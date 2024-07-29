@@ -8,6 +8,18 @@ edition = "2021"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
+rand = "0.8.5"
+
+rsa = "0.9.6"
+rsa-der = "0.3.0"
+
+aes = "0.8.4"
+cfb8 = "0.8.1"
+flate2 = "1.0.30"
+bytes = "1.6.1"
+
+anyhow = "1.0.86"
+
 base64 = "0.22.1"
 image = { version = "0.25", default-features = false, features = ["png"]}
 

@@ -1,4 +1,8 @@
+use std::io::{Read, Write};
+
+use anyhow::bail;
 use bytebuf::buffer::ByteBuffer;
+use byteorder::ReadBytesExt;
 use serde::{Deserialize, Serialize};
 
 pub mod bytebuf;
@@ -6,15 +10,90 @@ pub mod bytebuf;
 pub mod client;
 pub mod server;
 
-type VarInt = i32;
-type VarLong = i64;
+pub type VarInt = i32;
 
-#[derive(Debug)]
+pub struct VarInt32(pub i32);
+
+impl VarInt32 {
+    /// The maximum number of bytes a `VarInt` could occupy when read from and
+    /// written to the Minecraft protocol.
+    pub const MAX_SIZE: usize = 5;
+
+    /// Returns the exact number of bytes this varint will write when
+    /// [`Encode::encode`] is called, assuming no error occurs.
+    pub const fn written_size(self) -> usize {
+        match self.0 {
+            0 => 1,
+            n => (31 - n.leading_zeros() as usize) / 7 + 1,
+        }
+    }
+
+    pub fn decode_partial<R: Read>(mut r: R) -> Result<i32, VarIntDecodeError> {
+        let mut val = 0;
+        for i in 0..Self::MAX_SIZE {
+            let byte = r.read_u8().map_err(|_| VarIntDecodeError::Incomplete)?;
+            val |= (i32::from(byte) & 0b01111111) << (i * 7);
+            if byte & 0b10000000 == 0 {
+                return Ok(val);
+            }
+        }
+
+        Err(VarIntDecodeError::TooLarge)
+    }
+
+    pub fn encode(&self, mut w: impl Write) -> anyhow::Result<()> {
+        let x = self.0 as u64;
+        let stage1 = (x & 0x000000000000007f)
+            | ((x & 0x0000000000003f80) << 1)
+            | ((x & 0x00000000001fc000) << 2)
+            | ((x & 0x000000000fe00000) << 3)
+            | ((x & 0x00000000f0000000) << 4);
+
+        let leading = stage1.leading_zeros();
+
+        let unused_bytes = (leading - 1) >> 3;
+        let bytes_needed = 8 - unused_bytes;
+
+        // set all but the last MSBs
+        let msbs = 0x8080808080808080;
+        let msbmask = 0xffffffffffffffff >> (((8 - bytes_needed + 1) << 3) - 1);
+
+        let merged = stage1 | (msbs & msbmask);
+        let bytes = merged.to_le_bytes();
+
+        w.write_all(unsafe { bytes.get_unchecked(..bytes_needed as usize) })?;
+
+        Ok(())
+    }
+
+    pub fn decode(r: &mut &[u8]) -> anyhow::Result<Self> {
+        let mut val = 0;
+        for i in 0..Self::MAX_SIZE {
+            let byte = r.read_u8()?;
+            val |= (i32::from(byte) & 0b01111111) << (i * 7);
+            if byte & 0b10000000 == 0 {
+                return Ok(VarInt32(val));
+            }
+        }
+        bail!("VarInt is too large")
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum VarIntDecodeError {
+    Incomplete,
+    TooLarge,
+}
+
+pub type VarLong = i64;
+
+#[derive(Debug, PartialEq)]
 pub enum ConnectionState {
     HandShake,
     Status,
     Login,
     Transfer,
+    Config,
 }
 
 impl ConnectionState {

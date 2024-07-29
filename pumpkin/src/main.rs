@@ -1,3 +1,5 @@
+#![feature(read_buf)]
+
 use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
 use std::collections::HashMap;
@@ -9,6 +11,7 @@ const SERVER: Token = Token(0);
 pub mod client;
 pub mod protocol;
 pub mod server;
+pub mod util;
 
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
@@ -37,8 +40,7 @@ fn main() -> io::Result<()> {
     // Unique token for each incoming connection.
     let mut unique_token = Token(SERVER.0 + 1);
 
-    log::info!("You can connect to the server using `nc`:");
-    log::info!(" $ nc 127.0.0.1 9000");
+    log::info!("You now can connect to the server");
 
     let server = Rc::new(Server::new());
 
@@ -85,7 +87,7 @@ fn main() -> io::Result<()> {
                 token => {
                     // Maybe received an event for a TCP connection.
                     let done = if let Some(client) = connections.get_mut(&token) {
-                        client.handle_connection_event(poll.registry(), event)?;
+                        client.poll(poll.registry(), event).unwrap();
                         client.closed
                     } else {
                         // Sporadic events happen, we can safely ignore them.

@@ -219,6 +219,33 @@ impl ByteBuffer {
         }
     }
 
+    pub fn write_bool(&mut self, v: bool) {
+        if v {
+            self.write_u8(1);
+        } else {
+            self.write_u8(0);
+        }
+    }
+
+    pub fn write_bytes_len(&mut self, bytes: &[u8], max_len: usize) {
+        self.flush_bits();
+
+        let size = bytes.len() + self.wpos;
+        if size > max_len {
+            eprintln!("Write: size > max size");
+            return;
+        }
+
+        if size > self.data.len() {
+            self.resize(size);
+        }
+
+        for v in bytes {
+            self.data[self.wpos] = *v;
+            self.wpos += 1;
+        }
+    }
+
     /// Append a byte (8 bits value) to the buffer
     /// _Note_: This method resets the read and write cursor for bitwise reading.
     ///
@@ -388,8 +415,12 @@ impl ByteBuffer {
     /// buffer.write_string("Hello")
     /// ```
     pub fn write_string(&mut self, val: &str) {
+        self.write_string_len(val, 32767)
+    }
+
+    pub fn write_string_len(&mut self, val: &str, max_len: usize) {
         self.write_var_int(val.len() as VarInt);
-        self.write_bytes(val.as_bytes());
+        self.write_bytes_len(val.as_bytes(), max_len);
     }
 
     // Read operations
@@ -433,6 +464,10 @@ impl ByteBuffer {
         let pos = self.rpos;
         self.rpos += 1;
         Ok(self.data[pos])
+    }
+
+    pub fn read_bool(&mut self) -> Result<bool> {
+        Ok(self.read_u8()? != 0)
     }
 
     /// Same as `read_u8()` but for signed values
@@ -492,6 +527,25 @@ impl ByteBuffer {
     /// ```
     pub fn read_u64(&mut self) -> Result<u64> {
         read_number!(self, read_u64, 8)
+    }
+
+    /// Reads a boolean. If true, the closure is called, and the returned value is
+    /// wrapped in Some. Otherwise, this returns None.
+    pub fn read_option<T>(&mut self, val: impl FnOnce(&mut ByteBuffer) -> T) -> Result<Option<T>> {
+        if self.read_bool()? {
+            Ok(Some(val(self)))
+        } else {
+            Ok(None)
+        }
+    }
+    /// Writes `true` if the option is Some, or `false` if None. If the option is
+    /// some, then it also calls the `write` closure.
+    pub fn write_option<T>(&mut self, val: &Option<T>, write: impl FnOnce(&mut ByteBuffer, &T)) {
+        self.write_bool(val.is_some());
+        match val {
+            Some(v) => write(self, v),
+            None => {}
+        }
     }
 
     pub fn read_var_int(&mut self) -> Result<VarInt> {
@@ -564,11 +618,40 @@ impl ByteBuffer {
     ///         that  must be encoded as UTF8.
     /// _Note_: This method resets the read and write cursor for bitwise reading.
     pub fn read_string(&mut self) -> Result<String> {
+        self.read_string_len(32767)
+    }
+
+    pub fn read_string_len(&mut self, max_size: usize) -> Result<String> {
         let size = self.read_var_int()?;
-        match String::from_utf8(self.read_bytes(size as usize)?) {
+        if size as usize > max_size {
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                "String length is bigger than max size",
+            ));
+        }
+        let data = self.read_bytes(size as usize)?;
+        if data.len() > max_size {
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                "String is bigger than max size",
+            ));
+        }
+        match String::from_utf8(data) {
             Ok(string_result) => Ok(string_result),
             Err(e) => Err(Error::new(ErrorKind::InvalidData, e)),
         }
+    }
+
+    /// Reads 16 bytes from the buffer, and returns that as a big endian UUID.
+    pub fn read_uuid(&mut self) -> Result<uuid::Uuid> {
+        let mut bytes = [0u8; 16];
+        self.read_exact(&mut bytes)?;
+        uuid::Uuid::from_slice(&bytes).map_err(|e| Error::new(ErrorKind::InvalidData, e))
+    }
+
+    /// This writes a UUID into the buffer (in big endian format).
+    pub fn write_uuid(&mut self, v: uuid::Uuid) {
+        self.write_bytes(v.as_bytes());
     }
 
     // Other

@@ -13,7 +13,7 @@ impl SHandShake {
     pub fn read(bytebuf: &mut ByteBuffer) -> Self {
         Self {
             protocol_version: bytebuf.read_var_int().unwrap(),
-            server_address: bytebuf.read_string().unwrap(),
+            server_address: bytebuf.read_string_len(255).unwrap(),
             server_port: bytebuf.read_u16().unwrap(),
             next_state: ConnectionState::from_varint(bytebuf.read_var_int().unwrap()),
         }
