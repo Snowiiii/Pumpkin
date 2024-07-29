@@ -8,10 +8,14 @@ const SERVER: Token = Token(0);
 
 pub mod client;
 pub mod protocol;
+pub mod server;
 
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
+    use std::rc::Rc;
+
     use client::{interrupted, Client};
+    use server::Server;
 
     simple_logger::SimpleLogger::new().init().unwrap();
 
@@ -22,11 +26,11 @@ fn main() -> io::Result<()> {
 
     // Setup the TCP server socket.
     let addr = "127.0.0.1:25565".parse().unwrap();
-    let mut server = TcpListener::bind(addr)?;
+    let mut listener = TcpListener::bind(addr)?;
 
     // Register the server with poll we can receive events for it.
     poll.registry()
-        .register(&mut server, SERVER, Interest::READABLE)?;
+        .register(&mut listener, SERVER, Interest::READABLE)?;
 
     // Map of `Token` -> `TcpStream`.
     let mut connections = HashMap::new();
@@ -35,7 +39,8 @@ fn main() -> io::Result<()> {
 
     log::info!("You can connect to the server using `nc`:");
     log::info!(" $ nc 127.0.0.1 9000");
-    log::info!("You'll see our welcome message and anything you type will be printed here.");
+
+    let server = Rc::new(Server::new());
 
     loop {
         if let Err(err) = poll.poll(&mut events, None) {
@@ -50,7 +55,7 @@ fn main() -> io::Result<()> {
                 SERVER => loop {
                     // Received an event for the TCP server socket, which
                     // indicates we can accept an connection.
-                    let (mut connection, address) = match server.accept() {
+                    let (mut connection, address) = match listener.accept() {
                         Ok((connection, address)) => (connection, address),
                         Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
                             // If we get a `WouldBlock` error we know our
@@ -75,7 +80,7 @@ fn main() -> io::Result<()> {
                         Interest::READABLE.add(Interest::WRITABLE),
                     )?;
 
-                    connections.insert(token, Client::new(connection));
+                    connections.insert(token, Client::new(Rc::clone(&server), connection));
                 },
                 token => {
                     // Maybe received an event for a TCP connection.

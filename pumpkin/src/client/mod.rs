@@ -1,14 +1,18 @@
 use std::{
     collections::VecDeque,
     io::{self, Write},
+    rc::Rc,
 };
 
-use crate::protocol::{
-    server::{
-        handshake::SHandShake,
-        status::{SPingRequest, SStatusRequest},
+use crate::{
+    protocol::{
+        server::{
+            handshake::SHandShake,
+            status::{SPingRequest, SStatusRequest},
+        },
+        ClientPacket, RawPacket,
     },
-    ClientPacket, RawPacket,
+    server::Server,
 };
 
 use crate::protocol::{bytebuf::buffer::ByteBuffer, ConnectionState};
@@ -21,6 +25,7 @@ pub mod player;
 use client_packet::ClientPacketProcessor;
 
 pub struct Client {
+    pub server: Rc<Server>,
     pub connection_state: ConnectionState,
     pub closed: bool,
     pub connection: TcpStream,
@@ -29,8 +34,9 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(connection: TcpStream) -> Self {
+    pub fn new(server: Rc<Server>, connection: TcpStream) -> Self {
         Self {
+            server,
             connection_state: ConnectionState::HandShake,
             connection,
             closed: false,

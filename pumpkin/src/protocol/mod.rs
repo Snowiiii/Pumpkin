@@ -44,11 +44,26 @@ pub trait ClientPacket {
 #[derive(Serialize, Deserialize)]
 pub struct StatusResponse {
     pub version: Version,
+    pub players: Players,
     pub description: String,
-    // Players, favicon ...
+    pub favicon: String, // data:image/png;base64,<data>
+                         // Players, favicon ...
 }
 #[derive(Serialize, Deserialize)]
 pub struct Version {
-    pub version: String,
+    pub name: String,
     pub protocol: u32,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Players {
+    pub max: u32,
+    pub online: u32,
+    pub sample: Sample,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Sample {
+    pub name: String,
+    pub id: String, // uuid
 }
