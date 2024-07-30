@@ -1,4 +1,3 @@
-
 use crate::{
     client::Client,
     protocol::{ClientPacket, RawPacket, VarInt},

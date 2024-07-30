@@ -1,4 +1,3 @@
-
 use crate::protocol::{
     client::{
         config::CFinishConfig,
@@ -43,7 +42,7 @@ impl ClientPacketProcessor for Client {
         dbg!("sending status");
 
         dbg!("test first");
-        
+
         let guard = self.server.try_lock().unwrap();
         dbg!("test");
 

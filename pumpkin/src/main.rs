@@ -2,11 +2,9 @@ use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
 use std::io::{self};
 
-use std::{
-    sync::{Arc, Mutex}
-};
+use std::sync::{Arc, Mutex};
 
-use client::{interrupted};
+use client::interrupted;
 use configuration::BasicConfiguration;
 use server::Server;
 
@@ -14,23 +12,19 @@ use server::Server;
 const SERVER: Token = Token(0);
 
 pub mod client;
+pub mod configuration;
 pub mod entity;
 pub mod protocol;
 pub mod server;
 pub mod util;
-pub mod configuration;
 
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
     use configuration::AdvancedConfiguration;
 
-    
-    
     let basic_config = BasicConfiguration::load("configuration.toml");
-    
-    
+
     let advanced_configuration = AdvancedConfiguration::load("features.toml");
-  
 
     simple_logger::SimpleLogger::new().init().unwrap();
 
@@ -53,7 +47,7 @@ fn main() -> io::Result<()> {
     log::info!("You now can connect to the server");
 
     let server = Arc::new(Mutex::new(Server::new()));
-    
+
     loop {
         if let Err(err) = poll.poll(&mut events, None) {
             if interrupted(&err) {
@@ -96,10 +90,12 @@ fn main() -> io::Result<()> {
                     let mut guard = server.try_lock().unwrap();
                     guard.new_client(rc_server, connection, token);
                 },
-                
+
                 token => {
                     // Maybe received an event for a TCP connection.
-                    let done = if let Some(client) = server.try_lock().unwrap().connections.get_mut(&token) {
+                    let done = if let Some(client) =
+                        server.try_lock().unwrap().connections.get_mut(&token)
+                    {
                         client.poll(poll.registry(), event).unwrap();
                         client.closed
                     } else {
@@ -107,7 +103,9 @@ fn main() -> io::Result<()> {
                         false
                     };
                     if done {
-                        if let Some(mut client) = server.try_lock().unwrap().connections.remove(&token) {
+                        if let Some(mut client) =
+                            server.try_lock().unwrap().connections.remove(&token)
+                        {
                             poll.registry().deregister(&mut client.connection)?;
                         }
                     }
