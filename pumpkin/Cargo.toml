@@ -29,5 +29,6 @@ byteorder = "1"
 mio = { version = "1.0.1", features = ["os-poll", "net"]}
 crossbeam-channel = "0.5.13"
 uuid = "1.10"
+toml = "0.8.17"
 
 
