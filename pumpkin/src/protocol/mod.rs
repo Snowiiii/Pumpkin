@@ -91,7 +91,7 @@ pub type VarLong = i64;
 pub enum ConnectionState {
     HandShake,
     Status,
-    Login, 
+    Login,
     Transfer,
     Config,
     Play,

@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::{
     client::Client,
     protocol::{ClientPacket, RawPacket, VarInt},

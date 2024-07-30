@@ -11,6 +11,7 @@ use std::{
 use base64::{engine::general_purpose, Engine};
 use mio::{net::TcpStream, Token};
 use rsa::{rand_core::OsRng, traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     client::Client,
@@ -163,8 +164,9 @@ impl Server {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Serialize, Deserialize)]
 pub enum Difficulty {
+    Peaceful,
     Easy,
     Normal,
     Hard,
