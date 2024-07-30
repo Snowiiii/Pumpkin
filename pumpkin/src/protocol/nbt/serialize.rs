@@ -3,12 +3,18 @@ use crate::protocol::bytebuf::buffer::ByteBuffer;
 use super::{Tag, NBT};
 
 impl NBT {
-    pub fn serialize(&self) -> Vec<u8> {
-        let mut out = ByteBuffer::new();
+    pub fn serialize_buf(&self, out: &mut ByteBuffer) {
         out.write_u8(self.tag.ty());
+        if matches!(self.tag, Tag::End) {
+            return;
+        }
         out.write_u16(self.name.len() as u16);
         out.write_bytes(self.name.as_bytes());
-        out.write_bytes(&self.tag.serialize());
+        self.tag.serialize(out);
+    }
+    pub fn serialize(&self) -> Vec<u8> {
+        let mut out = ByteBuffer::new();
+        self.serialize_buf(&mut out);
         out.into_vec()
     }
 }
@@ -33,8 +39,8 @@ impl Tag {
         }
     }
 
-    fn serialize(&self) -> Vec<u8> {
-        let mut out = ByteBuffer::new();
+    /// Serializes the data of the tag. Does not add type byte.
+    fn serialize(&self, out: &mut ByteBuffer) {
         match self {
             Self::End => (),
             Self::Byte(v) => out.write_i8(*v),
@@ -55,11 +61,11 @@ impl Tag {
                 out.write_u8(v.get(0).unwrap_or(&Self::End).ty());
                 out.write_i32(v.len() as i32);
                 for tag in v {
-                    out.write_bytes(&tag.serialize());
+                    tag.serialize(out);
                 }
             }
             Self::Compound(v) => {
-                for (name, tag) in v {
+                for (name, tag) in &v.inner {
                     // Each element in the HashMap is essentially a NBT, but we store it in a
                     // separated form, so we have a manual implementation of serialize() here.
                     out.write_u8(tag.ty());
@@ -69,7 +75,7 @@ impl Tag {
                     }
                     out.write_u16(name.len() as u16);
                     out.write_bytes(name.as_bytes());
-                    out.write_bytes(&tag.serialize());
+                    tag.serialize(out);
                 }
                 out.write_u8(Self::End.ty());
             }
@@ -86,6 +92,5 @@ impl Tag {
                 }
             }
         }
-        out.into_vec()
     }
 }

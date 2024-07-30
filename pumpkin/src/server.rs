@@ -15,7 +15,13 @@ use crate::{
         player::{GameMode, Player},
         Entity, EntityId,
     },
-    protocol::{client::play::CLogin, Players, Sample, StatusResponse, VarInt, Version},
+    protocol::{
+        client::{
+            config::{CKnownPacks, CRegistryData, Entry, KnownPack},
+            play::CLogin,
+        },
+        Players, Sample, StatusResponse, VarInt, Version,
+    },
     world::World,
 };
 
@@ -88,6 +94,23 @@ impl Server {
                 entity_id: self.new_entity_id(),
             },
         };
+        // known data packs
+        client.send_packet(CKnownPacks::new(
+            1,
+            vec![KnownPack {
+                namespace: "minecraft".to_string(),
+                id: "core".to_string(),
+                version: "1.21".to_string(),
+            }],
+        ));
+        client.send_packet(CRegistryData::new(
+            "0".into(),
+            1,
+            vec![Entry {
+                entry_id: "minecraft:dimension_type".into(),
+                has_data: true,
+            }],
+        ));
 
         client.send_packet(CLogin::new(
             player.entity_id(),

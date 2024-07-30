@@ -1,4 +1,3 @@
-
 use crate::{
     entity::player::GameMode,
     protocol::{ClientPacket, VarInt},

@@ -1,4 +1,4 @@
-use crate::protocol::{nbt::NBT, VarInt, VarLong};
+use crate::protocol::{nbt::nbt::NBT, VarInt, VarLong};
 
 use super::{Endian, CONTINUE_BIT, SEGMENT_BITS};
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
@@ -616,6 +616,29 @@ impl ByteBuffer {
     /// _Note_: This method resets the read and write cursor for bitwise reading.
     pub fn read_f64(&mut self) -> Result<f64> {
         read_number!(self, read_f64, 8)
+    }
+
+    pub fn read_list<T>(&mut self, val: impl Fn(&mut ByteBuffer) -> Result<T>) -> Result<Vec<T>> {
+        let len = self.read_var_int()?.try_into().unwrap();
+        let mut list = Vec::with_capacity(len);
+        for _ in 0..len {
+            list.push(val(self)?);
+        }
+        Ok(list)
+    }
+    /// Writes a list to the buffer.
+    pub fn write_list<T>(&mut self, list: &[T], write: impl Fn(&mut ByteBuffer, &T)) {
+        self.write_var_int(list.len().try_into().unwrap());
+        for v in list {
+            write(self, v);
+        }
+    }
+
+    pub fn read_varint_arr(&mut self) -> Result<Vec<i32>> {
+        self.read_list(|buf| buf.read_var_int())
+    }
+    pub fn write_varint_arr(&mut self, v: &[i32]) {
+        self.write_list(v, |p, &v| p.write_var_int(v))
     }
 
     pub fn read_nbt(&mut self) -> Result<NBT> {
