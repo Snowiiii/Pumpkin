@@ -6,8 +6,8 @@ use crate::server::Difficulty;
 
 #[derive(Deserialize, Serialize)]
 pub struct AdvancedConfiguration {
-    liquid_physics: bool,
-    encryption: bool,
+    pub liquid_physics: bool,
+    pub encryption: bool,
 }
 
 impl Default for AdvancedConfiguration {
@@ -24,7 +24,7 @@ pub struct BasicConfiguration {
     pub server_address: String,
     pub server_port: u16,
     pub seed: String,
-    pub max_plyers: i32,
+    pub max_plyers: u32,
     pub view_distances: u8,
     pub simulation_distance: u8,
     pub resource_pack: String,
@@ -43,7 +43,7 @@ impl Default for BasicConfiguration {
             server_address: "127.0.0.1".to_string(),
             server_port: 25565,
             seed: "".to_string(),
-            max_plyers: -1,
+            max_plyers: 0,
             view_distances: 10,
             simulation_distance: 10,
             resource_pack: "".to_string(),

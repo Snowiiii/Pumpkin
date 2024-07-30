@@ -21,7 +21,7 @@ use crate::{
 
 use crate::protocol::ConnectionState;
 use anyhow::Context;
-use mio::{event::Event, net::TcpStream, Registry, Token};
+use mio::{event::Event, net::TcpStream, Token};
 use packet_decoder::PacketDecoder;
 use packet_encoder::PacketEncoder;
 use rsa::Pkcs1v15Encrypt;

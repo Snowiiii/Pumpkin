@@ -148,7 +148,7 @@ impl ClientPacketProcessor for Client {
     fn handle_config_acknowledged(
         &mut self,
         server: &mut Server,
-        config_acknowledged: SAcknowledgeFinishConfig,
+        _config_acknowledged: SAcknowledgeFinishConfig,
     ) {
         dbg!("config acknowledged");
         self.connection_state = ConnectionState::Play;

@@ -1,18 +1,16 @@
 use std::{
-    borrow::BorrowMut,
-    collections::HashMap,
     io::Cursor,
-    rc::Rc,
     sync::atomic::{AtomicI32, Ordering},
 };
 
 use base64::{engine::general_purpose, Engine};
-use mio::{event::Event, net::TcpStream, Poll, Token};
+use mio::{event::Event, Poll};
 use rsa::{rand_core::OsRng, traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     client::Client,
+    configuration::{AdvancedConfiguration, BasicConfiguration},
     entity::{
         player::{GameMode, Player},
         Entity, EntityId,
@@ -41,16 +39,11 @@ pub struct Server {
     pub difficulty: Difficulty,
 }
 
-impl Default for Server {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl Server {
-    pub fn new() -> Self {
+    pub fn new(config: (BasicConfiguration, AdvancedConfiguration)) -> Self {
         let max_players = 20;
-        let status_response = Self::default_response(max_players);
+        let config_clone = &config;
+        let status_response = Self::default_response(config_clone);
 
         // todo, only create when needed
         let (public_key, private_key) = Self::generate_keys();
@@ -65,15 +58,15 @@ impl Server {
             // 0 is invalid
             entity_id: 2.into(),
             world: World::new(),
-            online_mode: true,
-            encryption: true,
+            online_mode: config.0.online_mode,
+            encryption: config.1.encryption,
             compression_threshold: None, // 256
             public_key,
             private_key,
             max_players,
             status_response,
             public_key_der,
-            difficulty: Difficulty::Normal,
+            difficulty: config.0.default_difficulty,
         }
     }
 
@@ -84,10 +77,11 @@ impl Server {
         poll: &Poll,
         event: &Event,
     ) -> anyhow::Result<bool> {
+        let _ = poll;
         // todo, Poll players in every world
         client.poll(self, event)
     }
-    //CLIENT KOMMT in den Player
+
     pub fn spawn_player(&mut self, client: &mut Client) {
         let player = Player {
             entity: Entity {
@@ -128,7 +122,9 @@ impl Server {
         self.entity_id.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn default_response(max_players: u32) -> StatusResponse {
+    pub fn default_response(
+        config: &(BasicConfiguration, AdvancedConfiguration),
+    ) -> StatusResponse {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/icon.png");
 
         StatusResponse {
@@ -137,14 +133,14 @@ impl Server {
                 protocol: 767,
             },
             players: Players {
-                max: max_players,
+                max: config.0.max_plyers,
                 online: 0,
                 sample: vec![Sample {
                     name: "".into(),
                     id: "".into(),
                 }],
             },
-            description: "Pumpkin Server".into(),
+            description: config.0.motd.clone(),
             favicon: Self::load_icon(path),
         }
     }

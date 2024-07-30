@@ -1,7 +1,7 @@
 server_address = "127.0.0.1"
 server_port = 25565
 seed = ""
-max_plyers = -1
+max_plyers = 32
 view_distances = 10
 simulation_distance = 10
 resource_pack = ""

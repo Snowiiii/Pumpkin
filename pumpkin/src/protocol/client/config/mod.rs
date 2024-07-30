@@ -18,7 +18,7 @@ impl ClientPacket for CRegistryData {
     fn write(&self, bytebuf: &mut crate::protocol::bytebuf::buffer::ByteBuffer) {
         bytebuf.write_string(&self.registry_id);
         bytebuf.write_var_int(self.entry_count);
-    //    bytebuf.write_array(self.entries);
+        //    bytebuf.write_array(self.entries);
     }
 }
 

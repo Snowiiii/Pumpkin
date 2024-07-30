@@ -2,8 +2,6 @@ use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
 use std::io::{self};
 
-use std::sync::{Arc, Mutex};
-
 use client::interrupted;
 use configuration::BasicConfiguration;
 use server::Server;
@@ -38,7 +36,14 @@ fn main() -> io::Result<()> {
     let mut events = Events::with_capacity(128);
 
     // Setup the TCP server socket.
-    let addr = "127.0.0.1:25565".parse().unwrap();
+
+    let addr = format!(
+        "{}:{}",
+        basic_config.server_address, basic_config.server_port
+    )
+    .parse()
+    .unwrap();
+
     let mut listener = TcpListener::bind(addr)?;
 
     // Register the server with poll we can receive events for it.
@@ -52,7 +57,7 @@ fn main() -> io::Result<()> {
 
     log::info!("You now can connect to the server");
 
-    let mut server = Server::new();
+    let mut server = Server::new((basic_config, advanced_configuration));
 
     loop {
         if let Err(err) = poll.poll(&mut events, None) {

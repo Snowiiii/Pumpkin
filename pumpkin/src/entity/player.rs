@@ -1,9 +1,4 @@
-use std::rc::Rc;
-
-use crate::{
-    client::Client,
-    protocol::{ClientPacket, RawPacket, VarInt},
-};
+use crate::protocol::VarInt;
 
 use super::{Entity, EntityId};
 

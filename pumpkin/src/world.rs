@@ -1,13 +1,4 @@
-use mio::Token;
-
-use crate::{
-    entity::{
-        player::{GameMode, Player},
-        Entity,
-    },
-    protocol::{client::play::CLogin, VarInt},
-    server::Difficulty,
-};
+use crate::entity::player::Player;
 
 pub struct World {
     pub players: Vec<Player>,
