@@ -2,12 +2,15 @@ use std::{
     collections::VecDeque,
     io::{self, Write},
     rc::Rc,
+    sync::{Arc, Mutex},
 };
 
 use crate::{
+    entity::player::{ChatMode, Hand},
     protocol::{
-        client::login::CLoginDisconnect,
+        client::{config::CConfigDisconnect, login::CLoginDisconnect},
         server::{
+            config::{SAcknowledgeFinishConfig, SClientInformation},
             handshake::SHandShake,
             login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
             status::{SPingRequest, SStatusRequest},
@@ -19,14 +22,13 @@ use crate::{
 
 use crate::protocol::ConnectionState;
 use anyhow::Context;
-use mio::{event::Event, net::TcpStream, Registry};
+use mio::{event::Event, net::TcpStream, Registry, Token};
 use packet_decoder::PacketDecoder;
 use packet_encoder::PacketEncoder;
 use rsa::Pkcs1v15Encrypt;
 use std::io::Read;
 
 mod client_packet;
-pub mod player;
 
 mod packet_decoder;
 mod packet_encoder;
@@ -35,13 +37,27 @@ use client_packet::ClientPacketProcessor;
 
 pub const MAX_PACKET_SIZE: i32 = 2097152;
 
+pub struct PlayerConfig {
+    locale: String, // 16
+    view_distance: i8,
+    chat_mode: ChatMode,
+    chat_colors: bool,
+    skin_parts: u8,
+    main_hand: Hand,
+    text_filtering: bool,
+    server_listing: bool,
+}
+
 pub struct Client {
     pub name: Option<String>,
     pub uuid: Option<uuid::Uuid>,
-    pub server: Rc<Server>,
+    pub config: Option<PlayerConfig>,
+
+    pub server: Arc<Mutex<Server>>,
     pub connection_state: ConnectionState,
     pub encrytion: bool,
     pub closed: bool,
+    pub token: Rc<Token>,
     pub connection: TcpStream,
     enc: PacketEncoder,
     dec: PacketDecoder,
@@ -49,11 +65,13 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(server: Rc<Server>, connection: TcpStream) -> Self {
+    pub fn new(server: Arc<Mutex<Server>>, token: Rc<Token>, connection: TcpStream) -> Self {
         Self {
             name: None,
             uuid: None,
+            config: None,
             server,
+            token,
             connection_state: ConnectionState::HandShake,
             connection,
             enc: PacketEncoder::default(),
@@ -72,6 +90,8 @@ impl Client {
         self.encrytion = true;
         let shared_secret = self
             .server
+            .lock()
+            .unwrap()
             .private_key
             .decrypt(Pkcs1v15Encrypt, &shared_secret)
             .context("failed to decrypt shared secret")?;
@@ -136,6 +156,18 @@ impl Client {
                     packet.id
                 ),
             },
+            crate::protocol::ConnectionState::Config => match packet.id {
+                SClientInformation::PACKET_ID => {
+                    self.handle_client_information(SClientInformation::read(bytebuf))
+                }
+                SAcknowledgeFinishConfig::PACKET_ID => {
+                    self.handle_config_acknowledged(SAcknowledgeFinishConfig::read(bytebuf))
+                }
+                _ => log::error!(
+                    "Failed to handle packet id {} while in Config state",
+                    packet.id
+                ),
+            },
             _ => log::error!("Invalid Connection state {:?}", self.connection_state),
         }
     }
@@ -184,8 +216,16 @@ impl Client {
 
     pub fn kick(&mut self, reason: String) {
         // Todo
-        if self.connection_state == ConnectionState::Login {
-            self.send_packet(CLoginDisconnect::new(reason));
+        match self.connection_state {
+            ConnectionState::Login => {
+                self.send_packet(CLoginDisconnect::new(reason));
+            }
+            ConnectionState::Config => {
+                self.send_packet(CConfigDisconnect::new(reason));
+            }
+            _ => {
+                log::warn!("Cant't kick in {:?} State", self.connection_state)
+            }
         }
         self.close()
     }

@@ -91,9 +91,10 @@ pub type VarLong = i64;
 pub enum ConnectionState {
     HandShake,
     Status,
-    Login,
+    Login, 
     Transfer,
     Config,
+    Play,
 }
 
 impl ConnectionState {
@@ -102,7 +103,10 @@ impl ConnectionState {
             1 => Self::Status,
             2 => Self::Login,
             3 => Self::Transfer,
-            _ => panic!("Unexpected Status {}", var_int),
+            _ => {
+                log::info!("Unexpected Status {}", var_int);
+                Self::Status
+            }
         }
     }
 }
@@ -138,7 +142,7 @@ pub struct Version {
 pub struct Players {
     pub max: u32,
     pub online: u32,
-    pub sample: Sample,
+    pub sample: Vec<Sample>,
 }
 
 #[derive(Serialize, Deserialize)]

@@ -423,6 +423,12 @@ impl ByteBuffer {
         self.write_bytes_len(val.as_bytes(), max_len);
     }
 
+    pub fn write_string_array(&mut self, array: &[String]) {
+        for string in array {
+            self.write_string(string)
+        }
+    }
+
     // Read operations
 
     /// Read a defined amount of raw bytes, or return an IO error if not enough bytes are

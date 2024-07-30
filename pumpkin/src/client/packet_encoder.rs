@@ -37,7 +37,7 @@ impl PacketEncoder {
         let data_len = self.buf.len() - start_len;
 
         if false { // compression
-        } 
+        }
         let packet_len = data_len;
 
         ensure!(
