@@ -3,6 +3,35 @@ use crate::{
     protocol::{ClientPacket, VarInt},
 };
 
+pub struct CChangeDifficulty {
+    
+    difficulty: u8,
+    locked: bool
+    
+}
+
+impl CChangeDifficulty {
+    pub fn new(
+        difficulty: u8,
+        locked: bool
+    ) -> Self {
+        
+        Self {
+            difficulty,
+            locked
+        }
+        
+    } 
+}
+
+impl ClientPacket for CChangeDifficulty {
+    const PACKET_ID: VarInt = 0x0B;
+
+    fn write(&self, bytebuf: &mut crate::protocol::bytebuf::buffer::ByteBuffer) {
+        bytebuf.write_u8(self.difficulty);
+        bytebuf.write_bool(self.locked);
+    }
+}
 pub struct CLogin {
     entity_id: i32,
     is_hardcore: bool,
