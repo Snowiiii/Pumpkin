@@ -17,9 +17,13 @@ pub mod entity;
 pub mod protocol;
 pub mod server;
 pub mod util;
+pub mod world;
 
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
+    use std::{collections::HashMap, rc::Rc};
+
+    use client::Client;
     use configuration::AdvancedConfiguration;
 
     let basic_config = BasicConfiguration::load("configuration.toml");
@@ -44,9 +48,11 @@ fn main() -> io::Result<()> {
     // Unique token for each incoming connection.
     let mut unique_token = Token(SERVER.0 + 1);
 
+    let mut connections: HashMap<Token, Client> = HashMap::new();
+
     log::info!("You now can connect to the server");
 
-    let server = Arc::new(Mutex::new(Server::new()));
+    let mut server = Server::new();
 
     loop {
         if let Err(err) = poll.poll(&mut events, None) {
@@ -86,26 +92,20 @@ fn main() -> io::Result<()> {
                         Interest::READABLE.add(Interest::WRITABLE),
                     )?;
 
-                    let rc_server = Arc::clone(&server);
-                    let mut guard = server.try_lock().unwrap();
-                    guard.new_client(rc_server, connection, token);
+                    connections.insert(token, Client::new(Rc::new(token), connection));
                 },
 
                 token => {
                     // Maybe received an event for a TCP connection.
-                    let done = if let Some(client) =
-                        server.try_lock().unwrap().connections.get_mut(&token)
-                    {
-                        client.poll(poll.registry(), event).unwrap();
+                    let done = if let Some(client) = connections.get_mut(&token) {
+                        client.poll(&mut server, event).unwrap();
                         client.closed
                     } else {
                         // Sporadic events happen, we can safely ignore them.
                         false
                     };
                     if done {
-                        if let Some(mut client) =
-                            server.try_lock().unwrap().connections.remove(&token)
-                        {
+                        if let Some(mut client) = connections.remove(&token) {
                             poll.registry().deregister(&mut client.connection)?;
                         }
                     }

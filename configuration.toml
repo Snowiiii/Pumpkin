@@ -1,0 +1,14 @@
+server_address = "127.0.0.1"
+server_port = 25565
+seed = ""
+max_plyers = -1
+view_distances = 10
+simulation_distance = 10
+resource_pack = ""
+resource_pack_sha1 = ""
+default_difficulty = "Normal"
+allow_nether = true
+hardcore = false
+online_mode = true
+spawn_protection = 16
+motd = "A Blazing fast Pumpkin Server!"

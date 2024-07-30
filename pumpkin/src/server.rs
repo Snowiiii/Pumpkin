@@ -1,15 +1,13 @@
 use std::{
+    borrow::BorrowMut,
     collections::HashMap,
     io::Cursor,
     rc::Rc,
-    sync::{
-        atomic::{AtomicI32, Ordering},
-        Arc, Mutex,
-    },
+    sync::atomic::{AtomicI32, Ordering},
 };
 
 use base64::{engine::general_purpose, Engine};
-use mio::{net::TcpStream, Token};
+use mio::{event::Event, net::TcpStream, Poll, Token};
 use rsa::{rand_core::OsRng, traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
 
@@ -20,6 +18,7 @@ use crate::{
         Entity, EntityId,
     },
     protocol::{client::play::CLogin, Players, Sample, StatusResponse, VarInt, Version},
+    world::World,
 };
 
 pub struct Server {
@@ -33,12 +32,12 @@ pub struct Server {
 
     pub max_players: u32,
 
+    pub world: World,
+
     pub status_response: StatusResponse,
-    pub connections: HashMap<Token, Client>,
 
     // todo replace with HashMap <World, Player>
     entity_id: AtomicI32, // todo: place this into every world
-    pub players: Vec<Player>,
     pub difficulty: Difficulty,
 }
 
@@ -65,6 +64,7 @@ impl Server {
         Self {
             // 0 is invalid
             entity_id: 2.into(),
+            world: World::new(),
             online_mode: true,
             encryption: true,
             compression_threshold: None, // 256
@@ -73,23 +73,29 @@ impl Server {
             max_players,
             status_response,
             public_key_der,
-            connections: HashMap::new(),
-            players: Vec::new(),
             difficulty: Difficulty::Normal,
         }
     }
 
-    pub fn new_client(&mut self, rc: Arc<Mutex<Server>>, connection: TcpStream, token: Token) {
-        self.connections
-            .insert(token, Client::new(rc, Rc::new(token), connection));
+    // Returns Tokens to remove
+    pub fn poll(
+        &mut self,
+        client: &mut Client,
+        poll: &Poll,
+        event: &Event,
+    ) -> anyhow::Result<bool> {
+        // todo, Poll players in every world
+        client.poll(self, event)
     }
-
-    pub fn spawn_player(&mut self, token: &Token) {
-        let mut player = Player {
-            entity: Entity::new(self.new_entity_id()),
-            client: self.connections.remove(token).unwrap(),
+    //CLIENT KOMMT in den Player
+    pub fn spawn_player(&mut self, client: &mut Client) {
+        let player = Player {
+            entity: Entity {
+                entity_id: self.new_entity_id(),
+            },
         };
-        player.send_packet(CLogin::new(
+
+        client.send_packet(CLogin::new(
             player.entity_id(),
             self.difficulty == Difficulty::Hard,
             1,
@@ -114,7 +120,7 @@ impl Server {
             false,
         ));
 
-        self.players.push(player);
+        client.player = Some(player);
     }
 
     // move to world

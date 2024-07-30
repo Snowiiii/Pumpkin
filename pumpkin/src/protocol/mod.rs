@@ -6,6 +6,8 @@ use byteorder::ReadBytesExt;
 use serde::{Deserialize, Serialize};
 
 pub mod bytebuf;
+pub mod nbt;
+mod registry;
 
 pub mod client;
 pub mod server;

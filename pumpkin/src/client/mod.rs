@@ -2,11 +2,10 @@ use std::{
     collections::VecDeque,
     io::{self, Write},
     rc::Rc,
-    sync::{Arc, Mutex},
 };
 
 use crate::{
-    entity::player::{ChatMode, Hand},
+    entity::player::{ChatMode, Hand, Player},
     protocol::{
         client::{config::CConfigDisconnect, login::CLoginDisconnect},
         server::{
@@ -49,11 +48,12 @@ pub struct PlayerConfig {
 }
 
 pub struct Client {
+    pub player: Option<Player>,
+
     pub name: Option<String>,
     pub uuid: Option<uuid::Uuid>,
     pub config: Option<PlayerConfig>,
 
-    pub server: Arc<Mutex<Server>>,
     pub connection_state: ConnectionState,
     pub encrytion: bool,
     pub closed: bool,
@@ -65,13 +65,13 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(server: Arc<Mutex<Server>>, token: Rc<Token>, connection: TcpStream) -> Self {
+    pub fn new(token: Rc<Token>, connection: TcpStream) -> Self {
         Self {
             name: None,
             uuid: None,
             config: None,
-            server,
             token,
+            player: None,
             connection_state: ConnectionState::HandShake,
             connection,
             enc: PacketEncoder::default(),
@@ -86,12 +86,13 @@ impl Client {
         self.client_packets_queue.push_back(packet);
     }
 
-    pub fn enable_encryption(&mut self, shared_secret: Vec<u8>) -> anyhow::Result<()> {
+    pub fn enable_encryption(
+        &mut self,
+        server: &mut Server,
+        shared_secret: Vec<u8>,
+    ) -> anyhow::Result<()> {
         self.encrytion = true;
-        let shared_secret = self
-            .server
-            .lock()
-            .unwrap()
+        let shared_secret = server
             .private_key
             .decrypt(Pkcs1v15Encrypt, &shared_secret)
             .context("failed to decrypt shared secret")?;
@@ -110,21 +111,21 @@ impl Client {
         self.connection.write_all(&self.enc.take()).unwrap();
     }
 
-    pub fn procress_packets(&mut self) {
+    pub fn process_packets(&mut self, server: &mut Server) {
         let mut i = 0;
         while i < self.client_packets_queue.len() {
             let mut packet = self.client_packets_queue.remove(i).unwrap();
-            self.handle_packet(&mut packet);
+            self.handle_packet(server, &mut packet);
             i += 1;
         }
     }
 
-    pub fn handle_packet(&mut self, packet: &mut RawPacket) {
+    pub fn handle_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
         dbg!("Handling packet");
         let bytebuf = &mut packet.bytebuf;
         match self.connection_state {
             crate::protocol::ConnectionState::HandShake => match packet.id {
-                SHandShake::PACKET_ID => self.handle_handshake(SHandShake::read(bytebuf)),
+                SHandShake::PACKET_ID => self.handle_handshake(server, SHandShake::read(bytebuf)),
                 _ => log::error!(
                     "Failed to handle packet id {} while in Handshake state",
                     packet.id
@@ -132,24 +133,28 @@ impl Client {
             },
             crate::protocol::ConnectionState::Status => match packet.id {
                 SStatusRequest::PACKET_ID => {
-                    self.handle_status_request(SStatusRequest::read(bytebuf))
+                    self.handle_status_request(server, SStatusRequest::read(bytebuf))
                 }
-                SPingRequest::PACKET_ID => self.handle_ping_request(SPingRequest::read(bytebuf)),
+                SPingRequest::PACKET_ID => {
+                    self.handle_ping_request(server, SPingRequest::read(bytebuf))
+                }
                 _ => log::error!(
                     "Failed to handle packet id {} while in Status state",
                     packet.id
                 ),
             },
             crate::protocol::ConnectionState::Login => match packet.id {
-                SLoginStart::PACKET_ID => self.handle_login_start(SLoginStart::read(bytebuf)),
+                SLoginStart::PACKET_ID => {
+                    self.handle_login_start(server, SLoginStart::read(bytebuf))
+                }
                 SEncryptionResponse::PACKET_ID => {
-                    self.handle_encryption_response(SEncryptionResponse::read(bytebuf))
+                    self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf))
                 }
                 SLoginPluginResponse::PACKET_ID => {
-                    self.handle_plugin_response(SLoginPluginResponse::read(bytebuf))
+                    self.handle_plugin_response(server, SLoginPluginResponse::read(bytebuf))
                 }
                 SLoginAcknowledged::PACKET_ID => {
-                    self.handle_login_acknowledged(SLoginAcknowledged::read(bytebuf))
+                    self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf))
                 }
                 _ => log::error!(
                     "Failed to handle packet id {} while in Login state",
@@ -158,10 +163,10 @@ impl Client {
             },
             crate::protocol::ConnectionState::Config => match packet.id {
                 SClientInformation::PACKET_ID => {
-                    self.handle_client_information(SClientInformation::read(bytebuf))
+                    self.handle_client_information(server, SClientInformation::read(bytebuf))
                 }
                 SAcknowledgeFinishConfig::PACKET_ID => {
-                    self.handle_config_acknowledged(SAcknowledgeFinishConfig::read(bytebuf))
+                    self.handle_config_acknowledged(server, SAcknowledgeFinishConfig::read(bytebuf))
                 }
                 _ => log::error!(
                     "Failed to handle packet id {} while in Config state",
@@ -173,7 +178,7 @@ impl Client {
     }
 
     /// Returns `true` if the connection is done.
-    pub fn poll(&mut self, _registry: &Registry, event: &Event) -> anyhow::Result<()> {
+    pub fn poll(&mut self, server: &mut Server, event: &Event) -> anyhow::Result<bool> {
         if event.is_readable() {
             let mut received_data = vec![0; 4096];
             let mut bytes_read = 0;
@@ -206,12 +211,12 @@ impl Client {
                 self.dec.queue_slice(&received_data[..bytes_read]);
                 if let Some(packet) = self.dec.decode()? {
                     self.add_packet(packet);
-                    self.procress_packets();
+                    self.process_packets(server);
                 }
                 self.dec.clear();
             }
         }
-        Ok(())
+        Ok(self.closed)
     }
 
     pub fn kick(&mut self, reason: String) {

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     client::Client,
     protocol::{ClientPacket, RawPacket, VarInt},
@@ -7,23 +9,15 @@ use super::{Entity, EntityId};
 
 pub struct Player {
     pub entity: Entity,
-    // All networking stuff
-    pub client: Client,
 }
 
 impl Player {
-    pub fn new(entity: Entity, client: Client) -> Self {
-        Self { entity, client }
+    pub fn new(entity: Entity) -> Self {
+        Self { entity }
     }
 
     pub fn entity_id(&self) -> EntityId {
         self.entity.entity_id
-    }
-
-    pub fn handle_packet(&mut self, _packet: &mut RawPacket) {}
-
-    pub fn send_packet<P: ClientPacket>(&mut self, packet: P) {
-        self.client.send_packet(packet);
     }
 }
 

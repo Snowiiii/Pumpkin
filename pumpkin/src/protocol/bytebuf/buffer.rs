@@ -1,4 +1,4 @@
-use crate::protocol::{VarInt, VarLong};
+use crate::protocol::{nbt::NBT, VarInt, VarLong};
 
 use super::{Endian, CONTINUE_BIT, SEGMENT_BITS};
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
@@ -616,6 +616,15 @@ impl ByteBuffer {
     /// _Note_: This method resets the read and write cursor for bitwise reading.
     pub fn read_f64(&mut self) -> Result<f64> {
         read_number!(self, read_f64, 8)
+    }
+
+    pub fn read_nbt(&mut self) -> Result<NBT> {
+        match NBT::deserialize_buf(self) {
+            Ok(v) => Ok(v),
+            Err(err) => {
+                return Err(Error::new(ErrorKind::InvalidData, "Failed read nbt"));
+            }
+        }
     }
 
     /// Read a string.

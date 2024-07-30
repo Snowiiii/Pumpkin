@@ -3,7 +3,6 @@ use std::io::Write;
 use aes::cipher::{generic_array::GenericArray, BlockEncryptMut, BlockSizeUser, KeyIvInit};
 use anyhow::{ensure, Context};
 use bytes::{BufMut, BytesMut};
-use rsa::pkcs8::der::Encode;
 
 use crate::{
     client::MAX_PACKET_SIZE,

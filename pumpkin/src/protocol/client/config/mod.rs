@@ -1,4 +1,26 @@
-use crate::protocol::ClientPacket;
+use crate::protocol::{nbt::NBT, ClientPacket, VarInt};
+
+pub struct CRegistryData {
+    registry_id: String,
+    entry_count: VarInt,
+    entries: NBT,
+}
+
+struct Entry {
+    entry_id: String,
+    has_data: bool,
+    data: NBT,
+}
+
+impl ClientPacket for CRegistryData {
+    const PACKET_ID: VarInt = 0x07;
+
+    fn write(&self, bytebuf: &mut crate::protocol::bytebuf::buffer::ByteBuffer) {
+        bytebuf.write_string(&self.registry_id);
+        bytebuf.write_var_int(self.entry_count);
+    //    bytebuf.write_array(self.entries);
+    }
+}
 
 pub struct CCookieRequest {
     // TODO
@@ -29,6 +51,12 @@ impl ClientPacket for CConfigDisconnect {
 }
 
 pub struct CFinishConfig {}
+
+impl Default for CFinishConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl CFinishConfig {
     pub fn new() -> Self {

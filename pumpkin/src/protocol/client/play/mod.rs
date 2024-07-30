@@ -29,6 +29,7 @@ pub struct CLogin {
 }
 
 impl CLogin {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         entity_id: i32,
         is_hardcore: bool,
