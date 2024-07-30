@@ -1,7 +1,59 @@
+use std::io::Write;
+
 use crate::{
     entity::player::GameMode,
     protocol::{ClientPacket, VarInt},
 };
+
+pub struct SetHeldItem {
+    slot: i8
+}
+
+impl SetHeldItem {
+    pub fn new(slot: i8) -> Self {
+        Self {
+            slot
+        }
+    }
+}
+
+impl ClientPacket for SetHeldItem {
+    const PACKET_ID: VarInt = 0x53;
+
+    fn write(&self, bytebuf: &mut crate::protocol::bytebuf::buffer::ByteBuffer) {
+        bytebuf.write_i8(self.slot);
+    }
+}
+
+pub struct CPlayerAbilities {
+    flags: i8,
+    flying_speed: f32,
+    field_of_view: f32
+}
+
+impl CPlayerAbilities {
+    pub fn new(
+        flags: i8,
+        flying_speed: f32,
+        field_of_view: f32
+    ) -> Self {
+        Self {
+            flags,
+            flying_speed,
+            field_of_view
+        }
+    }
+}
+
+impl ClientPacket for CPlayerAbilities {
+    const PACKET_ID: VarInt = 0x38;
+
+    fn write(&self, bytebuf: &mut crate::protocol::bytebuf::buffer::ByteBuffer) {
+        bytebuf.write_i8(self.flags);
+        bytebuf.write_f32(self.flying_speed);
+        bytebuf.write_f32(self.field_of_view);
+    }
+}
 
 pub struct CChangeDifficulty {
     
