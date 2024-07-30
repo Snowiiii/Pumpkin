@@ -1,4 +1,3 @@
-use std::io::Write;
 
 use crate::{
     entity::player::GameMode,
@@ -6,14 +5,12 @@ use crate::{
 };
 
 pub struct SetHeldItem {
-    slot: i8
+    slot: i8,
 }
 
 impl SetHeldItem {
     pub fn new(slot: i8) -> Self {
-        Self {
-            slot
-        }
+        Self { slot }
     }
 }
 
@@ -28,19 +25,15 @@ impl ClientPacket for SetHeldItem {
 pub struct CPlayerAbilities {
     flags: i8,
     flying_speed: f32,
-    field_of_view: f32
+    field_of_view: f32,
 }
 
 impl CPlayerAbilities {
-    pub fn new(
-        flags: i8,
-        flying_speed: f32,
-        field_of_view: f32
-    ) -> Self {
+    pub fn new(flags: i8, flying_speed: f32, field_of_view: f32) -> Self {
         Self {
             flags,
             flying_speed,
-            field_of_view
+            field_of_view,
         }
     }
 }
@@ -56,24 +49,14 @@ impl ClientPacket for CPlayerAbilities {
 }
 
 pub struct CChangeDifficulty {
-    
     difficulty: u8,
-    locked: bool
-    
+    locked: bool,
 }
 
 impl CChangeDifficulty {
-    pub fn new(
-        difficulty: u8,
-        locked: bool
-    ) -> Self {
-        
-        Self {
-            difficulty,
-            locked
-        }
-        
-    } 
+    pub fn new(difficulty: u8, locked: bool) -> Self {
+        Self { difficulty, locked }
+    }
 }
 
 impl ClientPacket for CChangeDifficulty {
