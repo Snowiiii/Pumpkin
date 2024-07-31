@@ -34,7 +34,7 @@ struct CodecItem<T> {
 
 pub fn write_single_dimension(out: &mut ByteBuffer, world_min_y: i32, world_height: u32) {
     let dimension = dimensions::overworld(world_min_y, world_height);
-    //  out.put_slice(&crab_nbt::nbt!("", &dimension).unwrap().serialize());
+  //  out.put_nbt(nbt!(dimension))
 }
 
 pub fn write_codec(out: &mut ByteBuffer, world_min_y: i32, world_height: u32) {
