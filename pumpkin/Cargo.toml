@@ -25,7 +25,6 @@ image = { version = "0.25", default-features = false, features = ["png"]}
 
 simple_logger = "5.0.0"
 log = "0.4"
-byteorder = "1"
 mio = { version = "1.0.1", features = ["os-poll", "net"]}
 crossbeam-channel = "0.5.13"
 uuid = "1.10"
