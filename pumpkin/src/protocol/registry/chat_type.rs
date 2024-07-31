@@ -3,13 +3,14 @@ use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ChatType {
-    chat: ChatParams,
-    narration: ChatParams,
+    chat: Decoration,
+    narration: Decoration,
 }
 #[derive(Debug, Clone, Serialize)]
-struct ChatParams {
-    parameters: Vec<String>,
+struct Decoration {
     translation_key: String,
+    // style: Option<>
+    parameters: Vec<String>,
 }
 
 pub(super) fn all() -> Vec<CodecItem<ChatType>> {
@@ -17,11 +18,11 @@ pub(super) fn all() -> Vec<CodecItem<ChatType>> {
         name: "minecraft:chat".into(),
         id: 0,
         element: ChatType {
-            chat: ChatParams {
+            chat: Decoration {
                 parameters: vec!["sender".into(), "content".into()],
                 translation_key: "chat.type.text".into(),
             },
-            narration: ChatParams {
+            narration: Decoration {
                 parameters: vec!["sender".into(), "content".into()],
                 translation_key: "chat.type.text.narrate".into(),
             },

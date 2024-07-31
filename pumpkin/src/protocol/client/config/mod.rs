@@ -1,13 +1,33 @@
-use crate::protocol::{registry, ClientPacket, VarInt};
+use crate::protocol::{bytebuf::ByteBuffer, registry, ClientPacket, KnownPack, VarInt};
 
 pub struct CCookieRequest {
     // TODO
 }
 
 impl ClientPacket for CCookieRequest {
-    const PACKET_ID: crate::protocol::VarInt = 0;
+    const PACKET_ID: crate::protocol::VarInt = 0x00;
 
-    fn write(&self, bytebuf: &mut crate::protocol::bytebuf::buffer::ByteBuffer) {}
+    fn write(&self, bytebuf: &mut ByteBuffer) {}
+}
+
+pub struct CPluginMessage<'a> {
+    channel: String,
+    data: &'a [u8],
+}
+
+impl<'a> CPluginMessage<'a> {
+    pub fn new(channel: String, data: &'a [u8]) -> Self {
+        Self { channel, data }
+    }
+}
+
+impl<'a> ClientPacket for CPluginMessage<'a> {
+    const PACKET_ID: VarInt = 0x01;
+
+    fn write(&self, bytebuf: &mut ByteBuffer) {
+        bytebuf.put_string(&self.channel);
+        bytebuf.put_slice(&self.data);
+    }
 }
 
 pub struct CConfigDisconnect {
@@ -21,10 +41,10 @@ impl CConfigDisconnect {
 }
 
 impl ClientPacket for CConfigDisconnect {
-    const PACKET_ID: crate::protocol::VarInt = 2;
+    const PACKET_ID: crate::protocol::VarInt = 0x02;
 
-    fn write(&self, bytebuf: &mut crate::protocol::bytebuf::buffer::ByteBuffer) {
-        bytebuf.write_string(&self.reason);
+    fn write(&self, bytebuf: &mut ByteBuffer) {
+        bytebuf.put_string(&self.reason);
     }
 }
 
@@ -43,37 +63,31 @@ impl CFinishConfig {
 }
 
 impl ClientPacket for CFinishConfig {
-    const PACKET_ID: crate::protocol::VarInt = 3;
+    const PACKET_ID: crate::protocol::VarInt = 0x03;
 
-    fn write(&self, _bytebuf: &mut crate::protocol::bytebuf::buffer::ByteBuffer) {}
+    fn write(&self, _bytebuf: &mut ByteBuffer) {}
 }
 
-pub struct CKnownPacks {
+pub struct CKnownPacks<'a> {
     count: VarInt,
-    known_packs: Vec<KnownPack>,
+    known_packs: &'a [KnownPack],
 }
 
-impl CKnownPacks {
-    pub fn new(count: VarInt, known_packs: Vec<KnownPack>) -> Self {
+impl<'a> CKnownPacks<'a> {
+    pub fn new(count: VarInt, known_packs: &'a [KnownPack]) -> Self {
         Self { count, known_packs }
     }
 }
 
-pub struct KnownPack {
-    pub namespace: String,
-    pub id: String,
-    pub version: String,
-}
-
-impl ClientPacket for CKnownPacks {
+impl<'a> ClientPacket for CKnownPacks<'a> {
     const PACKET_ID: VarInt = 0x0E;
 
-    fn write(&self, bytebuf: &mut crate::protocol::bytebuf::buffer::ByteBuffer) {
-        bytebuf.write_var_int(self.count);
-        bytebuf.write_list::<KnownPack>(&self.known_packs, |p, v| {
-            p.write_string(&v.namespace);
-            p.write_string(&v.id);
-            p.write_string(&v.version);
+    fn write(&self, bytebuf: &mut ByteBuffer) {
+        //  bytebuf.write_var_int(self.count);
+        bytebuf.put_list::<KnownPack>(&self.known_packs, |p, v| {
+            p.put_string(&v.namespace);
+            p.put_string(&v.id);
+            p.put_string(&v.version);
         });
     }
 }
@@ -103,13 +117,13 @@ pub struct Entry {
 impl ClientPacket for CRegistryData {
     const PACKET_ID: VarInt = 0x07;
 
-    fn write(&self, bytebuf: &mut crate::protocol::bytebuf::buffer::ByteBuffer) {
-        bytebuf.write_string(&self.registry_id);
-        bytebuf.write_var_int(self.entry_count);
-        bytebuf.write_list::<Entry>(&self.entries, |p, v| {
-            p.write_string(&v.entry_id);
-            p.write_bool(v.has_data);
-            registry::write_codec(p, -64, 320);
+    fn write(&self, bytebuf: &mut ByteBuffer) {
+        bytebuf.put_string(&self.registry_id);
+        bytebuf.put_var_int(self.entry_count);
+        bytebuf.put_list::<Entry>(&self.entries, |p, v| {
+            p.put_string(&v.entry_id);
+            p.put_bool(v.has_data);
+            registry::write_single_dimension(p, -64, 320);
         });
     }
 }

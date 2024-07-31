@@ -1,4 +1,4 @@
-use crate::protocol::{bytebuf::buffer::ByteBuffer, ClientPacket, VarInt};
+use crate::protocol::{bytebuf::ByteBuffer, ClientPacket, VarInt};
 
 pub struct CPingResponse {
     payload: i64, // must responde with the same as in `SPingRequest`
@@ -11,10 +11,10 @@ impl CPingResponse {
 }
 
 impl ClientPacket for CPingResponse {
-    const PACKET_ID: VarInt = 1;
+    const PACKET_ID: VarInt = 0x01;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.write_i64(self.payload);
+        bytebuf.put_i64(self.payload);
     }
 }
 
@@ -29,9 +29,9 @@ impl CStatusResponse {
 }
 
 impl ClientPacket for CStatusResponse {
-    const PACKET_ID: VarInt = 0;
+    const PACKET_ID: VarInt = 0x00;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.write_string(self.json_response.as_str());
+        bytebuf.put_string(self.json_response.as_str());
     }
 }

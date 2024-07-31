@@ -1,4 +1,4 @@
-use crate::protocol::{bytebuf::buffer::ByteBuffer, ClientPacket, VarInt};
+use crate::protocol::{bytebuf::ByteBuffer, ClientPacket, VarInt};
 
 pub struct CLoginDisconnect {
     reason: String,
@@ -11,10 +11,10 @@ impl CLoginDisconnect {
 }
 
 impl ClientPacket for CLoginDisconnect {
-    const PACKET_ID: VarInt = 0;
+    const PACKET_ID: VarInt = 0x00;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.write_string(&serde_json::to_string_pretty(&self.reason).unwrap());
+        bytebuf.put_string(&serde_json::to_string_pretty(&self.reason).unwrap());
     }
 }
 
@@ -48,15 +48,15 @@ impl<'a> CEncryptionRequest<'a> {
 }
 
 impl<'a> ClientPacket for CEncryptionRequest<'a> {
-    const PACKET_ID: VarInt = 1;
+    const PACKET_ID: VarInt = 0x01;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.write_string_len(self.server_id.as_str(), 20);
-        bytebuf.write_var_int(self.public_key_length);
-        bytebuf.write_bytes(self.public_key);
-        bytebuf.write_var_int(self.verify_token_length);
-        bytebuf.write_bytes(self.verify_token);
-        bytebuf.write_bool(self.should_authenticate);
+        bytebuf.put_string(self.server_id.as_str());
+        bytebuf.put_var_int(self.public_key_length);
+        bytebuf.put_slice(self.public_key);
+        bytebuf.put_var_int(self.verify_token_length);
+        bytebuf.put_slice(self.verify_token);
+        bytebuf.put_bool(self.should_authenticate);
     }
 }
 
@@ -96,14 +96,14 @@ pub struct Property {
 }
 
 impl ClientPacket for CLoginSuccess {
-    const PACKET_ID: VarInt = 2;
+    const PACKET_ID: VarInt = 0x02;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.write_uuid(self.uuid);
-        bytebuf.write_string(&self.username);
-        bytebuf.write_var_int(self.num_of_props);
+        bytebuf.put_uuid(self.uuid);
+        bytebuf.put_string(&self.username);
+        bytebuf.put_var_int(self.num_of_props);
         // Todo
-        bytebuf.write_bool(self.strict_error_handling);
+        bytebuf.put_bool(self.strict_error_handling);
     }
 }
 
@@ -114,9 +114,9 @@ impl CSetCompression {
 }
 
 impl ClientPacket for CSetCompression {
-    const PACKET_ID: VarInt = 3;
+    const PACKET_ID: VarInt = 0x03;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.write_var_int(self.threshold);
+        bytebuf.put_var_int(self.threshold);
     }
 }

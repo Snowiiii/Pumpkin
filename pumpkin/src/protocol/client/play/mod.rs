@@ -1,6 +1,6 @@
 use crate::{
     entity::player::GameMode,
-    protocol::{ClientPacket, VarInt},
+    protocol::{bytebuf::ByteBuffer, ClientPacket, VarInt},
 };
 
 pub struct SetHeldItem {
@@ -16,8 +16,8 @@ impl SetHeldItem {
 impl ClientPacket for SetHeldItem {
     const PACKET_ID: VarInt = 0x53;
 
-    fn write(&self, bytebuf: &mut crate::protocol::bytebuf::buffer::ByteBuffer) {
-        bytebuf.write_i8(self.slot);
+    fn write(&self, bytebuf: &mut ByteBuffer) {
+        bytebuf.put_i8(self.slot);
     }
 }
 
@@ -40,10 +40,10 @@ impl CPlayerAbilities {
 impl ClientPacket for CPlayerAbilities {
     const PACKET_ID: VarInt = 0x38;
 
-    fn write(&self, bytebuf: &mut crate::protocol::bytebuf::buffer::ByteBuffer) {
-        bytebuf.write_i8(self.flags);
-        bytebuf.write_f32(self.flying_speed);
-        bytebuf.write_f32(self.field_of_view);
+    fn write(&self, bytebuf: &mut ByteBuffer) {
+        bytebuf.put_i8(self.flags);
+        bytebuf.put_f32(self.flying_speed);
+        bytebuf.put_f32(self.field_of_view);
     }
 }
 
@@ -61,9 +61,9 @@ impl CChangeDifficulty {
 impl ClientPacket for CChangeDifficulty {
     const PACKET_ID: VarInt = 0x0B;
 
-    fn write(&self, bytebuf: &mut crate::protocol::bytebuf::buffer::ByteBuffer) {
-        bytebuf.write_u8(self.difficulty);
-        bytebuf.write_bool(self.locked);
+    fn write(&self, bytebuf: &mut ByteBuffer) {
+        bytebuf.put_u8(self.difficulty);
+        bytebuf.put_bool(self.locked);
     }
 }
 pub struct CLogin {
@@ -147,28 +147,28 @@ impl CLogin {
 impl ClientPacket for CLogin {
     const PACKET_ID: VarInt = 0x2B;
 
-    fn write(&self, bytebuf: &mut crate::protocol::bytebuf::buffer::ByteBuffer) {
-        bytebuf.write_i32(self.entity_id);
-        bytebuf.write_bool(self.is_hardcore);
-        bytebuf.write_var_int(self.dimension_count);
-        bytebuf.write_string_array(self.dimension_names.as_slice());
-        bytebuf.write_var_int(self.max_players);
-        bytebuf.write_var_int(self.view_distance);
-        bytebuf.write_var_int(self.simulated_distance);
-        bytebuf.write_bool(self.reduced_debug_info);
-        bytebuf.write_bool(self.enabled_respawn_screen);
-        bytebuf.write_bool(self.limited_crafting);
-        bytebuf.write_var_int(self.dimension_type);
-        bytebuf.write_string(&self.dimension_name);
-        bytebuf.write_i64(self.hashed_seed);
-        bytebuf.write_u8(self.game_mode.to_byte() as u8);
-        bytebuf.write_i8(self.previous_gamemode.to_byte());
-        bytebuf.write_bool(self.debug);
-        bytebuf.write_bool(self.is_flat);
-        bytebuf.write_bool(self.has_death_loc);
-        bytebuf.write_option(&self.death_dimension_name, |buf, v| buf.write_string(v));
-        bytebuf.write_option(&self.death_loc, |buf, v| buf.write_string(v));
-        bytebuf.write_var_int(self.portal_cooldown);
-        bytebuf.write_bool(self.enforce_secure_chat);
+    fn write(&self, bytebuf: &mut ByteBuffer) {
+        bytebuf.put_i32(self.entity_id);
+        bytebuf.put_bool(self.is_hardcore);
+        bytebuf.put_var_int(self.dimension_count);
+        bytebuf.put_string_array(self.dimension_names.as_slice());
+        bytebuf.put_var_int(self.max_players);
+        bytebuf.put_var_int(self.view_distance);
+        bytebuf.put_var_int(self.simulated_distance);
+        bytebuf.put_bool(self.reduced_debug_info);
+        bytebuf.put_bool(self.enabled_respawn_screen);
+        bytebuf.put_bool(self.limited_crafting);
+        bytebuf.put_var_int(self.dimension_type);
+        bytebuf.put_string(&self.dimension_name);
+        bytebuf.put_i64(self.hashed_seed);
+        bytebuf.put_u8(self.game_mode.to_byte() as u8);
+        bytebuf.put_i8(self.previous_gamemode.to_byte());
+        bytebuf.put_bool(self.debug);
+        bytebuf.put_bool(self.is_flat);
+        bytebuf.put_bool(self.has_death_loc);
+        bytebuf.put_option(&self.death_dimension_name, |buf, v| buf.put_string(v));
+        bytebuf.put_option(&self.death_loc, |buf, v| buf.put_string(v));
+        bytebuf.put_var_int(self.portal_cooldown);
+        bytebuf.put_bool(self.enforce_secure_chat);
     }
 }

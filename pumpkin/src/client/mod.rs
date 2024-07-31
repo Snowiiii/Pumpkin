@@ -9,7 +9,7 @@ use crate::{
     protocol::{
         client::{config::CConfigDisconnect, login::CLoginDisconnect},
         server::{
-            config::{SAcknowledgeFinishConfig, SClientInformation},
+            config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks},
             handshake::SHandShake,
             login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
             status::{SPingRequest, SStatusRequest},
@@ -167,6 +167,9 @@ impl Client {
                 }
                 SAcknowledgeFinishConfig::PACKET_ID => {
                     self.handle_config_acknowledged(server, SAcknowledgeFinishConfig::read(bytebuf))
+                }
+                SKnownPacks::PACKET_ID => {
+                    self.handle_known_packs(server, SKnownPacks::read(bytebuf))
                 }
                 _ => log::error!(
                     "Failed to handle packet id {} while in Config state",
