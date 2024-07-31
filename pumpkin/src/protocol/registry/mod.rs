@@ -28,24 +28,9 @@ struct Codec<T> {
 }
 #[derive(Debug, Clone, Serialize)]
 struct RegistryValue<T> {
-    name: String,
     id: i32,
+    name: String,
     element: T,
-}
-
-pub fn write_single_dimension(out: &mut ByteBuffer, world_min_y: i32, world_height: u32) {
-    let dimension = Dimension::default();
-    let nbt = Codec {
-        ty: "minecraft:dimension_type".into(),
-        value: vec![RegistryValue {
-            name: "minecraft:overworld".into(),
-            id: 0,
-            element: dimension,
-        }],
-    };
-    let val = &fastsnbt::to_string(&nbt).unwrap();
-    dbg!(val);
-    out.put_string(val);
 }
 
 pub fn write_codec(out: &mut ByteBuffer, world_min_y: i32, world_height: u32) {
@@ -78,8 +63,4 @@ pub fn write_codec(out: &mut ByteBuffer, world_min_y: i32, world_height: u32) {
     dbg!(val);
     // Dimension codec
     out.put_string(val);
-    // Current dimension type (key in dimension codec)
-    out.put_string("minecraft:overworld");
-    // Current world
-    out.put_string("minecraft:overworld");
 }
