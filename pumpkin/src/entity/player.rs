@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::protocol::VarInt;
 
 use super::{Entity, EntityId};
@@ -54,7 +56,7 @@ impl ChatMode {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub enum GameMode {
     Undefined,
     Survival,

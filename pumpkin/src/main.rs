@@ -21,11 +21,8 @@ pub mod world;
 fn main() -> io::Result<()> {
     use std::{collections::HashMap, rc::Rc};
 
-    Information::load("level.dat");
-    
     use client::Client;
     use configuration::AdvancedConfiguration;
-    use world::Information;
 
     let basic_config = BasicConfiguration::load("configuration.toml");
 

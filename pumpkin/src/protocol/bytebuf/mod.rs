@@ -1,5 +1,5 @@
 use core::str;
-use std::io::{self, Error, ErrorKind, Read, Write};
+use std::io::{self, Error, ErrorKind};
 
 use bytes::{Buf, BufMut, BytesMut};
 

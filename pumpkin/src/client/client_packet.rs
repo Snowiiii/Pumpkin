@@ -1,7 +1,7 @@
 use crate::{
     protocol::{
         client::{
-            config::{CFinishConfig, CKnownPacks, CPluginMessage, CRegistryData, Entry},
+            config::{CFinishConfig, CKnownPacks, CRegistryData, Entry},
             login::{CEncryptionRequest, CLoginSuccess},
             status::{CPingResponse, CStatusResponse},
         },

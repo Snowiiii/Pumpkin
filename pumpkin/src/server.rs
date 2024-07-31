@@ -17,12 +17,12 @@ use crate::{
     },
     protocol::{
         client::{
-            config::{CFinishConfig, CKnownPacks, CPluginMessage, CRegistryData, Entry},
+            config::{CPluginMessage},
             play::CLogin,
         },
         Players, Sample, StatusResponse, VarInt, VarInt32, Version,
     },
-    world::World,
+    world::world::World,
 };
 
 pub struct Server {
