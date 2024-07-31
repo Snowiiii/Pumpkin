@@ -26,25 +26,25 @@ impl<'a> ClientPacket for CPluginMessage<'a> {
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_string(&self.channel);
-        bytebuf.put_slice(&self.data);
+        bytebuf.put_slice(self.data);
     }
 }
 
-pub struct CConfigDisconnect {
-    reason: String,
+pub struct CConfigDisconnect<'a> {
+    reason: &'a str,
 }
 
-impl CConfigDisconnect {
-    pub fn new(reason: String) -> Self {
+impl<'a> CConfigDisconnect<'a> {
+    pub fn new(reason: &'a str) -> Self {
         Self { reason }
     }
 }
 
-impl ClientPacket for CConfigDisconnect {
+impl<'a> ClientPacket for CConfigDisconnect<'a> {
     const PACKET_ID: crate::protocol::VarInt = 0x02;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.put_string(&self.reason);
+        bytebuf.put_string(self.reason);
     }
 }
 
@@ -69,13 +69,12 @@ impl ClientPacket for CFinishConfig {
 }
 
 pub struct CKnownPacks<'a> {
-    count: VarInt,
-    known_packs: &'a [KnownPack],
+    known_packs: &'a [KnownPack<'a>],
 }
 
 impl<'a> CKnownPacks<'a> {
-    pub fn new(count: VarInt, known_packs: &'a [KnownPack]) -> Self {
-        Self { count, known_packs }
+    pub fn new(known_packs: &'a [KnownPack]) -> Self {
+        Self { known_packs }
     }
 }
 
@@ -83,47 +82,43 @@ impl<'a> ClientPacket for CKnownPacks<'a> {
     const PACKET_ID: VarInt = 0x0E;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
-        //  bytebuf.write_var_int(self.count);
-        bytebuf.put_list::<KnownPack>(&self.known_packs, |p, v| {
-            p.put_string(&v.namespace);
-            p.put_string(&v.id);
-            p.put_string(&v.version);
+        bytebuf.put_list::<KnownPack>(self.known_packs, |p, v| {
+            p.put_string(v.namespace);
+            p.put_string(v.id);
+            p.put_string(v.version);
         });
     }
 }
 
-pub struct CRegistryData {
-    registry_id: String,
-    entry_count: VarInt,
-    entries: Vec<Entry>,
+pub struct CRegistryData<'a> {
+    registry_id: &'a str,
+    entries: &'a [Entry<'a>],
 }
 
-impl CRegistryData {
-    pub fn new(registry_id: String, entry_count: VarInt, entries: Vec<Entry>) -> Self {
+impl<'a> CRegistryData<'a> {
+    pub fn new(registry_id: &'a str, entries: &'a [Entry]) -> Self {
         Self {
             registry_id,
-            entry_count,
             entries,
         }
     }
 }
 
-pub struct Entry {
-    pub entry_id: String,
+pub struct Entry<'a> {
+    pub entry_id: &'a str,
     pub has_data: bool,
     // data provided by registry::write_codec
 }
 
-impl ClientPacket for CRegistryData {
+impl<'a> ClientPacket for CRegistryData<'a> {
     const PACKET_ID: VarInt = 0x07;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.put_string(&self.registry_id);
-        bytebuf.put_var_int(self.entry_count);
-        bytebuf.put_list::<Entry>(&self.entries, |p, v| {
-            p.put_string(&v.entry_id);
+        bytebuf.put_string(self.registry_id);
+        bytebuf.put_list::<Entry>(self.entries, |p, v| {
+            p.put_string(v.entry_id);
             p.put_bool(v.has_data);
-            registry::write_single_dimension(p, -64, 320);
+            registry::write_codec(p, -64, 384);
         });
     }
 }

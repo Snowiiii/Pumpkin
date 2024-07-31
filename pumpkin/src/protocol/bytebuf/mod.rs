@@ -1,5 +1,5 @@
 use core::str;
-use std::io::{self, Error, ErrorKind, Read, Write};
+use std::io::{self, Error, ErrorKind};
 
 use bytes::{Buf, BufMut, BytesMut};
 
@@ -180,17 +180,17 @@ impl ByteBuffer {
         self.put_list(v, |p, &v| p.put_var_int(v))
     }
 
-    /* pub fn get_nbt(&mut self) -> Option<crab_nbt::NbtTag> {
-        match crab_nbt::NbtTag::deserialize(self.buf()) {
-            Ok(v) => Some(v),
-            Err(err) => None,
+    /*  pub fn get_nbt(&mut self) -> Option<fastnbt::value::Value> {
+            match crab_nbt::NbtTag::deserialize(self.buf()) {
+                Ok(v) => Some(v),
+                Err(err) => None,
+            }
         }
-    }
 
-    pub fn put_nbt(&mut self, nbt: NbtTag) {
-        self.buffer.put_slice(&nbt.serialize());
-        } */
-
+        pub fn put_nbt(&mut self, nbt: N) {
+            self.buffer.put_slice(&nbt.serialize());
+        }
+    */
     pub fn buf(&mut self) -> &mut BytesMut {
         &mut self.buffer
     }

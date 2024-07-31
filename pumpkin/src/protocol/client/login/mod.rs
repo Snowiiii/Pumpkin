@@ -1,16 +1,16 @@
 use crate::protocol::{bytebuf::ByteBuffer, ClientPacket, VarInt};
 
-pub struct CLoginDisconnect {
-    reason: String,
+pub struct CLoginDisconnect<'a> {
+    reason: &'a str,
 }
 
-impl CLoginDisconnect {
-    pub fn new(reason: String) -> Self {
+impl<'a> CLoginDisconnect<'a> {
+    pub fn new(reason: &'a str) -> Self {
         Self { reason }
     }
 }
 
-impl ClientPacket for CLoginDisconnect {
+impl<'a> ClientPacket for CLoginDisconnect<'a> {
     const PACKET_ID: VarInt = 0x00;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
@@ -19,28 +19,22 @@ impl ClientPacket for CLoginDisconnect {
 }
 
 pub struct CEncryptionRequest<'a> {
-    server_id: String, // 20
-    public_key_length: VarInt,
+    server_id: &'a str, // 20
     public_key: &'a [u8],
-    verify_token_length: VarInt,
     verify_token: &'a [u8],
     should_authenticate: bool,
 }
 
 impl<'a> CEncryptionRequest<'a> {
     pub fn new(
-        server_id: String,
-        public_key_length: VarInt,
+        server_id: &'a str,
         public_key: &'a [u8],
-        verify_token_length: VarInt,
         verify_token: &'a [u8],
         should_authenticate: bool,
     ) -> Self {
         Self {
             server_id,
-            public_key_length,
             public_key,
-            verify_token_length,
             verify_token,
             should_authenticate,
         }
@@ -51,10 +45,10 @@ impl<'a> ClientPacket for CEncryptionRequest<'a> {
     const PACKET_ID: VarInt = 0x01;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.put_string(self.server_id.as_str());
-        bytebuf.put_var_int(self.public_key_length);
+        bytebuf.put_string(self.server_id);
+        bytebuf.put_var_int(self.public_key.len() as VarInt);
         bytebuf.put_slice(self.public_key);
-        bytebuf.put_var_int(self.verify_token_length);
+        bytebuf.put_var_int(self.verify_token.len() as VarInt);
         bytebuf.put_slice(self.verify_token);
         bytebuf.put_bool(self.should_authenticate);
     }

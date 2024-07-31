@@ -56,7 +56,7 @@ impl PacketDecoder {
         Ok(Some(RawPacket {
             len: packet_len,
             id: packet_id,
-            bytebuf: ByteBuffer::new(BytesMut::from(data)),
+            bytebuf: ByteBuffer::new(data),
         }))
     }
 

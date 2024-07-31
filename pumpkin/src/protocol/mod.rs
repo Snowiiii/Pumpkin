@@ -124,7 +124,7 @@ pub trait ClientPacket {
     fn write(&self, bytebuf: &mut ByteBuffer);
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct StatusResponse {
     pub version: Version,
     pub players: Players,
@@ -132,27 +132,27 @@ pub struct StatusResponse {
     pub favicon: String, // data:image/png;base64,<data>
                          // Players, favicon ...
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct Version {
     pub name: String,
     pub protocol: u32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct Players {
     pub max: u32,
     pub online: u32,
     pub sample: Vec<Sample>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct Sample {
     pub name: String,
     pub id: String, // uuid
 }
 
-pub struct KnownPack {
-    pub namespace: String,
-    pub id: String,
-    pub version: String,
+pub struct KnownPack<'a> {
+    pub namespace: &'a str,
+    pub id: &'a str,
+    pub version: &'a str,
 }

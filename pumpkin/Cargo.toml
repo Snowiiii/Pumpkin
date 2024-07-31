@@ -30,4 +30,6 @@ crossbeam-channel = "0.5.13"
 uuid = "1.10"
 toml = "0.8.17"
 fastnbt = "2.5.0"
+fastsnbt = "0.2"
+
 

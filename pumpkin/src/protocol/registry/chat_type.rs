@@ -1,4 +1,4 @@
-use super::CodecItem;
+use super::RegistryValue;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
@@ -13,8 +13,8 @@ struct Decoration {
     parameters: Vec<String>,
 }
 
-pub(super) fn all() -> Vec<CodecItem<ChatType>> {
-    vec![CodecItem {
+pub(super) fn all() -> Vec<RegistryValue<ChatType>> {
+    vec![RegistryValue {
         name: "minecraft:chat".into(),
         id: 0,
         element: ChatType {

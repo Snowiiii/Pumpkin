@@ -1,7 +1,7 @@
 use crate::{
     protocol::{
         client::{
-            config::{CFinishConfig, CKnownPacks, CPluginMessage, CRegistryData, Entry},
+            config::{CFinishConfig, CKnownPacks, CRegistryData, Entry},
             login::{CEncryptionRequest, CLoginSuccess},
             status::{CPingResponse, CStatusResponse},
         },
@@ -83,10 +83,8 @@ impl ClientPacketProcessor for Client {
         let verify_token: [u8; 4] = rand::random();
         let public_key_der = &server.public_key_der;
         let packet = CEncryptionRequest::new(
-            "".into(),
-            public_key_der.len() as i32,
+            "",
             public_key_der,
-            verify_token.len() as i32,
             &verify_token,
             false, // TODO
         );
@@ -101,7 +99,7 @@ impl ClientPacketProcessor for Client {
         dbg!("encryption response");
         // should be impossible
         if self.uuid.is_none() || self.name.is_none() {
-            self.kick("UUID or Name is none".into());
+            self.kick("UUID or Name is none");
             return;
         }
         self.enable_encryption(server, encryption_response.shared_secret)
@@ -126,14 +124,11 @@ impl ClientPacketProcessor for Client {
         self.connection_state = ConnectionState::Config;
         Server::send_brand(self);
         // known data packs
-        self.send_packet(CKnownPacks::new(
-            1,
-            &[KnownPack {
-                namespace: "minecraft".to_string(),
-                id: "core".to_string(),
-                version: "1.21".to_string(),
-            }],
-        ));
+        self.send_packet(CKnownPacks::new(&[KnownPack {
+            namespace: "minecraft",
+            id: "core",
+            version: "1.21",
+        }]));
         dbg!("login achnowlaged");
     }
     fn handle_client_information(
@@ -155,11 +150,10 @@ impl ClientPacketProcessor for Client {
 
     fn handle_known_packs(&mut self, server: &mut Server, config_acknowledged: SKnownPacks) {
         self.send_packet(CRegistryData::new(
-            "0".into(),
-            1,
-            vec![
+            "dimension_type",
+            &[
                 Entry {
-                    entry_id: "minecraft:dimension_type".into(),
+                    entry_id: "minecraft:dimension_type",
                     has_data: true,
                 },
                 /*    Entry {

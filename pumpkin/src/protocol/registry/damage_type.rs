@@ -1,5 +1,6 @@
-use super::CodecItem;
 use serde::Serialize;
+
+use super::RegistryValue;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct DamageType {
@@ -60,10 +61,10 @@ const NAMES: &[&str] = &[
     "wither_skull",
 ];
 
-pub(super) fn all() -> Vec<CodecItem<DamageType>> {
+pub(super) fn all() -> Vec<RegistryValue<DamageType>> {
     let mut items: Vec<_> = NAMES
         .iter()
-        .map(|name| CodecItem {
+        .map(|name| RegistryValue {
             name: (*name).into(),
             id: 0,
             element: DamageType {

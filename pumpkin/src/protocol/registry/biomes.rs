@@ -1,6 +1,6 @@
 use crate::protocol::VarInt;
 
-use super::CodecItem;
+use super::RegistryValue;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
@@ -72,7 +72,7 @@ struct Music {
 }
 
 // 1.20.6 default https://gist.github.com/WinX64/ab8c7a8df797c273b32d3a3b66522906
-pub(super) fn all() -> Vec<CodecItem<Biome>> {
+pub(super) fn all() -> Vec<RegistryValue<Biome>> {
     let biome = Biome {
         has_precipitation: false,
         temperature: 1.0,
@@ -99,7 +99,7 @@ pub(super) fn all() -> Vec<CodecItem<Biome>> {
         },
     };
 
-    vec![CodecItem {
+    vec![RegistryValue {
         name: "minecraft:plains".into(),
         id: 0,
         element: biome,

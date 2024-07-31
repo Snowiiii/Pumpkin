@@ -16,10 +16,7 @@ use crate::{
         Entity, EntityId,
     },
     protocol::{
-        client::{
-            config::{CFinishConfig, CKnownPacks, CPluginMessage, CRegistryData, Entry},
-            play::CLogin,
-        },
+        client::{config::CPluginMessage, play::CLogin},
         Players, Sample, StatusResponse, VarInt, VarInt32, Version,
     },
     world::World,

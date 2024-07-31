@@ -222,7 +222,7 @@ impl Client {
         Ok(self.closed)
     }
 
-    pub fn kick(&mut self, reason: String) {
+    pub fn kick(&mut self, reason: &str) {
         // Todo
         match self.connection_state {
             ConnectionState::Login => {
