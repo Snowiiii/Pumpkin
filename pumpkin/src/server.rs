@@ -17,10 +17,10 @@ use crate::{
     },
     protocol::{
         client::{
-            config::{CKnownPacks, CRegistryData, Entry, KnownPack},
+            config::{CFinishConfig, CKnownPacks, CPluginMessage, CRegistryData, Entry},
             play::CLogin,
         },
-        Players, Sample, StatusResponse, VarInt, Version,
+        Players, Sample, StatusResponse, VarInt, VarInt32, Version,
     },
     world::World,
 };
@@ -94,23 +94,6 @@ impl Server {
                 entity_id: self.new_entity_id(),
             },
         };
-        // known data packs
-        client.send_packet(CKnownPacks::new(
-            1,
-            vec![KnownPack {
-                namespace: "minecraft".to_string(),
-                id: "core".to_string(),
-                version: "1.21".to_string(),
-            }],
-        ));
-        client.send_packet(CRegistryData::new(
-            "0".into(),
-            1,
-            vec![Entry {
-                entry_id: "minecraft:dimension_type".into(),
-                has_data: true,
-            }],
-        ));
 
         client.send_packet(CLogin::new(
             player.entity_id(),
@@ -143,6 +126,18 @@ impl Server {
     // move to world
     pub fn new_entity_id(&self) -> EntityId {
         self.entity_id.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn send_brand(client: &mut Client) {
+        // send server brand
+        let brand = "pumpkin";
+        let mut buf = vec![];
+        let _ = VarInt32(brand.len() as i32).encode(&mut buf);
+        buf.extend_from_slice(brand.as_bytes());
+        client.send_packet(CPluginMessage::new(
+            "minecraft:brand".to_string(),
+            buf.as_slice(),
+        ))
     }
 
     pub fn default_response(

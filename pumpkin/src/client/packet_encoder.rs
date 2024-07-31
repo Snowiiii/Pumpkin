@@ -6,7 +6,7 @@ use bytes::{BufMut, BytesMut};
 
 use crate::{
     client::MAX_PACKET_SIZE,
-    protocol::{bytebuf::buffer::ByteBuffer, ClientPacket, VarInt32},
+    protocol::{bytebuf::ByteBuffer, ClientPacket, VarInt32},
 };
 
 type Cipher = cfb8::Encryptor<aes::Aes128>;
@@ -25,13 +25,13 @@ impl PacketEncoder {
 
         let mut writer = (&mut self.buf).writer();
 
-        let mut packet_buf = ByteBuffer::new();
+        let mut packet_buf = ByteBuffer::empty();
         VarInt32(P::PACKET_ID)
             .encode(&mut writer)
             .context("failed to encode packet ID")?;
         packet.write(&mut packet_buf);
 
-        writer.write(packet_buf.as_bytes()).unwrap();
+        writer.write(packet_buf.buf()).unwrap();
 
         let data_len = self.buf.len() - start_len;
 

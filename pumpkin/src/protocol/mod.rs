@@ -1,12 +1,11 @@
 use std::io::{Read, Write};
 
 use anyhow::bail;
-use bytebuf::buffer::ByteBuffer;
+use bytebuf::ByteBuffer;
 use byteorder::ReadBytesExt;
 use serde::{Deserialize, Serialize};
 
 pub mod bytebuf;
-pub mod nbt;
 mod registry;
 
 pub mod client;
@@ -113,7 +112,6 @@ impl ConnectionState {
     }
 }
 
-#[derive(Debug)]
 pub struct RawPacket {
     pub len: VarInt,
     pub id: VarInt,
@@ -151,4 +149,10 @@ pub struct Players {
 pub struct Sample {
     pub name: String,
     pub id: String, // uuid
+}
+
+pub struct KnownPack {
+    pub namespace: String,
+    pub id: String,
+    pub version: String,
 }

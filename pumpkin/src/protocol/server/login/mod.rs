@@ -1,4 +1,4 @@
-use crate::protocol::{bytebuf::buffer::ByteBuffer, VarInt};
+use crate::protocol::{bytebuf::ByteBuffer, VarInt};
 
 pub struct SLoginStart {
     pub name: String, // 16
@@ -6,12 +6,12 @@ pub struct SLoginStart {
 }
 
 impl SLoginStart {
-    pub const PACKET_ID: VarInt = 0;
+    pub const PACKET_ID: VarInt = 0x00;
 
     pub fn read(bytebuf: &mut ByteBuffer) -> Self {
         Self {
-            name: bytebuf.read_string_len(16).unwrap(),
-            uuid: bytebuf.read_uuid().unwrap(),
+            name: bytebuf.get_string_len(16).unwrap(),
+            uuid: bytebuf.get_uuid(),
         }
     }
 }
@@ -24,18 +24,18 @@ pub struct SEncryptionResponse {
 }
 
 impl SEncryptionResponse {
-    pub const PACKET_ID: VarInt = 1;
+    pub const PACKET_ID: VarInt = 0x01;
 
     pub fn read(bytebuf: &mut ByteBuffer) -> Self {
-        let shared_secret_length = bytebuf.read_var_int().unwrap();
-        let shared_secret = bytebuf.read_bytes(shared_secret_length as usize).unwrap();
-        let verify_token_length = bytebuf.read_var_int().unwrap();
-        let verify_token = bytebuf.read_bytes(shared_secret_length as usize).unwrap();
+        let shared_secret_length = bytebuf.get_var_int();
+        let shared_secret = bytebuf.copy_to_bytes(shared_secret_length as usize);
+        let verify_token_length = bytebuf.get_var_int();
+        let verify_token = bytebuf.copy_to_bytes(shared_secret_length as usize);
         Self {
             shared_secret_length,
-            shared_secret,
+            shared_secret: shared_secret.to_vec(),
             verify_token_length,
-            verify_token,
+            verify_token: verify_token.to_vec(),
         }
     }
 }
@@ -47,12 +47,12 @@ pub struct SLoginPluginResponse<'a> {
 }
 
 impl<'a> SLoginPluginResponse<'a> {
-    pub const PACKET_ID: VarInt = 2;
+    pub const PACKET_ID: VarInt = 0x02;
 
     pub fn read(bytebuf: &mut ByteBuffer) -> Self {
         Self {
-            message_id: bytebuf.read_var_int().unwrap(),
-            successful: bytebuf.read_bool().unwrap(),
+            message_id: bytebuf.get_var_int(),
+            successful: bytebuf.get_bool(),
             data: None, // TODO
         }
     }
@@ -64,7 +64,7 @@ pub struct SLoginAcknowledged {
 }
 
 impl SLoginAcknowledged {
-    pub const PACKET_ID: VarInt = 3;
+    pub const PACKET_ID: VarInt = 0x03;
 
     pub fn read(_bytebuf: &mut ByteBuffer) -> Self {
         Self {}

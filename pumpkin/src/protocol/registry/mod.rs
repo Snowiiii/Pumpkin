@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use super::{bytebuf::buffer::ByteBuffer, nbt};
+use super::bytebuf::ByteBuffer;
 
 mod biomes;
 mod chat_type;
@@ -32,12 +32,9 @@ struct CodecItem<T> {
     element: T,
 }
 
-pub fn write_single_dimension<T>(out: &mut ByteBuffer, world_min_y: i32, world_height: u32)
-where
-    std::io::Cursor<T>: std::io::Write,
-{
+pub fn write_single_dimension(out: &mut ByteBuffer, world_min_y: i32, world_height: u32) {
     let dimension = dimensions::overworld(world_min_y, world_height);
-    out.write_bytes(&nbt::to_nbt("", &dimension).unwrap().serialize());
+    //  out.put_slice(&crab_nbt::nbt!("", &dimension).unwrap().serialize());
 }
 
 pub fn write_codec(out: &mut ByteBuffer, world_min_y: i32, world_height: u32) {
@@ -67,9 +64,9 @@ pub fn write_codec(out: &mut ByteBuffer, world_min_y: i32, world_height: u32) {
     };
 
     // Dimension codec
-    out.write_bytes(&nbt::to_nbt("", &info).unwrap().serialize());
+    // out.put_slice(&nbt::to_nbt("", &info).unwrap().serialize());
     // Current dimension type (key in dimension codec)
-    out.write_string("minecraft:overworld");
+    out.put_string("minecraft:overworld");
     // Current world
-    out.write_string("minecraft:overworld");
+    out.put_string("minecraft:overworld");
 }

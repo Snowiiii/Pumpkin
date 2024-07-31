@@ -16,7 +16,7 @@ rsa-der = "0.3.0"
 aes = "0.8.4"
 cfb8 = "0.8.1"
 flate2 = "1.0.30"
-bytes = "1.6.1"
+bytes = "1.7"
 
 anyhow = "1.0.86"
 
@@ -30,5 +30,6 @@ mio = { version = "1.0.1", features = ["os-poll", "net"]}
 crossbeam-channel = "0.5.13"
 uuid = "1.10"
 toml = "0.8.17"
+crab_nbt = "0.1.2"
 
 

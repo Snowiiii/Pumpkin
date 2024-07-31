@@ -4,7 +4,7 @@ use bytes::{Buf, BytesMut};
 
 use crate::{
     client::MAX_PACKET_SIZE,
-    protocol::{bytebuf::buffer::ByteBuffer, RawPacket, VarInt32, VarIntDecodeError},
+    protocol::{bytebuf::ByteBuffer, RawPacket, VarInt32, VarIntDecodeError},
 };
 
 type Cipher = cfb8::Decryptor<aes::Aes128>;
@@ -56,7 +56,7 @@ impl PacketDecoder {
         Ok(Some(RawPacket {
             len: packet_len,
             id: packet_id,
-            bytebuf: ByteBuffer::from_bytes(&data),
+            bytebuf: ByteBuffer::new(BytesMut::from(data)),
         }))
     }
 

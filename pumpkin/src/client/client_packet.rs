@@ -1,17 +1,17 @@
 use crate::{
     protocol::{
         client::{
-            config::CFinishConfig,
+            config::{CFinishConfig, CKnownPacks, CPluginMessage, CRegistryData, Entry},
             login::{CEncryptionRequest, CLoginSuccess},
             status::{CPingResponse, CStatusResponse},
         },
         server::{
-            config::{SAcknowledgeFinishConfig, SClientInformation},
+            config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks},
             handshake::SHandShake,
             login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
             status::{SPingRequest, SStatusRequest},
         },
-        ConnectionState,
+        ConnectionState, KnownPack,
     },
     server::Server,
 };
@@ -47,6 +47,7 @@ pub trait ClientPacketProcessor {
         server: &mut Server,
         client_information: SClientInformation,
     );
+    fn handle_known_packs(&mut self, server: &mut Server, config_acknowledged: SKnownPacks);
     fn handle_config_acknowledged(
         &mut self,
         server: &mut Server,
@@ -120,10 +121,19 @@ impl ClientPacketProcessor for Client {
     fn handle_login_acknowledged(
         &mut self,
         _server: &mut Server,
-        login_acknowledged: SLoginAcknowledged,
+        _login_acknowledged: SLoginAcknowledged,
     ) {
-        let _ = login_acknowledged;
         self.connection_state = ConnectionState::Config;
+        Server::send_brand(self);
+        // known data packs
+        self.send_packet(CKnownPacks::new(
+            1,
+            &[KnownPack {
+                namespace: "minecraft".to_string(),
+                id: "core".to_string(),
+                version: "1.21".to_string(),
+            }],
+        ));
         dbg!("login achnowlaged");
     }
     fn handle_client_information(
@@ -141,7 +151,34 @@ impl ClientPacketProcessor for Client {
             text_filtering: client_information.text_filtering,
             server_listing: client_information.server_listing,
         });
+    }
+
+    fn handle_known_packs(&mut self, server: &mut Server, config_acknowledged: SKnownPacks) {
+        self.send_packet(CRegistryData::new(
+            "0".into(),
+            1,
+            vec![
+                Entry {
+                    entry_id: "minecraft:dimension_type".into(),
+                    has_data: true,
+                },
+                /*    Entry {
+                    entry_id: "minecraft:worldgen/biome".into(),
+                    has_data: true,
+                },
+                Entry {
+                    entry_id: "minecraft:chat_type".into(),
+                    has_data: true,
+                },
+                Entry {
+                    entry_id: "minecraft:damage_type".into(),
+                    has_data: true,
+                    }, */
+            ],
+        ));
+
         // We are done with configuring
+        dbg!("finish config");
         self.send_packet(CFinishConfig::new());
     }
 

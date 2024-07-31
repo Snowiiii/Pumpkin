@@ -1,6 +1,6 @@
 use crate::{
     entity::player::{ChatMode, Hand},
-    protocol::{bytebuf::buffer::ByteBuffer, VarInt},
+    protocol::{bytebuf::ByteBuffer, VarInt},
 };
 
 pub struct SClientInformation {
@@ -15,18 +15,18 @@ pub struct SClientInformation {
 }
 
 impl SClientInformation {
-    pub const PACKET_ID: VarInt = 0;
+    pub const PACKET_ID: VarInt = 0x00;
 
     pub fn read(bytebuf: &mut ByteBuffer) -> Self {
         Self {
-            locale: bytebuf.read_string_len(16).unwrap(),
-            view_distance: bytebuf.read_i8().unwrap(),
-            chat_mode: ChatMode::from_varint(bytebuf.read_var_int().unwrap()),
-            chat_colors: bytebuf.read_bool().unwrap(),
-            skin_parts: bytebuf.read_u8().unwrap(),
-            main_hand: Hand::from_varint(bytebuf.read_var_int().unwrap()),
-            text_filtering: bytebuf.read_bool().unwrap(),
-            server_listing: bytebuf.read_bool().unwrap(),
+            locale: bytebuf.get_string_len(16).unwrap(),
+            view_distance: bytebuf.get_i8(),
+            chat_mode: ChatMode::from_varint(bytebuf.get_var_int()),
+            chat_colors: bytebuf.get_bool(),
+            skin_parts: bytebuf.get_u8(),
+            main_hand: Hand::from_varint(bytebuf.get_var_int()),
+            text_filtering: bytebuf.get_bool(),
+            server_listing: bytebuf.get_bool(),
         }
     }
 }
@@ -34,9 +34,24 @@ impl SClientInformation {
 pub struct SAcknowledgeFinishConfig {}
 
 impl SAcknowledgeFinishConfig {
-    pub const PACKET_ID: VarInt = 3;
+    pub const PACKET_ID: VarInt = 0x03;
 
     pub fn read(_bytebuf: &mut ByteBuffer) -> Self {
         Self {}
+    }
+}
+
+pub struct SKnownPacks {
+    known_pack_count: VarInt,
+    // known_packs: &'a [KnownPack]
+}
+
+impl SKnownPacks {
+    pub const PACKET_ID: VarInt = 0x07;
+
+    pub fn read(bytebuf: &mut ByteBuffer) -> Self {
+        Self {
+            known_pack_count: bytebuf.get_var_int(),
+        }
     }
 }

@@ -1,30 +1,54 @@
+use crate::protocol::VarInt;
+
 use super::CodecItem;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Biome {
-    category: String,
-    depth: f32,
+    has_precipitation: bool,
+    temperature: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    temperature_modifier: Option<String>,
     downfall: f32,
     effects: BiomeEffects,
-    precipitation: String,
-    scale: f32,
-    temperature: f32,
-    has_precipitation: bool,
 }
 #[derive(Debug, Clone, Serialize)]
 struct BiomeEffects {
-    sky_color: i32,
     fog_color: i32,
-    water_fog_color: i32,
     water_color: i32,
+    water_fog_color: i32,
+    sky_color: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
     foliage_color: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     grass_color: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    mood_sound: Option<MoodSound>, // 1.18.2+
+    grass_color_modifier: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    particle: Option<Particle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ambient_sound: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mood_sound: Option<MoodSound>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    additions_sound: Option<AdditionsSound>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    music: Option<Music>,
 }
+
+#[derive(Debug, Clone, Serialize)]
+struct Particle {
+    options: ParticleOptions,
+    probability: f32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ParticleOptions {
+    typee: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    value: Option<VarInt>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 struct MoodSound {
     block_search_extent: i32,
@@ -33,35 +57,45 @@ struct MoodSound {
     tick_delay: i32,
 }
 
+#[derive(Debug, Clone, Serialize)]
+struct AdditionsSound {
+    sound: String,
+    tick_chance: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct Music {
+    sound: String,
+    min_delay: i32,
+    max_delay: i32,
+    replace_current_music: bool,
+}
+
+// 1.20.6 default https://gist.github.com/WinX64/ab8c7a8df797c273b32d3a3b66522906
 pub(super) fn all() -> Vec<CodecItem<Biome>> {
     let biome = Biome {
-        precipitation: "rain".into(),
-        depth: 1.0,
+        has_precipitation: false,
         temperature: 1.0,
-        scale: 1.0,
-        downfall: 1.0,
-        category: "none".into(),
-        has_precipitation: true,
+        temperature_modifier: None,
+        downfall: 0.0,
         effects: BiomeEffects {
-            sky_color: 0x78a7ff,
-            fog_color: 0xc0d8ff,
-            water_fog_color: 0x050533,
-            water_color: 0x3f76e4,
-            foliage_color: None,
-            grass_color: None,
+            fog_color: 0x7FA1FF,
+            water_color: 0x7FA1FF,
+            water_fog_color: 0x7FA1FF,
+            sky_color: 0x7FA1FF,
+            foliage_color: Some(0x7FA1FF),
+            grass_color: Some(0x7FA1FF),
+            grass_color_modifier: None,
+            particle: None,
+            ambient_sound: None,
             mood_sound: Some(MoodSound {
                 block_search_extent: 8,
                 offset: 2.0,
                 sound: "minecraft:ambient.cave".into(),
                 tick_delay: 6000,
             }),
-            // sky_color:       0xff00ff,
-            // water_color:     0xff00ff,
-            // fog_color:       0xff00ff,
-            // water_fog_color: 0xff00ff,
-            // grass_color:     0xff00ff,
-            // foliage_color:   0x00ffe5,
-            // grass_color:     0xff5900,
+            additions_sound: None,
+            music: None,
         },
     };
 

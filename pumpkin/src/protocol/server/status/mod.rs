@@ -1,11 +1,11 @@
-use crate::protocol::{bytebuf::buffer::ByteBuffer, VarInt};
+use crate::protocol::{bytebuf::ByteBuffer, VarInt};
 
 pub struct SStatusRequest {
     // empty
 }
 
 impl SStatusRequest {
-    pub const PACKET_ID: VarInt = 0;
+    pub const PACKET_ID: VarInt = 0x00;
 
     pub fn read(_bytebuf: &mut ByteBuffer) -> Self {
         Self {}
@@ -17,11 +17,11 @@ pub struct SPingRequest {
 }
 
 impl SPingRequest {
-    pub const PACKET_ID: VarInt = 1;
+    pub const PACKET_ID: VarInt = 0x01;
 
     pub fn read(bytebuf: &mut ByteBuffer) -> Self {
         Self {
-            payload: bytebuf.read_i64().unwrap(),
+            payload: bytebuf.get_i64(),
         }
     }
 }
