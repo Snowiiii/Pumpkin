@@ -2,7 +2,7 @@ use std::io::{Read, Write};
 
 use anyhow::bail;
 use bytebuf::ByteBuffer;
-use byteorder::ReadBytesExt;
+use bytes::{Buf, BytesMut};
 use serde::{Deserialize, Serialize};
 
 pub mod bytebuf;
@@ -29,10 +29,10 @@ impl VarInt32 {
         }
     }
 
-    pub fn decode_partial<R: Read>(mut r: R) -> Result<i32, VarIntDecodeError> {
+    pub fn decode_partial(r: &mut &[u8]) -> Result<i32, VarIntDecodeError> {
         let mut val = 0;
         for i in 0..Self::MAX_SIZE {
-            let byte = r.read_u8().map_err(|_| VarIntDecodeError::Incomplete)?;
+            let byte = r.get_u8();
             val |= (i32::from(byte) & 0b01111111) << (i * 7);
             if byte & 0b10000000 == 0 {
                 return Ok(val);
@@ -70,7 +70,7 @@ impl VarInt32 {
     pub fn decode(r: &mut &[u8]) -> anyhow::Result<Self> {
         let mut val = 0;
         for i in 0..Self::MAX_SIZE {
-            let byte = r.read_u8()?;
+            let byte = r.get_u8();
             val |= (i32::from(byte) & 0b01111111) << (i * 7);
             if byte & 0b10000000 == 0 {
                 return Ok(VarInt32(val));
