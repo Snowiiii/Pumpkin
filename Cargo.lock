@@ -196,8 +196,7 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 [[package]]
 name = "fastnbt"
 version = "2.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d4a73a95dc65551ccd98e1ecd1adb5d1ba5361146963b31f481ca42fc0520a3"
+source = "git+https://github.com/owengage/fastnbt.git#0ea1a338671e51e62277645fbfffbdcaf2d2ec60"
 dependencies = [
  "byteorder",
  "cesu8",
