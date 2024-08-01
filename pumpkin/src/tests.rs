@@ -18,7 +18,6 @@ mod tests {
         let mut length = 0;
         for chunk in vector {
             for block in chunk.blocks {
-                
                 length = length + 1;
             }
         }

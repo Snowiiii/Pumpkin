@@ -48,7 +48,7 @@ impl WorldChunk {
                             y: y as i32,
                             z: z as i32,
                             id: 10, //this will be the block id as a enum
-                            biome: biome,
+                            biome,
                             properties: block_data,
                         };
 
