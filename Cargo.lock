@@ -213,7 +213,7 @@ checksum = "619fbd9bb48f9e54a7ff88cdd0f7048b8ea519448518c690057f9d03d3e81ebf"
 dependencies = [
  "bit_field",
  "byteorder",
- "fastnbt",
+ "fastnbt 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2",
  "image 0.23.14",
  "log",
@@ -222,6 +222,18 @@ dependencies = [
  "serde",
  "serde_json",
  "tar",
+]
+
+[[package]]
+name = "fastnbt"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d4a73a95dc65551ccd98e1ecd1adb5d1ba5361146963b31f481ca42fc0520a3"
+dependencies = [
+ "byteorder",
+ "cesu8",
+ "serde",
+ "serde_bytes",
 ]
 
 [[package]]
@@ -632,7 +644,7 @@ dependencies = [
  "cfb8",
  "crossbeam-channel",
  "fastanvil",
- "fastnbt",
+ "fastnbt 2.5.0 (git+https://github.com/owengage/fastnbt.git)",
  "fastsnbt",
  "flate2",
  "image 0.25.2",

@@ -1,9 +1,6 @@
-use core::str;
-use std::{fs::File, io::Read};
 
-use dimensions::{Dimension, DimensionEffects, MonsterSpawnLightLevel};
-use fastnbt::{nbt, to_bytes_with_opts, SerOpts};
-use flate2::read::GzDecoder;
+use dimensions::{Dimension};
+use fastnbt::{SerOpts};
 use serde::Serialize;
 
 use super::bytebuf::ByteBuffer;

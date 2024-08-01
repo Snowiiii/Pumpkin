@@ -1,13 +1,34 @@
 use crate::entity::player::Player;
 
+use super::{chunk::WorldChunk, leveldat::LevelDat};
+
 pub struct World {
     pub players: Vec<Player>,
+    pub loaded_chunks: Vec<WorldChunk>,
+    pub level_dat: LevelDat,
 }
 
 impl World {
-    pub fn new() -> Self {
+    //path is the path to the world and region is the path to the region folder in the world
+    pub fn new(path: &str, region: &str) -> Self {
+        //load some chunks
+
+        let mut loaded_chunks = Vec::new();
+
+        let chunk_1 = WorldChunk::load_chunk(region, 0, 0);
+        let chunk_2 = WorldChunk::load_chunk(region, 0, 1);
+        let chunk_3 = WorldChunk::load_chunk(region, 1, 0);
+        let chunk_4 = WorldChunk::load_chunk(region, 1, 1);
+
+        loaded_chunks.push(chunk_1);
+        loaded_chunks.push(chunk_2);
+        loaded_chunks.push(chunk_3);
+        loaded_chunks.push(chunk_4);
+
         Self {
             players: Vec::new(),
+            loaded_chunks,
+            level_dat: LevelDat::load(format!("{}/level.dat", path).as_str()),
         }
     }
 
