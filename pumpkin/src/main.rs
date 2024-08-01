@@ -14,6 +14,7 @@ pub mod configuration;
 pub mod entity;
 pub mod protocol;
 pub mod server;
+pub mod tests;
 pub mod util;
 pub mod world;
 

@@ -19,7 +19,7 @@ use crate::{
         client::{config::CPluginMessage, play::CLogin},
         Players, Sample, StatusResponse, VarInt, VarInt32, Version,
     },
-    world::World,
+    world::world::World,
 };
 
 pub struct Server {
