@@ -24,5 +24,8 @@ A Minecraft server written in pure Rust
 - [ ] Compression
 - [x] Configuration
 
+## Contributions
+Contributions are welcome!. Feel free to open an issue or pull request.
+
 ### Thanks
 A big thank you to https://wiki.vg/ for providing valuable information used in the development of this project.

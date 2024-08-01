@@ -1,5 +1,5 @@
 use std::{
-    io::Cursor,
+    io::{self, Cursor},
     sync::atomic::{AtomicI32, Ordering},
 };
 
@@ -9,7 +9,7 @@ use rsa::{rand_core::OsRng, traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey}
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    client::Client,
+    client::{Client, PacketError},
     configuration::{AdvancedConfiguration, BasicConfiguration},
     entity::{
         player::{GameMode, Player},
@@ -77,10 +77,9 @@ impl Server {
     pub fn poll(
         &mut self,
         client: &mut Client,
-        poll: &Poll,
+        _poll: &Poll,
         event: &Event,
-    ) -> anyhow::Result<bool> {
-        let _ = poll;
+    ) -> Result<bool, io::Error> {
         // todo, Poll players in every world
         client.poll(self, event)
     }
@@ -92,30 +91,32 @@ impl Server {
             },
         };
 
-        client.send_packet(CLogin::new(
-            player.entity_id(),
-            self.difficulty == Difficulty::Hard,
-            1,
-            vec!["minecraft:overworld".into()],
-            self.max_players as VarInt,
-            8, //  view distance todo
-            8, // sim view dinstance todo
-            false,
-            false,
-            false,
-            1,
-            "minecraft:overworld".into(),
-            0, // seed
-            GameMode::Survival,
-            GameMode::Undefined,
-            false,
-            false,
-            false, // deth loc
-            None,
-            None,
-            0,
-            false,
-        ));
+        client
+            .send_packet(CLogin::new(
+                player.entity_id(),
+                self.difficulty == Difficulty::Hard,
+                1,
+                vec!["minecraft:overworld".into()],
+                self.max_players as VarInt,
+                8, //  view distance todo
+                8, // sim view dinstance todo
+                false,
+                false,
+                false,
+                1,
+                "minecraft:overworld".into(),
+                0, // seed
+                GameMode::Survival,
+                GameMode::Undefined,
+                false,
+                false,
+                false, // deth loc
+                None,
+                None,
+                0,
+                false,
+            ))
+            .unwrap_or_else(|e| client.kick(&e.to_string()));
 
         client.player = Some(player);
     }
@@ -125,7 +126,7 @@ impl Server {
         self.entity_id.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn send_brand(client: &mut Client) {
+    pub fn send_brand(client: &mut Client) -> Result<(), PacketError> {
         // send server brand
         let brand = "pumpkin";
         let mut buf = vec![];

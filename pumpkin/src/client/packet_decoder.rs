@@ -1,9 +1,8 @@
 use aes::cipher::{generic_array::GenericArray, BlockDecryptMut, BlockSizeUser, KeyIvInit};
-use anyhow::{bail, ensure, Context};
 use bytes::{Buf, BytesMut};
 
 use crate::{
-    client::MAX_PACKET_SIZE,
+    client::{PacketError, MAX_PACKET_SIZE},
     protocol::{bytebuf::ByteBuffer, RawPacket, VarInt32, VarIntDecodeError},
 };
 
@@ -18,19 +17,18 @@ pub struct PacketDecoder {
 }
 
 impl PacketDecoder {
-    pub fn decode(&mut self) -> anyhow::Result<Option<RawPacket>> {
+    pub fn decode(&mut self) -> Result<Option<RawPacket>, PacketError> {
         let mut r = &self.buf[..];
 
         let packet_len = match VarInt32::decode_partial(&mut r) {
             Ok(len) => len,
             Err(VarIntDecodeError::Incomplete) => return Ok(None),
-            Err(VarIntDecodeError::TooLarge) => bail!("malformed packet length VarInt"),
+            Err(VarIntDecodeError::TooLarge) => Err(PacketError::MailformedLength)?,
         };
 
-        ensure!(
-            (0..=MAX_PACKET_SIZE).contains(&packet_len),
-            "packet length of {packet_len} is out of bounds"
-        );
+        if !(0..=MAX_PACKET_SIZE).contains(&packet_len) {
+            Err(PacketError::OutOfBounds)?
+        }
 
         if r.len() < packet_len as usize {
             // Not enough data arrived yet.
@@ -48,7 +46,7 @@ impl PacketDecoder {
 
         r = &data[..];
         let packet_id = VarInt32::decode(&mut r)
-            .context("failed to decode packet ID")?
+            .map_err(|_| PacketError::DecodeID)?
             .0;
 
         data.advance(data.len() - r.len());

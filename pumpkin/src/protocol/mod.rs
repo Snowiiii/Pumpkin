@@ -1,9 +1,9 @@
-use std::io::{Read, Write};
+use std::io::{self, Write};
 
-use anyhow::bail;
 use bytebuf::ByteBuffer;
-use bytes::{Buf, BytesMut};
-use serde::{Deserialize, Serialize};
+use bytes::Buf;
+use serde::Serialize;
+use thiserror::Error;
 
 pub mod bytebuf;
 mod registry;
@@ -42,7 +42,7 @@ impl VarInt32 {
         Err(VarIntDecodeError::TooLarge)
     }
 
-    pub fn encode(&self, mut w: impl Write) -> anyhow::Result<()> {
+    pub fn encode(&self, mut w: impl Write) -> Result<(), io::Error> {
         let x = self.0 as u64;
         let stage1 = (x & 0x000000000000007f)
             | ((x & 0x0000000000003f80) << 1)
@@ -63,11 +63,10 @@ impl VarInt32 {
         let bytes = merged.to_le_bytes();
 
         w.write_all(unsafe { bytes.get_unchecked(..bytes_needed as usize) })?;
-
         Ok(())
     }
 
-    pub fn decode(r: &mut &[u8]) -> anyhow::Result<Self> {
+    pub fn decode(r: &mut &[u8]) -> Result<Self, VarIntDecodeError> {
         let mut val = 0;
         for i in 0..Self::MAX_SIZE {
             let byte = r.get_u8();
@@ -76,13 +75,15 @@ impl VarInt32 {
                 return Ok(VarInt32(val));
             }
         }
-        bail!("VarInt is too large")
+        Err(VarIntDecodeError::TooLarge)
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Error)]
 pub enum VarIntDecodeError {
+    #[error("incomplete VarInt decode")]
     Incomplete,
+    #[error("VarInt is too large")]
     TooLarge,
 }
 

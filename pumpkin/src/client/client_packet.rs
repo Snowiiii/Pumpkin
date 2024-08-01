@@ -18,6 +18,8 @@ use crate::{
 
 use super::{Client, PlayerConfig};
 
+/// Processes incoming Packets from the Client to the Server
+/// Implements the `Client` Packets, So everything before the Play state, then will use the `PlayerPacketProcessor`
 pub trait ClientPacketProcessor {
     // Handshake
     fn handle_handshake(&mut self, server: &mut Server, handshake: SHandShake);
@@ -65,14 +67,18 @@ impl ClientPacketProcessor for Client {
     fn handle_status_request(&mut self, server: &mut Server, _status_request: SStatusRequest) {
         dbg!("sending status");
 
-        let response = serde_json::to_string(&server.status_response).unwrap();
-
-        self.send_packet(CStatusResponse::new(response));
+        if let Ok(response) = serde_json::to_string(&server.status_response) {
+            self.send_packet(CStatusResponse::new(response))
+                .unwrap_or_else(|e| self.kick(&e.to_string()));
+        } else {
+            log::error!("Failed to parse Status response to JSON")
+        }
     }
 
     fn handle_ping_request(&mut self, _server: &mut Server, ping_request: SPingRequest) {
         dbg!("ping");
-        self.send_packet(CPingResponse::new(ping_request.payload));
+        self.send_packet(CPingResponse::new(ping_request.payload))
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
         self.close();
     }
 
@@ -88,7 +94,8 @@ impl ClientPacketProcessor for Client {
             &verify_token,
             false, // TODO
         );
-        self.send_packet(packet);
+        self.send_packet(packet)
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
     }
 
     fn handle_encryption_response(
@@ -97,16 +104,20 @@ impl ClientPacketProcessor for Client {
         encryption_response: SEncryptionResponse,
     ) {
         dbg!("encryption response");
-        // should be impossible
-        if self.uuid.is_none() || self.name.is_none() {
-            self.kick("UUID or Name is none");
-            return;
-        }
         self.enable_encryption(server, encryption_response.shared_secret)
-            .unwrap();
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
 
-        let packet = CLoginSuccess::new(self.uuid.unwrap(), self.name.clone().unwrap(), 0, false);
-        self.send_packet(packet);
+        if let Some(uuid) = self.uuid {
+            if let Some(name) = &self.name {
+                let packet = CLoginSuccess::new(uuid, name.clone(), 0, false);
+                self.send_packet(packet)
+                    .unwrap_or_else(|e| self.kick(&e.to_string()));
+            } else {
+                self.kick("Name is none");
+            }
+        } else {
+            self.kick("UUID is none");
+        }
     }
 
     fn handle_plugin_response(
@@ -122,13 +133,14 @@ impl ClientPacketProcessor for Client {
         _login_acknowledged: SLoginAcknowledged,
     ) {
         self.connection_state = ConnectionState::Config;
-        Server::send_brand(self);
+        Server::send_brand(self).unwrap_or_else(|e| self.kick(&e.to_string()));
         // known data packs
         self.send_packet(CKnownPacks::new(&[KnownPack {
             namespace: "minecraft",
             id: "core",
             version: "1.21",
-        }]));
+        }]))
+        .unwrap_or_else(|e| self.kick(&e.to_string()));
         dbg!("login achnowlaged");
     }
     fn handle_client_information(
@@ -169,11 +181,13 @@ impl ClientPacketProcessor for Client {
                     has_data: true,
                     }, */
             ],
-        ));
+        ))
+        .unwrap_or_else(|e| self.kick(&e.to_string()));
 
         // We are done with configuring
         dbg!("finish config");
-        self.send_packet(CFinishConfig::new());
+        self.send_packet(CFinishConfig::new())
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
     }
 
     fn handle_config_acknowledged(

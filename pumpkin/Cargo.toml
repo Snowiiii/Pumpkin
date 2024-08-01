@@ -18,7 +18,7 @@ cfb8 = "0.8.1"
 flate2 = "1.0.30"
 bytes = "1.7"
 
-anyhow = "1.0.86"
+thiserror = "1.0.63"
 
 base64 = "0.22.1"
 image = { version = "0.25", default-features = false, features = ["png"]}

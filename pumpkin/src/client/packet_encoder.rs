@@ -1,13 +1,14 @@
 use std::io::Write;
 
 use aes::cipher::{generic_array::GenericArray, BlockEncryptMut, BlockSizeUser, KeyIvInit};
-use anyhow::{ensure, Context};
 use bytes::{BufMut, BytesMut};
 
 use crate::{
     client::MAX_PACKET_SIZE,
     protocol::{bytebuf::ByteBuffer, ClientPacket, VarInt32},
 };
+
+use super::PacketError;
 
 type Cipher = cfb8::Encryptor<aes::Aes128>;
 
@@ -20,7 +21,7 @@ pub struct PacketEncoder {
 }
 
 impl PacketEncoder {
-    pub fn append_packet<P: ClientPacket>(&mut self, packet: P) -> anyhow::Result<()> {
+    pub fn append_packet<P: ClientPacket>(&mut self, packet: P) -> Result<(), PacketError> {
         let start_len = self.buf.len();
 
         let mut writer = (&mut self.buf).writer();
@@ -28,10 +29,12 @@ impl PacketEncoder {
         let mut packet_buf = ByteBuffer::empty();
         VarInt32(P::PACKET_ID)
             .encode(&mut writer)
-            .context("failed to encode packet ID")?;
+            .map_err(|_| PacketError::EncodeID)?;
         packet.write(&mut packet_buf);
 
-        writer.write(packet_buf.buf()).unwrap();
+        writer
+            .write(packet_buf.buf())
+            .map_err(|_| PacketError::EncodeFailedWrite)?;
 
         let data_len = self.buf.len() - start_len;
 
@@ -39,10 +42,9 @@ impl PacketEncoder {
         }
         let packet_len = data_len;
 
-        ensure!(
-            packet_len <= MAX_PACKET_SIZE as usize,
-            "packet exceeds maximum length"
-        );
+        if packet_len >= MAX_PACKET_SIZE as usize {
+            Err(PacketError::TooLong)?
+        }
 
         let packet_len_size = VarInt32(packet_len as i32).written_size();
 
@@ -51,7 +53,9 @@ impl PacketEncoder {
             .copy_within(start_len..start_len + data_len, start_len + packet_len_size);
 
         let front = &mut self.buf[start_len..];
-        VarInt32(packet_len as i32).encode(front)?;
+        VarInt32(packet_len as i32)
+            .encode(front)
+            .map_err(|_| PacketError::EncodeID)?;
         Ok(())
     }
 

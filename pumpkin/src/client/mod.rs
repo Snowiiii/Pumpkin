@@ -20,14 +20,15 @@ use crate::{
 };
 
 use crate::protocol::ConnectionState;
-use anyhow::Context;
 use mio::{event::Event, net::TcpStream, Token};
 use packet_decoder::PacketDecoder;
 use packet_encoder::PacketEncoder;
 use rsa::Pkcs1v15Encrypt;
 use std::io::Read;
+use thiserror::Error;
 
 mod client_packet;
+mod player_packet;
 
 mod packet_decoder;
 mod packet_encoder;
@@ -90,25 +91,30 @@ impl Client {
         &mut self,
         server: &mut Server,
         shared_secret: Vec<u8>,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), EncryptionError> {
         self.encrytion = true;
         let shared_secret = server
             .private_key
             .decrypt(Pkcs1v15Encrypt, &shared_secret)
-            .context("failed to decrypt shared secret")?;
+            .map_err(|_| EncryptionError::FailedDecrypt)?;
         let crypt_key: [u8; 16] = shared_secret
             .as_slice()
             .try_into()
-            .context("shared secret has the wrong length")?;
+            .map_err(|_| EncryptionError::SharedWrongLength)?;
         self.dec.enable_encryption(&crypt_key);
         self.enc.enable_encryption(&crypt_key);
         Ok(())
     }
 
-    pub fn send_packet<P: ClientPacket>(&mut self, packet: P) {
+    /// Im many cases we want to kick the Client when an Packet Error occours, But especially in the Client state we will not try to kick when not important packets
+    /// e.g Postion, Rotation... has not been send
+    pub fn send_packet<P: ClientPacket>(&mut self, packet: P) -> Result<(), PacketError> {
         dbg!("sending packet");
-        self.enc.append_packet(packet).unwrap();
-        self.connection.write_all(&self.enc.take()).unwrap();
+        self.enc.append_packet(packet)?;
+        self.connection
+            .write_all(&self.enc.take())
+            .map_err(|_| PacketError::ConnectionWrite)?;
+        Ok(())
     }
 
     pub fn process_packets(&mut self, server: &mut Server) {
@@ -180,8 +186,8 @@ impl Client {
         }
     }
 
-    /// Returns `true` if the connection is done.
-    pub fn poll(&mut self, server: &mut Server, event: &Event) -> anyhow::Result<bool> {
+    /// Returns `true` if the connection is closed.
+    pub fn poll(&mut self, server: &mut Server, event: &Event) -> Result<bool, io::Error> {
         if event.is_readable() {
             let mut received_data = vec![0; 4096];
             let mut bytes_read = 0;
@@ -205,16 +211,21 @@ impl Client {
                     Err(ref err) if would_block(err) => break,
                     Err(ref err) if interrupted(err) => continue,
                     // Other errors we'll consider fatal.
-                    Err(err) => return anyhow::bail!(err),
+                    Err(err) => return Err(err),
                 }
             }
 
             if bytes_read != 0 {
                 self.dec.reserve(4096);
                 self.dec.queue_slice(&received_data[..bytes_read]);
-                if let Some(packet) = self.dec.decode()? {
-                    self.add_packet(packet);
-                    self.process_packets(server);
+                match self.dec.decode() {
+                    Ok(packet) => {
+                        if let Some(packet) = packet {
+                            self.add_packet(packet);
+                            self.process_packets(server);
+                        }
+                    }
+                    Err(err) => self.kick(&err.to_string()),
                 }
                 self.dec.clear();
             }
@@ -226,10 +237,12 @@ impl Client {
         // Todo
         match self.connection_state {
             ConnectionState::Login => {
-                self.send_packet(CLoginDisconnect::new(reason));
+                self.send_packet(CLoginDisconnect::new(reason))
+                    .unwrap_or_else(|_| self.close());
             }
             ConnectionState::Config => {
-                self.send_packet(CConfigDisconnect::new(reason));
+                self.send_packet(CConfigDisconnect::new(reason))
+                    .unwrap_or_else(|_| self.close());
             }
             _ => {
                 log::warn!("Cant't kick in {:?} State", self.connection_state)
@@ -242,6 +255,32 @@ impl Client {
     pub fn close(&mut self) {
         self.closed = true;
     }
+}
+
+#[derive(Error, Debug)]
+pub enum EncryptionError {
+    #[error("failed to decrypt shared secret")]
+    FailedDecrypt,
+    #[error("shared secret has the wrong length")]
+    SharedWrongLength,
+}
+
+#[derive(Error, Debug)]
+pub enum PacketError {
+    #[error("failed to decode packet ID")]
+    DecodeID,
+    #[error("failed to encode packet ID")]
+    EncodeID,
+    #[error("failed to write encoded packet")]
+    EncodeFailedWrite,
+    #[error("failed to write encoded packet to connection")]
+    ConnectionWrite,
+    #[error("packet exceeds maximum length")]
+    TooLong,
+    #[error("packet length is out of bounds")]
+    OutOfBounds,
+    #[error("malformed packet length VarInt")]
+    MailformedLength,
 }
 
 fn would_block(err: &io::Error) -> bool {
