@@ -1,4 +1,9 @@
-use dimensions::Dimension;
+use core::str;
+use std::{fs::File, io::Read};
+
+use dimensions::{Dimension, DimensionEffects, MonsterSpawnLightLevel};
+use fastnbt::{nbt, to_bytes_with_opts, SerOpts};
+use flate2::read::GzDecoder;
 use serde::Serialize;
 
 use super::bytebuf::ByteBuffer;
@@ -59,8 +64,8 @@ pub fn write_codec(out: &mut ByteBuffer, world_min_y: i32, world_height: u32) {
             }, */
     };
 
-    let val = &fastsnbt::to_string(&info).unwrap();
+    let val = &fastnbt::to_bytes_with_opts(&info, SerOpts::network_nbt()).unwrap();
     dbg!(val);
     // Dimension codec
-    out.put_string(val);
+    out.put_slice(val);
 }

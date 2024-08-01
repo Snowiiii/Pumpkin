@@ -118,6 +118,7 @@ impl Server {
             ))
             .unwrap_or_else(|e| client.kick(&e.to_string()));
 
+        dbg!("spawning player");
         client.player = Some(player);
     }
 
