@@ -1,0 +1,22 @@
+{
+	"name": "Pumpkin",
+	"image": "mcr.microsoft.com/devcontainers/base:noble",
+	"features": {
+		"ghcr.io/devcontainers/features/rust:1": {}
+	},
+	"mounts": [
+		// mount SSH config & public keys from host to enable SSH-based Git remotes
+		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,readonly,type=bind"
+	],
+	"forwardPorts": [
+		25565
+	],
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"eamodio.gitlens",
+				"Swellaby.rust-pack"
+			]
+		}
+	}
+}
