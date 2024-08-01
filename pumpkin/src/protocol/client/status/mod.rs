@@ -18,20 +18,20 @@ impl ClientPacket for CPingResponse {
     }
 }
 
-pub struct CStatusResponse {
-    json_response: String, // 32767
+pub struct CStatusResponse<'a> {
+    json_response: &'a str, // 32767
 }
 
-impl CStatusResponse {
-    pub fn new(json_response: String) -> Self {
+impl<'a> CStatusResponse<'a> {
+    pub fn new(json_response: &'a str) -> Self {
         Self { json_response }
     }
 }
 
-impl ClientPacket for CStatusResponse {
+impl<'a> ClientPacket for CStatusResponse<'a> {
     const PACKET_ID: VarInt = 0x00;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.put_string(self.json_response.as_str());
+        bytebuf.put_string(self.json_response);
     }
 }

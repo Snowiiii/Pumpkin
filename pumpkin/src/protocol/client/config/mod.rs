@@ -1,4 +1,4 @@
-use crate::protocol::{bytebuf::ByteBuffer, registry, ClientPacket, KnownPack, VarInt};
+use crate::protocol::{bytebuf::ByteBuffer, ClientPacket, KnownPack, VarInt};
 
 pub struct CCookieRequest {
     // TODO
@@ -11,12 +11,12 @@ impl ClientPacket for CCookieRequest {
 }
 
 pub struct CPluginMessage<'a> {
-    channel: String,
+    channel: &'a str,
     data: &'a [u8],
 }
 
 impl<'a> CPluginMessage<'a> {
-    pub fn new(channel: String, data: &'a [u8]) -> Self {
+    pub fn new(channel: &'a str, data: &'a [u8]) -> Self {
         Self { channel, data }
     }
 }
@@ -25,7 +25,7 @@ impl<'a> ClientPacket for CPluginMessage<'a> {
     const PACKET_ID: VarInt = 0x01;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.put_string(&self.channel);
+        bytebuf.put_string(self.channel);
         bytebuf.put_slice(self.data);
     }
 }
@@ -107,7 +107,7 @@ impl<'a> CRegistryData<'a> {
 pub struct Entry<'a> {
     pub entry_id: &'a str,
     pub has_data: bool,
-    // data provided by registry::write_codec
+    pub data: &'a [u8],
 }
 
 impl<'a> ClientPacket for CRegistryData<'a> {
@@ -118,7 +118,7 @@ impl<'a> ClientPacket for CRegistryData<'a> {
         bytebuf.put_list::<Entry>(self.entries, |p, v| {
             p.put_string(v.entry_id);
             p.put_bool(v.has_data);
-            registry::write_codec(p, -64, 384);
+            p.put_slice(v.data);
         });
     }
 }

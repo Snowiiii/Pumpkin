@@ -31,11 +31,18 @@ pub struct Server {
     pub private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,
 
+    /// the maximum amount of players that can join the Server
     pub max_players: u32,
 
     pub world: World,
 
     pub status_response: StatusResponse,
+    // We cache the json response here so we don't parse it every time someone makes a Status request.
+    // Keep in mind that we must parse this again, when the StatusResponse changes which usally happen when a player joins or leaves
+    pub status_response_json: String,
+
+    /// Cache the Server brand buffer so we don't have to rebuild them every time a player joins
+    pub cached_server_brand: Vec<u8>,
 
     // todo replace with HashMap <World, Player>
     entity_id: AtomicI32, // todo: place this into every world
@@ -44,9 +51,11 @@ pub struct Server {
 
 impl Server {
     pub fn new(config: (BasicConfiguration, AdvancedConfiguration)) -> Self {
-        let max_players = 20;
-        let config_clone = &config;
-        let status_response = Self::default_response(config_clone);
+        let status_response = Self::build_response(&config.0);
+        let status_response_json = serde_json::to_string(&status_response)
+            .expect("Failed to parse Status response into JSON");
+
+        let cached_server_brand = Self::build_brand();
 
         // todo, only create when needed
         let (public_key, private_key) = Self::generate_keys();
@@ -65,9 +74,11 @@ impl Server {
             encryption: config.1.encryption,
             compression_threshold: None, // 256
             public_key,
+            cached_server_brand,
             private_key,
-            max_players,
+            max_players: config.0.max_plyers,
             status_response,
+            status_response_json,
             public_key_der,
             difficulty: config.0.default_difficulty,
         }
@@ -127,21 +138,23 @@ impl Server {
         self.entity_id.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn send_brand(client: &mut Client) -> Result<(), PacketError> {
-        // send server brand
+    pub fn build_brand() -> Vec<u8> {
         let brand = "pumpkin";
         let mut buf = vec![];
         let _ = VarInt32(brand.len() as i32).encode(&mut buf);
         buf.extend_from_slice(brand.as_bytes());
+        buf
+    }
+
+    pub fn send_brand(&self, client: &mut Client) -> Result<(), PacketError> {
+        // send server brand
         client.send_packet(CPluginMessage::new(
-            "minecraft:brand".to_string(),
-            buf.as_slice(),
+            "minecraft:brand",
+            &self.cached_server_brand,
         ))
     }
 
-    pub fn default_response(
-        config: &(BasicConfiguration, AdvancedConfiguration),
-    ) -> StatusResponse {
+    pub fn build_response(config: &BasicConfiguration) -> StatusResponse {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/icon.png");
 
         StatusResponse {
@@ -150,14 +163,14 @@ impl Server {
                 protocol: 767,
             },
             players: Players {
-                max: config.0.max_plyers,
+                max: config.max_plyers,
                 online: 0,
                 sample: vec![Sample {
                     name: "".into(),
                     id: "".into(),
                 }],
             },
-            description: config.0.motd.clone(),
+            description: config.motd.clone(),
             favicon: Self::load_icon(path),
         }
     }

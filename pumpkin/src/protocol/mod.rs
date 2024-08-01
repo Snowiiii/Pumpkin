@@ -6,7 +6,7 @@ use serde::Serialize;
 use thiserror::Error;
 
 pub mod bytebuf;
-mod registry;
+pub mod registry;
 
 pub mod client;
 pub mod server;

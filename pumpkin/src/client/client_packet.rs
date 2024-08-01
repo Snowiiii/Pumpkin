@@ -5,6 +5,7 @@ use crate::{
             login::{CEncryptionRequest, CLoginSuccess},
             status::{CPingResponse, CStatusResponse},
         },
+        registry::{DimensionCodec, WolfCodec},
         server::{
             config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks},
             handshake::SHandShake,
@@ -67,12 +68,8 @@ impl ClientPacketProcessor for Client {
     fn handle_status_request(&mut self, server: &mut Server, _status_request: SStatusRequest) {
         dbg!("sending status");
 
-        if let Ok(response) = serde_json::to_string(&server.status_response) {
-            self.send_packet(CStatusResponse::new(response))
-                .unwrap_or_else(|e| self.kick(&e.to_string()));
-        } else {
-            log::error!("Failed to parse Status response to JSON")
-        }
+        self.send_packet(CStatusResponse::new(&server.status_response_json))
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
     }
 
     fn handle_ping_request(&mut self, _server: &mut Server, ping_request: SPingRequest) {
@@ -129,11 +126,13 @@ impl ClientPacketProcessor for Client {
 
     fn handle_login_acknowledged(
         &mut self,
-        _server: &mut Server,
+        server: &mut Server,
         _login_acknowledged: SLoginAcknowledged,
     ) {
         self.connection_state = ConnectionState::Config;
-        Server::send_brand(self).unwrap_or_else(|e| self.kick(&e.to_string()));
+        server
+            .send_brand(self)
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
         // known data packs
         self.send_packet(CKnownPacks::new(&[KnownPack {
             namespace: "minecraft",
@@ -167,6 +166,12 @@ impl ClientPacketProcessor for Client {
                 Entry {
                     entry_id: "minecraft:dimension_type",
                     has_data: true,
+                    data: &DimensionCodec::parse(),
+                },
+                Entry {
+                    entry_id: "minecraft:wolf_variant",
+                    has_data: true,
+                    data: &WolfCodec::parse(),
                 },
                 /*    Entry {
                     entry_id: "minecraft:worldgen/biome".into(),

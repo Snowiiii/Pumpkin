@@ -83,10 +83,12 @@ impl Client {
         }
     }
 
+    /// adds a Incoming packet to the queue
     pub fn add_packet(&mut self, packet: RawPacket) {
         self.client_packets_queue.push_back(packet);
     }
 
+    /// enables encryption
     pub fn enable_encryption(
         &mut self,
         server: &mut Server,
@@ -126,6 +128,7 @@ impl Client {
         }
     }
 
+    /// Handles an incoming decoded Packet
     pub fn handle_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
         dbg!("Handling packet");
         let bytebuf = &mut packet.bytebuf;
@@ -186,6 +189,7 @@ impl Client {
         }
     }
 
+    // Reads the connection until our buffer of len 4096 is full, then decode
     /// Returns `true` if the connection is closed.
     pub fn poll(&mut self, server: &mut Server, event: &Event) -> Result<bool, io::Error> {
         if event.is_readable() {
@@ -233,6 +237,7 @@ impl Client {
         Ok(self.closed)
     }
 
+    /// Kicks the Client with a reason depending on the connection state
     pub fn kick(&mut self, reason: &str) {
         // Todo
         match self.connection_state {
@@ -251,7 +256,7 @@ impl Client {
         self.close()
     }
 
-    // Kick before when needed
+    /// You should prefer to use `kick` when you can
     pub fn close(&mut self) {
         self.closed = true;
     }
