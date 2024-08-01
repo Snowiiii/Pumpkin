@@ -27,5 +27,8 @@ A Minecraft server written in pure Rust
 ## Contributions
 Contributions are welcome!. Feel free to open an issue or pull request.
 
+## Communication
+Consider joining our discord https://discord.gg/wT8XjrjKkf to stay up-to-date on events, updates, and connect with other members.
+
 ### Thanks
 A big thank you to https://wiki.vg/ for providing valuable information used in the development of this project.
