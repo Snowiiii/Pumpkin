@@ -20,3 +20,11 @@ python3.12 main.py -mcv $MC_VERSION -s server -na -f -rmap -rjar -dm -dj -dd -de
 
 # move it to the correct directory
 mv src ..
+cd ..
+
+# move the custom made pom.xml
+cp pom.xml src/$MC_VERSION/server
+
+# install the dependencies
+cd ../src/$MC_VERSION/server
+# mvn clean install
