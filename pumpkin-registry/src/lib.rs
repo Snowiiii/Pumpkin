@@ -1,9 +1,8 @@
 use dimensions::Dimension;
 use fastnbt::SerOpts;
+use pumpkin_protocol::bytebuf::ByteBuffer;
 use serde::Serialize;
 use wolf::WolfVariant;
-
-use super::bytebuf::ByteBuffer;
 
 mod biomes;
 mod chat_type;

@@ -1,11 +1,11 @@
-use crate::protocol::{bytebuf::ByteBuffer, ClientPacket, KnownPack, VarInt};
+use crate::{bytebuf::ByteBuffer, ClientPacket, KnownPack, VarInt};
 
 pub struct CCookieRequest {
     // TODO
 }
 
 impl ClientPacket for CCookieRequest {
-    const PACKET_ID: crate::protocol::VarInt = 0x00;
+    const PACKET_ID: VarInt = 0x00;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {}
 }
@@ -41,7 +41,7 @@ impl<'a> CConfigDisconnect<'a> {
 }
 
 impl<'a> ClientPacket for CConfigDisconnect<'a> {
-    const PACKET_ID: crate::protocol::VarInt = 0x02;
+    const PACKET_ID: VarInt = 0x02;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_string(self.reason);
@@ -63,7 +63,7 @@ impl CFinishConfig {
 }
 
 impl ClientPacket for CFinishConfig {
-    const PACKET_ID: crate::protocol::VarInt = 0x03;
+    const PACKET_ID: VarInt = 0x03;
 
     fn write(&self, _bytebuf: &mut ByteBuffer) {}
 }

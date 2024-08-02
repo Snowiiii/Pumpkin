@@ -1,6 +1,5 @@
-use crate::protocol::VarInt;
-
 use super::RegistryValue;
+use pumpkin_protocol::VarInt;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]

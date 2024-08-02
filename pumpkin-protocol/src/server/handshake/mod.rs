@@ -1,4 +1,4 @@
-use crate::protocol::{bytebuf::ByteBuffer, ConnectionState, VarInt};
+use crate::{bytebuf::ByteBuffer, ConnectionState, ServerPacket, VarInt};
 
 pub struct SHandShake {
     pub protocol_version: VarInt,
@@ -7,10 +7,10 @@ pub struct SHandShake {
     pub next_state: ConnectionState,
 }
 
-impl SHandShake {
-    pub const PACKET_ID: VarInt = 0x00;
+impl ServerPacket for SHandShake {
+    const PACKET_ID: VarInt = 0x00;
 
-    pub fn read(bytebuf: &mut ByteBuffer) -> Self {
+    fn read(bytebuf: &mut ByteBuffer) -> Self {
         Self {
             protocol_version: bytebuf.get_var_int(),
             server_address: bytebuf.get_string_len(255).unwrap(),

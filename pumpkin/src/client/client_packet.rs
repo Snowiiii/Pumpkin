@@ -1,19 +1,21 @@
-use crate::{
-    protocol::{
-        client::{
-            config::{CFinishConfig, CKnownPacks, CRegistryData, Entry},
-            login::{CEncryptionRequest, CLoginSuccess},
-            status::{CPingResponse, CStatusResponse},
-        },
-        registry::{DimensionCodec, WolfCodec},
-        server::{
-            config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks},
-            handshake::SHandShake,
-            login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
-            status::{SPingRequest, SStatusRequest},
-        },
-        ConnectionState, KnownPack,
+use pumpkin_protocol::{
+    client::{
+        config::{CFinishConfig, CKnownPacks, CRegistryData, Entry},
+        login::{CEncryptionRequest, CLoginSuccess},
+        status::{CPingResponse, CStatusResponse},
     },
+    server::{
+        config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks},
+        handshake::SHandShake,
+        login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
+        status::{SPingRequest, SStatusRequest},
+    },
+    ConnectionState, KnownPack,
+};
+use pumpkin_registry::{DimensionCodec, WolfCodec};
+
+use crate::{
+    entity::player::{ChatMode, Hand},
     server::Server,
 };
 
@@ -150,10 +152,10 @@ impl ClientPacketProcessor for Client {
         self.config = Some(PlayerConfig {
             locale: client_information.locale,
             view_distance: client_information.view_distance,
-            chat_mode: client_information.chat_mode,
+            chat_mode: ChatMode::from_varint(client_information.chat_mode),
             chat_colors: client_information.chat_colors,
             skin_parts: client_information.skin_parts,
-            main_hand: client_information.main_hand,
+            main_hand: Hand::from_varint(client_information.main_hand),
             text_filtering: client_information.text_filtering,
             server_listing: client_information.server_listing,
         });

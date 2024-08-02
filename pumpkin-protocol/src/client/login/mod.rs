@@ -1,4 +1,4 @@
-use crate::protocol::{bytebuf::ByteBuffer, ClientPacket, VarInt};
+use crate::{bytebuf::ByteBuffer, ClientPacket, VarInt};
 
 pub struct CLoginDisconnect<'a> {
     reason: &'a str,

@@ -5,19 +5,19 @@ use std::{
 
 use base64::{engine::general_purpose, Engine};
 use mio::{event::Event, Poll};
+use pumpkin_protocol::{
+    client::{config::CPluginMessage, play::CLogin},
+    PacketError, Players, Sample, StatusResponse, VarInt, VarInt32, Version,
+};
 use rsa::{rand_core::OsRng, traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    client::{Client, PacketError},
+    client::Client,
     configuration::{AdvancedConfiguration, BasicConfiguration},
     entity::{
         player::{GameMode, Player},
         Entity, EntityId,
-    },
-    protocol::{
-        client::{config::CPluginMessage, play::CLogin},
-        Players, Sample, StatusResponse, VarInt, VarInt32, Version,
     },
     world::World,
 };
@@ -117,8 +117,8 @@ impl Server {
                 1,
                 "minecraft:overworld".into(),
                 0, // seed
-                GameMode::Survival,
-                GameMode::Undefined,
+                GameMode::Survival.to_byte() as u8,
+                GameMode::Undefined.to_byte(),
                 false,
                 false,
                 false, // deth loc

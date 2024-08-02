@@ -4,11 +4,9 @@ use aes::cipher::{generic_array::GenericArray, BlockEncryptMut, BlockSizeUser, K
 use bytes::{BufMut, BytesMut};
 
 use crate::{
-    client::MAX_PACKET_SIZE,
-    protocol::{bytebuf::ByteBuffer, ClientPacket, VarInt32},
+    bytebuf::ByteBuffer, ClientPacket, PacketError, VarInt32,
+    MAX_PACKET_SIZE,
 };
-
-use super::PacketError;
 
 type Cipher = cfb8::Encryptor<aes::Aes128>;
 

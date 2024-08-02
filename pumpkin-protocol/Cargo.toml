@@ -1,0 +1,20 @@
+[package]
+name = "pumpkin-protocol"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+bytes = "1.7"
+
+uuid = "1.10"
+
+serde = { version = "1.0", features = ["derive"] }
+# to parse strings to json responses
+serde_json = "1.0"
+
+thiserror = "1.0.63"
+log = "0.4"
+
+# encryption
+aes = "0.8.4"
+cfb8 = "0.8.1"

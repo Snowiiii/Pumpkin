@@ -1,0 +1,13 @@
+[package]
+name = "pumpkin-registry"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+pumpkin-protocol = { path = "../pumpkin-protocol"}
+# nbt
+fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
+fastsnbt = "0.2"
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

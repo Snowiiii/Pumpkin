@@ -12,7 +12,6 @@ const SERVER: Token = Token(0);
 pub mod client;
 pub mod configuration;
 pub mod entity;
-pub mod protocol;
 pub mod server;
 pub mod util;
 pub mod world;

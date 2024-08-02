@@ -1,7 +1,4 @@
-use crate::{
-    entity::player::GameMode,
-    protocol::{bytebuf::ByteBuffer, ClientPacket, VarInt},
-};
+use crate::{bytebuf::ByteBuffer, ClientPacket, VarInt};
 
 pub struct SetHeldItem {
     slot: i8,
@@ -80,8 +77,8 @@ pub struct CLogin {
     dimension_type: VarInt,
     dimension_name: String,
     hashed_seed: i64,
-    game_mode: GameMode,
-    previous_gamemode: GameMode,
+    game_mode: u8,
+    previous_gamemode: i8,
     debug: bool,
     is_flat: bool,
     has_death_loc: bool,
@@ -107,8 +104,8 @@ impl CLogin {
         dimension_type: VarInt,
         dimension_name: String,
         hashed_seed: i64,
-        game_mode: GameMode,
-        previous_gamemode: GameMode,
+        game_mode: u8,
+        previous_gamemode: i8,
         debug: bool,
         is_flat: bool,
         has_death_loc: bool,
@@ -161,8 +158,8 @@ impl ClientPacket for CLogin {
         bytebuf.put_var_int(self.dimension_type);
         bytebuf.put_string(&self.dimension_name);
         bytebuf.put_i64(self.hashed_seed);
-        bytebuf.put_u8(self.game_mode.to_byte() as u8);
-        bytebuf.put_i8(self.previous_gamemode.to_byte());
+        bytebuf.put_u8(self.game_mode);
+        bytebuf.put_i8(self.previous_gamemode);
         bytebuf.put_bool(self.debug);
         bytebuf.put_bool(self.is_flat);
         bytebuf.put_bool(self.has_death_loc);

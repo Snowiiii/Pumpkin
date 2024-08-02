@@ -1,14 +1,14 @@
-use crate::protocol::{bytebuf::ByteBuffer, VarInt};
+use crate::{bytebuf::ByteBuffer, ServerPacket, VarInt};
 
 pub struct SLoginStart {
     pub name: String, // 16
     pub uuid: uuid::Uuid,
 }
 
-impl SLoginStart {
-    pub const PACKET_ID: VarInt = 0x00;
+impl ServerPacket for SLoginStart {
+    const PACKET_ID: VarInt = 0x00;
 
-    pub fn read(bytebuf: &mut ByteBuffer) -> Self {
+    fn read(bytebuf: &mut ByteBuffer) -> Self {
         Self {
             name: bytebuf.get_string_len(16).unwrap(),
             uuid: bytebuf.get_uuid(),
@@ -23,10 +23,10 @@ pub struct SEncryptionResponse {
     pub verify_token: Vec<u8>,
 }
 
-impl SEncryptionResponse {
-    pub const PACKET_ID: VarInt = 0x01;
+impl ServerPacket for SEncryptionResponse {
+    const PACKET_ID: VarInt = 0x01;
 
-    pub fn read(bytebuf: &mut ByteBuffer) -> Self {
+    fn read(bytebuf: &mut ByteBuffer) -> Self {
         let shared_secret_length = bytebuf.get_var_int();
         let shared_secret = bytebuf.copy_to_bytes(shared_secret_length as usize);
         let verify_token_length = bytebuf.get_var_int();
@@ -46,10 +46,10 @@ pub struct SLoginPluginResponse<'a> {
     data: Option<&'a [u8]>,
 }
 
-impl<'a> SLoginPluginResponse<'a> {
-    pub const PACKET_ID: VarInt = 0x02;
+impl<'a> ServerPacket for SLoginPluginResponse<'a> {
+    const PACKET_ID: VarInt = 0x02;
 
-    pub fn read(bytebuf: &mut ByteBuffer) -> Self {
+    fn read(bytebuf: &mut ByteBuffer) -> Self {
         Self {
             message_id: bytebuf.get_var_int(),
             successful: bytebuf.get_bool(),
@@ -63,10 +63,10 @@ pub struct SLoginAcknowledged {
     // empty
 }
 
-impl SLoginAcknowledged {
-    pub const PACKET_ID: VarInt = 0x03;
+impl ServerPacket for SLoginAcknowledged {
+    const PACKET_ID: VarInt = 0x03;
 
-    pub fn read(_bytebuf: &mut ByteBuffer) -> Self {
+    fn read(_bytebuf: &mut ByteBuffer) -> Self {
         Self {}
     }
 }

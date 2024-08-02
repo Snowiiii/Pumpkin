@@ -6,23 +6,23 @@ use std::{
 
 use crate::{
     entity::player::{ChatMode, Hand, Player},
-    protocol::{
-        client::{config::CConfigDisconnect, login::CLoginDisconnect},
-        server::{
-            config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks},
-            handshake::SHandShake,
-            login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
-            status::{SPingRequest, SStatusRequest},
-        },
-        ClientPacket, RawPacket,
-    },
     server::Server,
 };
 
-use crate::protocol::ConnectionState;
 use mio::{event::Event, net::TcpStream, Token};
-use packet_decoder::PacketDecoder;
-use packet_encoder::PacketEncoder;
+use pumpkin_protocol::{
+    client::{config::CConfigDisconnect, login::CLoginDisconnect},
+    packet_decoder::PacketDecoder,
+    packet_encoder::PacketEncoder,
+    server::{
+        config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks},
+        handshake::SHandShake,
+        login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
+        status::{SPingRequest, SStatusRequest},
+    },
+    ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
+};
+
 use rsa::Pkcs1v15Encrypt;
 use std::io::Read;
 use thiserror::Error;
@@ -30,12 +30,7 @@ use thiserror::Error;
 mod client_packet;
 mod player_packet;
 
-mod packet_decoder;
-mod packet_encoder;
-
 use client_packet::ClientPacketProcessor;
-
-pub const MAX_PACKET_SIZE: i32 = 2097152;
 
 pub struct PlayerConfig {
     locale: String, // 16
@@ -133,14 +128,14 @@ impl Client {
         dbg!("Handling packet");
         let bytebuf = &mut packet.bytebuf;
         match self.connection_state {
-            crate::protocol::ConnectionState::HandShake => match packet.id {
+            pumpkin_protocol::ConnectionState::HandShake => match packet.id {
                 SHandShake::PACKET_ID => self.handle_handshake(server, SHandShake::read(bytebuf)),
                 _ => log::error!(
                     "Failed to handle packet id {} while in Handshake state",
                     packet.id
                 ),
             },
-            crate::protocol::ConnectionState::Status => match packet.id {
+            pumpkin_protocol::ConnectionState::Status => match packet.id {
                 SStatusRequest::PACKET_ID => {
                     self.handle_status_request(server, SStatusRequest::read(bytebuf))
                 }
@@ -152,7 +147,7 @@ impl Client {
                     packet.id
                 ),
             },
-            crate::protocol::ConnectionState::Login => match packet.id {
+            pumpkin_protocol::ConnectionState::Login => match packet.id {
                 SLoginStart::PACKET_ID => {
                     self.handle_login_start(server, SLoginStart::read(bytebuf))
                 }
@@ -170,7 +165,7 @@ impl Client {
                     packet.id
                 ),
             },
-            crate::protocol::ConnectionState::Config => match packet.id {
+            pumpkin_protocol::ConnectionState::Config => match packet.id {
                 SClientInformation::PACKET_ID => {
                     self.handle_client_information(server, SClientInformation::read(bytebuf))
                 }
@@ -268,24 +263,6 @@ pub enum EncryptionError {
     FailedDecrypt,
     #[error("shared secret has the wrong length")]
     SharedWrongLength,
-}
-
-#[derive(Error, Debug)]
-pub enum PacketError {
-    #[error("failed to decode packet ID")]
-    DecodeID,
-    #[error("failed to encode packet ID")]
-    EncodeID,
-    #[error("failed to write encoded packet")]
-    EncodeFailedWrite,
-    #[error("failed to write encoded packet to connection")]
-    ConnectionWrite,
-    #[error("packet exceeds maximum length")]
-    TooLong,
-    #[error("packet length is out of bounds")]
-    OutOfBounds,
-    #[error("malformed packet length VarInt")]
-    MailformedLength,
 }
 
 fn would_block(err: &io::Error) -> bool {

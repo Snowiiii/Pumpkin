@@ -1,4 +1,4 @@
-use crate::protocol::VarInt;
+use pumpkin_protocol::VarInt;
 
 use super::{Entity, EntityId};
 

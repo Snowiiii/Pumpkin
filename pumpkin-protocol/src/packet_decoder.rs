@@ -2,8 +2,7 @@ use aes::cipher::{generic_array::GenericArray, BlockDecryptMut, BlockSizeUser, K
 use bytes::{Buf, BytesMut};
 
 use crate::{
-    client::{PacketError, MAX_PACKET_SIZE},
-    protocol::{bytebuf::ByteBuffer, RawPacket, VarInt32, VarIntDecodeError},
+    bytebuf::ByteBuffer, PacketError, RawPacket, VarInt32, VarIntDecodeError, MAX_PACKET_SIZE,
 };
 
 type Cipher = cfb8::Decryptor<aes::Aes128>;

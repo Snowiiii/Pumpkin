@@ -3,7 +3,7 @@ use std::io::{self, Error, ErrorKind};
 
 use bytes::{Buf, BufMut, BytesMut};
 
-use crate::protocol::{VarInt, VarLong};
+use crate::{VarInt, VarLong};
 
 const SEGMENT_BITS: u8 = 0x7F;
 const CONTINUE_BIT: u8 = 0x80;

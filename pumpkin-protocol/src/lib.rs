@@ -6,12 +6,16 @@ use serde::Serialize;
 use thiserror::Error;
 
 pub mod bytebuf;
-pub mod registry;
-
 pub mod client;
 pub mod server;
 
+pub mod packet_decoder;
+pub mod packet_encoder;
+
+pub const MAX_PACKET_SIZE: i32 = 2097152;
+
 pub type VarInt = i32;
+pub type VarLong = i64;
 
 pub struct VarInt32(pub i32);
 
@@ -87,7 +91,23 @@ pub enum VarIntDecodeError {
     TooLarge,
 }
 
-pub type VarLong = i64;
+#[derive(Error, Debug)]
+pub enum PacketError {
+    #[error("failed to decode packet ID")]
+    DecodeID,
+    #[error("failed to encode packet ID")]
+    EncodeID,
+    #[error("failed to write encoded packet")]
+    EncodeFailedWrite,
+    #[error("failed to write encoded packet to connection")]
+    ConnectionWrite,
+    #[error("packet exceeds maximum length")]
+    TooLong,
+    #[error("packet length is out of bounds")]
+    OutOfBounds,
+    #[error("malformed packet length VarInt")]
+    MailformedLength,
+}
 
 #[derive(Debug, PartialEq)]
 pub enum ConnectionState {
@@ -123,6 +143,12 @@ pub trait ClientPacket {
     const PACKET_ID: VarInt;
 
     fn write(&self, bytebuf: &mut ByteBuffer);
+}
+
+pub trait ServerPacket {
+    const PACKET_ID: VarInt;
+
+    fn read(bytebuf: &mut ByteBuffer) -> Self;
 }
 
 #[derive(Serialize)]

@@ -521,17 +521,14 @@ dependencies = [
 name = "pumpkin"
 version = "0.1.0"
 dependencies = [
- "aes",
  "base64",
- "bytes",
- "cfb8",
  "crossbeam-channel",
- "fastnbt",
- "fastsnbt",
  "flate2",
  "image",
  "log",
  "mio",
+ "pumpkin-protocol",
+ "pumpkin-registry",
  "rand",
  "rsa",
  "rsa-der",
@@ -541,6 +538,31 @@ dependencies = [
  "thiserror",
  "toml",
  "uuid",
+]
+
+[[package]]
+name = "pumpkin-protocol"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "bytes",
+ "cfb8",
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "uuid",
+]
+
+[[package]]
+name = "pumpkin-registry"
+version = "0.1.0"
+dependencies = [
+ "fastnbt",
+ "fastsnbt",
+ "pumpkin-protocol",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
