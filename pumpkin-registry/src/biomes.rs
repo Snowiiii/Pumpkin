@@ -1,10 +1,26 @@
-use super::RegistryValue;
 use pumpkin_protocol::VarInt;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
+pub struct BiomeCodec {
+    name: String,
+    id: i32,
+    element: Biome,
+}
+
+impl Default for BiomeCodec {
+    fn default() -> Self {
+        Self {
+            name: "minecraft:plains".to_string(),
+            id: 0,
+            element: Biome::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct Biome {
-    has_precipitation: bool,
+    has_precipitation: i8,
     temperature: f32,
     #[serde(skip_serializing_if = "Option::is_none")]
     temperature_modifier: Option<String>,
@@ -67,40 +83,36 @@ struct Music {
     sound: String,
     min_delay: i32,
     max_delay: i32,
-    replace_current_music: bool,
+    replace_current_music: i8,
 }
 
 // 1.20.6 default https://gist.github.com/WinX64/ab8c7a8df797c273b32d3a3b66522906
-pub(super) fn all() -> Vec<RegistryValue<Biome>> {
-    let biome = Biome {
-        has_precipitation: false,
-        temperature: 1.0,
-        temperature_modifier: None,
-        downfall: 0.0,
-        effects: BiomeEffects {
-            fog_color: 0x7FA1FF,
-            water_color: 0x7FA1FF,
-            water_fog_color: 0x7FA1FF,
-            sky_color: 0x7FA1FF,
-            foliage_color: Some(0x7FA1FF),
-            grass_color: Some(0x7FA1FF),
-            grass_color_modifier: None,
-            particle: None,
-            ambient_sound: None,
-            mood_sound: Some(MoodSound {
-                block_search_extent: 8,
-                offset: 2.0,
-                sound: "minecraft:ambient.cave".into(),
-                tick_delay: 6000,
-            }),
-            additions_sound: None,
-            music: None,
-        },
-    };
-
-    vec![RegistryValue {
-        name: "minecraft:plains".into(),
-        id: 0,
-        element: biome,
-    }]
+impl Default for Biome {
+    fn default() -> Self {
+        Self {
+            has_precipitation: 0,
+            temperature: 1.0,
+            temperature_modifier: None,
+            downfall: 0.0,
+            effects: BiomeEffects {
+                fog_color: 12638463,
+                water_color: 4159204,
+                water_fog_color: 329011,
+                sky_color: 7907327,
+                foliage_color: None,
+                grass_color: None,
+                grass_color_modifier: None,
+                particle: None,
+                ambient_sound: None,
+                mood_sound: Some(MoodSound {
+                    block_search_extent: 8,
+                    offset: 2.0,
+                    sound: "minecraft:ambient.cave".into(),
+                    tick_delay: 6000,
+                }),
+                additions_sound: None,
+                music: None,
+            },
+        }
+    }
 }

@@ -1,121 +1,56 @@
+use biomes::Biome;
 use dimensions::Dimension;
 use fastnbt::SerOpts;
-use pumpkin_protocol::bytebuf::ByteBuffer;
-use serde::Serialize;
+use paint::Painting;
+use pumpkin_protocol::client::config::RegistryEntry;
 use wolf::WolfVariant;
 
-mod biomes;
+ mod biomes;
 mod chat_type;
 mod damage_type;
-mod dimensions;
-mod wolf;
+ mod dimensions;
+ mod paint;
+ mod wolf;
 
-#[derive(Debug, Clone, Serialize)]
-struct LoginInfo {
-    #[serde(rename = "minecraft:dimension_type")]
-    dimensions: Codec<dimensions::Dimension>,
-    // #[serde(rename = "minecraft:wolf_variant")]
-    // wolf: Codec<wolf::WolfVariant>,
-    /*   #[serde(rename = "minecraft:worldgen/biome")]
-    biomes: Codec<biomes::Biome>,
-    #[serde(rename = "minecraft:chat_type")]
-    chat: Codec<chat_type::ChatType>,
-    #[serde(rename = "minecraft:damage_type")]
-    damage: Codec<damage_type::DamageType>, */
+pub struct Registry {
+    pub registry_id: String,
+    pub registry_entries: Vec<RegistryEntry>,
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct DimensionCodec {
-    #[serde(rename = "minecraft:dimension_type")]
-    dimensions: Codec<dimensions::Dimension>,
-}
-
-impl DimensionCodec {
-    pub fn parse() -> Vec<u8> {
-        let dimension = Dimension::default();
-        let codec = DimensionCodec {
-            dimensions: Codec {
-                ty: "minecraft:dimension_type".into(),
-                value: vec![RegistryValue {
-                    name: "minecraft:overworld".into(),
-                    id: 0,
-                    element: dimension,
-                }],
-            },
-        };
-        fastnbt::to_bytes_with_opts(&codec, SerOpts::network_nbt()).unwrap()
-    }
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct WolfCodec {
-    #[serde(rename = "minecraft:wolf_variant")]
-    wolf: Codec<wolf::WolfVariant>,
-}
-
-impl WolfCodec {
-    pub fn parse() -> Vec<u8> {
-        let wolf = WolfVariant::default();
-        let codec = WolfCodec {
-            wolf: Codec {
-                ty: "minecraft:wolf_variant".into(),
-                value: vec![RegistryValue {
-                    name: "minecraft:wolf_variant".into(),
-                    id: 0,
-                    element: wolf,
-                }],
-            },
-        };
-        fastnbt::to_bytes_with_opts(&codec, SerOpts::network_nbt()).unwrap()
-    }
-}
-
-#[derive(Debug, Clone, Serialize)]
-struct Codec<T> {
-    #[serde(rename = "type")]
-    ty: String,
-    value: Vec<RegistryValue<T>>,
-}
-#[derive(Debug, Clone, Serialize)]
-struct RegistryValue<T> {
-    name: String,
-    id: i32,
-    element: T,
-}
-
-pub fn write_codec(out: &mut ByteBuffer, world_min_y: i32, world_height: u32) -> Vec<u8> {
-    let dimension = Dimension::default();
-    let wolf = WolfVariant::default();
-
-    let info = LoginInfo {
-        dimensions: Codec {
-            ty: "minecraft:dimension_type".into(),
-            value: vec![RegistryValue {
-                name: "minecraft:overworld".into(),
-                id: 0,
-                element: dimension,
+impl Registry {
+    pub fn get_static() -> Vec<Self> {
+        let dimensions = Registry {
+            registry_id: "minecraft:dimension_type".to_string(),
+            registry_entries: vec![RegistryEntry {
+                entry_id: "minecraft:overworld".to_string(),
+                data: fastnbt::to_bytes_with_opts(&Dimension::default(), SerOpts::network_nbt())
+                    .unwrap(),
             }],
-        },
-        /* wolf: Codec {
-         ty: "minecraft:wolf_variant".into(),
-         value: vec![RegistryValue {
-             name: "minecraft:wolf_variant".into(),
-             id: 0,
-             element: wolf,
-         }],
-         }, */ /* biomes: Codec {
-            ty: "minecraft:worldgen/biome".into(),
-            value: biomes::all(),
-        },
-        chat: Codec {
-            ty: "minecraft:chat_type".into(),
-            value: chat_type::all(),
-        },
-        damage: Codec {
-            ty: "minecraft:damage_type".into(),
-            value: damage_type::all(),
-            }, */
-    };
-
-    fastnbt::to_bytes_with_opts(&info, SerOpts::network_nbt()).unwrap()
+        };
+        let biomes = Registry {
+            registry_id: "minecraft:worldgen/biome".to_string(),
+            registry_entries: vec![RegistryEntry {
+                entry_id: "minecraft:snowy_taiga".to_string(),
+                data: fastnbt::to_bytes_with_opts(&Biome::default(), SerOpts::network_nbt())
+                    .unwrap(),
+            }],
+        };
+        let wolf_variants = Registry {
+            registry_id: "minecraft:wolf_variant".to_string(),
+            registry_entries: vec![RegistryEntry {
+                entry_id: "minecraft:wolf_variant".to_string(),
+                data: fastnbt::to_bytes_with_opts(&WolfVariant::default(), SerOpts::network_nbt())
+                    .unwrap(),
+            }],
+        };
+        let paintings = Registry {
+            registry_id: "minecraft:painting_variant".to_string(),
+            registry_entries: vec![RegistryEntry {
+                entry_id: "minecraft:painting_variant".to_string(),
+                data: fastnbt::to_bytes_with_opts(&Painting::default(), SerOpts::network_nbt())
+                    .unwrap(),
+            }],
+        };
+        vec![dimensions, biomes, wolf_variants, paintings]
+    }
 }

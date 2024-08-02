@@ -190,8 +190,8 @@ impl Client {
     }
 
     // Reads the connection until our buffer of len 4096 is full, then decode
-    /// Returns `true` if the connection is closed.
-    pub fn poll(&mut self, server: &mut Server, event: &Event) -> Result<bool, io::Error> {
+    /// Close connection when an error occurs
+    pub fn poll(&mut self, server: &mut Server, event: &Event) {
         if event.is_readable() {
             let mut received_data = vec![0; 4096];
             let mut bytes_read = 0;
@@ -201,7 +201,7 @@ impl Client {
                     Ok(0) => {
                         // Reading 0 bytes means the other side has closed the
                         // connection or is done writing, then so are we.
-                        self.closed = true;
+                        self.close();
                         break;
                     }
                     Ok(n) => {
@@ -215,7 +215,7 @@ impl Client {
                     Err(ref err) if would_block(err) => break,
                     Err(ref err) if interrupted(err) => continue,
                     // Other errors we'll consider fatal.
-                    Err(err) => return Err(err),
+                    Err(_) => self.close(),
                 }
             }
 
@@ -234,7 +234,6 @@ impl Client {
                 self.dec.clear();
             }
         }
-        Ok(self.closed)
     }
 
     /// Kicks the Client with a reason depending on the connection state

@@ -1,4 +1,3 @@
-use super::RegistryValue;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
@@ -13,19 +12,4 @@ struct Decoration {
     parameters: Vec<String>,
 }
 
-pub(super) fn all() -> Vec<RegistryValue<ChatType>> {
-    vec![RegistryValue {
-        name: "minecraft:chat".into(),
-        id: 0,
-        element: ChatType {
-            chat: Decoration {
-                parameters: vec!["sender".into(), "content".into()],
-                translation_key: "chat.type.text".into(),
-            },
-            narration: Decoration {
-                parameters: vec!["sender".into(), "content".into()],
-                translation_key: "chat.type.text.narrate".into(),
-            },
-        },
-    }]
-}
+

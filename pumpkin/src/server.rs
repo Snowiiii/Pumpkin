@@ -1,5 +1,5 @@
 use std::{
-    io::{self, Cursor},
+    io::Cursor,
     sync::atomic::{AtomicI32, Ordering},
 };
 
@@ -85,12 +85,7 @@ impl Server {
     }
 
     // Returns Tokens to remove
-    pub fn poll(
-        &mut self,
-        client: &mut Client,
-        _poll: &Poll,
-        event: &Event,
-    ) -> Result<bool, io::Error> {
+    pub fn poll(&mut self, client: &mut Client, _poll: &Poll, event: &Event) {
         // todo, Poll players in every world
         client.poll(self, event)
     }
@@ -106,19 +101,19 @@ impl Server {
             .send_packet(CLogin::new(
                 player.entity_id(),
                 self.difficulty == Difficulty::Hard,
-                1,
-                vec!["minecraft:overworld".into()],
+                0,
+                "minecraft:overworld".into(),
                 self.max_players as VarInt,
                 8, //  view distance todo
                 8, // sim view dinstance todo
                 false,
                 false,
                 false,
-                1,
+                0,
                 "minecraft:overworld".into(),
                 0, // seed
-                GameMode::Survival.to_byte() as u8,
-                GameMode::Undefined.to_byte(),
+                GameMode::Spectator.to_byte() as u8,
+                GameMode::Spectator.to_byte(),
                 false,
                 false,
                 false, // deth loc
