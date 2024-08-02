@@ -79,6 +79,7 @@ Cargo.lock
 # mc decompiled source
 mc-source-code/DecompilerMC/
 mc-source-code/src/
+mc-source-code/target/
 
 # project's binary configurations
 configuration.toml
