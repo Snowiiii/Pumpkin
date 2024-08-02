@@ -4,31 +4,36 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+pumpkin-protocol = { path = "../pumpkin-protocol"}
+pumpkin-registry = { path = "../pumpkin-registry"}
 
+# config
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 rand = "0.8.5"
 
+# encryption
 rsa = "0.9.6"
 rsa-der = "0.3.0"
 
-aes = "0.8.4"
-cfb8 = "0.8.1"
 flate2 = "1.0.30"
-bytes = "1.7"
 
 thiserror = "1.0.63"
 
+# icon loading
 base64 = "0.22.1"
 image = { version = "0.25", default-features = false, features = ["png"]}
 
 simple_logger = "5.0.0"
 log = "0.4"
+
+# networking
 mio = { version = "1.0.1", features = ["os-poll", "net"]}
 crossbeam-channel = "0.5.13"
+
 uuid = "1.10"
-toml = "0.8.17"
-fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
-fastsnbt = "0.2"
-fastanvil = "0.31.0"
+toml = "0.8.19"
+
+
+

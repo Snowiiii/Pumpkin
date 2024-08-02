@@ -1,18 +1,22 @@
-use crate::{
-    protocol::{
-        client::{
-            config::{CFinishConfig, CKnownPacks, CRegistryData, Entry},
-            login::{CEncryptionRequest, CLoginSuccess},
-            status::{CPingResponse, CStatusResponse},
-        },
-        server::{
-            config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks},
-            handshake::SHandShake,
-            login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
-            status::{SPingRequest, SStatusRequest},
-        },
-        ConnectionState, KnownPack,
+
+use pumpkin_protocol::{
+    client::{
+        config::{CFinishConfig, CKnownPacks, CRegistryData, Entry},
+        login::{CEncryptionRequest, CLoginSuccess},
+        status::{CPingResponse, CStatusResponse},
     },
+    server::{
+        config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks, SPluginMessage},
+        handshake::SHandShake,
+        login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
+        status::{SPingRequest, SStatusRequest},
+    },
+    ConnectionState, KnownPack,
+};
+use pumpkin_registry::{DimensionCodec, WolfCodec};
+
+use crate::{
+    entity::player::{ChatMode, Hand},
     server::Server,
 };
 
@@ -49,6 +53,7 @@ pub trait ClientPacketProcessor {
         server: &mut Server,
         client_information: SClientInformation,
     );
+    fn handle_plugin_message(&mut self, server: &mut Server, plugin_message: SPluginMessage);
     fn handle_known_packs(&mut self, server: &mut Server, config_acknowledged: SKnownPacks);
     fn handle_config_acknowledged(
         &mut self,
@@ -67,12 +72,8 @@ impl ClientPacketProcessor for Client {
     fn handle_status_request(&mut self, server: &mut Server, _status_request: SStatusRequest) {
         dbg!("sending status");
 
-        if let Ok(response) = serde_json::to_string(&server.status_response) {
-            self.send_packet(CStatusResponse::new(response))
-                .unwrap_or_else(|e| self.kick(&e.to_string()));
-        } else {
-            log::error!("Failed to parse Status response to JSON")
-        }
+        self.send_packet(CStatusResponse::new(&server.status_response_json))
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
     }
 
     fn handle_ping_request(&mut self, _server: &mut Server, ping_request: SPingRequest) {
@@ -129,11 +130,13 @@ impl ClientPacketProcessor for Client {
 
     fn handle_login_acknowledged(
         &mut self,
-        _server: &mut Server,
+        server: &mut Server,
         _login_acknowledged: SLoginAcknowledged,
     ) {
         self.connection_state = ConnectionState::Config;
-        Server::send_brand(self).unwrap_or_else(|e| self.kick(&e.to_string()));
+        server
+            .send_brand(self)
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
         // known data packs
         self.send_packet(CKnownPacks::new(&[KnownPack {
             namespace: "minecraft",
@@ -151,13 +154,25 @@ impl ClientPacketProcessor for Client {
         self.config = Some(PlayerConfig {
             locale: client_information.locale,
             view_distance: client_information.view_distance,
-            chat_mode: client_information.chat_mode,
+            chat_mode: ChatMode::from_varint(client_information.chat_mode),
             chat_colors: client_information.chat_colors,
             skin_parts: client_information.skin_parts,
-            main_hand: client_information.main_hand,
+            main_hand: Hand::from_varint(client_information.main_hand),
             text_filtering: client_information.text_filtering,
             server_listing: client_information.server_listing,
         });
+    }
+
+    fn handle_plugin_message(&mut self, _server: &mut Server, plugin_message: SPluginMessage) {
+        if plugin_message.channel.starts_with("minecraft:brand")
+            || plugin_message.channel.starts_with("MC|Brand")
+        {
+            dbg!("got a client brand");
+            match String::from_utf8(plugin_message.data) {
+                Ok(brand) => self.brand = Some(brand),
+                Err(e) => self.kick(&e.to_string()),
+            }
+        }
     }
 
     fn handle_known_packs(&mut self, server: &mut Server, config_acknowledged: SKnownPacks) {
@@ -167,6 +182,12 @@ impl ClientPacketProcessor for Client {
                 Entry {
                     entry_id: "minecraft:dimension_type",
                     has_data: true,
+                    data: &DimensionCodec::parse(),
+                },
+                Entry {
+                    entry_id: "minecraft:wolf_variant",
+                    has_data: true,
+                    data: &WolfCodec::parse(),
                 },
                 /*    Entry {
                     entry_id: "minecraft:worldgen/biome".into(),

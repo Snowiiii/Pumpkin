@@ -6,23 +6,23 @@ use std::{
 
 use crate::{
     entity::player::{ChatMode, Hand, Player},
-    protocol::{
-        client::{config::CConfigDisconnect, login::CLoginDisconnect},
-        server::{
-            config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks},
-            handshake::SHandShake,
-            login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
-            status::{SPingRequest, SStatusRequest},
-        },
-        ClientPacket, RawPacket,
-    },
     server::Server,
 };
 
-use crate::protocol::ConnectionState;
 use mio::{event::Event, net::TcpStream, Token};
-use packet_decoder::PacketDecoder;
-use packet_encoder::PacketEncoder;
+use pumpkin_protocol::{
+    client::{config::CConfigDisconnect, login::CLoginDisconnect},
+    packet_decoder::PacketDecoder,
+    packet_encoder::PacketEncoder,
+    server::{
+        config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks, SPluginMessage},
+        handshake::SHandShake,
+        login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
+        status::{SPingRequest, SStatusRequest},
+    },
+    ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
+};
+
 use rsa::Pkcs1v15Encrypt;
 use std::io::Read;
 use thiserror::Error;
@@ -30,12 +30,7 @@ use thiserror::Error;
 mod client_packet;
 mod player_packet;
 
-mod packet_decoder;
-mod packet_encoder;
-
 use client_packet::ClientPacketProcessor;
-
-pub const MAX_PACKET_SIZE: i32 = 2097152;
 
 pub struct PlayerConfig {
     locale: String, // 16
@@ -54,6 +49,7 @@ pub struct Client {
     pub name: Option<String>,
     pub uuid: Option<uuid::Uuid>,
     pub config: Option<PlayerConfig>,
+    pub brand: Option<String>,
 
     pub connection_state: ConnectionState,
     pub encrytion: bool,
@@ -71,6 +67,7 @@ impl Client {
             name: None,
             uuid: None,
             config: None,
+            brand: None,
             token,
             player: None,
             connection_state: ConnectionState::HandShake,
@@ -83,10 +80,12 @@ impl Client {
         }
     }
 
+    /// adds a Incoming packet to the queue
     pub fn add_packet(&mut self, packet: RawPacket) {
         self.client_packets_queue.push_back(packet);
     }
 
+    /// enables encryption
     pub fn enable_encryption(
         &mut self,
         server: &mut Server,
@@ -126,18 +125,19 @@ impl Client {
         }
     }
 
+    /// Handles an incoming decoded Packet
     pub fn handle_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
         dbg!("Handling packet");
         let bytebuf = &mut packet.bytebuf;
         match self.connection_state {
-            crate::protocol::ConnectionState::HandShake => match packet.id {
+            pumpkin_protocol::ConnectionState::HandShake => match packet.id {
                 SHandShake::PACKET_ID => self.handle_handshake(server, SHandShake::read(bytebuf)),
                 _ => log::error!(
                     "Failed to handle packet id {} while in Handshake state",
                     packet.id
                 ),
             },
-            crate::protocol::ConnectionState::Status => match packet.id {
+            pumpkin_protocol::ConnectionState::Status => match packet.id {
                 SStatusRequest::PACKET_ID => {
                     self.handle_status_request(server, SStatusRequest::read(bytebuf))
                 }
@@ -149,7 +149,7 @@ impl Client {
                     packet.id
                 ),
             },
-            crate::protocol::ConnectionState::Login => match packet.id {
+            pumpkin_protocol::ConnectionState::Login => match packet.id {
                 SLoginStart::PACKET_ID => {
                     self.handle_login_start(server, SLoginStart::read(bytebuf))
                 }
@@ -167,9 +167,12 @@ impl Client {
                     packet.id
                 ),
             },
-            crate::protocol::ConnectionState::Config => match packet.id {
+            pumpkin_protocol::ConnectionState::Config => match packet.id {
                 SClientInformation::PACKET_ID => {
                     self.handle_client_information(server, SClientInformation::read(bytebuf))
+                }
+                SPluginMessage::PACKET_ID => {
+                    self.handle_plugin_message(server, SPluginMessage::read(bytebuf))
                 }
                 SAcknowledgeFinishConfig::PACKET_ID => {
                     self.handle_config_acknowledged(server, SAcknowledgeFinishConfig::read(bytebuf))
@@ -186,6 +189,7 @@ impl Client {
         }
     }
 
+    // Reads the connection until our buffer of len 4096 is full, then decode
     /// Returns `true` if the connection is closed.
     pub fn poll(&mut self, server: &mut Server, event: &Event) -> Result<bool, io::Error> {
         if event.is_readable() {
@@ -233,6 +237,7 @@ impl Client {
         Ok(self.closed)
     }
 
+    /// Kicks the Client with a reason depending on the connection state
     pub fn kick(&mut self, reason: &str) {
         // Todo
         match self.connection_state {
@@ -251,7 +256,7 @@ impl Client {
         self.close()
     }
 
-    // Kick before when needed
+    /// You should prefer to use `kick` when you can
     pub fn close(&mut self) {
         self.closed = true;
     }
@@ -263,24 +268,6 @@ pub enum EncryptionError {
     FailedDecrypt,
     #[error("shared secret has the wrong length")]
     SharedWrongLength,
-}
-
-#[derive(Error, Debug)]
-pub enum PacketError {
-    #[error("failed to decode packet ID")]
-    DecodeID,
-    #[error("failed to encode packet ID")]
-    EncodeID,
-    #[error("failed to write encoded packet")]
-    EncodeFailedWrite,
-    #[error("failed to write encoded packet to connection")]
-    ConnectionWrite,
-    #[error("packet exceeds maximum length")]
-    TooLong,
-    #[error("packet length is out of bounds")]
-    OutOfBounds,
-    #[error("malformed packet length VarInt")]
-    MailformedLength,
 }
 
 fn would_block(err: &io::Error) -> bool {

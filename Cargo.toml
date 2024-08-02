@@ -1,7 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
-    "pumpkin/"]
+members = [ "pumpkin-protocol/", "pumpkin-registry/", "pumpkin/"]
 
 [workspace.package]
 version = "0.1.0"
