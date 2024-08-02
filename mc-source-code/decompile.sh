@@ -6,6 +6,11 @@
 # configure which version we want to decompile
 MC_VERSION="1.21"
 
+# remove folders if they already exist
+if [ -d "DecompilerMC" ]; then rm -r DecompilerMC; fi
+if [ -d "src" ]; then rm -r src; fi
+if [ -d "target" ]; then rm -r target; fi
+
 # clone DecompilerMC for automatic decompilation
 # look here for more informations:
 # - https://minecraft.fandom.com/wiki/Tutorials/See_Minecraft%27s_code
