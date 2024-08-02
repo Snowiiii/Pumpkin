@@ -11,6 +11,8 @@ MC_VERSION="1.21"
 # - https://minecraft.fandom.com/wiki/Tutorials/See_Minecraft%27s_code
 # - https://github.com/hube12/DecompilerMC
 git clone https://github.com/hube12/DecompilerMC.git
+echo "DecompilerMC cloned successfully."
+echo "Decompilation might take a while, please be patient."
 cd DecompilerMC
 python3.12 main.py -mcv $MC_VERSION -s server -na -f -rmap -rjar -dm -dj -dd -dec -q -c
 mv src ..
