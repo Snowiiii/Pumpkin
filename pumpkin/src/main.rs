@@ -16,6 +16,7 @@ pub mod server;
 pub mod tests;
 pub mod util;
 pub mod world;
+pub mod game;
 
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
@@ -23,6 +24,7 @@ fn main() -> io::Result<()> {
 
     use client::Client;
     use configuration::AdvancedConfiguration;
+    use game::data::GameData;
     use tests::Testing;
 
     let basic_config = BasicConfiguration::load("configuration.toml");
@@ -30,8 +32,9 @@ fn main() -> io::Result<()> {
     let advanced_configuration = AdvancedConfiguration::load("features.toml");
 
     simple_logger::SimpleLogger::new().init().unwrap();
+    
+    //Testing::data_test();
 
-    Testing::data_test();
     // Create a poll instance.
     let mut poll = Poll::new()?;
     // Create storage for events.

@@ -1,8 +1,9 @@
-use std::{collections::HashMap, io::Read};
+use std::{borrow::Borrow, collections::HashMap, io::Read};
 
 use fastanvil::{complete, Chunk, Region};
 
-use crate::tests::Testing;
+
+use crate::game::data::GameData;
 
 use super::{block::Block, world::World};
 
@@ -16,7 +17,7 @@ pub struct WorldChunk {
 
 impl WorldChunk {
     //region is the folder with the region files in world it is: world/region, in world_nether it is: world_nether/DIM-1/region for example
-    pub fn load_chunk(region: &str, x: i32, z: i32) -> Self {
+    pub fn load_chunk(region: &str, x: i32, z: i32, game_data: &GameData) -> Self {
         let mut blocks: Vec<Block> = Vec::new();
 
         let region_file = format!("{}/{}", region, World::get_region_file(x as f32, z as f32));
@@ -51,15 +52,24 @@ impl WorldChunk {
                                 block_data.insert(key, value);
                             }
                         }
+
+                        let block_id = game_data.get_block_id(chunk_block
+                            .name()
+                            .split(':')
+                            .collect::<Vec<&str>>()
+                            .get(1)
+                            .unwrap()
+                            .to_string());
+                        
                         let block = Block {
                             x: x as i32,
                             y: y as i32,
                             z: z as i32,
-                            id: 10, //this will be the block id as a enum
+                            id: block_id,
                             biome,
                             properties: block_data,
                         };
-
+                    
                         blocks.push(block)
                     }
                 }

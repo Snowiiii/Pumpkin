@@ -157,7 +157,7 @@ impl Server {
     pub fn build_response(config: &BasicConfiguration) -> StatusResponse {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/icon.png");
         let mut max_players = config.max_players;
-        
+
         let online = 0; // get online players
 
         //increasing player counter
