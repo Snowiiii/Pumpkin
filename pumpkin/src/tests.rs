@@ -1,10 +1,31 @@
 #![feature(test)]
 
-#[allow(soft_unstable)]
-mod tests {
-    use crate::world::chunk::WorldChunk;
+use std::io::Read;
 
-    
+use flate2::read::GzDecoder;
+
+#[allow(soft_unstable)]
+
+pub struct Testing {}
+impl Testing {
+    pub fn data_test() {
+        dbg!("test hello");
+        let mut file = std::fs::File::open("world/entities/r.-1.-1.mca").unwrap();
+
+        let mut bytes = vec![];
+
+        let mut string = String::new();
+        file.read_to_end(&mut bytes).unwrap();
+
+        dbg!(bytes.len());
+    }
+}
+
+mod tests {
+
+    use std::io::Read;
+
+    use crate::world::chunk::WorldChunk;
 
     #[test]
     pub fn load_100_chunks() {

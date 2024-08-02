@@ -403,6 +403,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
+name = "mca-parser"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "706c03c82edcbd3a42b89a19b4e7573634f9573c210d3acec4048c4f3c008697"
+dependencies = [
+ "fastnbt 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "miniz_oxide",
+ "serde",
+]
+
+[[package]]
 name = "memchr"
 version = "2.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -645,6 +656,7 @@ dependencies = [
  "flate2",
  "image 0.25.2",
  "log",
+ "mca-parser",
  "mio",
  "pumpkin-protocol",
  "pumpkin-registry",

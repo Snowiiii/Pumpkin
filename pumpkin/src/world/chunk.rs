@@ -1,6 +1,8 @@
-use std::{collections::HashMap};
+use std::{collections::HashMap, io::Read};
 
 use fastanvil::{complete, Chunk, Region};
+
+use crate::tests::Testing;
 
 use super::{block::Block, world::World};
 
@@ -15,7 +17,7 @@ pub struct WorldChunk {
 impl WorldChunk {
     //region is the folder with the region files in world it is: world/region, in world_nether it is: world_nether/DIM-1/region for example
     pub fn load_chunk(region: &str, x: i32, z: i32) -> Self {
-        let mut blocks = Vec::new();
+        let mut blocks: Vec<Block> = Vec::new();
 
         let region_file = format!("{}/{}", region, World::get_region_file(x as f32, z as f32));
         let intern = World::get_intern_coords(x, z);
@@ -27,6 +29,7 @@ impl WorldChunk {
             .unwrap();
         let complete_chunk = complete::Chunk::from_bytes(&chunk.unwrap()).unwrap();
         let height_map = complete_chunk.heightmap;
+
         for x in 0..16 {
             for y in -64..320 {
                 for z in 0..16 {

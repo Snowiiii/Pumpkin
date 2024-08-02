@@ -21,19 +21,32 @@ impl Default for AdvancedConfiguration {
 
 #[derive(Deserialize, Serialize)]
 pub struct BasicConfiguration {
+    #[serde(default)]
     pub server_address: String,
+    #[serde(default)]
     pub server_port: u16,
+    #[serde(default)]
     pub seed: String,
-    pub max_plyers: u32,
+    #[serde(default)]
+    pub max_players: u32,
+    #[serde(default)]
     pub view_distances: u8,
+    #[serde(default)]
     pub simulation_distance: u8,
+    #[serde(default)]
     pub resource_pack: String,
+    #[serde(default)]
     pub resource_pack_sha1: String,
     pub default_difficulty: Difficulty,
+    #[serde(default)]
     pub allow_nether: bool,
+    #[serde(default)]
     pub hardcore: bool,
+    #[serde(default)]
     pub online_mode: bool,
+    #[serde(default)]
     pub spawn_protection: u32,
+    #[serde(default)]
     pub motd: String,
 }
 
@@ -43,7 +56,7 @@ impl Default for BasicConfiguration {
             server_address: "127.0.0.1".to_string(),
             server_port: 25565,
             seed: "".to_string(),
-            max_plyers: 0,
+            max_players: 0, //if max_players is zero it increases every join
             view_distances: 10,
             simulation_distance: 10,
             resource_pack: "".to_string(),

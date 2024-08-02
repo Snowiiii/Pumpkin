@@ -76,7 +76,7 @@ impl Server {
             public_key,
             cached_server_brand,
             private_key,
-            max_players: config.0.max_plyers,
+            max_players: config.0.max_players,
             status_response,
             status_response_json,
             public_key_der,
@@ -156,6 +156,14 @@ impl Server {
 
     pub fn build_response(config: &BasicConfiguration) -> StatusResponse {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/icon.png");
+        let mut max_players = config.max_players;
+        
+        let online = 0; // get online players
+
+        //increasing player counter
+        if max_players == 0 {
+            max_players = online + 1;
+        }
 
         StatusResponse {
             version: Version {
@@ -163,7 +171,7 @@ impl Server {
                 protocol: 767,
             },
             players: Players {
-                max: config.max_plyers,
+                max: max_players,
                 online: 0,
                 sample: vec![Sample {
                     name: "".into(),

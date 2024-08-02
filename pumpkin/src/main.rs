@@ -19,10 +19,11 @@ pub mod world;
 
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
-    use std::{collections::HashMap, rc::Rc};
+    use std::{collections::HashMap, io::Cursor, rc::Rc};
 
     use client::Client;
     use configuration::AdvancedConfiguration;
+    use tests::Testing;
 
     let basic_config = BasicConfiguration::load("configuration.toml");
 
@@ -30,6 +31,7 @@ fn main() -> io::Result<()> {
 
     simple_logger::SimpleLogger::new().init().unwrap();
 
+    Testing::data_test();
     // Create a poll instance.
     let mut poll = Poll::new()?;
     // Create storage for events.

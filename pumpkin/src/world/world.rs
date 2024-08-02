@@ -34,7 +34,7 @@ impl World {
 
     pub fn get_region_file(x: f32, z: f32) -> String {
         let result: f32 = 7.0 / 32.0;
-        dbg!("{}", result.floor());
+        //dbg!("{}", result.floor());
 
         let region_file_name = format!("r.{}.{}.mca", (x / 32.0).floor(), (z / 32.0).floor());
         region_file_name

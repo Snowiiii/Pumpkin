@@ -36,6 +36,7 @@ uuid = "1.10"
 toml = "0.8.19"
 fastanvil = "0.31.0"
 fastnbt = "2.5.0"
+mca-parser = "1.0.2"
 
 
 

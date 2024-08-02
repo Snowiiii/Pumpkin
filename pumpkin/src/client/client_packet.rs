@@ -1,4 +1,3 @@
-
 use pumpkin_protocol::{
     client::{
         config::{CFinishConfig, CKnownPacks, CRegistryData, Entry},
