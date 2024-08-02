@@ -280,4 +280,8 @@ impl ByteBuffer {
     pub fn put_slice(&mut self, src: &[u8]) {
         self.buffer.put_slice(src)
     }
+
+    pub fn get_slice(&mut self) -> BytesMut {
+        self.buffer.split()
+    }
 }

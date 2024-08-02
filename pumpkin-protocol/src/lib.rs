@@ -14,6 +14,8 @@ pub mod packet_encoder;
 
 pub const MAX_PACKET_SIZE: i32 = 2097152;
 
+/// usally uses a namespace like "minecraft:thing"
+pub type Identifier = String;
 pub type VarInt = i32;
 pub type VarLong = i64;
 

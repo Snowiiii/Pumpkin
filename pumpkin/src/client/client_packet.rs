@@ -1,3 +1,4 @@
+
 use pumpkin_protocol::{
     client::{
         config::{CFinishConfig, CKnownPacks, CRegistryData, Entry},
@@ -5,7 +6,7 @@ use pumpkin_protocol::{
         status::{CPingResponse, CStatusResponse},
     },
     server::{
-        config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks},
+        config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks, SPluginMessage},
         handshake::SHandShake,
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
         status::{SPingRequest, SStatusRequest},
@@ -52,6 +53,7 @@ pub trait ClientPacketProcessor {
         server: &mut Server,
         client_information: SClientInformation,
     );
+    fn handle_plugin_message(&mut self, server: &mut Server, plugin_message: SPluginMessage);
     fn handle_known_packs(&mut self, server: &mut Server, config_acknowledged: SKnownPacks);
     fn handle_config_acknowledged(
         &mut self,
@@ -159,6 +161,18 @@ impl ClientPacketProcessor for Client {
             text_filtering: client_information.text_filtering,
             server_listing: client_information.server_listing,
         });
+    }
+
+    fn handle_plugin_message(&mut self, _server: &mut Server, plugin_message: SPluginMessage) {
+        if plugin_message.channel.starts_with("minecraft:brand")
+            || plugin_message.channel.starts_with("MC|Brand")
+        {
+            dbg!("got a client brand");
+            match String::from_utf8(plugin_message.data) {
+                Ok(brand) => self.brand = Some(brand),
+                Err(e) => self.kick(&e.to_string()),
+            }
+        }
     }
 
     fn handle_known_packs(&mut self, server: &mut Server, config_acknowledged: SKnownPacks) {

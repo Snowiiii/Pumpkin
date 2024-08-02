@@ -1,4 +1,4 @@
-use crate::{bytebuf::ByteBuffer, ServerPacket, VarInt};
+use crate::{bytebuf::ByteBuffer, Identifier, ServerPacket, VarInt};
 
 pub struct SClientInformation {
     pub locale: String, // 16
@@ -24,6 +24,22 @@ impl ServerPacket for SClientInformation {
             main_hand: bytebuf.get_var_int(),
             text_filtering: bytebuf.get_bool(),
             server_listing: bytebuf.get_bool(),
+        }
+    }
+}
+
+pub struct SPluginMessage {
+    pub channel: Identifier,
+    pub data: Vec<u8>,
+}
+
+impl ServerPacket for SPluginMessage {
+    const PACKET_ID: VarInt = 0x02;
+
+    fn read(bytebuf: &mut ByteBuffer) -> Self {
+        Self {
+            channel: bytebuf.get_string().unwrap(),
+            data: bytebuf.get_slice().to_vec(),
         }
     }
 }

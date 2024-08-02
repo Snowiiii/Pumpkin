@@ -15,7 +15,7 @@ use pumpkin_protocol::{
     packet_decoder::PacketDecoder,
     packet_encoder::PacketEncoder,
     server::{
-        config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks},
+        config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks, SPluginMessage},
         handshake::SHandShake,
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
         status::{SPingRequest, SStatusRequest},
@@ -49,6 +49,7 @@ pub struct Client {
     pub name: Option<String>,
     pub uuid: Option<uuid::Uuid>,
     pub config: Option<PlayerConfig>,
+    pub brand: Option<String>,
 
     pub connection_state: ConnectionState,
     pub encrytion: bool,
@@ -66,6 +67,7 @@ impl Client {
             name: None,
             uuid: None,
             config: None,
+            brand: None,
             token,
             player: None,
             connection_state: ConnectionState::HandShake,
@@ -168,6 +170,9 @@ impl Client {
             pumpkin_protocol::ConnectionState::Config => match packet.id {
                 SClientInformation::PACKET_ID => {
                     self.handle_client_information(server, SClientInformation::read(bytebuf))
+                }
+                SPluginMessage::PACKET_ID => {
+                    self.handle_plugin_message(server, SPluginMessage::read(bytebuf))
                 }
                 SAcknowledgeFinishConfig::PACKET_ID => {
                     self.handle_config_acknowledged(server, SAcknowledgeFinishConfig::read(bytebuf))
