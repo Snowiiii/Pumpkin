@@ -15,7 +15,7 @@ impl World {
         let game_data = &GameData::default();
 
         //load some chunks
-        
+
         let mut loaded_chunks = Vec::new();
 
         let chunk_1 = WorldChunk::load_chunk(region, 0, 0, game_data);

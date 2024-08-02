@@ -2,7 +2,6 @@ use std::{borrow::Borrow, collections::HashMap, io::Read};
 
 use fastanvil::{complete, Chunk, Region};
 
-
 use crate::game::data::GameData;
 
 use super::{block::Block, world::World};
@@ -53,14 +52,16 @@ impl WorldChunk {
                             }
                         }
 
-                        let block_id = game_data.get_block_id(chunk_block
-                            .name()
-                            .split(':')
-                            .collect::<Vec<&str>>()
-                            .get(1)
-                            .unwrap()
-                            .to_string());
-                        
+                        let block_id = game_data.get_block_id(
+                            chunk_block
+                                .name()
+                                .split(':')
+                                .collect::<Vec<&str>>()
+                                .get(1)
+                                .unwrap()
+                                .to_string(),
+                        );
+
                         let block = Block {
                             x: x as i32,
                             y: y as i32,
@@ -69,7 +70,7 @@ impl WorldChunk {
                             biome,
                             properties: block_data,
                         };
-                    
+
                         blocks.push(block)
                     }
                 }

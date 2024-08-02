@@ -12,11 +12,11 @@ const SERVER: Token = Token(0);
 pub mod client;
 pub mod configuration;
 pub mod entity;
+pub mod game;
 pub mod server;
 pub mod tests;
 pub mod util;
 pub mod world;
-pub mod game;
 
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
@@ -32,7 +32,7 @@ fn main() -> io::Result<()> {
     let advanced_configuration = AdvancedConfiguration::load("features.toml");
 
     simple_logger::SimpleLogger::new().init().unwrap();
-    
+
     //Testing::data_test();
 
     // Create a poll instance.

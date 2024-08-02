@@ -12,4 +12,3 @@ pub struct Block {
     pub biome: Biome,
     pub properties: HashMap<String, String>,
 }
-
