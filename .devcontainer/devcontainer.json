@@ -6,7 +6,7 @@
 		"ghcr.io/devcontainers/features/rust:1": {},
 		// java is needed for decompiling Mojang's server jar
 		"ghcr.io/devcontainers/features/java:1": {
-			"version": "17",
+			"version": "21",
 			"jdkDistro": "oracle",
 			"installMaven": true,
 			"mavenVersion": "latest"
