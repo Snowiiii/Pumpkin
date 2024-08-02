@@ -638,18 +638,16 @@ dependencies = [
 name = "pumpkin"
 version = "0.1.0"
 dependencies = [
- "aes",
  "base64",
- "bytes",
- "cfb8",
  "crossbeam-channel",
  "fastanvil",
- "fastnbt 2.5.0 (git+https://github.com/owengage/fastnbt.git)",
- "fastsnbt",
+ "fastnbt 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2",
  "image 0.25.2",
  "log",
  "mio",
+ "pumpkin-protocol",
+ "pumpkin-registry",
  "rand",
  "rsa",
  "rsa-der",
@@ -659,6 +657,31 @@ dependencies = [
  "thiserror",
  "toml",
  "uuid",
+]
+
+[[package]]
+name = "pumpkin-protocol"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "bytes",
+ "cfb8",
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "uuid",
+]
+
+[[package]]
+name = "pumpkin-registry"
+version = "0.1.0"
+dependencies = [
+ "fastnbt 2.5.0 (git+https://github.com/owengage/fastnbt.git)",
+ "fastsnbt",
+ "pumpkin-protocol",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

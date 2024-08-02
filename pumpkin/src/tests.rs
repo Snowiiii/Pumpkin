@@ -6,8 +6,6 @@ mod tests {
 
     
 
-    
-
     #[test]
     pub fn load_100_chunks() {
         //im doing it with tests as bench is not implemented yet

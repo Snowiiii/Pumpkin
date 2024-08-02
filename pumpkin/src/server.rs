@@ -19,7 +19,7 @@ use crate::{
         player::{GameMode, Player},
         Entity, EntityId,
     },
-    world::World,
+    world::world::World,
 };
 
 pub struct Server {
@@ -69,7 +69,7 @@ impl Server {
         Self {
             // 0 is invalid
             entity_id: 2.into(),
-            world: World::new(),
+            world: World::new("world", "world/region"),
             online_mode: config.0.online_mode,
             encryption: config.1.encryption,
             compression_threshold: None, // 256
