@@ -3,7 +3,7 @@ use std::io::{self, Error, ErrorKind};
 
 use bytes::{Buf, BufMut, BytesMut};
 
-use crate::{VarInt, VarLong};
+use crate::{BitSet, VarInt, VarLong};
 
 const SEGMENT_BITS: u8 = 0x7F;
 const CONTINUE_BIT: u8 = 0x80;
@@ -141,6 +141,13 @@ impl ByteBuffer {
         }
     }
 
+    pub fn put_bit_set(&mut self, set: &BitSet) {
+        self.put_var_int(set.0);
+        for b in &set.1 {
+            self.put_i64(*b);
+        }
+    }
+
     /// Reads a boolean. If true, the closure is called, and the returned value is
     /// wrapped in Some. Otherwise, this returns None.
     pub fn get_option<T>(&mut self, val: impl FnOnce(&mut Self) -> T) -> Option<T> {
@@ -272,6 +279,10 @@ impl ByteBuffer {
 
     pub fn put_f32(&mut self, n: f32) {
         self.buffer.put_f32(n)
+    }
+
+    pub fn put_f64(&mut self, n: f64) {
+        self.buffer.put_f64(n)
     }
 
     pub fn copy_to_bytes(&mut self, len: usize) -> bytes::Bytes {

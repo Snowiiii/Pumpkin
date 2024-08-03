@@ -108,7 +108,7 @@ fn main() -> io::Result<()> {
                 token => {
                     // Maybe received an event for a TCP connection.
                     let done = if let Some(client) = connections.get_mut(&token) {
-                        client.poll(&mut server, event).unwrap();
+                        client.poll(&mut server, event);
                         client.closed
                     } else {
                         // Sporadic events happen, we can safely ignore them.

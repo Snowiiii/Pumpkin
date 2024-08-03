@@ -92,11 +92,11 @@ impl<'a> ClientPacket for CKnownPacks<'a> {
 
 pub struct CRegistryData<'a> {
     registry_id: &'a str,
-    entries: &'a [Entry<'a>],
+    entries: &'a [RegistryEntry],
 }
 
 impl<'a> CRegistryData<'a> {
-    pub fn new(registry_id: &'a str, entries: &'a [Entry]) -> Self {
+    pub fn new(registry_id: &'a str, entries: &'a [RegistryEntry]) -> Self {
         Self {
             registry_id,
             entries,
@@ -104,10 +104,9 @@ impl<'a> CRegistryData<'a> {
     }
 }
 
-pub struct Entry<'a> {
-    pub entry_id: &'a str,
-    pub has_data: bool,
-    pub data: &'a [u8],
+pub struct RegistryEntry {
+    pub entry_id: String,
+    pub data: Vec<u8>,
 }
 
 impl<'a> ClientPacket for CRegistryData<'a> {
@@ -115,10 +114,10 @@ impl<'a> ClientPacket for CRegistryData<'a> {
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_string(self.registry_id);
-        bytebuf.put_list::<Entry>(self.entries, |p, v| {
-            p.put_string(v.entry_id);
-            p.put_bool(v.has_data);
-            p.put_slice(v.data);
+        bytebuf.put_list::<RegistryEntry>(self.entries, |p, v| {
+            p.put_string(&v.entry_id);
+            p.put_bool(!v.data.is_empty());
+            p.put_slice(&v.data);
         });
     }
 }

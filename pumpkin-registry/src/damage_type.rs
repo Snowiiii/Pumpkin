@@ -1,6 +1,6 @@
+use fastnbt::SerOpts;
+use pumpkin_protocol::client::config::RegistryEntry;
 use serde::Serialize;
-
-use super::RegistryValue;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct DamageType {
@@ -17,6 +17,8 @@ const NAMES: &[&str] = &[
     "arrow",
     "bad_respawn_point",
     "cactus",
+    "cramming",
+    "campfire",
     "cramming",
     "dragon_breath",
     "drown",
@@ -61,23 +63,24 @@ const NAMES: &[&str] = &[
     "wither_skull",
 ];
 
-pub(super) fn all() -> Vec<RegistryValue<DamageType>> {
-    let mut items: Vec<_> = NAMES
+pub(super) fn entires() -> Vec<RegistryEntry> {
+    let items: Vec<_> = NAMES
         .iter()
-        .map(|name| RegistryValue {
-            name: (*name).into(),
-            id: 0,
-            element: DamageType {
-                exhaustion: 0.1,
-                message_id: "inFire".into(),
-                scaling: "when_caused_by_living_non_player".into(),
-                effects: None,
-                death_message_type: Some("default".into()),
-            },
+        .map(|name| RegistryEntry {
+            entry_id: (*name).into(),
+            data: fastnbt::to_bytes_with_opts(
+                &DamageType {
+                    exhaustion: 0.1,
+                    message_id: "inFire".into(),
+                    scaling: "when_caused_by_living_non_player".into(),
+                    death_message_type: None,
+                    effects: None,
+                },
+                SerOpts::network_nbt(),
+            )
+            .unwrap(),
         })
         .collect();
-
-    items[1].element.effects = Some("burning".into());
 
     items
 }

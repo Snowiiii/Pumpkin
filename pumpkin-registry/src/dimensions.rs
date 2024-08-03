@@ -49,13 +49,8 @@ impl Default for Dimension {
             infiniburn: "#minecraft:infiniburn_overworld".into(),
             logical_height: 384,
             min_y: -64,
-            monster_spawn_block_light_limit: 0,
-            monster_spawn_light_level: MonsterSpawnLightLevel::Tagged(
-                MonsterSpawnLightLevelTagged::Uniform {
-                    min_inclusive: 7,
-                    max_inclusive: 0,
-                },
-            ),
+            monster_spawn_block_light_limit: 15,
+            monster_spawn_light_level: MonsterSpawnLightLevel::Int(7),
             natural: 1,
             piglin_safe: 0,
             respawn_anchor_works: 0,

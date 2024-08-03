@@ -1,6 +1,6 @@
 use pumpkin_protocol::{
     client::{
-        config::{CFinishConfig, CKnownPacks, CRegistryData, Entry},
+        config::{CFinishConfig, CKnownPacks, CRegistryData},
         login::{CEncryptionRequest, CLoginSuccess},
         status::{CPingResponse, CStatusResponse},
     },
@@ -12,7 +12,7 @@ use pumpkin_protocol::{
     },
     ConnectionState, KnownPack,
 };
-use pumpkin_registry::{DimensionCodec, WolfCodec};
+use pumpkin_registry::Registry;
 
 use crate::{
     entity::player::{ChatMode, Hand},
@@ -174,35 +174,14 @@ impl ClientPacketProcessor for Client {
         }
     }
 
-    fn handle_known_packs(&mut self, server: &mut Server, config_acknowledged: SKnownPacks) {
-        self.send_packet(CRegistryData::new(
-            "dimension_type",
-            &[
-                Entry {
-                    entry_id: "minecraft:dimension_type",
-                    has_data: true,
-                    data: &DimensionCodec::parse(),
-                },
-                Entry {
-                    entry_id: "minecraft:wolf_variant",
-                    has_data: true,
-                    data: &WolfCodec::parse(),
-                },
-                /*    Entry {
-                    entry_id: "minecraft:worldgen/biome".into(),
-                    has_data: true,
-                },
-                Entry {
-                    entry_id: "minecraft:chat_type".into(),
-                    has_data: true,
-                },
-                Entry {
-                    entry_id: "minecraft:damage_type".into(),
-                    has_data: true,
-                    }, */
-            ],
-        ))
-        .unwrap_or_else(|e| self.kick(&e.to_string()));
+    fn handle_known_packs(&mut self, _server: &mut Server, _config_acknowledged: SKnownPacks) {
+        for registry in Registry::get_static() {
+            self.send_packet(CRegistryData::new(
+                &registry.registry_id,
+                &registry.registry_entries,
+            ))
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
+        }
 
         // We are done with configuring
         dbg!("finish config");
