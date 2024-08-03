@@ -141,7 +141,7 @@ impl Server {
     }
 
     // todo: do this in a world
-    fn spawn_chunks(player: &Player) {}
+    fn spawn_test_chunk(client: &Client) {}
 
     // move to world
     pub fn new_entity_id(&self) -> EntityId {

@@ -3,7 +3,7 @@ use std::io::{self, Error, ErrorKind};
 
 use bytes::{Buf, BufMut, BytesMut};
 
-use crate::{VarInt, VarLong};
+use crate::{BitSet, VarInt, VarLong};
 
 const SEGMENT_BITS: u8 = 0x7F;
 const CONTINUE_BIT: u8 = 0x80;
@@ -138,6 +138,13 @@ impl ByteBuffer {
             if val == 0 {
                 break;
             }
+        }
+    }
+
+    pub fn put_bit_set(&mut self, set: &BitSet) {
+        self.put_var_int(set.length);
+        for b in &set.data {
+            self.put_i64(*b);
         }
     }
 

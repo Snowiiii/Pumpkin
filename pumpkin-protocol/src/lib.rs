@@ -19,6 +19,11 @@ pub type Identifier = String;
 pub type VarInt = i32;
 pub type VarLong = i64;
 
+pub struct BitSet {
+    length: VarInt,
+    data: Vec<i64>,
+}
+
 pub struct VarInt32(pub i32);
 
 impl VarInt32 {

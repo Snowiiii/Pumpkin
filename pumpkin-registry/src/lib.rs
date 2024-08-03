@@ -1,5 +1,4 @@
 use biomes::Biome;
-use damage_type::DamageType;
 use dimensions::Dimension;
 use fastnbt::SerOpts;
 use paint::Painting;
