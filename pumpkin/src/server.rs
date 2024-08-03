@@ -8,7 +8,7 @@ use mio::{event::Event, Poll};
 use pumpkin_protocol::{
     client::{
         config::CPluginMessage,
-        play::{CGameEvent, CLogin},
+        play::{CGameEvent, CLogin, CSyncPlayerPostion},
     },
     PacketError, Players, Sample, StatusResponse, VarInt, VarInt32, Version,
 };
@@ -95,6 +95,7 @@ impl Server {
 
     // todo: do this in a world
     pub fn spawn_player(&mut self, client: &mut Client) {
+        dbg!("spawning player");
         let player = Player {
             entity: Entity {
                 entity_id: self.new_entity_id(),
@@ -126,12 +127,16 @@ impl Server {
                 false,
             ))
             .unwrap_or_else(|e| client.kick(&e.to_string()));
+        // teleport
+        client
+            .send_packet(CSyncPlayerPostion::new(10.0, 10.0, 10.0, 10.0, 0.0, 0, 10))
+            .unwrap_or_else(|e| client.kick(&e.to_string()));
 
         // Start waiting for level chunks
         client
             .send_packet(CGameEvent::new(13, 0.0))
             .unwrap_or_else(|e| client.kick(&e.to_string()));
-        dbg!("spawning player");
+
         client.player = Some(player);
     }
 

@@ -274,6 +274,10 @@ impl ByteBuffer {
         self.buffer.put_f32(n)
     }
 
+    pub fn put_f64(&mut self, n: f64) {
+        self.buffer.put_f64(n)
+    }
+
     pub fn copy_to_bytes(&mut self, len: usize) -> bytes::Bytes {
         self.buffer.copy_to_bytes(len)
     }
