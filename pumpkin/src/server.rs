@@ -1,5 +1,6 @@
 use std::{
     io::Cursor,
+    rc::Rc,
     sync::atomic::{AtomicI32, Ordering},
 };
 
@@ -8,9 +9,13 @@ use mio::{event::Event, Poll};
 use pumpkin_protocol::{
     client::{
         config::CPluginMessage,
-        play::{CGameEvent, CLogin, CSyncPlayerPostion},
+        play::{CChunkDataUpdateLight, CGameEvent, CLogin, CSyncPlayerPostion, SkyLight},
     },
-    PacketError, Players, Sample, StatusResponse, VarInt, VarInt32, Version,
+    BitSet, PacketError, Players, Sample, StatusResponse, VarInt, VarInt32, Version,
+};
+use pumpkin_world::{
+    chunk::{TestChunk, SKY_LIGHT_ARRAYS},
+    World,
 };
 use rsa::{rand_core::OsRng, traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
@@ -22,7 +27,6 @@ use crate::{
         player::{GameMode, Player},
         Entity, EntityId,
     },
-    world::World,
 };
 
 pub struct Server {
@@ -37,8 +41,7 @@ pub struct Server {
     /// the maximum amount of players that can join the Server
     pub max_players: u32,
 
-    pub world: World,
-
+    // pub world: World,
     pub status_response: StatusResponse,
     // We cache the json response here so we don't parse it every time someone makes a Status request.
     // Keep in mind that we must parse this again, when the StatusResponse changes which usally happen when a player joins or leaves
@@ -72,7 +75,7 @@ impl Server {
         Self {
             // 0 is invalid
             entity_id: 2.into(),
-            world: World::new(),
+            //  world: World::load(""),
             online_mode: config.0.online_mode,
             encryption: config.1.encryption,
             compression_threshold: None, // 256
@@ -96,11 +99,9 @@ impl Server {
     // todo: do this in a world
     pub fn spawn_player(&mut self, client: &mut Client) {
         dbg!("spawning player");
-        let player = Player {
-            entity: Entity {
-                entity_id: self.new_entity_id(),
-            },
-        };
+        let player = Player::new(Entity {
+            entity_id: self.new_entity_id(),
+        });
 
         client
             .send_packet(CLogin::new(
@@ -137,11 +138,29 @@ impl Server {
             .send_packet(CGameEvent::new(13, 0.0))
             .unwrap_or_else(|e| client.kick(&e.to_string()));
 
+        Server::spawn_test_chunk(client);
+
         client.player = Some(player);
     }
 
     // todo: do this in a world
-    fn spawn_test_chunk(client: &Client) {}
+    fn spawn_test_chunk(client: &mut Client) {
+        let test_chunk = TestChunk::new();
+        client
+            .send_packet(CChunkDataUpdateLight::new(
+                10,
+                10,
+                test_chunk.heightmap,
+                Vec::new(),
+                Vec::new(),
+                BitSet(0, Vec::new()),
+                BitSet(0, Vec::new()),
+                BitSet(0, Vec::new()),
+                Vec::new(),
+                Vec::new(),
+            ))
+            .unwrap_or_else(|e| client.kick(&e.to_string()))
+    }
 
     // move to world
     pub fn new_entity_id(&self) -> EntityId {

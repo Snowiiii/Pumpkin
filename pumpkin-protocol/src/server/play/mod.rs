@@ -1,7 +1,7 @@
 use crate::{ServerPacket, VarInt};
 
 pub struct SConfirmTeleport {
-    teleport_id: VarInt,
+    pub teleport_id: VarInt,
 }
 
 impl ServerPacket for SConfirmTeleport {

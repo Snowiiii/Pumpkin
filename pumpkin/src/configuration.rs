@@ -62,13 +62,10 @@ impl AdvancedConfiguration {
     pub fn load<P: AsRef<Path>>(path: P) -> AdvancedConfiguration {
         if path.as_ref().exists() {
             let toml = std::fs::read_to_string(path).expect("Couldn't read configuration");
-            let configuration: AdvancedConfiguration =
-                toml::from_str(toml.as_str()).expect("Couldn't parse");
-            configuration
+            toml::from_str(toml.as_str()).expect("Couldn't parse")
         } else {
             let config = AdvancedConfiguration::default();
             let toml = toml::to_string(&config).expect("Couldn't create toml!");
-
             std::fs::write(path, toml).expect("Couldn't save configuration");
             config
         }
@@ -79,13 +76,10 @@ impl BasicConfiguration {
     pub fn load<P: AsRef<Path>>(path: P) -> BasicConfiguration {
         if path.as_ref().exists() {
             let toml = std::fs::read_to_string(path).expect("Couldn't read configuration");
-            let configuration: BasicConfiguration =
-                toml::from_str(toml.as_str()).expect("Couldn't parse");
-            configuration
+            toml::from_str(toml.as_str()).expect("Couldn't parse")
         } else {
             let config = BasicConfiguration::default();
             let toml = toml::to_string(&config).expect("Couldn't create toml!");
-
             std::fs::write(path, toml).expect("Couldn't save configuration");
             config
         }

@@ -92,7 +92,7 @@ impl<'a> ClientPacket for CKnownPacks<'a> {
 
 pub struct CRegistryData<'a> {
     registry_id: &'a str,
-    entries: &'a [RegistryEntry],
+    entries: &'a [RegistryEntry<'a>],
 }
 
 impl<'a> CRegistryData<'a> {
@@ -104,8 +104,8 @@ impl<'a> CRegistryData<'a> {
     }
 }
 
-pub struct RegistryEntry {
-    pub entry_id: String,
+pub struct RegistryEntry<'a> {
+    pub entry_id: &'a str,
     pub data: Vec<u8>,
 }
 

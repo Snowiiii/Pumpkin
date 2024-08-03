@@ -1,30 +1,24 @@
-use pumpkin_protocol::{server::play::SConfirmTeleport, RawPacket, ServerPacket, VarInt};
-
-use crate::{client::player_packet::PlayerPacketProcessor, server::Server};
+use pumpkin_protocol::VarInt;
 
 use super::{Entity, EntityId};
 
 pub struct Player {
     pub entity: Entity,
+
+    // Current awaiting teleport id, None if did not teleport
+    pub awaiting_teleport: Option<VarInt>,
 }
 
 impl Player {
     pub fn new(entity: Entity) -> Self {
-        Self { entity }
+        Self {
+            entity,
+            awaiting_teleport: None,
+        }
     }
 
     pub fn entity_id(&self) -> EntityId {
         self.entity.entity_id
-    }
-
-    pub fn handle_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
-        let bytebuf = &mut packet.bytebuf;
-        match packet.id {
-            SConfirmTeleport::PACKET_ID => {
-                self.handle_confirm_teleport(server, SConfirmTeleport::read(bytebuf))
-            }
-            _ => log::error!("Failed to handle Player packet, id {}", packet.id),
-        }
     }
 }
 

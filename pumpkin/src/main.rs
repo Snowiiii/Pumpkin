@@ -14,7 +14,6 @@ pub mod configuration;
 pub mod entity;
 pub mod server;
 pub mod util;
-pub mod world;
 
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {

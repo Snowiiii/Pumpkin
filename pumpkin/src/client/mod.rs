@@ -10,6 +10,7 @@ use crate::{
 };
 
 use mio::{event::Event, net::TcpStream, Token};
+use player_packet::PlayerPacketProcessor;
 use pumpkin_protocol::{
     client::{config::CConfigDisconnect, login::CLoginDisconnect},
     packet_decoder::PacketDecoder,
@@ -18,6 +19,7 @@ use pumpkin_protocol::{
         config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks, SPluginMessage},
         handshake::SHandShake,
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
+        play::SConfirmTeleport,
         status::{SPingRequest, SStatusRequest},
     },
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
@@ -186,14 +188,24 @@ impl Client {
                 ),
             },
             pumpkin_protocol::ConnectionState::Play => {
-                if let Some(player) = &mut self.player {
-                    player.handle_packet(server, packet);
+                if self.player.is_some() {
+                    self.handle_play_packet(server, packet);
                 } else {
                     // should be impossible
                     self.kick("no player in play state?")
                 }
             }
             _ => log::error!("Invalid Connection state {:?}", self.connection_state),
+        }
+    }
+
+    pub fn handle_play_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
+        let bytebuf = &mut packet.bytebuf;
+        match packet.id {
+            SConfirmTeleport::PACKET_ID => {
+                self.handle_confirm_teleport(server, SConfirmTeleport::read(bytebuf))
+            }
+            _ => log::error!("Failed to handle player packet id {}", packet.id),
         }
     }
 

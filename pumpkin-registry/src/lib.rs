@@ -14,7 +14,7 @@ mod wolf;
 
 pub struct Registry {
     pub registry_id: String,
-    pub registry_entries: Vec<RegistryEntry>,
+    pub registry_entries: Vec<RegistryEntry<'static>>,
 }
 
 impl Registry {
@@ -22,7 +22,7 @@ impl Registry {
         let dimensions = Registry {
             registry_id: "minecraft:dimension_type".to_string(),
             registry_entries: vec![RegistryEntry {
-                entry_id: "minecraft:overworld".to_string(),
+                entry_id: "minecraft:overworld",
                 data: fastnbt::to_bytes_with_opts(&Dimension::default(), SerOpts::network_nbt())
                     .unwrap(),
             }],
@@ -31,12 +31,12 @@ impl Registry {
             registry_id: "minecraft:worldgen/biome".to_string(),
             registry_entries: vec![
                 RegistryEntry {
-                    entry_id: "minecraft:snowy_taiga".to_string(),
+                    entry_id: "minecraft:snowy_taiga",
                     data: fastnbt::to_bytes_with_opts(&Biome::default(), SerOpts::network_nbt())
                         .unwrap(),
                 },
                 RegistryEntry {
-                    entry_id: "minecraft:plains".to_string(),
+                    entry_id: "minecraft:plains",
                     data: fastnbt::to_bytes_with_opts(&Biome::default(), SerOpts::network_nbt())
                         .unwrap(),
                 },
@@ -45,7 +45,7 @@ impl Registry {
         let wolf_variants = Registry {
             registry_id: "minecraft:wolf_variant".to_string(),
             registry_entries: vec![RegistryEntry {
-                entry_id: "minecraft:wolf_variant".to_string(),
+                entry_id: "minecraft:wolf_variant",
                 data: fastnbt::to_bytes_with_opts(&WolfVariant::default(), SerOpts::network_nbt())
                     .unwrap(),
             }],
@@ -57,7 +57,7 @@ impl Registry {
         let paintings = Registry {
             registry_id: "minecraft:painting_variant".to_string(),
             registry_entries: vec![RegistryEntry {
-                entry_id: "minecraft:painting_variant".to_string(),
+                entry_id: "minecraft:painting_variant",
                 data: fastnbt::to_bytes_with_opts(&Painting::default(), SerOpts::network_nbt())
                     .unwrap(),
             }],

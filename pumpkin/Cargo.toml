@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+pumpkin-world = { path = "../pumpkin-world"}
 pumpkin-protocol = { path = "../pumpkin-protocol"}
 pumpkin-registry = { path = "../pumpkin-registry"}
 

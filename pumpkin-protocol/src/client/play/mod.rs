@@ -312,9 +312,9 @@ pub struct BlockEntity {
 }
 
 pub struct SkyLight {
-    array: Vec<u8>,
+    pub array: Vec<u8>,
 }
 
 pub struct BlockLight {
-    array: Vec<u8>,
+    pub array: Vec<u8>,
 }
