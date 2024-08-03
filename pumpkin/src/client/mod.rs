@@ -28,7 +28,7 @@ use std::io::Read;
 use thiserror::Error;
 
 mod client_packet;
-mod player_packet;
+pub mod player_packet;
 
 use client_packet::ClientPacketProcessor;
 
@@ -185,6 +185,14 @@ impl Client {
                     packet.id
                 ),
             },
+            pumpkin_protocol::ConnectionState::Play => {
+                if let Some(player) = &mut self.player {
+                    player.handle_packet(server, packet);
+                } else {
+                    // should be impossible
+                    self.kick("no player in play state?")
+                }
+            }
             _ => log::error!("Invalid Connection state {:?}", self.connection_state),
         }
     }

@@ -30,15 +30,18 @@ impl Registry {
         };
         let biomes = Registry {
             registry_id: "minecraft:worldgen/biome".to_string(),
-            registry_entries: vec![RegistryEntry {
-                entry_id: "minecraft:snowy_taiga".to_string(),
-                data: fastnbt::to_bytes_with_opts(&Biome::default(), SerOpts::network_nbt())
-                    .unwrap(),
-            }, RegistryEntry {
-                entry_id: "minecraft:plains".to_string(),
-                data: fastnbt::to_bytes_with_opts(&Biome::default(), SerOpts::network_nbt())
-                    .unwrap(),
-            }]
+            registry_entries: vec![
+                RegistryEntry {
+                    entry_id: "minecraft:snowy_taiga".to_string(),
+                    data: fastnbt::to_bytes_with_opts(&Biome::default(), SerOpts::network_nbt())
+                        .unwrap(),
+                },
+                RegistryEntry {
+                    entry_id: "minecraft:plains".to_string(),
+                    data: fastnbt::to_bytes_with_opts(&Biome::default(), SerOpts::network_nbt())
+                        .unwrap(),
+                },
+            ],
         };
         let wolf_variants = Registry {
             registry_id: "minecraft:wolf_variant".to_string(),
