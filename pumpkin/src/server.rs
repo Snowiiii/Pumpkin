@@ -8,7 +8,7 @@ use mio::{event::Event, Poll};
 use pumpkin_protocol::{
     client::{
         config::CPluginMessage,
-        play::{ CLogin},
+        play::{CGameEvent, CLogin},
     },
     PacketError, Players, Sample, StatusResponse, VarInt, VarInt32, Version,
 };
@@ -127,7 +127,10 @@ impl Server {
             ))
             .unwrap_or_else(|e| client.kick(&e.to_string()));
 
-      
+        // Start waiting for level chunks
+        client
+            .send_packet(CGameEvent::new(13, 0.0))
+            .unwrap_or_else(|e| client.kick(&e.to_string()));
         dbg!("spawning player");
         client.player = Some(player);
     }
