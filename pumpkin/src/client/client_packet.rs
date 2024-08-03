@@ -179,7 +179,8 @@ impl ClientPacketProcessor for Client {
             self.send_packet(CRegistryData::new(
                 &registry.registry_id,
                 &registry.registry_entries,
-            )).unwrap_or_else(|e| self.kick(&e.to_string()));
+            ))
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
         }
 
         // We are done with configuring

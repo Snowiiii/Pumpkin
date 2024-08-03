@@ -6,7 +6,10 @@ use std::{
 use base64::{engine::general_purpose, Engine};
 use mio::{event::Event, Poll};
 use pumpkin_protocol::{
-    client::{config::CPluginMessage, play::CLogin},
+    client::{
+        config::CPluginMessage,
+        play::{ CLogin},
+    },
     PacketError, Players, Sample, StatusResponse, VarInt, VarInt32, Version,
 };
 use rsa::{rand_core::OsRng, traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
@@ -90,6 +93,7 @@ impl Server {
         client.poll(self, event)
     }
 
+    // todo: do this in a world
     pub fn spawn_player(&mut self, client: &mut Client) {
         let player = Player {
             entity: Entity {
@@ -101,8 +105,7 @@ impl Server {
             .send_packet(CLogin::new(
                 player.entity_id(),
                 self.difficulty == Difficulty::Hard,
-                0,
-                "minecraft:overworld".into(),
+                vec!["minecraft:overworld".into()],
                 self.max_players as VarInt,
                 8, //  view distance todo
                 8, // sim view dinstance todo
@@ -124,9 +127,13 @@ impl Server {
             ))
             .unwrap_or_else(|e| client.kick(&e.to_string()));
 
+      
         dbg!("spawning player");
         client.player = Some(player);
     }
+
+    // todo: do this in a world
+    fn spawn_chunks(player: &Player) {}
 
     // move to world
     pub fn new_entity_id(&self) -> EntityId {

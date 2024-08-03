@@ -1,6 +1,5 @@
 use serde::Serialize;
 
-
 #[derive(Debug, Clone, Serialize)]
 pub struct DamageType {
     message_id: String,
@@ -59,5 +58,3 @@ const NAMES: &[&str] = &[
     "wither",
     "wither_skull",
 ];
-
-

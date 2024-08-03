@@ -11,5 +11,3 @@ struct Decoration {
     // style: Option<>
     parameters: Vec<String>,
 }
-
-

@@ -5,12 +5,12 @@ use paint::Painting;
 use pumpkin_protocol::client::config::RegistryEntry;
 use wolf::WolfVariant;
 
- mod biomes;
+mod biomes;
 mod chat_type;
 mod damage_type;
- mod dimensions;
- mod paint;
- mod wolf;
+mod dimensions;
+mod paint;
+mod wolf;
 
 pub struct Registry {
     pub registry_id: String,
