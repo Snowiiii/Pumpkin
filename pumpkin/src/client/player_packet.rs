@@ -1,6 +1,6 @@
 use pumpkin_protocol::server::play::SConfirmTeleport;
 
-use crate::{entity::player::Player, server::Server};
+use crate::server::Server;
 
 use super::Client;
 

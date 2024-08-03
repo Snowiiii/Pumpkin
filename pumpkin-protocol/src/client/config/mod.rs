@@ -1,13 +1,15 @@
-use crate::{bytebuf::ByteBuffer, ClientPacket, KnownPack, VarInt};
+use crate::{bytebuf::ByteBuffer, ClientPacket, Identifier, KnownPack, VarInt};
 
 pub struct CCookieRequest {
-    // TODO
+    key: Identifier,
 }
 
 impl ClientPacket for CCookieRequest {
     const PACKET_ID: VarInt = 0x00;
 
-    fn write(&self, bytebuf: &mut ByteBuffer) {}
+    fn write(&self, bytebuf: &mut ByteBuffer) {
+        bytebuf.put_string(&self.key);
+    }
 }
 
 pub struct CPluginMessage<'a> {
@@ -115,7 +117,7 @@ impl<'a> ClientPacket for CRegistryData<'a> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_string(self.registry_id);
         bytebuf.put_list::<RegistryEntry>(self.entries, |p, v| {
-            p.put_string(&v.entry_id);
+            p.put_string(v.entry_id);
             p.put_bool(!v.data.is_empty());
             p.put_slice(&v.data);
         });

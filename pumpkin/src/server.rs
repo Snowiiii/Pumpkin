@@ -1,6 +1,5 @@
 use std::{
     io::Cursor,
-    rc::Rc,
     sync::atomic::{AtomicI32, Ordering},
 };
 
@@ -9,14 +8,11 @@ use mio::{event::Event, Poll};
 use pumpkin_protocol::{
     client::{
         config::CPluginMessage,
-        play::{CChunkDataUpdateLight, CGameEvent, CLogin, CSyncPlayerPostion, SkyLight},
+        play::{CChunkDataUpdateLight, CGameEvent, CLogin, CSyncPlayerPostion},
     },
     BitSet, PacketError, Players, Sample, StatusResponse, VarInt, VarInt32, Version,
 };
-use pumpkin_world::{
-    chunk::{TestChunk, SKY_LIGHT_ARRAYS},
-    World,
-};
+use pumpkin_world::chunk::TestChunk;
 use rsa::{rand_core::OsRng, traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
 

@@ -41,9 +41,9 @@ impl ServerPacket for SEncryptionResponse {
 }
 
 pub struct SLoginPluginResponse<'a> {
-    message_id: VarInt,
-    successful: bool,
-    data: Option<&'a [u8]>,
+    pub message_id: VarInt,
+    pub successful: bool,
+    pub data: Option<&'a [u8]>,
 }
 
 impl<'a> ServerPacket for SLoginPluginResponse<'a> {

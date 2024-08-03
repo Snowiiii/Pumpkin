@@ -248,6 +248,7 @@ pub struct CChunkDataUpdateLight {
 }
 
 impl CChunkDataUpdateLight {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         chunk_x: i32,
         chunk_y: i32,

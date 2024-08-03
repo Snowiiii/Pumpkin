@@ -1,4 +1,4 @@
-use fastnbt::{nbt, SerOpts};
+use fastnbt::nbt;
 
 pub const BLOCKS_AND_BIOMES: [u8; 2000] = [0x80; 2000];
 pub const SKY_LIGHT_ARRAYS: [FixedArray<u8, 2048>; 26] = [FixedArray([0xff; 2048]); 26];
@@ -9,6 +9,12 @@ pub struct FixedArray<T, const N: usize>(pub [T; N]);
 
 pub struct TestChunk {
     pub heightmap: Vec<u8>,
+}
+
+impl Default for TestChunk {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TestChunk {

@@ -35,14 +35,14 @@ pub mod player_packet;
 use client_packet::ClientPacketProcessor;
 
 pub struct PlayerConfig {
-    locale: String, // 16
-    view_distance: i8,
-    chat_mode: ChatMode,
-    chat_colors: bool,
-    skin_parts: u8,
-    main_hand: Hand,
-    text_filtering: bool,
-    server_listing: bool,
+    pub locale: String, // 16
+    pub view_distance: i8,
+    pub chat_mode: ChatMode,
+    pub chat_colors: bool,
+    pub skin_parts: u8,
+    pub main_hand: Hand,
+    pub text_filtering: bool,
+    pub server_listing: bool,
 }
 
 pub struct Client {

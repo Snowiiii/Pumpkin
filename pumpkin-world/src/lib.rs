@@ -1,6 +1,6 @@
 use std::{fs::File, path::Path};
 
-use fastanvil::{complete, Chunk, Region};
+use fastanvil::Region;
 
 pub mod chunk;
 
