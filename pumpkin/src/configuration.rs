@@ -2,7 +2,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::server::Difficulty;
+use crate::{entity::player::GameMode, server::Difficulty};
 
 /// Current Config version of the Base Config
 const CURRENT_BASE_VERSION: &str = "1.0.0";
@@ -59,6 +59,8 @@ pub struct BasicConfiguration {
     pub prevent_proxy_connections: bool,
     /// The description send when Client performs a Status request, (e.g Multiplayer Screen)
     pub motd: String,
+    /// default gamemode (e.g. Survival, Creative...)
+    pub default_gamemode: GameMode,
 }
 
 impl Default for BasicConfiguration {
@@ -80,6 +82,7 @@ impl Default for BasicConfiguration {
             encryption: true,
             prevent_proxy_connections: true,
             motd: "A Blazing fast Pumpkin Server!".to_string(),
+            default_gamemode: GameMode::Survival,
         }
     }
 }

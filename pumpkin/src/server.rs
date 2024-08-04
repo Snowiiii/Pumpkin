@@ -131,8 +131,12 @@ impl Server {
                 0,
                 "minecraft:overworld".into(),
                 0, // seed
-                GameMode::Survival.to_byte() as u8,
-                GameMode::Survival.to_byte(),
+                match self.base_config.default_gamemode {
+                    GameMode::Undefined => GameMode::Survival,
+                    game_mode => game_mode,
+                }
+                .to_byte() as u8,
+                self.base_config.default_gamemode.to_byte(),
                 false,
                 false,
                 false, // deth loc

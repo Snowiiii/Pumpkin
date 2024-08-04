@@ -1,4 +1,5 @@
 use pumpkin_protocol::VarInt;
+use serde::{Deserialize, Serialize};
 
 use super::{Entity, EntityId};
 
@@ -74,7 +75,7 @@ impl ChatMode {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum GameMode {
     Undefined,
     Survival,
