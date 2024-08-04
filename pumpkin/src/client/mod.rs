@@ -26,7 +26,7 @@ use pumpkin_protocol::{
         play::SConfirmTeleport,
         status::{SPingRequest, SStatusRequest},
     },
-    text::{Text},
+    text::Text,
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
 
@@ -123,9 +123,12 @@ impl Client {
         Ok(())
     }
 
-    pub fn teleport(&mut self) {
+    pub fn teleport(&mut self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
         assert!(self.player.is_some());
-        self.send_packet(CSyncPlayerPostion::new(10.0, 10.0, 10.0, 10.0, 0.0, 0, 10))
+        // todo
+        let id = 0;
+        self.player.as_mut().unwrap().awaiting_teleport = Some(0);
+        self.send_packet(CSyncPlayerPostion::new(x, y, z, yaw, pitch, 0, id))
             .unwrap_or_else(|e| self.kick(&e.to_string()));
     }
 

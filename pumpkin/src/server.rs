@@ -95,13 +95,15 @@ impl Server {
     // todo: do this in a world
     pub fn spawn_player(&mut self, client: &mut Client) {
         dbg!("spawning player");
+        let entity_id = self.new_entity_id();
         let player = Player::new(Entity {
-            entity_id: self.new_entity_id(),
+            entity_id,
         });
+        client.player = Some(player);
 
         client
             .send_packet(CLogin::new(
-                player.entity_id(),
+                entity_id,
                 self.difficulty == Difficulty::Hard,
                 vec!["minecraft:overworld".into()],
                 self.max_players as VarInt,
@@ -125,9 +127,7 @@ impl Server {
             ))
             .unwrap_or_else(|e| client.kick(&e.to_string()));
         // teleport
-        client
-            .send_packet(CSyncPlayerPostion::new(10.0, 10.0, 10.0, 10.0, 0.0, 0, 10))
-            .unwrap_or_else(|e| client.kick(&e.to_string()));
+        client.teleport(10.0, 10.0, 10.0, 10.0, 10.0);
 
         // Start waiting for level chunks
         client
@@ -135,8 +135,6 @@ impl Server {
             .unwrap_or_else(|e| client.kick(&e.to_string()));
 
         // Server::spawn_test_chunk(client);
-
-        client.player = Some(player);
     }
 
     // todo: do this in a world
