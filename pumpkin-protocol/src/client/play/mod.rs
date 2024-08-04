@@ -1,5 +1,13 @@
 use crate::{bytebuf::ByteBuffer, text::Text, BitSet, ClientPacket, VarInt};
 
+pub struct ChunkDataAndUpdateLight {
+    //Not implemented yet
+}
+
+pub struct ChunkEntry {
+    pub block_count: i16,
+}
+
 pub struct SetHeldItem {
     slot: i8,
 }
