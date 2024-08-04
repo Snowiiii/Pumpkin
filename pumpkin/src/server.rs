@@ -127,7 +127,7 @@ impl Server {
             ))
             .unwrap_or_else(|e| client.kick(&e.to_string()));
         // teleport
-        client.teleport(10.0, 10.0, 10.0, 10.0, 10.0);
+        client.teleport(10.0, 500.0, 10.0, 10.0, 10.0);
 
         // Start waiting for level chunks
         client
