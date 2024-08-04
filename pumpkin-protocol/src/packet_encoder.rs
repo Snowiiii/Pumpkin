@@ -3,10 +3,7 @@ use std::io::Write;
 use aes::cipher::{generic_array::GenericArray, BlockEncryptMut, BlockSizeUser, KeyIvInit};
 use bytes::{BufMut, BytesMut};
 
-use crate::{
-    bytebuf::{packet_id::Packet, ByteBuffer},
-    ClientPacket, PacketError, VarInt32, MAX_PACKET_SIZE,
-};
+use crate::{bytebuf::ByteBuffer, ClientPacket, PacketError, VarInt32, MAX_PACKET_SIZE};
 
 type Cipher = cfb8::Encryptor<aes::Aes128>;
 

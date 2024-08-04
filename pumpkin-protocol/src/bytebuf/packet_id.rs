@@ -35,7 +35,7 @@ where
     P: Packet + Serialize,
 {
     fn write(&self, bytebuf: &mut ByteBuffer) {
-      dbg!(P::PACKET_ID);
+        dbg!(P::PACKET_ID);
         take_mut::take(bytebuf, |bytebuf| {
             let mut serializer = serializer::Serializer::new(bytebuf);
             self.serialize(&mut serializer)

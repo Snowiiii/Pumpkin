@@ -1,10 +1,10 @@
+use crate::{BitSet, VarInt, VarLong};
+use bytes::{Buf, BufMut, BytesMut};
 use core::str;
 use std::io::{self, Error, ErrorKind};
-use bytes::{Buf, BufMut, BytesMut};
-use crate::{BitSet, VarInt, VarLong};
 
-mod serializer;
 pub mod packet_id;
+mod serializer;
 
 const SEGMENT_BITS: u8 = 0x7F;
 const CONTINUE_BIT: u8 = 0x80;
