@@ -1,6 +1,7 @@
 use std::{
     collections::VecDeque,
     io::{self, Write},
+    net::SocketAddr,
     rc::Rc,
 };
 
@@ -9,6 +10,7 @@ use crate::{
     server::Server,
 };
 
+use authentication::GameProfile;
 use mio::{event::Event, net::TcpStream, Token};
 use player_packet::PlayerPacketProcessor;
 use pumpkin_protocol::{
@@ -34,6 +36,7 @@ use rsa::Pkcs1v15Encrypt;
 use std::io::Read;
 use thiserror::Error;
 
+mod authentication;
 mod client_packet;
 pub mod player_packet;
 
@@ -53,8 +56,8 @@ pub struct PlayerConfig {
 pub struct Client {
     pub player: Option<Player>,
 
-    pub name: Option<String>,
-    pub uuid: Option<uuid::Uuid>,
+    pub gameprofile: Option<GameProfile>,
+
     pub config: Option<PlayerConfig>,
     pub brand: Option<String>,
 
@@ -63,19 +66,20 @@ pub struct Client {
     pub closed: bool,
     pub token: Rc<Token>,
     pub connection: TcpStream,
+    pub address: SocketAddr,
     enc: PacketEncoder,
     dec: PacketDecoder,
     pub client_packets_queue: VecDeque<RawPacket>,
 }
 
 impl Client {
-    pub fn new(token: Rc<Token>, connection: TcpStream) -> Self {
+    pub fn new(token: Rc<Token>, connection: TcpStream, address: SocketAddr) -> Self {
         Self {
-            name: None,
-            uuid: None,
+            gameprofile: None,
             config: None,
             brand: None,
             token,
+            address,
             player: None,
             connection_state: ConnectionState::HandShake,
             connection,
@@ -96,7 +100,7 @@ impl Client {
     pub fn enable_encryption(
         &mut self,
         server: &mut Server,
-        shared_secret: Vec<u8>,
+        shared_secret: Vec<u8>, // decrypted
     ) -> Result<(), EncryptionError> {
         self.encrytion = true;
         let shared_secret = server

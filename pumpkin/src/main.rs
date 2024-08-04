@@ -95,7 +95,7 @@ fn main() -> io::Result<()> {
                         Interest::READABLE.add(Interest::WRITABLE),
                     )?;
 
-                    connections.insert(token, Client::new(Rc::new(token), connection));
+                    connections.insert(token, Client::new(Rc::new(token), connection, addr));
                 },
 
                 token => {

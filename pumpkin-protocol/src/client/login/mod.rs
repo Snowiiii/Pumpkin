@@ -1,3 +1,5 @@
+use serde::Deserialize;
+
 use crate::{bytebuf::ByteBuffer, ClientPacket, VarInt};
 
 pub struct CLoginDisconnect<'a> {
@@ -81,11 +83,11 @@ impl<'a> CLoginSuccess<'a> {
     }
 }
 
+#[derive(Deserialize, Clone, Debug)]
 pub struct Property {
-    name: String,
-    value: String,
-    is_signed: bool,
-    signature: Option<String>,
+    pub name: String,
+    pub value: String,
+    pub signature: String,
 }
 
 impl<'a> ClientPacket for CLoginSuccess<'a> {
@@ -97,8 +99,11 @@ impl<'a> ClientPacket for CLoginSuccess<'a> {
         bytebuf.put_list::<Property>(self.properties, |p, v| {
             p.put_string(&v.name);
             p.put_string(&v.value);
-            p.put_bool(v.is_signed);
-            p.put_option(&v.signature, |p, v| p.put_string(v.as_str()))
+            // has signature ?
+            p.put_bool(true);
+            // option
+            p.put_bool(true);
+            p.put_string(&v.signature);
         });
         bytebuf.put_bool(self.strict_error_handling);
     }

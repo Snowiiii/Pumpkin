@@ -13,13 +13,16 @@ use pumpkin_protocol::{
     ConnectionState, KnownPack,
 };
 use pumpkin_registry::Registry;
+use rsa::Pkcs1v15Encrypt;
+use sha1::{Digest, Sha1};
 
 use crate::{
+    client::authentication::{self, GameProfile},
     entity::player::{ChatMode, Hand},
     server::Server,
 };
 
-use super::{Client, PlayerConfig};
+use super::{authentication::auth_digest, Client, EncryptionError, PlayerConfig};
 
 /// Processes incoming Packets from the Client to the Server
 /// Implements the `Client` Packets, So everything before the Play state, then will use the `PlayerPacketProcessor`
@@ -84,15 +87,21 @@ impl ClientPacketProcessor for Client {
 
     fn handle_login_start(&mut self, server: &mut Server, login_start: SLoginStart) {
         dbg!("login start");
-        self.name = Some(login_start.name);
-        self.uuid = Some(login_start.uuid);
+        // default game profile, when no online mode
+        self.gameprofile = Some(GameProfile {
+            id: login_start.uuid,
+            name: login_start.name,
+            properties: vec![],
+        });
+
+        // we want encryption
         let verify_token: [u8; 4] = rand::random();
         let public_key_der = &server.public_key_der;
         let packet = CEncryptionRequest::new(
             "",
             public_key_der,
             &verify_token,
-            false, // TODO
+            server.base_config.online_mode, // TODO
         );
         self.send_packet(packet)
             .unwrap_or_else(|e| self.kick(&e.to_string()));
@@ -103,20 +112,39 @@ impl ClientPacketProcessor for Client {
         server: &mut Server,
         encryption_response: SEncryptionResponse,
     ) {
-        dbg!("encryption response");
-        self.enable_encryption(server, encryption_response.shared_secret)
+        let shared_secret = server
+            .private_key
+            .decrypt(Pkcs1v15Encrypt, &encryption_response.shared_secret)
+            .map_err(|_| EncryptionError::FailedDecrypt)
+            .unwrap();
+
+        if server.base_config.online_mode {
+            let hash = Sha1::new()
+                .chain_update(&shared_secret)
+                .chain_update(&server.public_key_der)
+                .finalize();
+            let hash = auth_digest(&hash);
+            let ip = self.address.ip();
+            match pollster::block_on(authentication::authenticate(
+                &self.gameprofile.as_ref().unwrap().name,
+                &hash,
+                &ip,
+                server,
+            )) {
+                Ok(p) => self.gameprofile = Some(p),
+                Err(e) => self.kick(&e.to_string()),
+            }
+        }
+
+        self.enable_encryption(server, shared_secret)
             .unwrap_or_else(|e| self.kick(&e.to_string()));
 
-        if let Some(uuid) = self.uuid {
-            if let Some(name) = &self.name {
-                let packet = CLoginSuccess::new(uuid, name.clone(), &[], false); // todo
-                self.send_packet(packet)
-                    .unwrap_or_else(|e| self.kick(&e.to_string()));
-            } else {
-                self.kick("Name is none");
-            }
+        if let Some(profile) = self.gameprofile.as_ref().cloned() {
+            let packet = CLoginSuccess::new(profile.id, profile.name, &profile.properties, false);
+            self.send_packet(packet)
+                .unwrap_or_else(|e| self.kick(&e.to_string()));
         } else {
-            self.kick("UUID is none");
+            self.kick("game profile is none");
         }
     }
 

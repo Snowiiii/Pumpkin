@@ -22,7 +22,7 @@ Pumpkin is currently under heavy development.
   - [x] Custom Icon
   - [x] Custom Status (MOTD)
 - Login
-  - [ ] Authentication
+  - [x] Authentication
   - [x] Encryption
   - [ ] Packet Compression
 - Player Configuration
@@ -32,6 +32,8 @@ Pumpkin is currently under heavy development.
   - [ ] Set Resource Pack
   - [ ] Cookies
 - World 
+  - [x] World Joining
+  - [x] World Loading
   - [ ] Chunk Loading
   - [ ] World Generation
   - [ ] World Borders
