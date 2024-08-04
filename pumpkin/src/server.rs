@@ -28,14 +28,9 @@ use crate::{
 pub struct Server {
     pub compression_threshold: Option<u8>,
 
-    pub online_mode: bool,
-    pub encryption: bool, // encryptiony is always required when online_mode is disabled
     pub public_key: RsaPublicKey,
     pub private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,
-
-    /// the maximum amount of players that can join the Server
-    pub max_players: u32,
 
     // pub world: World,
     pub status_response: StatusResponse,
@@ -48,7 +43,11 @@ pub struct Server {
 
     // todo replace with HashMap <World, Player>
     entity_id: AtomicI32, // todo: place this into every world
-    pub difficulty: Difficulty,
+    pub base_config: BasicConfiguration,
+    pub advanced_config: AdvancedConfiguration,
+
+    /// Used for Authentication, None is Online mode is disabled
+    pub auth_client: Option<reqwest::Client>,
 }
 
 impl Server {
@@ -67,22 +66,26 @@ impl Server {
             &private_key.e().to_bytes_be(),
         )
         .into_boxed_slice();
+        let auth_client = if config.0.online_mode {
+            Some(reqwest::Client::new())
+        } else {
+            None
+        };
 
         Self {
             // 0 is invalid
             entity_id: 2.into(),
             //  world: World::load(""),
-            online_mode: config.0.online_mode,
-            encryption: config.1.encryption,
             compression_threshold: None, // 256
             public_key,
             cached_server_brand,
             private_key,
-            max_players: config.0.max_plyers,
             status_response,
             status_response_json,
             public_key_der,
-            difficulty: config.0.default_difficulty,
+            base_config: config.0,
+            auth_client,
+            advanced_config: config.1,
         }
     }
 
@@ -102,9 +105,9 @@ impl Server {
         client
             .send_packet(CLogin::new(
                 entity_id,
-                self.difficulty == Difficulty::Hard,
+                self.base_config.hardcore,
                 vec!["minecraft:overworld".into()],
-                self.max_players as VarInt,
+                self.base_config.max_players as VarInt,
                 8, //  view distance todo
                 8, // sim view dinstance todo
                 false,
@@ -184,7 +187,7 @@ impl Server {
                 protocol: 767,
             },
             players: Players {
-                max: config.max_plyers,
+                max: config.max_players,
                 online: 0,
                 sample: vec![Sample {
                     name: "".into(),
