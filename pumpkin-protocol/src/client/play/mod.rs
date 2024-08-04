@@ -1,4 +1,8 @@
-use crate::{bytebuf::ByteBuffer, text::TextComponent, BitSet, ClientPacket, Property, VarInt};
+use crate::{
+    bytebuf::{packet_id::Packet, ByteBuffer},
+    text::Text,
+    BitSet, ClientPacket, Property, VarInt,
+};
 
 pub struct SetHeldItem {
     slot: i8,
@@ -10,9 +14,11 @@ impl SetHeldItem {
     }
 }
 
-impl ClientPacket for SetHeldItem {
+impl Packet for SetHeldItem {
     const PACKET_ID: VarInt = 0x53;
+}
 
+impl ClientPacket for SetHeldItem {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_i8(self.slot);
     }
@@ -48,9 +54,11 @@ impl<'a> CPlayerInfoUpdate<'a> {
     }
 }
 
-impl<'a> ClientPacket for CPlayerInfoUpdate<'a> {
+impl<'a> Packet for CPlayerInfoUpdate<'a> {
     const PACKET_ID: VarInt = 0x3E;
+}
 
+impl<'a> ClientPacket for CPlayerInfoUpdate<'a> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_i8(self.actions);
         bytebuf.put_list::<Player>(self.players, |p, v| {
@@ -95,9 +103,11 @@ impl CPlayerAbilities {
     }
 }
 
-impl ClientPacket for CPlayerAbilities {
+impl Packet for CPlayerAbilities {
     const PACKET_ID: VarInt = 0x38;
+}
 
+impl ClientPacket for CPlayerAbilities {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_i8(self.flags);
         bytebuf.put_f32(self.flying_speed);
@@ -115,9 +125,11 @@ impl CPlayDisconnect {
     }
 }
 
-impl ClientPacket for CPlayDisconnect {
+impl Packet for CPlayDisconnect {
     const PACKET_ID: VarInt = 0x1D;
+}
 
+impl ClientPacket for CPlayDisconnect {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_slice(&self.reason.encode());
     }
@@ -154,9 +166,11 @@ impl CChangeDifficulty {
     }
 }
 
-impl ClientPacket for CChangeDifficulty {
+impl Packet for CChangeDifficulty {
     const PACKET_ID: VarInt = 0x0B;
+}
 
+impl ClientPacket for CChangeDifficulty {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_u8(self.difficulty);
         bytebuf.put_bool(self.locked);
@@ -237,9 +251,11 @@ impl CLogin {
     }
 }
 
-impl ClientPacket for CLogin {
+impl Packet for CLogin {
     const PACKET_ID: VarInt = 0x2B;
+}
 
+impl ClientPacket for CLogin {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_i32(self.entity_id);
         bytebuf.put_bool(self.is_hardcore);
@@ -278,9 +294,11 @@ impl CGameEvent {
     }
 }
 
-impl ClientPacket for CGameEvent {
+impl Packet for CGameEvent {
     const PACKET_ID: VarInt = 0x22;
+}
 
+impl ClientPacket for CGameEvent {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_u8(self.event);
         bytebuf.put_f32(self.value);
@@ -319,9 +337,11 @@ impl CSyncPlayerPostion {
     }
 }
 
-impl ClientPacket for CSyncPlayerPostion {
+impl Packet for CSyncPlayerPostion {
     const PACKET_ID: VarInt = 0x40;
+}
 
+impl ClientPacket for CSyncPlayerPostion {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_f64(self.x);
         bytebuf.put_f64(self.y);
@@ -375,9 +395,11 @@ impl CChunkDataUpdateLight {
     }
 }
 
-impl ClientPacket for CChunkDataUpdateLight {
+impl Packet for CChunkDataUpdateLight {
     const PACKET_ID: VarInt = 0x27;
+}
 
+impl ClientPacket for CChunkDataUpdateLight {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_i32(self.chunk_x);
         bytebuf.put_i32(self.chunk_y);

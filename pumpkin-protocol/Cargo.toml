@@ -21,3 +21,4 @@ fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 # encryption
 aes = "0.8.4"
 cfb8 = "0.8.1"
+take_mut = "0.2.2"

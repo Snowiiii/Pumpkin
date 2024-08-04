@@ -1,12 +1,17 @@
-use crate::{bytebuf::ByteBuffer, ClientPacket, Identifier, KnownPack, VarInt};
+use crate::{
+    bytebuf::{packet_id::Packet, ByteBuffer},
+    ClientPacket, Identifier, KnownPack, VarInt,
+};
 
 pub struct CCookieRequest {
     key: Identifier,
 }
 
-impl ClientPacket for CCookieRequest {
+impl Packet for CCookieRequest {
     const PACKET_ID: VarInt = 0x00;
+}
 
+impl ClientPacket for CCookieRequest {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_string(&self.key);
     }
@@ -23,17 +28,24 @@ impl<'a> CPluginMessage<'a> {
     }
 }
 
-impl<'a> ClientPacket for CPluginMessage<'a> {
+impl<'a> Packet for CPluginMessage<'a> {
     const PACKET_ID: VarInt = 0x01;
+}
 
+impl<'a> ClientPacket for CPluginMessage<'a> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_string(self.channel);
         bytebuf.put_slice(self.data);
     }
 }
 
+#[derive(serde::Serialize)]
 pub struct CConfigDisconnect<'a> {
     reason: &'a str,
+}
+
+impl<'a> Packet for CConfigDisconnect<'a> {
+    const PACKET_ID: i32 = 0x02;
 }
 
 impl<'a> CConfigDisconnect<'a> {
@@ -42,14 +54,7 @@ impl<'a> CConfigDisconnect<'a> {
     }
 }
 
-impl<'a> ClientPacket for CConfigDisconnect<'a> {
-    const PACKET_ID: VarInt = 0x02;
-
-    fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.put_string(self.reason);
-    }
-}
-
+#[derive(serde::Serialize)]
 pub struct CFinishConfig {}
 
 impl Default for CFinishConfig {
@@ -64,10 +69,8 @@ impl CFinishConfig {
     }
 }
 
-impl ClientPacket for CFinishConfig {
+impl Packet for CFinishConfig {
     const PACKET_ID: VarInt = 0x03;
-
-    fn write(&self, _bytebuf: &mut ByteBuffer) {}
 }
 
 pub struct CKnownPacks<'a> {
@@ -80,9 +83,11 @@ impl<'a> CKnownPacks<'a> {
     }
 }
 
-impl<'a> ClientPacket for CKnownPacks<'a> {
+impl<'a> Packet for CKnownPacks<'a> {
     const PACKET_ID: VarInt = 0x0E;
+}
 
+impl<'a> ClientPacket for CKnownPacks<'a> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_list::<KnownPack>(self.known_packs, |p, v| {
             p.put_string(v.namespace);
@@ -111,9 +116,11 @@ pub struct RegistryEntry<'a> {
     pub data: Vec<u8>,
 }
 
-impl<'a> ClientPacket for CRegistryData<'a> {
+impl<'a> Packet for CRegistryData<'a> {
     const PACKET_ID: VarInt = 0x07;
+}
 
+impl<'a> ClientPacket for CRegistryData<'a> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_string(self.registry_id);
         bytebuf.put_list::<RegistryEntry>(self.entries, |p, v| {

@@ -1,4 +1,7 @@
-use crate::{bytebuf::ByteBuffer, ClientPacket, Property, VarInt};
+use crate::{
+    bytebuf::{packet_id::Packet, ByteBuffer},
+    ClientPacket, Property, VarInt,
+};
 
 pub struct CLoginDisconnect<'a> {
     reason: &'a str,
@@ -10,9 +13,11 @@ impl<'a> CLoginDisconnect<'a> {
     }
 }
 
-impl<'a> ClientPacket for CLoginDisconnect<'a> {
+impl<'a> Packet for CLoginDisconnect<'a> {
     const PACKET_ID: VarInt = 0x00;
+}
 
+impl<'a> ClientPacket for CLoginDisconnect<'a> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_string(&serde_json::to_string_pretty(&self.reason).unwrap());
     }
@@ -41,9 +46,11 @@ impl<'a> CEncryptionRequest<'a> {
     }
 }
 
-impl<'a> ClientPacket for CEncryptionRequest<'a> {
+impl<'a> Packet for CEncryptionRequest<'a> {
     const PACKET_ID: VarInt = 0x01;
+}
 
+impl<'a> ClientPacket for CEncryptionRequest<'a> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_string(self.server_id);
         bytebuf.put_var_int(self.public_key.len() as VarInt);
@@ -81,9 +88,11 @@ impl<'a> CLoginSuccess<'a> {
     }
 }
 
-impl<'a> ClientPacket for CLoginSuccess<'a> {
+impl<'a> Packet for CLoginSuccess<'a> {
     const PACKET_ID: VarInt = 0x02;
+}
 
+impl<'a> ClientPacket for CLoginSuccess<'a> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_uuid(self.uuid);
         bytebuf.put_string(&self.username);
@@ -105,9 +114,11 @@ impl CSetCompression {
     }
 }
 
-impl ClientPacket for CSetCompression {
+impl Packet for CSetCompression {
     const PACKET_ID: VarInt = 0x03;
+}
 
+impl ClientPacket for CSetCompression {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_var_int(self.threshold);
     }
