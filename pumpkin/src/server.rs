@@ -8,10 +8,11 @@ use mio::{event::Event, Poll};
 use pumpkin_protocol::{
     client::{
         config::CPluginMessage,
-        play::{CGameEvent, CLogin, CSyncPlayerPostion},
+        play::{CChunkDataUpdateLight, CGameEvent, CLogin},
     },
-    PacketError, Players, Sample, StatusResponse, VarInt, VarInt32, Version,
+    BitSet, PacketError, Players, Sample, StatusResponse, VarInt, VarInt32, Version,
 };
+use pumpkin_world::chunk::TestChunk;
 use rsa::{rand_core::OsRng, traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
 
@@ -22,7 +23,6 @@ use crate::{
         player::{GameMode, Player},
         Entity, EntityId,
     },
-    world::world::World,
 };
 
 pub struct Server {
@@ -37,8 +37,7 @@ pub struct Server {
     /// the maximum amount of players that can join the Server
     pub max_players: u32,
 
-    pub world: World,
-
+    // pub world: World,
     pub status_response: StatusResponse,
     // We cache the json response here so we don't parse it every time someone makes a Status request.
     // Keep in mind that we must parse this again, when the StatusResponse changes which usally happen when a player joins or leaves
@@ -72,7 +71,7 @@ impl Server {
         Self {
             // 0 is invalid
             entity_id: 2.into(),
-            world: World::new("world", "world/region"),
+            //  world: World::load(""),
             online_mode: config.0.online_mode,
             encryption: config.1.encryption,
             compression_threshold: None, // 256
@@ -96,15 +95,13 @@ impl Server {
     // todo: do this in a world
     pub fn spawn_player(&mut self, client: &mut Client) {
         dbg!("spawning player");
-        let player = Player {
-            entity: Entity {
-                entity_id: self.new_entity_id(),
-            },
-        };
+        let entity_id = self.new_entity_id();
+        let player = Player::new(Entity { entity_id });
+        client.player = Some(player);
 
         client
             .send_packet(CLogin::new(
-                player.entity_id(),
+                entity_id,
                 self.difficulty == Difficulty::Hard,
                 vec!["minecraft:overworld".into()],
                 self.max_players as VarInt,
@@ -128,20 +125,34 @@ impl Server {
             ))
             .unwrap_or_else(|e| client.kick(&e.to_string()));
         // teleport
-        client
-            .send_packet(CSyncPlayerPostion::new(10.0, 10.0, 10.0, 10.0, 0.0, 0, 10))
-            .unwrap_or_else(|e| client.kick(&e.to_string()));
+        client.teleport(10.0, 500.0, 10.0, 10.0, 10.0);
 
         // Start waiting for level chunks
         client
             .send_packet(CGameEvent::new(13, 0.0))
             .unwrap_or_else(|e| client.kick(&e.to_string()));
 
-        client.player = Some(player);
+        // Server::spawn_test_chunk(client);
     }
 
     // todo: do this in a world
-    fn spawn_test_chunk(client: &Client) {}
+    fn _spawn_test_chunk(client: &mut Client) {
+        let test_chunk = TestChunk::new();
+        client
+            .send_packet(CChunkDataUpdateLight::new(
+                10,
+                10,
+                test_chunk.heightmap,
+                Vec::new(),
+                Vec::new(),
+                BitSet(0, Vec::new()),
+                BitSet(0, Vec::new()),
+                BitSet(0, Vec::new()),
+                Vec::new(),
+                Vec::new(),
+            ))
+            .unwrap_or_else(|e| client.kick(&e.to_string()))
+    }
 
     // move to world
     pub fn new_entity_id(&self) -> EntityId {

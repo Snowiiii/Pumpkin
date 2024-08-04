@@ -63,11 +63,11 @@ const NAMES: &[&str] = &[
     "wither_skull",
 ];
 
-pub(super) fn entires() -> Vec<RegistryEntry> {
+pub(super) fn entires() -> Vec<RegistryEntry<'static>> {
     let items: Vec<_> = NAMES
         .iter()
         .map(|name| RegistryEntry {
-            entry_id: (*name).into(),
+            entry_id: name,
             data: fastnbt::to_bytes_with_opts(
                 &DamageType {
                     exhaustion: 0.1,

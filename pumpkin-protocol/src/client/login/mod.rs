@@ -58,25 +58,24 @@ pub struct CSetCompression {
     threshold: VarInt,
 }
 
-pub struct CLoginSuccess {
+pub struct CLoginSuccess<'a> {
     pub uuid: uuid::Uuid,
     pub username: String, // 16
-    pub num_of_props: VarInt,
-    // pub property: Property,
+    pub properties: &'a [Property],
     pub strict_error_handling: bool,
 }
 
-impl CLoginSuccess {
+impl<'a> CLoginSuccess<'a> {
     pub fn new(
         uuid: uuid::Uuid,
         username: String,
-        num_of_props: VarInt,
+        properties: &'a [Property],
         strict_error_handling: bool,
     ) -> Self {
         Self {
             uuid,
             username,
-            num_of_props,
+            properties,
             strict_error_handling,
         }
     }
@@ -89,14 +88,18 @@ pub struct Property {
     signature: Option<String>,
 }
 
-impl ClientPacket for CLoginSuccess {
+impl<'a> ClientPacket for CLoginSuccess<'a> {
     const PACKET_ID: VarInt = 0x02;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_uuid(self.uuid);
         bytebuf.put_string(&self.username);
-        bytebuf.put_var_int(self.num_of_props);
-        // Todo
+        bytebuf.put_list::<Property>(self.properties, |p, v| {
+            p.put_string(&v.name);
+            p.put_string(&v.value);
+            p.put_bool(v.is_signed);
+            p.put_option(&v.signature, |p, v| p.put_string(v.as_str()))
+        });
         bytebuf.put_bool(self.strict_error_handling);
     }
 }

@@ -10,16 +10,23 @@ use crate::{
 };
 
 use mio::{event::Event, net::TcpStream, Token};
+use player_packet::PlayerPacketProcessor;
 use pumpkin_protocol::{
-    client::{config::CConfigDisconnect, login::CLoginDisconnect},
+    client::{
+        config::CConfigDisconnect,
+        login::CLoginDisconnect,
+        play::{CPlayDisconnect, CSyncPlayerPostion},
+    },
     packet_decoder::PacketDecoder,
     packet_encoder::PacketEncoder,
     server::{
         config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks, SPluginMessage},
         handshake::SHandShake,
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
+        play::SConfirmTeleport,
         status::{SPingRequest, SStatusRequest},
     },
+    text::Text,
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
 
@@ -33,14 +40,14 @@ pub mod player_packet;
 use client_packet::ClientPacketProcessor;
 
 pub struct PlayerConfig {
-    locale: String, // 16
-    view_distance: i8,
-    chat_mode: ChatMode,
-    chat_colors: bool,
-    skin_parts: u8,
-    main_hand: Hand,
-    text_filtering: bool,
-    server_listing: bool,
+    pub locale: String, // 16
+    pub view_distance: i8,
+    pub chat_mode: ChatMode,
+    pub chat_colors: bool,
+    pub skin_parts: u8,
+    pub main_hand: Hand,
+    pub text_filtering: bool,
+    pub server_listing: bool,
 }
 
 pub struct Client {
@@ -116,6 +123,15 @@ impl Client {
         Ok(())
     }
 
+    pub fn teleport(&mut self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
+        assert!(self.player.is_some());
+        // todo
+        let id = 0;
+        self.player.as_mut().unwrap().awaiting_teleport = Some(0);
+        self.send_packet(CSyncPlayerPostion::new(x, y, z, yaw, pitch, 0, id))
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
+    }
+
     pub fn process_packets(&mut self, server: &mut Server) {
         let mut i = 0;
         while i < self.client_packets_queue.len() {
@@ -186,14 +202,24 @@ impl Client {
                 ),
             },
             pumpkin_protocol::ConnectionState::Play => {
-                if let Some(player) = &mut self.player {
-                    player.handle_packet(server, packet);
+                if self.player.is_some() {
+                    self.handle_play_packet(server, packet);
                 } else {
                     // should be impossible
                     self.kick("no player in play state?")
                 }
             }
             _ => log::error!("Invalid Connection state {:?}", self.connection_state),
+        }
+    }
+
+    pub fn handle_play_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
+        let bytebuf = &mut packet.bytebuf;
+        match packet.id {
+            SConfirmTeleport::PACKET_ID => {
+                self.handle_confirm_teleport(server, SConfirmTeleport::read(bytebuf))
+            }
+            _ => log::error!("Failed to handle player packet id {}", packet.id),
         }
     }
 
@@ -246,7 +272,7 @@ impl Client {
 
     /// Kicks the Client with a reason depending on the connection state
     pub fn kick(&mut self, reason: &str) {
-        // Todo
+        dbg!(reason);
         match self.connection_state {
             ConnectionState::Login => {
                 self.send_packet(CLoginDisconnect::new(reason))
@@ -255,6 +281,12 @@ impl Client {
             ConnectionState::Config => {
                 self.send_packet(CConfigDisconnect::new(reason))
                     .unwrap_or_else(|_| self.close());
+            }
+            ConnectionState::Play => {
+                self.send_packet(CPlayDisconnect::new(Text {
+                    text: reason.to_string(),
+                }))
+                .unwrap_or_else(|_| self.close());
             }
             _ => {
                 log::warn!("Cant't kick in {:?} State", self.connection_state)

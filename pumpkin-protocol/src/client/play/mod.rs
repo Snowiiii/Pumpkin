@@ -1,4 +1,4 @@
-use crate::{bytebuf::ByteBuffer, BitSet, ClientPacket, VarInt};
+use crate::{bytebuf::ByteBuffer, text::Text, BitSet, ClientPacket, VarInt};
 
 pub struct ChunkDataAndUpdateLight {
     //Not implemented yet
@@ -49,6 +49,24 @@ impl ClientPacket for CPlayerAbilities {
         bytebuf.put_i8(self.flags);
         bytebuf.put_f32(self.flying_speed);
         bytebuf.put_f32(self.field_of_view);
+    }
+}
+
+pub struct CPlayDisconnect {
+    reason: Text,
+}
+
+impl CPlayDisconnect {
+    pub fn new(reason: Text) -> Self {
+        Self { reason }
+    }
+}
+
+impl ClientPacket for CPlayDisconnect {
+    const PACKET_ID: VarInt = 0x1D;
+
+    fn write(&self, bytebuf: &mut ByteBuffer) {
+        bytebuf.put_slice(&self.reason.encode());
     }
 }
 
@@ -256,6 +274,7 @@ pub struct CChunkDataUpdateLight {
 }
 
 impl CChunkDataUpdateLight {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         chunk_x: i32,
         chunk_y: i32,
@@ -320,9 +339,9 @@ pub struct BlockEntity {
 }
 
 pub struct SkyLight {
-    array: Vec<u8>,
+    pub array: Vec<u8>,
 }
 
 pub struct BlockLight {
-    array: Vec<u8>,
+    pub array: Vec<u8>,
 }

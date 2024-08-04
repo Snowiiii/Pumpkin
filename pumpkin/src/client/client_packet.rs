@@ -109,7 +109,7 @@ impl ClientPacketProcessor for Client {
 
         if let Some(uuid) = self.uuid {
             if let Some(name) = &self.name {
-                let packet = CLoginSuccess::new(uuid, name.clone(), 0, false);
+                let packet = CLoginSuccess::new(uuid, name.clone(), &[], false); // todo
                 self.send_packet(packet)
                     .unwrap_or_else(|e| self.kick(&e.to_string()));
             } else {

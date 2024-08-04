@@ -55,7 +55,7 @@ impl ServerPacket for SAcknowledgeFinishConfig {
 }
 
 pub struct SKnownPacks {
-    known_pack_count: VarInt,
+    pub known_pack_count: VarInt,
     // known_packs: &'a [KnownPack]
 }
 
