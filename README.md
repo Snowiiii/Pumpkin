@@ -39,6 +39,7 @@ Pumpkin is currently under heavy development.
   - [ ] World Borders
   - [ ] World Saving
 - Player
+  - [x] Player Skin
   - [x] Player Client brand
   - [x] Player Teleport
   - [ ] Player Movement

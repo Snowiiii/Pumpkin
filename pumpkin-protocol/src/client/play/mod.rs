@@ -1,4 +1,4 @@
-use crate::{bytebuf::ByteBuffer, text::Text, BitSet, ClientPacket, VarInt};
+use crate::{bytebuf::ByteBuffer, text::Text, BitSet, ClientPacket, Property, VarInt};
 
 pub struct SetHeldItem {
     slot: i8,
@@ -15,6 +15,65 @@ impl ClientPacket for SetHeldItem {
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_i8(self.slot);
+    }
+}
+
+pub struct CPlayerInfoUpdate<'a> {
+    actions: i8,
+    players: &'a [Player<'a>],
+}
+
+pub struct Player<'a> {
+    pub uuid: uuid::Uuid,
+    pub actions: &'a [PlayerAction],
+}
+
+pub enum PlayerAction {
+    AddPlayer {
+        name: String,
+        properties: Vec<Property>,
+    },
+    InitializeChat(u8),
+    UpdateGameMode(u8),
+    UpdateListed(u8),
+    UpdateLatency(u8),
+    UpdateDisplayName(u8),
+}
+
+impl<'a> CPlayerInfoUpdate<'a> {
+    pub fn new(actions: i8, players: &'a [Player]) -> Self {
+        Self { actions, players }
+    }
+}
+
+impl<'a> ClientPacket for CPlayerInfoUpdate<'a> {
+    const PACKET_ID: VarInt = 0x3E;
+
+    fn write(&self, bytebuf: &mut ByteBuffer) {
+        bytebuf.put_i8(self.actions);
+        bytebuf.put_list::<Player>(self.players, |p, v| {
+            p.put_uuid(v.uuid);
+            for action in v.actions {
+                match action {
+                    PlayerAction::AddPlayer { name, properties } => {
+                        p.put_string(name);
+                        p.put_list::<Property>(properties, |p, v| {
+                            p.put_string(&v.name);
+                            p.put_string(&v.value);
+                            // has signature ?
+                            // todo: for some reason we get "got too many bytes error when using a signature"
+                            p.put_bool(false);
+                            // todo signature
+                        });
+                    }
+                    PlayerAction::InitializeChat(_) => todo!(),
+                    PlayerAction::UpdateGameMode(_) => todo!(),
+                    PlayerAction::UpdateListed(_) => todo!(),
+                    PlayerAction::UpdateLatency(_) => todo!(),
+                    PlayerAction::UpdateDisplayName(_) => todo!(),
+                }
+            }
+        });
     }
 }
 

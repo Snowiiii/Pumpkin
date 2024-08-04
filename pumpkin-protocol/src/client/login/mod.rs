@@ -1,6 +1,4 @@
-use serde::Deserialize;
-
-use crate::{bytebuf::ByteBuffer, ClientPacket, VarInt};
+use crate::{bytebuf::ByteBuffer, ClientPacket, Property, VarInt};
 
 pub struct CLoginDisconnect<'a> {
     reason: &'a str,
@@ -83,15 +81,6 @@ impl<'a> CLoginSuccess<'a> {
     }
 }
 
-#[derive(Deserialize, Clone, Debug)]
-pub struct Property {
-    pub name: String,
-    // base 64
-    pub value: String,
-    // base 64
-    pub signature: Option<String>,
-}
-
 impl<'a> ClientPacket for CLoginSuccess<'a> {
     const PACKET_ID: VarInt = 0x02;
 
@@ -102,6 +91,7 @@ impl<'a> ClientPacket for CLoginSuccess<'a> {
             p.put_string(&v.name);
             p.put_string(&v.value);
             // has signature ?
+            // todo: for some reason we get "got too many bytes error when using a signature"
             p.put_bool(false);
             // p.put_option(&v.signature, |p,v| p.put_string(v));
         });

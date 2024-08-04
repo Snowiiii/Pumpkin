@@ -2,7 +2,7 @@ use std::io::{self, Write};
 
 use bytebuf::ByteBuffer;
 use bytes::Buf;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub mod bytebuf;
@@ -181,6 +181,16 @@ pub struct Players {
 pub struct Sample {
     pub name: String,
     pub id: String, // uuid
+}
+
+// basicly game profile
+#[derive(Deserialize, Clone, Debug)]
+pub struct Property {
+    pub name: String,
+    // base 64
+    pub value: String,
+    // base 64
+    pub signature: Option<String>,
 }
 
 pub struct KnownPack<'a> {

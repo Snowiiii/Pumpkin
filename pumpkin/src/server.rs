@@ -8,7 +8,7 @@ use mio::{event::Event, Poll};
 use pumpkin_protocol::{
     client::{
         config::CPluginMessage,
-        play::{CChunkDataUpdateLight, CGameEvent, CLogin},
+        play::{CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerInfoUpdate, PlayerAction},
     },
     BitSet, PacketError, Players, Sample, StatusResponse, VarInt, VarInt32, Version,
 };
@@ -129,6 +129,19 @@ impl Server {
             .unwrap_or_else(|e| client.kick(&e.to_string()));
         // teleport
         client.teleport(10.0, 500.0, 10.0, 10.0, 10.0);
+        let gameprofile = client.gameprofile.as_ref().unwrap();
+        client
+            .send_packet(CPlayerInfoUpdate::new(
+                0x01,
+                &[pumpkin_protocol::client::play::Player {
+                    uuid: gameprofile.id,
+                    actions: &[PlayerAction::AddPlayer {
+                        name: gameprofile.name.clone(),
+                        properties: gameprofile.properties.clone(),
+                    }],
+                }],
+            ))
+            .unwrap_or_else(|e| client.kick(&e.to_string()));
 
         // Start waiting for level chunks
         client

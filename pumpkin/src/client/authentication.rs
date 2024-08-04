@@ -1,7 +1,7 @@
-use std::{net::IpAddr};
+use std::net::IpAddr;
 
 use num_bigint::BigInt;
-use pumpkin_protocol::client::login::Property;
+use pumpkin_protocol::Property;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use thiserror::Error;
