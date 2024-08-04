@@ -134,7 +134,7 @@ impl Server {
             .send_packet(CGameEvent::new(13, 0.0))
             .unwrap_or_else(|e| client.kick(&e.to_string()));
 
-        Server::spawn_test_chunk(client);
+        // Server::spawn_test_chunk(client);
 
         client.player = Some(player);
     }

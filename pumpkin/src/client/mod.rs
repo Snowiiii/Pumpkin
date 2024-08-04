@@ -12,7 +12,11 @@ use crate::{
 use mio::{event::Event, net::TcpStream, Token};
 use player_packet::PlayerPacketProcessor;
 use pumpkin_protocol::{
-    client::{config::CConfigDisconnect, login::CLoginDisconnect},
+    client::{
+        config::CConfigDisconnect,
+        login::CLoginDisconnect,
+        play::{CPlayDisconnect, CSyncPlayerPostion},
+    },
     packet_decoder::PacketDecoder,
     packet_encoder::PacketEncoder,
     server::{
@@ -22,6 +26,7 @@ use pumpkin_protocol::{
         play::SConfirmTeleport,
         status::{SPingRequest, SStatusRequest},
     },
+    text::{Text},
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
 
@@ -116,6 +121,12 @@ impl Client {
             .write_all(&self.enc.take())
             .map_err(|_| PacketError::ConnectionWrite)?;
         Ok(())
+    }
+
+    pub fn teleport(&mut self) {
+        assert!(self.player.is_some());
+        self.send_packet(CSyncPlayerPostion::new(10.0, 10.0, 10.0, 10.0, 0.0, 0, 10))
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
     }
 
     pub fn process_packets(&mut self, server: &mut Server) {
@@ -258,7 +269,7 @@ impl Client {
 
     /// Kicks the Client with a reason depending on the connection state
     pub fn kick(&mut self, reason: &str) {
-        // Todo
+        dbg!(reason);
         match self.connection_state {
             ConnectionState::Login => {
                 self.send_packet(CLoginDisconnect::new(reason))
@@ -267,6 +278,12 @@ impl Client {
             ConnectionState::Config => {
                 self.send_packet(CConfigDisconnect::new(reason))
                     .unwrap_or_else(|_| self.close());
+            }
+            ConnectionState::Play => {
+                self.send_packet(CPlayDisconnect::new(Text {
+                    text: reason.to_string(),
+                }))
+                .unwrap_or_else(|_| self.close());
             }
             _ => {
                 log::warn!("Cant't kick in {:?} State", self.connection_state)

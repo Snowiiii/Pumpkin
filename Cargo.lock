@@ -665,6 +665,7 @@ dependencies = [
  "aes",
  "bytes",
  "cfb8",
+ "fastnbt 2.5.0 (git+https://github.com/owengage/fastnbt.git)",
  "log",
  "serde",
  "serde_json",
