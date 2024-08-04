@@ -35,7 +35,9 @@ pub enum PlayerAction {
     },
     InitializeChat(u8),
     UpdateGameMode(u8),
-    UpdateListed(u8),
+    UpdateListed {
+        listed: bool,
+    },
     UpdateLatency(u8),
     UpdateDisplayName(u8),
 }
@@ -68,7 +70,7 @@ impl<'a> ClientPacket for CPlayerInfoUpdate<'a> {
                     }
                     PlayerAction::InitializeChat(_) => todo!(),
                     PlayerAction::UpdateGameMode(_) => todo!(),
-                    PlayerAction::UpdateListed(_) => todo!(),
+                    PlayerAction::UpdateListed { listed } => p.put_bool(*listed),
                     PlayerAction::UpdateLatency(_) => todo!(),
                     PlayerAction::UpdateDisplayName(_) => todo!(),
                 }

@@ -72,8 +72,6 @@ impl ClientPacketProcessor for Client {
     }
 
     fn handle_status_request(&mut self, server: &mut Server, _status_request: SStatusRequest) {
-        dbg!("sending status");
-
         self.send_packet(CStatusResponse::new(&server.status_response_json))
             .unwrap_or_else(|e| self.kick(&e.to_string()));
     }

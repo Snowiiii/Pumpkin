@@ -1,16 +1,19 @@
 use std::{
+    cell::RefCell,
+    collections::HashMap,
     io::Cursor,
+    rc::Rc,
     sync::atomic::{AtomicI32, Ordering},
 };
 
 use base64::{engine::general_purpose, Engine};
-use mio::{event::Event, Poll};
+use mio::{event::Event, Poll, Token};
 use pumpkin_protocol::{
     client::{
         config::CPluginMessage,
         play::{CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerInfoUpdate, PlayerAction},
     },
-    BitSet, PacketError, Players, Sample, StatusResponse, VarInt, VarInt32, Version,
+    BitSet, ClientPacket, PacketError, Players, Sample, StatusResponse, VarInt, VarInt32, Version,
 };
 use pumpkin_world::chunk::TestChunk;
 use rsa::{rand_core::OsRng, traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
@@ -40,6 +43,8 @@ pub struct Server {
 
     /// Cache the Server brand buffer so we don't have to rebuild them every time a player joins
     pub cached_server_brand: Vec<u8>,
+
+    pub current_clients: HashMap<Rc<Token>, Rc<RefCell<Client>>>,
 
     // todo replace with HashMap <World, Player>
     entity_id: AtomicI32, // todo: place this into every world
@@ -83,6 +88,7 @@ impl Server {
             status_response,
             status_response_json,
             public_key_der,
+            current_clients: HashMap::new(),
             base_config: config.0,
             auth_client,
             advanced_config: config.1,
@@ -95,8 +101,17 @@ impl Server {
         client.poll(self, event)
     }
 
+    pub fn add_client(&mut self, token: Rc<Token>, client: Rc<RefCell<Client>>) {
+        self.current_clients.insert(token, client);
+    }
+
+    pub fn remove_client(&mut self, token: &Token) {
+        self.current_clients.remove(token);
+    }
+
     // todo: do this in a world
     pub fn spawn_player(&mut self, client: &mut Client) {
+        // This code follows the vanilla packet order
         dbg!("spawning player");
         let entity_id = self.new_entity_id();
         let player = Player::new(Entity { entity_id });
@@ -108,16 +123,16 @@ impl Server {
                 self.base_config.hardcore,
                 vec!["minecraft:overworld".into()],
                 self.base_config.max_players as VarInt,
-                8, //  view distance todo
-                8, // sim view dinstance todo
+                self.base_config.view_distances as VarInt, //  view distance todo
+                self.base_config.simulation_distance as VarInt, // sim view dinstance todo
                 false,
                 false,
                 false,
                 0,
                 "minecraft:overworld".into(),
                 0, // seed
-                GameMode::Spectator.to_byte() as u8,
-                GameMode::Spectator.to_byte(),
+                GameMode::Survival.to_byte() as u8,
+                GameMode::Survival.to_byte(),
                 false,
                 false,
                 false, // deth loc
@@ -130,6 +145,8 @@ impl Server {
         // teleport
         client.teleport(10.0, 500.0, 10.0, 10.0, 10.0);
         let gameprofile = client.gameprofile.as_ref().unwrap();
+        // first send info update to our new player, So he can see his Skin
+        // TODO: send more actions, (chat. list, ping)
         client
             .send_packet(CPlayerInfoUpdate::new(
                 0x01,
@@ -142,6 +159,7 @@ impl Server {
                 }],
             ))
             .unwrap_or_else(|e| client.kick(&e.to_string()));
+        // TODO: Now we send this to all other client
 
         // Start waiting for level chunks
         client
@@ -149,6 +167,22 @@ impl Server {
             .unwrap_or_else(|e| client.kick(&e.to_string()));
 
         // Server::spawn_test_chunk(client);
+    }
+
+    /// Sends a Packet to all Players
+    fn broadcast_packet<P>(&mut self, packet: P) -> Result<(), PacketError>
+    where
+        P: ClientPacket,
+        P: Clone,
+    {
+        for client in self.current_clients.values() {
+            // Check if client is a player
+            if client.borrow().is_player() {
+                // we need to clone, Because we send a new packet to every client
+                client.borrow_mut().send_packet(packet.clone())?;
+            }
+        }
+        Ok(())
     }
 
     // todo: do this in a world

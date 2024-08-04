@@ -4,6 +4,14 @@ use super::{Entity, EntityId};
 
 pub struct Player {
     pub entity: Entity,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub yaw: f32,
+    pub pitch: f32,
+
+    // Client side value, Should be not trusted
+    pub on_ground: bool,
 
     // Current awaiting teleport id, None if did not teleport
     pub awaiting_teleport: Option<VarInt>,
@@ -13,6 +21,12 @@ impl Player {
     pub fn new(entity: Entity) -> Self {
         Self {
             entity,
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            yaw: 0.0,
+            pitch: 0.0,
+            on_ground: false,
             awaiting_teleport: None,
         }
     }

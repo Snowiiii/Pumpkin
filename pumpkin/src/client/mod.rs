@@ -25,7 +25,7 @@ use pumpkin_protocol::{
         config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks, SPluginMessage},
         handshake::SHandShake,
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
-        play::SConfirmTeleport,
+        play::{SConfirmTeleport, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation},
         status::{SPingRequest, SStatusRequest},
     },
     text::Text,
@@ -109,10 +109,13 @@ impl Client {
         Ok(())
     }
 
+    pub fn is_player(&self) -> bool {
+        self.player.is_some()
+    }
+
     /// Im many cases we want to kick the Client when an Packet Error occours, But especially in the Client state we will not try to kick when not important packets
     /// e.g Postion, Rotation... has not been send
     pub fn send_packet<P: ClientPacket>(&mut self, packet: P) -> Result<(), PacketError> {
-        dbg!("sending packet");
         self.enc.append_packet(packet)?;
         self.connection
             .write_all(&self.enc.take())
@@ -121,10 +124,16 @@ impl Client {
     }
 
     pub fn teleport(&mut self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
-        assert!(self.player.is_some());
+        assert!(self.is_player());
         // todo
         let id = 0;
-        self.player.as_mut().unwrap().awaiting_teleport = Some(0);
+        let player = self.player.as_mut().unwrap();
+        player.x = x;
+        player.y = y;
+        player.z = z;
+        player.yaw = yaw;
+        player.pitch = pitch;
+        player.awaiting_teleport = Some(id);
         self.send_packet(CSyncPlayerPostion::new(x, y, z, yaw, pitch, 0, id))
             .unwrap_or_else(|e| self.kick(&e.to_string()));
     }
@@ -140,7 +149,6 @@ impl Client {
 
     /// Handles an incoming decoded Packet
     pub fn handle_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
-        dbg!("Handling packet");
         let bytebuf = &mut packet.bytebuf;
         match self.connection_state {
             pumpkin_protocol::ConnectionState::HandShake => match packet.id {
@@ -215,6 +223,15 @@ impl Client {
         match packet.id {
             SConfirmTeleport::PACKET_ID => {
                 self.handle_confirm_teleport(server, SConfirmTeleport::read(bytebuf))
+            }
+            SPlayerPosition::PACKET_ID => {
+                self.handle_position(server, SPlayerPosition::read(bytebuf))
+            }
+            SPlayerPositionRotation::PACKET_ID => {
+                self.handle_position_rotation(server, SPlayerPositionRotation::read(bytebuf))
+            }
+            SPlayerRotation::PACKET_ID => {
+                self.handle_rotation(server, SPlayerRotation::read(bytebuf))
             }
             _ => log::error!("Failed to handle player packet id {}", packet.id),
         }

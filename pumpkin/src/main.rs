@@ -17,7 +17,7 @@ pub mod util;
 
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
-    use std::{collections::HashMap, rc::Rc};
+    use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
     use client::Client;
     use configuration::AdvancedConfiguration;
@@ -51,7 +51,7 @@ fn main() -> io::Result<()> {
     // Unique token for each incoming connection.
     let mut unique_token = Token(SERVER.0 + 1);
 
-    let mut connections: HashMap<Token, Client> = HashMap::new();
+    let mut connections: HashMap<Token, Rc<RefCell<Client>>> = HashMap::new();
 
     log::info!("You now can connect to the server");
 
@@ -94,13 +94,20 @@ fn main() -> io::Result<()> {
                         token,
                         Interest::READABLE.add(Interest::WRITABLE),
                     )?;
-
-                    connections.insert(token, Client::new(Rc::new(token), connection, addr));
+                    let rc_token = Rc::new(token);
+                    let client = Rc::new(RefCell::new(Client::new(
+                        Rc::clone(&rc_token),
+                        connection,
+                        addr,
+                    )));
+                    server.add_client(rc_token, Rc::clone(&client));
+                    connections.insert(token, client);
                 },
 
                 token => {
                     // Maybe received an event for a TCP connection.
                     let done = if let Some(client) = connections.get_mut(&token) {
+                        let mut client = client.borrow_mut();
                         client.poll(&mut server, event);
                         client.closed
                     } else {
@@ -108,7 +115,9 @@ fn main() -> io::Result<()> {
                         false
                     };
                     if done {
-                        if let Some(mut client) = connections.remove(&token) {
+                        if let Some(client) = connections.remove(&token) {
+                            let mut client = client.borrow_mut();
+                            server.remove_client(&token);
                             poll.registry().deregister(&mut client.connection)?;
                         }
                     }

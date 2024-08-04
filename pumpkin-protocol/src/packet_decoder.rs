@@ -49,7 +49,6 @@ impl PacketDecoder {
             .0;
 
         data.advance(data.len() - r.len());
-        dbg!(packet_id);
         Ok(Some(RawPacket {
             len: packet_len,
             id: packet_id,

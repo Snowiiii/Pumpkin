@@ -1,4 +1,6 @@
-use pumpkin_protocol::server::play::SConfirmTeleport;
+use pumpkin_protocol::server::play::{
+    SConfirmTeleport, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
+};
 
 use crate::server::Server;
 
@@ -7,6 +9,15 @@ use super::Client;
 // implement player packets
 pub trait PlayerPacketProcessor {
     fn handle_confirm_teleport(&mut self, server: &mut Server, confirm_teleport: SConfirmTeleport);
+
+    fn handle_position(&mut self, server: &mut Server, position: SPlayerPosition);
+
+    fn handle_position_rotation(
+        &mut self,
+        server: &mut Server,
+        position_rotation: SPlayerPositionRotation,
+    );
+    fn handle_rotation(&mut self, server: &mut Server, rotation: SPlayerRotation);
 }
 
 impl PlayerPacketProcessor for Client {
@@ -25,5 +36,46 @@ impl PlayerPacketProcessor for Client {
         } else {
             self.kick("Send Teleport confirm, but we did not teleport")
         }
+    }
+
+    fn handle_position(&mut self, _server: &mut Server, position: SPlayerPosition) {
+        if position.x.is_nan() || position.feet_y.is_nan() || position.z.is_nan() {
+            self.kick("Invalid movement");
+        }
+        let player = self.player.as_mut().unwrap();
+        player.x = position.x;
+        player.y = position.feet_y;
+        player.z = position.z;
+    }
+
+    fn handle_position_rotation(
+        &mut self,
+        _server: &mut Server,
+        position_rotation: SPlayerPositionRotation,
+    ) {
+        if position_rotation.x.is_nan()
+            || position_rotation.feet_y.is_nan()
+            || position_rotation.z.is_nan()
+        {
+            self.kick("Invalid movement");
+        }
+        if !position_rotation.yaw.is_finite() || !position_rotation.pitch.is_finite() {
+            self.kick("Invalid rotation");
+        }
+        let player = self.player.as_mut().unwrap();
+        player.x = position_rotation.x;
+        player.y = position_rotation.feet_y;
+        player.z = position_rotation.z;
+        player.yaw = position_rotation.yaw;
+        player.pitch = position_rotation.pitch;
+    }
+
+    fn handle_rotation(&mut self, _server: &mut Server, rotation: SPlayerRotation) {
+        if !rotation.yaw.is_finite() || !rotation.pitch.is_finite() {
+            self.kick("Invalid rotation");
+        }
+        let player = self.player.as_mut().unwrap();
+        player.yaw = rotation.yaw;
+        player.pitch = rotation.pitch;
     }
 }
