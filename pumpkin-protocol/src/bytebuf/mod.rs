@@ -112,7 +112,9 @@ impl ByteBuffer {
     }
 
     pub fn put_uuid(&mut self, v: uuid::Uuid) {
-        self.buffer.put_slice(v.as_bytes());
+        let pair = v.as_u64_pair();
+        self.put_u64(pair.0);
+        self.put_u64(pair.1);
     }
 
     pub fn put_string(&mut self, val: &str) {

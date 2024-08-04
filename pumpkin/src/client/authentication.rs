@@ -1,4 +1,4 @@
-use std::{error, net::IpAddr};
+use std::{net::IpAddr};
 
 use num_bigint::BigInt;
 use pumpkin_protocol::client::login::Property;
@@ -9,14 +9,14 @@ use uuid::Uuid;
 
 use crate::server::Server;
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct GameProfile {
     pub id: Uuid,
     pub name: String,
     pub properties: Vec<Property>,
 }
 
-pub async fn authenticate(
+pub fn authenticate(
     username: &str,
     server_hash: &str,
     ip: &IpAddr,
@@ -34,14 +34,13 @@ pub async fn authenticate(
         .unwrap()
         .get(address)
         .send()
-        .await
         .map_err(|_| AuthError::FailedResponse)?;
     match response.status() {
         StatusCode::OK => {}
         StatusCode::NO_CONTENT => Err(AuthError::UnverifiedUsername)?,
         other => Err(AuthError::UnknownStatusCode(other.as_str().to_string()))?,
     }
-    let profile: GameProfile = response.json().await.map_err(|_| AuthError::FailedParse)?;
+    let profile: GameProfile = response.json().map_err(|_| AuthError::FailedParse)?;
     Ok(profile)
 }
 

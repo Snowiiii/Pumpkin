@@ -68,7 +68,7 @@ impl Default for BasicConfiguration {
             server_address: "127.0.0.1".to_string(),
             server_port: 25565,
             seed: "".to_string(),
-            max_players: 0,
+            max_players: 100000,
             view_distances: 10,
             simulation_distance: 10,
             resource_pack: "".to_string(),

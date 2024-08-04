@@ -94,7 +94,7 @@ impl ClientPacketProcessor for Client {
             properties: vec![],
         });
 
-        // we want encryption
+        // todo: check config for encryption
         let verify_token: [u8; 4] = rand::random();
         let public_key_der = &server.public_key_der;
         let packet = CEncryptionRequest::new(
@@ -117,6 +117,8 @@ impl ClientPacketProcessor for Client {
             .decrypt(Pkcs1v15Encrypt, &encryption_response.shared_secret)
             .map_err(|_| EncryptionError::FailedDecrypt)
             .unwrap();
+        self.enable_encryption(&shared_secret)
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
 
         if server.base_config.online_mode {
             let hash = Sha1::new()
@@ -125,19 +127,16 @@ impl ClientPacketProcessor for Client {
                 .finalize();
             let hash = auth_digest(&hash);
             let ip = self.address.ip();
-            match pollster::block_on(authentication::authenticate(
+            match authentication::authenticate(
                 &self.gameprofile.as_ref().unwrap().name,
                 &hash,
                 &ip,
                 server,
-            )) {
+            ) {
                 Ok(p) => self.gameprofile = Some(p),
                 Err(e) => self.kick(&e.to_string()),
             }
         }
-
-        self.enable_encryption(server, shared_secret)
-            .unwrap_or_else(|e| self.kick(&e.to_string()));
 
         if let Some(profile) = self.gameprofile.as_ref().cloned() {
             let packet = CLoginSuccess::new(profile.id, profile.name, &profile.properties, false);

@@ -32,7 +32,6 @@ use pumpkin_protocol::{
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
 
-use rsa::Pkcs1v15Encrypt;
 use std::io::Read;
 use thiserror::Error;
 
@@ -99,16 +98,10 @@ impl Client {
     /// enables encryption
     pub fn enable_encryption(
         &mut self,
-        server: &mut Server,
-        shared_secret: Vec<u8>, // decrypted
+        shared_secret: &[u8], // decrypted
     ) -> Result<(), EncryptionError> {
         self.encrytion = true;
-        let shared_secret = server
-            .private_key
-            .decrypt(Pkcs1v15Encrypt, &shared_secret)
-            .map_err(|_| EncryptionError::FailedDecrypt)?;
         let crypt_key: [u8; 16] = shared_secret
-            .as_slice()
             .try_into()
             .map_err(|_| EncryptionError::SharedWrongLength)?;
         self.dec.enable_encryption(&crypt_key);

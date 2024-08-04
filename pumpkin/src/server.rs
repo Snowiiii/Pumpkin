@@ -47,7 +47,7 @@ pub struct Server {
     pub advanced_config: AdvancedConfiguration,
 
     /// Used for Authentication, None is Online mode is disabled
-    pub auth_client: Option<reqwest::Client>,
+    pub auth_client: Option<reqwest::blocking::Client>,
 }
 
 impl Server {
@@ -67,7 +67,7 @@ impl Server {
         )
         .into_boxed_slice();
         let auth_client = if config.0.online_mode {
-            Some(reqwest::Client::new())
+            Some(reqwest::blocking::Client::new())
         } else {
             None
         };
@@ -163,7 +163,7 @@ impl Server {
     }
 
     pub fn build_brand() -> Vec<u8> {
-        let brand = "pumpkin";
+        let brand = "Pumpkin";
         let mut buf = vec![];
         let _ = VarInt32(brand.len() as i32).encode(&mut buf);
         buf.extend_from_slice(brand.as_bytes());

@@ -86,8 +86,10 @@ impl<'a> CLoginSuccess<'a> {
 #[derive(Deserialize, Clone, Debug)]
 pub struct Property {
     pub name: String,
+    // base 64
     pub value: String,
-    pub signature: String,
+    // base 64
+    pub signature: Option<String>,
 }
 
 impl<'a> ClientPacket for CLoginSuccess<'a> {
@@ -100,10 +102,8 @@ impl<'a> ClientPacket for CLoginSuccess<'a> {
             p.put_string(&v.name);
             p.put_string(&v.value);
             // has signature ?
-            p.put_bool(true);
-            // option
-            p.put_bool(true);
-            p.put_string(&v.signature);
+            p.put_bool(false);
+            // p.put_option(&v.signature, |p,v| p.put_string(v));
         });
         bytebuf.put_bool(self.strict_error_handling);
     }
