@@ -54,7 +54,7 @@ impl CPlayDisconnect {
     }
 }
 
-impl<'a> ClientPacket for CPlayDisconnect {
+impl ClientPacket for CPlayDisconnect {
     const PACKET_ID: VarInt = 0x1D;
 
     fn write(&self, bytebuf: &mut ByteBuffer) {

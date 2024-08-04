@@ -8,7 +8,7 @@ use mio::{event::Event, Poll};
 use pumpkin_protocol::{
     client::{
         config::CPluginMessage,
-        play::{CChunkDataUpdateLight, CGameEvent, CLogin, CSyncPlayerPostion},
+        play::{CChunkDataUpdateLight, CGameEvent, CLogin},
     },
     BitSet, PacketError, Players, Sample, StatusResponse, VarInt, VarInt32, Version,
 };
@@ -96,9 +96,7 @@ impl Server {
     pub fn spawn_player(&mut self, client: &mut Client) {
         dbg!("spawning player");
         let entity_id = self.new_entity_id();
-        let player = Player::new(Entity {
-            entity_id,
-        });
+        let player = Player::new(Entity { entity_id });
         client.player = Some(player);
 
         client
@@ -138,7 +136,7 @@ impl Server {
     }
 
     // todo: do this in a world
-    fn spawn_test_chunk(client: &mut Client) {
+    fn _spawn_test_chunk(client: &mut Client) {
         let test_chunk = TestChunk::new();
         client
             .send_packet(CChunkDataUpdateLight::new(
