@@ -1,20 +1,15 @@
 use pumpkin_macros::packet;
+use serde::Serialize;
 
-use crate::{bytebuf::ByteBuffer, ClientPacket};
-
+#[derive(Serialize)]
 #[packet(0x00)]
 pub struct CLoginDisconnect<'a> {
-    reason: &'a str,
+    json_reason: &'a str,
 }
 
 impl<'a> CLoginDisconnect<'a> {
-    pub fn new(reason: &'a str) -> Self {
-        Self { reason }
-    }
-}
-
-impl<'a> ClientPacket for CLoginDisconnect<'a> {
-    fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.put_string(&serde_json::to_string_pretty(&self.reason).unwrap());
+    // input json!
+    pub fn new(json_reason: &'a str) -> Self {
+        Self { json_reason }
     }
 }

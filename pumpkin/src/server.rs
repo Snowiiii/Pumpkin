@@ -103,11 +103,11 @@ impl Server {
         client.poll(self, event)
     }
 
-    pub fn add_client(&mut self, token: Rc<Token>, client: Rc<RefCell<Client>>) {
+    pub fn add_client(&mut self, _token: Rc<Token>, _client: Rc<RefCell<Client>>) {
         // self.current_clients.insert(token, client);
     }
 
-    pub fn remove_client(&mut self, token: &Token) {
+    pub fn remove_client(&mut self, _token: &Token) {
         // self.current_clients.remove(token);
     }
 
@@ -176,7 +176,7 @@ impl Server {
     }
 
     /// Sends a Packet to all Players
-    fn _broadcast_packet<P>(&mut self, packet: P) -> Result<(), PacketError>
+    fn _broadcast_packet<P>(&mut self, _packet: P) -> Result<(), PacketError>
     where
         P: ClientPacket,
         P: Clone,

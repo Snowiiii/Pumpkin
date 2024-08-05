@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    entity::player::{ChatMode, Hand, Player},
+    entity::player::{ChatMode, GameMode, Hand, Player},
     server::Server,
 };
 
@@ -16,7 +16,7 @@ use pumpkin_protocol::{
     client::{
         config::CConfigDisconnect,
         login::CLoginDisconnect,
-        play::{CPlayDisconnect, CSyncPlayerPostion, CSystemChatMessge},
+        play::{CGameEvent, CPlayDisconnect, CSyncPlayerPostion, CSystemChatMessge},
     },
     packet_decoder::PacketDecoder,
     packet_encoder::PacketEncoder,
@@ -40,8 +40,6 @@ use thiserror::Error;
 mod authentication;
 mod client_packet;
 pub mod player_packet;
-
-use client_packet::ClientPacketProcessor;
 
 pub struct PlayerConfig {
     pub locale: String, // 16
@@ -136,7 +134,12 @@ impl Client {
         player.yaw = yaw;
         player.pitch = pitch;
         player.awaiting_teleport = Some(id);
-        self.send_packet(CSyncPlayerPostion::new(x, y, z, yaw, pitch, 0, id))
+        self.send_packet(CSyncPlayerPostion::new(x, y, z, yaw, pitch, 0, id.into()))
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
+    }
+
+    pub fn set_gamemode(&mut self, gamemode: GameMode) {
+        self.send_packet(CGameEvent::new(3, gamemode.to_byte() as f32))
             .unwrap_or_else(|e| self.kick(&e.to_string()));
     }
 
@@ -299,8 +302,10 @@ impl Client {
         dbg!(reason);
         match self.connection_state {
             ConnectionState::Login => {
-                self.send_packet(CLoginDisconnect::new(reason))
-                    .unwrap_or_else(|_| self.close());
+                self.send_packet(CLoginDisconnect::new(
+                    &serde_json::to_string_pretty(&reason).unwrap(),
+                ))
+                .unwrap_or_else(|_| self.close());
             }
             ConnectionState::Config => {
                 self.send_packet(CConfigDisconnect::new(reason))

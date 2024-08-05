@@ -2,6 +2,17 @@ use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
 use std::io::{self};
 
+use client::Client;
+use commands::handle_command;
+use configuration::AdvancedConfiguration;
+
+use std::{
+    collections::HashMap,
+    rc::Rc,
+    sync::{Arc, Mutex},
+    thread,
+};
+
 use client::interrupted;
 use configuration::BasicConfiguration;
 use server::Server;
@@ -18,17 +29,6 @@ pub mod util;
 
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
-    use std::{
-        collections::HashMap,
-        rc::Rc,
-        sync::{Arc, Mutex},
-        thread,
-    };
-
-    use client::Client;
-    use commands::handle_command;
-    use configuration::AdvancedConfiguration;
-
     let basic_config = BasicConfiguration::load("configuration.toml");
 
     let advanced_configuration = AdvancedConfiguration::load("features.toml");

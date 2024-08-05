@@ -9,7 +9,7 @@ use crate::{
 
 use super::Client;
 
-
+/// Handles all Play Packets send by a real Player
 impl Client {
     pub fn handle_confirm_teleport(
         &mut self,

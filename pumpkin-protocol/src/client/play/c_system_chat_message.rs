@@ -1,7 +1,9 @@
 use pumpkin_macros::packet;
+use serde::Serialize;
 
-use crate::{bytebuf::ByteBuffer, text::TextComponent, ClientPacket};
+use crate::text::TextComponent;
 
+#[derive(Serialize)]
 #[packet(0x6C)]
 pub struct CSystemChatMessge {
     content: TextComponent,
@@ -11,12 +13,5 @@ pub struct CSystemChatMessge {
 impl CSystemChatMessge {
     pub fn new(content: TextComponent, overlay: bool) -> Self {
         Self { content, overlay }
-    }
-}
-
-impl ClientPacket for CSystemChatMessge {
-    fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.put_slice(&self.content.encode());
-        bytebuf.put_bool(self.overlay);
     }
 }

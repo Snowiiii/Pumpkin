@@ -1,7 +1,9 @@
 use pumpkin_macros::packet;
+use serde::Serialize;
 
-use crate::{bytebuf::ByteBuffer, ClientPacket, VarInt};
+use crate::VarInt32;
 
+#[derive(Serialize)]
 #[packet(0x40)]
 pub struct CSyncPlayerPostion {
     x: f64,
@@ -10,7 +12,7 @@ pub struct CSyncPlayerPostion {
     yaw: f32,
     pitch: f32,
     flags: i8,
-    teleport_id: VarInt,
+    teleport_id: VarInt32,
 }
 
 impl CSyncPlayerPostion {
@@ -21,7 +23,7 @@ impl CSyncPlayerPostion {
         yaw: f32,
         pitch: f32,
         flags: i8,
-        teleport_id: VarInt,
+        teleport_id: VarInt32,
     ) -> Self {
         Self {
             x,
@@ -32,17 +34,5 @@ impl CSyncPlayerPostion {
             flags,
             teleport_id,
         }
-    }
-}
-
-impl ClientPacket for CSyncPlayerPostion {
-    fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.put_f64(self.x);
-        bytebuf.put_f64(self.y);
-        bytebuf.put_f64(self.z);
-        bytebuf.put_f32(self.yaw.to_degrees());
-        bytebuf.put_f32(self.pitch.to_degrees());
-        bytebuf.put_i8(self.flags);
-        bytebuf.put_var_int(self.teleport_id);
     }
 }

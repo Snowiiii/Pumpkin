@@ -90,6 +90,12 @@ impl VarInt32 {
     }
 }
 
+impl From<i32> for VarInt32 {
+    fn from(value: i32) -> Self {
+        VarInt32(value)
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Error)]
 pub enum VarIntDecodeError {
     #[error("incomplete VarInt decode")]

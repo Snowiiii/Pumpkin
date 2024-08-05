@@ -25,65 +25,27 @@ use crate::{
 use super::{authentication::auth_digest, Client, EncryptionError, PlayerConfig};
 
 /// Processes incoming Packets from the Client to the Server
-/// Implements the `Client` Packets, So everything before the Play state, then will use the `PlayerPacketProcessor`
-pub trait ClientPacketProcessor {
-    // Handshake
-    fn handle_handshake(&mut self, server: &mut Server, handshake: SHandShake);
-    // Status
-    fn handle_status_request(&mut self, server: &mut Server, status_request: SStatusRequest);
-    fn handle_ping_request(&mut self, server: &mut Server, ping_request: SPingRequest);
-    // Login
-    fn handle_login_start(&mut self, server: &mut Server, login_start: SLoginStart);
-    fn handle_encryption_response(
-        &mut self,
-        server: &mut Server,
-        encryption_response: SEncryptionResponse,
-    );
-    fn handle_plugin_response(
-        &mut self,
-        server: &mut Server,
-        plugin_response: SLoginPluginResponse,
-    );
-    fn handle_login_acknowledged(
-        &mut self,
-        server: &mut Server,
-        login_acknowledged: SLoginAcknowledged,
-    );
-    // Config
-    fn handle_client_information(
-        &mut self,
-        server: &mut Server,
-        client_information: SClientInformation,
-    );
-    fn handle_plugin_message(&mut self, server: &mut Server, plugin_message: SPluginMessage);
-    fn handle_known_packs(&mut self, server: &mut Server, config_acknowledged: SKnownPacks);
-    fn handle_config_acknowledged(
-        &mut self,
-        server: &mut Server,
-        config_acknowledged: SAcknowledgeFinishConfig,
-    );
-}
-
-impl ClientPacketProcessor for Client {
-    fn handle_handshake(&mut self, _server: &mut Server, handshake: SHandShake) {
+/// Implements the `Client` Packets
+impl Client {
+    pub fn handle_handshake(&mut self, _server: &mut Server, handshake: SHandShake) {
         // TODO set protocol version and check protocol version
         self.connection_state = handshake.next_state;
         dbg!("handshake");
     }
 
-    fn handle_status_request(&mut self, server: &mut Server, _status_request: SStatusRequest) {
+    pub fn handle_status_request(&mut self, server: &mut Server, _status_request: SStatusRequest) {
         self.send_packet(CStatusResponse::new(&server.status_response_json))
             .unwrap_or_else(|e| self.kick(&e.to_string()));
     }
 
-    fn handle_ping_request(&mut self, _server: &mut Server, ping_request: SPingRequest) {
+    pub fn handle_ping_request(&mut self, _server: &mut Server, ping_request: SPingRequest) {
         dbg!("ping");
         self.send_packet(CPingResponse::new(ping_request.payload))
             .unwrap_or_else(|e| self.kick(&e.to_string()));
         self.close();
     }
 
-    fn handle_login_start(&mut self, server: &mut Server, login_start: SLoginStart) {
+    pub fn handle_login_start(&mut self, server: &mut Server, login_start: SLoginStart) {
         dbg!("login start");
         // default game profile, when no online mode
         self.gameprofile = Some(GameProfile {
@@ -105,7 +67,7 @@ impl ClientPacketProcessor for Client {
             .unwrap_or_else(|e| self.kick(&e.to_string()));
     }
 
-    fn handle_encryption_response(
+    pub fn handle_encryption_response(
         &mut self,
         server: &mut Server,
         encryption_response: SEncryptionResponse,
@@ -145,14 +107,14 @@ impl ClientPacketProcessor for Client {
         }
     }
 
-    fn handle_plugin_response(
+    pub fn handle_plugin_response(
         &mut self,
         _server: &mut Server,
         _plugin_response: SLoginPluginResponse,
     ) {
     }
 
-    fn handle_login_acknowledged(
+    pub fn handle_login_acknowledged(
         &mut self,
         server: &mut Server,
         _login_acknowledged: SLoginAcknowledged,
@@ -170,7 +132,7 @@ impl ClientPacketProcessor for Client {
         .unwrap_or_else(|e| self.kick(&e.to_string()));
         dbg!("login achnowlaged");
     }
-    fn handle_client_information(
+    pub fn handle_client_information(
         &mut self,
         _server: &mut Server,
         client_information: SClientInformation,
@@ -178,16 +140,16 @@ impl ClientPacketProcessor for Client {
         self.config = Some(PlayerConfig {
             locale: client_information.locale,
             view_distance: client_information.view_distance,
-            chat_mode: ChatMode::from_varint(client_information.chat_mode),
+            chat_mode: ChatMode::from(client_information.chat_mode),
             chat_colors: client_information.chat_colors,
             skin_parts: client_information.skin_parts,
-            main_hand: Hand::from_varint(client_information.main_hand),
+            main_hand: Hand::from(client_information.main_hand),
             text_filtering: client_information.text_filtering,
             server_listing: client_information.server_listing,
         });
     }
 
-    fn handle_plugin_message(&mut self, _server: &mut Server, plugin_message: SPluginMessage) {
+    pub fn handle_plugin_message(&mut self, _server: &mut Server, plugin_message: SPluginMessage) {
         if plugin_message.channel.starts_with("minecraft:brand")
             || plugin_message.channel.starts_with("MC|Brand")
         {
@@ -199,7 +161,7 @@ impl ClientPacketProcessor for Client {
         }
     }
 
-    fn handle_known_packs(&mut self, _server: &mut Server, _config_acknowledged: SKnownPacks) {
+    pub fn handle_known_packs(&mut self, _server: &mut Server, _config_acknowledged: SKnownPacks) {
         for registry in Registry::get_static() {
             self.send_packet(CRegistryData::new(
                 &registry.registry_id,
@@ -214,7 +176,7 @@ impl ClientPacketProcessor for Client {
             .unwrap_or_else(|e| self.kick(&e.to_string()));
     }
 
-    fn handle_config_acknowledged(
+    pub fn handle_config_acknowledged(
         &mut self,
         server: &mut Server,
         _config_acknowledged: SAcknowledgeFinishConfig,

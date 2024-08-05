@@ -1,20 +1,16 @@
 use pumpkin_macros::packet;
+use serde::Serialize;
 
-use crate::{bytebuf::ByteBuffer, ClientPacket, VarInt};
+use crate::VarInt32;
 
+#[derive(Serialize)]
 #[packet(0x03)]
 pub struct CSetCompression {
-    threshold: VarInt,
+    threshold: VarInt32,
 }
 
 impl CSetCompression {
-    pub fn new(threshold: VarInt) -> Self {
+    pub fn new(threshold: VarInt32) -> Self {
         Self { threshold }
-    }
-}
-
-impl ClientPacket for CSetCompression {
-    fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.put_var_int(self.threshold);
     }
 }
