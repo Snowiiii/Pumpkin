@@ -1,9 +1,6 @@
 use pumpkin_macros::packet;
 
-use crate::{
-    bytebuf::{packet_id::Packet, ByteBuffer},
-    ClientPacket, Property, VarInt,
-};
+use crate::{bytebuf::ByteBuffer, ClientPacket, Property};
 
 use super::PlayerAction;
 

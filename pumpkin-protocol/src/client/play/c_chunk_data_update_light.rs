@@ -1,9 +1,6 @@
 use pumpkin_macros::packet;
 
-use crate::{
-    bytebuf::{packet_id::Packet, ByteBuffer},
-    BitSet, ClientPacket, VarInt,
-};
+use crate::{bytebuf::ByteBuffer, BitSet, ClientPacket, VarInt};
 
 #[packet(0x27)]
 pub struct CChunkDataUpdateLight {

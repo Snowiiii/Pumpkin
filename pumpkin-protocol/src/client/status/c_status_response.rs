@@ -1,10 +1,5 @@
 use pumpkin_macros::packet;
 
-use crate::{
-    bytebuf::{packet_id::Packet, ByteBuffer},
-    ClientPacket, VarInt,
-};
-
 #[derive(serde::Serialize)]
 #[packet(0x00)]
 pub struct CStatusResponse<'a> {
@@ -16,4 +11,3 @@ impl<'a> CStatusResponse<'a> {
         Self { json_response }
     }
 }
-

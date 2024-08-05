@@ -1,9 +1,6 @@
 use pumpkin_macros::packet;
 
-use crate::{
-    bytebuf::{packet_id::Packet, ByteBuffer},
-    ClientPacket, VarInt,
-};
+use crate::{bytebuf::ByteBuffer, ClientPacket, VarInt};
 
 #[packet(0x40)]
 pub struct CSyncPlayerPostion {

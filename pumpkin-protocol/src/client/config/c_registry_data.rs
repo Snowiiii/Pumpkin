@@ -1,9 +1,6 @@
 use pumpkin_macros::packet;
 
-use crate::{
-    bytebuf::{packet_id::Packet, ByteBuffer},
-    ClientPacket, VarInt,
-};
+use crate::{bytebuf::ByteBuffer, ClientPacket};
 
 #[packet(0x07)]
 pub struct CRegistryData<'a> {

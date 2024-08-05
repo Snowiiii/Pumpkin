@@ -1,10 +1,6 @@
 use pumpkin_macros::packet;
 
-use crate::{
-    bytebuf::{packet_id::Packet, ByteBuffer},
-    text::TextComponent,
-    ClientPacket, VarInt,
-};
+use crate::{bytebuf::ByteBuffer, text::TextComponent, ClientPacket};
 
 #[packet(0x1D)]
 pub struct CPlayDisconnect {

@@ -1,9 +1,6 @@
 use pumpkin_macros::packet;
 
-use crate::{
-    bytebuf::{packet_id::Packet, ByteBuffer},
-    ClientPacket, KnownPack, VarInt,
-};
+use crate::{bytebuf::ByteBuffer, ClientPacket, KnownPack};
 
 #[packet(0x0E)]
 pub struct CKnownPacks<'a> {

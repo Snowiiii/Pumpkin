@@ -5,7 +5,6 @@ use thiserror::Error;
 
 use super::ByteBuffer;
 
-
 pub struct Serializer {
     output: ByteBuffer,
 }
