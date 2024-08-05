@@ -1,13 +1,15 @@
+use crate::{BitSet, VarInt, VarLong};
+use bytes::{Buf, BufMut, BytesMut};
 use core::str;
 use std::io::{self, Error, ErrorKind};
 
-use bytes::{Buf, BufMut, BytesMut};
-
-use crate::{BitSet, VarInt, VarLong};
+pub mod packet_id;
+mod serializer;
 
 const SEGMENT_BITS: u8 = 0x7F;
 const CONTINUE_BIT: u8 = 0x80;
 
+#[derive(Debug)]
 pub struct ByteBuffer {
     buffer: BytesMut,
 }
@@ -130,7 +132,7 @@ impl ByteBuffer {
     }
 
     pub fn put_var_int(&mut self, value: VarInt) {
-        let mut val = value as u32;
+        let mut val = value;
         for _ in 0..5 {
             let mut b: u8 = val as u8 & 0b01111111;
             val >>= 7;

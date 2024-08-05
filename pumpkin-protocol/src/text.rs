@@ -1,18 +1,33 @@
 use core::str;
 
 use fastnbt::SerOpts;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 // represents a text component
 // Reference: https://wiki.vg/Text_formatting#Text_components
-#[derive(Clone, PartialEq, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Default, Debug, Deserialize)]
 pub struct TextComponent {
     pub text: String,
 }
 
+impl serde::Serialize for TextComponent {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_bytes(&self.encode())
+    }
+}
+
 impl TextComponent {
     pub fn encode(&self) -> Vec<u8> {
-        fastnbt::to_bytes_with_opts(&self, SerOpts::network_nbt()).unwrap()
+        #[derive(serde::Serialize)]
+        struct TempStruct<'a> {
+            text: &'a String,
+        }
+
+        fastnbt::to_bytes_with_opts(&TempStruct { text: &self.text }, SerOpts::network_nbt())
+            .unwrap()
     }
 }
 

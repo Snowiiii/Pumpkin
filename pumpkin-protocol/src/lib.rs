@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use bytebuf::ByteBuffer;
+use bytebuf::{packet_id::Packet, ByteBuffer};
 use bytes::Buf;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -146,9 +146,7 @@ pub struct RawPacket {
     pub bytebuf: ByteBuffer,
 }
 
-pub trait ClientPacket {
-    const PACKET_ID: VarInt;
-
+pub trait ClientPacket: Packet {
     fn write(&self, bytebuf: &mut ByteBuffer);
 }
 

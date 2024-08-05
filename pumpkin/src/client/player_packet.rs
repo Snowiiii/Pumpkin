@@ -9,24 +9,9 @@ use crate::{
 
 use super::Client;
 
-// implement player packets
-pub trait PlayerPacketProcessor {
-    fn handle_confirm_teleport(&mut self, server: &mut Server, confirm_teleport: SConfirmTeleport);
 
-    fn handle_chat_command(&mut self, server: &mut Server, command: SChatCommand);
-
-    fn handle_position(&mut self, server: &mut Server, position: SPlayerPosition);
-
-    fn handle_position_rotation(
-        &mut self,
-        server: &mut Server,
-        position_rotation: SPlayerPositionRotation,
-    );
-    fn handle_rotation(&mut self, server: &mut Server, rotation: SPlayerRotation);
-}
-
-impl PlayerPacketProcessor for Client {
-    fn handle_confirm_teleport(
+impl Client {
+    pub fn handle_confirm_teleport(
         &mut self,
         _server: &mut Server,
         confirm_teleport: SConfirmTeleport,
@@ -43,7 +28,7 @@ impl PlayerPacketProcessor for Client {
         }
     }
 
-    fn handle_position(&mut self, _server: &mut Server, position: SPlayerPosition) {
+    pub fn handle_position(&mut self, _server: &mut Server, position: SPlayerPosition) {
         if position.x.is_nan() || position.feet_y.is_nan() || position.z.is_nan() {
             self.kick("Invalid movement");
         }
@@ -53,7 +38,7 @@ impl PlayerPacketProcessor for Client {
         player.z = position.z;
     }
 
-    fn handle_position_rotation(
+    pub fn handle_position_rotation(
         &mut self,
         _server: &mut Server,
         position_rotation: SPlayerPositionRotation,
@@ -75,7 +60,7 @@ impl PlayerPacketProcessor for Client {
         player.pitch = position_rotation.pitch;
     }
 
-    fn handle_rotation(&mut self, _server: &mut Server, rotation: SPlayerRotation) {
+    pub fn handle_rotation(&mut self, _server: &mut Server, rotation: SPlayerRotation) {
         if !rotation.yaw.is_finite() || !rotation.pitch.is_finite() {
             self.kick("Invalid rotation");
         }
@@ -84,7 +69,7 @@ impl PlayerPacketProcessor for Client {
         player.pitch = rotation.pitch;
     }
 
-    fn handle_chat_command(&mut self, server: &mut Server, command: SChatCommand) {
+    pub fn handle_chat_command(&mut self, server: &mut Server, command: SChatCommand) {
         handle_command(&mut CommandSender::Player(self), command.command, server);
     }
 }
