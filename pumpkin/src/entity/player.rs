@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use pumpkin_protocol::VarInt;
 use serde::{Deserialize, Serialize};
 
@@ -42,13 +44,13 @@ pub enum Hand {
     Off,
 }
 
-impl Hand {
-    pub fn from_varint(varint: VarInt) -> Self {
-        match varint {
+impl From<VarInt> for Hand {
+    fn from(value: VarInt) -> Self {
+        match value {
             0 => Self::Off,
             1 => Self::Main,
             _ => {
-                log::info!("Unexpected Hand {}", varint);
+                log::info!("Unexpected Hand {}", value);
                 Self::Main
             }
         }
@@ -61,14 +63,14 @@ pub enum ChatMode {
     Hidden,
 }
 
-impl ChatMode {
-    pub fn from_varint(varint: VarInt) -> Self {
-        match varint {
+impl From<VarInt> for ChatMode {
+    fn from(value: VarInt) -> Self {
+        match value {
             0 => Self::Enabled,
             1 => Self::CommandsOnly,
             2 => Self::Hidden,
             _ => {
-                log::info!("Unexpected ChatMode {}", varint);
+                log::info!("Unexpected ChatMode {}", value);
                 Self::Enabled
             }
         }
@@ -84,21 +86,40 @@ pub enum GameMode {
     Spectator,
 }
 
-impl GameMode {
-    pub fn from_byte(byte: i8) -> Self {
-        match byte {
+#[derive(Debug, PartialEq, Eq)]
+pub struct ParseGameModeError;
+
+impl FromStr for GameMode {
+    type Err = ParseGameModeError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "survival" => Ok(Self::Survival),
+            "creative" => Ok(Self::Creative),
+            "adventure" => Ok(Self::Adventure),
+            "spectator" => Ok(Self::Spectator),
+            _ => Err(ParseGameModeError),
+        }
+    }
+}
+
+impl From<i8> for GameMode {
+    fn from(value: i8) -> Self {
+        match value {
             -1 => GameMode::Undefined,
             0 => GameMode::Survival,
             1 => GameMode::Creative,
             2 => GameMode::Adventure,
             3 => GameMode::Spectator,
             _ => {
-                log::info!("Unexpected GameMode {}", byte);
+                log::info!("Unexpected GameMode {}", value);
                 Self::Survival
             }
         }
     }
+}
 
+impl GameMode {
     pub fn to_byte(self) -> i8 {
         match self {
             Self::Undefined => -1,
