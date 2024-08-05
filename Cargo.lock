@@ -1168,6 +1168,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pumpkin-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.72",
+]
+
+[[package]]
 name = "pumpkin-protocol"
 version = "0.1.0"
 dependencies = [
