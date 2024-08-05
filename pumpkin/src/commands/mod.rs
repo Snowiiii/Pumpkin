@@ -30,9 +30,10 @@ impl<'a> CommandSender<'a> {
 }
 pub fn handle_command(sender: &mut CommandSender, command: String, server: &mut Server) {
     let command = command.to_lowercase();
-    dbg!("handling command");
-    dbg!(&command);
     if command.starts_with(PumpkinCommand::NAME) {
-        PumpkinCommand::on_execute(sender, command, server)
+        PumpkinCommand::on_execute(sender, command, server);
+        return;
     }
+    // todo: red color
+    sender.send_message("Command not Found".into());
 }

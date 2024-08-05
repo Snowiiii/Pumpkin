@@ -18,9 +18,15 @@ pub mod util;
 
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
-    use std::{cell::RefCell, collections::HashMap, rc::Rc};
+    use std::{
+        collections::HashMap,
+        rc::Rc,
+        sync::{Arc, Mutex},
+        thread,
+    };
 
     use client::Client;
+    use commands::handle_command;
     use configuration::AdvancedConfiguration;
 
     let basic_config = BasicConfiguration::load("configuration.toml");
@@ -52,11 +58,30 @@ fn main() -> io::Result<()> {
     // Unique token for each incoming connection.
     let mut unique_token = Token(SERVER.0 + 1);
 
-    let mut connections: HashMap<Token, Rc<RefCell<Client>>> = HashMap::new();
+    let mut connections: HashMap<Token, Client> = HashMap::new();
 
     log::info!("You now can connect to the server");
 
-    let mut server = Server::new((basic_config, advanced_configuration));
+    let server = Arc::new(Mutex::new(Server::new((
+        basic_config,
+        advanced_configuration,
+    ))));
+    let server_clone = server.clone();
+
+    thread::spawn(move || {
+        let stdin = std::io::stdin();
+        loop {
+            let mut out = String::new();
+            stdin
+                .read_line(&mut out)
+                .expect("Failed to read console line");
+            handle_command(
+                &mut commands::CommandSender::Console,
+                out,
+                &mut server_clone.lock().unwrap(),
+            );
+        }
+    });
 
     loop {
         if let Err(err) = poll.poll(&mut events, None) {
@@ -96,29 +121,23 @@ fn main() -> io::Result<()> {
                         Interest::READABLE.add(Interest::WRITABLE),
                     )?;
                     let rc_token = Rc::new(token);
-                    let client = Rc::new(RefCell::new(Client::new(
-                        Rc::clone(&rc_token),
-                        connection,
-                        addr,
-                    )));
-                    server.add_client(rc_token, Rc::clone(&client));
+                    let client = Client::new(Rc::clone(&rc_token), connection, addr);
+                    // server.add_client(rc_token, Rc::clone(&client));
                     connections.insert(token, client);
                 },
 
                 token => {
                     // Maybe received an event for a TCP connection.
                     let done = if let Some(client) = connections.get_mut(&token) {
-                        let mut client = client.borrow_mut();
-                        client.poll(&mut server, event);
+                        client.poll(&mut server.lock().unwrap(), event);
                         client.closed
                     } else {
                         // Sporadic events happen, we can safely ignore them.
                         false
                     };
                     if done {
-                        if let Some(client) = connections.remove(&token) {
-                            let mut client = client.borrow_mut();
-                            server.remove_client(&token);
+                        if let Some(mut client) = connections.remove(&token) {
+                            //   server.remove_client(&token);
                             poll.registry().deregister(&mut client.connection)?;
                         }
                     }

@@ -1,6 +1,5 @@
 use std::{
     cell::RefCell,
-    collections::HashMap,
     io::Cursor,
     rc::Rc,
     sync::atomic::{AtomicI32, Ordering},
@@ -47,7 +46,7 @@ pub struct Server {
     /// Cache the Server brand buffer so we don't have to rebuild them every time a player joins
     pub cached_server_brand: Vec<u8>,
 
-    pub current_clients: HashMap<Rc<Token>, Rc<RefCell<Client>>>,
+    // pub current_clients: HashMap<Rc<Token>, Rc<RefCell<Client>>>,
 
     // todo replace with HashMap <World, Player>
     entity_id: AtomicI32, // todo: place this into every world
@@ -91,7 +90,7 @@ impl Server {
             status_response,
             status_response_json,
             public_key_der,
-            current_clients: HashMap::new(),
+            //  current_clients: HashMap::new(),
             base_config: config.0,
             auth_client,
             advanced_config: config.1,
@@ -105,11 +104,11 @@ impl Server {
     }
 
     pub fn add_client(&mut self, token: Rc<Token>, client: Rc<RefCell<Client>>) {
-        self.current_clients.insert(token, client);
+        // self.current_clients.insert(token, client);
     }
 
     pub fn remove_client(&mut self, token: &Token) {
-        self.current_clients.remove(token);
+        // self.current_clients.remove(token);
     }
 
     // todo: do this in a world
@@ -182,13 +181,15 @@ impl Server {
         P: ClientPacket,
         P: Clone,
     {
-        for client in self.current_clients.values() {
+        /*   for client in self.current_clients.values() {
             // Check if client is a player
             if client.borrow().is_player() {
                 // we need to clone, Because we send a new packet to every client
                 client.borrow_mut().send_packet(packet.clone())?;
             }
         }
+
+        */
         Ok(())
     }
 
