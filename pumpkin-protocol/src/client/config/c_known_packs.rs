@@ -1,8 +1,11 @@
+use pumpkin_macros::packet;
+
 use crate::{
     bytebuf::{packet_id::Packet, ByteBuffer},
     ClientPacket, KnownPack, VarInt,
 };
 
+#[packet(0x0E)]
 pub struct CKnownPacks<'a> {
     known_packs: &'a [KnownPack<'a>],
 }
@@ -11,10 +14,6 @@ impl<'a> CKnownPacks<'a> {
     pub fn new(known_packs: &'a [KnownPack]) -> Self {
         Self { known_packs }
     }
-}
-
-impl<'a> Packet for CKnownPacks<'a> {
-    const PACKET_ID: VarInt = 0x0E;
 }
 
 impl<'a> ClientPacket for CKnownPacks<'a> {

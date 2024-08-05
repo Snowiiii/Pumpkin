@@ -1,3 +1,5 @@
+use pumpkin_macros::packet;
+
 use crate::{
     bytebuf::{packet_id::Packet, ByteBuffer},
     ClientPacket, Property, VarInt,
@@ -5,13 +7,10 @@ use crate::{
 
 use super::PlayerAction;
 
+#[packet(0x3E)]
 pub struct CPlayerInfoUpdate<'a> {
     pub actions: i8,
     pub players: &'a [Player<'a>],
-}
-
-impl<'a> Packet for CPlayerInfoUpdate<'a> {
-    const PACKET_ID: VarInt = 0x3E;
 }
 
 pub struct Player<'a> {

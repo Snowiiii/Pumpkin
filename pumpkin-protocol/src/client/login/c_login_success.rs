@@ -1,8 +1,11 @@
+use pumpkin_macros::packet;
+
 use crate::{
     bytebuf::{packet_id::Packet, ByteBuffer},
     ClientPacket, Property, VarInt,
 };
 
+#[packet(0x02)]
 pub struct CLoginSuccess<'a> {
     pub uuid: uuid::Uuid,
     pub username: String, // 16
@@ -24,10 +27,6 @@ impl<'a> CLoginSuccess<'a> {
             strict_error_handling,
         }
     }
-}
-
-impl<'a> Packet for CLoginSuccess<'a> {
-    const PACKET_ID: VarInt = 0x02;
 }
 
 impl<'a> ClientPacket for CLoginSuccess<'a> {

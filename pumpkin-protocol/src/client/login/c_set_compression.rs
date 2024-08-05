@@ -1,8 +1,11 @@
+use pumpkin_macros::packet;
+
 use crate::{
     bytebuf::{packet_id::Packet, ByteBuffer},
     ClientPacket, VarInt,
 };
 
+#[packet(0x03)]
 pub struct CSetCompression {
     threshold: VarInt,
 }
@@ -11,10 +14,6 @@ impl CSetCompression {
     pub fn new(threshold: VarInt) -> Self {
         Self { threshold }
     }
-}
-
-impl Packet for CSetCompression {
-    const PACKET_ID: VarInt = 0x03;
 }
 
 impl ClientPacket for CSetCompression {

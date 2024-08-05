@@ -1,21 +1,20 @@
+use pumpkin_macros::packet;
+
 use crate::{
     bytebuf::{packet_id::Packet, ByteBuffer},
-    text::Text,
+    text::TextComponent,
     ClientPacket, VarInt,
 };
 
+#[packet(0x1D)]
 pub struct CPlayDisconnect {
-    reason: Text,
+    reason: TextComponent,
 }
 
 impl CPlayDisconnect {
-    pub fn new(reason: Text) -> Self {
+    pub fn new(reason: TextComponent) -> Self {
         Self { reason }
     }
-}
-
-impl Packet for CPlayDisconnect {
-    const PACKET_ID: VarInt = 0x1D;
 }
 
 impl ClientPacket for CPlayDisconnect {

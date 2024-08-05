@@ -4,6 +4,9 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+
+pumpkin-macros = { path = "../pumpkin-macros" }
+
 bytes = "1.7"
 
 uuid = "1.10"

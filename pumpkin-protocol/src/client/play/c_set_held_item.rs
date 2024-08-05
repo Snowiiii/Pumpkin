@@ -1,8 +1,11 @@
+use pumpkin_macros::packet;
+
 use crate::{
     bytebuf::{packet_id::Packet, ByteBuffer},
     ClientPacket, VarInt,
 };
 
+#[packet(0x53)]
 pub struct CSetHeldItem {
     slot: i8,
 }
@@ -11,10 +14,6 @@ impl CSetHeldItem {
     pub fn new(slot: i8) -> Self {
         Self { slot }
     }
-}
-
-impl Packet for CSetHeldItem {
-    const PACKET_ID: VarInt = 0x53;
 }
 
 impl ClientPacket for CSetHeldItem {

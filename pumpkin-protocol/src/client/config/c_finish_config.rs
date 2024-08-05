@@ -1,6 +1,9 @@
+use pumpkin_macros::packet;
+
 use crate::{bytebuf::packet_id::Packet, VarInt};
 
 #[derive(serde::Serialize)]
+#[packet(0x03)]
 pub struct CFinishConfig {}
 
 impl Default for CFinishConfig {
@@ -13,8 +16,4 @@ impl CFinishConfig {
     pub fn new() -> Self {
         Self {}
     }
-}
-
-impl Packet for CFinishConfig {
-    const PACKET_ID: VarInt = 0x03;
 }

@@ -1,8 +1,11 @@
+use pumpkin_macros::packet;
+
 use crate::{
     bytebuf::{packet_id::Packet, ByteBuffer},
     ClientPacket, VarInt,
 };
 
+#[packet(0x01)]
 pub struct CEncryptionRequest<'a> {
     server_id: &'a str, // 20
     public_key: &'a [u8],
@@ -24,10 +27,6 @@ impl<'a> CEncryptionRequest<'a> {
             should_authenticate,
         }
     }
-}
-
-impl<'a> Packet for CEncryptionRequest<'a> {
-    const PACKET_ID: VarInt = 0x01;
 }
 
 impl<'a> ClientPacket for CEncryptionRequest<'a> {

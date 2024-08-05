@@ -1,8 +1,11 @@
+use pumpkin_macros::packet;
+
 use crate::{
     bytebuf::{packet_id::Packet, ByteBuffer},
     ClientPacket, VarInt,
 };
 
+#[packet(0x38)]
 pub struct CPlayerAbilities {
     flags: i8,
     flying_speed: f32,
@@ -17,10 +20,6 @@ impl CPlayerAbilities {
             field_of_view,
         }
     }
-}
-
-impl Packet for CPlayerAbilities {
-    const PACKET_ID: VarInt = 0x38;
 }
 
 impl ClientPacket for CPlayerAbilities {

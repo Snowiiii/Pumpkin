@@ -1,12 +1,9 @@
-use crate::bytebuf::packet_id::Packet;
+use pumpkin_macros::packet;
 
 #[derive(serde::Serialize)]
+#[packet(0x02)]
 pub struct CConfigDisconnect<'a> {
     reason: &'a str,
-}
-
-impl<'a> Packet for CConfigDisconnect<'a> {
-    const PACKET_ID: i32 = 0x02;
 }
 
 impl<'a> CConfigDisconnect<'a> {

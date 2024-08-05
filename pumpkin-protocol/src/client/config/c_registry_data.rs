@@ -1,8 +1,11 @@
+use pumpkin_macros::packet;
+
 use crate::{
     bytebuf::{packet_id::Packet, ByteBuffer},
     ClientPacket, VarInt,
 };
 
+#[packet(0x07)]
 pub struct CRegistryData<'a> {
     registry_id: &'a str,
     entries: &'a [RegistryEntry<'a>],
@@ -20,10 +23,6 @@ impl<'a> CRegistryData<'a> {
 pub struct RegistryEntry<'a> {
     pub entry_id: &'a str,
     pub data: Vec<u8>,
-}
-
-impl<'a> Packet for CRegistryData<'a> {
-    const PACKET_ID: VarInt = 0x07;
 }
 
 impl<'a> ClientPacket for CRegistryData<'a> {

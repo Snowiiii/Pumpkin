@@ -1,8 +1,11 @@
+use pumpkin_macros::packet;
+
 use crate::{
     bytebuf::{packet_id::Packet, ByteBuffer},
     ClientPacket, VarInt,
 };
 
+#[packet(0x00)]
 pub struct CLoginDisconnect<'a> {
     reason: &'a str,
 }
@@ -11,10 +14,6 @@ impl<'a> CLoginDisconnect<'a> {
     pub fn new(reason: &'a str) -> Self {
         Self { reason }
     }
-}
-
-impl<'a> Packet for CLoginDisconnect<'a> {
-    const PACKET_ID: VarInt = 0x00;
 }
 
 impl<'a> ClientPacket for CLoginDisconnect<'a> {

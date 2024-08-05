@@ -1,8 +1,11 @@
+use pumpkin_macros::packet;
+
 use crate::{
     bytebuf::{packet_id::Packet, ByteBuffer},
     ClientPacket, VarInt,
 };
 
+#[packet(0x2B)]
 pub struct CLogin {
     entity_id: i32,
     is_hardcore: bool,
@@ -76,10 +79,6 @@ impl CLogin {
             enforce_secure_chat,
         }
     }
-}
-
-impl Packet for CLogin {
-    const PACKET_ID: VarInt = 0x2B;
 }
 
 impl ClientPacket for CLogin {

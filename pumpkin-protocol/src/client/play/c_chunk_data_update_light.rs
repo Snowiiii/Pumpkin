@@ -1,8 +1,11 @@
+use pumpkin_macros::packet;
+
 use crate::{
     bytebuf::{packet_id::Packet, ByteBuffer},
     BitSet, ClientPacket, VarInt,
 };
 
+#[packet(0x27)]
 pub struct CChunkDataUpdateLight {
     chunk_x: i32,
     chunk_y: i32,
@@ -43,10 +46,6 @@ impl CChunkDataUpdateLight {
             block_lights,
         }
     }
-}
-
-impl Packet for CChunkDataUpdateLight {
-    const PACKET_ID: VarInt = 0x27;
 }
 
 impl ClientPacket for CChunkDataUpdateLight {

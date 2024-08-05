@@ -1,8 +1,11 @@
+use pumpkin_macros::packet;
+
 use crate::{
     bytebuf::{packet_id::Packet, ByteBuffer},
     ClientPacket, VarInt,
 };
 
+#[packet(0x40)]
 pub struct CSyncPlayerPostion {
     x: f64,
     y: f64,
@@ -33,10 +36,6 @@ impl CSyncPlayerPostion {
             teleport_id,
         }
     }
-}
-
-impl Packet for CSyncPlayerPostion {
-    const PACKET_ID: VarInt = 0x40;
 }
 
 impl ClientPacket for CSyncPlayerPostion {

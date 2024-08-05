@@ -1185,6 +1185,7 @@ dependencies = [
  "cfb8",
  "fastnbt 2.5.0 (git+https://github.com/owengage/fastnbt.git)",
  "log",
+ "pumpkin-macros",
  "serde",
  "serde_json",
  "take_mut",

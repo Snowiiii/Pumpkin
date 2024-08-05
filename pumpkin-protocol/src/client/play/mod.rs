@@ -7,6 +7,7 @@ mod c_player_abilities;
 mod c_player_info_update;
 mod c_set_held_item;
 mod c_sync_player_position;
+mod c_system_chat_message;
 mod player_action;
 
 pub use c_change_difficulty::*;
@@ -18,4 +19,5 @@ pub use c_player_abilities::*;
 pub use c_player_info_update::*;
 pub use c_set_held_item::*;
 pub use c_sync_player_position::*;
+pub use c_system_chat_message::*;
 pub use player_action::*;
