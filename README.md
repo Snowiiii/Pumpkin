@@ -1,4 +1,12 @@
-## Pumpkin
+<div align="center">
+
+# Pumpkin
+
+![CI](https://github.com/Snowiiii/Pumpkin/actions/workflows/rust.yml/badge.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+</div>
+
 Pumpkin is a Minecraft server built entirely in Rust, offering a fast, efficient, 
 and customizable experience. It prioritizes performance and player enjoyment while adhering to the core mechanics of the game.
 
