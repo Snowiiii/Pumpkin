@@ -3,7 +3,7 @@ use core::str;
 use fastnbt::SerOpts;
 use serde::Deserialize;
 
-// represents a text component
+// Fepresents a Text component
 // Reference: https://wiki.vg/Text_formatting#Text_components
 #[derive(Clone, PartialEq, Default, Debug, Deserialize)]
 pub struct TextComponent {

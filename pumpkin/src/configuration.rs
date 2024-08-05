@@ -29,48 +29,44 @@ impl Default for AdvancedConfiguration {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct BasicConfiguration {
-    /// DO NOT CHANGE
-    /// Generated to see if config may have been updated with an new Update
+    /// A version identifier for the configuration format.
     pub config_version: String,
-    /// The Server Address to bind
+    /// The address to bind the server to.
     pub server_address: String,
-    /// The Server Port to bind
-    /// Minecraft java editon uses 25565 by default
+    /// The port to listen on.
     pub server_port: u16,
-    /// The World sent to the Client
+    /// The seed for world generation.
     pub seed: String,
-    /// The Maximum amout of player which can join the Server
+    /// The maximum number of players allowed on the server.
     pub max_players: u32,
-    /// The Maximum view distance
-    pub view_distances: u8,
-    /// The Maximum simulated view distance
+    /// The maximum view distance for players.
+    pub view_distance: u8,
+    /// The maximum simulated view distance.
     pub simulation_distance: u8,
-    /// Path for resource pack
+    /// The path to the resource pack.
     pub resource_pack: String,
-    /// Sha1 hash of resource pack, when present
+    /// The SHA1 hash of the resource pack.
     pub resource_pack_sha1: String,
-    /// default difficulty
+    /// The default game difficulty.
     pub default_difficulty: Difficulty,
-    /// allow nether dimension
+    /// Whether the Nether dimension is enabled.
     pub allow_nether: bool,
-    /// is the server hardcore mode?
+    /// Whether the server is in hardcore mode.
     pub hardcore: bool,
-    /// Online Mode, Require a valid Minecraft account to join the Server, Also adds support for Skins and Capes
-    /// IMPORTANT: Be carefull when turning this off, Everyone could join your server and use any Nickname or UUID they want
+    /// Whether online mode is enabled. Requires valid Minecraft accounts.
     pub online_mode: bool,
-    /// Enable encryption for Packets send & received.
-    /// IMPORTANT: When Online mode is enabled, encryption MUST be enabled also
+    /// Whether packet encryption is enabled. Required when online mode is enabled.
     pub encryption: bool,
-    /// When enabled, Client can't use a diffrent ip to login as they use for the Authentication Server
-    /// Usally preventing proxy connections
+    /// Whether to prevent proxy connections.
     pub prevent_proxy_connections: bool,
-    /// The description send when Client performs a Status request, (e.g Multiplayer Screen)
+    /// The server's description displayed on the status screen.
     pub motd: String,
-    /// default gamemode (e.g. Survival, Creative...)
+    /// The default game mode for players.
     pub default_gamemode: GameMode,
 }
+
 
 impl Default for BasicConfiguration {
     fn default() -> Self {
@@ -80,7 +76,7 @@ impl Default for BasicConfiguration {
             server_port: 25565,
             seed: "".to_string(),
             max_players: 100000,
-            view_distances: 10,
+            view_distance: 10,
             simulation_distance: 10,
             resource_pack: "".to_string(),
             resource_pack_sha1: "".to_string(),
@@ -129,9 +125,9 @@ impl BasicConfiguration {
             self.config_version, CURRENT_BASE_VERSION,
             "Config version does not match used Config version. Please update your config"
         );
-        assert!(self.view_distances >= 2, "View distance must be atleast 2");
+        assert!(self.view_distance >= 2, "View distance must be atleast 2");
         assert!(
-            self.view_distances <= 32,
+            self.view_distance <= 32,
             "View distance must be less than 32"
         );
         if self.online_mode {

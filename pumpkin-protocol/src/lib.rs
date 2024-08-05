@@ -132,14 +132,14 @@ pub enum ConnectionState {
     Play,
 }
 
-impl ConnectionState {
-    pub fn from_varint(var_int: VarInt) -> Self {
-        match var_int {
+impl From<VarInt> for ConnectionState {
+    fn from(value: VarInt) -> Self {
+        match value {
             1 => Self::Status,
             2 => Self::Login,
             3 => Self::Transfer,
             _ => {
-                log::info!("Unexpected Status {}", var_int);
+                log::info!("Unexpected Status {}", value);
                 Self::Status
             }
         }

@@ -15,7 +15,7 @@ impl ServerPacket for SHandShake {
             protocol_version: bytebuf.get_var_int(),
             server_address: bytebuf.get_string_len(255).unwrap(),
             server_port: bytebuf.get_u16(),
-            next_state: ConnectionState::from_varint(bytebuf.get_var_int()),
+            next_state: bytebuf.get_var_int().into(),
         }
     }
 }

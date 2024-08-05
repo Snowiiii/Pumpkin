@@ -125,7 +125,7 @@ impl Server {
                 self.base_config.hardcore,
                 vec!["minecraft:overworld".into()],
                 self.base_config.max_players as VarInt,
-                self.base_config.view_distances as VarInt, //  view distance todo
+                self.base_config.view_distance as VarInt, //  view distance todo
                 self.base_config.simulation_distance as VarInt, // sim view dinstance todo
                 false,
                 false,
