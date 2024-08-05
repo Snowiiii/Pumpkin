@@ -1,6 +1,7 @@
 [package]
 name = "pumpkin"
-version = "0.1.0"
+version = "0.1.0-dev"
+description = "Empowering everyone to host fast and efficient Minecraft servers."
 edition = "2021"
 
 [dependencies]

@@ -1,4 +1,4 @@
-use crate::{bytebuf::ByteBuffer, text::Text, BitSet, ClientPacket, Property, VarInt};
+use crate::{bytebuf::ByteBuffer, text::TextComponent, BitSet, ClientPacket, Property, VarInt};
 
 pub struct SetHeldItem {
     slot: i8,
@@ -106,11 +106,11 @@ impl ClientPacket for CPlayerAbilities {
 }
 
 pub struct CPlayDisconnect {
-    reason: Text,
+    reason: TextComponent,
 }
 
 impl CPlayDisconnect {
-    pub fn new(reason: Text) -> Self {
+    pub fn new(reason: TextComponent) -> Self {
         Self { reason }
     }
 }
@@ -120,6 +120,26 @@ impl ClientPacket for CPlayDisconnect {
 
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_slice(&self.reason.encode());
+    }
+}
+
+pub struct CSystemChatMessge {
+    content: TextComponent,
+    overlay: bool,
+}
+
+impl CSystemChatMessge {
+    pub fn new(content: TextComponent, overlay: bool) -> Self {
+        Self { content, overlay }
+    }
+}
+
+impl ClientPacket for CSystemChatMessge {
+    const PACKET_ID: VarInt = 0x6C;
+
+    fn write(&self, bytebuf: &mut ByteBuffer) {
+        bytebuf.put_slice(&self.content.encode());
+        bytebuf.put_bool(self.overlay);
     }
 }
 

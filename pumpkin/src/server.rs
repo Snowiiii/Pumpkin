@@ -14,6 +14,7 @@ use pumpkin_protocol::{
         play::{CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerInfoUpdate, PlayerAction},
     },
     BitSet, ClientPacket, PacketError, Players, Sample, StatusResponse, VarInt, VarInt32, Version,
+    CURRENT_MC_PROTOCOL,
 };
 use pumpkin_world::chunk::TestChunk;
 use rsa::{rand_core::OsRng, traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
@@ -27,6 +28,8 @@ use crate::{
         Entity, EntityId,
     },
 };
+
+pub const CURRENT_MC_VERSION: &str = "1.21";
 
 pub struct Server {
     pub compression_threshold: Option<u8>,
@@ -174,7 +177,7 @@ impl Server {
     }
 
     /// Sends a Packet to all Players
-    fn broadcast_packet<P>(&mut self, packet: P) -> Result<(), PacketError>
+    fn _broadcast_packet<P>(&mut self, packet: P) -> Result<(), PacketError>
     where
         P: ClientPacket,
         P: Clone,
@@ -234,8 +237,8 @@ impl Server {
 
         StatusResponse {
             version: Version {
-                name: "1.21".into(),
-                protocol: 767,
+                name: CURRENT_MC_VERSION.into(),
+                protocol: CURRENT_MC_PROTOCOL,
             },
             players: Players {
                 max: config.max_players,

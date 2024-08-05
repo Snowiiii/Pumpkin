@@ -8,14 +8,23 @@ use crate::{entity::player::GameMode, server::Difficulty};
 const CURRENT_BASE_VERSION: &str = "1.0.0";
 
 #[derive(Deserialize, Serialize)]
+/// The idea is that Pumpkin should very customizable, You can Enable or Disable Features depning on your needs.
+/// This also allows you get some Performance or Resource boosts.
+/// Important: The Configuration should match Vanilla by default
 pub struct AdvancedConfiguration {
-    pub liquid_physics: bool,
+    /// Requires Online mode
+    /// Should player have skins
+    use_skins: bool,
+    /// Should chat be enabled
+    enable_chat: bool,
 }
 
+/// Important: The Configuration should match Vanilla by default
 impl Default for AdvancedConfiguration {
     fn default() -> Self {
         Self {
-            liquid_physics: true,
+            use_skins: true,
+            enable_chat: true,
         }
     }
 }

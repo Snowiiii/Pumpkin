@@ -10,6 +10,7 @@ use server::Server;
 const SERVER: Token = Token(0);
 
 pub mod client;
+pub mod commands;
 pub mod configuration;
 pub mod entity;
 pub mod server;

@@ -1,14 +1,19 @@
 use pumpkin_protocol::server::play::{
-    SConfirmTeleport, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
+    SChatCommand, SConfirmTeleport, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
 };
 
-use crate::server::Server;
+use crate::{
+    commands::{handle_command, CommandSender},
+    server::Server,
+};
 
 use super::Client;
 
 // implement player packets
 pub trait PlayerPacketProcessor {
     fn handle_confirm_teleport(&mut self, server: &mut Server, confirm_teleport: SConfirmTeleport);
+
+    fn handle_chat_command(&mut self, server: &mut Server, command: SChatCommand);
 
     fn handle_position(&mut self, server: &mut Server, position: SPlayerPosition);
 
@@ -77,5 +82,9 @@ impl PlayerPacketProcessor for Client {
         let player = self.player.as_mut().unwrap();
         player.yaw = rotation.yaw;
         player.pitch = rotation.pitch;
+    }
+
+    fn handle_chat_command(&mut self, server: &mut Server, command: SChatCommand) {
+        handle_command(&mut CommandSender::Player(self), command.command, server);
     }
 }

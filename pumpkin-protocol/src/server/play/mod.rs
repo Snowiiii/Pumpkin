@@ -14,6 +14,20 @@ impl ServerPacket for SConfirmTeleport {
     }
 }
 
+pub struct SChatCommand {
+    pub command: String,
+}
+
+impl ServerPacket for SChatCommand {
+    const PACKET_ID: VarInt = 0x04;
+
+    fn read(bytebuf: &mut crate::bytebuf::ByteBuffer) -> Self {
+        Self {
+            command: bytebuf.get_string().unwrap(),
+        }
+    }
+}
+
 pub struct SPlayerPosition {
     pub x: f64,
     pub feet_y: f64,

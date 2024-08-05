@@ -13,6 +13,8 @@ pub mod text;
 pub mod packet_decoder;
 pub mod packet_encoder;
 
+pub const CURRENT_MC_PROTOCOL: u32 = 767;
+
 pub const MAX_PACKET_SIZE: i32 = 2097152;
 
 /// usally uses a namespace like "minecraft:thing"

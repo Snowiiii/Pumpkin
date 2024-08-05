@@ -17,7 +17,7 @@ use pumpkin_protocol::{
     client::{
         config::CConfigDisconnect,
         login::CLoginDisconnect,
-        play::{CPlayDisconnect, CSyncPlayerPostion},
+        play::{CPlayDisconnect, CSyncPlayerPostion, CSystemChatMessge},
     },
     packet_decoder::PacketDecoder,
     packet_encoder::PacketEncoder,
@@ -25,10 +25,13 @@ use pumpkin_protocol::{
         config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks, SPluginMessage},
         handshake::SHandShake,
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
-        play::{SConfirmTeleport, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation},
+        play::{
+            SChatCommand, SConfirmTeleport, SPlayerPosition, SPlayerPositionRotation,
+            SPlayerRotation,
+        },
         status::{SPingRequest, SStatusRequest},
     },
-    text::Text,
+    text::TextComponent,
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
 
@@ -224,6 +227,9 @@ impl Client {
             SConfirmTeleport::PACKET_ID => {
                 self.handle_confirm_teleport(server, SConfirmTeleport::read(bytebuf))
             }
+            SChatCommand::PACKET_ID => {
+                self.handle_chat_command(server, SChatCommand::read(bytebuf))
+            }
             SPlayerPosition::PACKET_ID => {
                 self.handle_position(server, SPlayerPosition::read(bytebuf))
             }
@@ -284,6 +290,11 @@ impl Client {
         }
     }
 
+    pub fn send_message(&mut self, text: TextComponent) {
+        self.send_packet(CSystemChatMessge::new(text, false))
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
+    }
+
     /// Kicks the Client with a reason depending on the connection state
     pub fn kick(&mut self, reason: &str) {
         dbg!(reason);
@@ -297,7 +308,7 @@ impl Client {
                     .unwrap_or_else(|_| self.close());
             }
             ConnectionState::Play => {
-                self.send_packet(CPlayDisconnect::new(Text {
+                self.send_packet(CPlayDisconnect::new(TextComponent {
                     text: reason.to_string(),
                 }))
                 .unwrap_or_else(|_| self.close());
