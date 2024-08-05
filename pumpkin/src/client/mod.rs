@@ -12,7 +12,6 @@ use crate::{
 
 use authentication::GameProfile;
 use mio::{event::Event, net::TcpStream, Token};
-use player_packet::PlayerPacketProcessor;
 use pumpkin_protocol::{
     client::{
         config::CConfigDisconnect,
