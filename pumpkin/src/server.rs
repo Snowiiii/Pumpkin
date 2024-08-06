@@ -18,8 +18,7 @@ use pumpkin_protocol::{
             CSpawnEntity, PlayerAction,
         },
     },
-    BitSet, ClientPacket, Players, Sample, StatusResponse, VarInt,
-    Version, CURRENT_MC_PROTOCOL,
+    BitSet, ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
 };
 use pumpkin_world::chunk::TestChunk;
 use rsa::{rand_core::OsRng, traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
@@ -117,8 +116,8 @@ impl Server {
     // todo: do this in a world
     pub fn spawn_player(&mut self, client: &mut Client) {
         // This code follows the vanilla packet order
-        dbg!("spawning player");
         let entity_id = self.new_entity_id();
+        log::debug!("spawning player, entity id {}", entity_id);
         let player = Player::new(entity_id);
         client.player = Some(player);
 
@@ -234,16 +233,17 @@ impl Server {
         for (_, existing_client) in self.current_clients.iter().filter(|c| c.0 != &token) {
             let existing_client = existing_client.borrow();
             if let Some(player) = &existing_client.player {
+                let entity = &player.entity;
                 let gameprofile = existing_client.gameprofile.as_ref().unwrap();
                 client.send_packet(CSpawnEntity::new(
                     player.entity_id().into(),
                     gameprofile.id,
                     EntityType::Player.to_i32().unwrap().into(),
-                    x,
-                    y,
-                    z,
-                    0,
-                    0,
+                    entity.x,
+                    entity.y,
+                    entity.z,
+                    entity.yaw as u8,
+                    entity.pitch as u8,
                     0,
                     0.into(),
                     0,
@@ -257,7 +257,7 @@ impl Server {
     }
 
     /// Sends a Packet to all Players
-    fn broadcast_packet<P>(&mut self, from: &Client, packet: P)
+    pub fn broadcast_packet<P>(&mut self, from: &Client, packet: P)
     where
         P: ClientPacket,
         P: Clone,

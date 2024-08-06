@@ -50,7 +50,7 @@ Pumpkin is currently under heavy development.
   - [x] Player Skin
   - [x] Player Client brand
   - [x] Player Teleport
-  - [ ] Player Movement
+  - [x] Player Movement
   - [ ] Player Animation
   - [ ] Player Inventory
   - [ ] Player Attack

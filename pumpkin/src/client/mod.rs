@@ -138,11 +138,15 @@ impl Client {
         // todo
         let id = 0;
         let player = self.player.as_mut().unwrap();
-        player.x = x;
-        player.y = y;
-        player.z = z;
-        player.yaw = yaw;
-        player.pitch = pitch;
+        let entity = &mut player.entity;
+        entity.x = x;
+        entity.y = y;
+        entity.z = z;
+        entity.lastx = x;
+        entity.lasty = y;
+        entity.lastz = z;
+        entity.yaw = yaw;
+        entity.pitch = pitch;
         player.awaiting_teleport = Some(id.into());
         self.send_packet(CSyncPlayerPostion::new(x, y, z, yaw, pitch, 0, id.into()));
     }

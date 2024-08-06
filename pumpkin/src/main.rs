@@ -9,7 +9,6 @@ use configuration::AdvancedConfiguration;
 use std::{
     collections::HashMap,
     rc::Rc,
-    sync::{Arc, Mutex},
     thread,
 };
 
@@ -65,10 +64,10 @@ fn main() -> io::Result<()> {
 
     let mut connections: HashMap<Token, Rc<RefCell<Client>>> = HashMap::new();
 
-    let server = Arc::new(Mutex::new(Server::new((
+    let mut server = Server::new((
         basic_config,
         advanced_configuration,
-    ))));
+    ));
     log::info!("Started Server took {}ms", time.elapsed().as_millis());
     log::info!("You now can connect to the server");
 
@@ -128,8 +127,6 @@ fn main() -> io::Result<()> {
                         addr,
                     )));
                     server
-                        .lock()
-                        .unwrap()
                         .add_client(rc_token, Rc::clone(&client));
                     connections.insert(token, client);
                 },
@@ -138,7 +135,7 @@ fn main() -> io::Result<()> {
                     // Maybe received an event for a TCP connection.
                     let done = if let Some(client) = connections.get_mut(&token) {
                         let mut client = client.borrow_mut();
-                        client.poll(&mut server.lock().unwrap(), event);
+                        client.poll(&mut server, event);
                         client.closed
                     } else {
                         // Sporadic events happen, we can safely ignore them.
@@ -147,7 +144,7 @@ fn main() -> io::Result<()> {
                     if done {
                         if let Some(client) = connections.remove(&token) {
                             let mut client = client.borrow_mut();
-                            server.lock().unwrap().remove_client(&token);
+                            server.remove_client(&token);
                             poll.registry().deregister(&mut client.connection)?;
                         }
                     }

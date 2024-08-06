@@ -1,6 +1,9 @@
-use pumpkin_protocol::server::play::{
-    SChatCommand, SConfirmTeleport, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
-    SPlayerRotation,
+use pumpkin_protocol::{
+    client::play::{CHeadRot, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot},
+    server::play::{
+        SChatCommand, SConfirmTeleport, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
+        SPlayerRotation,
+    },
 };
 
 use crate::{
@@ -29,19 +32,42 @@ impl Client {
         }
     }
 
-    pub fn handle_position(&mut self, _server: &mut Server, position: SPlayerPosition) {
+    pub fn handle_position(&mut self, server: &mut Server, position: SPlayerPosition) {
         if position.x.is_nan() || position.feet_y.is_nan() || position.z.is_nan() {
             self.kick("Invalid movement");
         }
         let player = self.player.as_mut().unwrap();
-        player.x = position.x;
-        player.y = position.feet_y;
-        player.z = position.z;
+        let entity = &mut player.entity;
+        entity.lastx = entity.x;
+        entity.lasty = entity.y;
+        entity.lastz = entity.z;
+        entity.x = position.x;
+        entity.y = position.feet_y;
+        entity.z = position.z;
+        // todo: teleport when moving > 8 block
+
+        // send new position to all other players
+        let on_ground = player.on_ground;
+        let entity_id = entity.entity_id;
+        let (x, lastx) = (entity.x, entity.lastx);
+        let (y, lasty) = (entity.y, entity.lasty);
+        let (z, lastz) = (entity.z, entity.lastz);
+
+        server.broadcast_packet(
+            self,
+            CUpdateEntityPos::new(
+                entity_id.into(),
+                (x * 4096.0 - lastx * 4096.0) as i16,
+                (y * 4096.0 - lasty * 4096.0) as i16,
+                (z * 4096.0 - lastz * 4096.0) as i16,
+                on_ground,
+            ),
+        );
     }
 
     pub fn handle_position_rotation(
         &mut self,
-        _server: &mut Server,
+        server: &mut Server,
         position_rotation: SPlayerPositionRotation,
     ) {
         if position_rotation.x.is_nan()
@@ -54,23 +80,61 @@ impl Client {
             self.kick("Invalid rotation");
         }
         let player = self.player.as_mut().unwrap();
-        player.x = position_rotation.x;
-        player.y = position_rotation.feet_y;
-        player.z = position_rotation.z;
-        player.yaw = position_rotation.yaw;
-        player.pitch = position_rotation.pitch;
+        let entity = &mut player.entity;
+
+        entity.x = position_rotation.x;
+        entity.y = position_rotation.feet_y;
+        entity.z = position_rotation.z;
+        entity.yaw = position_rotation.yaw % 360.0;
+        entity.pitch = position_rotation.pitch.clamp(-90.0, 90.0) % 360.0;
+
+        // send new position to all other players
+        let on_ground = player.on_ground;
+        let entity_id = entity.entity_id;
+        let (x, lastx) = (entity.x, entity.lastx);
+        let (y, lasty) = (entity.y, entity.lasty);
+        let (z, lastz) = (entity.z, entity.lastz);
+        let yaw = (entity.yaw * 256.0 / 360.0).floor();
+        let pitch = (entity.pitch * 256.0 / 360.0).floor();
+        let head_yaw = (entity.head_yaw * 256.0 / 360.0).floor();
+
+        server.broadcast_packet(
+            self,
+            CUpdateEntityPosRot::new(
+                entity_id.into(),
+                (x * 4096.0 - lastx * 4096.0) as i16,
+                (y * 4096.0 - lasty * 4096.0) as i16,
+                (z * 4096.0 - lastz * 4096.0) as i16,
+                yaw as u8,
+                pitch as u8,
+                on_ground,
+            ),
+        );
+        server.broadcast_packet(self, CHeadRot::new(entity_id.into(), head_yaw as u8));
     }
 
-    pub fn handle_rotation(&mut self, _server: &mut Server, rotation: SPlayerRotation) {
+    pub fn handle_rotation(&mut self, server: &mut Server, rotation: SPlayerRotation) {
         if !rotation.yaw.is_finite() || !rotation.pitch.is_finite() {
             self.kick("Invalid rotation");
         }
         let player = self.player.as_mut().unwrap();
-        player.yaw = rotation.yaw;
-        player.pitch = rotation.pitch;
+        let entity = &mut player.entity;
+        entity.yaw = rotation.yaw % 360.0;
+        entity.pitch = rotation.pitch.clamp(-90.0, 90.0) % 360.0;
+        // send new position to all other players
+        let on_ground = player.on_ground;
+        let entity_id = entity.entity_id;
+        let yaw = entity.yaw;
+        let pitch = entity.pitch;
+
+        server.broadcast_packet(
+            self,
+            CUpdateEntityRot::new(entity_id.into(), yaw as u8, pitch as u8, on_ground),
+        );
+        server.broadcast_packet(self, CHeadRot::new(entity_id.into(), yaw as u8));
     }
 
-    pub fn handle_chat_command(&mut self, server: &mut Server, command: SChatCommand) {
+    pub fn handle_chat_command(&mut self, _server: &mut Server, command: SChatCommand) {
         handle_command(&mut CommandSender::Player(self), command.command);
     }
 
