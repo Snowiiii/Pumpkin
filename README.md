@@ -61,10 +61,10 @@ Pumpkin is currently under heavy development.
 Check out our [Github Project](https://github.com/users/Snowiiii/projects/12/views/1) to see current progress
 
 ## Contributions
-Contributions are welcome!. Feel free to open an issue or pull request.
+Contributions are welcome!. See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Communication
-Consider joining our discord https://discord.gg/wT8XjrjKkf to stay up-to-date on events, updates, and connect with other members.
+Consider joining our [discord](https://discord.gg/wT8XjrjKkf) to stay up-to-date on events, updates, and connect with other members.
 
 ### Thanks
 A big thanks to https://wiki.vg/ for providing valuable information used in the development of this project.
