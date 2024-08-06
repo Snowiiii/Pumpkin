@@ -111,6 +111,9 @@ fn main() -> io::Result<()> {
                             return Err(e);
                         }
                     };
+                    if let Err(e) = connection.set_nodelay(true) {
+                            log::warn!("failed to set TCP_NODELAY {e}");
+                        }
 
                     log::info!("Accepted connection from: {}", address);
 
