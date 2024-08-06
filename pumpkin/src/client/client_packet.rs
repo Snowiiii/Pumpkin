@@ -1,3 +1,4 @@
+use num_traits::FromPrimitive;
 use pumpkin_protocol::{
     client::{
         config::{CFinishConfig, CKnownPacks, CRegistryData},
@@ -140,10 +141,10 @@ impl Client {
         self.config = Some(PlayerConfig {
             locale: client_information.locale,
             view_distance: client_information.view_distance,
-            chat_mode: ChatMode::from(client_information.chat_mode),
+            chat_mode: ChatMode::from_i32(client_information.chat_mode).unwrap(),
             chat_colors: client_information.chat_colors,
             skin_parts: client_information.skin_parts,
-            main_hand: Hand::from(client_information.main_hand),
+            main_hand: Hand::from_i32(client_information.main_hand).unwrap(),
             text_filtering: client_information.text_filtering,
             server_listing: client_information.server_listing,
         });

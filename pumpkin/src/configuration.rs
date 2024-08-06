@@ -14,9 +14,23 @@ const CURRENT_BASE_VERSION: &str = "1.0.0";
 pub struct AdvancedConfiguration {
     /// Requires Online mode
     /// Should player have skins
-    use_skins: bool,
+    pub use_skins: bool,
     /// Should chat be enabled
-    enable_chat: bool,
+    pub enable_chat: bool,
+
+    pub commands: Commands,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct Commands {
+    // Are commands from the Console accepted ?
+    pub use_console: bool,
+}
+
+impl Default for Commands {
+    fn default() -> Self {
+        Self { use_console: true }
+    }
 }
 
 /// Important: The Configuration should match Vanilla by default
@@ -25,6 +39,7 @@ impl Default for AdvancedConfiguration {
         Self {
             use_skins: true,
             enable_chat: true,
+            commands: Commands::default(),
         }
     }
 }
@@ -67,7 +82,6 @@ pub struct BasicConfiguration {
     pub default_gamemode: GameMode,
 }
 
-
 impl Default for BasicConfiguration {
     fn default() -> Self {
         Self {
@@ -96,7 +110,7 @@ impl AdvancedConfiguration {
     pub fn load<P: AsRef<Path>>(path: P) -> AdvancedConfiguration {
         if path.as_ref().exists() {
             let toml = std::fs::read_to_string(path).expect("Couldn't read configuration");
-            toml::from_str(toml.as_str()).expect("Couldn't parse")
+            toml::from_str(toml.as_str()).expect("Couldn't parse, Proberbly old config")
         } else {
             let config = AdvancedConfiguration::default();
             let toml = toml::to_string(&config).expect("Couldn't create toml!");

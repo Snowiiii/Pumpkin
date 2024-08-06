@@ -16,6 +16,8 @@ toml = "0.8.19"
 
 rand = "0.8.5"
 
+num-traits = "0.2"
+num-derive = "0.4"
 num-bigint = "0.4.6"
 
 # encryption

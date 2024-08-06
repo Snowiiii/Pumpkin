@@ -29,6 +29,9 @@ pub mod util;
 
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
+    use std::time::Instant;
+
+    let time = Instant::now();
     let basic_config = BasicConfiguration::load("configuration.toml");
 
     let advanced_configuration = AdvancedConfiguration::load("features.toml");
@@ -58,31 +61,34 @@ fn main() -> io::Result<()> {
     // Unique token for each incoming connection.
     let mut unique_token = Token(SERVER.0 + 1);
 
-    let mut connections: HashMap<Token, Client> = HashMap::new();
+    let use_console = advanced_configuration.commands.use_console;
 
-    log::info!("You now can connect to the server");
+    let mut connections: HashMap<Token, Client> = HashMap::new();
 
     let server = Arc::new(Mutex::new(Server::new((
         basic_config,
         advanced_configuration,
     ))));
-    let server_clone = server.clone();
+    log::info!("Started Server took {}ms", time.elapsed().as_millis());
+    log::info!("You now can connect to the server");
 
-    thread::spawn(move || {
-        let stdin = std::io::stdin();
-        loop {
-            let mut out = String::new();
-            stdin
-                .read_line(&mut out)
-                .expect("Failed to read console line");
-            handle_command(
-                &mut commands::CommandSender::Console,
-                out,
-                &mut server_clone.lock().unwrap(),
-            );
-        }
-    });
-
+    if use_console {
+        let server_clone = server.clone();
+        thread::spawn(move || {
+            let stdin = std::io::stdin();
+            loop {
+                let mut out = String::new();
+                stdin
+                    .read_line(&mut out)
+                    .expect("Failed to read console line");
+                handle_command(
+                    &mut commands::CommandSender::Console,
+                    out,
+                    &mut server_clone.lock().unwrap(),
+                );
+            }
+        });
+    }
     loop {
         if let Err(err) = poll.poll(&mut events, None) {
             if interrupted(&err) {

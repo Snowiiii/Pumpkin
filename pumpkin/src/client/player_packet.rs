@@ -1,5 +1,6 @@
 use pumpkin_protocol::server::play::{
-    SChatCommand, SConfirmTeleport, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
+    SChatCommand, SConfirmTeleport, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
+    SPlayerRotation,
 };
 
 use crate::{
@@ -71,5 +72,24 @@ impl Client {
 
     pub fn handle_chat_command(&mut self, server: &mut Server, command: SChatCommand) {
         handle_command(&mut CommandSender::Player(self), command.command, server);
+    }
+
+    pub fn handle_player_command(&mut self, _server: &mut Server, command: SPlayerCommand) {
+        let player = self.player.as_mut().unwrap();
+
+        if command.entitiy_id != player.entity.entity_id {
+            return;
+        }
+
+        match command.action {
+            pumpkin_protocol::server::play::Action::StartSneaking => player.sneaking = true,
+            pumpkin_protocol::server::play::Action::StopSneaking => player.sneaking = false,
+            pumpkin_protocol::server::play::Action::LeaveBed => todo!(),
+            pumpkin_protocol::server::play::Action::StartSprinting => player.sprinting = true,
+            pumpkin_protocol::server::play::Action::StopSprinting => player.sprinting = false,
+            pumpkin_protocol::server::play::Action::StartHourseJump => todo!(),
+            pumpkin_protocol::server::play::Action::OpenVehicleInventory => todo!(),
+            pumpkin_protocol::server::play::Action::StartFlyingElytra => todo!(),
+        }
     }
 }

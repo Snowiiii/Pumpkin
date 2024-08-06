@@ -7,6 +7,7 @@ use std::{
 
 use base64::{engine::general_purpose, Engine};
 use mio::{event::Event, Poll, Token};
+use num_traits::ToPrimitive;
 use pumpkin_protocol::{
     client::{
         config::CPluginMessage,
@@ -62,7 +63,6 @@ impl Server {
         let status_response = Self::build_response(&config.0);
         let status_response_json = serde_json::to_string(&status_response)
             .expect("Failed to parse Status response into JSON");
-
         let cached_server_brand = Self::build_brand();
 
         // todo, only create when needed
@@ -137,8 +137,9 @@ impl Server {
                     GameMode::Undefined => GameMode::Survival,
                     game_mode => game_mode,
                 }
-                .to_byte() as u8,
-                self.base_config.default_gamemode.to_byte(),
+                .to_u8()
+                .unwrap(),
+                self.base_config.default_gamemode.to_i8().unwrap(),
                 false,
                 false,
                 false, // deth loc

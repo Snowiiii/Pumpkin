@@ -17,6 +17,8 @@ serde_json = "1.0"
 
 thiserror = "1.0.63"
 log = "0.4"
+num-traits = "0.2"
+num-derive = "0.4"
 
 # for text component
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }

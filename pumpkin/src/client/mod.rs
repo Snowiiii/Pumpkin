@@ -12,6 +12,7 @@ use crate::{
 
 use authentication::GameProfile;
 use mio::{event::Event, net::TcpStream, Token};
+use num_traits::ToPrimitive;
 use pumpkin_protocol::{
     client::{
         config::CConfigDisconnect,
@@ -25,8 +26,8 @@ use pumpkin_protocol::{
         handshake::SHandShake,
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
         play::{
-            SChatCommand, SConfirmTeleport, SPlayerPosition, SPlayerPositionRotation,
-            SPlayerRotation,
+            SChatCommand, SConfirmTeleport, SPlayerCommand, SPlayerPosition,
+            SPlayerPositionRotation, SPlayerRotation,
         },
         status::{SPingRequest, SStatusRequest},
     },
@@ -139,7 +140,7 @@ impl Client {
     }
 
     pub fn set_gamemode(&mut self, gamemode: GameMode) {
-        self.send_packet(CGameEvent::new(3, gamemode.to_byte() as f32))
+        self.send_packet(CGameEvent::new(3, gamemode.to_f32().unwrap()))
             .unwrap_or_else(|e| self.kick(&e.to_string()));
     }
 
@@ -240,6 +241,9 @@ impl Client {
             }
             SPlayerRotation::PACKET_ID => {
                 self.handle_rotation(server, SPlayerRotation::read(bytebuf))
+            }
+            SPlayerCommand::PACKET_ID => {
+                self.handle_player_command(server, SPlayerCommand::read(bytebuf))
             }
             _ => log::error!("Failed to handle player packet id {}", packet.id),
         }
