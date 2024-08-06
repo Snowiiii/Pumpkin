@@ -1,0 +1,8 @@
+[package]
+name = "pumpkin-entity"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+num-traits = "0.2"
+num-derive = "0.4"

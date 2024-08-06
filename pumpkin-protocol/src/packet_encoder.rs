@@ -3,7 +3,7 @@ use std::io::Write;
 use aes::cipher::{generic_array::GenericArray, BlockEncryptMut, BlockSizeUser, KeyIvInit};
 use bytes::{BufMut, BytesMut};
 
-use crate::{bytebuf::ByteBuffer, ClientPacket, PacketError, VarInt32, MAX_PACKET_SIZE};
+use crate::{bytebuf::ByteBuffer, ClientPacket, PacketError, VarInt, MAX_PACKET_SIZE};
 
 type Cipher = cfb8::Encryptor<aes::Aes128>;
 
@@ -22,7 +22,7 @@ impl PacketEncoder {
         let mut writer = (&mut self.buf).writer();
 
         let mut packet_buf = ByteBuffer::empty();
-        VarInt32(P::PACKET_ID)
+        VarInt(P::PACKET_ID)
             .encode(&mut writer)
             .map_err(|_| PacketError::EncodeID)?;
         packet.write(&mut packet_buf);
@@ -41,14 +41,14 @@ impl PacketEncoder {
             Err(PacketError::TooLong)?
         }
 
-        let packet_len_size = VarInt32(packet_len as i32).written_size();
+        let packet_len_size = VarInt(packet_len as i32).written_size();
 
         self.buf.put_bytes(0, packet_len_size);
         self.buf
             .copy_within(start_len..start_len + data_len, start_len + packet_len_size);
 
         let front = &mut self.buf[start_len..];
-        VarInt32(packet_len as i32)
+        VarInt(packet_len as i32)
             .encode(front)
             .map_err(|_| PacketError::EncodeID)?;
         Ok(())

@@ -114,9 +114,18 @@ impl Client {
         self.player.is_some()
     }
 
-    /// Im many cases we want to kick the Client when an Packet Error occours, But especially in the Client state we will not try to kick when not important packets
-    /// e.g Postion, Rotation... has not been send
-    pub fn send_packet<P: ClientPacket>(&mut self, packet: P) -> Result<(), PacketError> {
+    /// Send a Clientbound Packet to the Client
+    pub fn send_packet<P: ClientPacket>(&mut self, packet: P) {
+        self.enc
+            .append_packet(packet)
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
+        self.connection
+            .write_all(&self.enc.take())
+            .map_err(|_| PacketError::ConnectionWrite)
+            .unwrap_or_else(|e| self.kick(&e.to_string()));
+    }
+
+    pub fn try_send_packet<P: ClientPacket>(&mut self, packet: P) -> Result<(), PacketError> {
         self.enc.append_packet(packet)?;
         self.connection
             .write_all(&self.enc.take())
@@ -134,14 +143,12 @@ impl Client {
         player.z = z;
         player.yaw = yaw;
         player.pitch = pitch;
-        player.awaiting_teleport = Some(id);
-        self.send_packet(CSyncPlayerPostion::new(x, y, z, yaw, pitch, 0, id.into()))
-            .unwrap_or_else(|e| self.kick(&e.to_string()));
+        player.awaiting_teleport = Some(id.into());
+        self.send_packet(CSyncPlayerPostion::new(x, y, z, yaw, pitch, 0, id.into()));
     }
 
     pub fn set_gamemode(&mut self, gamemode: GameMode) {
-        self.send_packet(CGameEvent::new(3, gamemode.to_f32().unwrap()))
-            .unwrap_or_else(|e| self.kick(&e.to_string()));
+        self.send_packet(CGameEvent::new(3, gamemode.to_f32().unwrap()));
     }
 
     pub fn process_packets(&mut self, server: &mut Server) {
@@ -161,7 +168,7 @@ impl Client {
                 SHandShake::PACKET_ID => self.handle_handshake(server, SHandShake::read(bytebuf)),
                 _ => log::error!(
                     "Failed to handle packet id {} while in Handshake state",
-                    packet.id
+                    packet.id.0
                 ),
             },
             pumpkin_protocol::ConnectionState::Status => match packet.id {
@@ -173,7 +180,7 @@ impl Client {
                 }
                 _ => log::error!(
                     "Failed to handle packet id {} while in Status state",
-                    packet.id
+                    packet.id.0
                 ),
             },
             pumpkin_protocol::ConnectionState::Login => match packet.id {
@@ -191,7 +198,7 @@ impl Client {
                 }
                 _ => log::error!(
                     "Failed to handle packet id {} while in Login state",
-                    packet.id
+                    packet.id.0
                 ),
             },
             pumpkin_protocol::ConnectionState::Config => match packet.id {
@@ -209,7 +216,7 @@ impl Client {
                 }
                 _ => log::error!(
                     "Failed to handle packet id {} while in Config state",
-                    packet.id
+                    packet.id.0
                 ),
             },
             pumpkin_protocol::ConnectionState::Play => {
@@ -245,7 +252,7 @@ impl Client {
             SPlayerCommand::PACKET_ID => {
                 self.handle_player_command(server, SPlayerCommand::read(bytebuf))
             }
-            _ => log::error!("Failed to handle player packet id {}", packet.id),
+            _ => log::error!("Failed to handle player packet id {}", packet.id.0),
         }
     }
 
@@ -296,9 +303,8 @@ impl Client {
         }
     }
 
-    pub fn send_message(&mut self, text: TextComponent) {
-        self.send_packet(CSystemChatMessge::new(text, false))
-            .unwrap_or_else(|e| self.kick(&e.to_string()));
+    pub fn send_system_message(&mut self, text: TextComponent) {
+        self.send_packet(CSystemChatMessge::new(text, false));
     }
 
     /// Kicks the Client with a reason depending on the connection state
@@ -306,17 +312,17 @@ impl Client {
         dbg!(reason);
         match self.connection_state {
             ConnectionState::Login => {
-                self.send_packet(CLoginDisconnect::new(
+                self.try_send_packet(CLoginDisconnect::new(
                     &serde_json::to_string_pretty(&reason).unwrap(),
                 ))
                 .unwrap_or_else(|_| self.close());
             }
             ConnectionState::Config => {
-                self.send_packet(CConfigDisconnect::new(reason))
+                self.try_send_packet(CConfigDisconnect::new(reason))
                     .unwrap_or_else(|_| self.close());
             }
             ConnectionState::Play => {
-                self.send_packet(CPlayDisconnect::new(TextComponent {
+                self.try_send_packet(CPlayDisconnect::new(TextComponent {
                     text: reason.to_string(),
                 }))
                 .unwrap_or_else(|_| self.close());

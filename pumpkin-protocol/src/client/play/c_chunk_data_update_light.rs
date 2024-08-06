@@ -1,6 +1,6 @@
 use pumpkin_macros::packet;
 
-use crate::{bytebuf::ByteBuffer, BitSet, ClientPacket, VarInt};
+use crate::{bytebuf::ByteBuffer, BitSet, ClientPacket, VarInt, VarIntType};
 
 #[packet(0x27)]
 pub struct CChunkDataUpdateLight {
@@ -50,23 +50,23 @@ impl ClientPacket for CChunkDataUpdateLight {
         bytebuf.put_i32(self.chunk_x);
         bytebuf.put_i32(self.chunk_y);
         bytebuf.put_slice(&self.heightmaps);
-        bytebuf.put_var_int(self.data.len() as VarInt);
+        bytebuf.put_var_int(&(self.data.len() as VarIntType).into());
         bytebuf.put_slice(&self.data);
         bytebuf.put_list::<BlockEntity>(&self.block_entites, |p, v| {
             p.put_u8(v.packed_xz);
             p.put_i16(v.y);
-            p.put_var_int(v.typee);
+            p.put_var_int(&v.typee);
             p.put_slice(&v.data);
         });
         bytebuf.put_bit_set(&self.sky_light_mask);
         bytebuf.put_bit_set(&self.block_light_mask);
         bytebuf.put_bit_set(&self.empty_sky_light_mask);
         bytebuf.put_list::<SkyLight>(&self.sky_lights, |p, v| {
-            p.put_var_int(v.array.len() as VarInt);
+            p.put_var_int(&(v.array.len() as VarIntType).into());
             p.put_slice(&v.array);
         });
         bytebuf.put_list::<BlockLight>(&self.block_lights, |p, v| {
-            p.put_var_int(v.array.len() as VarInt);
+            p.put_var_int(&(v.array.len() as VarIntType).into());
             p.put_slice(&v.array);
         });
     }

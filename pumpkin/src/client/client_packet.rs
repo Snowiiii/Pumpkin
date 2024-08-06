@@ -35,14 +35,12 @@ impl Client {
     }
 
     pub fn handle_status_request(&mut self, server: &mut Server, _status_request: SStatusRequest) {
-        self.send_packet(CStatusResponse::new(&server.status_response_json))
-            .unwrap_or_else(|e| self.kick(&e.to_string()));
+        self.send_packet(CStatusResponse::new(&server.status_response_json));
     }
 
     pub fn handle_ping_request(&mut self, _server: &mut Server, ping_request: SPingRequest) {
         dbg!("ping");
-        self.send_packet(CPingResponse::new(ping_request.payload))
-            .unwrap_or_else(|e| self.kick(&e.to_string()));
+        self.send_packet(CPingResponse::new(ping_request.payload));
         self.close();
     }
 
@@ -64,8 +62,7 @@ impl Client {
             &verify_token,
             server.base_config.online_mode, // TODO
         );
-        self.send_packet(packet)
-            .unwrap_or_else(|e| self.kick(&e.to_string()));
+        self.send_packet(packet);
     }
 
     pub fn handle_encryption_response(
@@ -101,8 +98,7 @@ impl Client {
 
         if let Some(profile) = self.gameprofile.as_ref().cloned() {
             let packet = CLoginSuccess::new(profile.id, profile.name, &profile.properties, false);
-            self.send_packet(packet)
-                .unwrap_or_else(|e| self.kick(&e.to_string()));
+            self.send_packet(packet);
         } else {
             self.kick("game profile is none");
         }
@@ -121,16 +117,13 @@ impl Client {
         _login_acknowledged: SLoginAcknowledged,
     ) {
         self.connection_state = ConnectionState::Config;
-        server
-            .send_brand(self)
-            .unwrap_or_else(|e| self.kick(&e.to_string()));
+        server.send_brand(self);
         // known data packs
         self.send_packet(CKnownPacks::new(&[KnownPack {
             namespace: "minecraft",
             id: "core",
             version: "1.21",
-        }]))
-        .unwrap_or_else(|e| self.kick(&e.to_string()));
+        }]));
         dbg!("login achnowlaged");
     }
     pub fn handle_client_information(
@@ -141,10 +134,10 @@ impl Client {
         self.config = Some(PlayerConfig {
             locale: client_information.locale,
             view_distance: client_information.view_distance,
-            chat_mode: ChatMode::from_i32(client_information.chat_mode).unwrap(),
+            chat_mode: ChatMode::from_i32(client_information.chat_mode.into()).unwrap(),
             chat_colors: client_information.chat_colors,
             skin_parts: client_information.skin_parts,
-            main_hand: Hand::from_i32(client_information.main_hand).unwrap(),
+            main_hand: Hand::from_i32(client_information.main_hand.into()).unwrap(),
             text_filtering: client_information.text_filtering,
             server_listing: client_information.server_listing,
         });
@@ -167,14 +160,12 @@ impl Client {
             self.send_packet(CRegistryData::new(
                 &registry.registry_id,
                 &registry.registry_entries,
-            ))
-            .unwrap_or_else(|e| self.kick(&e.to_string()));
+            ));
         }
 
         // We are done with configuring
         dbg!("finish config");
-        self.send_packet(CFinishConfig::new())
-            .unwrap_or_else(|e| self.kick(&e.to_string()));
+        self.send_packet(CFinishConfig::new());
     }
 
     pub fn handle_config_acknowledged(

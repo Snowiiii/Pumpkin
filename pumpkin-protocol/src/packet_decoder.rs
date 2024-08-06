@@ -2,7 +2,7 @@ use aes::cipher::{generic_array::GenericArray, BlockDecryptMut, BlockSizeUser, K
 use bytes::{Buf, BytesMut};
 
 use crate::{
-    bytebuf::ByteBuffer, PacketError, RawPacket, VarInt32, VarIntDecodeError, MAX_PACKET_SIZE,
+    bytebuf::ByteBuffer, PacketError, RawPacket, VarInt, VarIntDecodeError, MAX_PACKET_SIZE,
 };
 
 type Cipher = cfb8::Decryptor<aes::Aes128>;
@@ -19,7 +19,7 @@ impl PacketDecoder {
     pub fn decode(&mut self) -> Result<Option<RawPacket>, PacketError> {
         let mut r = &self.buf[..];
 
-        let packet_len = match VarInt32::decode_partial(&mut r) {
+        let packet_len = match VarInt::decode_partial(&mut r) {
             Ok(len) => len,
             Err(VarIntDecodeError::Incomplete) => return Ok(None),
             Err(VarIntDecodeError::TooLarge) => Err(PacketError::MailformedLength)?,
@@ -34,7 +34,7 @@ impl PacketDecoder {
             return Ok(None);
         }
 
-        let packet_len_len = VarInt32(packet_len).written_size();
+        let packet_len_len = VarInt(packet_len).written_size();
 
         let mut data;
 
@@ -44,13 +44,10 @@ impl PacketDecoder {
         data = self.buf.split_to(packet_len as usize);
 
         r = &data[..];
-        let packet_id = VarInt32::decode(&mut r)
-            .map_err(|_| PacketError::DecodeID)?
-            .0;
+        let packet_id = VarInt::decode(&mut r).map_err(|_| PacketError::DecodeID)?;
 
         data.advance(data.len() - r.len());
         Ok(Some(RawPacket {
-            len: packet_len,
             id: packet_id,
             bytebuf: ByteBuffer::new(data),
         }))

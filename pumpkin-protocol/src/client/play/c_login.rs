@@ -83,13 +83,13 @@ impl ClientPacket for CLogin {
         bytebuf.put_i32(self.entity_id);
         bytebuf.put_bool(self.is_hardcore);
         bytebuf.put_list(&self.dimension_names, |buf, v| buf.put_string(v));
-        bytebuf.put_var_int(self.max_players);
-        bytebuf.put_var_int(self.view_distance);
-        bytebuf.put_var_int(self.simulated_distance);
+        bytebuf.put_var_int(&self.max_players);
+        bytebuf.put_var_int(&self.view_distance);
+        bytebuf.put_var_int(&self.simulated_distance);
         bytebuf.put_bool(self.reduced_debug_info);
         bytebuf.put_bool(self.enabled_respawn_screen);
         bytebuf.put_bool(self.limited_crafting);
-        bytebuf.put_var_int(self.dimension_type);
+        bytebuf.put_var_int(&self.dimension_type);
         bytebuf.put_string(&self.dimension_name);
         bytebuf.put_i64(self.hashed_seed);
         bytebuf.put_u8(self.game_mode);
@@ -101,7 +101,7 @@ impl ClientPacket for CLogin {
             bytebuf.put_string(self.death_dimension_name.as_ref().unwrap());
             bytebuf.put_i64(self.death_loc.unwrap());
         }
-        bytebuf.put_var_int(self.portal_cooldown);
+        bytebuf.put_var_int(&self.portal_cooldown);
         bytebuf.put_bool(self.enforce_secure_chat);
     }
 }

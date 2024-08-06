@@ -6,7 +6,7 @@ pub struct SLoginStart {
 }
 
 impl ServerPacket for SLoginStart {
-    const PACKET_ID: VarInt = 0x00;
+    const PACKET_ID: VarInt = VarInt(0x00);
 
     fn read(bytebuf: &mut ByteBuffer) -> Self {
         Self {
@@ -24,13 +24,13 @@ pub struct SEncryptionResponse {
 }
 
 impl ServerPacket for SEncryptionResponse {
-    const PACKET_ID: VarInt = 0x01;
+    const PACKET_ID: VarInt = VarInt(0x01);
 
     fn read(bytebuf: &mut ByteBuffer) -> Self {
         let shared_secret_length = bytebuf.get_var_int();
-        let shared_secret = bytebuf.copy_to_bytes(shared_secret_length as usize);
+        let shared_secret = bytebuf.copy_to_bytes(shared_secret_length.0 as usize);
         let verify_token_length = bytebuf.get_var_int();
-        let verify_token = bytebuf.copy_to_bytes(shared_secret_length as usize);
+        let verify_token = bytebuf.copy_to_bytes(shared_secret_length.0 as usize);
         Self {
             shared_secret_length,
             shared_secret: shared_secret.to_vec(),
@@ -47,7 +47,7 @@ pub struct SLoginPluginResponse<'a> {
 }
 
 impl<'a> ServerPacket for SLoginPluginResponse<'a> {
-    const PACKET_ID: VarInt = 0x02;
+    const PACKET_ID: VarInt = VarInt(0x02);
 
     fn read(bytebuf: &mut ByteBuffer) -> Self {
         Self {
@@ -64,7 +64,7 @@ pub struct SLoginAcknowledged {
 }
 
 impl ServerPacket for SLoginAcknowledged {
-    const PACKET_ID: VarInt = 0x03;
+    const PACKET_ID: VarInt = VarInt(0x03);
 
     fn read(_bytebuf: &mut ByteBuffer) -> Self {
         Self {}

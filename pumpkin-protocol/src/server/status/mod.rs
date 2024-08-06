@@ -5,7 +5,7 @@ pub struct SStatusRequest {
 }
 
 impl ServerPacket for SStatusRequest {
-    const PACKET_ID: VarInt = 0x00;
+    const PACKET_ID: VarInt = VarInt(0x00);
 
     fn read(_bytebuf: &mut ByteBuffer) -> Self {
         Self {}
@@ -17,7 +17,7 @@ pub struct SPingRequest {
 }
 
 impl ServerPacket for SPingRequest {
-    const PACKET_ID: VarInt = 0x01;
+    const PACKET_ID: VarInt = VarInt(0x01);
 
     fn read(bytebuf: &mut ByteBuffer) -> Self {
         Self {

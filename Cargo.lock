@@ -1164,6 +1164,7 @@ dependencies = [
  "num-bigint",
  "num-derive",
  "num-traits",
+ "pumpkin-entity",
  "pumpkin-protocol",
  "pumpkin-registry",
  "pumpkin-world",
@@ -1178,6 +1179,14 @@ dependencies = [
  "thiserror",
  "toml",
  "uuid",
+]
+
+[[package]]
+name = "pumpkin-entity"
+version = "0.1.0"
+dependencies = [
+ "num-derive",
+ "num-traits",
 ]
 
 [[package]]

@@ -8,7 +8,7 @@ pub struct SConfirmTeleport {
 }
 
 impl ServerPacket for SConfirmTeleport {
-    const PACKET_ID: VarInt = 0x00;
+    const PACKET_ID: VarInt = VarInt(0x00);
 
     fn read(bytebuf: &mut crate::bytebuf::ByteBuffer) -> Self {
         Self {
@@ -22,7 +22,7 @@ pub struct SChatCommand {
 }
 
 impl ServerPacket for SChatCommand {
-    const PACKET_ID: VarInt = 0x04;
+    const PACKET_ID: VarInt = VarInt(0x04);
 
     fn read(bytebuf: &mut crate::bytebuf::ByteBuffer) -> Self {
         Self {
@@ -39,7 +39,7 @@ pub struct SPlayerPosition {
 }
 
 impl ServerPacket for SPlayerPosition {
-    const PACKET_ID: VarInt = 0x1A;
+    const PACKET_ID: VarInt = VarInt(0x1A);
 
     fn read(bytebuf: &mut crate::bytebuf::ByteBuffer) -> Self {
         Self {
@@ -69,12 +69,12 @@ pub enum Action {
 }
 
 impl ServerPacket for SPlayerCommand {
-    const PACKET_ID: VarInt = 0x25;
+    const PACKET_ID: VarInt = VarInt(0x25);
 
     fn read(bytebuf: &mut crate::bytebuf::ByteBuffer) -> Self {
         Self {
             entitiy_id: bytebuf.get_var_int(),
-            action: Action::from_i32(bytebuf.get_var_int()).unwrap(),
+            action: Action::from_i32(bytebuf.get_var_int().into()).unwrap(),
             jump_boost: bytebuf.get_var_int(),
         }
     }
@@ -90,7 +90,7 @@ pub struct SPlayerPositionRotation {
 }
 
 impl ServerPacket for SPlayerPositionRotation {
-    const PACKET_ID: VarInt = 0x1B;
+    const PACKET_ID: VarInt = VarInt(0x1B);
 
     fn read(bytebuf: &mut crate::bytebuf::ByteBuffer) -> Self {
         Self {
@@ -111,7 +111,7 @@ pub struct SPlayerRotation {
 }
 
 impl ServerPacket for SPlayerRotation {
-    const PACKET_ID: VarInt = 0x1C;
+    const PACKET_ID: VarInt = VarInt(0x1C);
 
     fn read(bytebuf: &mut crate::bytebuf::ByteBuffer) -> Self {
         Self {

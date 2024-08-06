@@ -8,7 +8,7 @@ pub struct SHandShake {
 }
 
 impl ServerPacket for SHandShake {
-    const PACKET_ID: VarInt = 0x00;
+    const PACKET_ID: VarInt = VarInt(0x00);
 
     fn read(bytebuf: &mut ByteBuffer) -> Self {
         Self {

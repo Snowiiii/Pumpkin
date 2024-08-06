@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 pumpkin-world = { path = "../pumpkin-world"}
+pumpkin-entity = { path = "../pumpkin-entity"}
 pumpkin-protocol = { path = "../pumpkin-protocol"}
 pumpkin-registry = { path = "../pumpkin-registry"}
 

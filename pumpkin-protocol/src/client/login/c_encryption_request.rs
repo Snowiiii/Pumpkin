@@ -1,6 +1,6 @@
 use pumpkin_macros::packet;
 
-use crate::{bytebuf::ByteBuffer, ClientPacket, VarInt};
+use crate::{bytebuf::ByteBuffer, ClientPacket, VarIntType};
 
 #[packet(0x01)]
 pub struct CEncryptionRequest<'a> {
@@ -29,9 +29,9 @@ impl<'a> CEncryptionRequest<'a> {
 impl<'a> ClientPacket for CEncryptionRequest<'a> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_string(self.server_id);
-        bytebuf.put_var_int(self.public_key.len() as VarInt);
+        bytebuf.put_var_int(&(self.public_key.len() as VarIntType).into());
         bytebuf.put_slice(self.public_key);
-        bytebuf.put_var_int(self.verify_token.len() as VarInt);
+        bytebuf.put_var_int(&(self.verify_token.len() as VarIntType).into());
         bytebuf.put_slice(self.verify_token);
         bytebuf.put_bool(self.should_authenticate);
     }

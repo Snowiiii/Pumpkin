@@ -18,7 +18,7 @@ impl Client {
         confirm_teleport: SConfirmTeleport,
     ) {
         let player = self.player.as_mut().unwrap();
-        if let Some(id) = player.awaiting_teleport {
+        if let Some(id) = player.awaiting_teleport.clone() {
             if id == confirm_teleport.teleport_id {
             } else {
                 log::warn!("Teleport id does not match, Weird but okay");
@@ -71,13 +71,13 @@ impl Client {
     }
 
     pub fn handle_chat_command(&mut self, server: &mut Server, command: SChatCommand) {
-        handle_command(&mut CommandSender::Player(self), command.command, server);
+        handle_command(&mut CommandSender::Player(self), command.command);
     }
 
     pub fn handle_player_command(&mut self, _server: &mut Server, command: SPlayerCommand) {
         let player = self.player.as_mut().unwrap();
 
-        if command.entitiy_id != player.entity.entity_id {
+        if command.entitiy_id != player.entity.entity_id.into() {
             return;
         }
 

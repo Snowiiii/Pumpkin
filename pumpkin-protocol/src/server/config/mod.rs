@@ -12,7 +12,7 @@ pub struct SClientInformation {
 }
 
 impl ServerPacket for SClientInformation {
-    const PACKET_ID: VarInt = 0x00;
+    const PACKET_ID: VarInt = VarInt(0x00);
 
     fn read(bytebuf: &mut ByteBuffer) -> Self {
         Self {
@@ -34,7 +34,7 @@ pub struct SPluginMessage {
 }
 
 impl ServerPacket for SPluginMessage {
-    const PACKET_ID: VarInt = 0x02;
+    const PACKET_ID: VarInt = VarInt(0x02);
 
     fn read(bytebuf: &mut ByteBuffer) -> Self {
         Self {
@@ -47,7 +47,7 @@ impl ServerPacket for SPluginMessage {
 pub struct SAcknowledgeFinishConfig {}
 
 impl ServerPacket for SAcknowledgeFinishConfig {
-    const PACKET_ID: VarInt = 0x03;
+    const PACKET_ID: VarInt = VarInt(0x03);
 
     fn read(_bytebuf: &mut ByteBuffer) -> Self {
         Self {}
@@ -60,7 +60,7 @@ pub struct SKnownPacks {
 }
 
 impl ServerPacket for SKnownPacks {
-    const PACKET_ID: VarInt = 0x07;
+    const PACKET_ID: VarInt = VarInt(0x07);
 
     fn read(bytebuf: &mut ByteBuffer) -> Self {
         Self {

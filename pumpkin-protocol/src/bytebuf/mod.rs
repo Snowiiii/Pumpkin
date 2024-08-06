@@ -1,4 +1,4 @@
-use crate::{BitSet, VarInt, VarLong};
+use crate::{BitSet, VarInt, VarLongType};
 use bytes::{Buf, BufMut, BytesMut};
 use core::str;
 use std::io::{self, Error, ErrorKind};
@@ -44,10 +44,10 @@ impl ByteBuffer {
             }
         }
 
-        value
+        VarInt(value)
     }
 
-    pub fn get_var_long(&mut self) -> VarLong {
+    pub fn get_var_long(&mut self) -> VarLongType {
         let mut value: i64 = 0;
         let mut position: i64 = 0;
 
@@ -75,7 +75,7 @@ impl ByteBuffer {
     }
 
     pub fn get_string_len(&mut self, max_size: usize) -> Result<String, io::Error> {
-        let size = self.get_var_int();
+        let size = self.get_var_int().0;
         if size as usize > max_size {
             return Err(Error::new(
                 ErrorKind::InvalidData,
@@ -121,7 +121,7 @@ impl ByteBuffer {
     }
 
     pub fn put_string(&mut self, val: &str) {
-        self.put_var_int(val.len() as VarInt);
+        self.put_var_int(&val.len().into());
         self.buffer.put(val.as_bytes());
     }
 
@@ -131,8 +131,8 @@ impl ByteBuffer {
         }
     }
 
-    pub fn put_var_int(&mut self, value: VarInt) {
-        let mut val = value;
+    pub fn put_var_int(&mut self, value: &VarInt) {
+        let mut val = value.0;
         for _ in 0..5 {
             let mut b: u8 = val as u8 & 0b01111111;
             val >>= 7;
@@ -147,7 +147,7 @@ impl ByteBuffer {
     }
 
     pub fn put_bit_set(&mut self, set: &BitSet) {
-        self.put_var_int(set.0);
+        self.put_var_int(&set.0);
         for b in &set.1 {
             self.put_i64(*b);
         }
@@ -173,7 +173,7 @@ impl ByteBuffer {
     }
 
     pub fn get_list<T>(&mut self, val: impl Fn(&mut Self) -> T) -> Vec<T> {
-        let len = self.get_var_int().try_into().unwrap();
+        let len = self.get_var_int().0 as usize;
         let mut list = Vec::with_capacity(len);
         for _ in 0..len {
             list.push(val(self));
@@ -182,14 +182,14 @@ impl ByteBuffer {
     }
     /// Writes a list to the buffer.
     pub fn put_list<T>(&mut self, list: &[T], write: impl Fn(&mut Self, &T)) {
-        self.put_var_int(list.len().try_into().unwrap());
+        self.put_var_int(&list.len().into());
         for v in list {
             write(self, v);
         }
     }
 
     pub fn put_varint_arr(&mut self, v: &[i32]) {
-        self.put_list(v, |p, &v| p.put_var_int(v))
+        self.put_list(v, |p, &v| p.put_var_int(&v.into()))
     }
 
     /*  pub fn get_nbt(&mut self) -> Option<fastnbt::value::Value> {

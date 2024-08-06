@@ -2,7 +2,7 @@ use gamemode::GamemodeCommand;
 use pumpkin::PumpkinCommand;
 use pumpkin_protocol::text::TextComponent;
 
-use crate::{client::Client, server::Server};
+use crate::client::Client;
 
 mod gamemode;
 mod pumpkin;
@@ -13,7 +13,7 @@ pub trait Command<'a> {
     const NAME: &'a str;
     const DESCRIPTION: &'a str;
 
-    fn on_execute(sender: &mut CommandSender<'a>, command: String, server: &mut Server);
+    fn on_execute(sender: &mut CommandSender<'a>, command: String);
 
     /// Specifies wether the Command Sender has to be a Player
     fn player_required() -> bool {
@@ -31,7 +31,7 @@ impl<'a> CommandSender<'a> {
         match self {
             // todo: add color and stuff to console
             CommandSender::Console => log::info!("{}", text.text),
-            CommandSender::Player(c) => c.send_message(text),
+            CommandSender::Player(c) => c.send_system_message(text),
         }
     }
 
@@ -55,15 +55,15 @@ impl<'a> CommandSender<'a> {
         }
     }
 }
-pub fn handle_command(sender: &mut CommandSender, command: String, server: &mut Server) {
+pub fn handle_command(sender: &mut CommandSender, command: String) {
     let command = command.to_lowercase();
     // an ugly mess i know
     if command.starts_with(PumpkinCommand::NAME) {
-        PumpkinCommand::on_execute(sender, command, server);
+        PumpkinCommand::on_execute(sender, command);
         return;
     }
     if command.starts_with(GamemodeCommand::NAME) {
-        GamemodeCommand::on_execute(sender, command, server);
+        GamemodeCommand::on_execute(sender, command);
         return;
     }
     // todo: red color

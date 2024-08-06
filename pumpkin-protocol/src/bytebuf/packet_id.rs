@@ -1,10 +1,10 @@
 use serde::{Serialize, Serializer};
 
-use crate::{ClientPacket, VarInt, VarInt32};
+use crate::{ClientPacket, VarInt, VarIntType};
 
 use super::{serializer, ByteBuffer};
 
-impl Serialize for VarInt32 {
+impl Serialize for VarInt {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -27,7 +27,7 @@ impl Serialize for VarInt32 {
 }
 
 pub trait Packet {
-    const PACKET_ID: VarInt;
+    const PACKET_ID: VarIntType;
 }
 
 impl<P> ClientPacket for P

@@ -13,17 +13,13 @@ impl<'a> Command<'a> for GamemodeCommand {
 
     const DESCRIPTION: &'a str = "Changes the gamemode for a Player";
 
-    fn on_execute(
-        sender: &mut super::CommandSender<'a>,
-        command: String,
-        _server: &mut crate::server::Server,
-    ) {
+    fn on_execute(sender: &mut super::CommandSender<'a>, command: String) {
         let player = sender.as_mut_player().unwrap();
         let args: Vec<&str> = command.split_whitespace().collect();
 
         if args.len() != 2 {
             // todo red
-            player.send_message("Usage: /gamemode <mode>".into());
+            player.send_system_message("Usage: /gamemode <mode>".into());
             return;
         }
 
@@ -31,11 +27,11 @@ impl<'a> Command<'a> for GamemodeCommand {
         match mode_str.parse() {
             Ok(mode) => {
                 player.set_gamemode(mode);
-                player.send_message(format!("Set own game mode to {mode_str}").into());
+                player.send_system_message(format!("Set own game mode to {mode_str}").into());
             }
             Err(_) => {
                 // todo red
-                player.send_message("Invalid gamemode".into());
+                player.send_system_message("Invalid gamemode".into());
             }
         }
     }

@@ -4,15 +4,16 @@ use crate::{bytebuf::ByteBuffer, ClientPacket, Property};
 
 use super::PlayerAction;
 
+#[derive(Clone)]
 #[packet(0x3E)]
 pub struct CPlayerInfoUpdate<'a> {
     pub actions: i8,
-    pub players: &'a [Player<'a>],
+    pub players: &'a [Player],
 }
 
-pub struct Player<'a> {
+pub struct Player {
     pub uuid: uuid::Uuid,
-    pub actions: &'a [PlayerAction],
+    pub actions: Vec<PlayerAction>,
 }
 
 impl<'a> CPlayerInfoUpdate<'a> {
@@ -26,7 +27,7 @@ impl<'a> ClientPacket for CPlayerInfoUpdate<'a> {
         bytebuf.put_i8(self.actions);
         bytebuf.put_list::<Player>(self.players, |p, v| {
             p.put_uuid(v.uuid);
-            for action in v.actions {
+            for action in &v.actions {
                 match action {
                     PlayerAction::AddPlayer { name, properties } => {
                         p.put_string(name);

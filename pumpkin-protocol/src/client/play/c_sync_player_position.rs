@@ -1,7 +1,7 @@
 use pumpkin_macros::packet;
 use serde::Serialize;
 
-use crate::VarInt32;
+use crate::VarInt;
 
 #[derive(Serialize)]
 #[packet(0x40)]
@@ -12,7 +12,7 @@ pub struct CSyncPlayerPostion {
     yaw: f32,
     pitch: f32,
     flags: i8,
-    teleport_id: VarInt32,
+    teleport_id: VarInt,
 }
 
 impl CSyncPlayerPostion {
@@ -23,7 +23,7 @@ impl CSyncPlayerPostion {
         yaw: f32,
         pitch: f32,
         flags: i8,
-        teleport_id: VarInt32,
+        teleport_id: VarInt,
     ) -> Self {
         Self {
             x,

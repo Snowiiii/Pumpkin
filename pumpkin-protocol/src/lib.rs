@@ -19,14 +19,15 @@ pub const MAX_PACKET_SIZE: i32 = 2097152;
 
 /// usally uses a namespace like "minecraft:thing"
 pub type Identifier = String;
-pub type VarInt = i32;
-pub type VarLong = i64;
+pub type VarIntType = i32;
+pub type VarLongType = i64;
 
 pub struct BitSet(pub VarInt, pub Vec<i64>);
 
-pub struct VarInt32(pub i32);
+#[derive(Debug, Clone, PartialEq)]
+pub struct VarInt(pub VarIntType);
 
-impl VarInt32 {
+impl VarInt {
     /// The maximum number of bytes a `VarInt` could occupy when read from and
     /// written to the Minecraft protocol.
     pub const MAX_SIZE: usize = 5;
@@ -83,16 +84,40 @@ impl VarInt32 {
             let byte = r.get_u8();
             val |= (i32::from(byte) & 0b01111111) << (i * 7);
             if byte & 0b10000000 == 0 {
-                return Ok(VarInt32(val));
+                return Ok(VarInt(val));
             }
         }
         Err(VarIntDecodeError::TooLarge)
     }
 }
 
-impl From<i32> for VarInt32 {
+impl From<i32> for VarInt {
     fn from(value: i32) -> Self {
-        VarInt32(value)
+        VarInt(value)
+    }
+}
+
+impl From<u32> for VarInt {
+    fn from(value: u32) -> Self {
+        VarInt(value as i32)
+    }
+}
+
+impl From<u8> for VarInt {
+    fn from(value: u8) -> Self {
+        VarInt(value as i32)
+    }
+}
+
+impl From<usize> for VarInt {
+    fn from(value: usize) -> Self {
+        VarInt(value as i32)
+    }
+}
+
+impl From<VarInt> for i32 {
+    fn from(value: VarInt) -> Self {
+        value.0
     }
 }
 
@@ -134,6 +159,7 @@ pub enum ConnectionState {
 
 impl From<VarInt> for ConnectionState {
     fn from(value: VarInt) -> Self {
+        let value = value.0;
         match value {
             1 => Self::Status,
             2 => Self::Login,
@@ -147,7 +173,6 @@ impl From<VarInt> for ConnectionState {
 }
 
 pub struct RawPacket {
-    pub len: VarInt,
     pub id: VarInt,
     pub bytebuf: ByteBuffer,
 }

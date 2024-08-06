@@ -1,10 +1,9 @@
 use std::str::FromStr;
 
 use num_derive::{FromPrimitive, ToPrimitive};
+use pumpkin_entity::{entity_type::EntityType, Entity, EntityId};
 use pumpkin_protocol::VarInt;
 use serde::{Deserialize, Serialize};
-
-use super::{Entity, EntityId};
 
 pub struct Player {
     pub entity: Entity,
@@ -25,9 +24,12 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new(entity: Entity) -> Self {
+    pub fn new(entity_id: EntityId) -> Self {
         Self {
-            entity,
+            entity: Entity {
+                entity_id,
+                entity_type: EntityType::Player,
+            },
             x: 0.0,
             y: 0.0,
             z: 0.0,
