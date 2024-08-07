@@ -1,5 +1,11 @@
-use crate::{bytebuf::ByteBuffer, ConnectionState, ServerPacket, VarInt};
+use pumpkin_macros::packet;
 
+use crate::{
+    bytebuf::{ByteBuffer, DeserializerError},
+    ConnectionState, ServerPacket, VarInt,
+};
+
+#[packet(0x00)]
 pub struct SHandShake {
     pub protocol_version: VarInt,
     pub server_address: String, // 255
@@ -8,14 +14,12 @@ pub struct SHandShake {
 }
 
 impl ServerPacket for SHandShake {
-    const PACKET_ID: VarInt = VarInt(0x00);
-
-    fn read(bytebuf: &mut ByteBuffer) -> Self {
-        Self {
+    fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError> {
+        Ok(Self {
             protocol_version: bytebuf.get_var_int(),
             server_address: bytebuf.get_string_len(255).unwrap(),
             server_port: bytebuf.get_u16(),
             next_state: bytebuf.get_var_int().into(),
-        }
+        })
     }
 }
