@@ -156,17 +156,17 @@ impl Client {
         self.send_packet(CGameEvent::new(3, gamemode.to_f32().unwrap()));
     }
 
-    pub async fn process_packets(&mut self, server: &mut Server) {
+    pub fn process_packets(&mut self, server: &mut Server) {
         let mut i = 0;
         while i < self.client_packets_queue.len() {
             let mut packet = self.client_packets_queue.remove(i).unwrap();
-            self.handle_packet(server, &mut packet).await;
+            self.handle_packet(server, &mut packet);
             i += 1;
         }
     }
 
     /// Handles an incoming decoded Packet
-    pub async fn handle_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
+    pub fn handle_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
         // TODO: handle each packet's Error instead of calling .unwrap()
         let bytebuf = &mut packet.bytebuf;
         match self.connection_state {
@@ -198,7 +198,7 @@ impl Client {
                 SEncryptionResponse::PACKET_ID => self.handle_encryption_response(
                     server,
                     SEncryptionResponse::read(bytebuf).unwrap(),
-                ).await,
+                ),
                 SLoginPluginResponse::PACKET_ID => self
                     .handle_plugin_response(server, SLoginPluginResponse::read(bytebuf).unwrap()),
                 SLoginAcknowledged::PACKET_ID => self
@@ -267,7 +267,7 @@ impl Client {
 
     // Reads the connection until our buffer of len 4096 is full, then decode
     /// Close connection when an error occurs
-    pub async fn poll(&mut self, server: &mut Server, event: &Event) {
+    pub fn poll(&mut self, server: &mut Server, event: &Event) {
         if event.is_readable() {
             let mut received_data = vec![0; 4096];
             let mut bytes_read = 0;
@@ -302,7 +302,7 @@ impl Client {
                     Ok(packet) => {
                         if let Some(packet) = packet {
                             self.add_packet(packet);
-                            self.process_packets(server).await;
+                            self.process_packets(server);
                         }
                     }
                     Err(err) => self.kick(&err.to_string()),

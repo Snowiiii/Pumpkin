@@ -56,7 +56,7 @@ pub struct Server {
     pub advanced_config: AdvancedConfiguration,
 
     /// Used for Authentication, None is Online mode is disabled
-    pub auth_client: Option<reqwest::Client>,
+    pub auth_client: Option<reqwest::blocking::Client>,
 }
 
 impl Server {
@@ -75,7 +75,7 @@ impl Server {
         )
         .into_boxed_slice();
         let auth_client = if config.0.online_mode {
-            Some(reqwest::Client::new())
+            Some(reqwest::blocking::Client::new())
         } else {
             None
         };
@@ -99,9 +99,9 @@ impl Server {
     }
 
     // Returns Tokens to remove
-    pub async fn poll(&mut self, client: &mut Client, _poll: &Poll, event: &Event) {
+    pub fn poll(&mut self, client: &mut Client, _poll: &Poll, event: &Event) {
         // TODO: Poll players in every world
-        client.poll(self, event).await
+        client.poll(self, event)
     }
 
     pub fn add_client(&mut self, token: Rc<Token>, client: Rc<RefCell<Client>>) {

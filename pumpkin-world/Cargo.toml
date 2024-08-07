@@ -8,4 +8,3 @@ pumpkin-protocol = { path = "../pumpkin-protocol"}
 fastanvil = "0.31"
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 fastsnbt = "0.2"
-tokio.workspace = true
