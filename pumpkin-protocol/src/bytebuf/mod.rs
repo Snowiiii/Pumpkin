@@ -3,6 +3,8 @@ use bytes::{Buf, BufMut, BytesMut};
 use core::str;
 use std::io::{self, Error, ErrorKind};
 
+mod deserializer;
+pub use deserializer::DeserializerError;
 pub mod packet_id;
 mod serializer;
 
@@ -299,5 +301,46 @@ impl ByteBuffer {
 
     pub fn get_slice(&mut self) -> BytesMut {
         self.buffer.split()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use serde::{Deserialize, Serialize};
+
+    use crate::{bytebuf::{deserializer, serializer, ByteBuffer}, VarInt};
+
+    #[test]
+    fn test_i32_reserialize() {
+        #[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
+        struct Foo {
+            bar: i32,
+        }
+        let foo = Foo { bar: 69 };
+        let mut serializer = serializer::Serializer::new(ByteBuffer::empty());
+        foo.serialize(&mut serializer).unwrap();
+
+        let mut serialized: ByteBuffer = serializer.into();
+        let deserialized: Foo =
+            Foo::deserialize(deserializer::Deserializer::new(&mut serialized)).unwrap();
+
+        assert_eq!(foo, deserialized);
+    }
+
+    #[test]
+    fn test_varint_reserialize() {
+        #[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
+        struct Foo {
+            bar: VarInt,
+        }
+        let foo = Foo { bar: 69.into() };
+        let mut serializer = serializer::Serializer::new(ByteBuffer::empty());
+        foo.serialize(&mut serializer).unwrap();
+
+        let mut serialized: ByteBuffer = serializer.into();
+        let deserialized: Foo =
+            Foo::deserialize(deserializer::Deserializer::new(&mut serialized)).unwrap();
+
+        assert_eq!(foo, deserialized);
     }
 }

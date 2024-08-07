@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use bytebuf::{packet_id::Packet, ByteBuffer};
+use bytebuf::{packet_id::Packet, ByteBuffer, DeserializerError};
 use bytes::Buf;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -24,7 +24,7 @@ pub type VarLongType = i64;
 
 pub struct BitSet(pub VarInt, pub Vec<i64>);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VarInt(pub VarIntType);
 
 impl VarInt {
@@ -181,10 +181,8 @@ pub trait ClientPacket: Packet {
     fn write(&self, bytebuf: &mut ByteBuffer);
 }
 
-pub trait ServerPacket {
-    const PACKET_ID: VarInt;
-
-    fn read(bytebuf: &mut ByteBuffer) -> Self;
+pub trait ServerPacket: Packet + Sized {
+    fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError>;
 }
 
 #[derive(Serialize)]

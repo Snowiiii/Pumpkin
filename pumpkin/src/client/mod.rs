@@ -14,14 +14,11 @@ use authentication::GameProfile;
 use mio::{event::Event, net::TcpStream, Token};
 use num_traits::ToPrimitive;
 use pumpkin_protocol::{
-    client::{
+    bytebuf::packet_id::Packet, client::{
         config::CConfigDisconnect,
         login::CLoginDisconnect,
         play::{CGameEvent, CPlayDisconnect, CSyncPlayerPostion, CSystemChatMessge},
-    },
-    packet_decoder::PacketDecoder,
-    packet_encoder::PacketEncoder,
-    server::{
+    }, packet_decoder::PacketDecoder, packet_encoder::PacketEncoder, server::{
         config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks, SPluginMessage},
         handshake::SHandShake,
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
@@ -30,9 +27,7 @@ use pumpkin_protocol::{
             SPlayerPositionRotation, SPlayerRotation,
         },
         status::{SPingRequest, SStatusRequest},
-    },
-    text::TextComponent,
-    ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
+    }, text::TextComponent, ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket
 };
 
 use std::io::Read;
@@ -166,57 +161,58 @@ impl Client {
 
     /// Handles an incoming decoded Packet
     pub fn handle_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
+        // TODO: handle each packet's Error instead of calling .unwrap()
         let bytebuf = &mut packet.bytebuf;
         match self.connection_state {
-            pumpkin_protocol::ConnectionState::HandShake => match packet.id {
-                SHandShake::PACKET_ID => self.handle_handshake(server, SHandShake::read(bytebuf)),
+            pumpkin_protocol::ConnectionState::HandShake => match packet.id.0 {
+                SHandShake::PACKET_ID => self.handle_handshake(server, SHandShake::read(bytebuf).unwrap()),
                 _ => log::error!(
                     "Failed to handle packet id {} while in Handshake state",
                     packet.id.0
                 ),
             },
-            pumpkin_protocol::ConnectionState::Status => match packet.id {
+            pumpkin_protocol::ConnectionState::Status => match packet.id.0 {
                 SStatusRequest::PACKET_ID => {
-                    self.handle_status_request(server, SStatusRequest::read(bytebuf))
+                    self.handle_status_request(server, SStatusRequest::read(bytebuf).unwrap())
                 }
                 SPingRequest::PACKET_ID => {
-                    self.handle_ping_request(server, SPingRequest::read(bytebuf))
+                    self.handle_ping_request(server, SPingRequest::read(bytebuf).unwrap())
                 }
                 _ => log::error!(
                     "Failed to handle packet id {} while in Status state",
                     packet.id.0
                 ),
             },
-            pumpkin_protocol::ConnectionState::Login => match packet.id {
+            pumpkin_protocol::ConnectionState::Login => match packet.id.0 {
                 SLoginStart::PACKET_ID => {
-                    self.handle_login_start(server, SLoginStart::read(bytebuf))
+                    self.handle_login_start(server, SLoginStart::read(bytebuf).unwrap())
                 }
                 SEncryptionResponse::PACKET_ID => {
-                    self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf))
+                    self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf).unwrap())
                 }
                 SLoginPluginResponse::PACKET_ID => {
-                    self.handle_plugin_response(server, SLoginPluginResponse::read(bytebuf))
+                    self.handle_plugin_response(server, SLoginPluginResponse::read(bytebuf).unwrap())
                 }
                 SLoginAcknowledged::PACKET_ID => {
-                    self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf))
+                    self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf).unwrap())
                 }
                 _ => log::error!(
                     "Failed to handle packet id {} while in Login state",
                     packet.id.0
                 ),
             },
-            pumpkin_protocol::ConnectionState::Config => match packet.id {
+            pumpkin_protocol::ConnectionState::Config => match packet.id.0 {
                 SClientInformation::PACKET_ID => {
-                    self.handle_client_information(server, SClientInformation::read(bytebuf))
+                    self.handle_client_information(server, SClientInformation::read(bytebuf).unwrap())
                 }
                 SPluginMessage::PACKET_ID => {
-                    self.handle_plugin_message(server, SPluginMessage::read(bytebuf))
+                    self.handle_plugin_message(server, SPluginMessage::read(bytebuf).unwrap())
                 }
                 SAcknowledgeFinishConfig::PACKET_ID => {
-                    self.handle_config_acknowledged(server, SAcknowledgeFinishConfig::read(bytebuf))
+                    self.handle_config_acknowledged(server, SAcknowledgeFinishConfig::read(bytebuf).unwrap())
                 }
                 SKnownPacks::PACKET_ID => {
-                    self.handle_known_packs(server, SKnownPacks::read(bytebuf))
+                    self.handle_known_packs(server, SKnownPacks::read(bytebuf).unwrap())
                 }
                 _ => log::error!(
                     "Failed to handle packet id {} while in Config state",
@@ -237,24 +233,24 @@ impl Client {
 
     pub fn handle_play_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
         let bytebuf = &mut packet.bytebuf;
-        match packet.id {
+        match packet.id.0 {
             SConfirmTeleport::PACKET_ID => {
-                self.handle_confirm_teleport(server, SConfirmTeleport::read(bytebuf))
+                self.handle_confirm_teleport(server, SConfirmTeleport::read(bytebuf).unwrap())
             }
             SChatCommand::PACKET_ID => {
-                self.handle_chat_command(server, SChatCommand::read(bytebuf))
+                self.handle_chat_command(server, SChatCommand::read(bytebuf).unwrap())
             }
             SPlayerPosition::PACKET_ID => {
-                self.handle_position(server, SPlayerPosition::read(bytebuf))
+                self.handle_position(server, SPlayerPosition::read(bytebuf).unwrap())
             }
             SPlayerPositionRotation::PACKET_ID => {
-                self.handle_position_rotation(server, SPlayerPositionRotation::read(bytebuf))
+                self.handle_position_rotation(server, SPlayerPositionRotation::read(bytebuf).unwrap())
             }
             SPlayerRotation::PACKET_ID => {
-                self.handle_rotation(server, SPlayerRotation::read(bytebuf))
+                self.handle_rotation(server, SPlayerRotation::read(bytebuf).unwrap())
             }
             SPlayerCommand::PACKET_ID => {
-                self.handle_player_command(server, SPlayerCommand::read(bytebuf))
+                self.handle_player_command(server, SPlayerCommand::read(bytebuf).unwrap())
             }
             _ => log::error!("Failed to handle player packet id {}", packet.id.0),
         }

@@ -1,27 +1,7 @@
 use crate::{bytebuf::ByteBuffer, ServerPacket, VarInt};
 
-pub struct SStatusRequest {
-    // empty
-}
+mod s_ping_request;
+mod s_status_request;
 
-impl ServerPacket for SStatusRequest {
-    const PACKET_ID: VarInt = VarInt(0x00);
-
-    fn read(_bytebuf: &mut ByteBuffer) -> Self {
-        Self {}
-    }
-}
-
-pub struct SPingRequest {
-    pub payload: i64,
-}
-
-impl ServerPacket for SPingRequest {
-    const PACKET_ID: VarInt = VarInt(0x01);
-
-    fn read(bytebuf: &mut ByteBuffer) -> Self {
-        Self {
-            payload: bytebuf.get_i64(),
-        }
-    }
-}
+pub use s_ping_request::*;
+pub use s_status_request::*;
