@@ -258,7 +258,7 @@ impl Client {
             SPlayerCommand::PACKET_ID => {
                 self.handle_player_command(server, SPlayerCommand::read(bytebuf).unwrap())
             }
-            SSwingArm::PACKET_ID => self.handle_swing_arm(server, SSwingArm::read(bytebuf)),
+            SSwingArm::PACKET_ID => self.handle_swing_arm(server, SSwingArm::read(bytebuf).unwrap()),
             _ => log::error!("Failed to handle player packet id {}", packet.id.0),
         }
     }
