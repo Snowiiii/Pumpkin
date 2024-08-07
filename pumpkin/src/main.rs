@@ -23,7 +23,8 @@ pub mod server;
 pub mod util;
 
 #[cfg(not(target_os = "wasi"))]
-fn main() -> io::Result<()> {
+#[tokio::main]
+async fn main() -> io::Result<()> {
     use std::{cell::RefCell, time::Instant};
 
     let time = Instant::now();
@@ -130,7 +131,7 @@ fn main() -> io::Result<()> {
                     // Maybe received an event for a TCP connection.
                     let done = if let Some(client) = connections.get_mut(&token) {
                         let mut client = client.borrow_mut();
-                        client.poll(&mut server, event);
+                        client.poll(&mut server, event).await;
                         client.closed
                     } else {
                         // Sporadic events happen, we can safely ignore them.
