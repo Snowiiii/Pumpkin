@@ -23,7 +23,7 @@ pub struct AdvancedConfiguration {
 pub struct Commands {
     /// Are commands from the Console accepted ?
     pub use_console: bool,
-    // todo commands...
+    // TODO: commands...
 }
 
 impl Default for Commands {

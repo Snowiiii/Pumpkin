@@ -80,7 +80,7 @@ pub fn authenticate(
 }
 
 pub fn unpack_textures(property: Property, config: &TextureConfig) {
-    // todo: no unwrap
+    // TODO: no unwrap
     let from64 = general_purpose::STANDARD.decode(property.value).unwrap();
     let textures: ProfileTextures = serde_json::from_slice(&from64).unwrap();
     dbg!(&textures);

@@ -48,10 +48,10 @@ impl Client {
     }
 
     pub fn handle_login_start(&mut self, server: &mut Server, login_start: SLoginStart) {
-        // todo: do basic name validation
+        // TODO: do basic name validation
         dbg!("login start");
         // default game profile, when no online mode
-        // todo: make offline uuid
+        // TODO: make offline uuid
         self.gameprofile = Some(GameProfile {
             id: login_start.uuid,
             name: login_start.name,
@@ -59,7 +59,7 @@ impl Client {
             profile_actions: None,
         });
 
-        // todo: check config for encryption
+        // TODO: check config for encryption
         let verify_token: [u8; 4] = rand::random();
         let public_key_der = &server.public_key_der;
         let packet = CEncryptionRequest::new(

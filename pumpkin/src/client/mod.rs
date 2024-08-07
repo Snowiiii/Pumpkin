@@ -136,7 +136,7 @@ impl Client {
 
     pub fn teleport(&mut self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
         assert!(self.is_player());
-        // todo
+        // TODO
         let id = 0;
         let player = self.player.as_mut().unwrap();
         let entity = &mut player.entity;
