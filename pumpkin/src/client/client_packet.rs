@@ -71,7 +71,7 @@ impl Client {
         self.send_packet(packet);
     }
 
-    pub fn handle_encryption_response(
+    pub async fn handle_encryption_response(
         &mut self,
         server: &mut Server,
         encryption_response: SEncryptionResponse,
@@ -96,7 +96,9 @@ impl Client {
                 &hash,
                 &ip,
                 server,
-            ) {
+            )
+            .await
+            {
                 Ok(p) => {
                     // Check if player should join
                     if let Some(p) = &p.profile_actions {

@@ -46,7 +46,7 @@ pub struct GameProfile {
     pub profile_actions: Option<Vec<ProfileAction>>,
 }
 
-pub fn authenticate(
+pub async fn authenticate(
     username: &str,
     server_hash: &str,
     ip: &IpAddr,
@@ -69,13 +69,14 @@ pub fn authenticate(
         .unwrap()
         .get(address)
         .send()
+        .await
         .map_err(|_| AuthError::FailedResponse)?;
     match response.status() {
         StatusCode::OK => {}
         StatusCode::NO_CONTENT => Err(AuthError::UnverifiedUsername)?,
         other => Err(AuthError::UnknownStatusCode(other.as_str().to_string()))?,
     }
-    let profile: GameProfile = response.json().map_err(|_| AuthError::FailedParse)?;
+    let profile: GameProfile = response.json().await.map_err(|_| AuthError::FailedParse)?;
     Ok(profile)
 }
 

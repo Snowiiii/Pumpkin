@@ -28,7 +28,7 @@ rsa-der = "0.3.0"
 flate2 = "1.0.30"
 
 # authentication
-reqwest = { version = "0.12.5", features = ["json", "blocking"]}
+reqwest = { version = "0.12.5", features = ["json"]}
 
 sha1 = "0.10.6"
 digest = "=0.11.0-pre.9"
