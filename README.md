@@ -4,6 +4,7 @@
 
 ![CI](https://github.com/Snowiiii/Pumpkin/actions/workflows/rust.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Current version)](https://img.shields.io/badge/current_version-1.21-blue)
 
 </div>
 
@@ -12,18 +13,16 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 
 Pumpkin is currently under heavy development.
 
-## What Pumpkin aims to be:
-- A fast, efficient, and scalable Minecraft server
-- Use Multi-Threading
-- Compatible with the latest Minecraft server version
-- Adherent to Vanilla game mechanics
-- Be Secure and prevent all Exploits found
-- Highly configurable with the ability to disable unnecessary features
-- A platform for plugin development
+### What Pumpkin wants to achive:
+- **Performance**: Leveraging multi-threading for maximum speed and efficiency.
+- **Compatibility**: Supports the latest Minecraft server version and adheres to vanilla game mechanics.
+- **Security**: Prioritizes security by preventing known exploits.
+- **Flexibility**: Highly configurable with the ability to disable unnecessary features.
+- **Extensibility**: Provides a foundation for plugin development.
 
-## What Pumpkin is not:
-- A direct replacement for Vanilla or Bukkit servers
-- A framework for building a Server from scratch
+### What Pumpkin will not be:
+- A direct replacement for Vanilla or Bukkit servers.
+- A framework for building a server from scratch.
 
 ### Features (WIP)
 - [x] Configuration (toml)
@@ -44,6 +43,7 @@ Pumpkin is currently under heavy development.
 - World 
   - [x] World Joining
   - [x] World Loading
+  - [x] Entity Spawning
   - [ ] Chunk Loading
   - [ ] World Generation
   - [ ] World Borders
