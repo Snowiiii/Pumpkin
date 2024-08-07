@@ -6,11 +6,7 @@ use client::Client;
 use commands::handle_command;
 use configuration::AdvancedConfiguration;
 
-use std::{
-    collections::HashMap,
-    rc::Rc,
-    thread,
-};
+use std::{collections::HashMap, rc::Rc, thread};
 
 use client::interrupted;
 use configuration::BasicConfiguration;
@@ -64,10 +60,7 @@ fn main() -> io::Result<()> {
 
     let mut connections: HashMap<Token, Rc<RefCell<Client>>> = HashMap::new();
 
-    let mut server = Server::new((
-        basic_config,
-        advanced_configuration,
-    ));
+    let mut server = Server::new((basic_config, advanced_configuration));
     log::info!("Started Server took {}ms", time.elapsed().as_millis());
     log::info!("You now can connect to the server");
 
@@ -112,8 +105,8 @@ fn main() -> io::Result<()> {
                         }
                     };
                     if let Err(e) = connection.set_nodelay(true) {
-                            log::warn!("failed to set TCP_NODELAY {e}");
-                        }
+                        log::warn!("failed to set TCP_NODELAY {e}");
+                    }
 
                     log::info!("Accepted connection from: {}", address);
 
@@ -129,8 +122,7 @@ fn main() -> io::Result<()> {
                         connection,
                         addr,
                     )));
-                    server
-                        .add_client(rc_token, Rc::clone(&client));
+                    server.add_client(rc_token, Rc::clone(&client));
                     connections.insert(token, client);
                 },
 
