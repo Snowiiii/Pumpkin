@@ -14,7 +14,8 @@ use pumpkin_protocol::{
     client::{
         config::CPluginMessage,
         play::{
-            CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate, CSpawnEntity, PlayerAction,
+            CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate,
+            CSpawnEntity, PlayerAction,
         },
     },
     BitSet, ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,

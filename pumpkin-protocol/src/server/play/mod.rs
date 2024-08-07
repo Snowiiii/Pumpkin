@@ -51,6 +51,20 @@ impl ServerPacket for SPlayerPosition {
     }
 }
 
+pub struct SSwingArm {
+    pub hand: VarInt,
+}
+
+impl ServerPacket for SSwingArm {
+    const PACKET_ID: VarInt = VarInt(0x36);
+
+    fn read(bytebuf: &mut crate::bytebuf::ByteBuffer) -> Self {
+        Self {
+            hand: bytebuf.get_var_int(),
+        }
+    }
+}
+
 pub struct SPlayerCommand {
     pub entitiy_id: VarInt,
     pub action: Action,

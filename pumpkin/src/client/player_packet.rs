@@ -1,13 +1,18 @@
+use num_traits::FromPrimitive;
 use pumpkin_protocol::{
-    client::play::{CHeadRot, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot},
+    client::play::{
+        Animation, CEntityAnimation, CHeadRot, CUpdateEntityPos, CUpdateEntityPosRot,
+        CUpdateEntityRot,
+    },
     server::play::{
         SChatCommand, SConfirmTeleport, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
-        SPlayerRotation,
+        SPlayerRotation, SSwingArm,
     },
 };
 
 use crate::{
     commands::{handle_command, CommandSender},
+    entity::player::Hand,
     server::Server,
 };
 
@@ -155,5 +160,15 @@ impl Client {
             pumpkin_protocol::server::play::Action::OpenVehicleInventory => todo!(),
             pumpkin_protocol::server::play::Action::StartFlyingElytra => todo!(),
         }
+    }
+
+    pub fn handle_swing_arm(&mut self, server: &mut Server, swing_arm: SSwingArm) {
+        let animation = match Hand::from_i32(swing_arm.hand.0).unwrap() {
+            Hand::Main => Animation::SwingMainArm,
+            Hand::Off => Animation::SwingOffhand,
+        };
+        let player = self.player.as_mut().unwrap();
+        let id = player.entity_id();
+        server.broadcast_packet_expect(self, CEntityAnimation::new(id.into(), animation as u8))
     }
 }

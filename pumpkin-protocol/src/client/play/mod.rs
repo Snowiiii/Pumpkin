@@ -1,5 +1,6 @@
 mod c_change_difficulty;
 mod c_chunk_data_update_light;
+mod c_entity_animation;
 mod c_entity_metadata;
 mod c_game_event;
 mod c_head_rot;
@@ -19,6 +20,7 @@ mod player_action;
 
 pub use c_change_difficulty::*;
 pub use c_chunk_data_update_light::*;
+pub use c_entity_animation::*;
 pub use c_entity_metadata::*;
 pub use c_game_event::*;
 pub use c_head_rot::*;

@@ -27,7 +27,7 @@ use pumpkin_protocol::{
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
         play::{
             SChatCommand, SConfirmTeleport, SPlayerCommand, SPlayerPosition,
-            SPlayerPositionRotation, SPlayerRotation,
+            SPlayerPositionRotation, SPlayerRotation, SSwingArm,
         },
         status::{SPingRequest, SStatusRequest},
     },
@@ -256,6 +256,7 @@ impl Client {
             SPlayerCommand::PACKET_ID => {
                 self.handle_player_command(server, SPlayerCommand::read(bytebuf))
             }
+            SSwingArm::PACKET_ID => self.handle_swing_arm(server, SSwingArm::read(bytebuf)),
             _ => log::error!("Failed to handle player packet id {}", packet.id.0),
         }
     }
