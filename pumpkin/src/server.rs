@@ -15,7 +15,7 @@ use pumpkin_protocol::{
         config::CPluginMessage,
         play::{
             CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate,
-            CSpawnEntity, PlayerAction,
+            CRemoveEntities, CSpawnEntity, PlayerAction,
         },
     },
     BitSet, ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
@@ -109,7 +109,14 @@ impl Server {
     }
 
     pub fn remove_client(&mut self, token: &Token) {
-        self.current_clients.remove(token);
+        let client = self.current_clients.remove(token).unwrap();
+        let mut client = client.borrow_mut();
+        // despawn the player
+        // todo: put this into the entitiy struct
+        if client.is_player() {
+            let id = client.player.as_ref().unwrap().entity_id();
+            self.broadcast_packet(&mut client, CRemoveEntities::new(vec![id.into()]))
+        }
     }
 
     // here is where the magic happens

@@ -139,8 +139,8 @@ async fn main() -> io::Result<()> {
                     };
                     if done {
                         if let Some(client) = connections.remove(&token) {
-                            let mut client = client.borrow_mut();
                             server.remove_client(&token);
+                            let mut client = client.borrow_mut();
                             poll.registry().deregister(&mut client.connection)?;
                         }
                     }
