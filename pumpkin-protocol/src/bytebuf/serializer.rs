@@ -1,7 +1,10 @@
 use std::fmt::Display;
 
+use bytes::Buf;
 use serde::{ser, Serialize};
 use thiserror::Error;
+
+use crate::VarInt;
 
 use super::ByteBuffer;
 
@@ -123,8 +126,12 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     fn serialize_none(self) -> Result<Self::Ok, Self::Error> {
         unimplemented!()
     }
-    fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
-        unimplemented!()
+    fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
+        if let Some(len) = len {
+            self.output.reserve(len);
+            self.output.put_var_int(&VarInt(len as i32));
+        }
+        Ok(self)
     }
     fn serialize_some<T>(self, _value: &T) -> Result<Self::Ok, Self::Error>
     where
@@ -213,16 +220,16 @@ impl<'a> ser::SerializeSeq for &'a mut Serializer {
     type Error = SerializerError;
 
     // Serialize a single element of the sequence.
-    fn serialize_element<T>(&mut self, _value: &T) -> Result<(), Self::Error>
+    fn serialize_element<T>(&mut self, value: &T) -> Result<(), Self::Error>
     where
         T: ?Sized + Serialize,
     {
-        todo!()
+        value.serialize(&mut **self)
     }
 
     // Close the sequence.
     fn end(self) -> Result<(), Self::Error> {
-        todo!()
+        Ok(())
     }
 }
 
