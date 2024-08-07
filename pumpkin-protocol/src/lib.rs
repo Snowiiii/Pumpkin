@@ -215,7 +215,7 @@ pub struct Sample {
 }
 
 // basicly game profile
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Property {
     pub name: String,
     // base 64

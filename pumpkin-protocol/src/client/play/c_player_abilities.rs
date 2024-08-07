@@ -1,7 +1,8 @@
 use pumpkin_macros::packet;
+use serde::Serialize;
 
-use crate::{bytebuf::ByteBuffer, ClientPacket};
 
+#[derive(Serialize)]
 #[packet(0x38)]
 pub struct CPlayerAbilities {
     flags: i8,
@@ -16,13 +17,5 @@ impl CPlayerAbilities {
             flying_speed,
             field_of_view,
         }
-    }
-}
-
-impl ClientPacket for CPlayerAbilities {
-    fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.put_i8(self.flags);
-        bytebuf.put_f32(self.flying_speed);
-        bytebuf.put_f32(self.field_of_view);
     }
 }

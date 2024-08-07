@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use bytes::Buf;
 use serde::{ser, Serialize};
 use thiserror::Error;
 
@@ -124,20 +123,22 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         unimplemented!()
     }
     fn serialize_none(self) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
+        self.output.put_bool(false);
+        Ok(())
     }
     fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
         if let Some(len) = len {
-            self.output.reserve(len);
             self.output.put_var_int(&VarInt(len as i32));
         }
         Ok(self)
     }
-    fn serialize_some<T>(self, _value: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_some<T>(self, value: &T) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + Serialize,
     {
-        unimplemented!()
+        self.output.put_bool(true);
+        dbg!("aa");
+        value.serialize(self)
     }
     fn serialize_str(self, v: &str) -> Result<Self::Ok, Self::Error> {
         self.output.put_string(v);

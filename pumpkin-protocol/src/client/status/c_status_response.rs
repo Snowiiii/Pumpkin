@@ -1,6 +1,7 @@
 use pumpkin_macros::packet;
+use serde::Serialize;
 
-#[derive(serde::Serialize)]
+#[derive(Serialize)]
 #[packet(0x00)]
 pub struct CStatusResponse<'a> {
     json_response: &'a str, // 32767

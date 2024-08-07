@@ -14,8 +14,7 @@ use pumpkin_protocol::{
     client::{
         config::CPluginMessage,
         play::{
-            CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate,
-            CSpawnEntity, PlayerAction,
+            CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate, CSpawnEntity, PlayerAction,
         },
     },
     BitSet, ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
@@ -144,8 +143,6 @@ impl Server {
             self.base_config.default_gamemode.to_i8().unwrap(),
             false,
             false,
-            false, // deth loc
-            None,
             None,
             0.into(),
             false,
@@ -160,19 +157,7 @@ impl Server {
         client.teleport(x, y, z, 10.0, 10.0);
         let gameprofile = client.gameprofile.as_ref().unwrap();
         // first send info update to our new player, So he can see his Skin
-        // TODO: send more actions, (chat. list, ping)
-        client.send_packet(CPlayerInfoUpdate::new(
-            0x01,
-            &[pumpkin_protocol::client::play::Player {
-                uuid: gameprofile.id,
-                actions: vec![PlayerAction::AddPlayer {
-                    name: gameprofile.name.clone(),
-                    properties: gameprofile.properties.clone(),
-                }],
-            }],
-        ));
-        let gameprofile = client.gameprofile.as_ref().unwrap();
-        // send his info to everyone else
+        // also send his info to everyone else
         self.broadcast_packet(
             client,
             CPlayerInfoUpdate::new(
@@ -210,7 +195,7 @@ impl Server {
         let gameprofile = client.gameprofile.as_ref().unwrap();
 
         // spawn player for every client
-        self.broadcast_packet(
+        self.broadcast_packet_expect(
             client,
             CSpawnEntity::new(
                 entity_id.into(),
@@ -252,12 +237,37 @@ impl Server {
                 ))
             }
         }
+        // entity meta data
+        /*  if let Some(config) = &client.config {
+            self.broadcast_packet(
+                client,
+                CSetEntityMetadata::new(entity_id.into(), vec![Metadata::new(18, VarInt(0), 0)]),
+            )
+        }
+        */
 
         // Server::spawn_test_chunk(client);
     }
 
     /// Sends a Packet to all Players
-    pub fn broadcast_packet<P>(&mut self, from: &Client, packet: P)
+    pub fn broadcast_packet<P>(&mut self, from: &mut Client, packet: P)
+    where
+        P: ClientPacket,
+        P: Clone,
+    {
+        // we can't borrow twice at same time
+        from.send_packet(packet.clone());
+        for (_, client) in self.current_clients.iter().filter(|c| c.0 != &from.token) {
+            // Check if client is a player
+            let mut client = client.borrow_mut();
+            if client.is_player() {
+                // we need to clone, Because we send a new packet to every client
+                client.send_packet(packet.clone());
+            }
+        }
+    }
+
+    pub fn broadcast_packet_expect<P>(&mut self, from: &mut Client, packet: P)
     where
         P: ClientPacket,
         P: Clone,

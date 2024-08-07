@@ -297,7 +297,7 @@ impl ByteBuffer {
         self.buffer.put_slice(src)
     }
 
-    pub fn put<T: Buf>(&mut self, mut src: T)
+    pub fn put<T: Buf>(&mut self, src: T)
     where
         Self: Sized,
     {
