@@ -8,6 +8,3 @@ edition = "2021"
 
 [profile.release]
 lto = true
-
-[workspace.dependencies]
-tokio = { version = "1.39.2", features = ["net", "macros", "rt-multi-thread", "fs", "io-util"] }

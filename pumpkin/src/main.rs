@@ -23,8 +23,7 @@ pub mod server;
 pub mod util;
 
 #[cfg(not(target_os = "wasi"))]
-#[tokio::main]
-async fn main() -> io::Result<()> {
+fn main() -> io::Result<()> {
     use std::{cell::RefCell, time::Instant};
 
     let time = Instant::now();
