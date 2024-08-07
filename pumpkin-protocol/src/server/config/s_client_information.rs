@@ -1,6 +1,6 @@
 use pumpkin_macros::packet;
 
-use crate::{bytebuf::ByteBuffer, Identifier, ServerPacket, VarInt};
+use crate::VarInt;
 
 #[derive(serde::Deserialize)]
 #[packet(0x00)]

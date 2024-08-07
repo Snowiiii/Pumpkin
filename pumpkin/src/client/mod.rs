@@ -14,11 +14,15 @@ use authentication::GameProfile;
 use mio::{event::Event, net::TcpStream, Token};
 use num_traits::ToPrimitive;
 use pumpkin_protocol::{
-    bytebuf::packet_id::Packet, client::{
+    bytebuf::packet_id::Packet,
+    client::{
         config::CConfigDisconnect,
         login::CLoginDisconnect,
         play::{CGameEvent, CPlayDisconnect, CSyncPlayerPostion, CSystemChatMessge},
-    }, packet_decoder::PacketDecoder, packet_encoder::PacketEncoder, server::{
+    },
+    packet_decoder::PacketDecoder,
+    packet_encoder::PacketEncoder,
+    server::{
         config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks, SPluginMessage},
         handshake::SHandShake,
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
@@ -27,7 +31,9 @@ use pumpkin_protocol::{
             SPlayerPositionRotation, SPlayerRotation,
         },
         status::{SPingRequest, SStatusRequest},
-    }, text::TextComponent, ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket
+    },
+    text::TextComponent,
+    ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
 
 use std::io::Read;
@@ -165,7 +171,9 @@ impl Client {
         let bytebuf = &mut packet.bytebuf;
         match self.connection_state {
             pumpkin_protocol::ConnectionState::HandShake => match packet.id.0 {
-                SHandShake::PACKET_ID => self.handle_handshake(server, SHandShake::read(bytebuf).unwrap()),
+                SHandShake::PACKET_ID => {
+                    self.handle_handshake(server, SHandShake::read(bytebuf).unwrap())
+                }
                 _ => log::error!(
                     "Failed to handle packet id {} while in Handshake state",
                     packet.id.0
@@ -187,30 +195,29 @@ impl Client {
                 SLoginStart::PACKET_ID => {
                     self.handle_login_start(server, SLoginStart::read(bytebuf).unwrap())
                 }
-                SEncryptionResponse::PACKET_ID => {
-                    self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf).unwrap())
-                }
-                SLoginPluginResponse::PACKET_ID => {
-                    self.handle_plugin_response(server, SLoginPluginResponse::read(bytebuf).unwrap())
-                }
-                SLoginAcknowledged::PACKET_ID => {
-                    self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf).unwrap())
-                }
+                SEncryptionResponse::PACKET_ID => self.handle_encryption_response(
+                    server,
+                    SEncryptionResponse::read(bytebuf).unwrap(),
+                ),
+                SLoginPluginResponse::PACKET_ID => self
+                    .handle_plugin_response(server, SLoginPluginResponse::read(bytebuf).unwrap()),
+                SLoginAcknowledged::PACKET_ID => self
+                    .handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf).unwrap()),
                 _ => log::error!(
                     "Failed to handle packet id {} while in Login state",
                     packet.id.0
                 ),
             },
             pumpkin_protocol::ConnectionState::Config => match packet.id.0 {
-                SClientInformation::PACKET_ID => {
-                    self.handle_client_information(server, SClientInformation::read(bytebuf).unwrap())
-                }
+                SClientInformation::PACKET_ID => self
+                    .handle_client_information(server, SClientInformation::read(bytebuf).unwrap()),
                 SPluginMessage::PACKET_ID => {
                     self.handle_plugin_message(server, SPluginMessage::read(bytebuf).unwrap())
                 }
-                SAcknowledgeFinishConfig::PACKET_ID => {
-                    self.handle_config_acknowledged(server, SAcknowledgeFinishConfig::read(bytebuf).unwrap())
-                }
+                SAcknowledgeFinishConfig::PACKET_ID => self.handle_config_acknowledged(
+                    server,
+                    SAcknowledgeFinishConfig::read(bytebuf).unwrap(),
+                ),
                 SKnownPacks::PACKET_ID => {
                     self.handle_known_packs(server, SKnownPacks::read(bytebuf).unwrap())
                 }
@@ -243,9 +250,8 @@ impl Client {
             SPlayerPosition::PACKET_ID => {
                 self.handle_position(server, SPlayerPosition::read(bytebuf).unwrap())
             }
-            SPlayerPositionRotation::PACKET_ID => {
-                self.handle_position_rotation(server, SPlayerPositionRotation::read(bytebuf).unwrap())
-            }
+            SPlayerPositionRotation::PACKET_ID => self
+                .handle_position_rotation(server, SPlayerPositionRotation::read(bytebuf).unwrap()),
             SPlayerRotation::PACKET_ID => {
                 self.handle_rotation(server, SPlayerRotation::read(bytebuf).unwrap())
             }

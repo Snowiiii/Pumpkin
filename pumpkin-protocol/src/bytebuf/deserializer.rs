@@ -1,9 +1,7 @@
-use std::{error, fmt::Display};
+use std::fmt::Display;
 
-use serde::de::{self, DeserializeOwned, DeserializeSeed, SeqAccess};
+use serde::de::{self, DeserializeSeed, SeqAccess};
 use thiserror::Error;
-
-use crate::VarInt;
 
 use super::ByteBuffer;
 
@@ -34,7 +32,7 @@ impl<'a> Deserializer<'a> {
 impl<'a, 'de> de::Deserializer<'de> for Deserializer<'a> {
     type Error = DeserializerError;
 
-    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
@@ -43,7 +41,7 @@ impl<'a, 'de> de::Deserializer<'de> for Deserializer<'a> {
         )
     }
 
-    fn deserialize_bool<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
@@ -120,7 +118,7 @@ impl<'a, 'de> de::Deserializer<'de> for Deserializer<'a> {
         visitor.visit_f64(self.inner.get_f64())
     }
 
-    fn deserialize_char<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_char<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
@@ -131,10 +129,7 @@ impl<'a, 'de> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: de::Visitor<'de>,
     {
-        let string = self
-            .inner
-            .get_string()
-            .map_err(|e| DeserializerError::Stdio(e))?;
+        let string = self.inner.get_string().map_err(DeserializerError::Stdio)?;
         visitor.visit_str(&string)
     }
 
@@ -142,35 +137,32 @@ impl<'a, 'de> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: de::Visitor<'de>,
     {
-        let string = self
-            .inner
-            .get_string()
-            .map_err(|e| DeserializerError::Stdio(e))?;
+        let string = self.inner.get_string().map_err(DeserializerError::Stdio)?;
         visitor.visit_str(&string)
     }
 
-    fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_bytes<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
         unimplemented!()
     }
 
-    fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_byte_buf<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
         unimplemented!()
     }
 
-    fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_option<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
         unimplemented!()
     }
 
-    fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_unit<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
@@ -179,8 +171,8 @@ impl<'a, 'de> de::Deserializer<'de> for Deserializer<'a> {
 
     fn deserialize_unit_struct<V>(
         self,
-        name: &'static str,
-        visitor: V,
+        _name: &'static str,
+        _visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
@@ -190,8 +182,8 @@ impl<'a, 'de> de::Deserializer<'de> for Deserializer<'a> {
 
     fn deserialize_newtype_struct<V>(
         self,
-        name: &'static str,
-        visitor: V,
+        _name: &'static str,
+        _visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
@@ -217,7 +209,7 @@ impl<'a, 'de> de::Deserializer<'de> for Deserializer<'a> {
                 let value = DeserializeSeed::deserialize(
                     seed,
                     Deserializer {
-                        inner: &mut self.deserializer.inner,
+                        inner: self.deserializer.inner,
                     },
                 )?;
                 Ok(Some(value))
@@ -252,7 +244,7 @@ impl<'a, 'de> de::Deserializer<'de> for Deserializer<'a> {
                     let value = DeserializeSeed::deserialize(
                         seed,
                         Deserializer {
-                            inner: &mut self.deserializer.inner,
+                            inner: self.deserializer.inner,
                         },
                     )?;
                     Ok(Some(value))
@@ -272,9 +264,9 @@ impl<'a, 'de> de::Deserializer<'de> for Deserializer<'a> {
 
     fn deserialize_tuple_struct<V>(
         self,
-        name: &'static str,
-        len: usize,
-        visitor: V,
+        _name: &'static str,
+        _len: usize,
+        _visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
@@ -282,7 +274,7 @@ impl<'a, 'de> de::Deserializer<'de> for Deserializer<'a> {
         unimplemented!()
     }
 
-    fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_map<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
@@ -291,7 +283,7 @@ impl<'a, 'de> de::Deserializer<'de> for Deserializer<'a> {
 
     fn deserialize_struct<V>(
         self,
-        name: &'static str,
+        _name: &'static str,
         fields: &'static [&'static str],
         visitor: V,
     ) -> Result<V::Value, Self::Error>
@@ -303,9 +295,9 @@ impl<'a, 'de> de::Deserializer<'de> for Deserializer<'a> {
 
     fn deserialize_enum<V>(
         self,
-        name: &'static str,
-        variants: &'static [&'static str],
-        visitor: V,
+        _name: &'static str,
+        _variants: &'static [&'static str],
+        _visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
@@ -313,14 +305,14 @@ impl<'a, 'de> de::Deserializer<'de> for Deserializer<'a> {
         unimplemented!()
     }
 
-    fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_identifier<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
         unimplemented!()
     }
 
-    fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_ignored_any<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {

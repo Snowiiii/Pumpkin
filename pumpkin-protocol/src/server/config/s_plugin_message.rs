@@ -2,7 +2,7 @@ use pumpkin_macros::packet;
 
 use crate::{
     bytebuf::{ByteBuffer, DeserializerError},
-    Identifier, ServerPacket, VarInt,
+    Identifier, ServerPacket,
 };
 
 #[packet(0x02)]

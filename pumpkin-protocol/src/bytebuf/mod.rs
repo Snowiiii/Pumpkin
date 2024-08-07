@@ -308,7 +308,10 @@ impl ByteBuffer {
 mod test {
     use serde::{Deserialize, Serialize};
 
-    use crate::{bytebuf::{deserializer, serializer, ByteBuffer}, VarInt};
+    use crate::{
+        bytebuf::{deserializer, serializer, ByteBuffer},
+        VarInt,
+    };
 
     #[test]
     fn test_i32_reserialize() {
