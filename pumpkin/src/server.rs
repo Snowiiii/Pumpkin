@@ -26,7 +26,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     client::Client,
-    configuration::{AdvancedConfiguration, BasicConfiguration},
+    config::{AdvancedConfiguration, BasicConfiguration},
     entity::player::{GameMode, Player},
 };
 

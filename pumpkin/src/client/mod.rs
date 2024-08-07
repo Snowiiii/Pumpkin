@@ -38,7 +38,7 @@ use pumpkin_protocol::{
 use std::io::Read;
 use thiserror::Error;
 
-mod authentication;
+pub mod authentication;
 mod client_packet;
 pub mod player_packet;
 

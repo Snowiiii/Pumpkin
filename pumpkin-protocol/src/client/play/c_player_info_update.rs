@@ -34,10 +34,7 @@ impl<'a> ClientPacket for CPlayerInfoUpdate<'a> {
                         p.put_list::<Property>(properties, |p, v| {
                             p.put_string(&v.name);
                             p.put_string(&v.value);
-                            // has signature ?
-                            // todo: for some reason we get "got too many bytes error when using a signature"
-                            p.put_bool(false);
-                            // todo signature
+                            p.put_option(&v.signature, |p, v| p.put_string(v));
                         });
                     }
                     PlayerAction::InitializeChat(_) => todo!(),

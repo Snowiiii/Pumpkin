@@ -1,19 +1,49 @@
-use std::net::IpAddr;
+use std::{collections::HashMap, net::IpAddr};
 
+use base64::{engine::general_purpose, Engine};
 use num_bigint::BigInt;
 use pumpkin_protocol::Property;
-use reqwest::StatusCode;
-use serde::Deserialize;
+use reqwest::{StatusCode, Url};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::server::Server;
+use crate::{config::auth_config::TextureConfig, server::Server};
+
+#[derive(Deserialize, Clone, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
+pub struct ProfileTextures {
+    timestamp: i64,
+    profileId: Uuid,
+    profileName: String,
+    signatureRequired: bool,
+    textures: HashMap<String, Texture>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
+pub struct Texture {
+    url: String,
+    metadata: Option<HashMap<String, String>>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
+pub enum ProfileAction {
+    #[serde(rename = "FORCED_NAME_CHANGE")]
+    ForcedNameChange,
+    #[serde(rename = "USING_BANNED_SKIN")]
+    UsingBannedSkin,
+}
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct GameProfile {
     pub id: Uuid,
     pub name: String,
     pub properties: Vec<Property>,
+    #[serde(rename = "profileActions")]
+    pub profile_actions: Option<Vec<ProfileAction>>,
 }
 
 pub fn authenticate(
@@ -22,8 +52,13 @@ pub fn authenticate(
     ip: &IpAddr,
     server: &mut Server,
 ) -> Result<GameProfile, AuthError> {
+    assert!(server.advanced_config.authentication.use_authentication);
     assert!(server.auth_client.is_some());
-    let address = if server.base_config.prevent_proxy_connections {
+    let address = if server
+        .advanced_config
+        .authentication
+        .prevent_proxy_connections
+    {
         format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}")
     } else {
         format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}")
@@ -44,8 +79,30 @@ pub fn authenticate(
     Ok(profile)
 }
 
+pub fn unpack_textures(property: Property, config: &TextureConfig) {
+    // todo: no unwrap
+    let from64 = general_purpose::STANDARD.decode(property.value).unwrap();
+    let textures: ProfileTextures = serde_json::from_slice(&from64).unwrap();
+    dbg!(&textures);
+    for texture in textures.textures {
+        is_texture_url_valid(Url::parse(&texture.1.url).unwrap(), config);
+    }
+}
+
 pub fn auth_digest(bytes: &[u8]) -> String {
     BigInt::from_signed_bytes_be(bytes).to_str_radix(16)
+}
+
+pub fn is_texture_url_valid(url: Url, config: &TextureConfig) -> bool {
+    let scheme = url.scheme();
+    if !config.allowed_url_schemes.contains(&scheme.to_string()) {
+        return false;
+    }
+    let domain = url.domain().unwrap_or("");
+    if !config.allowed_url_domains.contains(&domain.to_string()) {
+        return false;
+    }
+    true
 }
 
 #[derive(Error, Debug)]
