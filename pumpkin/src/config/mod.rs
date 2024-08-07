@@ -1,8 +1,11 @@
 use std::path::Path;
 
+use auth_config::Authentication;
 use serde::{Deserialize, Serialize};
 
 use crate::{entity::player::GameMode, server::Difficulty};
+
+pub mod auth_config;
 
 /// Current Config version of the Base Config
 const CURRENT_BASE_VERSION: &str = "1.0.0";
@@ -12,19 +15,15 @@ const CURRENT_BASE_VERSION: &str = "1.0.0";
 /// This also allows you get some Performance or Resource boosts.
 /// Important: The Configuration should match Vanilla by default
 pub struct AdvancedConfiguration {
-    /// Requires Online mode
-    /// Should player have skins
-    pub use_skins: bool,
-    /// Should chat be enabled
-    pub enable_chat: bool,
-
     pub commands: Commands,
+    pub authentication: Authentication,
 }
 
 #[derive(Deserialize, Serialize)]
 pub struct Commands {
-    // Are commands from the Console accepted ?
+    /// Are commands from the Console accepted ?
     pub use_console: bool,
+    // todo commands...
 }
 
 impl Default for Commands {
@@ -37,8 +36,7 @@ impl Default for Commands {
 impl Default for AdvancedConfiguration {
     fn default() -> Self {
         Self {
-            use_skins: true,
-            enable_chat: true,
+            authentication: Authentication::default(),
             commands: Commands::default(),
         }
     }
@@ -74,8 +72,6 @@ pub struct BasicConfiguration {
     pub online_mode: bool,
     /// Whether packet encryption is enabled. Required when online mode is enabled.
     pub encryption: bool,
-    /// Whether to prevent proxy connections.
-    pub prevent_proxy_connections: bool,
     /// The server's description displayed on the status screen.
     pub motd: String,
     /// The default game mode for players.
@@ -99,7 +95,6 @@ impl Default for BasicConfiguration {
             hardcore: false,
             online_mode: true,
             encryption: true,
-            prevent_proxy_connections: true,
             motd: "A Blazing fast Pumpkin Server!".to_string(),
             default_gamemode: GameMode::Survival,
         }

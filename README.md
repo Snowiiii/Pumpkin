@@ -14,8 +14,10 @@ Pumpkin is currently under heavy development.
 
 ## What Pumpkin aims to be:
 - A fast, efficient, and scalable Minecraft server
+- Use Multi-Threading
 - Compatible with the latest Minecraft server version
 - Adherent to Vanilla game mechanics
+- Be Secure and prevent all Exploits found
 - Highly configurable with the ability to disable unnecessary features
 - A platform for plugin development
 
@@ -51,7 +53,7 @@ Pumpkin is currently under heavy development.
   - [x] Player Client brand
   - [x] Player Teleport
   - [x] Player Movement
-  - [ ] Player Animation
+  - [x] Player Animation
   - [ ] Player Inventory
   - [ ] Player Attack
 - Server

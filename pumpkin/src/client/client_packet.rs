@@ -23,7 +23,10 @@ use crate::{
     server::Server,
 };
 
-use super::{authentication::auth_digest, Client, EncryptionError, PlayerConfig};
+use super::{
+    authentication::{auth_digest, unpack_textures},
+    Client, EncryptionError, PlayerConfig,
+};
 
 /// Processes incoming Packets from the Client to the Server
 /// Implements the `Client` Packets
@@ -45,12 +48,15 @@ impl Client {
     }
 
     pub fn handle_login_start(&mut self, server: &mut Server, login_start: SLoginStart) {
+        // todo: do basic name validation
         dbg!("login start");
         // default game profile, when no online mode
+        // todo: make offline uuid
         self.gameprofile = Some(GameProfile {
             id: login_start.uuid,
             name: login_start.name,
             properties: vec![],
+            profile_actions: None,
         });
 
         // todo: check config for encryption
@@ -91,9 +97,39 @@ impl Client {
                 &ip,
                 server,
             ) {
-                Ok(p) => self.gameprofile = Some(p),
+                Ok(p) => {
+                    // Check if player should join
+                    if let Some(p) = &p.profile_actions {
+                        if !server
+                            .advanced_config
+                            .authentication
+                            .player_profile
+                            .allow_banned_players
+                        {
+                            if !p.is_empty() {
+                                self.kick("Your account can't join");
+                            }
+                        } else {
+                            for allowed in server
+                                .advanced_config
+                                .authentication
+                                .player_profile
+                                .allowed_actions
+                                .clone()
+                            {
+                                if !p.contains(&allowed) {
+                                    self.kick("Your account can't join");
+                                }
+                            }
+                        }
+                    }
+                    self.gameprofile = Some(p);
+                }
                 Err(e) => self.kick(&e.to_string()),
             }
+        }
+        for ele in self.gameprofile.as_ref().unwrap().properties.clone() {
+            unpack_textures(ele, &server.advanced_config.authentication.textures);
         }
 
         if let Some(profile) = self.gameprofile.as_ref().cloned() {

@@ -299,6 +299,17 @@ impl ByteBuffer {
         self.buffer.put_slice(src)
     }
 
+    pub fn put<T: Buf>(&mut self, src: T)
+    where
+        Self: Sized,
+    {
+        self.buffer.put(src)
+    }
+
+    pub fn reserve(&mut self, additional: usize) {
+        self.buffer.reserve(additional)
+    }
+
     pub fn get_slice(&mut self) -> BytesMut {
         self.buffer.split()
     }

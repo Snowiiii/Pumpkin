@@ -4,12 +4,12 @@ use std::io::{self};
 
 use client::Client;
 use commands::handle_command;
-use configuration::AdvancedConfiguration;
+use config::AdvancedConfiguration;
 
 use std::{collections::HashMap, rc::Rc, thread};
 
 use client::interrupted;
-use configuration::BasicConfiguration;
+use config::BasicConfiguration;
 use server::Server;
 
 // Setup some tokens to allow us to identify which event is for which socket.
@@ -17,7 +17,7 @@ const SERVER: Token = Token(0);
 
 pub mod client;
 pub mod commands;
-pub mod configuration;
+pub mod config;
 pub mod entity;
 pub mod server;
 pub mod util;
@@ -104,6 +104,9 @@ fn main() -> io::Result<()> {
                             return Err(e);
                         }
                     };
+                    if let Err(e) = connection.set_nodelay(true) {
+                        log::warn!("failed to set TCP_NODELAY {e}");
+                    }
 
                     log::info!("Accepted connection from: {}", address);
 

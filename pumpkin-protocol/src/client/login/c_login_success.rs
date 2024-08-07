@@ -33,10 +33,7 @@ impl<'a> ClientPacket for CLoginSuccess<'a> {
         bytebuf.put_list::<Property>(self.properties, |p, v| {
             p.put_string(&v.name);
             p.put_string(&v.value);
-            // has signature ?
-            // todo: for some reason we get "got too many bytes error when using a signature"
-            p.put_bool(false);
-            // p.put_option(&v.signature, |p,v| p.put_string(v));
+            p.put_option(&v.signature, |p, v| p.put_string(v));
         });
         bytebuf.put_bool(self.strict_error_handling);
     }

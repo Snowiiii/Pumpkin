@@ -1,10 +1,13 @@
 mod c_change_difficulty;
 mod c_chunk_data_update_light;
+mod c_entity_animation;
+mod c_entity_metadata;
 mod c_game_event;
 mod c_head_rot;
 mod c_login;
 mod c_play_disconnect;
 mod c_player_abilities;
+mod c_player_chat_message;
 mod c_player_info_update;
 mod c_set_held_item;
 mod c_spawn_player;
@@ -17,11 +20,14 @@ mod player_action;
 
 pub use c_change_difficulty::*;
 pub use c_chunk_data_update_light::*;
+pub use c_entity_animation::*;
+pub use c_entity_metadata::*;
 pub use c_game_event::*;
 pub use c_head_rot::*;
 pub use c_login::*;
 pub use c_play_disconnect::*;
 pub use c_player_abilities::*;
+pub use c_player_chat_message::*;
 pub use c_player_info_update::*;
 pub use c_set_held_item::*;
 pub use c_spawn_player::*;
