@@ -1,6 +1,6 @@
 use num_derive::ToPrimitive;
 
-// todo
+// TODO
 #[derive(ToPrimitive, Clone)]
 pub enum EntityType {
     Zombie = 124,

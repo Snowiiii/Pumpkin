@@ -18,7 +18,7 @@ impl<'a> Command<'a> for GamemodeCommand {
         let args: Vec<&str> = command.split_whitespace().collect();
 
         if args.len() != 2 {
-            // todo red
+            // TODO: red
             player.send_system_message("Usage: /gamemode <mode>".into());
             return;
         }
@@ -30,13 +30,13 @@ impl<'a> Command<'a> for GamemodeCommand {
                 player.send_system_message(format!("Set own game mode to {mode_str}").into());
             }
             Err(_) => {
-                // todo red
+                // TODO: red
                 player.send_system_message("Invalid gamemode".into());
             }
         }
     }
 
-    // todo: support console, (name required)
+    // TODO: support console, (name required)
     fn player_required() -> bool {
         true
     }

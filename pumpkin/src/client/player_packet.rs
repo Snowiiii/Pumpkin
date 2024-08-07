@@ -49,7 +49,7 @@ impl Client {
         entity.x = position.x;
         entity.y = position.feet_y;
         entity.z = position.z;
-        // todo: teleport when moving > 8 block
+        // TODO: teleport when moving > 8 block
 
         // send new position to all other players
         let on_ground = player.on_ground;

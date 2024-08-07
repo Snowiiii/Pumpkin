@@ -29,7 +29,7 @@ pub enum CommandSender<'a> {
 impl<'a> CommandSender<'a> {
     pub fn send_message(&mut self, text: TextComponent) {
         match self {
-            // todo: add color and stuff to console
+            // TODO: add color and stuff to console
             CommandSender::Console => log::info!("{}", text.text),
             CommandSender::Player(c) => c.send_system_message(text),
         }
@@ -66,6 +66,6 @@ pub fn handle_command(sender: &mut CommandSender, command: String) {
         GamemodeCommand::on_execute(sender, command);
         return;
     }
-    // todo: red color
+    // TODO: red color
     sender.send_message("Command not Found".into());
 }

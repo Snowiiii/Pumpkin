@@ -50,8 +50,8 @@ pub struct Server {
 
     pub current_clients: HashMap<Rc<Token>, Rc<RefCell<Client>>>,
 
-    // todo replace with HashMap <World, Player>
-    entity_id: AtomicI32, // todo: place this into every world
+    // TODO: replace with HashMap <World, Player>
+    entity_id: AtomicI32, // TODO: place this into every world
     pub base_config: BasicConfiguration,
     pub advanced_config: AdvancedConfiguration,
 
@@ -66,7 +66,7 @@ impl Server {
             .expect("Failed to parse Status response into JSON");
         let cached_server_brand = Self::build_brand();
 
-        // todo, only create when needed
+        // TODO: only create when needed
         let (public_key, private_key) = Self::generate_keys();
 
         let public_key_der = rsa_der::public_key_to_der(
@@ -100,7 +100,7 @@ impl Server {
 
     // Returns Tokens to remove
     pub fn poll(&mut self, client: &mut Client, _poll: &Poll, event: &Event) {
-        // todo, Poll players in every world
+        // TODO: Poll players in every world
         client.poll(self, event)
     }
 
@@ -120,7 +120,7 @@ impl Server {
     }
 
     // here is where the magic happens
-    // todo: do this in a world
+    // TODO: do this in a world
     pub fn spawn_player(&mut self, client: &mut Client) {
         // This code follows the vanilla packet order
         let entity_id = self.new_entity_id();
@@ -134,8 +134,8 @@ impl Server {
             self.base_config.hardcore,
             vec!["minecraft:overworld".into()],
             self.base_config.max_players.into(),
-            self.base_config.view_distance.into(), //  view distance todo
-            self.base_config.simulation_distance.into(), // sim view dinstance todo
+            self.base_config.view_distance.into(), //  TODO: view distance
+            self.base_config.simulation_distance.into(), // TODO: sim view dinstance
             false,
             false,
             false,
@@ -290,7 +290,7 @@ impl Server {
         }
     }
 
-    // todo: do this in a world
+    // TODO: do this in a world
     fn _spawn_test_chunk(client: &mut Client) {
         let test_chunk = TestChunk::new();
         client.send_packet(CChunkDataUpdateLight::new(
