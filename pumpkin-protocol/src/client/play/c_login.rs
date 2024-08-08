@@ -8,6 +8,7 @@ use crate::VarInt;
 pub struct CLogin {
     entity_id: i32,
     is_hardcore: bool,
+    dimension_count: VarInt,
     dimension_names: Vec<String>,
     max_players: VarInt,
     view_distance: VarInt,
@@ -53,6 +54,7 @@ impl CLogin {
         Self {
             entity_id,
             is_hardcore,
+            dimension_count: VarInt(dimension_names.len() as i32),
             dimension_names,
             max_players,
             view_distance,

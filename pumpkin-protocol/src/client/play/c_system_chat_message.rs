@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use crate::text::TextComponent;
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 #[packet(0x6C)]
 pub struct CSystemChatMessge {
     content: TextComponent,

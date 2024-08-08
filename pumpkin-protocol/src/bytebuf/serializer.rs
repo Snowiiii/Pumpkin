@@ -1,9 +1,10 @@
 use std::fmt::Display;
 
-use serde::{ser, Serialize};
+use serde::{
+    ser::{self},
+    Serialize,
+};
 use thiserror::Error;
-
-use crate::VarInt;
 
 use super::ByteBuffer;
 
@@ -126,10 +127,9 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         self.output.put_bool(false);
         Ok(())
     }
-    fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
-        if let Some(len) = len {
-            self.output.put_var_int(&VarInt(len as i32));
-        }
+    fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
+        // here is where all arrays/list getting written, usally we prefix the length of every length with an var int. The problem is
+        // that byte arrays also getting thrown in here, and we don't want to prefix them
         Ok(self)
     }
     fn serialize_some<T>(self, value: &T) -> Result<Self::Ok, Self::Error>
@@ -137,7 +137,6 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         T: ?Sized + Serialize,
     {
         self.output.put_bool(true);
-        dbg!("aa");
         value.serialize(self)
     }
     fn serialize_str(self, v: &str) -> Result<Self::Ok, Self::Error> {
@@ -288,7 +287,7 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
     }
 
     fn end(self) -> Result<(), Self::Error> {
-        todo!()
+        Ok(())
     }
 }
 

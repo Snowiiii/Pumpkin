@@ -16,6 +16,7 @@ pub trait Command<'a> {
     fn on_execute(sender: &mut CommandSender<'a>, command: String);
 
     /// Specifies wether the Command Sender has to be a Player
+    /// TODO: implement
     fn player_required() -> bool {
         false
     }

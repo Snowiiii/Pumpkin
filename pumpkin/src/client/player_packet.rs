@@ -1,13 +1,14 @@
 use num_traits::FromPrimitive;
 use pumpkin_protocol::{
     client::play::{
-        Animation, CEntityAnimation, CHeadRot, CUpdateEntityPos, CUpdateEntityPosRot,
-        CUpdateEntityRot,
+        Animation, CEntityAnimation, CHeadRot, CSystemChatMessge, CUpdateEntityPos,
+        CUpdateEntityPosRot, CUpdateEntityRot,
     },
     server::play::{
-        SChatCommand, SConfirmTeleport, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
-        SPlayerRotation, SSwingArm,
+        SChatCommand, SChatMessage, SConfirmTeleport, SPlayerCommand, SPlayerPosition,
+        SPlayerPositionRotation, SPlayerRotation, SSwingArm,
     },
+    text::TextComponent,
 };
 
 use crate::{
@@ -170,5 +171,46 @@ impl Client {
         let player = self.player.as_mut().unwrap();
         let id = player.entity_id();
         server.broadcast_packet_expect(self, CEntityAnimation::new(id.into(), animation as u8))
+    }
+
+    pub fn handle_chat_message(&mut self, server: &mut Server, chat_message: SChatMessage) {
+        let message = chat_message.message;
+        // TODO: filter message & validation
+        let gameprofile = self.gameprofile.as_ref().unwrap();
+        dbg!("got message");
+        // yeah a "raw system message", the ugly way to do that, but it works
+        server.broadcast_packet(
+            self,
+            CSystemChatMessge::new(
+                TextComponent::from(format!("{}: {}", gameprofile.name, message)),
+                false,
+            ),
+        )
+        /*server.broadcast_packet(
+        self,
+        CPlayerChatMessage::new(
+            gameprofile.id,
+            0.into(),
+            None,
+            message.clone(),
+            chat_message.timestamp,
+            chat_message.salt,
+            &[],
+            Some(TextComponent::from(message.clone())),
+            pumpkin_protocol::VarInt(FilterType::PassThrough as i32),
+            0.into(),
+            TextComponent::from(gameprofile.name.clone()),
+            None,
+        ),
+        ) */
+        /* server.broadcast_packet(
+            self,
+            CDisguisedChatMessage::new(
+                TextComponent::from(message.clone()),
+                VarInt(0),
+                gameprofile.name.clone().into(),
+                None,
+            ),
+        ) */
     }
 }

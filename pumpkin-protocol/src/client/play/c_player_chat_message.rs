@@ -1,10 +1,12 @@
-use num_derive::FromPrimitive;
+use num_derive::{FromPrimitive, ToPrimitive};
+use pumpkin_macros::packet;
 use serde::Serialize;
 
 use crate::{text::TextComponent, VarInt};
 
-#[derive(Serialize)]
-pub struct PlayerChatMessage<'a> {
+#[derive(Serialize, Clone)]
+#[packet(0x39)]
+pub struct CPlayerChatMessage<'a> {
     sender: uuid::Uuid,
     index: VarInt,
     message_signature: Option<&'a [u8]>,
@@ -20,7 +22,7 @@ pub struct PlayerChatMessage<'a> {
     target_name: Option<TextComponent>,
 }
 
-impl<'a> PlayerChatMessage<'a> {
+impl<'a> CPlayerChatMessage<'a> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         sender: uuid::Uuid,
@@ -59,7 +61,7 @@ pub struct PreviousMessage<'a> {
     signature: Option<&'a [u8]>,
 }
 
-#[derive(FromPrimitive)]
+#[derive(FromPrimitive, ToPrimitive)]
 pub enum FilterType {
     /// Message is not filtered at all
     PassThrough,

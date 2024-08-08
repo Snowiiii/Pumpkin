@@ -11,7 +11,7 @@ use pumpkin_protocol::{
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
         status::{SPingRequest, SStatusRequest},
     },
-    ConnectionState, KnownPack,
+    ConnectionState, KnownPack, RawBytes,
 };
 use pumpkin_registry::Registry;
 use rsa::Pkcs1v15Encrypt;
@@ -64,8 +64,8 @@ impl Client {
         let public_key_der = &server.public_key_der;
         let packet = CEncryptionRequest::new(
             "",
-            public_key_der,
-            &verify_token,
+            RawBytes(public_key_der),
+            RawBytes(&verify_token),
             server.base_config.online_mode, // TODO
         );
         self.send_packet(packet);

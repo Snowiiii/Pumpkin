@@ -155,6 +155,7 @@ impl Server {
             0.into(),
             false,
         ));
+        dbg!("sending abilities");
         // player abilities
         client.send_packet(CPlayerAbilities::new(0x02, 00.2, 0.1));
 

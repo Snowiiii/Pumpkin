@@ -57,7 +57,7 @@ Pumpkin is currently under heavy development.
   - [ ] Player Inventory
   - [ ] Player Attack
 - Server
-  - [ ] Chat
+  - [x] Chat
   - [x] Commands
 
 Check out our [Github Project](https://github.com/users/Snowiiii/projects/12/views/1) to see current progress

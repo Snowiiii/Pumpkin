@@ -91,6 +91,16 @@ impl VarInt {
     }
 }
 
+pub struct RawBytes<'a>(pub &'a [u8]);
+impl<'a> Serialize for RawBytes<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_bytes(self.0)
+    }
+}
+
 impl From<i32> for VarInt {
     fn from(value: i32) -> Self {
         VarInt(value)

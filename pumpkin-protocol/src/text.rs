@@ -15,7 +15,7 @@ impl serde::Serialize for TextComponent {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_bytes(&self.encode())
+        serializer.serialize_bytes(self.encode().as_slice())
     }
 }
 

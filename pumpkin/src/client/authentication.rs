@@ -84,7 +84,6 @@ pub fn unpack_textures(property: Property, config: &TextureConfig) {
     // TODO: no unwrap
     let from64 = general_purpose::STANDARD.decode(property.value).unwrap();
     let textures: ProfileTextures = serde_json::from_slice(&from64).unwrap();
-    dbg!(&textures);
     for texture in textures.textures {
         is_texture_url_valid(Url::parse(&texture.1.url).unwrap(), config);
     }
