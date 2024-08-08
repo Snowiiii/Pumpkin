@@ -62,6 +62,20 @@ Pumpkin is currently under heavy development.
 
 Check out our [Github Project](https://github.com/users/Snowiiii/projects/12/views/1) to see current progress
 
+## How to run
+There are currently no release builds, because there was no release :D.
+
+To get Pumpkin running you first have to clone it:
+```
+git clone https://github.com/Snowiiii/Pumpkin.git
+cd Pumpkin
+```
+You also may have to [install rust](https://www.rust-lang.org/tools/install) when you don't already have.
+Then run it:
+```
+cargo run --release
+```
+
 ## Contributions
 Contributions are welcome!. See [CONTRIBUTING.md](CONTRIBUTING.md)
 
