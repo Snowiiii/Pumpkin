@@ -2,7 +2,7 @@ use num_traits::FromPrimitive;
 use pumpkin_protocol::{
     client::{
         config::{CFinishConfig, CKnownPacks, CRegistryData},
-        login::{CEncryptionRequest, CLoginSuccess},
+        login::{CEncryptionRequest, CLoginSuccess, CSetCompression},
         status::{CPingResponse, CStatusResponse},
     },
     server::{
@@ -132,6 +132,17 @@ impl Client {
         }
         for ele in self.gameprofile.as_ref().unwrap().properties.clone() {
             unpack_textures(ele, &server.advanced_config.authentication.textures);
+        }
+
+        // enable compression
+        if server.advanced_config.packet_compression.enabled {
+            let threshold = server
+                .advanced_config
+                .packet_compression
+                .compression_threshold;
+            let level = server.advanced_config.packet_compression.compression_level;
+            self.send_packet(CSetCompression::new(threshold.into()));
+            self.set_compression(Some((threshold, level)));
         }
 
         if let Some(profile) = self.gameprofile.as_ref().cloned() {

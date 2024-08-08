@@ -33,7 +33,7 @@ Pumpkin is currently under heavy development.
 - Login
   - [x] Authentication
   - [x] Encryption
-  - [ ] Packet Compression
+  - [x] Packet Compression
 - Player Configuration
   - [x] Registries (biome types, paintings, dimensions)
   - [x] Server Brand

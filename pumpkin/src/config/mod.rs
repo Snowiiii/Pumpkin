@@ -17,6 +17,7 @@ const CURRENT_BASE_VERSION: &str = "1.0.0";
 pub struct AdvancedConfiguration {
     pub commands: Commands,
     pub authentication: Authentication,
+    pub packet_compression: Compression,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -24,6 +25,29 @@ pub struct Commands {
     /// Are commands from the Console accepted ?
     pub use_console: bool,
     // TODO: commands...
+}
+
+#[derive(Deserialize, Serialize)]
+// Packet compression
+pub struct Compression {
+    // Is compression enabled ?
+    pub enabled: bool,
+    // The compression threshold used when compression is enabled
+    pub compression_threshold: u32,
+    // A value between 0..9
+    // 1 = Optimize for the best speed of encoding.
+    // 9 = Optimize for the size of data being encoded.
+    pub compression_level: u32,
+}
+
+impl Default for Compression {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            compression_threshold: 256,
+            compression_level: 4,
+        }
+    }
 }
 
 impl Default for Commands {
@@ -38,6 +62,7 @@ impl Default for AdvancedConfiguration {
         Self {
             authentication: Authentication::default(),
             commands: Commands::default(),
+            packet_compression: Compression::default(),
         }
     }
 }

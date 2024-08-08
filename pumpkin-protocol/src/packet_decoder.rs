@@ -1,6 +1,11 @@
 use aes::cipher::{generic_array::GenericArray, BlockDecryptMut, BlockSizeUser, KeyIvInit};
 use bytes::{Buf, BytesMut};
 
+use std::io::Write;
+
+use bytes::BufMut;
+use flate2::write::ZlibDecoder;
+
 use crate::{
     bytebuf::ByteBuffer, PacketError, RawPacket, VarInt, VarIntDecodeError, MAX_PACKET_SIZE,
 };
@@ -11,7 +16,8 @@ type Cipher = cfb8::Decryptor<aes::Aes128>;
 #[derive(Default)]
 pub struct PacketDecoder {
     buf: BytesMut,
-
+    decompress_buf: BytesMut,
+    compression: Option<u32>,
     cipher: Option<Cipher>,
 }
 
@@ -37,11 +43,46 @@ impl PacketDecoder {
         let packet_len_len = VarInt(packet_len).written_size();
 
         let mut data;
+        if self.compression.is_some() {
+            r = &r[..packet_len as usize];
 
-        // no compression
+            let data_len = VarInt::decode(&mut r).map_err(|_| PacketError::TooLong)?.0;
 
-        self.buf.advance(packet_len_len);
-        data = self.buf.split_to(packet_len as usize);
+            if !(0..=MAX_PACKET_SIZE).contains(&data_len) {
+                Err(PacketError::OutOfBounds)?
+            }
+
+            // Is this packet compressed?
+            if data_len > 0 {
+                debug_assert!(self.decompress_buf.is_empty());
+
+                self.decompress_buf.put_bytes(0, data_len as usize);
+
+                // TODO: use libdeflater or zune-inflate?
+                let mut z = ZlibDecoder::new(&mut self.decompress_buf[..]);
+
+                z.write_all(r).map_err(|_| PacketError::FailedWrite)?;
+                z.finish().map_err(|_| PacketError::FailedFinish)?;
+
+                let total_packet_len = VarInt(packet_len).written_size() + packet_len as usize;
+
+                self.buf.advance(total_packet_len);
+
+                data = self.decompress_buf.split();
+            } else {
+                debug_assert_eq!(data_len, 0);
+
+                let remaining_len = r.len();
+
+                self.buf.advance(packet_len_len + 1);
+
+                data = self.buf.split_to(remaining_len);
+            }
+        } else {
+            // no compression
+            self.buf.advance(packet_len_len);
+            data = self.buf.split_to(packet_len as usize);
+        }
 
         r = &data[..];
         let packet_id = VarInt::decode(&mut r).map_err(|_| PacketError::DecodeID)?;
@@ -62,6 +103,10 @@ impl PacketDecoder {
         Self::decrypt_bytes(&mut cipher, &mut self.buf);
 
         self.cipher = Some(cipher);
+    }
+
+    pub fn set_compression(&mut self, compression: Option<u32>) {
+        self.compression = compression;
     }
 
     fn decrypt_bytes(cipher: &mut Cipher, bytes: &mut [u8]) {

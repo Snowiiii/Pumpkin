@@ -111,6 +111,12 @@ impl Client {
         Ok(())
     }
 
+    // Compression threshold, Compression level
+    pub fn set_compression(&mut self, compression: Option<(u32, u32)>) {
+        self.dec.set_compression(compression.map(|v| v.0));
+        self.enc.set_compression(compression);
+    }
+
     pub fn is_player(&self) -> bool {
         self.player.is_some()
     }

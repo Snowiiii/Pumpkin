@@ -145,8 +145,16 @@ pub enum PacketError {
     DecodeID,
     #[error("failed to encode packet ID")]
     EncodeID,
+    #[error("failed to encode packet Length")]
+    EncodeLength,
+    #[error("failed to encode packet data")]
+    EncodeData,
     #[error("failed to write encoded packet")]
     EncodeFailedWrite,
+    #[error("failed to write into decoder")]
+    FailedWrite,
+    #[error("failed to flush decoder")]
+    FailedFinish,
     #[error("failed to write encoded packet to connection")]
     ConnectionWrite,
     #[error("packet exceeds maximum length")]
