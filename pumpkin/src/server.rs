@@ -7,6 +7,7 @@ use std::{
 };
 
 use base64::{engine::general_purpose, Engine};
+use image::GenericImageView;
 use mio::{event::Event, Poll, Token};
 use num_traits::ToPrimitive;
 use pumpkin_entity::{entity_type::EntityType, EntityId};
@@ -21,7 +22,7 @@ use pumpkin_protocol::{
     BitSet, ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
 };
 use pumpkin_world::chunk::TestChunk;
-use rsa::{rand_core::OsRng, traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
+use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -67,6 +68,7 @@ impl Server {
         let cached_server_brand = Self::build_brand();
 
         // TODO: only create when needed
+        dbg!("creating keys");
         let (public_key, private_key) = Self::generate_keys();
 
         let public_key_der = rsa_der::public_key_to_der(
@@ -351,12 +353,14 @@ impl Server {
     }
 
     pub fn load_icon(path: &str) -> String {
-        let mut icon = match image::open(path).map_err(|e| panic!("error loading icon: {}", e)) {
+        let icon = match image::open(path).map_err(|e| panic!("error loading icon: {}", e)) {
             Ok(icon) => icon,
             Err(_) => return "".into(),
         };
-        icon = icon.resize_exact(64, 64, image::imageops::FilterType::Triangle);
-        let mut image = Vec::new();
+        let dimension = icon.dimensions();
+        assert!(dimension.0 == 64, "Icon width must be 64");
+        assert!(dimension.1 == 64, "Icon height must be 64");
+        let mut image = Vec::with_capacity(64 * 64 * 4);
         icon.write_to(&mut Cursor::new(&mut image), image::ImageFormat::Png)
             .unwrap();
         let mut result = "data:image/png;base64,".to_owned();
@@ -365,7 +369,9 @@ impl Server {
     }
 
     pub fn generate_keys() -> (RsaPublicKey, RsaPrivateKey) {
-        let priv_key = RsaPrivateKey::new(&mut OsRng, 1024).expect("failed to generate a key");
+        let mut rng = rand::thread_rng();
+
+        let priv_key = RsaPrivateKey::new(&mut rng, 1024).expect("failed to generate a key");
         let pub_key = RsaPublicKey::from(&priv_key);
         (pub_key, priv_key)
     }
