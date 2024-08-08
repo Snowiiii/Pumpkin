@@ -343,10 +343,8 @@ impl Client {
                     .unwrap_or_else(|_| self.close());
             }
             ConnectionState::Play => {
-                self.try_send_packet(CPlayDisconnect::new(TextComponent {
-                    text: reason.to_string(),
-                }))
-                .unwrap_or_else(|_| self.close());
+                self.try_send_packet(CPlayDisconnect::new(TextComponent::from(reason)))
+                    .unwrap_or_else(|_| self.close());
             }
             _ => {
                 log::warn!("Cant't kick in {:?} State", self.connection_state)
