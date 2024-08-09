@@ -15,6 +15,7 @@ use crate::{
     commands::{handle_command, CommandSender},
     entity::player::Hand,
     server::Server,
+    util::math::wrap_degrees,
 };
 
 use super::Client;
@@ -38,18 +39,27 @@ impl Client {
         }
     }
 
+    fn clamp_horizontal(pos: f64) -> f64 {
+        pos.clamp(-3.0E7, 3.0E7)
+    }
+
+    fn clamp_vertical(pos: f64) -> f64 {
+        pos.clamp(-2.0E7, 2.0E7)
+    }
+
     pub fn handle_position(&mut self, server: &mut Server, position: SPlayerPosition) {
         if position.x.is_nan() || position.feet_y.is_nan() || position.z.is_nan() {
             self.kick("Invalid movement");
+            return;
         }
         let player = self.player.as_mut().unwrap();
         let entity = &mut player.entity;
         entity.lastx = entity.x;
         entity.lasty = entity.y;
         entity.lastz = entity.z;
-        entity.x = position.x;
-        entity.y = position.feet_y;
-        entity.z = position.z;
+        entity.x = Self::clamp_horizontal(position.x);
+        entity.y = Self::clamp_vertical(position.feet_y);
+        entity.z = Self::clamp_horizontal(position.z);
         // TODO: teleport when moving > 8 block
 
         // send new position to all other players
@@ -81,18 +91,20 @@ impl Client {
             || position_rotation.z.is_nan()
         {
             self.kick("Invalid movement");
+            return;
         }
         if !position_rotation.yaw.is_finite() || !position_rotation.pitch.is_finite() {
             self.kick("Invalid rotation");
+            return;
         }
         let player = self.player.as_mut().unwrap();
         let entity = &mut player.entity;
 
-        entity.x = position_rotation.x;
-        entity.y = position_rotation.feet_y;
-        entity.z = position_rotation.z;
-        entity.yaw = position_rotation.yaw % 360.0;
-        entity.pitch = position_rotation.pitch.clamp(-90.0, 90.0) % 360.0;
+        entity.x = Self::clamp_horizontal(position_rotation.x);
+        entity.y = Self::clamp_vertical(position_rotation.feet_y);
+        entity.z = Self::clamp_horizontal(position_rotation.z);
+        entity.yaw = wrap_degrees(position_rotation.yaw);
+        entity.pitch = wrap_degrees(position_rotation.pitch);
 
         // send new position to all other players
         let on_ground = player.on_ground;
@@ -122,22 +134,24 @@ impl Client {
     pub fn handle_rotation(&mut self, server: &mut Server, rotation: SPlayerRotation) {
         if !rotation.yaw.is_finite() || !rotation.pitch.is_finite() {
             self.kick("Invalid rotation");
+            return;
         }
         let player = self.player.as_mut().unwrap();
         let entity = &mut player.entity;
-        entity.yaw = rotation.yaw % 360.0;
-        entity.pitch = rotation.pitch.clamp(-90.0, 90.0) % 360.0;
+        entity.yaw = wrap_degrees(rotation.yaw);
+        entity.pitch = wrap_degrees(rotation.pitch);
         // send new position to all other players
         let on_ground = player.on_ground;
         let entity_id = entity.entity_id;
-        let yaw = entity.yaw;
-        let pitch = entity.pitch;
+        let yaw = (entity.yaw * 256.0 / 360.0).floor();
+        let pitch = (entity.pitch * 256.0 / 360.0).floor();
+        let head_yaw = (entity.head_yaw * 256.0 / 360.0).floor();
 
         server.broadcast_packet(
             self,
             CUpdateEntityRot::new(entity_id.into(), yaw as u8, pitch as u8, on_ground),
         );
-        server.broadcast_packet(self, CHeadRot::new(entity_id.into(), yaw as u8));
+        server.broadcast_packet(self, CHeadRot::new(entity_id.into(), head_yaw as u8));
     }
 
     pub fn handle_chat_command(&mut self, _server: &mut Server, command: SChatCommand) {

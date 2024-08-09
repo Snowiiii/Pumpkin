@@ -12,6 +12,9 @@ pub struct CRemoveEntities {
 
 impl CRemoveEntities {
     pub fn new(entitiy_ids: Vec<VarInt>) -> Self {
-        Self { count: VarInt(entitiy_ids.len() as i32), entitiy_ids }
+        Self {
+            count: VarInt(entitiy_ids.len() as i32),
+            entitiy_ids,
+        }
     }
 }

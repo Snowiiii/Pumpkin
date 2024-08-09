@@ -1,7 +1,5 @@
-use pumpkin_protocol::{
-    CURRENT_MC_PROTOCOL,
-};
-use pumpkin_text::{click::ClickEvent, color::NamedColor, hover::HoverEvent, TextComponent};
+use pumpkin_protocol::CURRENT_MC_PROTOCOL;
+use pumpkin_text::{color::NamedColor, TextComponent};
 
 use crate::server::CURRENT_MC_VERSION;
 

@@ -6,8 +6,8 @@ use fastnbt::SerOpts;
 use hover::HoverEvent;
 use serde::{Deserialize, Serialize};
 
-pub mod color;
 pub mod click;
+pub mod color;
 pub mod hover;
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
@@ -163,9 +163,9 @@ impl TextComponent {
             click_event: &self.click_event,
             hover_event: &self.hover_event,
         };
-       // dbg!(&serde_json::to_string(&astruct));
-        let nbt = fastnbt::to_bytes_with_opts(&astruct, SerOpts::network_nbt()).unwrap();
-        nbt
+        // dbg!(&serde_json::to_string(&astruct));
+
+        fastnbt::to_bytes_with_opts(&astruct, SerOpts::network_nbt()).unwrap()
     }
 }
 

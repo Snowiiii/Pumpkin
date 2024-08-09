@@ -165,6 +165,8 @@ impl Server {
         let x = 10.0;
         let y = 500.0;
         let z = 10.0;
+        let yaw = 10.0;
+        let pitch = 10.0;
         client.teleport(x, y, z, 10.0, 10.0);
         let gameprofile = client.gameprofile.as_ref().unwrap();
         // first send info update to our new player, So he can see his Skin
@@ -208,6 +210,7 @@ impl Server {
         // spawn player for every client
         self.broadcast_packet_expect(
             client,
+            // TODO: add velo
             CSpawnEntity::new(
                 entity_id.into(),
                 gameprofile.id,
@@ -215,13 +218,13 @@ impl Server {
                 x,
                 y,
                 z,
-                0,
-                0,
-                0,
+                pitch,
+                yaw,
+                yaw,
                 0.into(),
-                0,
-                0,
-                0,
+                0.0,
+                0.0,
+                0.0,
             ),
         );
         // spawn players for our client
@@ -238,13 +241,13 @@ impl Server {
                     entity.x,
                     entity.y,
                     entity.z,
-                    entity.yaw as u8,
-                    entity.pitch as u8,
-                    0,
+                    entity.yaw,
+                    entity.pitch,
+                    entity.pitch,
                     0.into(),
-                    0,
-                    0,
-                    0,
+                    0.0,
+                    0.0,
+                    0.0,
                 ))
             }
         }

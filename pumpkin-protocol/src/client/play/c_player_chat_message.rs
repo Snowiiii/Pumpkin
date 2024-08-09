@@ -3,7 +3,7 @@ use pumpkin_macros::packet;
 use pumpkin_text::TextComponent;
 use serde::Serialize;
 
-use crate::{ VarInt};
+use crate::VarInt;
 
 #[derive(Serialize, Clone)]
 #[packet(0x39)]
