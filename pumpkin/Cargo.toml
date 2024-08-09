@@ -46,6 +46,6 @@ log = "0.4"
 mio = { version = "1.0.1", features = ["os-poll", "net"]}
 crossbeam-channel = "0.5.13"
 
-uuid = { version = "1.10", features = ["serde"]}
+uuid = { version = "1.10", features = ["serde", "v3"]}
 
 tokio.workspace = true

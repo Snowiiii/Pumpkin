@@ -1,7 +1,9 @@
+use std::str::FromStr;
+
 use num_traits::FromPrimitive;
 use pumpkin_protocol::{
     client::{
-        config::{CFinishConfig, CKnownPacks, CRegistryData},
+        config::{CConfigAddResourcePack, CFinishConfig, CKnownPacks, CRegistryData},
         login::{CEncryptionRequest, CLoginSuccess, CSetCompression},
         status::{CPingResponse, CStatusResponse},
     },
@@ -14,6 +16,7 @@ use pumpkin_protocol::{
     ConnectionState, KnownPack, RawBytes,
 };
 use pumpkin_registry::Registry;
+use pumpkin_text::TextComponent;
 use rsa::Pkcs1v15Encrypt;
 use sha1::{Digest, Sha1};
 
@@ -167,6 +170,23 @@ impl Client {
     ) {
         self.connection_state = ConnectionState::Config;
         server.send_brand(self);
+
+        let resource_config = &server.advanced_config.resource_pack;
+        if resource_config.enabled {
+            let prompt_message = if resource_config.prompt_message.is_empty() {
+                None
+            } else {
+                Some(TextComponent::from(resource_config.prompt_message.clone()))
+            };
+            self.send_packet(CConfigAddResourcePack::new(
+                uuid::Uuid::from_str(&resource_config.resource_pack_url).unwrap(),
+                resource_config.resource_pack_url.clone(),
+                resource_config.resource_pack_sha1.clone(),
+                resource_config.force,
+                prompt_message,
+            ));
+        }
+
         // known data packs
         self.send_packet(CKnownPacks::new(&[KnownPack {
             namespace: "minecraft",

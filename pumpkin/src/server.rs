@@ -4,6 +4,7 @@ use std::{
     io::Cursor,
     rc::Rc,
     sync::atomic::{AtomicI32, Ordering},
+    time::Duration,
 };
 
 use base64::{engine::general_purpose, Engine};
@@ -77,7 +78,12 @@ impl Server {
         )
         .into_boxed_slice();
         let auth_client = if config.0.online_mode {
-            Some(reqwest::Client::new())
+            Some(
+                reqwest::Client::builder()
+                    .timeout(Duration::from_millis(5000))
+                    .build()
+                    .expect("Failed to to make reqwest client"),
+            )
         } else {
             None
         };

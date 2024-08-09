@@ -1,9 +1,9 @@
-use std::{collections::HashMap, net::IpAddr};
+use std::{collections::HashMap, net::IpAddr, time::Duration};
 
 use base64::{engine::general_purpose, Engine};
 use num_bigint::BigInt;
 use pumpkin_protocol::Property;
-use reqwest::{StatusCode, Url};
+use reqwest::{header::CONTENT_TYPE, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
@@ -52,14 +52,16 @@ pub async fn authenticate(
     ip: &IpAddr,
     server: &mut Server,
 ) -> Result<GameProfile, AuthError> {
-    assert!(server.advanced_config.authentication.use_authentication);
+    assert!(server.advanced_config.authentication.enabled);
     assert!(server.auth_client.is_some());
     let address = if server
         .advanced_config
         .authentication
         .prevent_proxy_connections
     {
-        format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}")
+        let test = format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}");
+        dbg!(&test);
+        test
     } else {
         format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}")
     };
