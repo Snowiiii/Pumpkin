@@ -1163,6 +1163,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "pumpkin-entity",
+ "pumpkin-inventory",
  "pumpkin-protocol",
  "pumpkin-registry",
  "pumpkin-text",
@@ -1183,6 +1184,14 @@ dependencies = [
 
 [[package]]
 name = "pumpkin-entity"
+version = "0.1.0"
+dependencies = [
+ "num-derive",
+ "num-traits",
+]
+
+[[package]]
+name = "pumpkin-inventory"
 version = "0.1.0"
 dependencies = [
  "num-derive",

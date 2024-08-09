@@ -134,6 +134,7 @@ impl Client {
             }
         }
         for ele in self.gameprofile.as_ref().unwrap().properties.clone() {
+            // todo, use this
             unpack_textures(ele, &server.advanced_config.authentication.textures);
         }
 

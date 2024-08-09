@@ -1,14 +1,15 @@
 use num_traits::FromPrimitive;
+use pumpkin_inventory::WindowType;
 use pumpkin_protocol::{
     client::play::{
-        Animation, CEntityAnimation, CHeadRot, CSystemChatMessge, CUpdateEntityPos,
+        Animation, CEntityAnimation, CHeadRot, COpenScreen, CSystemChatMessge, CUpdateEntityPos,
         CUpdateEntityPosRot, CUpdateEntityRot,
     },
     server::play::{
         SChatCommand, SChatMessage, SConfirmTeleport, SPlayerCommand, SPlayerPosition,
         SPlayerPositionRotation, SPlayerRotation, SSwingArm,
-    },
-};
+    }, VarInt,
+    };
 use pumpkin_text::TextComponent;
 
 use crate::{
@@ -189,6 +190,14 @@ impl Client {
 
     pub fn handle_chat_message(&mut self, server: &mut Server, chat_message: SChatMessage) {
         let message = chat_message.message;
+        server.broadcast_packet(
+            self,
+            COpenScreen::new(
+                VarInt(0),
+                VarInt(WindowType::CraftingTable as i32),
+                TextComponent::from("Test Crafter"),
+            ),
+        );
         // TODO: filter message & validation
         let gameprofile = self.gameprofile.as_ref().unwrap();
         dbg!("got message");
