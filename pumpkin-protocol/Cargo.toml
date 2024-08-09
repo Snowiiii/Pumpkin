@@ -4,8 +4,8 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-
 pumpkin-macros = { path = "../pumpkin-macros" }
+pumpkin-text = { path = "../pumpkin-text" }
 
 bytes = "1.7"
 
@@ -21,9 +21,6 @@ thiserror = "1.0.63"
 log = "0.4"
 num-traits = "0.2"
 num-derive = "0.4"
-
-# for text component
-fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 
 # encryption
 aes = "0.8.4"

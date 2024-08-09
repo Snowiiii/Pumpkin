@@ -1155,6 +1155,7 @@ dependencies = [
  "pumpkin-entity",
  "pumpkin-protocol",
  "pumpkin-registry",
+ "pumpkin-text",
  "pumpkin-world",
  "rand",
  "reqwest",
@@ -1194,12 +1195,12 @@ dependencies = [
  "aes",
  "bytes",
  "cfb8",
- "fastnbt 2.5.0 (git+https://github.com/owengage/fastnbt.git)",
  "flate2",
  "log",
  "num-derive",
  "num-traits",
  "pumpkin-macros",
+ "pumpkin-text",
  "serde",
  "serde_json",
  "take_mut",
@@ -1215,6 +1216,15 @@ dependencies = [
  "fastsnbt",
  "pumpkin-protocol",
  "serde",
+]
+
+[[package]]
+name = "pumpkin-text"
+version = "0.1.0"
+dependencies = [
+ "fastnbt 2.5.0 (git+https://github.com/owengage/fastnbt.git)",
+ "serde",
+ "uuid",
 ]
 
 [[package]]

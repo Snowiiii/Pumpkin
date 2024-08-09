@@ -5,6 +5,7 @@ description = "Empowering everyone to host fast and efficient Minecraft servers.
 edition = "2021"
 
 [dependencies]
+pumpkin-text = { path = "../pumpkin-text" }
 pumpkin-world = { path = "../pumpkin-world"}
 pumpkin-entity = { path = "../pumpkin-entity"}
 pumpkin-protocol = { path = "../pumpkin-protocol"}

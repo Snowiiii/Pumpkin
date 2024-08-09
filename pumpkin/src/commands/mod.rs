@@ -1,6 +1,6 @@
 use gamemode::GamemodeCommand;
 use pumpkin::PumpkinCommand;
-use pumpkin_protocol::text::TextComponent;
+use pumpkin_text::TextComponent;
 
 use crate::client::Client;
 

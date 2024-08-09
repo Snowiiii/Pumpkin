@@ -1,8 +1,9 @@
 use num_derive::{FromPrimitive, ToPrimitive};
 use pumpkin_macros::packet;
+use pumpkin_text::TextComponent;
 use serde::Serialize;
 
-use crate::{text::TextComponent, VarInt};
+use crate::{ VarInt};
 
 #[derive(Serialize, Clone)]
 #[packet(0x39)]

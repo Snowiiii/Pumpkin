@@ -1,11 +1,18 @@
 use core::str;
 
+use click::ClickEvent;
+use color::Color;
 use fastnbt::SerOpts;
+use hover::HoverEvent;
 use serde::{Deserialize, Serialize};
+
+pub mod color;
+pub mod click;
+pub mod hover;
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct Text(Box<TextComponent>);
+pub struct Text(pub Box<TextComponent>);
 
 // Fepresents a Text component
 // Reference: https://wiki.vg/Text_formatting#Text_components
@@ -42,6 +49,12 @@ pub struct TextComponent {
     /// When the text is shift-clicked by a player, this string is inserted in their chat input. It does not overwrite any existing text the player was writing. This only works in chat messages
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub insertion: Option<String>,
+    /// Allows for events to occur when the player clicks on text. Only work in chat.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub click_event: Option<ClickEvent>,
+    /// Allows for a tooltip to be displayed when the player hovers their mouse over text.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hover_event: Option<HoverEvent>,
 }
 
 impl serde::Serialize for TextComponent {
@@ -59,7 +72,7 @@ impl TextComponent {
         self
     }
 
-    pub fn color_named(mut self, color: NamedColor) -> Self {
+    pub fn color_named(mut self, color: color::NamedColor) -> Self {
         self.color = Some(Color::Named(color));
         self
     }
@@ -100,6 +113,18 @@ impl TextComponent {
         self
     }
 
+    /// Allows for events to occur when the player clicks on text. Only work in chat.
+    pub fn click_event(mut self, event: ClickEvent) -> Self {
+        self.click_event = Some(event);
+        self
+    }
+
+    /// Allows for a tooltip to be displayed when the player hovers their mouse over text.
+    pub fn hover_event(mut self, event: HoverEvent) -> Self {
+        self.hover_event = Some(event);
+        self
+    }
+
     pub fn encode(&self) -> Vec<u8> {
         // TODO: Somehow fix this ugly mess
         #[derive(serde::Serialize, Debug)]
@@ -121,6 +146,10 @@ impl TextComponent {
             pub obfuscated: &'a Option<u8>,
             #[serde(default, skip_serializing_if = "Option::is_none")]
             pub insertion: &'a Option<String>,
+            #[serde(default, skip_serializing_if = "Option::is_none")]
+            pub click_event: &'a Option<ClickEvent>,
+            #[serde(default, skip_serializing_if = "Option::is_none")]
+            pub hover_event: &'a Option<HoverEvent>,
         }
         let astruct = TempStruct {
             text: &self.content,
@@ -131,7 +160,10 @@ impl TextComponent {
             strikethrough: &self.strikethrough,
             obfuscated: &self.obfuscated,
             insertion: &self.insertion,
+            click_event: &self.click_event,
+            hover_event: &self.hover_event,
         };
+       // dbg!(&serde_json::to_string(&astruct));
         let nbt = fastnbt::to_bytes_with_opts(&astruct, SerOpts::network_nbt()).unwrap();
         nbt
     }
@@ -148,6 +180,8 @@ impl From<String> for TextComponent {
             strikethrough: None,
             obfuscated: None,
             insertion: None,
+            click_event: None,
+            hover_event: None,
         }
     }
 }
@@ -165,6 +199,8 @@ impl From<&str> for TextComponent {
             strikethrough: None,
             obfuscated: None,
             insertion: None,
+            click_event: None,
+            hover_event: None,
         }
     }
 }
@@ -195,39 +231,4 @@ impl Default for TextContent {
     fn default() -> Self {
         Self::Text { text: "".into() }
     }
-}
-
-/// Text color
-#[derive(Default, Debug, Clone, Copy, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum Color {
-    /// The default color for the text will be used, which varies by context
-    /// (in some cases, it's white; in others, it's black; in still others, it
-    /// is a shade of gray that isn't normally used on text).
-    #[default]
-    Reset,
-    /// One of the 16 named Minecraft colors
-    Named(NamedColor),
-}
-
-/// Named Minecraft color
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum NamedColor {
-    Black = 0,
-    DarkBlue,
-    DarkGreen,
-    DarkAqua,
-    DarkRed,
-    DarkPurple,
-    Gold,
-    Gray,
-    DarkGray,
-    Blue,
-    Green,
-    Aqua,
-    Red,
-    LightPurple,
-    Yellow,
-    White,
 }

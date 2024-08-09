@@ -32,9 +32,9 @@ use pumpkin_protocol::{
         },
         status::{SPingRequest, SStatusRequest},
     },
-    text::TextComponent,
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
+use pumpkin_text::TextComponent;
 
 use std::io::Read;
 use thiserror::Error;

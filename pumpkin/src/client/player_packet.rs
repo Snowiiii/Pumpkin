@@ -8,8 +8,8 @@ use pumpkin_protocol::{
         SChatCommand, SChatMessage, SConfirmTeleport, SPlayerCommand, SPlayerPosition,
         SPlayerPositionRotation, SPlayerRotation, SSwingArm,
     },
-    text::TextComponent,
 };
+use pumpkin_text::TextComponent;
 
 use crate::{
     commands::{handle_command, CommandSender},
