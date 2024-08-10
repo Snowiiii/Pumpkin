@@ -15,13 +15,13 @@ use pumpkin_protocol::{
     client::{
         config::CPluginMessage,
         play::{
-            CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate,
-            CRemoveEntities, CSpawnEntity, PlayerAction,
+            CCenterChunk, CChunkData, CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerAbilities,
+            CPlayerInfoUpdate, CRemoveEntities, CSpawnEntity, PlayerAction,
         },
     },
     BitSet, ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
 };
-use pumpkin_world::chunk::TestChunk;
+use pumpkin_world::dimension::Dimension;
 use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
 
@@ -123,7 +123,7 @@ impl Server {
 
     // here is where the magic happens
     // TODO: do this in a world
-    pub fn spawn_player(&mut self, client: &mut Client) {
+    pub async fn spawn_player(&mut self, client: &mut Client) {
         // This code follows the vanilla packet order
         let entity_id = self.new_entity_id();
         log::debug!("spawning player, entity id {}", entity_id);
@@ -163,7 +163,7 @@ impl Server {
 
         // teleport
         let x = 10.0;
-        let y = 500.0;
+        let y = 120.0;
         let z = 10.0;
         client.teleport(x, y, z, 10.0, 10.0);
         let gameprofile = client.gameprofile.as_ref().unwrap();
@@ -257,7 +257,7 @@ impl Server {
         }
         */
 
-        // Server::spawn_test_chunk(client);
+        Server::spawn_test_chunk(client).await;
     }
 
     /// Sends a Packet to all Players
@@ -294,20 +294,49 @@ impl Server {
     }
 
     // TODO: do this in a world
-    fn _spawn_test_chunk(client: &mut Client) {
-        let test_chunk = TestChunk::new();
-        client.send_packet(CChunkDataUpdateLight::new(
-            10,
-            10,
-            test_chunk.heightmap,
-            Vec::new(),
-            Vec::new(),
-            BitSet(0.into(), Vec::new()),
-            BitSet(0.into(), Vec::new()),
-            BitSet(0.into(), Vec::new()),
-            Vec::new(),
-            Vec::new(),
-        ));
+    async fn spawn_test_chunk(client: &mut Client) {
+        let mut wanted_chunks = Vec::new();
+
+        for i in -3i32..3 {
+            for j in -3i32..3 {
+                wanted_chunks.push((i, j))
+            }
+        }
+        let chunks = Dimension::OverWorld
+            .into_level(
+                "C:\\Users\\lukza\\Desktop\\code\\rust\\vanilla_mc_server\\world"
+                    .parse()
+                    .unwrap(),
+            )
+            .read_chunks(wanted_chunks)
+            .await;
+
+        client.send_packet(CCenterChunk {
+            chunk_x: 0.into(),
+            chunk_z: 0.into(),
+        });
+
+        chunks.iter().for_each(|chunk| match &chunk.1 {
+            Err(err) => println!(
+                "Chunk loading failed for chunk ({},{}): {}",
+                chunk.0 .0, chunk.0 .1, err
+            ),
+            Ok(data) => client.send_packet(CChunkData(data)),
+        });
+
+        // let test_chunk = TestChunk::new();
+        // client.send_packet(CChunkDataUpdateLight::new(
+        //     10,
+        //     10,
+        //     test_chunk.heightmap,
+        //     Vec::new(),
+        //     Vec::new(),
+        //     BitSet(0.into(), Vec::new()),
+        //     BitSet(0.into(), Vec::new()),
+        //     BitSet(0.into(), Vec::new()),
+        //     Vec::new(),
+        //     Vec::new(),
+        // ));
     }
 
     // move to world

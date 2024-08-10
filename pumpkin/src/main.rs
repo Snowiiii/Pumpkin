@@ -13,7 +13,6 @@ use config::BasicConfiguration;
 use server::Server;
 
 // Setup some tokens to allow us to identify which event is for which socket.
-const SERVER: Token = Token(0);
 
 pub mod client;
 pub mod commands;
@@ -25,6 +24,7 @@ pub mod util;
 #[cfg(not(target_os = "wasi"))]
 #[tokio::main]
 async fn main() -> io::Result<()> {
+    const SERVER: Token = Token(0);
     use std::{cell::RefCell, time::Instant};
 
     let time = Instant::now();

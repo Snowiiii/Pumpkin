@@ -32,7 +32,7 @@ impl PacketEncoder {
             .encode(&mut writer)
             .map_err(|_| PacketError::EncodeID)?;
         packet.write(&mut packet_buf);
-
+        
         writer
             .write(packet_buf.buf())
             .map_err(|_| PacketError::EncodeFailedWrite)?;

@@ -217,7 +217,7 @@ impl Client {
         self.send_packet(CFinishConfig::new());
     }
 
-    pub fn handle_config_acknowledged(
+    pub async fn handle_config_acknowledged(
         &mut self,
         server: &mut Server,
         _config_acknowledged: SAcknowledgeFinishConfig,
@@ -225,6 +225,6 @@ impl Client {
         dbg!("config acknowledged");
         self.connection_state = ConnectionState::Play;
         // generate a player
-        server.spawn_player(self);
+        server.spawn_player(self).await;
     }
 }

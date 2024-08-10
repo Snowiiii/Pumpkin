@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 
 pumpkin-macros = { path = "../pumpkin-macros" }
+pumpkin-world =  { path = "../pumpkin-world" }
 
 bytes = "1.7"
 
@@ -29,3 +30,4 @@ fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 aes = "0.8.4"
 cfb8 = "0.8.1"
 take_mut = "0.2.2"
+itertools = "0.13.0"
