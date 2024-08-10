@@ -23,6 +23,7 @@ pub trait Command<'a> {
 }
 
 pub enum CommandSender<'a> {
+    Rcon(&'a mut Vec<String>),
     Console,
     Player(&'a mut Client),
 }
@@ -33,6 +34,7 @@ impl<'a> CommandSender<'a> {
             // TODO: add color and stuff to console
             CommandSender::Console => log::info!("{:?}", text.content),
             CommandSender::Player(c) => c.send_system_message(text),
+            CommandSender::Rcon(s) => s.push(format!("{:?}", text.content)),
         }
     }
 
@@ -40,6 +42,7 @@ impl<'a> CommandSender<'a> {
         match self {
             CommandSender::Console => false,
             CommandSender::Player(_) => true,
+            CommandSender::Rcon(_) => false,
         }
     }
 
@@ -47,16 +50,18 @@ impl<'a> CommandSender<'a> {
         match self {
             CommandSender::Console => true,
             CommandSender::Player(_) => false,
+            CommandSender::Rcon(_) => true,
         }
     }
     pub fn as_mut_player(&mut self) -> Option<&mut Client> {
         match self {
             CommandSender::Player(client) => Some(client),
             CommandSender::Console => None,
+            CommandSender::Rcon(_) => None,
         }
     }
 }
-pub fn handle_command(sender: &mut CommandSender, command: String) {
+pub fn handle_command(sender: &mut CommandSender, command: &str) {
     let command = command.to_lowercase();
     // an ugly mess i know
     if command.starts_with(PumpkinCommand::NAME) {

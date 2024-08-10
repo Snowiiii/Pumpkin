@@ -1,9 +1,9 @@
-use std::{collections::HashMap, net::IpAddr, time::Duration};
+use std::{collections::HashMap, net::IpAddr};
 
 use base64::{engine::general_purpose, Engine};
 use num_bigint::BigInt;
 use pumpkin_protocol::Property;
-use reqwest::{header::CONTENT_TYPE, StatusCode, Url};
+use reqwest::{StatusCode, Url};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;

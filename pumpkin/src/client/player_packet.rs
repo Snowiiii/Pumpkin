@@ -8,8 +8,9 @@ use pumpkin_protocol::{
     server::play::{
         SChatCommand, SChatMessage, SConfirmTeleport, SPlayerCommand, SPlayerPosition,
         SPlayerPositionRotation, SPlayerRotation, SSwingArm,
-    }, VarInt,
-    };
+    },
+    VarInt,
+};
 use pumpkin_text::TextComponent;
 
 use crate::{
@@ -156,7 +157,7 @@ impl Client {
     }
 
     pub fn handle_chat_command(&mut self, _server: &mut Server, command: SChatCommand) {
-        handle_command(&mut CommandSender::Player(self), command.command);
+        handle_command(&mut CommandSender::Player(self), &command.command);
     }
 
     pub fn handle_player_command(&mut self, _server: &mut Server, command: SPlayerCommand) {

@@ -21,6 +21,26 @@ pub struct AdvancedConfiguration {
     pub authentication: Authentication,
     pub packet_compression: Compression,
     pub resource_pack: ResourcePack,
+    pub rcon: RCONConfig,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+pub struct RCONConfig {
+    pub enabled: bool,
+    pub ip: String,
+    pub port: u16,
+    pub password: String,
+}
+
+impl Default for RCONConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            ip: "0.0.0.0".to_string(),
+            port: 25575,
+            password: "".to_string(),
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -67,6 +87,7 @@ impl Default for AdvancedConfiguration {
             commands: Commands::default(),
             packet_compression: Compression::default(),
             resource_pack: ResourcePack::default(),
+            rcon: RCONConfig::default(),
         }
     }
 }
@@ -107,7 +128,7 @@ impl Default for BasicConfiguration {
     fn default() -> Self {
         Self {
             config_version: CURRENT_BASE_VERSION.to_string(),
-            server_address: "127.0.0.1".to_string(),
+            server_address: "0.0.0.0".to_string(),
             server_port: 25565,
             seed: "".to_string(),
             max_players: 100000,
