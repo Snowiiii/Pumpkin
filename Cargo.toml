@@ -7,7 +7,9 @@ version = "0.1.0"
 edition = "2021"
 
 [profile.release]
+strip = true
 lto = true
+codegen-units = 1
 
 [workspace.dependencies]
 tokio = { version = "1.39.2", features = ["net", "macros", "rt-multi-thread", "fs", "io-util"] }
