@@ -85,7 +85,7 @@ impl Default for Authentication {
     fn default() -> Self {
         Self {
             enabled: true,
-            prevent_proxy_connections: true,
+            prevent_proxy_connections: false,
             player_profile: Default::default(),
             textures: Default::default(),
         }
