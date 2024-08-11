@@ -5,11 +5,11 @@ use crate::VarInt;
 
 #[derive(Serialize)]
 #[packet(0x2B)]
-pub struct CLogin {
+pub struct CLogin<'a> {
     entity_id: i32,
     is_hardcore: bool,
     dimension_count: VarInt,
-    dimension_names: Vec<String>,
+    dimension_names: &'a [&'a str],
     max_players: VarInt,
     view_distance: VarInt,
     simulated_distance: VarInt,
@@ -17,7 +17,7 @@ pub struct CLogin {
     enabled_respawn_screen: bool,
     limited_crafting: bool,
     dimension_type: VarInt,
-    dimension_name: String,
+    dimension_name: &'a str,
     hashed_seed: i64,
     game_mode: u8,
     previous_gamemode: i8,
@@ -28,12 +28,12 @@ pub struct CLogin {
     enforce_secure_chat: bool,
 }
 
-impl CLogin {
+impl<'a> CLogin<'a> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         entity_id: i32,
         is_hardcore: bool,
-        dimension_names: Vec<String>,
+        dimension_names: &'a [&'a str],
         max_players: VarInt,
         view_distance: VarInt,
         simulated_distance: VarInt,
@@ -41,7 +41,7 @@ impl CLogin {
         enabled_respawn_screen: bool,
         limited_crafting: bool,
         dimension_type: VarInt,
-        dimension_name: String,
+        dimension_name: &'a str,
         hashed_seed: i64,
         game_mode: u8,
         previous_gamemode: i8,

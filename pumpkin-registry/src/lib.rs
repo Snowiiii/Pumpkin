@@ -1,4 +1,5 @@
 use biomes::Biome;
+use chat_type::ChatType;
 use dimensions::Dimension;
 use fastnbt::SerOpts;
 use paint::Painting;
@@ -50,6 +51,16 @@ impl Registry {
                     .unwrap(),
             }],
         };
+
+        let _chat_types = Registry {
+            registry_id: "minecraft:chat_type".to_string(),
+            registry_entries: vec![RegistryEntry {
+                entry_id: "minecraft:chat",
+                data: fastnbt::to_bytes_with_opts(&ChatType::default(), SerOpts::network_nbt())
+                    .unwrap(),
+            }],
+        };
+
         let damage_types = Registry {
             registry_id: "minecraft:damage_type".to_string(),
             registry_entries: damage_type::entires(),
@@ -62,6 +73,13 @@ impl Registry {
                     .unwrap(),
             }],
         };
-        vec![dimensions, damage_types, biomes, wolf_variants, paintings]
+        vec![
+            dimensions,
+            damage_types,
+            biomes,
+            wolf_variants,
+            paintings,
+            // chat_types,
+        ]
     }
 }

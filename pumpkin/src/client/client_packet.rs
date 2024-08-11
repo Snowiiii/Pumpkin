@@ -15,7 +15,6 @@ use pumpkin_protocol::{
     },
     ConnectionState, KnownPack, RawBytes,
 };
-use pumpkin_registry::Registry;
 use pumpkin_text::TextComponent;
 use rsa::Pkcs1v15Encrypt;
 use sha1::{Digest, Sha1};
@@ -150,7 +149,7 @@ impl Client {
         }
 
         if let Some(profile) = self.gameprofile.as_ref().cloned() {
-            let packet = CLoginSuccess::new(profile.id, profile.name, &profile.properties, false);
+            let packet = CLoginSuccess::new(profile.id, &profile.name, &profile.properties, false);
             self.send_packet(packet);
         } else {
             self.kick("game profile is none");
@@ -225,8 +224,8 @@ impl Client {
         }
     }
 
-    pub fn handle_known_packs(&mut self, _server: &mut Server, _config_acknowledged: SKnownPacks) {
-        for registry in Registry::get_static() {
+    pub fn handle_known_packs(&mut self, server: &mut Server, _config_acknowledged: SKnownPacks) {
+        for registry in &server.cached_registry {
             self.send_packet(CRegistryData::new(
                 &registry.registry_id,
                 &registry.registry_entries,

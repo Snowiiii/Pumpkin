@@ -2,7 +2,7 @@ use std::io::{self, Write};
 
 use bytebuf::{packet_id::Packet, ByteBuffer, DeserializerError};
 use bytes::Buf;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use thiserror::Error;
 
 pub mod bytebuf;

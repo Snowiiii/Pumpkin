@@ -3,7 +3,7 @@ use pumpkin_macros::packet;
 use pumpkin_text::TextComponent;
 use serde::Serialize;
 
-use crate::VarInt;
+use crate::{BitSet, VarInt};
 
 #[derive(Serialize, Clone)]
 #[packet(0x39)]
@@ -14,10 +14,13 @@ pub struct CPlayerChatMessage<'a> {
     message: String,
     timestamp: i64,
     salt: i64,
+    previous_messages_count: VarInt,
     previous_messages: &'a [PreviousMessage<'a>], // max 20
     unsigned_content: Option<TextComponent>,
     /// See `FilterType`
     filter_type: VarInt,
+    // TODO: THIS IS A HACK, We currently don't support writing or reading bitsets
+    filter_type_bits: bool,
     chat_type: VarInt,
     sender_name: TextComponent,
     target_name: Option<TextComponent>,
@@ -46,9 +49,11 @@ impl<'a> CPlayerChatMessage<'a> {
             message,
             timestamp,
             salt,
+            previous_messages_count: previous_messages.len().into(),
             previous_messages,
             unsigned_content,
             filter_type,
+            filter_type_bits: false,
             chat_type,
             sender_name,
             target_name,

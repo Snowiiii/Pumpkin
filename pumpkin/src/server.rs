@@ -22,6 +22,7 @@ use pumpkin_protocol::{
     },
     BitSet, ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
 };
+use pumpkin_registry::Registry;
 use pumpkin_world::chunk::TestChunk;
 use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
@@ -49,6 +50,9 @@ pub struct Server {
 
     /// Cache the Server brand buffer so we don't have to rebuild them every time a player joins
     pub cached_server_brand: Vec<u8>,
+
+    /// Cache the registry so we don't have to parse it every time a player joins
+    pub cached_registry: Vec<Registry>,
 
     pub current_clients: HashMap<Rc<Token>, Rc<RefCell<Client>>>,
 
@@ -89,6 +93,7 @@ impl Server {
         };
 
         Self {
+            cached_registry: Registry::get_static(),
             // 0 is invalid
             entity_id: 2.into(),
             //  world: World::load(""),
@@ -123,7 +128,7 @@ impl Server {
         // todo: put this into the entitiy struct
         if client.is_player() {
             let id = client.player.as_ref().unwrap().entity_id();
-            self.broadcast_packet(&mut client, CRemoveEntities::new(vec![id.into()]))
+            self.broadcast_packet(&mut client, CRemoveEntities::new(&[id.into()]))
         }
     }
 
@@ -140,7 +145,7 @@ impl Server {
         client.send_packet(CLogin::new(
             entity_id,
             self.base_config.hardcore,
-            vec!["minecraft:overworld".into()],
+            &["minecraft:overworld"],
             self.base_config.max_players.into(),
             self.base_config.view_distance.into(), //  TODO: view distance
             self.base_config.simulation_distance.into(), // TODO: sim view dinstance
@@ -148,7 +153,7 @@ impl Server {
             false,
             false,
             0.into(),
-            "minecraft:overworld".into(),
+            "minecraft:overworld",
             0, // seed
             match self.base_config.default_gamemode {
                 GameMode::Undefined => GameMode::Survival,
