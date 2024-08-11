@@ -7,12 +7,6 @@ use super::Command;
 
 pub struct PumpkinCommand {}
 
-impl PumpkinCommand {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
 impl<'a> Command<'a> for PumpkinCommand {
     const NAME: &'a str = "pumpkin";
 

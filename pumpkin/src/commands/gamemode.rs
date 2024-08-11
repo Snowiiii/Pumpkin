@@ -2,12 +2,6 @@ use super::Command;
 
 pub struct GamemodeCommand {}
 
-impl GamemodeCommand {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
 impl<'a> Command<'a> for GamemodeCommand {
     const NAME: &'a str = "gamemode";
 
