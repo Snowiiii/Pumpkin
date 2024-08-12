@@ -3,7 +3,7 @@ use std::io::{self, BufRead, Cursor, Write};
 use bytes::{BufMut, BytesMut};
 use mio::net::TcpStream;
 use thiserror::Error;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::AsyncReadExt;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PacketType {

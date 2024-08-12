@@ -186,7 +186,7 @@ impl Client {
         };
         let player = self.player.as_mut().unwrap();
         let id = player.entity_id();
-        server.broadcast_packet_expect(self, CEntityAnimation::new(id.into(), animation as u8))
+        server.broadcast_packet_expect(self, &CEntityAnimation::new(id.into(), animation as u8))
     }
 
     pub fn handle_chat_message(&mut self, server: &mut Server, chat_message: SChatMessage) {

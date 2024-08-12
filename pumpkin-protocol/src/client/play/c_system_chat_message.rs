@@ -2,7 +2,7 @@ use pumpkin_macros::packet;
 use pumpkin_text::TextComponent;
 use serde::Serialize;
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 #[packet(0x6C)]
 pub struct CSystemChatMessge {
     content: TextComponent,

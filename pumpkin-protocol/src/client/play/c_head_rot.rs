@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 #[packet(0x48)]
 pub struct CHeadRot {
     entity_id: VarInt,

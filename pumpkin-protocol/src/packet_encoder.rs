@@ -22,7 +22,7 @@ pub struct PacketEncoder {
 }
 
 impl PacketEncoder {
-    pub fn append_packet<P: ClientPacket>(&mut self, packet: P) -> Result<(), PacketError> {
+    pub fn append_packet<P: ClientPacket>(&mut self, packet: &P) -> Result<(), PacketError> {
         let start_len = self.buf.len();
 
         let mut writer = (&mut self.buf).writer();

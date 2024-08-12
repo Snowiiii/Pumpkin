@@ -40,12 +40,12 @@ impl Client {
     }
 
     pub fn handle_status_request(&mut self, server: &mut Server, _status_request: SStatusRequest) {
-        self.send_packet(CStatusResponse::new(&server.status_response_json));
+        self.send_packet(&CStatusResponse::new(&server.status_response_json));
     }
 
     pub fn handle_ping_request(&mut self, _server: &mut Server, ping_request: SPingRequest) {
         dbg!("ping");
-        self.send_packet(CPingResponse::new(ping_request.payload));
+        self.send_packet(&CPingResponse::new(ping_request.payload));
         self.close();
     }
 
@@ -70,7 +70,7 @@ impl Client {
             &verify_token,
             server.base_config.online_mode, // TODO
         );
-        self.send_packet(packet);
+        self.send_packet(&packet);
     }
 
     pub async fn handle_encryption_response(
@@ -144,13 +144,13 @@ impl Client {
                 .packet_compression
                 .compression_threshold;
             let level = server.advanced_config.packet_compression.compression_level;
-            self.send_packet(CSetCompression::new(threshold.into()));
+            self.send_packet(&CSetCompression::new(threshold.into()));
             self.set_compression(Some((threshold, level)));
         }
 
         if let Some(profile) = self.gameprofile.as_ref().cloned() {
             let packet = CLoginSuccess::new(profile.id, &profile.name, &profile.properties, false);
-            self.send_packet(packet);
+            self.send_packet(&packet);
         } else {
             self.kick("game profile is none");
         }
@@ -178,7 +178,7 @@ impl Client {
             } else {
                 Some(TextComponent::from(resource_config.prompt_message.clone()))
             };
-            self.send_packet(CConfigAddResourcePack::new(
+            self.send_packet(&CConfigAddResourcePack::new(
                 uuid::Uuid::from_str(&resource_config.resource_pack_url).unwrap(),
                 resource_config.resource_pack_url.clone(),
                 resource_config.resource_pack_sha1.clone(),
@@ -188,7 +188,7 @@ impl Client {
         }
 
         // known data packs
-        self.send_packet(CKnownPacks::new(&[KnownPack {
+        self.send_packet(&CKnownPacks::new(&[KnownPack {
             namespace: "minecraft",
             id: "core",
             version: "1.21",
@@ -226,7 +226,7 @@ impl Client {
 
     pub fn handle_known_packs(&mut self, server: &mut Server, _config_acknowledged: SKnownPacks) {
         for registry in &server.cached_registry {
-            self.send_packet(CRegistryData::new(
+            self.send_packet(&CRegistryData::new(
                 &registry.registry_id,
                 &registry.registry_entries,
             ));
@@ -234,7 +234,7 @@ impl Client {
 
         // We are done with configuring
         dbg!("finish config");
-        self.send_packet(CFinishConfig::new());
+        self.send_packet(&CFinishConfig::new());
     }
 
     pub fn handle_config_acknowledged(

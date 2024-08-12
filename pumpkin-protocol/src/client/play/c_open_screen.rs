@@ -4,7 +4,7 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 #[packet(0x33)]
 pub struct COpenScreen {
     window_id: VarInt,

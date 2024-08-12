@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use crate::{uuid::UUID, BitSet, VarInt};
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 #[packet(0x39)]
 pub struct CPlayerChatMessage<'a> {
     sender: UUID,

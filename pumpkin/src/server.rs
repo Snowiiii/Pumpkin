@@ -145,7 +145,7 @@ impl Server {
         client.player = Some(player);
 
         // login packet for our new player
-        client.send_packet(CLogin::new(
+        client.send_packet(&CLogin::new(
             entity_id,
             self.base_config.hardcore,
             &["minecraft:overworld"],
@@ -173,7 +173,7 @@ impl Server {
         ));
         dbg!("sending abilities");
         // player abilities
-        client.send_packet(CPlayerAbilities::new(0x02, 00.2, 0.1));
+        client.send_packet(&CPlayerAbilities::new(0x02, 00.2, 0.1));
 
         // teleport
         let x = 10.0;
@@ -220,10 +220,10 @@ impl Server {
                 })
             }
         }
-        client.send_packet(CPlayerInfoUpdate::new(0x01 | 0x08, &entries));
+        client.send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries));
 
         // Start waiting for level chunks
-        client.send_packet(CGameEvent::new(13, 0.0));
+        client.send_packet(&CGameEvent::new(13, 0.0));
 
         let gameprofile = client.gameprofile.as_ref().unwrap();
 
@@ -231,7 +231,7 @@ impl Server {
         self.broadcast_packet_expect(
             client,
             // TODO: add velo
-            CSpawnEntity::new(
+            &CSpawnEntity::new(
                 entity_id.into(),
                 UUID(gameprofile.id),
                 EntityType::Player.to_i32().unwrap().into(),
@@ -254,7 +254,7 @@ impl Server {
             if let Some(player) = &existing_client.player {
                 let entity = &player.entity;
                 let gameprofile = existing_client.gameprofile.as_ref().unwrap();
-                client.send_packet(CSpawnEntity::new(
+                client.send_packet(&CSpawnEntity::new(
                     player.entity_id().into(),
                     UUID(gameprofile.id),
                     EntityType::Player.to_i32().unwrap().into(),
@@ -287,31 +287,29 @@ impl Server {
     pub fn broadcast_packet<P>(&mut self, from: &mut Client, packet: P)
     where
         P: ClientPacket,
-        P: Clone,
     {
         // we can't borrow twice at same time
-        from.send_packet(packet.clone());
+        from.send_packet(&packet);
         for (_, client) in self.current_clients.iter().filter(|c| c.0 != &from.token) {
             // Check if client is a player
             let mut client = client.borrow_mut();
             if client.is_player() {
                 // we need to clone, Because we send a new packet to every client
-                client.send_packet(packet.clone());
+                client.send_packet(&packet);
             }
         }
     }
 
-    pub fn broadcast_packet_expect<P>(&mut self, from: &mut Client, packet: P)
+    pub fn broadcast_packet_expect<P>(&mut self, from: &mut Client, packet: &P)
     where
         P: ClientPacket,
-        P: Clone,
     {
         for (_, client) in self.current_clients.iter().filter(|c| c.0 != &from.token) {
             // Check if client is a player
             let mut client = client.borrow_mut();
             if client.is_player() {
                 // we need to clone, Because we send a new packet to every client
-                client.send_packet(packet.clone());
+                client.send_packet(packet);
             }
         }
     }
@@ -319,7 +317,7 @@ impl Server {
     // TODO: do this in a world
     fn _spawn_test_chunk(client: &mut Client) {
         let test_chunk = TestChunk::new();
-        client.send_packet(CChunkDataUpdateLight::new(
+        client.send_packet(&CChunkDataUpdateLight::new(
             10,
             10,
             test_chunk.heightmap,
@@ -348,7 +346,7 @@ impl Server {
 
     pub fn send_brand(&self, client: &mut Client) {
         // send server brand
-        client.send_packet(CPluginMessage::new(
+        client.send_packet(&CPluginMessage::new(
             "minecraft:brand",
             &self.cached_server_brand,
         ));

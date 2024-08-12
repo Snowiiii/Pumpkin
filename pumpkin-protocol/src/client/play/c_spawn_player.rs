@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use crate::{uuid::UUID, VarInt};
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 #[packet(0x01)]
 pub struct CSpawnEntity {
     entity_id: VarInt,

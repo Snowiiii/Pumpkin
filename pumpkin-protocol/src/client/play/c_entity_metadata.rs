@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 #[packet(0x58)]
 pub struct CSetEntityMetadata {
     entity_id: VarInt,
@@ -19,7 +19,7 @@ impl CSetEntityMetadata {
     }
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 pub struct Metadata {
     index: u8,
     typ: VarInt,

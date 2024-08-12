@@ -1,7 +1,7 @@
 use pumpkin_macros::packet;
 use serde::Serialize;
 
-use crate::{VarInt};
+use crate::VarInt;
 
 #[derive(Serialize)]
 #[packet(0x01)]
