@@ -4,8 +4,14 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-pumpkin-protocol = { path = "../pumpkin-protocol"}
-fastanvil = "0.31"
+# fastanvil = "0.31"
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 fastsnbt = "0.2"
 tokio.workspace = true
+itertools = "0.13.0"
+thiserror = "1.0.63"
+futures = "0.3.30"
+flate2 = "1.0.31"
+serde = { version = "1.0.205", features = ["derive"] }
+lazy_static = "1.5.0"
+serde_json = "1.0.122"

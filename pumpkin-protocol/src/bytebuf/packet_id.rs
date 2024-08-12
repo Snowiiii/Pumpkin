@@ -3,9 +3,19 @@ use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
 };
 
-use crate::{ClientPacket, ServerPacket, VarInt, VarIntType};
+use crate::{BitSet, ClientPacket, ServerPacket, VarInt, VarIntType};
 
 use super::{deserializer, serializer, ByteBuffer, DeserializerError};
+
+impl Serialize for BitSet {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // TODO: make this right
+        (self.0.clone(), self.1.clone()).serialize(serializer)
+    }
+}
 
 impl Serialize for VarInt {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

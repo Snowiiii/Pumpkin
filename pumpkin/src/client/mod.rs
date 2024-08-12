@@ -226,7 +226,7 @@ impl Client {
                 SAcknowledgeFinishConfig::PACKET_ID => self.handle_config_acknowledged(
                     server,
                     SAcknowledgeFinishConfig::read(bytebuf).unwrap(),
-                ),
+                ).await,
                 SKnownPacks::PACKET_ID => {
                     self.handle_known_packs(server, SKnownPacks::read(bytebuf).unwrap())
                 }
