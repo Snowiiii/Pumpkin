@@ -328,7 +328,8 @@ impl Server {
         }
         let chunks = Dimension::OverWorld
             .into_level(
-                "C:\\Users\\lukza\\Desktop\\code\\rust\\vanilla_mc_server\\world"
+                // TODO: load form config
+                "./world"
                     .parse()
                     .unwrap(),
             )

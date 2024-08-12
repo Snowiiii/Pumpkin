@@ -209,13 +209,6 @@ impl Level {
                         return ((old_chunk_x, old_chunk_z), Err(WorldError::ZlibError(err)))
                     }
                 }
-                // TODO: remove
-                // File::create_new(format!("./test-{}.{}.nbt", old_chunk_x, old_chunk_z))
-                // .await
-                // .unwrap()
-                // .write_all(&chunk_data)
-                // .await
-                // .unwrap();
 
                 (
                     (old_chunk_x, old_chunk_z),
@@ -227,19 +220,4 @@ impl Level {
         .into_iter()
         .collect_vec()
     }
-}
-
-#[test]
-fn wawa() {
-    tokio::runtime::Runtime::new().unwrap().block_on(async {
-        Dimension::OverWorld
-            .into_level(
-                "C:\\Users\\lukza\\Desktop\\code\\rust\\vanilla_mc_server\\world"
-                    .parse()
-                    .unwrap(),
-            )
-            .read_chunk((0, 0))
-            .await
-            .unwrap();
-    });
 }

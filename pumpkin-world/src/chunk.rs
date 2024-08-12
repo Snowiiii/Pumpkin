@@ -47,7 +47,7 @@ struct PaletteEntry {
 
 #[derive(serde::Deserialize, Debug, Clone)]
 struct ChunkSectionBlockStates {
-    data: Option<LongArray>, // TODO: see if you can use u32 here
+    data: Option<LongArray>,
     palette: Vec<PaletteEntry>,
 }
 
