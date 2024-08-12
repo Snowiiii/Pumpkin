@@ -13,7 +13,7 @@ use pumpkin_protocol::{
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
         status::{SPingRequest, SStatusRequest},
     },
-    ConnectionState, KnownPack, RawBytes,
+    ConnectionState, KnownPack,
 };
 use pumpkin_text::TextComponent;
 use rsa::Pkcs1v15Encrypt;

@@ -39,6 +39,7 @@ Pumpkin is currently under heavy development.
   - [ ] Cookies
 - World 
   - [x] World Joining
+  - [x] Player Tab-list
   - [x] World Loading
   - [x] Entity Spawning
   - [ ] Chunk Loading
