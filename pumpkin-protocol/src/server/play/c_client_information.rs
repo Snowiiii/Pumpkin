@@ -3,8 +3,8 @@ use pumpkin_macros::packet;
 use crate::VarInt;
 
 #[derive(serde::Deserialize)]
-#[packet(0x00)]
-pub struct SClientInformationConfig {
+#[packet(0x0A)]
+pub struct SClientInformationPlay {
     pub locale: String, // 16
     pub view_distance: i8,
     pub chat_mode: VarInt, // Varint

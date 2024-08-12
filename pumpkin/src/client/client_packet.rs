@@ -8,7 +8,7 @@ use pumpkin_protocol::{
         status::{CPingResponse, CStatusResponse},
     },
     server::{
-        config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks, SPluginMessage},
+        config::{SAcknowledgeFinishConfig, SClientInformationConfig, SKnownPacks, SPluginMessage},
         handshake::SHandShake,
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
         status::{SPingRequest, SStatusRequest},
@@ -195,10 +195,10 @@ impl Client {
         }]));
         dbg!("login achnowlaged");
     }
-    pub fn handle_client_information(
+    pub fn handle_client_information_config(
         &mut self,
         _server: &mut Server,
-        client_information: SClientInformation,
+        client_information: SClientInformationConfig,
     ) {
         dbg!("got client settings");
         self.config = Some(PlayerConfig {

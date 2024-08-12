@@ -1,5 +1,5 @@
-mod c_center_chunk;
 mod c_actionbar;
+mod c_center_chunk;
 mod c_change_difficulty;
 mod c_chunk_data;
 mod c_chunk_data_update_light;
@@ -27,8 +27,8 @@ mod c_update_entity_pos;
 mod c_update_entity_rot;
 mod player_action;
 
-pub use c_center_chunk::*;
 pub use c_actionbar::*;
+pub use c_center_chunk::*;
 pub use c_change_difficulty::*;
 pub use c_chunk_data::*;
 pub use c_chunk_data_update_light::*;

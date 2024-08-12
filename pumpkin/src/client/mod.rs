@@ -23,12 +23,12 @@ use pumpkin_protocol::{
     packet_decoder::PacketDecoder,
     packet_encoder::PacketEncoder,
     server::{
-        config::{SAcknowledgeFinishConfig, SClientInformation, SKnownPacks, SPluginMessage},
+        config::{SAcknowledgeFinishConfig, SClientInformationConfig, SKnownPacks, SPluginMessage},
         handshake::SHandShake,
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
         play::{
-            SChatCommand, SChatMessage, SConfirmTeleport, SPlayerCommand, SPlayerPosition,
-            SPlayerPositionRotation, SPlayerRotation, SSwingArm,
+            SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SPlayerCommand,
+            SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSwingArm,
         },
         status::{SPingRequest, SStatusRequest},
     },
@@ -218,15 +218,20 @@ impl Client {
                 ),
             },
             pumpkin_protocol::ConnectionState::Config => match packet.id.0 {
-                SClientInformation::PACKET_ID => self
-                    .handle_client_information(server, SClientInformation::read(bytebuf).unwrap()),
+                SClientInformationConfig::PACKET_ID => self.handle_client_information_config(
+                    server,
+                    SClientInformationConfig::read(bytebuf).unwrap(),
+                ),
                 SPluginMessage::PACKET_ID => {
                     self.handle_plugin_message(server, SPluginMessage::read(bytebuf).unwrap())
                 }
-                SAcknowledgeFinishConfig::PACKET_ID => self.handle_config_acknowledged(
-                    server,
-                    SAcknowledgeFinishConfig::read(bytebuf).unwrap(),
-                ).await,
+                SAcknowledgeFinishConfig::PACKET_ID => {
+                    self.handle_config_acknowledged(
+                        server,
+                        SAcknowledgeFinishConfig::read(bytebuf).unwrap(),
+                    )
+                    .await
+                }
                 SKnownPacks::PACKET_ID => {
                     self.handle_known_packs(server, SKnownPacks::read(bytebuf).unwrap())
                 }
@@ -273,6 +278,10 @@ impl Client {
             SChatMessage::PACKET_ID => {
                 self.handle_chat_message(server, SChatMessage::read(bytebuf).unwrap())
             }
+            SClientInformationPlay::PACKET_ID => self.handle_client_information_play(
+                server,
+                SClientInformationPlay::read(bytebuf).unwrap(),
+            ),
             _ => log::error!("Failed to handle player packet id {}", packet.id.0),
         }
     }

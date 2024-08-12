@@ -13,12 +13,17 @@ use mio::{event::Event, Poll, Token};
 use num_traits::ToPrimitive;
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_protocol::{
-    bytebuf::ByteBuffer, client::{
+    bytebuf::ByteBuffer,
+    client::{
         config::CPluginMessage,
         play::{
-            CCenterChunk, CChunkData, CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate, CRemoveEntities, CRemovePlayerInfo, CSetEntityMetadata, CSpawnEntity, Metadata, PlayerAction
+            CCenterChunk, CChunkData, CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerAbilities,
+            CPlayerInfoUpdate, CRemoveEntities, CRemovePlayerInfo, CSetEntityMetadata,
+            CSpawnEntity, Metadata, PlayerAction,
         },
-    }, uuid::UUID, BitSet, ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL
+    },
+    uuid::UUID,
+    BitSet, ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
 };
 use pumpkin_world::dimension::Dimension;
 
@@ -329,9 +334,7 @@ impl Server {
         let chunks = Dimension::OverWorld
             .into_level(
                 // TODO: load form config
-                "./world"
-                    .parse()
-                    .unwrap(),
+                "./world".parse().unwrap(),
             )
             .read_chunks(wanted_chunks)
             .await;
@@ -342,22 +345,25 @@ impl Server {
         });
 
         chunks.iter().for_each(|chunk| {
-                if chunk.0 == (0,0) {
-                    let mut test = ByteBuffer::empty();
-                    CChunkData(chunk.1.as_ref().unwrap()).write(&mut test);
-                    let len = test.buf().len();
-                    dbg!("Chunk packet size: {}B {}KB {}MB", len, len/1024, len/(1024*1024));
-                }
+            if chunk.0 == (0, 0) {
+                let mut test = ByteBuffer::empty();
+                CChunkData(chunk.1.as_ref().unwrap()).write(&mut test);
+                let len = test.buf().len();
+                dbg!(
+                    "Chunk packet size: {}B {}KB {}MB",
+                    len,
+                    len / 1024,
+                    len / (1024 * 1024)
+                );
+            }
             match &chunk.1 {
-            Err(err) => println!(
-                "Chunk loading failed for chunk ({},{}): {}",
-                chunk.0 .0, chunk.0 .1, err
-            ),
-            Ok(data) => client.send_packet(&CChunkData(data)),
-        }});
-
-
-
+                Err(err) => println!(
+                    "Chunk loading failed for chunk ({},{}): {}",
+                    chunk.0 .0, chunk.0 .1, err
+                ),
+                Ok(data) => client.send_packet(&CChunkData(data)),
+            }
+        });
 
         // let test_chunk = TestChunk::new();
         // client.send_packet(CChunkDataUpdateLight::new(

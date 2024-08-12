@@ -6,8 +6,8 @@ use pumpkin_protocol::{
         CUpdateEntityRot,
     },
     server::play::{
-        SChatCommand, SChatMessage, SConfirmTeleport, SPlayerCommand, SPlayerPosition,
-        SPlayerPositionRotation, SPlayerRotation, SSwingArm,
+        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SPlayerCommand,
+        SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSwingArm,
     },
     VarInt,
 };
@@ -15,12 +15,12 @@ use pumpkin_text::TextComponent;
 
 use crate::{
     commands::{handle_command, CommandSender},
-    entity::player::Hand,
+    entity::player::{ChatMode, Hand},
     server::Server,
     util::math::wrap_degrees,
 };
 
-use super::Client;
+use super::{Client, PlayerConfig};
 
 /// Handles all Play Packets send by a real Player
 impl Client {
@@ -238,5 +238,22 @@ impl Client {
                 None,
             ),
         ) */
+    }
+
+    pub fn handle_client_information_play(
+        &mut self,
+        _server: &mut Server,
+        client_information: SClientInformationPlay,
+    ) {
+        self.config = Some(PlayerConfig {
+            locale: client_information.locale,
+            view_distance: client_information.view_distance,
+            chat_mode: ChatMode::from_i32(client_information.chat_mode.into()).unwrap(),
+            chat_colors: client_information.chat_colors,
+            skin_parts: client_information.skin_parts,
+            main_hand: Hand::from_i32(client_information.main_hand.into()).unwrap(),
+            text_filtering: client_information.text_filtering,
+            server_listing: client_information.server_listing,
+        });
     }
 }
