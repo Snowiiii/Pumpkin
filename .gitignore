@@ -81,6 +81,8 @@ mc-source-code/DecompilerMC/
 mc-source-code/src/
 mc-source-code/target/
 
+world/
+
 # project's binary configurations
 configuration.toml
 features.toml
