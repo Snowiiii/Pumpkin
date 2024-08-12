@@ -102,6 +102,9 @@ impl Client {
         let player = self.player.as_mut().unwrap();
         let entity = &mut player.entity;
 
+        entity.lastx = entity.x;
+        entity.lasty = entity.y;
+        entity.lastz = entity.z;
         entity.x = Self::clamp_horizontal(position_rotation.x);
         entity.y = Self::clamp_vertical(position_rotation.feet_y);
         entity.z = Self::clamp_horizontal(position_rotation.z);
