@@ -27,22 +27,19 @@ Pumpkin is currently under heavy development.
 ### Features (WIP)
 - [x] Configuration (toml)
 - [x] Server Status/Ping
-  - [x] Custom maximum player amount
-  - [x] Custom Icon
-  - [x] Custom Status (MOTD)
 - [x] Login
 - Player Configuration
   - [x] Registries (biome types, paintings, dimensions)
   - [x] Server Brand
   - [ ] Server Links
-  - [ ] Set Resource Pack
+  - [x] Set Resource Pack
   - [ ] Cookies
 - World 
   - [x] World Joining
   - [x] Player Tab-list
   - [x] World Loading
   - [x] Entity Spawning
-  - [ ] Chunk Loading
+  - [x] Chunk Loading
   - [ ] World Generation
   - [ ] World Borders
   - [ ] World Saving
@@ -60,7 +57,7 @@ Pumpkin is currently under heavy development.
   - [x] Chat
   - [x] Commands
 
-Check out our [Github Project](https://github.com/users/Snowiiii/projects/12/views/1) to see current progress
+Check out our [Github Project](https://github.com/users/Snowiiii/projects/12/views/3) to see current progress
 
 ## How to run
 There are currently no release builds, because there was no release :D.
@@ -71,7 +68,11 @@ git clone https://github.com/Snowiiii/Pumpkin.git
 cd Pumpkin
 ```
 You also may have to [install rust](https://www.rust-lang.org/tools/install) when you don't already have.
-Then run it:
+
+You need to pregenerate the world and place it inside of the Pumpkin/ directory.
+Make sure to generate chunks close to (0,0) since that is where the player gets spawned by default.
+
+Then run:
 ```
 cargo run --release
 ```
