@@ -233,7 +233,7 @@ impl Server {
             // TODO: add velo
             CSpawnEntity::new(
                 entity_id.into(),
-                gameprofile.id,
+                UUID(gameprofile.id),
                 EntityType::Player.to_i32().unwrap().into(),
                 x,
                 y,
@@ -256,7 +256,7 @@ impl Server {
                 let gameprofile = existing_client.gameprofile.as_ref().unwrap();
                 client.send_packet(CSpawnEntity::new(
                     player.entity_id().into(),
-                    gameprofile.id,
+                    UUID(gameprofile.id),
                     EntityType::Player.to_i32().unwrap().into(),
                     entity.x,
                     entity.y,

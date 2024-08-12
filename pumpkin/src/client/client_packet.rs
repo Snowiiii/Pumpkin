@@ -66,8 +66,8 @@ impl Client {
         let public_key_der = &server.public_key_der;
         let packet = CEncryptionRequest::new(
             "",
-            RawBytes(public_key_der),
-            RawBytes(&verify_token),
+            public_key_der,
+            &verify_token,
             server.base_config.online_mode, // TODO
         );
         self.send_packet(packet);

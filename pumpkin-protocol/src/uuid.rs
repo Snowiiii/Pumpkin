@@ -1,5 +1,6 @@
 use serde::Serialize;
 
+#[derive(Clone)]
 pub struct UUID(pub uuid::Uuid);
 
 impl Serialize for UUID {

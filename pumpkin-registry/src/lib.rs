@@ -52,7 +52,7 @@ impl Registry {
             }],
         };
 
-        let _chat_types = Registry {
+        let chat_types = Registry {
             registry_id: "minecraft:chat_type".to_string(),
             registry_entries: vec![RegistryEntry {
                 entry_id: "minecraft:chat",
@@ -79,7 +79,7 @@ impl Registry {
             biomes,
             wolf_variants,
             paintings,
-            // chat_types,
+            chat_types,
         ]
     }
 }

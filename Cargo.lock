@@ -1235,6 +1235,7 @@ dependencies = [
  "fastnbt 2.5.0 (git+https://github.com/owengage/fastnbt.git)",
  "fastsnbt",
  "pumpkin-protocol",
+ "pumpkin-text",
  "serde",
 ]
 

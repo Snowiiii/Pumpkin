@@ -3,12 +3,12 @@ use pumpkin_macros::packet;
 use pumpkin_text::TextComponent;
 use serde::Serialize;
 
-use crate::{BitSet, VarInt};
+use crate::{uuid::UUID, BitSet, VarInt};
 
 #[derive(Serialize, Clone)]
 #[packet(0x39)]
 pub struct CPlayerChatMessage<'a> {
-    sender: uuid::Uuid,
+    sender: UUID,
     index: VarInt,
     message_signature: Option<&'a [u8]>,
     message: String,
@@ -29,7 +29,7 @@ pub struct CPlayerChatMessage<'a> {
 impl<'a> CPlayerChatMessage<'a> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        sender: uuid::Uuid,
+        sender: UUID,
         index: VarInt,
         message_signature: Option<&'a [u8]>,
         message: String,

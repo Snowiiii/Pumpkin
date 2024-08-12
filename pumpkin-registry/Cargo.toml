@@ -5,6 +5,8 @@ edition.workspace = true
 
 [dependencies]
 pumpkin-protocol = { path = "../pumpkin-protocol"}
+pumpkin-text = { path = "../pumpkin-text"}
+
 # nbt
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 fastsnbt = "0.2"

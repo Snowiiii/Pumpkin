@@ -2,8 +2,8 @@ use num_traits::FromPrimitive;
 use pumpkin_inventory::WindowType;
 use pumpkin_protocol::{
     client::play::{
-        Animation, CEntityAnimation, CHeadRot, COpenScreen, CPlayerChatMessage, CUpdateEntityPos,
-        CUpdateEntityPosRot, CUpdateEntityRot, FilterType,
+        Animation, CEntityAnimation, CHeadRot, COpenScreen, CUpdateEntityPos, CUpdateEntityPosRot,
+        CUpdateEntityRot,
     },
     server::play::{
         SChatCommand, SChatMessage, SConfirmTeleport, SPlayerCommand, SPlayerPosition,
@@ -210,10 +210,10 @@ impl Client {
         //         false,
         //     ),
         // );
-        server.broadcast_packet(
+        /*   server.broadcast_packet(
             self,
             CPlayerChatMessage::new(
-                gameprofile.id,
+                pumpkin_protocol::uuid::UUID(gameprofile.id),
                 0.into(),
                 None,
                 message.clone(),
@@ -227,6 +227,8 @@ impl Client {
                 None,
             ),
         )
+
+        */
         /* server.broadcast_packet(
             self,
             CDisguisedChatMessage::new(
