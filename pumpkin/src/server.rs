@@ -17,7 +17,8 @@ use pumpkin_protocol::{
         config::CPluginMessage,
         play::{
             CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate,
-            CRemoveEntities, CRemovePlayerInfo, CSpawnEntity, PlayerAction,
+            CRemoveEntities, CRemovePlayerInfo, CSetEntityMetadata, CSpawnEntity, Metadata,
+            PlayerAction,
         },
     },
     uuid::UUID,
@@ -130,8 +131,11 @@ impl Server {
         if client.is_player() {
             let id = client.player.as_ref().unwrap().entity_id();
             let uuid = client.gameprofile.as_ref().unwrap().id;
-            self.broadcast_packet(&mut client, CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]));
-            self.broadcast_packet(&mut client, CRemoveEntities::new(&[id.into()]))
+            self.broadcast_packet_expect(
+                &mut client,
+                &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]),
+            );
+            self.broadcast_packet_expect(&mut client, &CRemoveEntities::new(&[id.into()]))
         }
     }
 
@@ -187,7 +191,7 @@ impl Server {
         // also send his info to everyone else
         self.broadcast_packet(
             client,
-            CPlayerInfoUpdate::new(
+            &CPlayerInfoUpdate::new(
                 0x01 | 0x08,
                 &[pumpkin_protocol::client::play::Player {
                     uuid: gameprofile.id,
@@ -272,30 +276,32 @@ impl Server {
             }
         }
         // entity meta data
-        /*  if let Some(config) = &client.config {
+        if let Some(config) = &client.config {
             self.broadcast_packet(
                 client,
-                CSetEntityMetadata::new(entity_id.into(), vec![Metadata::new(18, VarInt(0), 0)]),
+                &CSetEntityMetadata::new(
+                    entity_id.into(),
+                    Metadata::new(17, VarInt(0), config.skin_parts),
+                ),
             )
         }
-        */
 
         // Server::spawn_test_chunk(client);
     }
 
     /// Sends a Packet to all Players
-    pub fn broadcast_packet<P>(&mut self, from: &mut Client, packet: P)
+    pub fn broadcast_packet<P>(&mut self, from: &mut Client, packet: &P)
     where
         P: ClientPacket,
     {
         // we can't borrow twice at same time
-        from.send_packet(&packet);
+        from.send_packet(packet);
         for (_, client) in self.current_clients.iter().filter(|c| c.0 != &from.token) {
             // Check if client is a player
             let mut client = client.borrow_mut();
             if client.is_player() {
                 // we need to clone, Because we send a new packet to every client
-                client.send_packet(&packet);
+                client.send_packet(packet);
             }
         }
     }

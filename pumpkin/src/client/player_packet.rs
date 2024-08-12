@@ -73,7 +73,7 @@ impl Client {
 
         server.broadcast_packet(
             self,
-            CUpdateEntityPos::new(
+            &CUpdateEntityPos::new(
                 entity_id.into(),
                 (x * 4096.0 - lastx * 4096.0) as i16,
                 (y * 4096.0 - lasty * 4096.0) as i16,
@@ -120,7 +120,7 @@ impl Client {
 
         server.broadcast_packet(
             self,
-            CUpdateEntityPosRot::new(
+            &CUpdateEntityPosRot::new(
                 entity_id.into(),
                 (x * 4096.0 - lastx * 4096.0) as i16,
                 (y * 4096.0 - lasty * 4096.0) as i16,
@@ -130,7 +130,7 @@ impl Client {
                 on_ground,
             ),
         );
-        server.broadcast_packet(self, CHeadRot::new(entity_id.into(), head_yaw as u8));
+        server.broadcast_packet(self, &CHeadRot::new(entity_id.into(), head_yaw as u8));
     }
 
     pub fn handle_rotation(&mut self, server: &mut Server, rotation: SPlayerRotation) {
@@ -151,9 +151,9 @@ impl Client {
 
         server.broadcast_packet(
             self,
-            CUpdateEntityRot::new(entity_id.into(), yaw as u8, pitch as u8, on_ground),
+            &CUpdateEntityRot::new(entity_id.into(), yaw as u8, pitch as u8, on_ground),
         );
-        server.broadcast_packet(self, CHeadRot::new(entity_id.into(), head_yaw as u8));
+        server.broadcast_packet(self, &CHeadRot::new(entity_id.into(), head_yaw as u8));
     }
 
     pub fn handle_chat_command(&mut self, _server: &mut Server, command: SChatCommand) {
@@ -191,14 +191,11 @@ impl Client {
 
     pub fn handle_chat_message(&mut self, server: &mut Server, chat_message: SChatMessage) {
         let message = chat_message.message;
-        server.broadcast_packet(
-            self,
-            COpenScreen::new(
-                VarInt(0),
-                VarInt(WindowType::CraftingTable as i32),
-                TextComponent::from("Test Crafter"),
-            ),
-        );
+        self.send_packet(&COpenScreen::new(
+            VarInt(0),
+            VarInt(WindowType::CraftingTable as i32),
+            TextComponent::from("Test Crafter"),
+        ));
         // TODO: filter message & validation
         let gameprofile = self.gameprofile.as_ref().unwrap();
         dbg!("got message");

@@ -7,14 +7,16 @@ use crate::VarInt;
 #[packet(0x58)]
 pub struct CSetEntityMetadata {
     entity_id: VarInt,
-    metadata: Vec<Metadata>,
+    metadata: Metadata,
+    end: u8,
 }
 
 impl CSetEntityMetadata {
-    pub fn new(entity_id: VarInt, metadata: Vec<Metadata>) -> Self {
+    pub fn new(entity_id: VarInt, metadata: Metadata) -> Self {
         Self {
             entity_id,
             metadata,
+            end: 255,
         }
     }
 }

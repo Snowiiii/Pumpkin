@@ -200,6 +200,7 @@ impl Client {
         _server: &mut Server,
         client_information: SClientInformation,
     ) {
+        dbg!("got client settings");
         self.config = Some(PlayerConfig {
             locale: client_information.locale,
             view_distance: client_information.view_distance,
