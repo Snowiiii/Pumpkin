@@ -4,7 +4,7 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 #[packet(0x03)]
 pub struct CEntityAnimation {
     entity_id: VarInt,

@@ -5,7 +5,7 @@ use crate::client::authentication::ProfileAction;
 #[derive(Deserialize, Serialize)]
 pub struct Authentication {
     /// Whether to use Mojang authentication.
-    pub use_authentication: bool,
+    pub enabled: bool,
 
     /// Prevent proxy connections.
     pub prevent_proxy_connections: bool,
@@ -84,8 +84,8 @@ impl Default for TextureTypes {
 impl Default for Authentication {
     fn default() -> Self {
         Self {
-            use_authentication: true,
-            prevent_proxy_connections: true,
+            enabled: true,
+            prevent_proxy_connections: false,
             player_profile: Default::default(),
             textures: Default::default(),
         }

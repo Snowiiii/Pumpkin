@@ -2,13 +2,13 @@ use std::io::{self, Write};
 
 use bytebuf::{packet_id::Packet, ByteBuffer, DeserializerError};
 use bytes::Buf;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use thiserror::Error;
 
 pub mod bytebuf;
 pub mod client;
 pub mod server;
-pub mod text;
+pub mod uuid;
 
 pub mod packet_decoder;
 pub mod packet_encoder;
@@ -88,16 +88,6 @@ impl VarInt {
             }
         }
         Err(VarIntDecodeError::TooLarge)
-    }
-}
-
-pub struct RawBytes<'a>(pub &'a [u8]);
-impl<'a> Serialize for RawBytes<'a> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_bytes(self.0)
     }
 }
 

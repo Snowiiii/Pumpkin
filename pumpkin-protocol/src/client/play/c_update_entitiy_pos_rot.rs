@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 #[packet(0x2F)]
 pub struct CUpdateEntityPosRot {
     entity_id: VarInt,

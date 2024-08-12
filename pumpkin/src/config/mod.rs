@@ -1,11 +1,13 @@
 use std::path::Path;
 
 use auth_config::Authentication;
+use resource_pack::ResourcePack;
 use serde::{Deserialize, Serialize};
 
 use crate::{entity::player::GameMode, server::Difficulty};
 
 pub mod auth_config;
+pub mod resource_pack;
 
 /// Current Config version of the Base Config
 const CURRENT_BASE_VERSION: &str = "1.0.0";
@@ -18,6 +20,27 @@ pub struct AdvancedConfiguration {
     pub commands: Commands,
     pub authentication: Authentication,
     pub packet_compression: Compression,
+    pub resource_pack: ResourcePack,
+    pub rcon: RCONConfig,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+pub struct RCONConfig {
+    pub enabled: bool,
+    pub ip: String,
+    pub port: u16,
+    pub password: String,
+}
+
+impl Default for RCONConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            ip: "0.0.0.0".to_string(),
+            port: 25575,
+            password: "".to_string(),
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -63,6 +86,8 @@ impl Default for AdvancedConfiguration {
             authentication: Authentication::default(),
             commands: Commands::default(),
             packet_compression: Compression::default(),
+            resource_pack: ResourcePack::default(),
+            rcon: RCONConfig::default(),
         }
     }
 }
@@ -83,10 +108,6 @@ pub struct BasicConfiguration {
     pub view_distance: u8,
     /// The maximum simulated view distance.
     pub simulation_distance: u8,
-    /// The path to the resource pack.
-    pub resource_pack: String,
-    /// The SHA1 hash of the resource pack.
-    pub resource_pack_sha1: String,
     /// The default game difficulty.
     pub default_difficulty: Difficulty,
     /// Whether the Nether dimension is enabled.
@@ -107,14 +128,12 @@ impl Default for BasicConfiguration {
     fn default() -> Self {
         Self {
             config_version: CURRENT_BASE_VERSION.to_string(),
-            server_address: "127.0.0.1".to_string(),
+            server_address: "0.0.0.0".to_string(),
             server_port: 25565,
             seed: "".to_string(),
             max_players: 100000,
             view_distance: 10,
             simulation_distance: 10,
-            resource_pack: "".to_string(),
-            resource_pack_sha1: "".to_string(),
             default_difficulty: Difficulty::Normal,
             allow_nether: true,
             hardcore: false,
@@ -130,13 +149,20 @@ impl AdvancedConfiguration {
     pub fn load<P: AsRef<Path>>(path: P) -> AdvancedConfiguration {
         if path.as_ref().exists() {
             let toml = std::fs::read_to_string(path).expect("Couldn't read configuration");
-            toml::from_str(toml.as_str()).expect("Couldn't parse, Proberbly old config")
+            let config: AdvancedConfiguration =
+                toml::from_str(toml.as_str()).expect("Couldn't parse features.toml, Proberbly old config, Replacing with a new one or just delete it");
+            config.validate();
+            config
         } else {
             let config = AdvancedConfiguration::default();
             let toml = toml::to_string(&config).expect("Couldn't create toml!");
             std::fs::write(path, toml).expect("Couldn't save configuration");
+            config.validate();
             config
         }
+    }
+    pub fn validate(&self) {
+        self.resource_pack.validate()
     }
 }
 
@@ -144,7 +170,9 @@ impl BasicConfiguration {
     pub fn load<P: AsRef<Path>>(path: P) -> BasicConfiguration {
         if path.as_ref().exists() {
             let toml = std::fs::read_to_string(path).expect("Couldn't read configuration");
-            toml::from_str(toml.as_str()).expect("Couldn't parse")
+            let config: BasicConfiguration = toml::from_str(toml.as_str()).expect("Couldn't parse configuration.toml, Proberbly old config, Replacing with a new one or just delete it");
+            config.validate();
+            config
         } else {
             let config = BasicConfiguration::default();
             let toml = toml::to_string(&config).expect("Couldn't create toml!");
@@ -170,10 +198,5 @@ impl BasicConfiguration {
                 "When Online Mode is enabled, Encryption must be enabled"
             )
         }
-        assert_eq!(
-            !self.resource_pack.is_empty(),
-            !self.resource_pack_sha1.is_empty(),
-            "Resource Pack path or Sha1 hash is missing"
-        );
     }
 }

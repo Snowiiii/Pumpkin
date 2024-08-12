@@ -1,6 +1,7 @@
 use pumpkin_macros::packet;
+use pumpkin_text::TextComponent;
 
-use crate::{text::TextComponent, ClientPacket, VarInt};
+use crate::{ClientPacket, VarInt};
 
 #[derive(Clone)]
 #[packet(0x1E)]

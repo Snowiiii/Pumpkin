@@ -1,0 +1,9 @@
+[package]
+name = "pumpkin-text"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
+uuid = "1.10"

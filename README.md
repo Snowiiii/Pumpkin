@@ -4,7 +4,7 @@
 
 ![CI](https://github.com/Snowiiii/Pumpkin/actions/workflows/rust.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![Current version)](https://img.shields.io/badge/current_version-1.21-blue)
+![Current version)](https://img.shields.io/badge/current_version-1.21.1-blue)
 
 </div>
 
@@ -27,13 +27,10 @@ Pumpkin is currently under heavy development.
 ### Features (WIP)
 - [x] Configuration (toml)
 - [x] Server Status/Ping
-  - [x] Custom maximum player amout
+  - [x] Custom maximum player amount
   - [x] Custom Icon
   - [x] Custom Status (MOTD)
-- Login
-  - [x] Authentication
-  - [x] Encryption
-  - [x] Packet Compression
+- [x] Login
 - Player Configuration
   - [x] Registries (biome types, paintings, dimensions)
   - [x] Server Brand
@@ -42,6 +39,7 @@ Pumpkin is currently under heavy development.
   - [ ] Cookies
 - World 
   - [x] World Joining
+  - [x] Player Tab-list
   - [x] World Loading
   - [x] Entity Spawning
   - [ ] Chunk Loading
@@ -57,6 +55,8 @@ Pumpkin is currently under heavy development.
   - [ ] Player Inventory
   - [ ] Player Attack
 - Server
+  - [x] RCON
+  - [x] Inventories
   - [x] Chat
   - [x] Commands
 

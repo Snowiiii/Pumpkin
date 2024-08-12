@@ -3,14 +3,18 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize)]
 #[packet(0x42)]
-pub struct CRemoveEntities {
-    entitiy_ids: Vec<VarInt>,
+pub struct CRemoveEntities<'a> {
+    count: VarInt,
+    entitiy_ids: &'a [VarInt],
 }
 
-impl CRemoveEntities {
-    pub fn new(entitiy_ids: Vec<VarInt>) -> Self {
-        Self { entitiy_ids }
+impl<'a> CRemoveEntities<'a> {
+    pub fn new(entitiy_ids: &'a [VarInt]) -> Self {
+        Self {
+            count: VarInt(entitiy_ids.len() as i32),
+            entitiy_ids,
+        }
     }
 }

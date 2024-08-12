@@ -1,7 +1,9 @@
+use std::str::FromStr;
+
 use num_traits::FromPrimitive;
 use pumpkin_protocol::{
     client::{
-        config::{CFinishConfig, CKnownPacks, CRegistryData},
+        config::{CConfigAddResourcePack, CFinishConfig, CKnownPacks, CRegistryData},
         login::{CEncryptionRequest, CLoginSuccess, CSetCompression},
         status::{CPingResponse, CStatusResponse},
     },
@@ -11,9 +13,9 @@ use pumpkin_protocol::{
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
         status::{SPingRequest, SStatusRequest},
     },
-    ConnectionState, KnownPack, RawBytes,
+    ConnectionState, KnownPack,
 };
-use pumpkin_registry::Registry;
+use pumpkin_text::TextComponent;
 use rsa::Pkcs1v15Encrypt;
 use sha1::{Digest, Sha1};
 
@@ -38,12 +40,12 @@ impl Client {
     }
 
     pub fn handle_status_request(&mut self, server: &mut Server, _status_request: SStatusRequest) {
-        self.send_packet(CStatusResponse::new(&server.status_response_json));
+        self.send_packet(&CStatusResponse::new(&server.status_response_json));
     }
 
     pub fn handle_ping_request(&mut self, _server: &mut Server, ping_request: SPingRequest) {
         dbg!("ping");
-        self.send_packet(CPingResponse::new(ping_request.payload));
+        self.send_packet(&CPingResponse::new(ping_request.payload));
         self.close();
     }
 
@@ -64,11 +66,11 @@ impl Client {
         let public_key_der = &server.public_key_der;
         let packet = CEncryptionRequest::new(
             "",
-            RawBytes(public_key_der),
-            RawBytes(&verify_token),
+            public_key_der,
+            &verify_token,
             server.base_config.online_mode, // TODO
         );
-        self.send_packet(packet);
+        self.send_packet(&packet);
     }
 
     pub async fn handle_encryption_response(
@@ -131,6 +133,7 @@ impl Client {
             }
         }
         for ele in self.gameprofile.as_ref().unwrap().properties.clone() {
+            // todo, use this
             unpack_textures(ele, &server.advanced_config.authentication.textures);
         }
 
@@ -141,13 +144,13 @@ impl Client {
                 .packet_compression
                 .compression_threshold;
             let level = server.advanced_config.packet_compression.compression_level;
-            self.send_packet(CSetCompression::new(threshold.into()));
+            self.send_packet(&CSetCompression::new(threshold.into()));
             self.set_compression(Some((threshold, level)));
         }
 
         if let Some(profile) = self.gameprofile.as_ref().cloned() {
-            let packet = CLoginSuccess::new(profile.id, profile.name, &profile.properties, false);
-            self.send_packet(packet);
+            let packet = CLoginSuccess::new(profile.id, &profile.name, &profile.properties, false);
+            self.send_packet(&packet);
         } else {
             self.kick("game profile is none");
         }
@@ -167,8 +170,25 @@ impl Client {
     ) {
         self.connection_state = ConnectionState::Config;
         server.send_brand(self);
+
+        let resource_config = &server.advanced_config.resource_pack;
+        if resource_config.enabled {
+            let prompt_message = if resource_config.prompt_message.is_empty() {
+                None
+            } else {
+                Some(TextComponent::from(resource_config.prompt_message.clone()))
+            };
+            self.send_packet(&CConfigAddResourcePack::new(
+                uuid::Uuid::from_str(&resource_config.resource_pack_url).unwrap(),
+                resource_config.resource_pack_url.clone(),
+                resource_config.resource_pack_sha1.clone(),
+                resource_config.force,
+                prompt_message,
+            ));
+        }
+
         // known data packs
-        self.send_packet(CKnownPacks::new(&[KnownPack {
+        self.send_packet(&CKnownPacks::new(&[KnownPack {
             namespace: "minecraft",
             id: "core",
             version: "1.21",
@@ -180,6 +200,7 @@ impl Client {
         _server: &mut Server,
         client_information: SClientInformation,
     ) {
+        dbg!("got client settings");
         self.config = Some(PlayerConfig {
             locale: client_information.locale,
             view_distance: client_information.view_distance,
@@ -204,9 +225,9 @@ impl Client {
         }
     }
 
-    pub fn handle_known_packs(&mut self, _server: &mut Server, _config_acknowledged: SKnownPacks) {
-        for registry in Registry::get_static() {
-            self.send_packet(CRegistryData::new(
+    pub fn handle_known_packs(&mut self, server: &mut Server, _config_acknowledged: SKnownPacks) {
+        for registry in &server.cached_registry {
+            self.send_packet(&CRegistryData::new(
                 &registry.registry_id,
                 &registry.registry_entries,
             ));
@@ -214,7 +235,7 @@ impl Client {
 
         // We are done with configuring
         dbg!("finish config");
-        self.send_packet(CFinishConfig::new());
+        self.send_packet(&CFinishConfig::new());
     }
 
     pub async fn handle_config_acknowledged(

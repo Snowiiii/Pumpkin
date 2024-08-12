@@ -18,6 +18,7 @@ pub mod client;
 pub mod commands;
 pub mod config;
 pub mod entity;
+pub mod rcon;
 pub mod server;
 pub mod util;
 
@@ -26,6 +27,8 @@ pub mod util;
 async fn main() -> io::Result<()> {
     const SERVER: Token = Token(0);
     use std::{cell::RefCell, time::Instant};
+
+    use rcon::RCONServer;
 
     let time = Instant::now();
     let basic_config = BasicConfiguration::load("configuration.toml");
@@ -58,6 +61,7 @@ async fn main() -> io::Result<()> {
     let mut unique_token = Token(SERVER.0 + 1);
 
     let use_console = advanced_configuration.commands.use_console;
+    let rcon = advanced_configuration.rcon.clone();
 
     let mut connections: HashMap<Token, Rc<RefCell<Client>>> = HashMap::new();
 
@@ -73,8 +77,13 @@ async fn main() -> io::Result<()> {
                 stdin
                     .read_line(&mut out)
                     .expect("Failed to read console line");
-                handle_command(&mut commands::CommandSender::Console, out);
+                handle_command(&mut commands::CommandSender::Console, &out);
             }
+        });
+    }
+    if rcon.enabled {
+        tokio::spawn(async move {
+            RCONServer::new(&rcon).await.unwrap();
         });
     }
     loop {

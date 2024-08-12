@@ -32,9 +32,9 @@ use pumpkin_protocol::{
         },
         status::{SPingRequest, SStatusRequest},
     },
-    text::TextComponent,
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
+use pumpkin_text::TextComponent;
 
 use std::io::Read;
 use thiserror::Error;
@@ -122,7 +122,7 @@ impl Client {
     }
 
     /// Send a Clientbound Packet to the Client
-    pub fn send_packet<P: ClientPacket>(&mut self, packet: P) {
+    pub fn send_packet<P: ClientPacket>(&mut self, packet: &P) {
         self.enc
             .append_packet(packet)
             .unwrap_or_else(|e| self.kick(&e.to_string()));
@@ -132,7 +132,7 @@ impl Client {
             .unwrap_or_else(|e| self.kick(&e.to_string()));
     }
 
-    pub fn try_send_packet<P: ClientPacket>(&mut self, packet: P) -> Result<(), PacketError> {
+    pub fn try_send_packet<P: ClientPacket>(&mut self, packet: &P) -> Result<(), PacketError> {
         self.enc.append_packet(packet)?;
         self.connection
             .write_all(&self.enc.take())
@@ -155,11 +155,11 @@ impl Client {
         entity.yaw = yaw;
         entity.pitch = pitch;
         player.awaiting_teleport = Some(id.into());
-        self.send_packet(CSyncPlayerPostion::new(x, y, z, yaw, pitch, 0, id.into()));
+        self.send_packet(&CSyncPlayerPostion::new(x, y, z, yaw, pitch, 0, id.into()));
     }
 
     pub fn set_gamemode(&mut self, gamemode: GameMode) {
-        self.send_packet(CGameEvent::new(3, gamemode.to_f32().unwrap()));
+        self.send_packet(&CGameEvent::new(3, gamemode.to_f32().unwrap()));
     }
 
     pub async fn process_packets(&mut self, server: &mut Server) {
@@ -294,9 +294,7 @@ impl Client {
                     }
                     Ok(n) => {
                         bytes_read += n;
-                        if bytes_read == received_data.len() {
-                            received_data.resize(received_data.len() + 1024, 0);
-                        }
+                        received_data.extend(&vec![0; n]);
                     }
                     // Would block "errors" are the OS's way of saying that the
                     // connection is not actually ready to perform this I/O operation.
@@ -325,7 +323,7 @@ impl Client {
     }
 
     pub fn send_system_message(&mut self, text: TextComponent) {
-        self.send_packet(CSystemChatMessge::new(text, false));
+        self.send_packet(&CSystemChatMessge::new(text, false));
     }
 
     /// Kicks the Client with a reason depending on the connection state
@@ -333,20 +331,18 @@ impl Client {
         dbg!(reason);
         match self.connection_state {
             ConnectionState::Login => {
-                self.try_send_packet(CLoginDisconnect::new(
+                self.try_send_packet(&CLoginDisconnect::new(
                     &serde_json::to_string_pretty(&reason).unwrap(),
                 ))
                 .unwrap_or_else(|_| self.close());
             }
             ConnectionState::Config => {
-                self.try_send_packet(CConfigDisconnect::new(reason))
+                self.try_send_packet(&CConfigDisconnect::new(reason))
                     .unwrap_or_else(|_| self.close());
             }
             ConnectionState::Play => {
-                self.try_send_packet(CPlayDisconnect::new(TextComponent {
-                    text: reason.to_string(),
-                }))
-                .unwrap_or_else(|_| self.close());
+                self.try_send_packet(&CPlayDisconnect::new(TextComponent::from(reason)))
+                    .unwrap_or_else(|_| self.close());
             }
             _ => {
                 log::warn!("Cant't kick in {:?} State", self.connection_state)
