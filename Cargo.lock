@@ -1169,6 +1169,7 @@ dependencies = [
  "aes",
  "bytes",
  "cfb8",
+ "fastnbt",
  "flate2",
  "itertools",
  "log",

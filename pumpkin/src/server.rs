@@ -16,15 +16,13 @@ use pumpkin_protocol::{
     bytebuf::ByteBuffer, client::{
         config::CPluginMessage,
         play::{
-            CCenterChunk, CChunkData, CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerAbilities,
-            CPlayerInfoUpdate, CRemoveEntities, CSpawnEntity, PlayerAction,
+            CCenterChunk, CChunkData, CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate, CRemoveEntities, CRemovePlayerInfo, CSetEntityMetadata, CSpawnEntity, Metadata, PlayerAction
         },
-    }, BitSet, ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL
+    }, uuid::UUID, BitSet, ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL
 };
 use pumpkin_world::dimension::Dimension;
 
 use pumpkin_registry::Registry;
-use pumpkin_world::chunk::TestChunk;
 use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
 
@@ -337,7 +335,7 @@ impl Server {
             .read_chunks(wanted_chunks)
             .await;
 
-        client.send_packet(CCenterChunk {
+        client.send_packet(&CCenterChunk {
             chunk_x: 0.into(),
             chunk_z: 0.into(),
         });
@@ -354,7 +352,7 @@ impl Server {
                 "Chunk loading failed for chunk ({},{}): {}",
                 chunk.0 .0, chunk.0 .1, err
             ),
-            Ok(data) => client.send_packet(CChunkData(data)),
+            Ok(data) => client.send_packet(&CChunkData(data)),
         }});
 
 

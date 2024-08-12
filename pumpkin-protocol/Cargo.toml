@@ -28,4 +28,4 @@ aes = "0.8.4"
 cfb8 = "0.8.1"
 take_mut = "0.2.2"
 itertools = "0.13.0"
-fastnbt = "2.5.0"
+fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
