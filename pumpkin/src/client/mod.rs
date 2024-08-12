@@ -294,9 +294,7 @@ impl Client {
                     }
                     Ok(n) => {
                         bytes_read += n;
-                        if bytes_read == received_data.len() {
-                            received_data.resize(received_data.len() + 1024, 0);
-                        }
+                        received_data.extend(&vec![0; n]);
                     }
                     // Would block "errors" are the OS's way of saying that the
                     // connection is not actually ready to perform this I/O operation.

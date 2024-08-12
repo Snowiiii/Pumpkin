@@ -17,9 +17,10 @@ use pumpkin_protocol::{
         config::CPluginMessage,
         play::{
             CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate,
-            CRemoveEntities, CSpawnEntity, PlayerAction,
+            CRemoveEntities, CRemovePlayerInfo, CSpawnEntity, PlayerAction,
         },
     },
+    uuid::UUID,
     BitSet, ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
 };
 use pumpkin_registry::Registry;
@@ -128,6 +129,8 @@ impl Server {
         // todo: put this into the entitiy struct
         if client.is_player() {
             let id = client.player.as_ref().unwrap().entity_id();
+            let uuid = client.gameprofile.as_ref().unwrap().id;
+            self.broadcast_packet(&mut client, CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]));
             self.broadcast_packet(&mut client, CRemoveEntities::new(&[id.into()]))
         }
     }
@@ -185,13 +188,16 @@ impl Server {
         self.broadcast_packet(
             client,
             CPlayerInfoUpdate::new(
-                0x01,
+                0x01 | 0x08,
                 &[pumpkin_protocol::client::play::Player {
                     uuid: gameprofile.id,
-                    actions: vec![PlayerAction::AddPlayer {
-                        name: gameprofile.name.clone(),
-                        properties: gameprofile.properties.clone(),
-                    }],
+                    actions: vec![
+                        PlayerAction::AddPlayer {
+                            name: gameprofile.name.clone(),
+                            properties: gameprofile.properties.clone(),
+                        },
+                        PlayerAction::UpdateListed { listed: true },
+                    ],
                 }],
             ),
         );
@@ -204,14 +210,17 @@ impl Server {
                 let gameprofile = client.gameprofile.as_ref().unwrap();
                 entries.push(pumpkin_protocol::client::play::Player {
                     uuid: gameprofile.id,
-                    actions: vec![PlayerAction::AddPlayer {
-                        name: gameprofile.name.clone(),
-                        properties: gameprofile.properties.clone(),
-                    }],
+                    actions: vec![
+                        PlayerAction::AddPlayer {
+                            name: gameprofile.name.clone(),
+                            properties: gameprofile.properties.clone(),
+                        },
+                        PlayerAction::UpdateListed { listed: true },
+                    ],
                 })
             }
         }
-        client.send_packet(CPlayerInfoUpdate::new(0x01, &entries));
+        client.send_packet(CPlayerInfoUpdate::new(0x01 | 0x08, &entries));
 
         // Start waiting for level chunks
         client.send_packet(CGameEvent::new(13, 0.0));
