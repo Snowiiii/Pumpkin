@@ -4,7 +4,15 @@ version = "0.1.0-dev"
 description = "Empowering everyone to host fast and efficient Minecraft servers."
 edition = "2021"
 
+[features]
+default = []
+dhat-heap = ["dhat"]
+
 [dependencies]
+# memory analysis
+dhat = { version = "0.3.3", optional = true }
+
+# pumpkin
 pumpkin-text = { path = "../pumpkin-text" }
 pumpkin-inventory = { path = "../pumpkin-inventory"}
 pumpkin-world = { path = "../pumpkin-world"}
@@ -52,3 +60,4 @@ crossbeam-channel = "0.5.13"
 uuid = { version = "1.10", features = ["serde", "v3"]}
 
 tokio.workspace = true
+rayon.workspace = true
