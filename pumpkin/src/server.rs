@@ -25,7 +25,7 @@ use pumpkin_protocol::{
     uuid::UUID,
     ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
 };
-use pumpkin_world::dimension::Dimension;
+use pumpkin_world::{dimension::Dimension, radial_chunk_iterator::RadialIterator};
 
 use pumpkin_registry::Registry;
 use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
@@ -330,19 +330,12 @@ impl Server {
 
     // TODO: do this in a world
     async fn spawn_test_chunk(client: &mut Client) {
-        let mut wanted_chunks = Vec::new();
-
-        for i in -32i32..32 {
-            for j in -32i32..32 {
-                wanted_chunks.push((i, j))
-            }
-        }
         let chunks = Dimension::OverWorld
             .into_level(
                 // TODO: load form config
                 "./world".parse().unwrap(),
             )
-            .read_chunks(wanted_chunks)
+            .read_chunks(RadialIterator::new(32).collect())
             .await;
 
         client.send_packet(&CCenterChunk {
