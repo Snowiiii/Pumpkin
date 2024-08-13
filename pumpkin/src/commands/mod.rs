@@ -1,11 +1,13 @@
 use gamemode::GamemodeCommand;
 use pumpkin::PumpkinCommand;
 use pumpkin_text::TextComponent;
+use stop::StopCommand;
 
 use crate::client::Client;
 
 mod gamemode;
 mod pumpkin;
+mod stop;
 
 /// I think it would be great to split this up into a seperate crate, But idk how i should do that, Because we have to rely on Client and Server
 pub trait Command<'a> {
@@ -70,6 +72,10 @@ pub fn handle_command(sender: &mut CommandSender, command: &str) {
     }
     if command.starts_with(GamemodeCommand::NAME) {
         GamemodeCommand::on_execute(sender, command);
+        return;
+    }
+    if command.starts_with(StopCommand::NAME) {
+        StopCommand::on_execute(sender, command);
         return;
     }
     // TODO: red color
