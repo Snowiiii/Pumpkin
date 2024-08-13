@@ -17,9 +17,9 @@ use pumpkin_protocol::{
     client::{
         config::CPluginMessage,
         play::{
-            CCenterChunk, CChunkData, CChunkDataUpdateLight, CGameEvent, CLogin, CPlayerAbilities,
-            CPlayerInfoUpdate, CRemoveEntities, CRemovePlayerInfo, CSetEntityMetadata,
-            CSpawnEntity, Metadata, PlayerAction,
+            CCenterChunk, CChunkData, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate,
+            CRemoveEntities, CRemovePlayerInfo, CSetEntityMetadata, CSpawnEntity, Metadata,
+            PlayerAction,
         },
     },
     uuid::UUID,

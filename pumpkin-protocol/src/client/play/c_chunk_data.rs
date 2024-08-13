@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::{bytebuf::ByteBuffer, BitSet, ClientPacket, VarInt};
-use fastnbt::LongArray;
 use itertools::Itertools;
 use pumpkin_macros::packet;
 use pumpkin_world::{chunk::ChunkData, DIRECT_PALETTE_BITS};
