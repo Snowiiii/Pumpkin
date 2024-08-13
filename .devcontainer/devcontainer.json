@@ -14,7 +14,7 @@
 		// python is needed for decompiling Mojang's server jar
 		"ghcr.io/devcontainers/features/python:1": {
 			"installTools": true,
-			"version": "3.12"
+			"version": "3.7"
 		}
 	},
 	"mounts": [
