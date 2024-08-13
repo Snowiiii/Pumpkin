@@ -1,6 +1,3 @@
-#![feature(test)]
-extern crate test;
-
 use bytebuf::{packet_id::Packet, ByteBuffer, DeserializerError};
 use bytes::Buf;
 use serde::{Deserialize, Serialize, Serializer};
