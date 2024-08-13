@@ -8,7 +8,8 @@ use pumpkin_protocol::{
     },
     server::play::{
         SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
-        SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSwingArm,
+        SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
+        SSwingArm,
     },
     VarInt,
 };
@@ -277,4 +278,5 @@ impl Client {
             }
         }
     }
+    pub fn handle_player_action(&mut self, _server: &mut Server, player_action: SPlayerAction) {}
 }

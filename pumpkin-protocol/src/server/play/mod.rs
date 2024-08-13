@@ -8,6 +8,7 @@ mod s_player_position;
 mod s_player_position_rotation;
 mod s_player_rotation;
 mod s_swing_arm;
+mod s_player_action;
 
 pub use c_client_information::*;
 pub use c_interact::*;
@@ -19,3 +20,4 @@ pub use s_player_position::*;
 pub use s_player_position_rotation::*;
 pub use s_player_rotation::*;
 pub use s_swing_arm::*;
+pub use s_player_action::*;

@@ -28,7 +28,8 @@ use pumpkin_protocol::{
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
         play::{
             SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
-            SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSwingArm,
+            SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
+            SPlayerRotation, SSwingArm,
         },
         status::{SPingRequest, SStatusRequest},
     },
@@ -286,8 +287,9 @@ impl Client {
                 server,
                 SClientInformationPlay::read(bytebuf).unwrap(),
             ),
-            SInteract::PACKET_ID => {
-                self.handle_interact(server, SInteract::read(bytebuf).unwrap());
+            SInteract::PACKET_ID => self.handle_interact(server, SInteract::read(bytebuf).unwrap()),
+            SPlayerAction::PACKET_ID => {
+                self.handle_player_action(server, SPlayerAction::read(bytebuf).unwrap())
             }
             _ => log::error!("Failed to handle player packet id {}", packet.id.0),
         }
