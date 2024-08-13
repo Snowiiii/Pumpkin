@@ -97,11 +97,6 @@ impl Level {
         chunks: Vec<(i32, i32)>,
     ) -> Vec<((i32, i32), Result<ChunkData, WorldError>)> {
         // dbg!(at);
-        println!(
-            "Getting chunks {:?}, from region file {}",
-            &chunks,
-            region_file.to_str().unwrap_or("")
-        );
         // return different error when file is not found (because that means that the chunks have just not been generated yet)
         let mut region_file = match File::open(region_file).await {
             Ok(f) => f,

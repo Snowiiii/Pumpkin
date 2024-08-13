@@ -351,6 +351,7 @@ impl Server {
         });
 
         chunks.iter().for_each(|chunk| {
+            #[cfg(debug_assertions)]
             if chunk.0 == (0, 0) {
                 let mut test = ByteBuffer::empty();
                 CChunkData(chunk.1.as_ref().unwrap()).write(&mut test);
