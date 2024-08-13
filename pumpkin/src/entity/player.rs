@@ -50,7 +50,7 @@ pub enum ChatMode {
     Hidden,
 }
 
-#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, FromPrimitive, ToPrimitive)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, FromPrimitive, ToPrimitive)]
 pub enum GameMode {
     Undefined = -1,
     Survival,
