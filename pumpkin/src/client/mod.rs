@@ -62,6 +62,7 @@ pub struct Client {
     pub config: Option<PlayerConfig>,
     pub brand: Option<String>,
 
+    pub protocol_version: i32,
     pub connection_state: ConnectionState,
     pub encrytion: bool,
     pub closed: bool,
@@ -76,6 +77,7 @@ pub struct Client {
 impl Client {
     pub fn new(token: Rc<Token>, connection: TcpStream, address: SocketAddr) -> Self {
         Self {
+            protocol_version: 0,
             gameprofile: None,
             config: None,
             brand: None,

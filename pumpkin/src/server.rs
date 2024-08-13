@@ -37,7 +37,7 @@ use crate::{
     entity::player::{GameMode, Player},
 };
 
-pub const CURRENT_MC_VERSION: &str = "1.21";
+pub const CURRENT_MC_VERSION: &str = "1.21.1";
 
 pub struct Server {
     pub compression_threshold: Option<u8>,

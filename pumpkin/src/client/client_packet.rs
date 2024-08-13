@@ -13,7 +13,7 @@ use pumpkin_protocol::{
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
         status::{SPingRequest, SStatusRequest},
     },
-    ConnectionState, KnownPack,
+    ConnectionState, KnownPack, CURRENT_MC_PROTOCOL,
 };
 use pumpkin_text::TextComponent;
 use rsa::Pkcs1v15Encrypt;
@@ -22,7 +22,7 @@ use sha1::{Digest, Sha1};
 use crate::{
     client::authentication::{self, GameProfile},
     entity::player::{ChatMode, Hand},
-    server::Server,
+    server::{Server, CURRENT_MC_VERSION},
 };
 
 use super::{
@@ -34,9 +34,17 @@ use super::{
 /// Implements the `Client` Packets
 impl Client {
     pub fn handle_handshake(&mut self, _server: &mut Server, handshake: SHandShake) {
-        // TODO set protocol version and check protocol version
+        self.protocol_version = handshake.protocol_version.0;
         self.connection_state = handshake.next_state;
-        dbg!("handshake");
+        if self.connection_state == ConnectionState::Login {
+            if self.protocol_version < CURRENT_MC_PROTOCOL as i32 {
+                self.kick(&format!("Client outdated, Server uses Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL}"));
+                return;
+            } else if self.protocol_version > CURRENT_MC_PROTOCOL as i32 {
+                self.kick(&format!("Server outdated, Server uses Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL}"));
+                return;
+            }
+        }
     }
 
     pub fn handle_status_request(&mut self, server: &mut Server, _status_request: SStatusRequest) {
