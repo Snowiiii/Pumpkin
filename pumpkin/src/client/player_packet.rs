@@ -271,7 +271,7 @@ impl Client {
                 }
                 drop(client);
                 if config.hurt_animation {
-                    // todo
+                    // TODO
                     server.broadcast_packet(self, &CHurtAnimation::new(interact.entity_id, 10.0))
                 }
             }

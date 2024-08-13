@@ -22,7 +22,7 @@ pub type Identifier = String;
 pub type VarIntType = i32;
 pub type VarLongType = i64;
 
-pub struct BitSet(pub VarInt, pub Vec<i64>);
+pub struct BitSet<'a>(pub VarInt, pub &'a [i64]);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VarInt(pub VarIntType);

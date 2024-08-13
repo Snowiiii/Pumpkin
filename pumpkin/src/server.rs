@@ -127,17 +127,14 @@ impl Server {
 
     pub fn remove_client(&mut self, token: &Token) {
         let client = self.current_clients.remove(token).unwrap();
-        let mut client = client.borrow_mut();
+        let client = client.borrow();
         // despawn the player
         // todo: put this into the entitiy struct
         if client.is_player() {
             let id = client.player.as_ref().unwrap().entity_id();
             let uuid = client.gameprofile.as_ref().unwrap().id;
-            self.broadcast_packet_expect(
-                &mut client,
-                &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]),
-            );
-            self.broadcast_packet_expect(&mut client, &CRemoveEntities::new(&[id.into()]))
+            self.broadcast_packet_expect(&client, &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]));
+            self.broadcast_packet_expect(&client, &CRemoveEntities::new(&[id.into()]))
         }
     }
 
@@ -313,7 +310,6 @@ impl Server {
             // Check if client is a player
             let mut client = client.borrow_mut();
             if client.is_player() {
-                // we need to clone, Because we send a new packet to every client
                 client.send_packet(packet);
             }
         }
@@ -327,7 +323,6 @@ impl Server {
             // Check if client is a player
             let mut client = client.borrow_mut();
             if client.is_player() {
-                // we need to clone, Because we send a new packet to every client
                 client.send_packet(packet);
             }
         }
@@ -360,7 +355,7 @@ impl Server {
                 let mut test = ByteBuffer::empty();
                 CChunkData(chunk.1.as_ref().unwrap()).write(&mut test);
                 let len = test.buf().len();
-                dbg!(
+                log::debug!(
                     "Chunk packet size: {}B {}KB {}MB",
                     len,
                     len / 1024,
@@ -368,27 +363,15 @@ impl Server {
                 );
             }
             match &chunk.1 {
-                Err(err) => println!(
+                Err(err) => log::warn!(
                     "Chunk loading failed for chunk ({},{}): {}",
-                    chunk.0 .0, chunk.0 .1, err
+                    chunk.0 .0,
+                    chunk.0 .1,
+                    err
                 ),
                 Ok(data) => client.send_packet(&CChunkData(data)),
             }
         });
-
-        // let test_chunk = TestChunk::new();
-        // client.send_packet(CChunkDataUpdateLight::new(
-        //     10,
-        //     10,
-        //     test_chunk.heightmap,
-        //     Vec::new(),
-        //     Vec::new(),
-        //     BitSet(0.into(), Vec::new()),
-        //     BitSet(0.into(), Vec::new()),
-        //     BitSet(0.into(), Vec::new()),
-        //     Vec::new(),
-        //     Vec::new(),
-        // ));
     }
 
     // move to world

@@ -150,7 +150,7 @@ impl ByteBuffer {
 
     pub fn put_bit_set(&mut self, set: &BitSet) {
         self.put_var_int(&set.0);
-        for b in &set.1 {
+        for b in set.1 {
             self.put_i64(*b);
         }
     }

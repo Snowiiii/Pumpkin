@@ -4,7 +4,6 @@ use crate::{bytebuf::ByteBuffer, ClientPacket, Property};
 
 use super::PlayerAction;
 
-#[derive(Clone)]
 #[packet(0x3E)]
 pub struct CPlayerInfoUpdate<'a> {
     pub actions: i8,
