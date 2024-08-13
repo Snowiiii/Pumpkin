@@ -32,7 +32,7 @@ use fastnbt::LongArray;
 use crate::{world::WorldError, WORLD_HEIGHT};
 
 pub struct ChunkData {
-    pub blocks: Box<[i64; 16 * 16 * WORLD_HEIGHT]>,
+    pub blocks: Box<[i32; 16 * 16 * WORLD_HEIGHT]>,
     pub position: (i32, i32),
     pub heightmaps: ChunkHeightmaps,
 }
@@ -96,6 +96,7 @@ impl ChunkData {
                         &entry.name,
                         entry.properties.as_ref(),
                     )
+                    .map(|v| v as i32)
                 })
                 .collect::<Result<Vec<_>, _>>()?;
             let block_data = match block_states.data {

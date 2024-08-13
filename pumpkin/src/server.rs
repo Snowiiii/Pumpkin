@@ -30,6 +30,7 @@ use pumpkin_world::{dimension::Dimension, radial_chunk_iterator::RadialIterator}
 use pumpkin_registry::Registry;
 use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc;
 
 use crate::{
     client::Client,
@@ -330,24 +331,33 @@ impl Server {
 
     // TODO: do this in a world
     async fn spawn_test_chunk(client: &mut Client) {
-        let chunks = Dimension::OverWorld
-            .into_level(
+        let inst = std::time::Instant::now();
+        let (sender, mut chunk_receiver) = mpsc::channel(1024);
+        tokio::spawn(async move {
+            let level = Dimension::OverWorld.into_level(
                 // TODO: load form config
                 "./world".parse().unwrap(),
-            )
-            .read_chunks(RadialIterator::new(32).collect())
-            .await;
+            );
+            level
+                .read_chunks(RadialIterator::new(32).collect(), sender)
+                .await;
+        });
 
         client.send_packet(&CCenterChunk {
             chunk_x: 0.into(),
             chunk_z: 0.into(),
         });
-
-        chunks.iter().for_each(|chunk| {
+        
+        while let Some((chunk_pos, chunk_data)) = chunk_receiver.recv().await {
+            // dbg!(chunk_pos);
+            let chunk_data = match chunk_data {
+                Ok(d) => d,
+                Err(_) => continue,
+            };
             #[cfg(debug_assertions)]
-            if chunk.0 == (0, 0) {
+            if chunk_pos == (0, 0) {
                 let mut test = ByteBuffer::empty();
-                CChunkData(chunk.1.as_ref().unwrap()).write(&mut test);
+                CChunkData(&chunk_data).write(&mut test);
                 let len = test.buf().len();
                 log::debug!(
                     "Chunk packet size: {}B {}KB {}MB",
@@ -356,11 +366,10 @@ impl Server {
                     len / (1024 * 1024)
                 );
             }
-            match &chunk.1 {
-                Err(err) => {},
-                Ok(data) => client.send_packet(&CChunkData(data)),
-            }
-        });
+            client.send_packet(&CChunkData(&chunk_data));
+        }
+        let t = std::time::Instant::now().duration_since(inst);
+        dbg!("DONE", t);
     }
 
     // move to world
