@@ -24,6 +24,10 @@ use crate::{
 
 use super::{Client, PlayerConfig};
 
+fn modulus(a: f32, b: f32) -> f32 {
+    ((a % b) + b) % b
+}
+
 /// Handles all Play Packets send by a real Player
 impl Client {
     pub fn handle_confirm_teleport(
@@ -119,9 +123,9 @@ impl Client {
         let (x, lastx) = (entity.x, entity.lastx);
         let (y, lasty) = (entity.y, entity.lasty);
         let (z, lastz) = (entity.z, entity.lastz);
-        let yaw = (entity.yaw * 256.0 / 360.0).floor();
-        let pitch = (entity.pitch * 256.0 / 360.0).floor();
-        let head_yaw = (entity.head_yaw * 256.0 / 360.0).floor();
+        let yaw = modulus(entity.yaw * 256.0 / 360.0, 256.0);
+        let pitch = modulus(entity.pitch * 256.0 / 360.0, 256.0);
+        // let head_yaw = (entity.head_yaw * 256.0 / 360.0).floor();
 
         server.broadcast_packet(
             self,
@@ -135,7 +139,7 @@ impl Client {
                 on_ground,
             ),
         );
-        server.broadcast_packet(self, &CHeadRot::new(entity_id.into(), head_yaw as u8));
+        server.broadcast_packet(self, &CHeadRot::new(entity_id.into(), yaw as u8));
     }
 
     pub fn handle_rotation(&mut self, server: &mut Server, rotation: SPlayerRotation) {
@@ -150,15 +154,15 @@ impl Client {
         // send new position to all other players
         let on_ground = player.on_ground;
         let entity_id = entity.entity_id;
-        let yaw = (entity.yaw * 256.0 / 360.0).floor();
-        let pitch = (entity.pitch * 256.0 / 360.0).floor();
-        let head_yaw = (entity.head_yaw * 256.0 / 360.0).floor();
+        let yaw = modulus(entity.yaw * 256.0 / 360.0, 256.0);
+        let pitch = modulus(entity.pitch * 256.0 / 360.0, 256.0);
+        // let head_yaw = modulus(entity.head_yaw * 256.0 / 360.0, 256.0);
 
         server.broadcast_packet(
             self,
             &CUpdateEntityRot::new(entity_id.into(), yaw as u8, pitch as u8, on_ground),
         );
-        server.broadcast_packet(self, &CHeadRot::new(entity_id.into(), head_yaw as u8));
+        server.broadcast_packet(self, &CHeadRot::new(entity_id.into(), yaw as u8));
     }
 
     pub fn handle_chat_command(&mut self, _server: &mut Server, command: SChatCommand) {

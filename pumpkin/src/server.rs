@@ -339,7 +339,7 @@ impl Server {
                 "./world".parse().unwrap(),
             );
             level
-                .read_chunks(RadialIterator::new(32).collect(), sender)
+                .read_chunks(RadialIterator::new(2).collect(), sender)
                 .await;
         });
 
