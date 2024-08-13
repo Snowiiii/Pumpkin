@@ -81,9 +81,10 @@ impl Level {
                 .into_iter()
                 .map(|(region, chunk_vec)| {
                     let mut path = self.root_folder.clone();
+                    let chunk_vec = chunk_vec.collect_vec();
                     path.push("region");
                     path.push(format!("r.{}.{}.mca", region.0, region.1));
-                    self.read_region_chunks(path, chunk_vec.collect_vec())
+                    self.read_region_chunks(path, chunk_vec)
                 }),
         )
         .await
@@ -93,12 +94,12 @@ impl Level {
     }
     async fn read_region_chunks(
         &self,
-        region_file: PathBuf,
+        region_file_path: PathBuf,
         chunks: Vec<(i32, i32)>,
     ) -> Vec<((i32, i32), Result<ChunkData, WorldError>)> {
         // dbg!(at);
         // return different error when file is not found (because that means that the chunks have just not been generated yet)
-        let mut region_file = match File::open(region_file).await {
+        let mut region_file = match File::open(&region_file_path).await {
             Ok(f) => f,
             Err(err) => match err.kind() {
                 std::io::ErrorKind::NotFound => {
@@ -190,12 +191,13 @@ impl Level {
 
                 match compression {
                     Compression::Zlib => {}
-                    _ => panic!(), // TODO: support other compression types
+                    _ => panic!("Compression type is not supported"), // TODO: support other compression types
                 }
 
                 let size = u32::from_be_bytes(header[0..4].try_into().unwrap());
-
-                let chunk_data = file_buf.drain(0..size as usize).collect_vec();
+                
+                // size includes the compression scheme byte, so we need to subtract 1
+                let chunk_data = file_buf.drain(0..size as usize - 1).collect_vec();
 
                 ((old_chunk_x, old_chunk_z), Ok(chunk_data))
             }
