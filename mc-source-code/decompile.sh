@@ -21,7 +21,7 @@ echo "DecompilerMC cloned successfully."
 # decompile the server JAR file
 echo "Decompilation might take a while, please be patient."
 cd DecompilerMC
-python3.12 main.py -mcv $MC_VERSION -s server -na -f -rmap -rjar -dm -dj -dd -dec -q -c
+python3 main.py -mcv $MC_VERSION -s server -na -f -rmap -rjar -dm -dj -dd -dec -q -c
 
 # move it to the correct directory
 mv src ..
