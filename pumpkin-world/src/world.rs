@@ -2,6 +2,7 @@ use std::{io::Read, path::PathBuf, sync::Arc};
 
 use flate2::bufread::ZlibDecoder;
 use itertools::Itertools;
+use rayon::prelude::*;
 use thiserror::Error;
 use tokio::{
     fs::File,
@@ -201,23 +202,28 @@ impl Level {
 
                 let chunk_data = file_buf.drain(0..size as usize).collect_vec();
 
-                let mut z = ZlibDecoder::new(&chunk_data[..]);
-                let mut chunk_data = Vec::new();
-                match z.read_to_end(&mut chunk_data) {
-                    Ok(_) => {}
-                    Err(err) => {
-                        return ((old_chunk_x, old_chunk_z), Err(WorldError::ZlibError(err)))
-                    }
-                }
-
-                (
-                    (old_chunk_x, old_chunk_z),
-                    ChunkData::from_bytes(chunk_data, (old_chunk_x, old_chunk_z)),
-                )
+                ((old_chunk_x, old_chunk_z), Ok(chunk_data))
             }
         }))
         .await
-        .into_iter()
-        .collect_vec()
+        .into_par_iter()
+        .map(|((old_chunk_x, old_chunk_z), chunk_data)| {
+            let chunk_data = match chunk_data {
+                Ok(c) => c,
+                Err(e) => return ((old_chunk_x, old_chunk_z), Err(e)),
+            };
+            let mut z = ZlibDecoder::new(&chunk_data[..]);
+            let mut chunk_data = Vec::new();
+            match z.read_to_end(&mut chunk_data) {
+                Ok(_) => {}
+                Err(err) => return ((old_chunk_x, old_chunk_z), Err(WorldError::ZlibError(err))),
+            }
+
+            (
+                (old_chunk_x, old_chunk_z),
+                ChunkData::from_bytes(chunk_data, (old_chunk_x, old_chunk_z)),
+            )
+        })
+        .collect()
     }
 }

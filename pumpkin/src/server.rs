@@ -332,8 +332,8 @@ impl Server {
     async fn spawn_test_chunk(client: &mut Client) {
         let mut wanted_chunks = Vec::new();
 
-        for i in -3i32..3 {
-            for j in -3i32..3 {
+        for i in -32i32..32 {
+            for j in -32i32..32 {
                 wanted_chunks.push((i, j))
             }
         }
@@ -363,12 +363,7 @@ impl Server {
                 );
             }
             match &chunk.1 {
-                Err(err) => log::warn!(
-                    "Chunk loading failed for chunk ({},{}): {}",
-                    chunk.0 .0,
-                    chunk.0 .1,
-                    err
-                ),
+                Err(err) => {},
                 Ok(data) => client.send_packet(&CChunkData(data)),
             }
         });
