@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
-pub struct ResourcePack {
+pub struct ResourcePackConfig {
     pub enabled: bool,
     /// The path to the resource pack.
     pub resource_pack_url: String,
@@ -13,7 +13,7 @@ pub struct ResourcePack {
     pub force: bool,
 }
 
-impl ResourcePack {
+impl ResourcePackConfig {
     pub fn validate(&self) {
         assert_eq!(
             !self.resource_pack_url.is_empty(),
@@ -27,7 +27,7 @@ impl ResourcePack {
     }
 }
 
-impl Default for ResourcePack {
+impl Default for ResourcePackConfig {
     fn default() -> Self {
         Self {
             enabled: false,

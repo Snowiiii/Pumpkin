@@ -16,6 +16,7 @@ pub struct SChatMessage {
     // acknowledged: BitSet,
 }
 
+// TODO
 impl ServerPacket for SChatMessage {
     fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError> {
         Ok(Self {

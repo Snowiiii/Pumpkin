@@ -1,13 +1,14 @@
 use num_traits::FromPrimitive;
+use pumpkin_entity::EntityId;
 use pumpkin_inventory::WindowType;
 use pumpkin_protocol::{
     client::play::{
-        Animation, CEntityAnimation, CHeadRot, COpenScreen, CUpdateEntityPos, CUpdateEntityPosRot,
-        CUpdateEntityRot,
+        Animation, CEntityAnimation, CHeadRot, CHurtAnimation, COpenScreen, CUpdateEntityPos,
+        CUpdateEntityPosRot, CUpdateEntityRot,
     },
     server::play::{
-        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SPlayerCommand,
-        SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSwingArm,
+        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
+        SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSwingArm,
     },
     VarInt,
 };
@@ -15,7 +16,7 @@ use pumpkin_text::TextComponent;
 
 use crate::{
     commands::{handle_command, CommandSender},
-    entity::player::{ChatMode, Hand},
+    entity::player::{ChatMode, GameMode, Hand},
     server::Server,
     util::math::wrap_degrees,
 };
@@ -255,5 +256,25 @@ impl Client {
             text_filtering: client_information.text_filtering,
             server_listing: client_information.server_listing,
         });
+    }
+
+    pub fn handle_interact(&mut self, server: &mut Server, interact: SInteract) {
+        // TODO: do validation and stuff
+        let config = &server.advanced_config.pvp;
+        if config.enabled {
+            let attacked_client = server.get_by_entityid(self, interact.entity_id.0 as EntityId);
+            if let Some(client) = attacked_client {
+                if config.protect_creative
+                    && client.player.as_ref().unwrap().gamemode == GameMode::Creative
+                {
+                    return;
+                }
+                drop(client);
+                if config.hurt_animation {
+                    // todo
+                    server.broadcast_packet(self, &CHurtAnimation::new(interact.entity_id, 10.0))
+                }
+            }
+        }
     }
 }

@@ -1,15 +1,15 @@
-use std::{collections::VecDeque, future, io::Read, path::PathBuf, sync::Arc};
+use std::{io::Read, path::PathBuf, sync::Arc};
 
 use flate2::bufread::ZlibDecoder;
 use itertools::Itertools;
 use thiserror::Error;
 use tokio::{
     fs::File,
-    io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
+    io::{AsyncReadExt, AsyncSeekExt},
     sync::Mutex,
 };
 
-use crate::{chunk::ChunkData, dimension::Dimension};
+use crate::chunk::ChunkData;
 
 pub struct Level {
     root_folder: PathBuf,

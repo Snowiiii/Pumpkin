@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::client::authentication::ProfileAction;
 
 #[derive(Deserialize, Serialize)]
-pub struct Authentication {
+pub struct AuthenticationConfig {
     /// Whether to use Mojang authentication.
     pub enabled: bool,
 
@@ -81,7 +81,7 @@ impl Default for TextureTypes {
     }
 }
 
-impl Default for Authentication {
+impl Default for AuthenticationConfig {
     fn default() -> Self {
         Self {
             enabled: true,

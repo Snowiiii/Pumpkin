@@ -25,10 +25,9 @@
 //     }
 // }
 
-use std::{collections::HashMap, io::Write};
+use std::collections::HashMap;
 
 use fastnbt::LongArray;
-use itertools::Itertools;
 
 use crate::{world::WorldError, WORLD_HEIGHT};
 
@@ -157,7 +156,7 @@ impl ChunkData {
         // }
         // dbg!("{}", blocks.iter().filter(|v| **v == 2005).collect_vec().len());
         Ok(ChunkData {
-            blocks: blocks,
+            blocks,
             position: at,
             heightmaps: chunk_data.heightmaps,
         })

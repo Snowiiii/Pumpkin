@@ -27,8 +27,8 @@ use pumpkin_protocol::{
         handshake::SHandShake,
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
         play::{
-            SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SPlayerCommand,
-            SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSwingArm,
+            SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
+            SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSwingArm,
         },
         status::{SPingRequest, SStatusRequest},
     },
@@ -159,6 +159,8 @@ impl Client {
     }
 
     pub fn set_gamemode(&mut self, gamemode: GameMode) {
+        let player = self.player.as_mut().unwrap();
+        player.gamemode = gamemode;
         self.send_packet(&CGameEvent::new(3, gamemode.to_f32().unwrap()));
     }
 
@@ -282,6 +284,9 @@ impl Client {
                 server,
                 SClientInformationPlay::read(bytebuf).unwrap(),
             ),
+            SInteract::PACKET_ID => {
+                self.handle_interact(server, SInteract::read(bytebuf).unwrap());
+            }
             _ => log::error!("Failed to handle player packet id {}", packet.id.0),
         }
     }

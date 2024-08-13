@@ -1,4 +1,5 @@
 mod c_client_information;
+mod c_interact;
 mod s_chat_command;
 mod s_chat_message;
 mod s_confirm_teleport;
@@ -9,6 +10,7 @@ mod s_player_rotation;
 mod s_swing_arm;
 
 pub use c_client_information::*;
+pub use c_interact::*;
 pub use s_chat_command::*;
 pub use s_chat_message::*;
 pub use s_confirm_teleport::*;

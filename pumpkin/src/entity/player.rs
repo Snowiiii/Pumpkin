@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 
 pub struct Player {
     pub entity: Entity,
+    // current gamemode
+    pub gamemode: GameMode,
 
     // Client side value, Should be not trusted
     pub on_ground: bool,
@@ -19,13 +21,14 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new(entity_id: EntityId) -> Self {
+    pub fn new(entity_id: EntityId, gamemode: GameMode) -> Self {
         Self {
             entity: Entity::new(entity_id, EntityType::Player),
             on_ground: false,
             awaiting_teleport: None,
             sneaking: false,
             sprinting: false,
+            gamemode,
         }
     }
 

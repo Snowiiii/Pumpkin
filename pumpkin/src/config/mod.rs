@@ -1,7 +1,7 @@
 use std::path::Path;
 
-use auth_config::Authentication;
-use resource_pack::ResourcePack;
+use auth_config::AuthenticationConfig;
+use resource_pack::ResourcePackConfig;
 use serde::{Deserialize, Serialize};
 
 use crate::{entity::player::GameMode, server::Difficulty};
@@ -17,11 +17,12 @@ const CURRENT_BASE_VERSION: &str = "1.0.0";
 /// This also allows you get some Performance or Resource boosts.
 /// Important: The Configuration should match Vanilla by default
 pub struct AdvancedConfiguration {
-    pub commands: Commands,
-    pub authentication: Authentication,
-    pub packet_compression: Compression,
-    pub resource_pack: ResourcePack,
+    pub commands: CommandsConfig,
+    pub authentication: AuthenticationConfig,
+    pub packet_compression: CompressionConfig,
+    pub resource_pack: ResourcePackConfig,
     pub rcon: RCONConfig,
+    pub pvp: PVPConfig,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -44,26 +45,52 @@ impl Default for RCONConfig {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct Commands {
+pub struct CommandsConfig {
     /// Are commands from the Console accepted ?
     pub use_console: bool,
     // TODO: commands...
 }
 
+impl Default for CommandsConfig {
+    fn default() -> Self {
+        Self { use_console: true }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct PVPConfig {
+    /// Is PVP enabled ?
+    pub enabled: bool,
+    /// Do we want to have the Red hurt animation & fov bobbing
+    pub hurt_animation: bool,
+    /// Should players in creative be protected against PVP
+    pub protect_creative: bool,
+}
+
+impl Default for PVPConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            hurt_animation: true,
+            protect_creative: true,
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize)]
 // Packet compression
-pub struct Compression {
-    // Is compression enabled ?
+pub struct CompressionConfig {
+    /// Is compression enabled ?
     pub enabled: bool,
-    // The compression threshold used when compression is enabled
+    /// The compression threshold used when compression is enabled
     pub compression_threshold: u32,
-    // A value between 0..9
-    // 1 = Optimize for the best speed of encoding.
-    // 9 = Optimize for the size of data being encoded.
+    /// A value between 0..9
+    /// 1 = Optimize for the best speed of encoding.
+    /// 9 = Optimize for the size of data being encoded.
     pub compression_level: u32,
 }
 
-impl Default for Compression {
+impl Default for CompressionConfig {
     fn default() -> Self {
         Self {
             enabled: true,
@@ -73,21 +100,16 @@ impl Default for Compression {
     }
 }
 
-impl Default for Commands {
-    fn default() -> Self {
-        Self { use_console: true }
-    }
-}
-
 /// Important: The Configuration should match Vanilla by default
 impl Default for AdvancedConfiguration {
     fn default() -> Self {
         Self {
-            authentication: Authentication::default(),
-            commands: Commands::default(),
-            packet_compression: Compression::default(),
-            resource_pack: ResourcePack::default(),
+            authentication: AuthenticationConfig::default(),
+            commands: CommandsConfig::default(),
+            packet_compression: CompressionConfig::default(),
+            resource_pack: ResourcePackConfig::default(),
             rcon: RCONConfig::default(),
+            pvp: PVPConfig::default(),
         }
     }
 }

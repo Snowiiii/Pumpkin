@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 
 use crate::world::WorldError;
 
-const BLOCKS_JSON: &'static str = include_str!("../blocks.json");
+const BLOCKS_JSON: &str = include_str!("../blocks.json");
 
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 struct BlockDefinition {

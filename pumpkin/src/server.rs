@@ -1,5 +1,5 @@
 use std::{
-    cell::RefCell,
+    cell::{RefCell, RefMut},
     collections::HashMap,
     io::Cursor,
     rc::Rc,
@@ -23,7 +23,7 @@ use pumpkin_protocol::{
         },
     },
     uuid::UUID,
-    BitSet, ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
+    ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
 };
 use pumpkin_world::dimension::Dimension;
 
@@ -146,8 +146,12 @@ impl Server {
     pub async fn spawn_player(&mut self, client: &mut Client) {
         // This code follows the vanilla packet order
         let entity_id = self.new_entity_id();
+        let gamemode = match self.base_config.default_gamemode {
+            GameMode::Undefined => GameMode::Survival,
+            game_mode => game_mode,
+        };
         log::debug!("spawning player, entity id {}", entity_id);
-        let player = Player::new(entity_id);
+        let player = Player::new(entity_id, gamemode);
         client.player = Some(player);
 
         // login packet for our new player
@@ -164,12 +168,7 @@ impl Server {
             0.into(),
             "minecraft:overworld",
             0, // seed
-            match self.base_config.default_gamemode {
-                GameMode::Undefined => GameMode::Survival,
-                game_mode => game_mode,
-            }
-            .to_u8()
-            .unwrap(),
+            gamemode.to_u8().unwrap(),
             self.base_config.default_gamemode.to_i8().unwrap(),
             false,
             false,
@@ -291,8 +290,20 @@ impl Server {
         Server::spawn_test_chunk(client).await;
     }
 
+    /// TODO: This definitly should be in world
+    pub fn get_by_entityid(&self, from: &Client, id: EntityId) -> Option<RefMut<Client>> {
+        for (_, client) in self.current_clients.iter().filter(|c| c.0 != &from.token) {
+            // Check if client is a player
+            let client = client.borrow_mut();
+            if client.is_player() && client.player.as_ref().unwrap().entity_id() == id {
+                return Some(client);
+            }
+        }
+        None
+    }
+
     /// Sends a Packet to all Players
-    pub fn broadcast_packet<P>(&mut self, from: &mut Client, packet: &P)
+    pub fn broadcast_packet<P>(&self, from: &mut Client, packet: &P)
     where
         P: ClientPacket,
     {
@@ -308,7 +319,7 @@ impl Server {
         }
     }
 
-    pub fn broadcast_packet_expect<P>(&mut self, from: &mut Client, packet: &P)
+    pub fn broadcast_packet_expect<P>(&self, from: &Client, packet: &P)
     where
         P: ClientPacket,
     {
