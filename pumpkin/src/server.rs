@@ -347,7 +347,7 @@ impl Server {
             chunk_x: 0.into(),
             chunk_z: 0.into(),
         });
-        
+
         while let Some((chunk_pos, chunk_data)) = chunk_receiver.recv().await {
             // dbg!(chunk_pos);
             let chunk_data = match chunk_data {

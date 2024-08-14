@@ -8,9 +8,9 @@ pub mod bytebuf;
 pub mod client;
 pub mod packet_decoder;
 pub mod packet_encoder;
+pub mod position;
 pub mod server;
 pub mod uuid;
-pub mod position;
 
 pub const CURRENT_MC_PROTOCOL: u32 = 767;
 

@@ -89,7 +89,11 @@ impl Level {
                 region_file_path.push(format!("r.{}.{}.mca", region.0, region.1));
 
                 // return different error when file is not found (because that means that the chunks have just not been generated yet)
-                let mut region_file = match std::fs::File::options().read(true).write(false).open(&region_file_path) {
+                let mut region_file = match std::fs::File::options()
+                    .read(true)
+                    .write(false)
+                    .open(&region_file_path)
+                {
                     Ok(f) => f,
                     Err(err) => match err.kind() {
                         std::io::ErrorKind::NotFound => {
