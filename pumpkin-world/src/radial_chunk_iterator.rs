@@ -1,4 +1,3 @@
-use std::collections::VecDeque;
 
 pub struct RadialIterator {
     radius: i32,

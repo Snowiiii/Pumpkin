@@ -1,7 +1,6 @@
 use std::{
     io::{Read, Seek},
     path::PathBuf,
-    sync::{atomic::AtomicUsize, Arc},
 };
 
 use flate2::bufread::ZlibDecoder;
@@ -9,11 +8,8 @@ use itertools::Itertools;
 use rayon::prelude::*;
 use thiserror::Error;
 use tokio::{
-    fs::File,
     io::{AsyncReadExt, AsyncSeekExt},
-    runtime::Handle,
-    sync::{mpsc, oneshot, Mutex},
-    task::spawn_blocking,
+    sync::mpsc,
 };
 
 use crate::chunk::ChunkData;

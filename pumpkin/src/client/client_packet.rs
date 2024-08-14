@@ -40,10 +40,8 @@ impl Client {
             if self.protocol_version < CURRENT_MC_PROTOCOL as i32 {
                 let protocol = self.protocol_version;
                 self.kick(&format!("Client outdated ({protocol}), Server uses Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL}"));
-                return;
             } else if self.protocol_version > CURRENT_MC_PROTOCOL as i32 {
                 self.kick(&format!("Server outdated, Server uses Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL}"));
-                return;
             }
         }
     }
