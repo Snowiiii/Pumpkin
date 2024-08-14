@@ -161,6 +161,13 @@ impl Client {
         self.send_packet(&CSyncPlayerPostion::new(x, y, z, yaw, pitch, 0, id.into()));
     }
 
+    pub fn update_health(&mut self, health: f32, food: i32, food_saturation: f32) {
+        let player = self.player.as_mut().unwrap();
+        player.health = health;
+        player.food = food;
+        player.food_saturation = food_saturation;
+    }
+
     pub fn set_gamemode(&mut self, gamemode: GameMode) {
         let player = self.player.as_mut().unwrap();
         player.gamemode = gamemode;

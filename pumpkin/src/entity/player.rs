@@ -5,16 +5,24 @@ use pumpkin_entity::{entity_type::EntityType, Entity, EntityId};
 use pumpkin_protocol::VarInt;
 use serde::{Deserialize, Serialize};
 
+use crate::util::vec3::Vec3;
+
 pub struct Player {
     pub entity: Entity,
     // current gamemode
     pub gamemode: GameMode,
+    // TODO: prbly should put this into an Living Entitiy or something
+    pub health: f32,
+    pub food: i32,
+    pub food_saturation: f32,
 
     // Client side value, Should be not trusted
     pub on_ground: bool,
 
     pub sneaking: bool,
     pub sprinting: bool,
+
+    pub velocity: Vec3,
 
     // Current awaiting teleport id, None if did not teleport
     pub awaiting_teleport: Option<VarInt>,
@@ -28,12 +36,39 @@ impl Player {
             awaiting_teleport: None,
             sneaking: false,
             sprinting: false,
+            // TODO: Load this from previous instance
+            health: 20.0,
+            food: 20,
+            food_saturation: 20.0,
+            velocity: Vec3::new(0.0, 0.0, 0.0),
             gamemode,
         }
     }
 
     pub fn entity_id(&self) -> EntityId {
         self.entity.entity_id
+    }
+
+    pub fn knockback(&mut self, y: f64, x: f64, z: f64) {
+        // This has some vanilla magic
+        let mut x = x;
+        let mut z = z;
+        while x * x + z * z < 9.999999747378752E-6 {
+            x = (rand::random::<f64>() - rand::random::<f64>()) * 0.01;
+            z = (rand::random::<f64>() - rand::random::<f64>()) * 0.01;
+        }
+
+        let var8 = Vec3::new(x, 0.0, z).normalize() * y;
+        let var7 = self.velocity;
+        self.velocity = Vec3::new(
+            var7.x / 2.0 - var8.x,
+            if self.on_ground {
+                (var7.y / 2.0 + x).min(0.4)
+            } else {
+                var7.y
+            },
+            var7.z / 2.0 - var8.z,
+        );
     }
 }
 

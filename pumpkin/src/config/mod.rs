@@ -65,6 +65,8 @@ pub struct PVPConfig {
     pub hurt_animation: bool,
     /// Should players in creative be protected against PVP
     pub protect_creative: bool,
+    /// Has PVP Knockback?
+    pub knockback: bool,
 }
 
 impl Default for PVPConfig {
@@ -73,6 +75,7 @@ impl Default for PVPConfig {
             enabled: true,
             hurt_animation: true,
             protect_creative: true,
+            knockback: true,
         }
     }
 }

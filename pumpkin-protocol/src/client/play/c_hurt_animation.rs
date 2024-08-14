@@ -5,13 +5,13 @@ use crate::VarInt;
 
 #[derive(Serialize)]
 #[packet(0x24)]
-pub struct CHurtAnimation {
-    entitiy_id: VarInt,
+pub struct CHurtAnimation<'a> {
+    entitiy_id: &'a VarInt,
     yaw: f32,
 }
 
-impl CHurtAnimation {
-    pub fn new(entitiy_id: VarInt, yaw: f32) -> Self {
+impl<'a> CHurtAnimation<'a> {
+    pub fn new(entitiy_id: &'a VarInt, yaw: f32) -> Self {
         Self { entitiy_id, yaw }
     }
 }

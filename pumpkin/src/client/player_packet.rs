@@ -3,8 +3,8 @@ use pumpkin_entity::EntityId;
 use pumpkin_inventory::WindowType;
 use pumpkin_protocol::{
     client::play::{
-        Animation, CEntityAnimation, CHeadRot, CHurtAnimation, COpenScreen, CUpdateEntityPos,
-        CUpdateEntityPosRot, CUpdateEntityRot,
+        Animation, CEntityAnimation, CEntityVelocity, CHeadRot, CHurtAnimation, COpenScreen,
+        CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot,
     },
     server::play::{
         SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
@@ -114,8 +114,8 @@ impl Client {
         entity.x = Self::clamp_horizontal(position_rotation.x);
         entity.y = Self::clamp_vertical(position_rotation.feet_y);
         entity.z = Self::clamp_horizontal(position_rotation.z);
-        entity.yaw = wrap_degrees(position_rotation.yaw);
-        entity.pitch = wrap_degrees(position_rotation.pitch);
+        entity.yaw = wrap_degrees(position_rotation.yaw).clamp(-90.0, 90.0) % 360.0;
+        entity.pitch = wrap_degrees(position_rotation.pitch) % 360.0;
 
         // send new position to all other players
         let on_ground = player.on_ground;
@@ -149,8 +149,8 @@ impl Client {
         }
         let player = self.player.as_mut().unwrap();
         let entity = &mut player.entity;
-        entity.yaw = wrap_degrees(rotation.yaw);
-        entity.pitch = wrap_degrees(rotation.pitch);
+        entity.yaw = wrap_degrees(rotation.yaw).clamp(-90.0, 90.0) % 360.0;
+        entity.pitch = wrap_degrees(rotation.pitch) % 360.0;
         // send new position to all other players
         let on_ground = player.on_ground;
         let entity_id = entity.entity_id;
@@ -195,7 +195,10 @@ impl Client {
         };
         let player = self.player.as_mut().unwrap();
         let id = player.entity_id();
-        server.broadcast_packet_expect(self, &CEntityAnimation::new(id.into(), animation as u8))
+        server.broadcast_packet_expect(
+            &[&self.token],
+            &CEntityAnimation::new(id.into(), animation as u8),
+        )
     }
 
     pub fn handle_chat_message(&mut self, server: &mut Server, chat_message: SChatMessage) {
@@ -264,21 +267,50 @@ impl Client {
     }
 
     pub fn handle_interact(&mut self, server: &mut Server, interact: SInteract) {
+        let attacker_player = self.player.as_ref().unwrap();
+        let entity_id = interact.entity_id;
         // TODO: do validation and stuff
         let config = &server.advanced_config.pvp;
         if config.enabled {
-            let attacked_client = server.get_by_entityid(self, interact.entity_id.0 as EntityId);
-            if let Some(client) = attacked_client {
-                if config.protect_creative
-                    && client.player.as_ref().unwrap().gamemode == GameMode::Creative
-                {
+            let attacked_client = server.get_by_entityid(self, entity_id.0 as EntityId);
+            if let Some(mut client) = attacked_client {
+                let token = client.token.clone();
+                let player = client.player.as_mut().unwrap();
+                let velo = player.velocity;
+                if config.protect_creative && player.gamemode == GameMode::Creative {
                     return;
                 }
-                drop(client);
+                if config.knockback {
+                    let pitch = attacker_player.entity.pitch;
+                    let strength = 1.0;
+                    player.knockback(
+                        strength * 0.5,
+                        (pitch * 0.017453292).sin() as f64,
+                        -(pitch * 0.017453292).cos() as f64,
+                    );
+                    let packet = &CEntityVelocity::new(
+                        &entity_id,
+                        player.velocity.x as f32,
+                        player.velocity.y as f32,
+                        player.velocity.z as f32,
+                    );
+                    player.velocity = velo;
+                    client.send_packet(packet);
+                    //  attacker_player.velocity = attacker_player.velocity.multiply(0.6, 1.0, 0.6);
+                }
                 if config.hurt_animation {
                     // TODO
-                    server.broadcast_packet(self, &CHurtAnimation::new(interact.entity_id, 10.0))
+                    // thats how we prevent borrow errors :c
+                    let packet = &CHurtAnimation::new(&entity_id, 10.0);
+                    self.send_packet(packet);
+                    client.send_packet(packet);
+                    server.broadcast_packet_expect(
+                        &[self.token.as_ref(), token.as_ref()],
+                        &CHurtAnimation::new(&entity_id, 10.0),
+                    )
                 }
+            } else {
+                self.kick("Interacted with invalid entitiy id")
             }
         }
     }

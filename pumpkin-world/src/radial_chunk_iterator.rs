@@ -1,4 +1,3 @@
-
 pub struct RadialIterator {
     radius: i32,
     direction: usize,

@@ -32,13 +32,14 @@ impl<'a> Command<'a> for GamemodeCommand {
             }
             Err(_) => {
                 // try to parse from number
-                if let Ok(i) = mode_str.parse::<u8>() { if let Some(mode) = GameMode::from_u8(i) {
-                    player.set_gamemode(mode);
-                    player.send_system_message(
-                        format!("Set own game mode to {:?}", mode).into(),
-                    );
-                    return;
-                } }
+                if let Ok(i) = mode_str.parse::<u8>() {
+                    if let Some(mode) = GameMode::from_u8(i) {
+                        player.set_gamemode(mode);
+                        player
+                            .send_system_message(format!("Set own game mode to {:?}", mode).into());
+                        return;
+                    }
+                }
 
                 player.send_system_message(
                     TextComponent::from("Invalid gamemode")

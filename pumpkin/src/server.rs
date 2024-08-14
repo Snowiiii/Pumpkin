@@ -134,8 +134,11 @@ impl Server {
         if client.is_player() {
             let id = client.player.as_ref().unwrap().entity_id();
             let uuid = client.gameprofile.as_ref().unwrap().id;
-            self.broadcast_packet_expect(&client, &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]));
-            self.broadcast_packet_expect(&client, &CRemoveEntities::new(&[id.into()]))
+            self.broadcast_packet_expect(
+                &[&client.token],
+                &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]),
+            );
+            self.broadcast_packet_expect(&[&client.token], &CRemoveEntities::new(&[id.into()]))
         }
     }
 
@@ -232,7 +235,7 @@ impl Server {
 
         // spawn player for every client
         self.broadcast_packet_expect(
-            client,
+            &[&client.token],
             // TODO: add velo
             &CSpawnEntity::new(
                 entity_id.into(),
@@ -316,11 +319,15 @@ impl Server {
         }
     }
 
-    pub fn broadcast_packet_expect<P>(&self, from: &Client, packet: &P)
+    pub fn broadcast_packet_expect<P>(&self, from: &[&Token], packet: &P)
     where
         P: ClientPacket,
     {
-        for (_, client) in self.current_clients.iter().filter(|c| c.0 != &from.token) {
+        for (_, client) in self
+            .current_clients
+            .iter()
+            .filter(|c| !from.contains(&c.0.as_ref()))
+        {
             // Check if client is a player
             let mut client = client.borrow_mut();
             if client.is_player() {
@@ -339,7 +346,7 @@ impl Server {
                 "./world".parse().unwrap(),
             );
             level
-                .read_chunks(RadialIterator::new(2).collect(), sender)
+                .read_chunks(RadialIterator::new(7).collect(), sender)
                 .await;
         });
 
