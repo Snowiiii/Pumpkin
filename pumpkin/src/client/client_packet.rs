@@ -38,7 +38,8 @@ impl Client {
         self.connection_state = handshake.next_state;
         if self.connection_state == ConnectionState::Login {
             if self.protocol_version < CURRENT_MC_PROTOCOL as i32 {
-                self.kick(&format!("Client outdated, Server uses Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL}"));
+                let protocol = self.protocol_version;
+                self.kick(&format!("Client outdated ({protocol}), Server uses Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL}"));
                 return;
             } else if self.protocol_version > CURRENT_MC_PROTOCOL as i32 {
                 self.kick(&format!("Server outdated, Server uses Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL}"));
