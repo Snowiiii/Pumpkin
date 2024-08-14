@@ -19,6 +19,7 @@ pub struct Registry {
 }
 
 impl Registry {
+    /// We should parse this from a JSON in the future
     pub fn get_static() -> Vec<Self> {
         let dimensions = Registry {
             registry_id: "minecraft:dimension_type".to_string(),

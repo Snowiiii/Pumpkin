@@ -22,7 +22,7 @@ Packets in the Pumpkin protocol are organized by functionality and state.
 You can find all Minecraft Java packets at https://wiki.vg/Protocol. There you also can see in which [State](State) they are.
 You also can see all the information the Packets has which we can either Write or Read depending if its Serverbound or Clientbound
 #### Adding a Packet
-Adding a Packet is easy. First you have to dereive serde Serialize.
+Adding a Packet is easy. First you have to dereive serde Serialize for Clientbound Packets or Deserialize for Serverbound packets.
 ```rust
 #[derive(Serialize)]
 ```
@@ -47,7 +47,8 @@ impl CPlayDisconnect {
     }
 }
 ```
-At the End everything should come together
+At the End everything should come together,
+Thats a Clientbound Packet
 ```rust
 #[derive(Serialize)]
 #[packet(0x1D)]
@@ -59,5 +60,13 @@ impl CPlayDisconnect {
     pub fn new(reason: TextComponent) -> Self {
         Self { reason }
     }
+}
+```
+Thats a Serverbound packet
+```rust
+#[derive(Deserialize)]
+#[packet(0x1D)]
+pub struct CPlayDisconnect {
+    reason: TextComponent,
 }
 ``
