@@ -7,7 +7,7 @@ use crate::{bytebuf::DeserializerError, ServerPacket, VarInt};
 #[packet(0x25)]
 pub struct SPlayerCommand {
     pub entitiy_id: VarInt,
-    pub action: Action,
+    pub action: VarInt,
     pub jump_boost: VarInt,
 }
 #[derive(FromPrimitive)]
@@ -27,7 +27,7 @@ impl ServerPacket for SPlayerCommand {
     fn read(bytebuf: &mut crate::bytebuf::ByteBuffer) -> Result<Self, DeserializerError> {
         Ok(Self {
             entitiy_id: bytebuf.get_var_int(),
-            action: Action::from_i32(bytebuf.get_var_int().into()).unwrap(),
+            action: bytebuf.get_var_int(),
             jump_boost: bytebuf.get_var_int(),
         })
     }

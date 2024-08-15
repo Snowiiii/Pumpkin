@@ -4,10 +4,10 @@ use pumpkin_inventory::WindowType;
 use pumpkin_protocol::{
     client::play::{
         Animation, CEntityAnimation, CEntityVelocity, CHeadRot, CHurtAnimation, COpenScreen,
-        CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot,
+        CSetEntityMetadata, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot, Metadata,
     },
     server::play::{
-        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
+        Action, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
         SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
         SSwingArm,
     },
@@ -17,7 +17,7 @@ use pumpkin_text::TextComponent;
 
 use crate::{
     commands::{handle_command, CommandSender},
-    entity::player::{ChatMode, GameMode, Hand},
+    entity::player::{ChatMode, GameMode, Hand, Player},
     server::Server,
     util::math::wrap_degrees,
 };
@@ -176,16 +176,20 @@ impl Client {
             return;
         }
 
-        match command.action {
-            pumpkin_protocol::server::play::Action::StartSneaking => player.sneaking = true,
-            pumpkin_protocol::server::play::Action::StopSneaking => player.sneaking = false,
-            pumpkin_protocol::server::play::Action::LeaveBed => todo!(),
-            pumpkin_protocol::server::play::Action::StartSprinting => player.sprinting = true,
-            pumpkin_protocol::server::play::Action::StopSprinting => player.sprinting = false,
-            pumpkin_protocol::server::play::Action::StartHourseJump => todo!(),
-            pumpkin_protocol::server::play::Action::StopHourseJump => todo!(),
-            pumpkin_protocol::server::play::Action::OpenVehicleInventory => todo!(),
-            pumpkin_protocol::server::play::Action::StartFlyingElytra => {}, // TODO
+        if let Some(action) = Action::from_i32(command.action.0 as i32) {
+            match action {
+                pumpkin_protocol::server::play::Action::StartSneaking => player.sneaking = true,
+                pumpkin_protocol::server::play::Action::StopSneaking => player.sneaking = false,
+                pumpkin_protocol::server::play::Action::LeaveBed => todo!(),
+                pumpkin_protocol::server::play::Action::StartSprinting => player.sprinting = true,
+                pumpkin_protocol::server::play::Action::StopSprinting => player.sprinting = false,
+                pumpkin_protocol::server::play::Action::StartHourseJump => todo!(),
+                pumpkin_protocol::server::play::Action::StopHourseJump => todo!(),
+                pumpkin_protocol::server::play::Action::OpenVehicleInventory => todo!(),
+                pumpkin_protocol::server::play::Action::StartFlyingElytra => {} // TODO
+            }
+        } else {
+            self.kick("Invalid player command")
         }
     }
 
