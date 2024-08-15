@@ -1,14 +1,14 @@
 pub struct RadialIterator {
-    radius: i32,
+    radius: u32,
     direction: usize,
     current: (i32, i32),
     step_size: i32,
-    steps_taken: i32,
+    steps_taken: u32,
     steps_in_direction: i32,
 }
 
 impl RadialIterator {
-    pub fn new(radius: i32) -> Self {
+    pub fn new(radius: u32) -> Self {
         RadialIterator {
             radius,
             direction: 0,

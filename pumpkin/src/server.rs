@@ -288,7 +288,7 @@ impl Server {
             )
         }
 
-        Server::spawn_test_chunk(client).await;
+        Server::spawn_test_chunk(client, self.base_config.view_distance as u32).await;
     }
 
     /// TODO: This definitly should be in world
@@ -337,7 +337,7 @@ impl Server {
     }
 
     // TODO: do this in a world
-    async fn spawn_test_chunk(client: &mut Client) {
+    async fn spawn_test_chunk(client: &mut Client, distance: u32) {
         let inst = std::time::Instant::now();
         let (sender, mut chunk_receiver) = mpsc::channel(1024);
         tokio::spawn(async move {
@@ -346,7 +346,7 @@ impl Server {
                 "./world".parse().unwrap(),
             );
             level
-                .read_chunks(RadialIterator::new(7).collect(), sender)
+                .read_chunks(RadialIterator::new(distance).collect(), sender)
                 .await;
         });
 
