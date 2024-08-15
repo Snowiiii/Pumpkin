@@ -18,6 +18,7 @@ pub enum Action {
     StartSprinting,
     StopSprinting,
     StartHourseJump,
+    StopHourseJump,
     OpenVehicleInventory,
     StartFlyingElytra,
 }
