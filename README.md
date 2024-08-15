@@ -61,7 +61,8 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Chat
   - [x] Commands
 - Proxy
-  - [x] Velocity
+  - [ ] Velocity
+
 Check out our [Github Project](https://github.com/users/Snowiiii/projects/12/views/3) to see current progress
 
 ## How to run
