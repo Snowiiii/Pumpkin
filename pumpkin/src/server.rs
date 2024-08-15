@@ -179,7 +179,7 @@ impl Server {
         ));
         dbg!("sending abilities");
         // player abilities
-        client.send_packet(&CPlayerAbilities::new(0x02, 00.2, 0.1));
+        client.send_packet(&CPlayerAbilities::new(0x02, 0.1, 0.1));
 
         // teleport
         let x = 10.0;
