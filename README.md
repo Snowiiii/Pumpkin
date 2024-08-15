@@ -83,7 +83,7 @@ Then run:
 > [!NOTE]
 > This can take a while. Because we enabled heavy optimations for release builds
 ```
-cargo run --release
+RUSTFLAGS="-C target-cpu=native" cargo run --release
 ```
 
 ## Contributions
