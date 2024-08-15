@@ -16,7 +16,7 @@ serde = { version = "1.0", features = ["derive"] }
 # to parse strings to json responses
 serde_json = "1.0"
 
-flate2 = "1.0.30"
+flate2 = "1.0.31"
 
 thiserror = "1.0.63"
 log = "0.4"

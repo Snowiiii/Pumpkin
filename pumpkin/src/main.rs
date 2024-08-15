@@ -18,6 +18,7 @@ pub mod client;
 pub mod commands;
 pub mod config;
 pub mod entity;
+pub mod proxy;
 pub mod rcon;
 pub mod server;
 pub mod util;
@@ -81,7 +82,7 @@ fn main() -> io::Result<()> {
 
         let mut server = Server::new((basic_config, advanced_configuration));
         log::info!("Started Server took {}ms", time.elapsed().as_millis());
-        log::info!("You now can connect to the server");
+        log::info!("You now can connect to the server, Listening on {}", addr);
 
         if use_console {
             thread::spawn(move || {

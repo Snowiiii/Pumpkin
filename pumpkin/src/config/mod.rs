@@ -1,12 +1,14 @@
 use std::path::Path;
 
 use auth_config::AuthenticationConfig;
+use proxy::ProxyConfig;
 use resource_pack::ResourcePackConfig;
 use serde::{Deserialize, Serialize};
 
 use crate::{entity::player::GameMode, server::Difficulty};
 
 pub mod auth_config;
+pub mod proxy;
 pub mod resource_pack;
 
 /// Current Config version of the Base Config
@@ -17,10 +19,11 @@ const CURRENT_BASE_VERSION: &str = "1.0.0";
 /// This also allows you get some Performance or Resource boosts.
 /// Important: The Configuration should match Vanilla by default
 pub struct AdvancedConfiguration {
-    pub commands: CommandsConfig,
+    pub proxy: ProxyConfig,
     pub authentication: AuthenticationConfig,
     pub packet_compression: CompressionConfig,
     pub resource_pack: ResourcePackConfig,
+    pub commands: CommandsConfig,
     pub rcon: RCONConfig,
     pub pvp: PVPConfig,
 }
@@ -107,6 +110,7 @@ impl Default for CompressionConfig {
 impl Default for AdvancedConfiguration {
     fn default() -> Self {
         Self {
+            proxy: ProxyConfig::default(),
             authentication: AuthenticationConfig::default(),
             commands: CommandsConfig::default(),
             packet_compression: CompressionConfig::default(),

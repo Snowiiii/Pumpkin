@@ -22,6 +22,7 @@ use sha1::{Digest, Sha1};
 use crate::{
     client::authentication::{self, GameProfile},
     entity::player::{ChatMode, Hand},
+    proxy::velocity::velocity_login,
     server::{Server, CURRENT_MC_VERSION},
 };
 
@@ -34,6 +35,7 @@ use super::{
 /// Implements the `Client` Packets
 impl Client {
     pub fn handle_handshake(&mut self, _server: &mut Server, handshake: SHandShake) {
+        dbg!("handshake");
         self.protocol_version = handshake.protocol_version.0;
         self.connection_state = handshake.next_state;
         if self.connection_state == ConnectionState::Login {
@@ -56,9 +58,17 @@ impl Client {
         self.close();
     }
 
+    fn is_valid_player_name(name: &str) -> bool {
+        name.len() <= 16 && name.chars().all(|c| c > 32 as char && c < 127 as char)
+    }
+
     pub fn handle_login_start(&mut self, server: &mut Server, login_start: SLoginStart) {
-        // TODO: do basic name validation
         dbg!("login start");
+
+        if !Self::is_valid_player_name(&login_start.name) {
+            self.kick("Invalid characters in username");
+            return;
+        }
         // default game profile, when no online mode
         // TODO: make offline uuid
         self.gameprofile = Some(GameProfile {
@@ -67,6 +77,13 @@ impl Client {
             properties: vec![],
             profile_actions: None,
         });
+        let proxy = &server.advanced_config.proxy;
+        if proxy.enabled {
+            if proxy.velocity.enabled {
+                velocity_login(self)
+            }
+            return;
+        }
 
         // TODO: check config for encryption
         let verify_token: [u8; 4] = rand::random();

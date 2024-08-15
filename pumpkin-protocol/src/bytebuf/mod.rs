@@ -295,6 +295,11 @@ impl ByteBuffer {
     pub fn copy_to_bytes(&mut self, len: usize) -> bytes::Bytes {
         self.buffer.copy_to_bytes(len)
     }
+
+    pub fn copy_to_slice(&mut self, dst: &mut [u8]) {
+        self.buffer.copy_to_slice(dst)
+    }
+
     pub fn put_slice(&mut self, src: &[u8]) {
         self.buffer.put_slice(src)
     }

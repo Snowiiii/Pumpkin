@@ -1,3 +1,4 @@
+use bytes::BytesMut;
 use pumpkin_macros::packet;
 
 use crate::{
@@ -6,18 +7,18 @@ use crate::{
 };
 
 #[packet(0x02)]
-pub struct SLoginPluginResponse<'a> {
+pub struct SLoginPluginResponse {
     pub message_id: VarInt,
     pub successful: bool,
-    pub data: Option<&'a [u8]>,
+    pub data: Option<BytesMut>,
 }
 
-impl<'a> ServerPacket for SLoginPluginResponse<'a> {
+impl ServerPacket for SLoginPluginResponse {
     fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError> {
         Ok(Self {
             message_id: bytebuf.get_var_int(),
             successful: bytebuf.get_bool(),
-            data: None, // TODO
+            data: bytebuf.get_option(|v| v.get_slice()),
         })
     }
 }

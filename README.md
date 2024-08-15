@@ -56,6 +56,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [ ] Player Inventory
   - [x] Player Combat
 - Server
+  - [ ] Query
   - [x] RCON
   - [x] Inventories
   - [x] Chat
