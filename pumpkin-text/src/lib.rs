@@ -100,13 +100,13 @@ impl TextComponent {
 
     pub fn encode(&self) -> Vec<u8> {
         // TODO: Somehow fix this ugly mess
-        #[derive(serde::Serialize, Debug)]
+        #[derive(serde::Serialize)]
         #[serde(rename_all = "camelCase")]
         struct TempStruct<'a> {
             #[serde(flatten)]
             text: &'a TextContent,
             #[serde(flatten)]
-            pub style: &'a Style,
+            style: &'a Style,
         }
         let astruct = TempStruct {
             text: &self.content,

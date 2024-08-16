@@ -21,9 +21,9 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 - **Flexibility**: Highly configurable with the ability to disable unnecessary features.
 - **Extensibility**: Provides a foundation for plugin development.
 
-### What Pumpkin will not be:
-- A direct replacement for Vanilla or Bukkit servers.
-- A framework for building a server from scratch.
+### What Pumpkin will not:
+- Provide compatibility with Vanilla or Bukkit servers (including configs and plugins).
+- Function as a framework for building a server from scratch.
 
 > [!IMPORTANT]
 > Pumpkin is currently under heavy development.

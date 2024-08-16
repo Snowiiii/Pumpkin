@@ -1,23 +1,21 @@
 use num_traits::FromPrimitive;
 use pumpkin_entity::EntityId;
-use pumpkin_inventory::WindowType;
 use pumpkin_protocol::{
     client::play::{
-        Animation, CEntityAnimation, CEntityVelocity, CHeadRot, CHurtAnimation, COpenScreen,
-        CSetEntityMetadata, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot, Metadata,
+        Animation, CEntityAnimation, CEntityVelocity, CHeadRot, CHurtAnimation, CSystemChatMessge,
+        CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot,
     },
     server::play::{
         Action, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
         SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
         SSwingArm,
     },
-    VarInt,
 };
 use pumpkin_text::TextComponent;
 
 use crate::{
     commands::{handle_command, CommandSender},
-    entity::player::{ChatMode, GameMode, Hand, Player},
+    entity::player::{ChatMode, GameMode, Hand},
     server::Server,
     util::math::wrap_degrees,
 };
@@ -176,7 +174,7 @@ impl Client {
             return;
         }
 
-        if let Some(action) = Action::from_i32(command.action.0 as i32) {
+        if let Some(action) = Action::from_i32(command.action.0) {
             match action {
                 pumpkin_protocol::server::play::Action::StartSneaking => player.sneaking = true,
                 pumpkin_protocol::server::play::Action::StopSneaking => player.sneaking = false,
@@ -208,22 +206,17 @@ impl Client {
 
     pub fn handle_chat_message(&mut self, server: &mut Server, chat_message: SChatMessage) {
         let message = chat_message.message;
-        self.send_packet(&COpenScreen::new(
-            VarInt(0),
-            VarInt(WindowType::CraftingTable as i32),
-            TextComponent::from("Test Crafter"),
-        ));
         // TODO: filter message & validation
         let gameprofile = self.gameprofile.as_ref().unwrap();
         dbg!("got message");
         // yeah a "raw system message", the ugly way to do that, but it works
-        // server.broadcast_packet(
-        //     self,
-        //     CSystemChatMessge::new(
-        //         TextComponent::from(format!("{}: {}", gameprofile.name, message)),
-        //         false,
-        //     ),
-        // );
+        server.broadcast_packet(
+            self,
+            &CSystemChatMessge::new(
+                TextComponent::from(format!("{}: {}", gameprofile.name, message)),
+                false,
+            ),
+        );
         /*   server.broadcast_packet(
             self,
             CPlayerChatMessage::new(
@@ -245,7 +238,7 @@ impl Client {
         */
         /* server.broadcast_packet(
             self,
-            CDisguisedChatMessage::new(
+            &CDisguisedChatMessage::new(
                 TextComponent::from(message.clone()),
                 VarInt(0),
                 gameprofile.name.clone().into(),

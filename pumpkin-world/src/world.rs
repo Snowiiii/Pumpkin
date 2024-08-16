@@ -1,9 +1,10 @@
 use std::{
+    fs::OpenOptions,
     io::{Read, Seek},
     path::PathBuf,
 };
 
-use flate2::bufread::ZlibDecoder;
+use flate2::{bufread::ZlibDecoder, read::GzDecoder};
 use itertools::Itertools;
 use rayon::prelude::*;
 use thiserror::Error;
@@ -16,6 +17,7 @@ use crate::chunk::ChunkData;
 
 pub struct Level {
     root_folder: PathBuf,
+    region_folder: PathBuf,
 }
 
 #[derive(Error, Debug)]
@@ -29,14 +31,22 @@ pub enum WorldError {
     RegionIsInvalid,
     #[error("Chunk not found")]
     ChunkNotFound,
-    #[error("Compression scheme not recognised")]
-    UnknownCompression,
-    #[error("Error while working with zlib compression: {0}")]
-    ZlibError(std::io::Error),
+    #[error("Compression Error")]
+    Compression(CompressionError),
     #[error("Error deserializing chunk: {0}")]
     ErrorDeserializingChunk(String),
     #[error("The requested block state id does not exist")]
     BlockStateIdNotFound,
+}
+
+#[derive(Error, Debug)]
+pub enum CompressionError {
+    #[error("Compression scheme not recognised")]
+    UnknownCompression,
+    #[error("Error while working with zlib compression: {0}")]
+    ZlibError(std::io::Error),
+    #[error("Error while working with Gzip compression: {0}")]
+    GZipError(std::io::Error),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,7 +59,12 @@ pub enum Compression {
 
 impl Level {
     pub fn from_root_folder(root_folder: PathBuf) -> Self {
-        Level { root_folder }
+        // TODO: Check if exists
+        let region_folder = root_folder.join("region");
+        Level {
+            root_folder,
+            region_folder,
+        }
     }
 
     // /// Read one chunk in the world
@@ -80,16 +95,12 @@ impl Level {
                     ((chunk.1 as f32) / 32.0).floor() as i32,
                 );
                 let channel = channel.clone();
-                let mut region_file_path = self.root_folder.clone();
-                region_file_path.push("region");
-                region_file_path.push(format!("r.{}.{}.mca", region.0, region.1));
 
                 // return different error when file is not found (because that means that the chunks have just not been generated yet)
-                let mut region_file = match std::fs::File::options()
-                    .read(true)
-                    .write(false)
-                    .open(&region_file_path)
-                {
+                let mut region_file = match OpenOptions::new().read(true).open(
+                    self.region_folder
+                        .join(format!("r.{}.{}.mca", region.0, region.1)),
+                ) {
                     Ok(f) => f,
                     Err(err) => match err.kind() {
                         std::io::ErrorKind::NotFound => {
@@ -172,34 +183,63 @@ impl Level {
                     3 => Compression::None,
                     4 => Compression::LZ4,
                     _ => {
-                        let _ =
-                            channel.send(((chunk.0, chunk.1), Err(WorldError::RegionIsInvalid)));
+                        let _ = channel.send((
+                            (chunk.0, chunk.1),
+                            Err(WorldError::Compression(
+                                CompressionError::UnknownCompression,
+                            )),
+                        ));
                         return;
                     }
                 };
-
-                match compression {
-                    Compression::Zlib => {}
-                    _ => panic!("Compression type is not supported"), // TODO: support other compression types
-                }
 
                 let size = u32::from_be_bytes(header[0..4].try_into().unwrap());
 
                 // size includes the compression scheme byte, so we need to subtract 1
                 let chunk_data = file_buf.drain(0..size as usize - 1).collect_vec();
+                let decompressed_chunk = match Self::decompress_data(compression, chunk_data) {
+                    Ok(data) => data,
+                    Err(e) => {
+                        let _ = channel.send(((chunk.0, chunk.1), Err(WorldError::Compression(e))));
+                        return;
+                    }
+                };
 
-                let mut z = ZlibDecoder::new(&chunk_data[..]);
+                let _ = channel
+                    .blocking_send((chunk, ChunkData::from_bytes(decompressed_chunk, chunk)));
+            })
+            .collect::<Vec<()>>();
+    }
+
+    fn decompress_data(
+        compression: Compression,
+        compressed_data: Vec<u8>,
+    ) -> Result<Vec<u8>, CompressionError> {
+        match compression {
+            Compression::Gzip => {
+                let mut z = GzDecoder::new(&compressed_data[..]);
                 let mut chunk_data = Vec::new();
                 match z.read_to_end(&mut chunk_data) {
                     Ok(_) => {}
                     Err(e) => {
-                        let _ = channel.blocking_send((chunk, Err(WorldError::ZlibError(e))));
-                        return;
+                        return Err(CompressionError::GZipError(e));
                     }
                 }
-
-                let _ = channel.blocking_send((chunk, ChunkData::from_bytes(chunk_data, chunk)));
-            })
-            .collect::<Vec<()>>();
+                Ok(chunk_data)
+            }
+            Compression::Zlib => {
+                let mut z = ZlibDecoder::new(&compressed_data[..]);
+                let mut chunk_data = Vec::new();
+                match z.read_to_end(&mut chunk_data) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        return Err(CompressionError::ZlibError(e));
+                    }
+                }
+                Ok(chunk_data)
+            }
+            Compression::None => Ok(compressed_data),
+            Compression::LZ4 => todo!(),
+        }
     }
 }
