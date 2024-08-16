@@ -2,8 +2,8 @@ use num_traits::FromPrimitive;
 use pumpkin_entity::EntityId;
 use pumpkin_protocol::{
     client::play::{
-        Animation, CEntityAnimation, CEntityVelocity, CHeadRot, CHurtAnimation, CSystemChatMessge,
-        CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot,
+        Animation, CEntityAnimation, CEntityVelocity, CHeadRot, CHurtAnimation,
+        CSystemChatMessge, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot,
     },
     server::play::{
         Action, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
@@ -217,6 +217,7 @@ impl Client {
                 false,
             ),
         );
+
         /*   server.broadcast_packet(
             self,
             CPlayerChatMessage::new(

@@ -57,6 +57,18 @@ pub enum Compression {
     LZ4,
 }
 
+impl Compression {
+    pub fn from_byte(byte: u8) -> Option<Self> {
+        match byte {
+            1 => Some(Self::Gzip),
+            2 => Some(Self::Zlib),
+            3 => Some(Self::None),
+            4 => Some(Self::LZ4),
+            _ => None,
+        }
+    }
+}
+
 impl Level {
     pub fn from_root_folder(root_folder: PathBuf) -> Self {
         // TODO: Check if exists
@@ -177,13 +189,10 @@ impl Level {
                 // TODO: check checksum to make sure chunk is not corrupted
                 let header = file_buf.drain(0..5).collect_vec();
 
-                let compression = match header[4] {
-                    1 => Compression::Gzip,
-                    2 => Compression::Zlib,
-                    3 => Compression::None,
-                    4 => Compression::LZ4,
-                    _ => {
-                        let _ = channel.send((
+                let compression = match Compression::from_byte(header[4]) {
+                    Some(c) => c,
+                    None => {
+                        let _ = channel.blocking_send((
                             (chunk.0, chunk.1),
                             Err(WorldError::Compression(
                                 CompressionError::UnknownCompression,
@@ -193,20 +202,23 @@ impl Level {
                     }
                 };
 
-                let size = u32::from_be_bytes(header[0..4].try_into().unwrap());
+                let size = u32::from_be_bytes(header[..4].try_into().unwrap());
 
                 // size includes the compression scheme byte, so we need to subtract 1
                 let chunk_data = file_buf.drain(0..size as usize - 1).collect_vec();
                 let decompressed_chunk = match Self::decompress_data(compression, chunk_data) {
                     Ok(data) => data,
                     Err(e) => {
-                        let _ = channel.send(((chunk.0, chunk.1), Err(WorldError::Compression(e))));
+                        channel
+                            .blocking_send(((chunk.0, chunk.1), Err(WorldError::Compression(e))))
+                            .expect("Failed to send Compression error");
                         return;
                     }
                 };
 
-                let _ = channel
-                    .blocking_send((chunk, ChunkData::from_bytes(decompressed_chunk, chunk)));
+                channel
+                    .blocking_send((chunk, ChunkData::from_bytes(decompressed_chunk, chunk)))
+                    .expect("Error sending decompressed chunk");
             })
             .collect::<Vec<()>>();
     }

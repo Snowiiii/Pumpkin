@@ -59,6 +59,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [ ] Query
   - [x] RCON
   - [x] Inventories
+  - [x] Particles
   - [x] Chat
   - [x] Commands
 - Proxy

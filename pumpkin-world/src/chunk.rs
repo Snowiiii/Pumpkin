@@ -114,17 +114,8 @@ impl ChunkData {
             };
 
             let mask = (1 << block_size) - 1;
-            // println!("{block_size} {:#08b}", mask);
-            // println!(
-            //     "{} {}",
-            //     block_size,
-            //     palette.iter().map(|v| v.to_string()).join(",")
-            // );
             let mut blocks_left = 16 * 16 * 16;
             'block_loop: for (j, block) in block_data.iter().enumerate() {
-                // if at == (0,0) && block_size != 4 {
-                //     println!("{} {:#066b}", 64 - (64 / block_size) * block_size, *block);
-                // }
                 for i in 0..64 / block_size {
                     if blocks_left <= 0 {
                         break 'block_loop;
@@ -138,24 +129,6 @@ impl ChunkData {
             }
         }
 
-        // std::fs::File::create_new("../mafaile.txt")
-        //     .unwrap()
-        //     .write_all(
-        //         blocks
-        //             .iter()
-        //             .map(|v| v.to_string())
-        //             .collect::<Vec<_>>()
-        //             .join(",")
-        //             .as_bytes(),
-        //     );
-
-        // if at == (0, 0) {
-        //     println!(
-        //         "[{}]",
-        //         &blocks[0..10000].iter().map(|v| v.to_string()).join(",")
-        //     );
-        // }
-        // dbg!("{}", blocks.iter().filter(|v| **v == 2005).collect_vec().len());
         Ok(ChunkData {
             blocks,
             position: at,
