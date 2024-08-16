@@ -21,7 +21,7 @@ pub enum WindowType {
     Craft3x3,
     Anvil,
     Beacon,
-    BlastFurance,
+    BlastFurnace,
     BrewingStand,
     CraftingTable,
     EnchantmentTable,
