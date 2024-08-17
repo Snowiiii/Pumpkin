@@ -92,7 +92,7 @@ impl ChunkData {
                 .palette
                 .iter()
                 .map(|entry| {
-                    crate::block_registry::block_id_and_properties_to_block_state_id(
+                    crate::block::block_registry::block_id_and_properties_to_block_state_id(
                         &entry.name,
                         entry.properties.as_ref(),
                     )

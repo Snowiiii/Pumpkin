@@ -339,7 +339,7 @@ impl Server {
     // TODO: do this in a world
     async fn spawn_test_chunk(client: &mut Client, distance: u32) {
         let inst = std::time::Instant::now();
-        let (sender, mut chunk_receiver) = mpsc::channel(1024);
+        let (sender, mut chunk_receiver) = mpsc::channel(distance as usize);
         tokio::spawn(async move {
             let level = Dimension::OverWorld.into_level(
                 // TODO: load form config
@@ -375,7 +375,7 @@ impl Server {
             }
             client.send_packet(&CChunkData(&chunk_data));
         }
-        let t = std::time::Instant::now().duration_since(inst);
+        let t = inst.elapsed();
         dbg!("DONE", t);
     }
 
