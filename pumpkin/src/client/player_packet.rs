@@ -4,14 +4,14 @@ use pumpkin_protocol::{
     client::play::{
         Animation, CBlockUpdate, CEntityAnimation, CEntityVelocity, CHeadRot, CHurtAnimation,
         CSystemChatMessge, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot,
-    },
-    server::play::{
+    }, position::WorldPosition, server::play::{
         Action, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
         SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
         SSetHeldItem, SSwingArm, SUseItemOn,
-    },
+    }
 };
 use pumpkin_text::TextComponent;
+use pumpkin_world::block::BlockFace;
 
 use crate::{
     commands::{handle_command, CommandSender},
@@ -317,7 +317,8 @@ impl Client {
 
     pub fn handle_use_item_on(&mut self, server: &mut Server, use_item_on: SUseItemOn) {
         let mut location = use_item_on.location;
-        location.y += 2;
+        let face = BlockFace::from_i32(use_item_on.face.0).unwrap();
+        let location = WorldPosition(location.0 + face.to_offset());
         server.broadcast_packet(self, &CBlockUpdate::new(location, 11.into()));
     }
 
