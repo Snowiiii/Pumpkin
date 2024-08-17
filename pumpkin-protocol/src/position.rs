@@ -1,9 +1,21 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 pub struct WorldPosition {
     x: i32,
     y: i32,
     z: i32,
+}
+
+impl Serialize for WorldPosition {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let long = ((self.x as i64 & 0x3FFFFFF) << 38)
+            | ((self.z as i64 & 0x3FFFFFF) << 12)
+            | (self.y as i64 & 0xFFF);
+        serializer.serialize_i64(long)
+    }
 }
 
 impl<'de> Deserialize<'de> for WorldPosition {

@@ -29,7 +29,7 @@ impl<'a> CLoginSuccess<'a> {
 impl<'a> ClientPacket for CLoginSuccess<'a> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_uuid(self.uuid);
-        bytebuf.put_string(&self.username);
+        bytebuf.put_string(self.username);
         bytebuf.put_list::<Property>(self.properties, |p, v| {
             p.put_string(&v.name);
             p.put_string(&v.value);

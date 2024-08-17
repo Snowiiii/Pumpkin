@@ -48,21 +48,17 @@ impl Vec3 {
             z: self.z * z,
         }
     }
-
-    pub fn mul(self, scalar: f64) -> Self {
-        Vec3 {
-            x: self.x * scalar,
-            y: self.y * scalar,
-            z: self.z * scalar,
-        }
-    }
 }
 
 impl Mul<f64> for Vec3 {
     type Output = Self;
 
     fn mul(self, scalar: f64) -> Self {
-        self.mul(scalar)
+        Self {
+            x: self.x * scalar,
+            y: self.y * scalar,
+            z: self.z * scalar,
+        }
     }
 }
 
