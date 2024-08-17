@@ -1,19 +1,16 @@
+use pumpkin_world::vector3::Vector3;
 use serde::{Deserialize, Serialize};
 
-pub struct WorldPosition {
-    pub x: i32,
-    pub y: i32,
-    pub z: i32,
-}
+pub struct WorldPosition(pub Vector3<i32>);
 
 impl Serialize for WorldPosition {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        let long = ((self.x as i64 & 0x3FFFFFF) << 38)
-            | ((self.z as i64 & 0x3FFFFFF) << 12)
-            | (self.y as i64 & 0xFFF);
+        let long = ((self.0.x as i64 & 0x3FFFFFF) << 38)
+            | ((self.0.z as i64 & 0x3FFFFFF) << 12)
+            | (self.0.y as i64 & 0xFFF);
         serializer.serialize_i64(long)
     }
 }
@@ -33,11 +30,11 @@ impl<'de> Deserialize<'de> for WorldPosition {
             where
                 E: serde::de::Error,
             {
-                Ok(WorldPosition {
+                Ok(WorldPosition(Vector3 {
                     x: (v >> 38) as i32,
                     y: (v << 52 >> 52) as i32,
                     z: (v << 26 >> 38) as i32,
-                })
+                }))
             }
         }
         deserializer.deserialize_i64(Visitor)

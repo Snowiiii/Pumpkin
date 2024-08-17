@@ -7,4 +7,5 @@ pub mod block;
 mod global_registry;
 pub mod item;
 pub mod radial_chunk_iterator;
+pub mod vector3;
 mod world;

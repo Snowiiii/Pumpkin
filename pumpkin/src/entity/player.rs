@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
 use num_derive::{FromPrimitive, ToPrimitive};
+use num_traits::Float;
 use pumpkin_entity::{entity_type::EntityType, Entity, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_protocol::VarInt;
+use pumpkin_world::vector3::Vector3;
 use serde::{Deserialize, Serialize};
-
-use crate::util::vec3::Vec3;
 
 pub struct Player {
     pub entity: Entity,
@@ -25,7 +25,7 @@ pub struct Player {
     pub sprinting: bool,
 
     // TODO: prbly should put this into an Living Entitiy or something
-    pub velocity: Vec3,
+    pub velocity: Vector3<f64>,
 
     // Current awaiting teleport id, None if did not teleport
     pub awaiting_teleport: Option<VarInt>,
@@ -43,7 +43,7 @@ impl Player {
             health: 20.0,
             food: 20,
             food_saturation: 20.0,
-            velocity: Vec3::new(0.0, 0.0, 0.0),
+            velocity: Vector3::new(0.0, 0.0, 0.0),
             inventory: PlayerInventory::new(),
             gamemode,
         }
@@ -62,9 +62,9 @@ impl Player {
             z = (rand::random::<f64>() - rand::random::<f64>()) * 0.01;
         }
 
-        let var8 = Vec3::new(x, 0.0, z).normalize() * y;
+        let var8 = Vector3::new(x, 0.0, z).normalize() * y;
         let var7 = self.velocity;
-        self.velocity = Vec3::new(
+        self.velocity = Vector3::new(
             var7.x / 2.0 - var8.x,
             if self.on_ground {
                 (var7.y / 2.0 + x).min(0.4)
