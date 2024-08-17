@@ -4,11 +4,13 @@ use pumpkin_protocol::{
     client::play::{
         Animation, CBlockUpdate, CEntityAnimation, CEntityVelocity, CHeadRot, CHurtAnimation,
         CSystemChatMessge, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot,
-    }, position::WorldPosition, server::play::{
+    },
+    position::WorldPosition,
+    server::play::{
         Action, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
         SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
-        SSetHeldItem, SSwingArm, SUseItemOn,
-    }
+        SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn,
+    },
 };
 use pumpkin_text::TextComponent;
 use pumpkin_world::block::BlockFace;
@@ -316,7 +318,7 @@ impl Client {
     pub fn handle_player_action(&mut self, _server: &mut Server, player_action: SPlayerAction) {}
 
     pub fn handle_use_item_on(&mut self, server: &mut Server, use_item_on: SUseItemOn) {
-        let mut location = use_item_on.location;
+        let location = use_item_on.location;
         let face = BlockFace::from_i32(use_item_on.face.0).unwrap();
         let location = WorldPosition(location.0 + face.to_offset());
         server.broadcast_packet(self, &CBlockUpdate::new(location, 11.into()));
@@ -329,5 +331,10 @@ impl Client {
         }
         let player = self.player.as_mut().unwrap();
         player.inventory.set_selected(slot);
+    }
+
+    pub fn handle_set_creative_slot(&mut self, _server: &mut Server, packet: SSetCreativeSlot) {
+        // TODO: handle this
+        dbg!(&packet);
     }
 }

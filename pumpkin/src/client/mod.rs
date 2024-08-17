@@ -29,7 +29,7 @@ use pumpkin_protocol::{
         play::{
             SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
             SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
-            SPlayerRotation, SSetHeldItem, SSwingArm, SUseItemOn,
+            SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn,
         },
         status::{SPingRequest, SStatusRequest},
     },
@@ -303,6 +303,9 @@ impl Client {
             }
             SSetHeldItem::PACKET_ID => {
                 self.handle_set_held_item(server, SSetHeldItem::read(bytebuf).unwrap())
+            }
+            SSetCreativeSlot::PACKET_ID => {
+                self.handle_set_creative_slot(server, SSetCreativeSlot::read(bytebuf).unwrap())
             }
             _ => log::error!("Failed to handle player packet id {}", packet.id.0),
         }
