@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 pub struct WorldPosition {
-    x: i32,
-    y: i32,
-    z: i32,
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
 }
 
 impl Serialize for WorldPosition {

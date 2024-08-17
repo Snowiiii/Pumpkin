@@ -9,3 +9,9 @@ pub struct CBlockUpdate {
     location: WorldPosition,
     block_id: VarInt,
 }
+
+impl CBlockUpdate {
+    pub fn new(location: WorldPosition, block_id: VarInt) -> Self {
+        Self { location, block_id }
+    }
+}

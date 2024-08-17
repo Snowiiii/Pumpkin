@@ -2,13 +2,13 @@ use num_traits::FromPrimitive;
 use pumpkin_entity::EntityId;
 use pumpkin_protocol::{
     client::play::{
-        Animation, CEntityAnimation, CEntityVelocity, CHeadRot, CHurtAnimation, CSystemChatMessge,
-        CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot,
+        Animation, CBlockUpdate, CEntityAnimation, CEntityVelocity, CHeadRot, CHurtAnimation,
+        CSystemChatMessge, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot,
     },
     server::play::{
         Action, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
         SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
-        SSwingArm,
+        SSwingArm, SUseItemOn,
     },
 };
 use pumpkin_text::TextComponent;
@@ -314,4 +314,10 @@ impl Client {
         }
     }
     pub fn handle_player_action(&mut self, _server: &mut Server, player_action: SPlayerAction) {}
+
+    pub fn handle_use_item_on(&mut self, server: &mut Server, use_item_on: SUseItemOn) {
+        let mut location = use_item_on.location;
+        location.y += 2;
+        server.broadcast_packet(self, &CBlockUpdate::new(location, 11.into()));
+    }
 }
