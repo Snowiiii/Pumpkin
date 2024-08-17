@@ -11,6 +11,7 @@ pub mod packet_encoder;
 pub mod position;
 pub mod server;
 pub mod uuid;
+pub mod slot;
 
 pub const CURRENT_MC_PROTOCOL: u32 = 767;
 
