@@ -8,7 +8,7 @@ use pumpkin_protocol::{
     server::play::{
         Action, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
         SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
-        SSwingArm, SUseItemOn,
+        SSetHeldItem, SSwingArm, SUseItemOn,
     },
 };
 use pumpkin_text::TextComponent;
@@ -319,5 +319,14 @@ impl Client {
         let mut location = use_item_on.location;
         location.y += 2;
         server.broadcast_packet(self, &CBlockUpdate::new(location, 11.into()));
+    }
+
+    pub fn handle_set_held_item(&mut self, _server: &mut Server, held: SSetHeldItem) {
+        let slot = held.slot;
+        if !(0..=8).contains(&slot) {
+            self.kick("Invalid held slot")
+        }
+        let player = self.player.as_mut().unwrap();
+        player.inventory.set_selected(slot);
     }
 }

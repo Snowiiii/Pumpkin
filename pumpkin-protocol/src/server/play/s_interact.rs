@@ -1,5 +1,4 @@
 use pumpkin_macros::packet;
-use serde::Deserialize;
 
 use crate::{ServerPacket, VarInt};
 

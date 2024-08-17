@@ -1,5 +1,7 @@
 use num_derive::ToPrimitive;
 
+pub mod player;
+
 /// https://wiki.vg/Inventory
 #[derive(Debug, ToPrimitive)]
 pub enum WindowType {

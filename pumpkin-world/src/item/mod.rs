@@ -9,3 +9,6 @@ pub enum Raritiy {
     Rare,
     Epic,
 }
+
+#[derive(Clone, Copy)]
+pub struct Item {}

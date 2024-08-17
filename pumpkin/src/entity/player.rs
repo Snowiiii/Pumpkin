@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use num_derive::{FromPrimitive, ToPrimitive};
 use pumpkin_entity::{entity_type::EntityType, Entity, EntityId};
+use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_protocol::VarInt;
 use serde::{Deserialize, Serialize};
 
@@ -15,6 +16,7 @@ pub struct Player {
     pub health: f32,
     pub food: i32,
     pub food_saturation: f32,
+    pub inventory: PlayerInventory,
 
     // Client side value, Should be not trusted
     pub on_ground: bool,
@@ -22,6 +24,7 @@ pub struct Player {
     pub sneaking: bool,
     pub sprinting: bool,
 
+    // TODO: prbly should put this into an Living Entitiy or something
     pub velocity: Vec3,
 
     // Current awaiting teleport id, None if did not teleport
@@ -41,6 +44,7 @@ impl Player {
             food: 20,
             food_saturation: 20.0,
             velocity: Vec3::new(0.0, 0.0, 0.0),
+            inventory: PlayerInventory::new(),
             gamemode,
         }
     }

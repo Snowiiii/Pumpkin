@@ -1239,6 +1239,7 @@ version = "0.1.0"
 dependencies = [
  "num-derive",
  "num-traits",
+ "pumpkin-world",
 ]
 
 [[package]]
