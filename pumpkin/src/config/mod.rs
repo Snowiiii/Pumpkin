@@ -70,6 +70,8 @@ pub struct PVPConfig {
     pub protect_creative: bool,
     /// Has PVP Knockback?
     pub knockback: bool,
+    /// Should player swing when attacking?
+    pub swing: bool,
 }
 
 impl Default for PVPConfig {
@@ -79,6 +81,7 @@ impl Default for PVPConfig {
             hurt_animation: true,
             protect_creative: true,
             knockback: true,
+            swing: true,
         }
     }
 }

@@ -116,8 +116,8 @@ impl Client {
         entity.x = Self::clamp_horizontal(position_rotation.x);
         entity.y = Self::clamp_vertical(position_rotation.feet_y);
         entity.z = Self::clamp_horizontal(position_rotation.z);
-        entity.yaw = wrap_degrees(position_rotation.yaw).clamp(-90.0, 90.0) % 360.0;
-        entity.pitch = wrap_degrees(position_rotation.pitch) % 360.0;
+        entity.yaw = wrap_degrees(position_rotation.yaw)  % 360.0;
+        entity.pitch = wrap_degrees(position_rotation.pitch).clamp(-90.0, 90.0) % 360.0;
 
         // send new position to all other players
         let on_ground = player.on_ground;
@@ -151,8 +151,8 @@ impl Client {
         }
         let player = self.player.as_mut().unwrap();
         let entity = &mut player.entity;
-        entity.yaw = wrap_degrees(rotation.yaw).clamp(-90.0, 90.0) % 360.0;
-        entity.pitch = wrap_degrees(rotation.pitch) % 360.0;
+        entity.yaw = wrap_degrees(rotation.yaw) % 360.0;
+        entity.pitch = wrap_degrees(rotation.pitch).clamp(-90.0, 90.0) % 360.0;
         // send new position to all other players
         let on_ground = player.on_ground;
         let entity_id = entity.entity_id;
@@ -313,6 +313,9 @@ impl Client {
                             &[self.token.as_ref(), token.as_ref()],
                             &CHurtAnimation::new(&entity_id, 10.0),
                         )
+                    }
+                    if config.swing {
+                        
                     }
                 } else {
                     self.kick("Interacted with invalid entitiy id")
