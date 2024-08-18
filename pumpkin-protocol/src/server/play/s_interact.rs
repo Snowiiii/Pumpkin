@@ -1,3 +1,7 @@
+use std::char::MAX;
+
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 use pumpkin_macros::packet;
 
 use crate::{ServerPacket, VarInt};
@@ -6,19 +10,45 @@ use crate::{ServerPacket, VarInt};
 pub struct SInteract {
     pub entity_id: VarInt,
     pub typ: VarInt,
-    pub target_x: Option<f32>,
-    // don't ask me why, adding more values does not work :c
+    pub target_position: Option<(f32, f32, f32)>,
+    pub hand: Option<VarInt>,
+    pub sneaking: bool,
 }
 
-// TODO
+// Great job Mojang ;D
 impl ServerPacket for SInteract {
     fn read(
         bytebuf: &mut crate::bytebuf::ByteBuffer,
     ) -> Result<Self, crate::bytebuf::DeserializerError> {
+        let entity_id = bytebuf.get_var_int();
+        let typ = bytebuf.get_var_int();
+        let action = ActionType::from_i32(typ.0 as i32).unwrap();
+        let target_position: Option<(f32, f32, f32)> = match action {
+            ActionType::Interact => None,
+            ActionType::Attack => None,
+            ActionType::InteractAt => {
+                Some((bytebuf.get_f32(), bytebuf.get_f32(), bytebuf.get_f32()))
+            }
+        };
+        let hand = match action {
+            ActionType::Interact => Some(bytebuf.get_var_int()),
+            ActionType::Attack => None,
+            ActionType::InteractAt => Some(bytebuf.get_var_int()),
+        };
+
         Ok(Self {
-            entity_id: bytebuf.get_var_int(),
-            typ: bytebuf.get_var_int(),
-            target_x: bytebuf.get_option(|v| v.get_f32()),
+            entity_id,
+            typ,
+            target_position,
+            hand,
+            sneaking: bytebuf.get_bool(),
         })
     }
+}
+
+#[derive(FromPrimitive, PartialEq, Eq)]
+pub enum ActionType {
+    Interact,
+    Attack,
+    InteractAt,
 }
