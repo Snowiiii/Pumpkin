@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use num_traits::FromPrimitive;
 use pumpkin_entity::EntityId;
 use pumpkin_protocol::{
@@ -284,12 +286,12 @@ impl Client {
                         return;
                     }
                     if config.knockback {
-                        let pitch = attacker_player.entity.pitch;
+                        let yaw = attacker_player.entity.yaw;
                         let strength = 1.0;
                         player.knockback(
                             strength * 0.5,
-                            (pitch * 0.017453292).sin() as f64,
-                            -(pitch * 0.017453292).cos() as f64,
+                            (yaw * (PI / 180.0)).sin() as f64,
+                            -(yaw * (PI / 180.0)).cos() as f64,
                         );
                         let packet = &CEntityVelocity::new(
                             &entity_id,
