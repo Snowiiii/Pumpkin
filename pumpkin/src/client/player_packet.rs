@@ -331,7 +331,7 @@ impl Client {
             self.kick("Invalid held slot")
         }
         let player = self.player.as_mut().unwrap();
-        player.inventory.set_selected(slot);
+        player.inventory.set_selected(slot as usize);
     }
 
     pub fn handle_set_creative_slot(&mut self, _server: &mut Server, packet: SSetCreativeSlot) {

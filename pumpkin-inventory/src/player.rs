@@ -44,7 +44,7 @@ impl PlayerInventory {
 
     pub fn set_slot(slot: u32, item: Item) {}
 
-    pub fn set_selected(&mut self, slot: i16) {
+    pub fn set_selected(&mut self, slot: usize) {
         assert!((0..9).contains(&slot));
         self.selected = slot;
     }
