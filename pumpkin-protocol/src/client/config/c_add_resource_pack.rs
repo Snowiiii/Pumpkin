@@ -2,21 +2,23 @@ use pumpkin_macros::packet;
 use pumpkin_text::TextComponent;
 use serde::Serialize;
 
+use crate::uuid::UUID;
+
 #[derive(Serialize)]
 #[packet(0x09)]
-pub struct CConfigAddResourcePack {
-    uuid: uuid::Uuid,
-    url: String,
-    hash: String,
+pub struct CConfigAddResourcePack<'a> {
+    uuid: UUID,
+    url: &'a str,
+    hash: &'a str, // max 40
     forced: bool,
     prompt_message: Option<TextComponent>,
 }
 
-impl CConfigAddResourcePack {
+impl<'a> CConfigAddResourcePack<'a> {
     pub fn new(
-        uuid: uuid::Uuid,
-        url: String,
-        hash: String,
+        uuid: UUID,
+        url: &'a str,
+        hash: &'a str,
         forced: bool,
         prompt_message: Option<TextComponent>,
     ) -> Self {

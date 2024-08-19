@@ -1,4 +1,3 @@
-use std::str::FromStr;
 
 use num_traits::FromPrimitive;
 use pumpkin_protocol::{
@@ -203,9 +202,12 @@ impl Client {
                 Some(TextComponent::from(resource_config.prompt_message.clone()))
             };
             self.send_packet(&CConfigAddResourcePack::new(
-                uuid::Uuid::from_str(&resource_config.resource_pack_url).unwrap(),
-                resource_config.resource_pack_url.clone(),
-                resource_config.resource_pack_sha1.clone(),
+                pumpkin_protocol::uuid::UUID(uuid::Uuid::new_v3(
+                    &uuid::Uuid::NAMESPACE_DNS,
+                    resource_config.resource_pack_url.as_bytes(),
+                )),
+                &resource_config.resource_pack_url,
+                &resource_config.resource_pack_sha1,
                 resource_config.force,
                 prompt_message,
             ));

@@ -116,7 +116,7 @@ impl Client {
         entity.x = Self::clamp_horizontal(position_rotation.x);
         entity.y = Self::clamp_vertical(position_rotation.feet_y);
         entity.z = Self::clamp_horizontal(position_rotation.z);
-        entity.yaw = wrap_degrees(position_rotation.yaw)  % 360.0;
+        entity.yaw = wrap_degrees(position_rotation.yaw) % 360.0;
         entity.pitch = wrap_degrees(position_rotation.pitch).clamp(-90.0, 90.0) % 360.0;
 
         // send new position to all other players
@@ -314,9 +314,7 @@ impl Client {
                             &CHurtAnimation::new(&entity_id, 10.0),
                         )
                     }
-                    if config.swing {
-                        
-                    }
+                    if config.swing {}
                 } else {
                     self.kick("Interacted with invalid entitiy id")
                 }
