@@ -79,5 +79,5 @@ pub fn handle_command(sender: &mut CommandSender, command: &str) {
         return;
     }
     // TODO: red color
-    sender.send_message("Command not Found".into());
+    sender.send_message(TextComponent::text("Command not Found"));
 }

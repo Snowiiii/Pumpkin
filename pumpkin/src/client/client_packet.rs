@@ -1,4 +1,3 @@
-
 use num_traits::FromPrimitive;
 use pumpkin_protocol::{
     client::{
@@ -199,7 +198,7 @@ impl Client {
             let prompt_message = if resource_config.prompt_message.is_empty() {
                 None
             } else {
-                Some(TextComponent::from(resource_config.prompt_message.clone()))
+                Some(TextComponent::text(&resource_config.prompt_message))
             };
             self.send_packet(&CConfigAddResourcePack::new(
                 pumpkin_protocol::uuid::UUID(uuid::Uuid::new_v3(

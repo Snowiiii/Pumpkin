@@ -5,7 +5,8 @@ use pumpkin_entity::EntityId;
 use pumpkin_protocol::{
     client::play::{
         Animation, CBlockUpdate, CEntityAnimation, CEntityVelocity, CHeadRot, CHurtAnimation,
-        CSystemChatMessge, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot,
+        CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot,
+        CUpdateEntityRot, FilterType,
     },
     position::WorldPosition,
     server::play::{
@@ -209,38 +210,30 @@ impl Client {
     }
 
     pub fn handle_chat_message(&mut self, server: &mut Server, chat_message: SChatMessage) {
+        dbg!("got message");
         let message = chat_message.message;
         // TODO: filter message & validation
         let gameprofile = self.gameprofile.as_ref().unwrap();
-        dbg!("got message");
-        // yeah a "raw system message", the ugly way to do that, but it works
+
         server.broadcast_packet(
             self,
-            &CSystemChatMessge::new(
-                TextComponent::from(format!("{}: {}", gameprofile.name, message)),
-                false,
-            ),
-        );
-
-        /*   server.broadcast_packet(
-            self,
-            CPlayerChatMessage::new(
+            &CPlayerChatMessage::new(
                 pumpkin_protocol::uuid::UUID(gameprofile.id),
-                0.into(),
-                None,
-                message.clone(),
+                chat_message.messagee_count,
+                chat_message.signature.as_deref(),
+                &message,
                 chat_message.timestamp,
                 chat_message.salt,
                 &[],
-                Some(TextComponent::from(message.clone())),
+                Some(TextComponent::text(&message)),
                 pumpkin_protocol::VarInt(FilterType::PassThrough as i32),
-                0.into(),
-                TextComponent::from(gameprofile.name.clone()),
+                None,
+                1.into(),
+                TextComponent::text(&gameprofile.name.clone()),
                 None,
             ),
         )
 
-        */
         /* server.broadcast_packet(
             self,
             &CDisguisedChatMessage::new(
@@ -272,12 +265,13 @@ impl Client {
     pub fn handle_interact(&mut self, server: &mut Server, interact: SInteract) {
         let action = ActionType::from_i32(interact.typ.0).unwrap();
         if action == ActionType::Attack {
-            let attacker_player = self.player.as_ref().unwrap();
             let entity_id = interact.entity_id;
             // TODO: do validation and stuff
             let config = &server.advanced_config.pvp;
             if config.enabled {
                 let attacked_client = server.get_by_entityid(self, entity_id.0 as EntityId);
+                let attacker_player = self.player.as_mut().unwrap();
+                attacker_player.sneaking = interact.sneaking;
                 if let Some(mut client) = attacked_client {
                     let token = client.token.clone();
                     let player = client.player.as_mut().unwrap();
@@ -299,9 +293,10 @@ impl Client {
                             player.velocity.y as f32,
                             player.velocity.z as f32,
                         );
+                        attacker_player.velocity = attacker_player.velocity.multiply(0.6, 1.0, 0.6);
+
                         player.velocity = velo;
                         client.send_packet(packet);
-                        //  attacker_player.velocity = attacker_player.velocity.multiply(0.6, 1.0, 0.6);
                     }
                     if config.hurt_animation {
                         // TODO

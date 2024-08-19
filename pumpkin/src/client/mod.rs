@@ -375,7 +375,7 @@ impl Client {
                     .unwrap_or_else(|_| self.close());
             }
             ConnectionState::Play => {
-                self.try_send_packet(&CPlayDisconnect::new(TextComponent::from(reason)))
+                self.try_send_packet(&CPlayDisconnect::new(TextComponent::text(reason)))
                     .unwrap_or_else(|_| self.close());
             }
             _ => {

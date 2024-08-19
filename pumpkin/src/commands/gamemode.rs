@@ -18,7 +18,7 @@ impl<'a> Command<'a> for GamemodeCommand {
 
         if args.len() != 2 {
             player.send_system_message(
-                TextComponent::from("Usage: /gamemode <mode>")
+                TextComponent::text("Usage: /gamemode <mode>")
                     .color_named(pumpkin_text::color::NamedColor::Red),
             );
             return;
@@ -28,21 +28,26 @@ impl<'a> Command<'a> for GamemodeCommand {
         match mode_str.parse() {
             Ok(mode) => {
                 player.set_gamemode(mode);
-                player.send_system_message(format!("Set own game mode to {:?}", mode).into());
+                player.send_system_message(TextComponent::text(&format!(
+                    "Set own game mode to {:?}",
+                    mode
+                )));
             }
             Err(_) => {
                 // try to parse from number
                 if let Ok(i) = mode_str.parse::<u8>() {
                     if let Some(mode) = GameMode::from_u8(i) {
                         player.set_gamemode(mode);
-                        player
-                            .send_system_message(format!("Set own game mode to {:?}", mode).into());
+                        player.send_system_message(TextComponent::text(&format!(
+                            "Set own game mode to {:?}",
+                            mode
+                        )));
                         return;
                     }
                 }
 
                 player.send_system_message(
-                    TextComponent::from("Invalid gamemode")
+                    TextComponent::text("Invalid gamemode")
                         .color_named(pumpkin_text::color::NamedColor::Red),
                 );
             }

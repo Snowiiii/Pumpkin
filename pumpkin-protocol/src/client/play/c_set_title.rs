@@ -4,12 +4,12 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 #[packet(0x65)]
-pub struct CTitleText {
-    title: TextComponent,
+pub struct CTitleText<'a> {
+    title: TextComponent<'a>,
 }
 
-impl CTitleText {
-    pub fn new(title: TextComponent) -> Self {
+impl<'a> CTitleText<'a> {
+    pub fn new(title: TextComponent<'a>) -> Self {
         Self { title }
     }
 }

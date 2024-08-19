@@ -7,7 +7,7 @@ use crate::{BitSet, ClientPacket, ServerPacket, VarInt, VarIntType};
 
 use super::{deserializer, serializer, ByteBuffer, DeserializerError};
 
-impl Serialize for BitSet<'static> {
+impl<'a> Serialize for BitSet<'a> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
