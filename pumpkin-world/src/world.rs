@@ -81,7 +81,7 @@ impl Level {
 
     // /// Read one chunk in the world
     // ///
-    // /// Do not use this function if reading many chunks is required, since in case those two chunks which are read seperately using `.read_chunk` are in the same region file, it will need to be opened and closed separately for both of them, leading to a performance loss.
+    // /// Do not use this function if reading many chunks is required, since in case those two chunks which are read separately using `.read_chunk` are in the same region file, it will need to be opened and closed separately for both of them, leading to a performance loss.
     // pub async fn read_chunk(&self, chunk: (i32, i32)) -> Result<ChunkData, WorldError> {
     //     self.read_chunks(vec![chunk])
     //         .await

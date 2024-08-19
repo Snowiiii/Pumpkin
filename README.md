@@ -14,7 +14,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 
 ![image](https://github.com/user-attachments/assets/7e2e865e-b150-4675-a2d5-b52f9900378e)
 
-### What Pumpkin wants to achive:
+### What Pumpkin wants to achieve:
 - **Performance**: Leveraging multi-threading for maximum speed and efficiency.
 - **Compatibility**: Supports the latest Minecraft server version and adheres to vanilla game mechanics.
 - **Security**: Prioritizes security by preventing known exploits.
@@ -83,13 +83,13 @@ Make sure to generate chunks close to (0,0) since that is where the player gets 
 
 Then run:
 > [!NOTE]
-> This can take a while. Because we enabled heavy optimations for release builds
+> This can take a while. Because we enabled heavy optimizations for release builds
 ```
 RUSTFLAGS="-C target-cpu=native" cargo run --release
 ```
 
 ## Contributions
-Contributions are welcome!. See [CONTRIBUTING.md](CONTRIBUTING.md)
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Communication
 Consider joining our [discord](https://discord.gg/wT8XjrjKkf) to stay up-to-date on events, updates, and connect with other members.

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(tag = "action", content = "value", rename_all = "snake_case")]
 pub enum ClickEvent {
-    /// Opens an URL
+    /// Opens a URL
     OpenUrl(String),
     /// Works in signs, but only on the root text component
     RunCommand(String),

@@ -13,19 +13,19 @@ pub struct Style {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bold: Option<u8>,
     /// Whether to render the content in italic.
-    /// Keep in mind that booleans are representet as bytes in nbt
+    /// Keep in mind that booleans are represented as bytes in nbt
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub italic: Option<u8>,
     /// Whether to render the content in underlined.
-    /// Keep in mind that booleans are representet as bytes in nbt
+    /// Keep in mind that booleans are represented as bytes in nbt
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub underlined: Option<u8>,
     /// Whether to render the content in strikethrough.
-    /// Keep in mind that booleans are representet as bytes in nbt
+    /// Keep in mind that booleans are represented as bytes in nbt
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub strikethrough: Option<u8>,
     /// Whether to render the content in obfuscated.
-    /// Keep in mind that booleans are representet as bytes in nbt
+    /// Keep in mind that booleans are represented as bytes in nbt
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub obfuscated: Option<u8>,
     /// When the text is shift-clicked by a player, this string is inserted in their chat input. It does not overwrite any existing text the player was writing. This only works in chat messages
