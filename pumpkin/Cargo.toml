@@ -65,3 +65,4 @@ uuid = { version = "1.10", features = ["serde", "v3"]}
 
 tokio.workspace = true
 rayon.workspace = true
+libc = "0.2.157"

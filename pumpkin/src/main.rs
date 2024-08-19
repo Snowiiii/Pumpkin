@@ -33,6 +33,9 @@ fn main() -> io::Result<()> {
     let _profiler = dhat::Profiler::new_heap();
     #[cfg(feature = "dhat-heap")]
     println!("Using a memory profiler");
+
+    adjust_file_descriptor_limits();
+
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -173,6 +176,36 @@ fn main() -> io::Result<()> {
             }
         }
     })
+}
+
+fn adjust_file_descriptor_limits() {
+    let mut limits = libc::rlimit {
+        rlim_cur: 0,
+        rlim_max: 0,
+    };
+
+    if unsafe { libc::getrlimit(libc::RLIMIT_NOFILE, &mut limits) } != 0 {
+        panic!(
+            "Failed to get the current file handle limits {}",
+            std::io::Error::last_os_error()
+        );
+    };
+
+    let limit_before = limits.rlim_cur;
+    limits.rlim_cur = limits.rlim_max;
+
+    if unsafe { libc::setrlimit(libc::RLIMIT_NOFILE, &limits) } != 0 {
+        panic!(
+            "Failed to set the file handle limits {}",
+            std::io::Error::last_os_error()
+        );
+    }
+
+    log::debug!(
+        "file descriptor adjusted to {} from {}",
+        limits.rlim_max,
+        limit_before
+    );
 }
 
 fn next(current: &mut Token) -> Token {
