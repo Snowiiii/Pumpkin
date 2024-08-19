@@ -70,8 +70,8 @@ impl <'a> CommandTree<'a> {
         
         let mut s = String::with_capacity(len);
 
-        for path in paths {
-            s.push('\n');
+        for path in paths.iter() {
+            s.push(if paths.len() > 1 { '\n' } else { ' ' });
             s.push('/');
             s.push_str(name);
             for node in path {

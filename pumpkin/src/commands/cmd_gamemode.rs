@@ -14,7 +14,7 @@ use crate::entity::player::GameMode;
 
 pub(crate) const NAME: &str = "gamemode";
 
-const DESCRIPTION: &str = "Changes the gamemode for a Player";
+const DESCRIPTION: &str = "Change a player's gamemode.";
 
 const ARG_GAMEMODE: &str = "gamemode";
 const ARG_TARGET: &str = "target";

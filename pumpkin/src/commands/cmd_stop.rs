@@ -3,7 +3,7 @@ use crate::commands::tree_builder::require;
 
 pub(crate) const NAME: &str = "stop";
 
-const DESCRIPTION: &str = "Stops the server";
+const DESCRIPTION: &str = "Stop the server.";
 
 pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(DESCRIPTION).with_child(

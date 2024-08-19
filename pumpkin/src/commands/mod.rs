@@ -4,8 +4,6 @@ use pumpkin_text::TextComponent;
 
 use crate::client::Client;
 use crate::commands::dispatcher::CommandDispatcher;
-use crate::server::Server;
-
 mod cmd_gamemode;
 mod cmd_pumpkin;
 mod cmd_stop;
@@ -14,6 +12,7 @@ mod tree_builder;
 mod dispatcher;
 mod arg_player;
 mod cmd_teleport;
+mod cmd_help;
 
 pub enum CommandSender<'a> {
     Rcon(&'a mut Vec<String>),
@@ -73,6 +72,8 @@ fn dispatcher_init<'a>() -> CommandDispatcher<'a> {
     map.insert(cmd_pumpkin::NAME, cmd_pumpkin::init_command_tree());
     map.insert(cmd_gamemode::NAME, cmd_gamemode::init_command_tree());
     map.insert(cmd_stop::NAME, cmd_stop::init_command_tree());
+    map.insert(cmd_help::NAME, cmd_help::init_command_tree());
+    map.insert(cmd_help::ALIAS, cmd_help::init_command_tree());
 
     CommandDispatcher {
         commands: map,

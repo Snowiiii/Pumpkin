@@ -6,7 +6,7 @@ use crate::commands::tree::CommandTree;
 
 pub(crate) const NAME: &str = "pumpkin";
 
-const DESCRIPTION: &str = "Displays information about Pumpkin";
+const DESCRIPTION: &str = "Display information about Pumpkin.";
 
 pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(DESCRIPTION).execute(&|sender, _| {
