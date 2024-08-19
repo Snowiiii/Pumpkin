@@ -8,13 +8,11 @@ use flate2::{bufread::ZlibDecoder, read::GzDecoder};
 use itertools::Itertools;
 use rayon::prelude::*;
 use thiserror::Error;
-use tokio::{
-    io::{AsyncReadExt, AsyncSeekExt},
-    sync::mpsc,
-};
+use tokio::sync::mpsc;
 
 use crate::chunk::ChunkData;
 
+#[allow(dead_code)]
 pub struct Level {
     root_folder: PathBuf,
     region_folder: PathBuf,
