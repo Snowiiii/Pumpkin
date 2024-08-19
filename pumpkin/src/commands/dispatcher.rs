@@ -19,7 +19,7 @@ pub(crate) struct CommandDispatcher<'a> {
 }
 
 impl <'a> CommandDispatcher<'a> {
-    pub(crate) fn dispatch(&'a self, src: &mut CommandSender, cmd: &str) -> Result<(), &str> {
+    pub(crate) fn dispatch(&'a self, src: &mut CommandSender, cmd: &str) -> Result<(), String> {
 
         let mut parts = cmd.split_ascii_whitespace();
         let key = parts.next().ok_or("Empty Command")?;
@@ -31,9 +31,11 @@ impl <'a> CommandDispatcher<'a> {
             match Self::try_path(src, path, tree, raw_args.clone()) {
                 Err(InvalidConsumptionError(s)) => {
                     println!("Error while parsing command \"{cmd}\": {s:?} was consumed, but couldn't be parsed");
+                    return Err("Internal Error (See logs for details)".into())
                 },
                 Err(InvalidRequirementError) => {
                     println!("Error while parsing command \"{cmd}\": a requirement that was expected was not met.");
+                    return Err("Internal Error (See logs for details)".into())
                 },
                 Ok(fitting_path) => {
                     if fitting_path { return Ok(()) }
@@ -41,7 +43,7 @@ impl <'a> CommandDispatcher<'a> {
             }
         }
 
-        Err("Invalid Syntax: ")
+        Err(format!("Invalid Syntax. Usage:{}", tree.paths_formatted(key)))
     }
 
     fn try_path(src: &mut CommandSender, path: Vec<usize>, tree: &CommandTree, mut raw_args: RawArgs) -> Result<bool, InvalidTreeError> {
