@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 
 use crate::global_registry::{self, ITEM_REGISTRY};
 
-use super::Raritiy;
+use super::Rarity;
 
 const ITEMS_JSON: &str = include_str!("../../assets/items.json");
 
@@ -17,7 +17,7 @@ pub struct ItemComponents {
     #[serde(rename = "minecraft:max_stack_size")]
     max_stack_size: u32,
     #[serde(rename = "minecraft:rarity")]
-    rarity: Raritiy,
+    rarity: Rarity,
     #[serde(rename = "minecraft:repair_cost")]
     repair_cost: u32,
 }
