@@ -21,7 +21,7 @@ impl PlayerInventory {
             items: [None; 36],
             armor: [None; 4],
             offhand: None,
-            // TODO: What when player spawns in with an diffrent index ?
+            // TODO: What when player spawns in with an different index ?
             selected: 0,
         }
     }

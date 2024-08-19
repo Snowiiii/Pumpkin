@@ -16,7 +16,7 @@ pub mod style;
 #[serde(transparent)]
 pub struct Text(pub Box<TextComponent>);
 
-// Fepresents a Text component
+// Represents a Text component
 // Reference: https://wiki.vg/Text_formatting#Text_components
 #[derive(Clone, Default, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -24,7 +24,7 @@ pub struct TextComponent {
     /// The actual text
     #[serde(flatten)]
     pub content: TextContent,
-    /// Style of the text. Bold, Italic, unterline, Color...
+    /// Style of the text. Bold, Italic, underline, Color...
     /// Also has `ClickEvent
     #[serde(flatten)]
     pub style: Style,

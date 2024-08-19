@@ -3,7 +3,7 @@
 We appreciate your interest in contributing to Pumpkin! This document outlines the guidelines for submitting bug reports, feature suggestions, and code changes.
 Getting Started
 
-The easisty way to get started is by asking for help in our [discord](https://discord.gg/wT8XjrjKkf) 
+The easiest way to get started is by asking for help in our [discord](https://discord.gg/wT8XjrjKkf) 
 
 ### How to Contribute
 
