@@ -42,7 +42,64 @@ impl PlayerInventory {
         }
     }
 
-    pub fn set_slot(slot: u32, item: Item) {}
+    /// Set the contents of an item in a slot
+    ///
+    /// ## Slot
+    /// The slot according to https://wiki.vg/Inventory#Player_Inventory
+    /// 
+    /// ## Item
+    /// The optional item to place in the slot
+    /// 
+    /// ## Item allowed override
+    /// An override, which when enabled, makes it so that invalid items, can be placed in slots they normally can't.
+    /// Useful functionality for plugins in the future.
+    pub fn set_slot(&mut self, slot: usize, item: Option<Item>, item_allowed_override: bool) {
+        match slot {
+            0 => {
+                // TODO: Add crafting check here
+                self.crafting_output = item
+            }
+            1..=4 => {
+                self.crafting[slot-1] = item
+            }
+            5..=8 => {
+                match item {
+                    None => {
+                        self.armor[slot-4] = None
+                    },
+                    Some(item) => {
+                        // TODO: Replace asserts with error handling
+                        match slot-5 {
+                            0 => {
+                                assert!(item.is_helmet() || item_allowed_override);
+                                self.armor[0] = Some(item);
+                            }
+                            1 => {
+                                assert!(item.is_chestplate() || item_allowed_override);
+                                self.armor[1] = Some(item)
+                            }
+                            2 => {
+                                assert!(item.is_leggings() || item_allowed_override);
+                                self.armor[2] = Some(item);
+                            }
+                            3 => {
+                                assert!(item.is_boots() || item_allowed_override);
+                                self.armor[3] = Some(item)
+                            }
+                            _ => unreachable!()
+                        }
+                    }
+                }
+            }
+            9..=44 => {
+                self.items[slot-9] = item;
+            }
+            45 => {
+                self.offhand = item;
+            }
+            _ => unreachable!()
+        }
+    }
 
     pub fn set_selected(&mut self, slot: usize) {
         assert!((0..9).contains(&slot));
