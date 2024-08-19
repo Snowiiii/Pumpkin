@@ -1,4 +1,5 @@
 mod item_registry;
+mod item_category_checks;
 
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
