@@ -83,10 +83,10 @@ impl PacketEncoder {
                 self.buf
                     .copy_within(start_len..start_len + data_len, start_len + data_prefix_len);
 
-                let front = &mut self.buf[start_len..];
+                let mut front = &mut self.buf[start_len..];
 
                 VarInt(packet_len as i32)
-                    .encode(front.as_mut())
+                    .encode(&mut front)
                     .map_err(|_| PacketError::EncodeLength)?;
                 // Zero for no compression on this packet.
                 VarInt(0)
