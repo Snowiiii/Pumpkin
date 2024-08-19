@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use fastnbt::LongArray;
 
-use crate::{world::WorldError, WORLD_HEIGHT};
+use crate::{level::WorldError, WORLD_HEIGHT};
 
 pub struct ChunkData {
     pub blocks: Box<[i32; 16 * 16 * WORLD_HEIGHT]>,

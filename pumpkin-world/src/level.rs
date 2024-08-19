@@ -13,6 +13,7 @@ use tokio::sync::mpsc;
 use crate::chunk::ChunkData;
 
 #[allow(dead_code)]
+/// The Level represents a
 pub struct Level {
     root_folder: PathBuf,
     region_folder: PathBuf,
@@ -69,8 +70,13 @@ impl Compression {
 
 impl Level {
     pub fn from_root_folder(root_folder: PathBuf) -> Self {
-        // TODO: Check if exists
+        assert!(root_folder.exists(), "World root folder does not exist!");
         let region_folder = root_folder.join("region");
+        assert!(
+            region_folder.exists(),
+            "World region folder does not exist!"
+        );
+
         Level {
             root_folder,
             region_folder,
