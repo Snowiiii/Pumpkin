@@ -16,8 +16,8 @@ pub enum Action {
     LeaveBed,
     StartSprinting,
     StopSprinting,
-    StartHourseJump,
-    StopHourseJump,
+    StartHorseJump,
+    StopHorseJump,
     OpenVehicleInventory,
     StartFlyingElytra,
 }

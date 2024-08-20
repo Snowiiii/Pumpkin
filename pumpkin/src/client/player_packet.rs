@@ -187,8 +187,8 @@ impl Client {
                 pumpkin_protocol::server::play::Action::LeaveBed => todo!(),
                 pumpkin_protocol::server::play::Action::StartSprinting => player.sprinting = true,
                 pumpkin_protocol::server::play::Action::StopSprinting => player.sprinting = false,
-                pumpkin_protocol::server::play::Action::StartHourseJump => todo!(),
-                pumpkin_protocol::server::play::Action::StopHourseJump => todo!(),
+                pumpkin_protocol::server::play::Action::StartHorseJump => todo!(),
+                pumpkin_protocol::server::play::Action::StopHorseJump => todo!(),
                 pumpkin_protocol::server::play::Action::OpenVehicleInventory => todo!(),
                 pumpkin_protocol::server::play::Action::StartFlyingElytra => {} // TODO
             }
