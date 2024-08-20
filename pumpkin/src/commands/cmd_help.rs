@@ -1,3 +1,4 @@
+use pumpkin_text::TextComponent;
 use crate::commands::{CommandSender, DISPATCHER, dispatcher_init};
 use crate::commands::dispatcher::{CommandDispatcher, InvalidTreeError};
 use crate::commands::dispatcher::InvalidTreeError::InvalidConsumptionError;
@@ -41,7 +42,9 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
             let (name, tree) = parse_arg_command(args, dispatcher)?;
             
             sender.send_message(
-                format!("{} - {} Usage:{}", name, tree.description, tree.paths_formatted(name)).into()
+                TextComponent::text(
+                    &format!("{} - {} Usage:{}", name, tree.description, tree.paths_formatted(name))
+                )
             );
             
             Ok(())
@@ -52,7 +55,9 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
 
         for (name, tree) in &dispatcher.commands {
             sender.send_message(
-                format!("{} - {} Usage:{}", name, tree.description, tree.paths_formatted(name)).into()
+                TextComponent::text(
+                    &format!("{} - {} Usage:{}", name, tree.description, tree.paths_formatted(name))
+                )
             );
         };
 

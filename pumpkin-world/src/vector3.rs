@@ -14,7 +14,7 @@ impl<T: Math + Copy> Vector3<T> {
         Vector3 { x, y, z }
     }
 
-    pub fn length_sqared(&self) -> T {
+    pub fn length_squared(&self) -> T {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
@@ -45,7 +45,7 @@ impl<T: Math + Copy> Vector3<T> {
 
 impl<T: Math + Copy + Float> Vector3<T> {
     pub fn length(&self) -> T {
-        self.length_sqared().sqrt()
+        self.length_squared().sqrt()
     }
     pub fn normalize(&self) -> Self {
         let length = self.length();

@@ -1,5 +1,6 @@
 use pumpkin_world::item::Item;
 
+#[allow(dead_code)]
 pub struct PlayerInventory {
     // Main Inventory + Hotbar
     items: [Option<Item>; 36],
@@ -21,12 +22,12 @@ impl PlayerInventory {
             items: [None; 36],
             armor: [None; 4],
             offhand: None,
-            // TODO: What when player spawns in with an diffrent index ?
+            // TODO: What when player spawns in with an different index ?
             selected: 0,
         }
     }
 
-    pub fn set_slot(slot: u32, item: Item) {}
+    pub fn set_slot(_slot: u32, _item: Item) {}
 
     pub fn set_selected(&mut self, slot: i16) {
         assert!((0..9).contains(&slot));

@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use num_traits::FromPrimitive;
+use pumpkin_text::TextComponent;
 
 use crate::commands::arg_player::{consume_arg_player, parse_arg_player};
 
@@ -68,7 +69,9 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
 
                         return if let Player(target) = sender {
                             target.set_gamemode(gamemode);
-                            target.send_system_message(format!("Game mode was set to {:?}", gamemode).into());
+                            target.send_system_message(TextComponent::text(
+                                &format!("Game mode was set to {:?}", gamemode)
+                            ));
 
                             Ok(())
                         } else {
@@ -85,7 +88,9 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                         let target = parse_arg_player(sender, ARG_TARGET, args)?;
 
                         target.set_gamemode(gamemode);
-                        target.send_system_message(format!("Game mode was set to {:?}", gamemode).into());
+                        target.send_system_message(TextComponent::text(
+                            &format!("Set own game mode to {:?}", gamemode)
+                        ));
 
                         Ok(())
                     })

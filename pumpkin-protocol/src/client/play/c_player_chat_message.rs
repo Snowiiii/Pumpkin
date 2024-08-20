@@ -11,19 +11,18 @@ pub struct CPlayerChatMessage<'a> {
     sender: UUID,
     index: VarInt,
     message_signature: Option<&'a [u8]>,
-    message: String,
+    message: &'a str,
     timestamp: i64,
     salt: i64,
     previous_messages_count: VarInt,
     previous_messages: &'a [PreviousMessage<'a>], // max 20
-    unsigned_content: Option<TextComponent>,
+    unsigned_content: Option<TextComponent<'a>>,
     /// See `FilterType`
     filter_type: VarInt,
-    // TODO: THIS IS A HACK, We currently don't support writing or reading bitsets
-    filter_type_bits: bool,
+    filter_type_bits: Option<BitSet<'a>>,
     chat_type: VarInt,
-    sender_name: TextComponent,
-    target_name: Option<TextComponent>,
+    sender_name: TextComponent<'a>,
+    target_name: Option<TextComponent<'a>>,
 }
 
 impl<'a> CPlayerChatMessage<'a> {
@@ -32,15 +31,16 @@ impl<'a> CPlayerChatMessage<'a> {
         sender: UUID,
         index: VarInt,
         message_signature: Option<&'a [u8]>,
-        message: String,
+        message: &'a str,
         timestamp: i64,
         salt: i64,
         previous_messages: &'a [PreviousMessage<'a>],
-        unsigned_content: Option<TextComponent>,
+        unsigned_content: Option<TextComponent<'a>>,
         filter_type: VarInt,
+        filter_type_bits: Option<BitSet<'a>>,
         chat_type: VarInt,
-        sender_name: TextComponent,
-        target_name: Option<TextComponent>,
+        sender_name: TextComponent<'a>,
+        target_name: Option<TextComponent<'a>>,
     ) -> Self {
         Self {
             sender,
@@ -53,7 +53,7 @@ impl<'a> CPlayerChatMessage<'a> {
             previous_messages,
             unsigned_content,
             filter_type,
-            filter_type_bits: false,
+            filter_type_bits,
             chat_type,
             sender_name,
             target_name,

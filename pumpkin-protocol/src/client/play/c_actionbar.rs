@@ -4,12 +4,12 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 #[packet(0x4C)]
-pub struct CActionBar {
-    action_bar: TextComponent,
+pub struct CActionBar<'a> {
+    action_bar: TextComponent<'a>,
 }
 
-impl CActionBar {
-    pub fn new(action_bar: TextComponent) -> Self {
+impl<'a> CActionBar<'a> {
+    pub fn new(action_bar: TextComponent<'a>) -> Self {
         Self { action_bar }
     }
 }

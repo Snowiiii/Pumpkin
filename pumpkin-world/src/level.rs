@@ -8,13 +8,12 @@ use flate2::{bufread::ZlibDecoder, read::GzDecoder};
 use itertools::Itertools;
 use rayon::prelude::*;
 use thiserror::Error;
-use tokio::{
-    io::{AsyncReadExt, AsyncSeekExt},
-    sync::mpsc,
-};
+use tokio::sync::mpsc;
 
 use crate::chunk::ChunkData;
 
+#[allow(dead_code)]
+/// The Level represents a
 pub struct Level {
     root_folder: PathBuf,
     region_folder: PathBuf,
@@ -71,8 +70,13 @@ impl Compression {
 
 impl Level {
     pub fn from_root_folder(root_folder: PathBuf) -> Self {
-        // TODO: Check if exists
+        assert!(root_folder.exists(), "World root folder does not exist!");
         let region_folder = root_folder.join("region");
+        assert!(
+            region_folder.exists(),
+            "World region folder does not exist!"
+        );
+
         Level {
             root_folder,
             region_folder,
@@ -81,7 +85,7 @@ impl Level {
 
     // /// Read one chunk in the world
     // ///
-    // /// Do not use this function if reading many chunks is required, since in case those two chunks which are read seperately using `.read_chunk` are in the same region file, it will need to be opened and closed separately for both of them, leading to a performance loss.
+    // /// Do not use this function if reading many chunks is required, since in case those two chunks which are read separately using `.read_chunk` are in the same region file, it will need to be opened and closed separately for both of them, leading to a performance loss.
     // pub async fn read_chunk(&self, chunk: (i32, i32)) -> Result<ChunkData, WorldError> {
     //     self.read_chunks(vec![chunk])
     //         .await

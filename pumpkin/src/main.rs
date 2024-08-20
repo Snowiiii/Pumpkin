@@ -1,3 +1,5 @@
+#![allow(clippy::await_holding_refcell_ref)]
+
 use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
 use std::io::{self};

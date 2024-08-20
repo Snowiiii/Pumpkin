@@ -26,6 +26,7 @@ pub fn get_protocol_id(category: &str, entry: &str) -> u32 {
         .expect("No Entry found")
 }
 
+#[allow(dead_code)]
 pub fn get_default<'a>(category: &str) -> Option<&'a str> {
     REGISTRY
         .get(category)

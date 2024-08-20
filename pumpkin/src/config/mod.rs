@@ -15,7 +15,7 @@ pub mod resource_pack;
 const CURRENT_BASE_VERSION: &str = "1.0.0";
 
 #[derive(Deserialize, Serialize)]
-/// The idea is that Pumpkin should very customizable, You can Enable or Disable Features depning on your needs.
+/// The idea is that Pumpkin should very customizable, You can Enable or Disable Features depending on your needs.
 /// This also allows you get some Performance or Resource boosts.
 /// Important: The Configuration should match Vanilla by default
 pub struct AdvancedConfiguration {
@@ -182,7 +182,7 @@ impl AdvancedConfiguration {
         if path.as_ref().exists() {
             let toml = std::fs::read_to_string(path).expect("Couldn't read configuration");
             let config: AdvancedConfiguration =
-                toml::from_str(toml.as_str()).expect("Couldn't parse features.toml, Proberbly old config, Replacing with a new one or just delete it");
+                toml::from_str(toml.as_str()).expect("Couldn't parse features.toml, Probably old config, Replacing with a new one or just delete it");
             config.validate();
             config
         } else {
@@ -202,7 +202,7 @@ impl BasicConfiguration {
     pub fn load<P: AsRef<Path>>(path: P) -> BasicConfiguration {
         if path.as_ref().exists() {
             let toml = std::fs::read_to_string(path).expect("Couldn't read configuration");
-            let config: BasicConfiguration = toml::from_str(toml.as_str()).expect("Couldn't parse configuration.toml, Proberbly old config, Replacing with a new one or just delete it");
+            let config: BasicConfiguration = toml::from_str(toml.as_str()).expect("Couldn't parse configuration.toml, Probably old config, Replacing with a new one or just delete it");
             config.validate();
             config
         } else {
@@ -219,7 +219,7 @@ impl BasicConfiguration {
             self.config_version, CURRENT_BASE_VERSION,
             "Config version does not match used Config version. Please update your config"
         );
-        assert!(self.view_distance >= 2, "View distance must be atleast 2");
+        assert!(self.view_distance >= 2, "View distance must be at least 2");
         assert!(
             self.view_distance <= 32,
             "View distance must be less than 32"

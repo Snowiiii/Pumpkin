@@ -64,7 +64,7 @@ impl Registry {
 
         let damage_types = Registry {
             registry_id: "minecraft:damage_type".to_string(),
-            registry_entries: damage_type::entires(),
+            registry_entries: damage_type::entries(),
         };
         let paintings = Registry {
             registry_id: "minecraft:painting_variant".to_string(),

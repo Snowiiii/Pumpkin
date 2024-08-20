@@ -65,7 +65,7 @@ impl Packet {
         buf.put_slice(bytes);
         buf.put_u8(0);
         buf.put_u8(0);
-        connection.write(&buf).unwrap();
+        let _ = connection.write(&buf).unwrap();
         Ok(())
     }
 

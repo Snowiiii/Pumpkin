@@ -1,7 +1,7 @@
 use pumpkin_macros::packet;
 use serde::Serialize;
 
-use crate::VarInt;
+use crate::{position::WorldPosition, VarInt};
 
 #[derive(Serialize)]
 #[packet(0x2B)]
@@ -23,7 +23,7 @@ pub struct CLogin<'a> {
     previous_gamemode: i8,
     debug: bool,
     is_flat: bool,
-    death_dimension_name: Option<(String, i64)>, // POSITION NOT STRING
+    death_dimension_name: Option<(WorldPosition, i64)>,
     portal_cooldown: VarInt,
     enforce_secure_chat: bool,
 }
@@ -47,7 +47,7 @@ impl<'a> CLogin<'a> {
         previous_gamemode: i8,
         debug: bool,
         is_flat: bool,
-        death_dimension_name: Option<(String, i64)>,
+        death_dimension_name: Option<(WorldPosition, i64)>,
         portal_cooldown: VarInt,
         enforce_secure_chat: bool,
     ) -> Self {
