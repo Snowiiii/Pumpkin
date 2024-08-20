@@ -7,7 +7,7 @@ pub struct ResourcePackConfig {
     pub resource_pack_url: String,
     /// The SHA1 hash (40) of the resource pack.
     pub resource_pack_sha1: String,
-    /// Custom propmt Text component, Leave blank for none
+    /// Custom prompt Text component, Leave blank for none
     pub prompt_message: String,
     /// Will force the Player to accept the resource pack
     pub force: bool,

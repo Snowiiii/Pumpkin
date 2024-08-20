@@ -1,6 +1,6 @@
 use bytebuf::{packet_id::Packet, ByteBuffer, DeserializerError};
 use bytes::Buf;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
 use thiserror::Error;
 

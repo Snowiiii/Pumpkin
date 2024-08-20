@@ -4,12 +4,12 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 #[packet(0x63)]
-pub struct CSubtitle {
-    subtitle: TextComponent,
+pub struct CSubtitle<'a> {
+    subtitle: TextComponent<'a>,
 }
 
-impl CSubtitle {
-    pub fn new(subtitle: TextComponent) -> Self {
+impl<'a> CSubtitle<'a> {
+    pub fn new(subtitle: TextComponent<'a>) -> Self {
         Self { subtitle }
     }
 }

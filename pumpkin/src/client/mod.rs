@@ -65,7 +65,7 @@ pub struct Client {
 
     pub protocol_version: i32,
     pub connection_state: ConnectionState,
-    pub encrytion: bool,
+    pub encryption: bool,
     pub closed: bool,
     pub token: Rc<Token>,
     pub connection: TcpStream,
@@ -89,7 +89,7 @@ impl Client {
             connection,
             enc: PacketEncoder::default(),
             dec: PacketDecoder::default(),
-            encrytion: true,
+            encryption: true,
             closed: false,
             client_packets_queue: VecDeque::new(),
         }
@@ -105,7 +105,7 @@ impl Client {
         &mut self,
         shared_secret: &[u8], // decrypted
     ) -> Result<(), EncryptionError> {
-        self.encrytion = true;
+        self.encryption = true;
         let crypt_key: [u8; 16] = shared_secret
             .try_into()
             .map_err(|_| EncryptionError::SharedWrongLength)?;
@@ -375,11 +375,11 @@ impl Client {
                     .unwrap_or_else(|_| self.close());
             }
             ConnectionState::Play => {
-                self.try_send_packet(&CPlayDisconnect::new(TextComponent::from(reason)))
+                self.try_send_packet(&CPlayDisconnect::new(TextComponent::text(reason)))
                     .unwrap_or_else(|_| self.close());
             }
             _ => {
-                log::warn!("Cant't kick in {:?} State", self.connection_state)
+                log::warn!("Can't kick in {:?} State", self.connection_state)
             }
         }
         self.close()

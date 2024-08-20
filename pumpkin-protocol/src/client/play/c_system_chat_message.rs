@@ -4,13 +4,13 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 #[packet(0x6C)]
-pub struct CSystemChatMessge {
-    content: TextComponent,
+pub struct CSystemChatMessge<'a> {
+    content: TextComponent<'a>,
     overlay: bool,
 }
 
-impl CSystemChatMessge {
-    pub fn new(content: TextComponent, overlay: bool) -> Self {
+impl<'a> CSystemChatMessge<'a> {
+    pub fn new(content: TextComponent<'a>, overlay: bool) -> Self {
         Self { content, overlay }
     }
 }

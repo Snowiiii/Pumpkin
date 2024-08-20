@@ -1,5 +1,3 @@
-use std::char::MAX;
-
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use pumpkin_macros::packet;
@@ -22,7 +20,7 @@ impl ServerPacket for SInteract {
     ) -> Result<Self, crate::bytebuf::DeserializerError> {
         let entity_id = bytebuf.get_var_int();
         let typ = bytebuf.get_var_int();
-        let action = ActionType::from_i32(typ.0 as i32).unwrap();
+        let action = ActionType::from_i32(typ.0).unwrap();
         let target_position: Option<(f32, f32, f32)> = match action {
             ActionType::Interact => None,
             ActionType::Attack => None,

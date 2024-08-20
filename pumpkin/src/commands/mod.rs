@@ -89,7 +89,7 @@ pub fn handle_command(sender: &mut CommandSender, cmd: &str) {
 
     if let Err(err) = dispatcher.dispatch(sender, cmd) {
         sender.send_message(
-            TextComponent::from(err)
+            TextComponent::text(&err)
                 .color_named(pumpkin_text::color::NamedColor::Red),
         )
     }

@@ -1,4 +1,5 @@
 use core::str;
+use std::borrow::Cow;
 
 use click::ClickEvent;
 use color::Color;
@@ -12,25 +13,34 @@ pub mod color;
 pub mod hover;
 pub mod style;
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct Text(pub Box<TextComponent>);
+pub struct Text<'a>(pub Box<TextComponent<'a>>);
 
-// Fepresents a Text component
+// Represents a Text component
 // Reference: https://wiki.vg/Text_formatting#Text_components
-#[derive(Clone, Default, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TextComponent {
+pub struct TextComponent<'a> {
     /// The actual text
     #[serde(flatten)]
-    pub content: TextContent,
-    /// Style of the text. Bold, Italic, unterline, Color...
+    pub content: TextContent<'a>,
+    /// Style of the text. Bold, Italic, underline, Color...
     /// Also has `ClickEvent
     #[serde(flatten)]
-    pub style: Style,
+    pub style: Style<'a>,
 }
 
-impl serde::Serialize for TextComponent {
+impl<'a> TextComponent<'a> {
+    pub fn text(text: &'a str) -> Self {
+        Self {
+            content: TextContent::Text { text: text.into() },
+            style: Style::default(),
+        }
+    }
+}
+
+impl<'a> serde::Serialize for TextComponent<'a> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -39,7 +49,7 @@ impl serde::Serialize for TextComponent {
     }
 }
 
-impl TextComponent {
+impl<'a> TextComponent<'a> {
     pub fn color(mut self, color: Color) -> Self {
         self.style.color = Some(color);
         self
@@ -87,13 +97,13 @@ impl TextComponent {
     }
 
     /// Allows for events to occur when the player clicks on text. Only work in chat.
-    pub fn click_event(mut self, event: ClickEvent) -> Self {
+    pub fn click_event(mut self, event: ClickEvent<'a>) -> Self {
         self.style.click_event = Some(event);
         self
     }
 
     /// Allows for a tooltip to be displayed when the player hovers their mouse over text.
-    pub fn hover_event(mut self, event: HoverEvent) -> Self {
+    pub fn hover_event(mut self, event: HoverEvent<'a>) -> Self {
         self.style.hover_event = Some(event);
         self
     }
@@ -104,9 +114,9 @@ impl TextComponent {
         #[serde(rename_all = "camelCase")]
         struct TempStruct<'a> {
             #[serde(flatten)]
-            text: &'a TextContent,
+            text: &'a TextContent<'a>,
             #[serde(flatten)]
-            style: &'a Style,
+            style: &'a Style<'a>,
         }
         let astruct = TempStruct {
             text: &self.content,
@@ -118,50 +128,24 @@ impl TextComponent {
     }
 }
 
-impl From<String> for TextComponent {
-    fn from(value: String) -> Self {
-        Self {
-            content: TextContent::Text { text: value },
-            style: Style::default(),
-        }
-    }
-}
-
-impl From<&str> for TextComponent {
-    fn from(value: &str) -> Self {
-        Self {
-            content: TextContent::Text {
-                text: value.to_string(),
-            },
-            style: Style::default(),
-        }
-    }
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum TextContent {
+pub enum TextContent<'a> {
     /// Raw Text
-    Text { text: String },
+    Text { text: Cow<'a, str> },
     /// Translated text
     Translate {
-        translate: String,
+        translate: Cow<'a, str>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        with: Vec<Text>,
+        with: Vec<Text<'a>>,
     },
     /// Displays the name of one or more entities found by a selector.
     EntityNames {
-        selector: String,
+        selector: Cow<'a, str>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        separator: Option<Text>,
+        separator: Option<Cow<'a, str>>,
     },
     /// A keybind identifier
     /// https://minecraft.fandom.com/wiki/Controls#Configurable_controls
-    Keybind { keybind: String },
-}
-
-impl Default for TextContent {
-    fn default() -> Self {
-        Self::Text { text: "".into() }
-    }
+    Keybind { keybind: Cow<'a, str> },
 }

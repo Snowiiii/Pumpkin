@@ -1,8 +1,6 @@
 use pumpkin_macros::packet;
 use serde::Serialize;
 
-use crate::{bytebuf::ByteBuffer, ClientPacket};
-
 #[derive(Serialize)]
 #[packet(0x01)]
 pub struct CPluginMessage<'a> {

@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use num_traits::FromPrimitive;
 use pumpkin_protocol::{
     client::{
@@ -39,11 +37,15 @@ impl Client {
         self.protocol_version = handshake.protocol_version.0;
         self.connection_state = handshake.next_state;
         if self.connection_state == ConnectionState::Login {
-            if self.protocol_version < CURRENT_MC_PROTOCOL as i32 {
-                let protocol = self.protocol_version;
-                self.kick(&format!("Client outdated ({protocol}), Server uses Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL}"));
-            } else if self.protocol_version > CURRENT_MC_PROTOCOL as i32 {
-                self.kick(&format!("Server outdated, Server uses Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL}"));
+            let protocol = self.protocol_version;
+            match protocol.cmp(&(CURRENT_MC_PROTOCOL as i32)) {
+                std::cmp::Ordering::Less => {
+                    self.kick(&format!("Client outdated ({protocol}), Server uses Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL}"));
+                }
+                std::cmp::Ordering::Equal => {}
+                std::cmp::Ordering::Greater => {
+                    self.kick(&format!("Server outdated, Server uses Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL}"));
+                }
             }
         }
     }
@@ -200,12 +202,15 @@ impl Client {
             let prompt_message = if resource_config.prompt_message.is_empty() {
                 None
             } else {
-                Some(TextComponent::from(resource_config.prompt_message.clone()))
+                Some(TextComponent::text(&resource_config.prompt_message))
             };
             self.send_packet(&CConfigAddResourcePack::new(
-                uuid::Uuid::from_str(&resource_config.resource_pack_url).unwrap(),
-                resource_config.resource_pack_url.clone(),
-                resource_config.resource_pack_sha1.clone(),
+                pumpkin_protocol::uuid::UUID(uuid::Uuid::new_v3(
+                    &uuid::Uuid::NAMESPACE_DNS,
+                    resource_config.resource_pack_url.as_bytes(),
+                )),
+                &resource_config.resource_pack_url,
+                &resource_config.resource_pack_sha1,
                 resource_config.force,
                 prompt_message,
             ));

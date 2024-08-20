@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::Float;
 use pumpkin_entity::{entity_type::EntityType, Entity, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_protocol::VarInt;

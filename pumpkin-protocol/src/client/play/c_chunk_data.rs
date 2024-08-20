@@ -32,7 +32,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
             data_buf.put_i16(block_count);
             //// Block states
 
-            let palette = chunk.into_iter().dedup().collect_vec();
+            let palette = chunk.iter().dedup().collect_vec();
             // TODO: make dynamic block_size work
             // TODO: make direct block_size work
             enum PaletteType {
@@ -63,7 +63,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
                     palette.iter().enumerate().for_each(|(i, id)| {
                         palette_map.insert(*id, i);
                         // Palette
-                        data_buf.put_var_int(&VarInt(**id as i32));
+                        data_buf.put_var_int(&VarInt(**id));
                     });
                     for block_clump in chunk.chunks(64 / block_size as usize) {
                         let mut out_long: i64 = 0;
@@ -109,7 +109,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
         // Size
         buf.put_var_int(&VarInt(data_buf.buf().len() as i32));
         // Data
-        buf.put_slice(&data_buf.buf());
+        buf.put_slice(data_buf.buf());
 
         // TODO: block entities
         buf.put_var_int(&VarInt(0));
