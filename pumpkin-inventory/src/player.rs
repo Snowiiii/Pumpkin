@@ -105,4 +105,9 @@ impl PlayerInventory {
         assert!((0..9).contains(&slot));
         self.selected = slot;
     }
+    
+    pub fn held_item(&self) -> Option<&Item> {
+        debug_assert!((0..9).contains(&self.selected));
+        self.items[self.selected+36-8].as_ref()
+    }
 }

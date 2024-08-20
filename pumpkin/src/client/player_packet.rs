@@ -322,7 +322,11 @@ impl Client {
         let location = use_item_on.location;
         let face = BlockFace::from_i32(use_item_on.face.0).unwrap();
         let location = WorldPosition(location.0 + face.to_offset());
-        server.broadcast_packet(self, &CBlockUpdate::new(location, 11.into()));
+        // TODO: 
+        // - Add checking for if used item is a block
+        if let Some(item) = self.player.as_ref().unwrap().inventory.held_item() {
+            server.broadcast_packet(self, &CBlockUpdate::new(location, item.item_id.into()));
+        }
     }
 
     pub fn handle_set_held_item(&mut self, _server: &mut Server, held: SSetHeldItem) {
@@ -335,7 +339,10 @@ impl Client {
     }
 
     pub fn handle_set_creative_slot(&mut self, _server: &mut Server, packet: SSetCreativeSlot) {
-        // TODO: handle this
-        dbg!(&packet);
+        let inventory = &mut self.player.as_mut()
+            .unwrap()
+            .inventory;
+        
+        inventory.set_slot(packet.slot as usize, packet.clicked_item.to_item(), false);
     }
 }
