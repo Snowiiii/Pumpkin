@@ -14,21 +14,24 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 
 ![image](https://github.com/user-attachments/assets/7e2e865e-b150-4675-a2d5-b52f9900378e)
 
-### What Pumpkin wants to achieve:
+## What Pumpkin wants to achieve
+
 - **Performance**: Leveraging multi-threading for maximum speed and efficiency.
 - **Compatibility**: Supports the latest Minecraft server version and adheres to vanilla game mechanics.
 - **Security**: Prioritizes security by preventing known exploits.
 - **Flexibility**: Highly configurable with the ability to disable unnecessary features.
 - **Extensibility**: Provides a foundation for plugin development.
 
-### What Pumpkin will not:
+## What Pumpkin will not
+
 - Provide compatibility with Vanilla or Bukkit servers (including configs and plugins).
 - Function as a framework for building a server from scratch.
 
 > [!IMPORTANT]
 > Pumpkin is currently under heavy development.
 
-### Features (WIP)
+## Features (WIP)
+
 - [x] Configuration (toml)
 - [x] Server Status/Ping
 - [x] Login
@@ -68,13 +71,16 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 Check out our [Github Project](https://github.com/users/Snowiiii/projects/12/views/3) to see current progress
 
 ## How to run
+
 There are currently no release builds, because there was no release :D.
 
 To get Pumpkin running you first have to clone it:
-```
+
+```shell
 git clone https://github.com/Snowiiii/Pumpkin.git
 cd Pumpkin
 ```
+
 You also may have to [install rust](https://www.rust-lang.org/tools/install) when you don't already have.
 
 For Now, until we don't have own chunk generation.
@@ -82,17 +88,22 @@ You need to pregenerate the world and place it inside of the Pumpkin/ directory.
 Make sure to generate chunks close to (0,0) since that is where the player gets spawned by default.
 
 Then run:
+
 > [!NOTE]
 > This can take a while. Because we enabled heavy optimizations for release builds
-```
+
+```shell
 RUSTFLAGS="-C target-cpu=native" cargo run --release
 ```
 
 ## Contributions
+
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Communication
+
 Consider joining our [discord](https://discord.gg/wT8XjrjKkf) to stay up-to-date on events, updates, and connect with other members.
 
-### Thanks
-A big thanks to https://wiki.vg/ for providing valuable information used in the development of this project.
+## Thanks
+
+A big thanks to [wiki.vg](https://wiki.vg/) for providing valuable information used in the development of this project.
