@@ -18,7 +18,10 @@ pub(crate) struct CommandDispatcher<'a> {
     pub(crate) commands: HashMap<&'a str, CommandTree<'a>>
 }
 
+/// Stores registered [CommandTree]s and dispatches commands to them.
 impl <'a> CommandDispatcher<'a> {
+
+    /// Execute a command using its corresponding [CommandTree].
     pub(crate) fn dispatch(&'a self, src: &mut CommandSender, cmd: &str) -> Result<(), String> {
 
         let mut parts = cmd.split_ascii_whitespace();
@@ -27,8 +30,9 @@ impl <'a> CommandDispatcher<'a> {
 
         let tree = self.commands.get(key).ok_or("Command not found")?;
 
+        // try paths until fitting path is found
         for path in tree.iter_paths() {
-            match Self::try_path(src, path, tree, raw_args.clone()) {
+            match Self::try_is_fitting_path(src, path, tree, raw_args.clone()) {
                 Err(InvalidConsumptionError(s)) => {
                     println!("Error while parsing command \"{cmd}\": {s:?} was consumed, but couldn't be parsed");
                     return Err("Internal Error (See logs for details)".into())
@@ -37,8 +41,8 @@ impl <'a> CommandDispatcher<'a> {
                     println!("Error while parsing command \"{cmd}\": a requirement that was expected was not met.");
                     return Err("Internal Error (See logs for details)".into())
                 },
-                Ok(fitting_path) => {
-                    if fitting_path { return Ok(()) }
+                Ok(is_fitting_path) => {
+                    if is_fitting_path { return Ok(()) }
                 }
             }
         }
@@ -46,7 +50,7 @@ impl <'a> CommandDispatcher<'a> {
         Err(format!("Invalid Syntax. Usage:{}", tree.paths_formatted(key)))
     }
 
-    fn try_path(src: &mut CommandSender, path: Vec<usize>, tree: &CommandTree, mut raw_args: RawArgs) -> Result<bool, InvalidTreeError> {
+    fn try_is_fitting_path(src: &mut CommandSender, path: Vec<usize>, tree: &CommandTree, mut raw_args: RawArgs) -> Result<bool, InvalidTreeError> {
 
         let mut parsed_args: ConsumedArgs = HashMap::new();
 

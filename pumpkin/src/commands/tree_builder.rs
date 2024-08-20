@@ -3,6 +3,8 @@ use crate::commands::dispatcher::InvalidTreeError;
 use crate::commands::tree::{ArgumentConsumer, ConsumedArgs, Node, NodeType, CommandTree};
 
 impl <'a> CommandTree<'a> {
+
+    /// Add a child [Node] to the root of this [CommandTree].
     pub fn with_child(mut self, child: impl NodeBuilder<'a>) -> Self {
         let node = child.build(&mut self);
         self.children.push(self.nodes.len());
@@ -19,6 +21,12 @@ impl <'a> CommandTree<'a> {
     }
 
     /// Executes if a command terminates at this [Node], i.e. without any arguments.
+    ///
+    /// [ConsumedArgs] maps the names of all
+    /// arguments to the result of their consumption, i.e. a string that can be parsed to the
+    /// desired type.
+    ///
+    /// Also see [NonLeafNodeBuilder::execute].
     pub fn execute(mut self, run: &'a dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError>) -> Self {
         let node = Node {
             node_type: NodeType::ExecuteLeaf {
@@ -81,12 +89,20 @@ impl <'a>NodeBuilder<'a> for NonLeafNodeBuilder<'a> {
 }
 
 impl <'a>NonLeafNodeBuilder<'a> {
+
+    /// Add a child [Node] to this one.
     pub fn with_child(mut self, child: NonLeafNodeBuilder<'a>) -> Self {
         self.child_nodes.push(child);
         self
     }
 
     /// Executes if a command terminates at this [Node].
+    ///
+    /// [ConsumedArgs] maps the names of all
+    /// arguments to the result of their consumption, i.e. a string that can be parsed to the
+    /// desired type.
+    ///
+    /// Also see [CommandTree::execute].
     pub fn execute(mut self, run: &'a dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError>) -> Self {
         self.leaf_nodes.push(LeafNodeBuilder {
             node_type: NodeType::ExecuteLeaf {
@@ -109,8 +125,14 @@ pub fn literal(string: &str) -> NonLeafNodeBuilder {
     }
 }
 
-/// ```name``` identifies this argument.
-/// ```consumer: [ArgumentConsumer]``` has the purpose of validating arguments. Conversion may start here, as long as the result remains a [String] (e.g. convert offset to absolute position actual coordinates). It must remove consumed arg(s) from [RawArgs] and return them. It must return None if [RawArgs] are invalid. [RawArgs] is reversed, so [Vec::pop] can be used to obtain args in ltr order.
+/// ```name``` identifies this argument in [ConsumedArgs].
+///
+/// ```consumer: ArgumentConsumer``` has the purpose of validating arguments. Conversion may start
+/// here, as long as the result remains a [String] (e.g. convert offset to absolute position actual
+/// coordinates), because the result of this function will be passed to following
+/// [NonLeafNodeBuilder::execute] nodes in a [ConsumedArgs] instance. It must remove consumed arg(s)
+/// from [RawArgs] and return them. It must return None if [RawArgs] are invalid. [RawArgs] is
+/// reversed, so [Vec::pop] can be used to obtain args in ltr order.
 pub fn argument<'a>(name: &'a str, consumer: ArgumentConsumer) -> NonLeafNodeBuilder<'a> {
     NonLeafNodeBuilder {
         node_type: NodeType::Argument {
@@ -122,7 +144,8 @@ pub fn argument<'a>(name: &'a str, consumer: ArgumentConsumer) -> NonLeafNodeBui
     }
 }
 
-/// ```predicate``` should return ```false``` if requirement for reaching following [Node]s is not met.
+/// ```predicate``` should return ```false``` if requirement for reaching following [Node]s is not
+/// met.
 pub fn require(predicate: &dyn Fn(&CommandSender) -> bool) -> NonLeafNodeBuilder {
     NonLeafNodeBuilder {
         node_type: NodeType::Require {

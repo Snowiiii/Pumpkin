@@ -2,11 +2,15 @@ use std::collections::{HashMap, VecDeque};
 
 use crate::commands::CommandSender;
 use crate::commands::dispatcher::InvalidTreeError;
+use crate::commands::tree_builder::{argument, NonLeafNodeBuilder};
 
+/// see [argument]
 pub(crate) type RawArgs<'a> = Vec<&'a str>;
 
+/// see [argument] and [CommandTree::execute]/[NonLeafNodeBuilder::execute]
 pub(crate) type ConsumedArgs<'a> = HashMap<&'a str, String>;
 
+/// see [argument]
 pub(crate) type ArgumentConsumer<'a> = fn(&CommandSender, &mut RawArgs) -> Option<String>;
 
 pub(crate) struct Node<'a> {
@@ -51,6 +55,8 @@ impl <'a> CommandTree<'a> {
         }
     }
 
+
+    /// format possible paths as [String], using ```name``` as the command name
     pub(crate) fn paths_formatted(&'a self, name: &str) -> String {
         let paths: Vec<Vec<&NodeType>> = self.iter_paths()
             .map(|path| path.iter().map(|&i| &self.nodes[i].node_type).collect())

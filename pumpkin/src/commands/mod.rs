@@ -11,7 +11,6 @@ mod tree;
 mod tree_builder;
 mod dispatcher;
 mod arg_player;
-mod cmd_teleport;
 mod cmd_help;
 
 pub enum CommandSender<'a> {
@@ -63,9 +62,13 @@ impl<'a> CommandSender<'a> {
     }
 }
 
-// todo: reconsider using constant
+/// todo: reconsider using constant
+///
+/// Central point from which commands are dispatched. Should always be initialized using
+/// [dispatcher_init].
 const DISPATCHER: OnceLock<CommandDispatcher> = OnceLock::new();
 
+/// create [CommandDispatcher] instance for [DISPATCHER]
 fn dispatcher_init<'a>() -> CommandDispatcher<'a> {
     let mut map = HashMap::new();
 
