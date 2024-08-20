@@ -1,10 +1,10 @@
-name: Cargo Build & Test
+name: Cargo Build, Test, and Linting
 
 on:
   push:
   pull_request:
 
-env: 
+env:
   CARGO_TERM_COLOR: always
 
 jobs:
@@ -14,9 +14,13 @@ jobs:
     strategy:
       matrix:
         toolchain:
-          - stable
+          - stable  
+
     steps:
-      - uses: actions/checkout@v4
-      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-      - run: cargo build --verbose
-      - run: cargo test --verbose
+    - uses: actions/checkout@v4  
+
+    - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+    - run: cargo build --verbose
+    - run: cargo test --verbose
+    - run: cargo clippy --all-targets --all-features --no-default-features -- -D warnings
+    - run: cargo fmt --check
