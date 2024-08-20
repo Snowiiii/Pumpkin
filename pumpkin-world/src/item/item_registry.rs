@@ -23,12 +23,12 @@ pub struct ItemComponents {
 }
 
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
-struct ItemElement {
+pub struct ItemElement {
     components: ItemComponents,
 }
 
 lazy_static! {
-    static ref ITEMS: HashMap<String, ItemElement> =
+   pub static ref ITEMS: HashMap<String, ItemElement> =
         serde_json::from_str(ITEMS_JSON).expect("Could not parse items.json registry.");
 }
 

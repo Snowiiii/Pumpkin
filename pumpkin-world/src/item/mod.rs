@@ -1,6 +1,6 @@
 mod item_registry;
 mod item_categories;
-
+pub use item_registry::ITEMS;
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 /// Item Rarity

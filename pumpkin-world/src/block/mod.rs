@@ -3,7 +3,7 @@ use num_derive::FromPrimitive;
 use crate::vector3::Vector3;
 
 pub mod block_registry;
-
+pub use block_registry::BLOCKS;
 #[derive(FromPrimitive)]
 pub enum BlockFace {
     Bottom = 0,
