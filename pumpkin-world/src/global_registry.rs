@@ -15,6 +15,7 @@ pub struct RegistryElement {
 lazy_static! {
     static ref REGISTRY: HashMap<String, RegistryElement> =
         serde_json::from_str(REGISTRY_JSON).expect("Could not parse items.json registry.");
+        serde_json::from_str(REGISTRY_JSON).expect("Could not parse registry.json registry.");
 }
 
 pub fn get_protocol_id(category: &str, entry: &str) -> u32 {
