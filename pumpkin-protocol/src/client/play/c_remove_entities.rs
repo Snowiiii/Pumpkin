@@ -7,14 +7,14 @@ use crate::VarInt;
 #[packet(0x42)]
 pub struct CRemoveEntities<'a> {
     count: VarInt,
-    entitiy_ids: &'a [VarInt],
+    entity_ids: &'a [VarInt],
 }
 
 impl<'a> CRemoveEntities<'a> {
-    pub fn new(entitiy_ids: &'a [VarInt]) -> Self {
+    pub fn new(entity_ids: &'a [VarInt]) -> Self {
         Self {
-            count: VarInt(entitiy_ids.len() as i32),
-            entitiy_ids,
+            count: VarInt(entity_ids.len() as i32),
+            entity_ids,
         }
     }
 }

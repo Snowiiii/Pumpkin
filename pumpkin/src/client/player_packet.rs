@@ -176,7 +176,7 @@ impl Client {
     pub fn handle_player_command(&mut self, _server: &mut Server, command: SPlayerCommand) {
         let player = self.player.as_mut().unwrap();
 
-        if command.entitiy_id != player.entity.entity_id.into() {
+        if command.entity_id != player.entity.entity_id.into() {
             return;
         }
 
@@ -317,7 +317,7 @@ impl Client {
                     }
                     if config.swing {}
                 } else {
-                    self.kick("Interacted with invalid entitiy id")
+                    self.kick("Interacted with invalid entity id")
                 }
             }
         }
