@@ -8,6 +8,7 @@ mod c_entity_animation;
 mod c_entity_metadata;
 mod c_entity_velocity;
 mod c_game_event;
+mod c_worldevent;
 mod c_head_rot;
 mod c_hurt_animation;
 mod c_login;
@@ -30,6 +31,7 @@ mod c_update_entity_pos;
 mod c_update_entity_rot;
 mod player_action;
 
+pub use c_worldevent::*;
 pub use c_actionbar::*;
 pub use c_block_update::*;
 pub use c_center_chunk::*;
