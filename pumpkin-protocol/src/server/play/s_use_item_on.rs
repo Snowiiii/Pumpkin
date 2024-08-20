@@ -13,5 +13,5 @@ pub struct SUseItemOn {
     pub cursor_pos_y: f32,
     pub cursor_pos_z: f32,
     pub inside_block: bool,
-    pub sequene: VarInt,
+    pub sequence: VarInt,
 }

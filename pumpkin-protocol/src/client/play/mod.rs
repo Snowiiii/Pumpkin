@@ -1,3 +1,4 @@
+mod c_acknowledge_block;
 mod c_actionbar;
 mod c_block_destroy_stage;
 mod c_block_update;
@@ -32,6 +33,7 @@ mod c_update_entity_rot;
 mod c_worldevent;
 mod player_action;
 
+pub use c_acknowledge_block::*;
 pub use c_actionbar::*;
 pub use c_block_destroy_stage::*;
 pub use c_block_update::*;

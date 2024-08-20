@@ -10,9 +10,9 @@ use num_traits::FromPrimitive;
 use pumpkin_entity::EntityId;
 use pumpkin_protocol::{
     client::play::{
-        Animation, CBlockUpdate, CEntityAnimation, CEntityVelocity, CHeadRot, CHurtAnimation,
-        CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot, CWorldEvent,
-        FilterType,
+        Animation, CAcknowledgeBlockChange, CBlockUpdate, CEntityAnimation, CEntityVelocity,
+        CHeadRot, CHurtAnimation, CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot,
+        CUpdateEntityRot, CWorldEvent, FilterType,
     },
     position::WorldPosition,
     server::play::{
@@ -319,6 +319,7 @@ impl Client {
     pub fn handle_player_action(&mut self, server: &mut Server, player_action: SPlayerAction) {
         match Status::from_i32(player_action.status.0).unwrap() {
             Status::StartedDigging => {
+                // TODO: do validation
                 let player = self.player.as_mut().unwrap();
                 // TODO: Config
                 if player.gamemode == GameMode::Creative {
@@ -335,12 +336,15 @@ impl Client {
                 player.current_block_destroy_stage = 0;
             }
             Status::FinishedDigging => {
+                // TODO: do validation
                 let location = player_action.location;
                 // Block break & block break sound
                 // TODO: currently this is always dirt replace it
                 server.broadcast_packet(self, &CWorldEvent::new(2001, &location, 11, false));
                 // AIR
                 server.broadcast_packet(self, &CBlockUpdate::new(location, 0.into()));
+                // TODO: Send this every tick
+                self.send_packet(&CAcknowledgeBlockChange::new(player_action.sequence));
             }
             Status::DropItemStack => {
                 dbg!("todo");
@@ -358,6 +362,8 @@ impl Client {
     }
 
     pub fn handle_use_item_on(&mut self, server: &mut Server, use_item_on: SUseItemOn) {
+        self.send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence));
+
         let location = use_item_on.location;
         let face = BlockFace::from_i32(use_item_on.face.0).unwrap();
         let location = WorldPosition(location.0 + face.to_offset());
