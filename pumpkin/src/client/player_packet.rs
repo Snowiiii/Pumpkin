@@ -322,12 +322,11 @@ impl Client {
         let location = use_item_on.location;
         let face = BlockFace::from_i32(use_item_on.face.0).unwrap();
         let location = WorldPosition(location.0 + face.to_offset());
-        // TODO:
-        // - Add checking for if used item is a block
         if let Some(item) = self.player.as_ref().unwrap().inventory.held_item() {
-            let minecraft_id = global_registry::find_minecraft_id(global_registry::ITEM_REGISTRY,item.item_id).unwrap();
-            let block_state_id = pumpkin_world::block::block_registry::block_id_and_properties_to_block_state_id(minecraft_id,None).expect("Id should exist");
-            server.broadcast_packet(self, &CBlockUpdate::new(location, (block_state_id as i32).into()));
+            let minecraft_id = global_registry::find_minecraft_id(global_registry::ITEM_REGISTRY,item.item_id).expect("All item ids are in the global registry");
+            if let Ok(block_state_id) = pumpkin_world::block::block_registry::block_id_and_properties_to_block_state_id(minecraft_id,None) {
+                server.broadcast_packet(self, &CBlockUpdate::new(location, (block_state_id as i32).into()));
+            }
         }
     }
 
