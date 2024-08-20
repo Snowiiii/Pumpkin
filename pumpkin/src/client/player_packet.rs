@@ -17,7 +17,7 @@ use pumpkin_protocol::{
 };
 use pumpkin_text::TextComponent;
 use pumpkin_world::block::BlockFace;
-
+use pumpkin_world::global_registry;
 use crate::{
     commands::{handle_command, CommandSender},
     entity::player::{ChatMode, GameMode, Hand},
@@ -322,10 +322,12 @@ impl Client {
         let location = use_item_on.location;
         let face = BlockFace::from_i32(use_item_on.face.0).unwrap();
         let location = WorldPosition(location.0 + face.to_offset());
-        // TODO: 
+        // TODO:
         // - Add checking for if used item is a block
         if let Some(item) = self.player.as_ref().unwrap().inventory.held_item() {
-            server.broadcast_packet(self, &CBlockUpdate::new(location, item.item_id.into()));
+            let id = global_registry::find_minecraft_id(global_registry::ITEM_REGISTRY,item.item_id).unwrap();
+            let block_state_id = pumpkin_world::block::block_registry::block_id_and_properties_to_block_state_id(id,None).expect("Id should exist");
+            server.broadcast_packet(self, &CBlockUpdate::new(location, (block_state_id as i32).into()));
         }
     }
 
@@ -342,7 +344,7 @@ impl Client {
         let inventory = &mut self.player.as_mut()
             .unwrap()
             .inventory;
-        
+
         inventory.set_slot(packet.slot as usize, packet.clicked_item.to_item(), false);
     }
 }
