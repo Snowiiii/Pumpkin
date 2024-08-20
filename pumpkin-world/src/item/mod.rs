@@ -1,9 +1,10 @@
 mod item_registry;
-
+mod item_categories;
+pub use item_registry::ITEMS;
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
-/// Item Raritiy
-pub enum Raritiy {
+/// Item Rarity
+pub enum Rarity {
     Common,
     UnCommon,
     Rare,
@@ -11,4 +12,9 @@ pub enum Raritiy {
 }
 
 #[derive(Clone, Copy)]
-pub struct Item {}
+pub struct Item {
+    pub item_count: u32,
+    // This ID is the numerical protocol ID, not the usual minecraft::block ID.
+    pub item_id: u32,
+    // TODO: Add Item Components
+}

@@ -16,7 +16,7 @@ use pumpkin_protocol::{
 };
 use pumpkin_text::TextComponent;
 use pumpkin_world::block::BlockFace;
-
+use pumpkin_world::global_registry;
 use crate::{
     commands::{handle_command, CommandSender},
     entity::player::{ChatMode, GameMode, Hand},
@@ -317,11 +317,16 @@ impl Client {
     }
     pub fn handle_player_action(&mut self, _server: &mut Server, _player_action: SPlayerAction) {}
 
-    pub fn handle_use_item_on(&mut self, server: &mut Server, use_item_on: SUseItemOn) {
+    pub fn handle_use_item_on(&mut self, server: &mut Server, use_item_on: SUseItemOn)  {
         let location = use_item_on.location;
         let face = BlockFace::from_i32(use_item_on.face.0).unwrap();
         let location = WorldPosition(location.0 + face.to_offset());
-        server.broadcast_packet(self, &CBlockUpdate::new(location, 11.into()));
+        if let Some(item) = self.player.as_ref().unwrap().inventory.held_item() {
+            let minecraft_id = global_registry::find_minecraft_id(global_registry::ITEM_REGISTRY,item.item_id).expect("All item ids are in the global registry");
+            if let Ok(block_state_id) = pumpkin_world::block::block_registry::block_id_and_properties_to_block_state_id(minecraft_id,None) {
+                server.broadcast_packet(self, &CBlockUpdate::new(location, (block_state_id as i32).into()));
+            }
+        }
     }
 
     pub fn handle_set_held_item(&mut self, _server: &mut Server, held: SSetHeldItem) {
@@ -330,11 +335,14 @@ impl Client {
             self.kick("Invalid held slot")
         }
         let player = self.player.as_mut().unwrap();
-        player.inventory.set_selected(slot);
+        player.inventory.set_selected(slot as usize);
     }
 
     pub fn handle_set_creative_slot(&mut self, _server: &mut Server, packet: SSetCreativeSlot) {
-        // TODO: handle this
-        dbg!(&packet);
+        let inventory = &mut self.player.as_mut()
+            .unwrap()
+            .inventory;
+
+        inventory.set_slot(packet.slot as usize, packet.clicked_item.to_item(), false);
     }
 }

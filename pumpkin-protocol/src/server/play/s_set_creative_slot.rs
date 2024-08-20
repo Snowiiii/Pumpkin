@@ -6,6 +6,6 @@ use crate::slot::Slot;
 #[allow(dead_code)]
 #[packet(0x32)]
 pub struct SSetCreativeSlot {
-    slot: i16,
-    clicked_item: Slot,
+    pub slot: i16,
+    pub clicked_item: Slot,
 }

@@ -7,28 +7,28 @@ use crate::level::WorldError;
 const BLOCKS_JSON: &str = include_str!("../../assets/blocks.json");
 
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
-struct BlockDefinition {
+pub struct BlockDefinition {
     #[serde(rename = "type")]
     kind: String,
     block_set_type: Option<String>,
 }
 
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
-struct BlockState {
+pub struct BlockState {
     default: Option<bool>,
     id: i64,
     properties: Option<HashMap<String, String>>,
 }
 
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
-struct BlocksElement {
+pub struct BlocksElement {
     definition: BlockDefinition,
     properties: Option<HashMap<String, Vec<String>>>,
     states: Vec<BlockState>,
 }
 
 lazy_static! {
-    static ref BLOCKS: HashMap<String, BlocksElement> =
+    pub static ref BLOCKS: HashMap<String, BlocksElement> =
         serde_json::from_str(BLOCKS_JSON).expect("Could not parse block.json registry.");
 }
 

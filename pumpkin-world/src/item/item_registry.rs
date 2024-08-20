@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 
 use crate::global_registry::{self, ITEM_REGISTRY};
 
-use super::Raritiy;
+use super::Rarity;
 
 const ITEMS_JSON: &str = include_str!("../../assets/items.json");
 
@@ -17,18 +17,18 @@ pub struct ItemComponents {
     #[serde(rename = "minecraft:max_stack_size")]
     max_stack_size: u32,
     #[serde(rename = "minecraft:rarity")]
-    rarity: Raritiy,
+    rarity: Rarity,
     #[serde(rename = "minecraft:repair_cost")]
     repair_cost: u32,
 }
 
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
-struct ItemElement {
+pub struct ItemElement {
     components: ItemComponents,
 }
 
 lazy_static! {
-    static ref ITEMS: HashMap<String, ItemElement> =
+   pub static ref ITEMS: HashMap<String, ItemElement> =
         serde_json::from_str(ITEMS_JSON).expect("Could not parse items.json registry.");
 }
 

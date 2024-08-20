@@ -2,7 +2,7 @@ use serde::{
     de::{self, SeqAccess, Visitor},
     Deserialize,
 };
-
+use pumpkin_world::item::Item;
 use crate::VarInt;
 
 #[derive(Debug, Clone)]
@@ -15,6 +15,9 @@ pub struct Slot {
     components_to_add: Option<Vec<(VarInt, ())>>, // The second type depends on the varint
     components_to_remove: Option<Vec<VarInt>>,
 }
+
+
+
 
 impl<'de> Deserialize<'de> for Slot {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -73,5 +76,22 @@ impl<'de> Deserialize<'de> for Slot {
         }
 
         deserializer.deserialize_seq(VarIntVisitor)
+    }
+}
+impl Slot {
+    pub fn to_item(self) -> Option<Item> {
+        let item_id = self.item_id?.0.try_into().unwrap();
+        Some(Item {
+            item_id,
+            item_count: self.item_count.0.try_into().unwrap(),
+        })
+    }
+}
+impl From<Slot> for Item {
+    fn from(slot: Slot) -> Self {
+        Item {
+            item_count: slot.item_count.0.try_into().unwrap(),
+            item_id: slot.item_id.unwrap().0.try_into().unwrap()
+        }
     }
 }
