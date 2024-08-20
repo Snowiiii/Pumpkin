@@ -1,7 +1,6 @@
 use pumpkin_macros::packet;
 use serde::Serialize;
 
-
 #[derive(Serialize)]
 #[packet(0x01)]
 pub struct CPluginMessage<'a> {

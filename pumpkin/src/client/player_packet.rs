@@ -5,8 +5,7 @@ use pumpkin_entity::EntityId;
 use pumpkin_protocol::{
     client::play::{
         Animation, CBlockUpdate, CEntityAnimation, CEntityVelocity, CHeadRot, CHurtAnimation,
-        CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot,
-        CUpdateEntityRot, FilterType,
+        CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot, FilterType,
     },
     position::WorldPosition,
     server::play::{
@@ -316,7 +315,7 @@ impl Client {
             }
         }
     }
-    pub fn handle_player_action(&mut self, _server: &mut Server, player_action: SPlayerAction) {}
+    pub fn handle_player_action(&mut self, _server: &mut Server, _player_action: SPlayerAction) {}
 
     pub fn handle_use_item_on(&mut self, server: &mut Server, use_item_on: SUseItemOn)  {
         let location = use_item_on.location;

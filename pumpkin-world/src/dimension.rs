@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::world::Level;
+use crate::level::Level;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Dimension {

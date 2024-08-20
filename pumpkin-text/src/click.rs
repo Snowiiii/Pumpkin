@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[serde(tag = "action", content = "value", rename_all = "snake_case")]
 pub enum ClickEvent<'a> {
     /// Opens a URL
-   OpenUrl(Cow<'a, str>),
+    OpenUrl(Cow<'a, str>),
     /// Works in signs, but only on the root text component
     RunCommand(Cow<'a, str>),
     /// Replaces the contents of the chat box with the text, not necessarily a

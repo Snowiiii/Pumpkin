@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use lazy_static::lazy_static;
 
-use crate::world::WorldError;
+use crate::level::WorldError;
 
 const BLOCKS_JSON: &str = include_str!("../../assets/blocks.json");
 

@@ -3,7 +3,10 @@ use std::{
     collections::HashMap,
     io::Cursor,
     rc::Rc,
-    sync::atomic::{AtomicI32, Ordering},
+    sync::{
+        atomic::{AtomicI32, Ordering},
+        Arc,
+    },
     time::Duration,
 };
 
@@ -25,12 +28,12 @@ use pumpkin_protocol::{
     uuid::UUID,
     ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
 };
-use pumpkin_world::{dimension::Dimension, radial_chunk_iterator::RadialIterator};
+use pumpkin_world::{dimension::Dimension, radial_chunk_iterator::RadialIterator, World};
 
 use pumpkin_registry::Registry;
 use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Mutex};
 
 use crate::{
     client::Client,
@@ -47,7 +50,7 @@ pub struct Server {
     pub private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,
 
-    // pub world: World,
+    pub world: Arc<Mutex<World>>,
     pub status_response: StatusResponse,
     // We cache the json response here so we don't parse it every time someone makes a Status request.
     // Keep in mind that we must parse this again, when the StatusResponse changes which usally happen when a player joins or leaves
@@ -97,11 +100,17 @@ impl Server {
             None
         };
 
+        log::debug!("Pumpkin does currently not have World or Chunk generation, Using ../world folder with vanilla pregenerated chunks");
+        let world = World::load(Dimension::OverWorld.into_level(
+            // TODO: load form config
+            "./world".parse().unwrap(),
+        ));
+
         Self {
             cached_registry: Registry::get_static(),
             // 0 is invalid
             entity_id: 2.into(),
-            //  world: World::load(""),
+            world: Arc::new(Mutex::new(world)),
             compression_threshold: None, // 256
             public_key,
             cached_server_brand,
@@ -288,7 +297,8 @@ impl Server {
             )
         }
 
-        Server::spawn_test_chunk(client, self.base_config.view_distance as u32).await;
+        self.spawn_test_chunk(client, self.base_config.view_distance as u32)
+            .await;
     }
 
     /// TODO: This definitly should be in world
@@ -337,15 +347,15 @@ impl Server {
     }
 
     // TODO: do this in a world
-    async fn spawn_test_chunk(client: &mut Client, distance: u32) {
+    async fn spawn_test_chunk(&self, client: &mut Client, distance: u32) {
         let inst = std::time::Instant::now();
         let (sender, mut chunk_receiver) = mpsc::channel(distance as usize);
+        let world = self.world.clone();
         tokio::spawn(async move {
-            let level = Dimension::OverWorld.into_level(
-                // TODO: load form config
-                "./world".parse().unwrap(),
-            );
-            level
+            world
+                .lock()
+                .await
+                .level
                 .read_chunks(RadialIterator::new(distance).collect(), sender)
                 .await;
         });

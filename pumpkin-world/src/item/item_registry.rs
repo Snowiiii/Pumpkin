@@ -32,10 +32,12 @@ lazy_static! {
         serde_json::from_str(ITEMS_JSON).expect("Could not parse items.json registry.");
 }
 
+#[allow(dead_code)]
 pub fn get_item_element(item_id: &str) -> &ItemComponents {
     &ITEMS.get(item_id).expect("Item not found").components
 }
 
+#[allow(dead_code)]
 pub fn get_item_protocol_id(item_id: &str) -> u32 {
     global_registry::get_protocol_id(ITEM_REGISTRY, item_id)
 }

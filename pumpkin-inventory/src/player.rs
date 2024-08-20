@@ -1,5 +1,6 @@
 use pumpkin_world::item::Item;
 
+#[allow(dead_code)]
 pub struct PlayerInventory {
     // Main Inventory + Hotbar
     crafting: [Option<Item>; 4],
@@ -41,7 +42,7 @@ impl PlayerInventory {
             selected: 0,
         }
     }
-
+  
     /// Set the contents of an item in a slot
     ///
     /// ## Slot
