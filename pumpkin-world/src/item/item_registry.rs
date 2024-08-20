@@ -28,7 +28,7 @@ pub struct ItemElement {
 }
 
 lazy_static! {
-   pub static ref ITEMS: HashMap<String, ItemElement> =
+    pub static ref ITEMS: HashMap<String, ItemElement> =
         serde_json::from_str(ITEMS_JSON).expect("Could not parse items.json registry.");
 }
 

@@ -12,18 +12,6 @@ pub struct PlayerInventory {
     selected: usize,
 }
 
-pub struct Hotbar<'a>(&'a mut [Option<Item>;9]);
-
-impl Hotbar<'_> {
-    fn get_mut(&mut self, index: usize) -> &mut Option<Item> {
-        &mut self.0[index]
-    }
-}
-
-pub struct Armor<'a>(&'a mut [Option<Item>; 4]);
-
-
-
 impl Default for PlayerInventory {
     fn default() -> Self {
         Self::new()
@@ -42,15 +30,15 @@ impl PlayerInventory {
             selected: 0,
         }
     }
-  
+
     /// Set the contents of an item in a slot
     ///
     /// ## Slot
     /// The slot according to https://wiki.vg/Inventory#Player_Inventory
-    /// 
+    ///
     /// ## Item
     /// The optional item to place in the slot
-    /// 
+    ///
     /// ## Item allowed override
     /// An override, which when enabled, makes it so that invalid items, can be placed in slots they normally can't.
     /// Useful functionality for plugins in the future.
@@ -60,17 +48,13 @@ impl PlayerInventory {
                 // TODO: Add crafting check here
                 self.crafting_output = item
             }
-            1..=4 => {
-                self.crafting[slot-1] = item
-            }
+            1..=4 => self.crafting[slot - 1] = item,
             5..=8 => {
                 match item {
-                    None => {
-                        self.armor[slot-4] = None
-                    },
+                    None => self.armor[slot - 4] = None,
                     Some(item) => {
                         // TODO: Replace asserts with error handling
-                        match slot-5 {
+                        match slot - 5 {
                             0 => {
                                 assert!(item.is_helmet() || item_allowed_override);
                                 self.armor[0] = Some(item);
@@ -87,18 +71,18 @@ impl PlayerInventory {
                                 assert!(item.is_boots() || item_allowed_override);
                                 self.armor[3] = Some(item)
                             }
-                            _ => unreachable!()
+                            _ => unreachable!(),
                         }
                     }
                 }
             }
             9..=44 => {
-                self.items[slot-9] = item;
+                self.items[slot - 9] = item;
             }
             45 => {
                 self.offhand = item;
             }
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -106,9 +90,9 @@ impl PlayerInventory {
         assert!((0..9).contains(&slot));
         self.selected = slot;
     }
-    
+
     pub fn held_item(&self) -> Option<&Item> {
         debug_assert!((0..9).contains(&self.selected));
-        self.items[self.selected+36-9].as_ref()
+        self.items[self.selected + 36 - 9].as_ref()
     }
 }
