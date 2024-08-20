@@ -115,6 +115,7 @@ impl <'a>NonLeafNodeBuilder<'a> {
 }
 
 /// Matches a sting literal.
+#[allow(dead_code)] // todo: remove (so far no commands requiring this are implemented)
 pub fn literal(string: &str) -> NonLeafNodeBuilder {
     NonLeafNodeBuilder {
         node_type: NodeType::Literal {

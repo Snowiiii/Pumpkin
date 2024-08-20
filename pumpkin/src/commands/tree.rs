@@ -20,6 +20,7 @@ pub(crate) enum NodeType<'a> {
     ExecuteLeaf {
         run: &'a (dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync),
     },
+    #[allow(dead_code)] // todo: remove (so far no commands requiring this are implemented)
     Literal {
         string: &'a str,
     },
