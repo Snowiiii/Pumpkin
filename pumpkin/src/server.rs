@@ -98,7 +98,7 @@ impl Server {
             None
         };
 
-        log::warn!("Pumpkin does currently not have World or Chunk generation, Using ../world folder with vanilla pregenerated chunks");
+        log::warn!("Pumpkin does currently not have World or Chunk generation yet, Using ../world folder with vanilla pregenerated chunks");
         let world = World::load(Dimension::OverWorld.into_level(
             // TODO: load form config
             "./world".parse().unwrap(),
