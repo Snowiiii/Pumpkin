@@ -1,28 +1,17 @@
-use gamemode::GamemodeCommand;
-use pumpkin::PumpkinCommand;
 use pumpkin_text::TextComponent;
-use stop::StopCommand;
+use std::collections::HashMap;
+use std::sync::OnceLock;
 
 use crate::client::Client;
-
-mod gamemode;
-mod pumpkin;
-mod stop;
-
-/// I think it would be great to split this up into a seperate crate, But idk how i should do that, Because we have to rely on Client and Server
-pub trait Command<'a> {
-    // Name of the Plugin, Use lower case
-    const NAME: &'a str;
-    const DESCRIPTION: &'a str;
-
-    fn on_execute(sender: &mut CommandSender<'a>, command: String);
-
-    /// Specifies wether the Command Sender has to be a Player
-    /// TODO: implement
-    fn player_required() -> bool {
-        false
-    }
-}
+use crate::commands::dispatcher::CommandDispatcher;
+mod arg_player;
+mod cmd_gamemode;
+mod cmd_help;
+mod cmd_pumpkin;
+mod cmd_stop;
+mod dispatcher;
+mod tree;
+mod tree_builder;
 
 pub enum CommandSender<'a> {
     Rcon(&'a mut Vec<String>),
@@ -40,7 +29,7 @@ impl<'a> CommandSender<'a> {
         }
     }
 
-    pub fn is_player(&mut self) -> bool {
+    pub fn is_player(&self) -> bool {
         match self {
             CommandSender::Console => false,
             CommandSender::Player(_) => true,
@@ -48,7 +37,7 @@ impl<'a> CommandSender<'a> {
         }
     }
 
-    pub fn is_console(&mut self) -> bool {
+    pub fn is_console(&self) -> bool {
         match self {
             CommandSender::Console => true,
             CommandSender::Player(_) => false,
@@ -62,22 +51,42 @@ impl<'a> CommandSender<'a> {
             CommandSender::Rcon(_) => None,
         }
     }
+
+    /// todo: implement
+    pub fn permission_lvl(&self) -> i32 {
+        match self {
+            CommandSender::Rcon(_) => 4,
+            CommandSender::Console => 4,
+            CommandSender::Player(_) => 4,
+        }
+    }
 }
-pub fn handle_command(sender: &mut CommandSender, command: &str) {
-    let command = command.to_lowercase();
-    // an ugly mess i know
-    if command.starts_with(PumpkinCommand::NAME) {
-        PumpkinCommand::on_execute(sender, command);
-        return;
+
+/// todo: reconsider using constant
+///
+/// Central point from which commands are dispatched. Should always be initialized using
+/// [dispatcher_init].
+static DISPATCHER: OnceLock<CommandDispatcher> = OnceLock::new();
+
+/// create [CommandDispatcher] instance for [DISPATCHER]
+fn dispatcher_init<'a>() -> CommandDispatcher<'a> {
+    let mut map = HashMap::new();
+
+    map.insert(cmd_pumpkin::NAME, cmd_pumpkin::init_command_tree());
+    map.insert(cmd_gamemode::NAME, cmd_gamemode::init_command_tree());
+    map.insert(cmd_stop::NAME, cmd_stop::init_command_tree());
+    map.insert(cmd_help::NAME, cmd_help::init_command_tree());
+    map.insert(cmd_help::ALIAS, cmd_help::init_command_tree());
+
+    CommandDispatcher { commands: map }
+}
+
+pub fn handle_command(sender: &mut CommandSender, cmd: &str) {
+    let dispatcher = DISPATCHER.get_or_init(dispatcher_init);
+
+    if let Err(err) = dispatcher.dispatch(sender, cmd) {
+        sender.send_message(
+            TextComponent::text(&err).color_named(pumpkin_text::color::NamedColor::Red),
+        )
     }
-    if command.starts_with(GamemodeCommand::NAME) {
-        GamemodeCommand::on_execute(sender, command);
-        return;
-    }
-    if command.starts_with(StopCommand::NAME) {
-        StopCommand::on_execute(sender, command);
-        return;
-    }
-    // TODO: red color
-    sender.send_message(TextComponent::text("Command not Found"));
 }
