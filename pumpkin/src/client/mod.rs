@@ -28,10 +28,11 @@ use pumpkin_protocol::{
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
         play::{
             SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
-            SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
-            SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn,
+            SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition,
+            SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm,
+            SUseItemOn,
         },
-        status::{SPingRequest, SStatusRequest},
+        status::{SStatusPingRequest, SStatusRequest},
     },
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
@@ -201,8 +202,8 @@ impl Client {
                 SStatusRequest::PACKET_ID => {
                     self.handle_status_request(server, SStatusRequest::read(bytebuf).unwrap())
                 }
-                SPingRequest::PACKET_ID => {
-                    self.handle_ping_request(server, SPingRequest::read(bytebuf).unwrap())
+                SStatusPingRequest::PACKET_ID => {
+                    self.handle_ping_request(server, SStatusPingRequest::read(bytebuf).unwrap())
                 }
                 _ => log::error!(
                     "Failed to handle packet id {} while in Status state",
@@ -306,6 +307,9 @@ impl Client {
             }
             SSetCreativeSlot::PACKET_ID => {
                 self.handle_set_creative_slot(server, SSetCreativeSlot::read(bytebuf).unwrap())
+            }
+            SPlayPingRequest::PACKET_ID => {
+                self.handle_play_ping_request(server, SPlayPingRequest::read(bytebuf).unwrap())
             }
             _ => log::error!("Failed to handle player packet id {}", packet.id.0),
         }

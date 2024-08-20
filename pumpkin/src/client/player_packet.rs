@@ -11,14 +11,15 @@ use pumpkin_entity::EntityId;
 use pumpkin_protocol::{
     client::play::{
         Animation, CAcknowledgeBlockChange, CBlockUpdate, CEntityAnimation, CEntityVelocity,
-        CHeadRot, CHurtAnimation, CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot,
-        CUpdateEntityRot, CWorldEvent, FilterType,
+        CHeadRot, CHurtAnimation, CPingResponse, CPlayerChatMessage, CUpdateEntityPos,
+        CUpdateEntityPosRot, CUpdateEntityRot, CWorldEvent, FilterType,
     },
     position::WorldPosition,
     server::play::{
         Action, ActionType, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport,
-        SInteract, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
-        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status,
+        SInteract, SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition,
+        SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm,
+        SUseItemOn, Status,
     },
 };
 use pumpkin_text::TextComponent;
@@ -359,6 +360,10 @@ impl Client {
                 dbg!("todo");
             }
         }
+    }
+
+    pub fn handle_play_ping_request(&mut self, _server: &mut Server, request: SPlayPingRequest) {
+        self.send_packet(&CPingResponse::new(request.payload));
     }
 
     pub fn handle_use_item_on(&mut self, server: &mut Server, use_item_on: SUseItemOn) {

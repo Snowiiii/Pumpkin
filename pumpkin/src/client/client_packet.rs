@@ -9,7 +9,7 @@ use pumpkin_protocol::{
         config::{SAcknowledgeFinishConfig, SClientInformationConfig, SKnownPacks, SPluginMessage},
         handshake::SHandShake,
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
-        status::{SPingRequest, SStatusRequest},
+        status::{SStatusPingRequest, SStatusRequest},
     },
     ConnectionState, KnownPack, CURRENT_MC_PROTOCOL,
 };
@@ -54,7 +54,7 @@ impl Client {
         self.send_packet(&CStatusResponse::new(&server.status_response_json));
     }
 
-    pub fn handle_ping_request(&mut self, _server: &mut Server, ping_request: SPingRequest) {
+    pub fn handle_ping_request(&mut self, _server: &mut Server, ping_request: SStatusPingRequest) {
         dbg!("ping");
         self.send_packet(&CPingResponse::new(ping_request.payload));
         self.close();
