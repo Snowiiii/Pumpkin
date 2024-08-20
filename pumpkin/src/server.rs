@@ -44,8 +44,6 @@ use crate::{
 pub const CURRENT_MC_VERSION: &str = "1.21.1";
 
 pub struct Server {
-    pub compression_threshold: Option<u8>,
-
     pub public_key: RsaPublicKey,
     pub private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,
@@ -81,7 +79,7 @@ impl Server {
         let cached_server_brand = Self::build_brand();
 
         // TODO: only create when needed
-        dbg!("creating keys");
+        log::debug!("Creating encryption keys...");
         let (public_key, private_key) = Self::generate_keys();
 
         let public_key_der = rsa_der::public_key_to_der(
@@ -100,7 +98,7 @@ impl Server {
             None
         };
 
-        log::debug!("Pumpkin does currently not have World or Chunk generation, Using ../world folder with vanilla pregenerated chunks");
+        log::warn!("Pumpkin does currently not have World or Chunk generation, Using ../world folder with vanilla pregenerated chunks");
         let world = World::load(Dimension::OverWorld.into_level(
             // TODO: load form config
             "./world".parse().unwrap(),
@@ -111,7 +109,6 @@ impl Server {
             // 0 is invalid
             entity_id: 2.into(),
             world: Arc::new(Mutex::new(world)),
-            compression_threshold: None, // 256
             public_key,
             cached_server_brand,
             private_key,
@@ -249,7 +246,7 @@ impl Server {
             &CSpawnEntity::new(
                 entity_id.into(),
                 UUID(gameprofile.id),
-                EntityType::Player.to_i32().unwrap().into(),
+                (EntityType::Player as i32).into(),
                 x,
                 y,
                 z,

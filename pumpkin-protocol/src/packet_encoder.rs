@@ -22,6 +22,8 @@ pub struct PacketEncoder {
 }
 
 impl PacketEncoder {
+    // i think clippy is broken
+    #[allow(clippy::needless_borrows_for_generic_args)]
     pub fn append_packet<P: ClientPacket>(&mut self, packet: &P) -> Result<(), PacketError> {
         let start_len = self.buf.len();
 

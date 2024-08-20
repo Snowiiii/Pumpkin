@@ -218,7 +218,7 @@ impl Client {
             self,
             &CPlayerChatMessage::new(
                 pumpkin_protocol::uuid::UUID(gameprofile.id),
-                chat_message.messagee_count,
+                1.into(),
                 chat_message.signature.as_deref(),
                 &message,
                 chat_message.timestamp,
