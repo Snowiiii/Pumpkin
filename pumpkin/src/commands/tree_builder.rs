@@ -1,9 +1,8 @@
-use crate::commands::CommandSender;
 use crate::commands::dispatcher::InvalidTreeError;
-use crate::commands::tree::{ArgumentConsumer, ConsumedArgs, Node, NodeType, CommandTree};
+use crate::commands::tree::{ArgumentConsumer, CommandTree, ConsumedArgs, Node, NodeType};
+use crate::commands::CommandSender;
 
-impl <'a> CommandTree<'a> {
-
+impl<'a> CommandTree<'a> {
     /// Add a child [Node] to the root of this [CommandTree].
     pub fn with_child(mut self, child: impl NodeBuilder<'a>) -> Self {
         let node = child.build(&mut self);
@@ -11,7 +10,7 @@ impl <'a> CommandTree<'a> {
         self.nodes.push(node);
         self
     }
-    
+
     pub fn new(description: &'a str) -> Self {
         Self {
             nodes: Vec::new(),
@@ -27,11 +26,12 @@ impl <'a> CommandTree<'a> {
     /// desired type.
     ///
     /// Also see [NonLeafNodeBuilder::execute].
-    pub fn execute(mut self, run: &'a (dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync)) -> Self {
+    pub fn execute(
+        mut self,
+        run: &'a (dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync),
+    ) -> Self {
         let node = Node {
-            node_type: NodeType::ExecuteLeaf {
-                run,
-            },
+            node_type: NodeType::ExecuteLeaf { run },
             children: Vec::new(),
         };
 
@@ -50,7 +50,7 @@ struct LeafNodeBuilder<'a> {
     node_type: NodeType<'a>,
 }
 
-impl <'a>NodeBuilder<'a> for LeafNodeBuilder<'a> {
+impl<'a> NodeBuilder<'a> for LeafNodeBuilder<'a> {
     fn build(self, _tree: &mut CommandTree<'a>) -> Node<'a> {
         Node {
             children: Vec::new(),
@@ -62,10 +62,10 @@ impl <'a>NodeBuilder<'a> for LeafNodeBuilder<'a> {
 pub struct NonLeafNodeBuilder<'a> {
     node_type: NodeType<'a>,
     child_nodes: Vec<NonLeafNodeBuilder<'a>>,
-    leaf_nodes: Vec<LeafNodeBuilder<'a>>
+    leaf_nodes: Vec<LeafNodeBuilder<'a>>,
 }
 
-impl <'a>NodeBuilder<'a> for NonLeafNodeBuilder<'a> {
+impl<'a> NodeBuilder<'a> for NonLeafNodeBuilder<'a> {
     fn build(self, tree: &mut CommandTree<'a>) -> Node<'a> {
         let mut child_indices = Vec::new();
 
@@ -88,8 +88,7 @@ impl <'a>NodeBuilder<'a> for NonLeafNodeBuilder<'a> {
     }
 }
 
-impl <'a>NonLeafNodeBuilder<'a> {
-
+impl<'a> NonLeafNodeBuilder<'a> {
     /// Add a child [Node] to this one.
     pub fn with_child(mut self, child: NonLeafNodeBuilder<'a>) -> Self {
         self.child_nodes.push(child);
@@ -103,13 +102,14 @@ impl <'a>NonLeafNodeBuilder<'a> {
     /// desired type.
     ///
     /// Also see [CommandTree::execute].
-    pub fn execute(mut self, run: &'a (dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync)) -> Self {
+    pub fn execute(
+        mut self,
+        run: &'a (dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync),
+    ) -> Self {
         self.leaf_nodes.push(LeafNodeBuilder {
-            node_type: NodeType::ExecuteLeaf {
-                run
-            },
+            node_type: NodeType::ExecuteLeaf { run },
         });
-        
+
         self
     }
 }
@@ -118,9 +118,7 @@ impl <'a>NonLeafNodeBuilder<'a> {
 #[allow(dead_code)] // todo: remove (so far no commands requiring this are implemented)
 pub fn literal(string: &str) -> NonLeafNodeBuilder {
     NonLeafNodeBuilder {
-        node_type: NodeType::Literal {
-            string
-        },
+        node_type: NodeType::Literal { string },
         child_nodes: Vec::new(),
         leaf_nodes: Vec::new(),
     }
@@ -136,10 +134,7 @@ pub fn literal(string: &str) -> NonLeafNodeBuilder {
 /// reversed, so [Vec::pop] can be used to obtain args in ltr order.
 pub fn argument<'a>(name: &'a str, consumer: ArgumentConsumer) -> NonLeafNodeBuilder<'a> {
     NonLeafNodeBuilder {
-        node_type: NodeType::Argument {
-            name,
-            consumer,
-        },
+        node_type: NodeType::Argument { name, consumer },
         child_nodes: Vec::new(),
         leaf_nodes: Vec::new(),
     }
@@ -149,9 +144,7 @@ pub fn argument<'a>(name: &'a str, consumer: ArgumentConsumer) -> NonLeafNodeBui
 /// met.
 pub fn require(predicate: &(dyn Fn(&CommandSender) -> bool + Sync)) -> NonLeafNodeBuilder {
     NonLeafNodeBuilder {
-        node_type: NodeType::Require {
-            predicate
-        },
+        node_type: NodeType::Require { predicate },
         child_nodes: Vec::new(),
         leaf_nodes: Vec::new(),
     }

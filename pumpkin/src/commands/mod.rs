@@ -1,17 +1,17 @@
+use pumpkin_text::TextComponent;
 use std::collections::HashMap;
 use std::sync::OnceLock;
-use pumpkin_text::TextComponent;
 
 use crate::client::Client;
 use crate::commands::dispatcher::CommandDispatcher;
+mod arg_player;
 mod cmd_gamemode;
+mod cmd_help;
 mod cmd_pumpkin;
 mod cmd_stop;
+mod dispatcher;
 mod tree;
 mod tree_builder;
-mod dispatcher;
-mod arg_player;
-mod cmd_help;
 
 pub enum CommandSender<'a> {
     Rcon(&'a mut Vec<String>),
@@ -78,9 +78,7 @@ fn dispatcher_init<'a>() -> CommandDispatcher<'a> {
     map.insert(cmd_help::NAME, cmd_help::init_command_tree());
     map.insert(cmd_help::ALIAS, cmd_help::init_command_tree());
 
-    CommandDispatcher {
-        commands: map,
-    }
+    CommandDispatcher { commands: map }
 }
 
 pub fn handle_command(sender: &mut CommandSender, cmd: &str) {
@@ -88,8 +86,7 @@ pub fn handle_command(sender: &mut CommandSender, cmd: &str) {
 
     if let Err(err) = dispatcher.dispatch(sender, cmd) {
         sender.send_message(
-            TextComponent::text(&err)
-                .color_named(pumpkin_text::color::NamedColor::Red),
+            TextComponent::text(&err).color_named(pumpkin_text::color::NamedColor::Red),
         )
     }
 }

@@ -5,12 +5,14 @@ use pumpkin_text::TextComponent;
 
 use crate::commands::arg_player::{consume_arg_player, parse_arg_player};
 
-use crate::commands::CommandSender;
-use crate::commands::CommandSender::Player;
 use crate::commands::dispatcher::InvalidTreeError;
-use crate::commands::dispatcher::InvalidTreeError::{InvalidConsumptionError, InvalidRequirementError};
+use crate::commands::dispatcher::InvalidTreeError::{
+    InvalidConsumptionError, InvalidRequirementError,
+};
 use crate::commands::tree::{CommandTree, ConsumedArgs, RawArgs};
 use crate::commands::tree_builder::{argument, require};
+use crate::commands::CommandSender;
+use crate::commands::CommandSender::Player;
 use crate::entity::player::GameMode;
 
 pub(crate) const NAME: &str = "gamemode";
@@ -25,76 +27,70 @@ pub fn consume_arg_gamemode(_src: &CommandSender, args: &mut RawArgs) -> Option<
 
     if let Ok(id) = s.parse::<u8>() {
         match GameMode::from_u8(id) {
-            None | Some(GameMode::Undefined) => {},
-            Some(_) => return Some(s.into())
+            None | Some(GameMode::Undefined) => {}
+            Some(_) => return Some(s.into()),
         };
     };
 
     match GameMode::from_str(s) {
         Err(_) | Ok(GameMode::Undefined) => None,
-        Ok(_) => Some(s.into())
+        Ok(_) => Some(s.into()),
     }
 }
 
 pub fn parse_arg_gamemode(consumed_args: &ConsumedArgs) -> Result<GameMode, InvalidTreeError> {
-    let s = consumed_args.get(ARG_GAMEMODE)
+    let s = consumed_args
+        .get(ARG_GAMEMODE)
         .ok_or(InvalidConsumptionError(None))?;
 
     if let Ok(id) = s.parse::<u8>() {
         match GameMode::from_u8(id) {
-            None | Some(GameMode::Undefined) => {},
-            Some(gamemode) => return Ok(gamemode)
+            None | Some(GameMode::Undefined) => {}
+            Some(gamemode) => return Ok(gamemode),
         };
     };
 
     match GameMode::from_str(s) {
         Err(_) | Ok(GameMode::Undefined) => Err(InvalidConsumptionError(Some(s.into()))),
-        Ok(gamemode) => Ok(gamemode)
+        Ok(gamemode) => Ok(gamemode),
     }
 }
 
 pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(DESCRIPTION).with_child(
-
-        require(&|sender| {
-            sender.permission_lvl() >= 2
-        }).with_child(
-
-            argument(ARG_GAMEMODE, consume_arg_gamemode).with_child(
-
-                require(&|sender| sender.is_player())
-
-                    .execute(&|sender, args| {
+        require(&|sender| sender.permission_lvl() >= 2).with_child(
+            argument(ARG_GAMEMODE, consume_arg_gamemode)
+                .with_child(
+                    require(&|sender| sender.is_player()).execute(&|sender, args| {
                         let gamemode = parse_arg_gamemode(args)?;
 
                         return if let Player(target) = sender {
                             target.set_gamemode(gamemode);
-                            target.send_system_message(TextComponent::text(
-                                &format!("Game mode was set to {:?}", gamemode)
-                            ));
+                            target.send_system_message(TextComponent::text(&format!(
+                                "Game mode was set to {:?}",
+                                gamemode
+                            )));
 
                             Ok(())
                         } else {
                             Err(InvalidRequirementError)
-                        }
-                    })
-
-            ).with_child(
-
-                argument(ARG_TARGET, consume_arg_player)
-
-                    .execute(&|sender, args| {
+                        };
+                    }),
+                )
+                .with_child(
+                    argument(ARG_TARGET, consume_arg_player).execute(&|sender, args| {
                         let gamemode = parse_arg_gamemode(args)?;
                         let target = parse_arg_player(sender, ARG_TARGET, args)?;
 
                         target.set_gamemode(gamemode);
-                        target.send_system_message(TextComponent::text(
-                            &format!("Set own game mode to {:?}", gamemode)
-                        ));
+                        target.send_system_message(TextComponent::text(&format!(
+                            "Set own game mode to {:?}",
+                            gamemode
+                        )));
 
                         Ok(())
-                    })
-            )
-        )
+                    }),
+                ),
+        ),
     )
 }

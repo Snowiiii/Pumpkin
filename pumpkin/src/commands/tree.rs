@@ -1,7 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 
-use crate::commands::CommandSender;
 use crate::commands::dispatcher::InvalidTreeError;
+use crate::commands::CommandSender;
 /// see [crate::commands::tree_builder::argument]
 pub(crate) type RawArgs<'a> = Vec<&'a str>;
 
@@ -21,16 +21,14 @@ pub(crate) enum NodeType<'a> {
         run: &'a (dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync),
     },
     #[allow(dead_code)] // todo: remove (so far no commands requiring this are implemented)
-    Literal {
-        string: &'a str,
-    },
+    Literal { string: &'a str },
     Argument {
         name: &'a str,
         consumer: ArgumentConsumer<'a>,
     },
     Require {
         predicate: &'a (dyn Fn(&CommandSender) -> bool + Sync),
-    }
+    },
 }
 
 pub(crate) struct CommandTree<'a> {
@@ -39,7 +37,7 @@ pub(crate) struct CommandTree<'a> {
     pub(crate) description: &'a str,
 }
 
-impl <'a> CommandTree<'a> {
+impl<'a> CommandTree<'a> {
     /// iterate over all possible paths that end in a [NodeType::ExecuteLeaf]
     pub(crate) fn iter_paths(&'a self) -> impl Iterator<Item = Vec<usize>> + 'a {
         let mut todo = VecDeque::<(usize, usize)>::new();
@@ -54,25 +52,29 @@ impl <'a> CommandTree<'a> {
         }
     }
 
-
     /// format possible paths as [String], using ```name``` as the command name
     pub(crate) fn paths_formatted(&'a self, name: &str) -> String {
-        let paths: Vec<Vec<&NodeType>> = self.iter_paths()
+        let paths: Vec<Vec<&NodeType>> = self
+            .iter_paths()
             .map(|path| path.iter().map(|&i| &self.nodes[i].node_type).collect())
             .collect();
-        
-        let len = paths.iter()
-            .map(|path| path.iter()
-                .map(|node| match node {
-                    NodeType::ExecuteLeaf { .. } => 0,
-                    NodeType::Literal { string } => string.len() + 1,
-                    NodeType::Argument { name, .. } => name.len() + 3,
-                    NodeType::Require { .. } => 0,
-                })
-                .sum::<usize>() + name.len() + 2
-            )
+
+        let len = paths
+            .iter()
+            .map(|path| {
+                path.iter()
+                    .map(|node| match node {
+                        NodeType::ExecuteLeaf { .. } => 0,
+                        NodeType::Literal { string } => string.len() + 1,
+                        NodeType::Argument { name, .. } => name.len() + 3,
+                        NodeType::Require { .. } => 0,
+                    })
+                    .sum::<usize>()
+                    + name.len()
+                    + 2
+            })
             .sum::<usize>();
-        
+
         let mut s = String::with_capacity(len);
 
         for path in paths.iter() {
@@ -95,7 +97,7 @@ impl <'a> CommandTree<'a> {
                 }
             }
         }
-        
+
         s
     }
 }
@@ -107,8 +109,7 @@ struct TraverseAllPathsIter<'a> {
     todo: VecDeque<(usize, usize)>,
 }
 
-impl <'a>Iterator for TraverseAllPathsIter<'a> {
-
+impl<'a> Iterator for TraverseAllPathsIter<'a> {
     type Item = Vec<usize>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -118,12 +119,15 @@ impl <'a>Iterator for TraverseAllPathsIter<'a> {
 
             // add new children to front
             self.todo.reserve(node.children.len());
-            node.children.iter().rev().for_each(|&c| self.todo.push_front((depth + 1, c)));
+            node.children
+                .iter()
+                .rev()
+                .for_each(|&c| self.todo.push_front((depth + 1, c)));
 
             // update path
             while self.path.len() > depth {
                 self.path.pop();
-            };
+            }
             self.path.push(i);
 
             if let NodeType::ExecuteLeaf { .. } = node.node_type {
@@ -132,4 +136,3 @@ impl <'a>Iterator for TraverseAllPathsIter<'a> {
         }
     }
 }
-

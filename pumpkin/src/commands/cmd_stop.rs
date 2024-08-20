@@ -7,9 +7,7 @@ const DESCRIPTION: &str = "Stop the server.";
 
 pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(DESCRIPTION).with_child(
-        require(&|sender| { sender.permission_lvl() >= 4 })
-            .execute(&|_sender, _args| {
-                std::process::exit(0)
-            })
+        require(&|sender| sender.permission_lvl() >= 4)
+            .execute(&|_sender, _args| std::process::exit(0)),
     )
 }
