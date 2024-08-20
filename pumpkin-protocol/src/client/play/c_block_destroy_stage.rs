@@ -12,9 +12,11 @@ pub struct CSetBlockDestroyStage {
 }
 
 impl CSetBlockDestroyStage {
-    pub fn new(entity_id: VarInt,
-    location: WorldPosition,
-    destroy_stage: u8) -> Self {
-        Self { entity_id, location, destroy_stage }
+    pub fn new(entity_id: VarInt, location: WorldPosition, destroy_stage: u8) -> Self {
+        Self {
+            entity_id,
+            location,
+            destroy_stage,
+        }
     }
 }

@@ -11,13 +11,14 @@ use pumpkin_entity::EntityId;
 use pumpkin_protocol::{
     client::play::{
         Animation, CBlockUpdate, CEntityAnimation, CEntityVelocity, CHeadRot, CHurtAnimation,
-        CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot, FilterType,
+        CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot, CWorldEvent,
+        FilterType,
     },
     position::WorldPosition,
     server::play::{
         Action, ActionType, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport,
         SInteract, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
-        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn,
+        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status,
     },
 };
 use pumpkin_text::TextComponent;
@@ -315,7 +316,46 @@ impl Client {
             }
         }
     }
-    pub fn handle_player_action(&mut self, _server: &mut Server, _player_action: SPlayerAction) {}
+    pub fn handle_player_action(&mut self, server: &mut Server, player_action: SPlayerAction) {
+        match Status::from_i32(player_action.status.0).unwrap() {
+            Status::StartedDigging => {
+                let player = self.player.as_mut().unwrap();
+                // TODO: Config
+                if player.gamemode == GameMode::Creative {
+                    let location = player_action.location;
+                    // Block break & block break sound
+                    // TODO: currently this is always dirt replace it
+                    server.broadcast_packet(self, &CWorldEvent::new(2001, &location, 11, false));
+                    // AIR
+                    server.broadcast_packet(self, &CBlockUpdate::new(location, 0.into()));
+                }
+            }
+            Status::CancelledDigging => {
+                let player = self.player.as_mut().unwrap();
+                player.current_block_destroy_stage = 0;
+            }
+            Status::FinishedDigging => {
+                let location = player_action.location;
+                // Block break & block break sound
+                // TODO: currently this is always dirt replace it
+                server.broadcast_packet(self, &CWorldEvent::new(2001, &location, 11, false));
+                // AIR
+                server.broadcast_packet(self, &CBlockUpdate::new(location, 0.into()));
+            }
+            Status::DropItemStack => {
+                dbg!("todo");
+            }
+            Status::DropItem => {
+                dbg!("todo");
+            }
+            Status::ShootArrowOrFinishEating => {
+                dbg!("todo");
+            }
+            Status::SwapItem => {
+                dbg!("todo");
+            }
+        }
+    }
 
     pub fn handle_use_item_on(&mut self, server: &mut Server, use_item_on: SUseItemOn) {
         let location = use_item_on.location;

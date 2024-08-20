@@ -5,18 +5,25 @@ use crate::position::WorldPosition;
 
 #[derive(Serialize)]
 #[packet(0x28)]
-pub struct CWorldEvent {
+pub struct CWorldEvent<'a> {
     event: i32,
-    location: WorldPosition,
+    location: &'a WorldPosition,
     data: i32,
     disable_relative_volume: bool,
 }
 
-impl CWorldEvent {
-    pub fn new(event: i32,
-    location: WorldPosition,
-    data: i32,
-    disable_relative_volume: bool) -> Self {
-        Self { event, location, data, disable_relative_volume }
+impl<'a> CWorldEvent<'a> {
+    pub fn new(
+        event: i32,
+        location: &'a WorldPosition,
+        data: i32,
+        disable_relative_volume: bool,
+    ) -> Self {
+        Self {
+            event,
+            location,
+            data,
+            disable_relative_volume,
+        }
     }
 }

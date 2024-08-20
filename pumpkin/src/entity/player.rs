@@ -23,6 +23,9 @@ pub struct Player {
     pub sneaking: bool,
     pub sprinting: bool,
 
+    // TODO: This is currently unused, We have to calculate the block breaking speed our own and then break the block our own if its done
+    pub current_block_destroy_stage: u8,
+
     // TODO: prbly should put this into an Living Entitiy or something
     pub velocity: Vector3<f64>,
 
@@ -42,6 +45,7 @@ impl Player {
             health: 20.0,
             food: 20,
             food_saturation: 20.0,
+            current_block_destroy_stage: 0,
             velocity: Vector3::new(0.0, 0.0, 0.0),
             inventory: PlayerInventory::new(),
             gamemode,
