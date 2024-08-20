@@ -53,6 +53,8 @@ impl<'a> CommandTree<'a> {
     }
 
     /// format possible paths as [String], using ```name``` as the command name
+    ///
+    /// todo: merge into single line
     pub(crate) fn paths_formatted(&'a self, name: &str) -> String {
         let paths: Vec<Vec<&NodeType>> = self
             .iter_paths()
