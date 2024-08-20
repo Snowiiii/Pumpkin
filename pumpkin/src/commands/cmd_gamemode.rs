@@ -30,7 +30,7 @@ pub fn consume_arg_gamemode(_src: &CommandSender, args: &mut RawArgs) -> Option<
         };
     };
 
-    return match GameMode::from_str(s) {
+    match GameMode::from_str(s) {
         Err(_) | Ok(GameMode::Undefined) => None,
         Ok(_) => Some(s.into())
     }
@@ -47,10 +47,10 @@ pub fn parse_arg_gamemode(consumed_args: &ConsumedArgs) -> Result<GameMode, Inva
         };
     };
 
-    return match GameMode::from_str(s) {
+    match GameMode::from_str(s) {
         Err(_) | Ok(GameMode::Undefined) => Err(InvalidConsumptionError(Some(s.into()))),
         Ok(gamemode) => Ok(gamemode)
-    };
+    }
 }
 
 pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {

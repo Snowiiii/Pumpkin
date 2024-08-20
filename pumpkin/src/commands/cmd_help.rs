@@ -15,8 +15,7 @@ const ARG_COMMAND: &str = "command";
 fn consume_arg_command(_src: &CommandSender, args: &mut RawArgs) -> Option<String> {
     let s = args.pop()?;
 
-    let dispatcher = DISPATCHER;
-    let dispatcher = dispatcher.get_or_init(dispatcher_init);
+    let dispatcher = DISPATCHER.get_or_init(dispatcher_init);
 
     if dispatcher.commands.contains_key(s) { Some(s.into()) }
     else { None }
@@ -36,8 +35,7 @@ fn parse_arg_command<'a>(consumed_args: &'a ConsumedArgs, dispatcher: &'a Comman
 pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(DESCRIPTION).with_child(
         argument(ARG_COMMAND, consume_arg_command).execute(&|sender, args| {
-            let dispatcher = DISPATCHER;
-            let dispatcher = dispatcher.get_or_init(dispatcher_init);
+            let dispatcher = DISPATCHER.get_or_init(dispatcher_init);
             
             let (name, tree) = parse_arg_command(args, dispatcher)?;
             
@@ -50,8 +48,7 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
             Ok(())
         })
     ).execute(&|sender, _args| {
-        let dispatcher = DISPATCHER;
-        let dispatcher = dispatcher.get_or_init(dispatcher_init);
+        let dispatcher = DISPATCHER.get_or_init(dispatcher_init);
 
         for (name, tree) in &dispatcher.commands {
             sender.send_message(

@@ -27,7 +27,7 @@ impl <'a> CommandTree<'a> {
     /// desired type.
     ///
     /// Also see [NonLeafNodeBuilder::execute].
-    pub fn execute(mut self, run: &'a dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError>) -> Self {
+    pub fn execute(mut self, run: &'a (dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync)) -> Self {
         let node = Node {
             node_type: NodeType::ExecuteLeaf {
                 run,
@@ -103,7 +103,7 @@ impl <'a>NonLeafNodeBuilder<'a> {
     /// desired type.
     ///
     /// Also see [CommandTree::execute].
-    pub fn execute(mut self, run: &'a dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError>) -> Self {
+    pub fn execute(mut self, run: &'a (dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync)) -> Self {
         self.leaf_nodes.push(LeafNodeBuilder {
             node_type: NodeType::ExecuteLeaf {
                 run
@@ -146,7 +146,7 @@ pub fn argument<'a>(name: &'a str, consumer: ArgumentConsumer) -> NonLeafNodeBui
 
 /// ```predicate``` should return ```false``` if requirement for reaching following [Node]s is not
 /// met.
-pub fn require(predicate: &dyn Fn(&CommandSender) -> bool) -> NonLeafNodeBuilder {
+pub fn require(predicate: &(dyn Fn(&CommandSender) -> bool + Sync)) -> NonLeafNodeBuilder {
     NonLeafNodeBuilder {
         node_type: NodeType::Require {
             predicate

@@ -66,7 +66,7 @@ impl<'a> CommandSender<'a> {
 ///
 /// Central point from which commands are dispatched. Should always be initialized using
 /// [dispatcher_init].
-const DISPATCHER: OnceLock<CommandDispatcher> = OnceLock::new();
+static DISPATCHER: OnceLock<CommandDispatcher> = OnceLock::new();
 
 /// create [CommandDispatcher] instance for [DISPATCHER]
 fn dispatcher_init<'a>() -> CommandDispatcher<'a> {
@@ -84,8 +84,7 @@ fn dispatcher_init<'a>() -> CommandDispatcher<'a> {
 }
 
 pub fn handle_command(sender: &mut CommandSender, cmd: &str) {
-    let dispatcher = DISPATCHER;
-    let dispatcher = dispatcher.get_or_init(dispatcher_init);
+    let dispatcher = DISPATCHER.get_or_init(dispatcher_init);
 
     if let Err(err) = dispatcher.dispatch(sender, cmd) {
         sender.send_message(

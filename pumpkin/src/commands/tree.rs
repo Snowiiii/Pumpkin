@@ -2,15 +2,13 @@ use std::collections::{HashMap, VecDeque};
 
 use crate::commands::CommandSender;
 use crate::commands::dispatcher::InvalidTreeError;
-use crate::commands::tree_builder::{argument, NonLeafNodeBuilder};
-
-/// see [argument]
+/// see [crate::commands::tree_builder::argument]
 pub(crate) type RawArgs<'a> = Vec<&'a str>;
 
-/// see [argument] and [CommandTree::execute]/[NonLeafNodeBuilder::execute]
+/// see [crate::commands::tree_builder::argument] and [CommandTree::execute]/[crate::commands::tree_builder::NonLeafNodeBuilder::execute]
 pub(crate) type ConsumedArgs<'a> = HashMap<&'a str, String>;
 
-/// see [argument]
+/// see [crate::commands::tree_builder::argument]
 pub(crate) type ArgumentConsumer<'a> = fn(&CommandSender, &mut RawArgs) -> Option<String>;
 
 pub(crate) struct Node<'a> {
@@ -20,7 +18,7 @@ pub(crate) struct Node<'a> {
 
 pub(crate) enum NodeType<'a> {
     ExecuteLeaf {
-        run: &'a dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError>,
+        run: &'a (dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync),
     },
     Literal {
         string: &'a str,
@@ -30,7 +28,7 @@ pub(crate) enum NodeType<'a> {
         consumer: ArgumentConsumer<'a>,
     },
     Require {
-        predicate: &'a dyn Fn(&CommandSender) -> bool,
+        predicate: &'a (dyn Fn(&CommandSender) -> bool + Sync),
     }
 }
 
