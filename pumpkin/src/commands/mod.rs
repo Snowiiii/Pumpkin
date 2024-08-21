@@ -1,4 +1,4 @@
-use pumpkin_text::TextComponent;
+use pumpkin_core::text::TextComponent;
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
@@ -85,7 +85,7 @@ pub fn handle_command(sender: &mut CommandSender, cmd: &str) {
 
     if let Err(err) = dispatcher.dispatch(sender, cmd) {
         sender.send_message(
-            TextComponent::text(&err).color_named(pumpkin_text::color::NamedColor::Red),
+            TextComponent::text(&err).color_named(pumpkin_core::text::color::NamedColor::Red),
         )
     }
 }

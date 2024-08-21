@@ -13,6 +13,7 @@ use crate::{
 use authentication::GameProfile;
 use mio::{event::Event, net::TcpStream, Token};
 use num_traits::ToPrimitive;
+use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::{
@@ -39,7 +40,6 @@ use pumpkin_protocol::{
     },
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
-use pumpkin_text::TextComponent;
 
 use pumpkin_inventory::WindowType;
 use pumpkin_protocol::bytebuf::ByteBuffer;

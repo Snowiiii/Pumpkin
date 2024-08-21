@@ -13,7 +13,7 @@ dhat-heap = ["dhat"]
 dhat = { version = "0.3.3", optional = true }
 
 # pumpkin
-pumpkin-text = { path = "../pumpkin-text" }
+pumpkin-core = { path = "../pumpkin-core"}
 pumpkin-inventory = { path = "../pumpkin-inventory"}
 pumpkin-world = { path = "../pumpkin-world"}
 pumpkin-entity = { path = "../pumpkin-entity"}
@@ -61,7 +61,6 @@ log = "0.4"
 mio = { version = "1.0.1", features = ["os-poll", "net"]}
 crossbeam-channel = "0.5.13"
 
-uuid = { version = "1.10", features = ["serde", "v3"]}
-
+uuid.workspace = true
 tokio.workspace = true
 rayon.workspace = true
