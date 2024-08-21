@@ -79,7 +79,7 @@ fn dispatcher_init<'a>() -> CommandDispatcher<'a> {
     dispatcher.register(cmd_gamemode::init_command_tree());
     dispatcher.register(cmd_stop::init_command_tree());
     dispatcher.register(cmd_help::init_command_tree());
-    
+
     dispatcher
 }
 
