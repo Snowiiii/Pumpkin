@@ -115,6 +115,10 @@ impl PacketEncoder {
         VarInt(packet_len as i32)
             .encode(front)
             .map_err(|_| PacketError::EncodeID)?;
+
+        if P::PACKET_ID == 0x39 {
+            println!("PACKET: {:X}", self.buf);
+        }
         Ok(())
     }
 

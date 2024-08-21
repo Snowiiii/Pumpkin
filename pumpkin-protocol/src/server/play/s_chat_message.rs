@@ -14,6 +14,7 @@ pub struct SChatMessage {
     pub salt: i64,
     pub signature: Option<Bytes>,
     pub messagee_count: VarInt,
+    // TODO: Properly implement BitSet decoding
     // acknowledged: BitSet,
 }
 
