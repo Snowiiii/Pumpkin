@@ -19,7 +19,10 @@ use pumpkin_protocol::{
     client::{
         config::CConfigDisconnect,
         login::CLoginDisconnect,
-        play::{CGameEvent, CPlayDisconnect, CSetContainerContent, CSyncPlayerPosition, CSystemChatMessage},
+        play::{
+            CGameEvent, CPlayDisconnect, CSetContainerContent, CSyncPlayerPosition,
+            CSystemChatMessage,
+        },
     },
     packet_decoder::PacketDecoder,
     packet_encoder::PacketEncoder,
