@@ -13,7 +13,7 @@ pub struct SChatMessage {
     pub timestamp: i64,
     pub salt: i64,
     pub signature: Option<Bytes>,
-    pub messagee_count: VarInt,
+    pub message_count: VarInt,
     pub acknowledged: FixedBitSet,
 }
 
@@ -25,7 +25,7 @@ impl ServerPacket for SChatMessage {
             timestamp: bytebuf.get_i64(),
             salt: bytebuf.get_i64(),
             signature: bytebuf.get_option(|v| v.copy_to_bytes(256)),
-            messagee_count: bytebuf.get_var_int(),
+            message_count: bytebuf.get_var_int(),
             acknowledged: bytebuf.get_fixed_bitset(20),
         })
     }
