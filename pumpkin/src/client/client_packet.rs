@@ -1,4 +1,5 @@
 use num_traits::FromPrimitive;
+use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
     client::{
         config::{CConfigAddResourcePack, CFinishConfig, CKnownPacks, CRegistryData},
@@ -13,7 +14,6 @@ use pumpkin_protocol::{
     },
     ConnectionState, KnownPack, CURRENT_MC_PROTOCOL,
 };
-use pumpkin_core::text::TextComponent;
 use rsa::Pkcs1v15Encrypt;
 use sha1::{Digest, Sha1};
 

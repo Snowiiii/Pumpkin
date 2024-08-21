@@ -7,6 +7,7 @@ use crate::{
     util::math::wrap_degrees,
 };
 use num_traits::FromPrimitive;
+use pumpkin_core::text::TextComponent;
 use pumpkin_entity::EntityId;
 use pumpkin_protocol::{
     client::play::{
@@ -22,7 +23,6 @@ use pumpkin_protocol::{
         SUseItemOn, Status,
     },
 };
-use pumpkin_core::text::TextComponent;
 use pumpkin_world::block::BlockFace;
 use pumpkin_world::global_registry;
 

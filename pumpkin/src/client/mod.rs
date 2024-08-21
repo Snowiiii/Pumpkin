@@ -13,6 +13,7 @@ use crate::{
 use authentication::GameProfile;
 use mio::{event::Event, net::TcpStream, Token};
 use num_traits::ToPrimitive;
+use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::{
@@ -36,7 +37,6 @@ use pumpkin_protocol::{
     },
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
-use pumpkin_core::text::TextComponent;
 
 use std::io::Read;
 use thiserror::Error;
