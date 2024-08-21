@@ -14,3 +14,4 @@ codegen-units = 1
 [workspace.dependencies]
 tokio = { version = "1.39.2", features = ["net", "macros", "rt-multi-thread", "fs", "io-util", "sync"] }
 rayon = "1.10.0"
+uuid = { version = "1.10.0", features = ["serde", "v3"] }
