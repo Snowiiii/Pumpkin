@@ -41,6 +41,7 @@ use pumpkin_text::TextComponent;
 use std::io::Read;
 use thiserror::Error;
 use pumpkin_inventory::WindowType;
+use pumpkin_protocol::bytebuf::ByteBuffer;
 use pumpkin_protocol::client::play::COpenScreen;
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::Item;
@@ -179,23 +180,18 @@ impl Client {
         self.send_packet(&CGameEvent::new(3, gamemode.to_f32().unwrap()));
     }
     
-    pub fn open_container(&mut self, window_type: WindowType, minecraft_menu_id: &str,window_title: Option<&str>) {
+    pub fn open_container(&mut self, window_type: WindowType, minecraft_menu_id: &str,window_title: Option<&str>, items: Option<Vec<Option<&Item>>>, carried_item: Option<&Item>) {
         let menu_protocol_id = (*pumpkin_world::global_registry::REGISTRY.get("minecraft:menu").unwrap().entries.get(minecraft_menu_id).expect("Should be a valid menu id").get("protocol_id").unwrap()).into();
         let title = TextComponent::text(window_title.unwrap_or(window_type.default_title()));
         self.send_packet(&COpenScreen::new((window_type.clone() as u8 +1).into(),menu_protocol_id, title));
-        let temp_item = Item {
-            item_id: 91, // Diamond block
-            item_count: 64
-        };
-        self.set_container_content(window_type, Some([Some(&temp_item);27].to_vec()), None);
+        self.set_container_content(window_type, items, carried_item);
     }
     
     pub fn set_container_content<'a>(&mut self, window_type: WindowType, items: Option<Vec<Option<&'a Item>>>, carried_item: Option<&'a Item>) {
         let player = self.player.as_ref().unwrap();
         
         let slots: Vec<Slot> = {if let Some(mut items) = items {
-            items.extend(player.inventory.slots()
-               );
+            items.extend(player.inventory.slots());
             items
         } else {
             player.inventory.slots()
@@ -215,8 +211,7 @@ impl Client {
                 Slot::empty()
             }
         };
-        
-        self.send_packet(&CSetContainerContent::new(window_type as u8, 10.into(), &slots, carried_item))
+        self.send_packet(&CSetContainerContent::new(window_type as u8+1, 0.into(), &slots, &carried_item));
     }
 
     pub async fn process_packets(&mut self, server: &mut Server) {

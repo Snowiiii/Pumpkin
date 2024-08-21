@@ -1,12 +1,9 @@
 use crate::VarInt;
 use pumpkin_world::item::Item;
-use serde::{
-    de::{self, SeqAccess, Visitor},
-    Deserialize,
-    Serialize
-};
+use serde::{de::{self, SeqAccess, Visitor}, Deserialize, Serialize, Serializer};
+use serde::ser::SerializeSeq;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct Slot {
     item_count: VarInt,
@@ -76,6 +73,60 @@ impl<'de> Deserialize<'de> for Slot {
         deserializer.deserialize_seq(VarIntVisitor)
     }
 }
+
+impl Serialize for Slot {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if self.item_count == 0.into() {
+            let mut s = serializer.serialize_seq(Some(1))?;
+            s.serialize_element(&self.item_count)?;
+            s.end()
+        } else {
+            match (&self.num_components_to_add,&self.num_components_to_remove) {
+                (Some(to_add),Some(to_remove)) => {
+                    let mut s = serializer.serialize_seq(Some(6))?;
+                    s.serialize_element(&self.item_count)?;
+                    s.serialize_element(self.item_id.as_ref().unwrap())?;
+                    s.serialize_element(to_add)?;
+                    s.serialize_element(to_remove)?;
+                    s.serialize_element(self.components_to_add.as_ref().unwrap())?;
+                    s.serialize_element(self.components_to_remove.as_ref().unwrap())?;
+                    s.end()
+                }
+                (None, Some(to_remove)) => {
+                    let mut s = serializer.serialize_seq(Some(5))?;
+                    s.serialize_element(&self.item_count)?;
+                    s.serialize_element(self.item_id.as_ref().unwrap())?;
+                    s.serialize_element(&VarInt(0))?;
+                    s.serialize_element(to_remove)?;
+                    s.serialize_element(self.components_to_remove.as_ref().unwrap())?;
+                    s.end()
+                }
+                (Some(to_add),None) => {
+                    let mut s = serializer.serialize_seq(Some(5))?;
+                    s.serialize_element(&self.item_count)?;
+                    s.serialize_element(self.item_id.as_ref().unwrap())?;
+                    s.serialize_element(to_add)?;
+                    s.serialize_element(&VarInt(0))?;
+                    s.serialize_element(self.components_to_add.as_ref().unwrap())?;
+                    s.end()
+                }
+                (None,None) => {
+                    let mut s = serializer.serialize_seq(Some(4))?;
+                    s.serialize_element(&self.item_count)?;
+                    s.serialize_element(&self.item_id.as_ref().unwrap())?;
+                    s.serialize_element(&VarInt(0))?;
+                    s.serialize_element(&VarInt(0))?;
+                    s.end()
+                }
+            }
+            
+        }
+    }
+}
+
 impl Slot {
     pub fn to_item(self) -> Option<Item> {
         let item_id = self.item_id?.0.try_into().unwrap();
@@ -103,7 +154,7 @@ impl From<&Item> for Slot {
             item_count: item.item_count.into(),
             item_id: Some(item.item_id.into()),
             // TODO: add these
-            num_components_to_add: None,
+            num_components_to_add:None, 
             num_components_to_remove: None,
             components_to_add: None,
             components_to_remove: None,

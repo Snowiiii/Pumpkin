@@ -10,12 +10,12 @@ pub struct CSetContainerContent<'a> {
     state_id: VarInt,
     count: VarInt,
     slot_data: &'a [Slot],
-    carried_item: Slot
+    carried_item: &'a Slot
 }
 
 
 impl<'a> CSetContainerContent<'a> {
-    pub fn new(window_id: u8,state_id: VarInt, slots: &'a [Slot], carried_item: Slot) -> Self {
+    pub fn new(window_id: u8,state_id: VarInt, slots: &'a [Slot], carried_item: &'a Slot) -> Self {
         Self {
             window_id,
             state_id,
