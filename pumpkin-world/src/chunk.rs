@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use fastnbt::LongArray;
 
-use crate::{level::WorldError, WORLD_HEIGHT};
+use crate::{level::WorldError, vector3::Vector3, WORLD_HEIGHT, WORLD_Y_START_AT};
 
 pub struct ChunkData {
     pub blocks: Box<[i32; 16 * 16 * WORLD_HEIGHT]>,
@@ -109,5 +109,22 @@ impl ChunkData {
             position: at,
             heightmaps: chunk_data.heightmaps,
         })
+    }
+    /// Sets the given block in the chunk, returning the old block
+    pub fn set_block(&mut self, at: Vector3<i32>, block_id: i32) -> Result<i32, WorldError> {
+        let x = at.x - self.position.0 * 16;
+        let z = at.z - self.position.1 * 16;
+        let y = at.y - WORLD_Y_START_AT;
+        if !(0..16).contains(&x)
+            || !(0..16).contains(&z)
+            || !(0..(WORLD_HEIGHT as i32)).contains(&y)
+        {
+            return Err(WorldError::BlockOutsideChunk);
+        }
+
+        Ok(std::mem::replace(
+            &mut self.blocks[(y * 16 * 16 + z * 16 + x) as usize],
+            block_id,
+        ))
     }
 }

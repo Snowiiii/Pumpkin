@@ -188,8 +188,8 @@ pub struct StatusResponse {
     pub version: Version,
     pub players: Players,
     pub description: String,
-    pub favicon: String, // data:image/png;base64,<data>
-                         // Players, favicon ...
+    pub favicon: Option<String>, // data:image/png;base64,<data>
+                                 // Players, favicon ...
 }
 #[derive(Serialize)]
 pub struct Version {

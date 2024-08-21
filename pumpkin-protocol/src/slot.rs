@@ -1,7 +1,7 @@
 use crate::VarInt;
 use pumpkin_world::item::Item;
 use serde::{
-    de::{self, SeqAccess, Visitor},
+    de::{self, SeqAccess},
     Deserialize,
 };
 
@@ -21,8 +21,8 @@ impl<'de> Deserialize<'de> for Slot {
     where
         D: de::Deserializer<'de>,
     {
-        struct VarIntVisitor;
-        impl<'de> Visitor<'de> for VarIntVisitor {
+        struct Visitor;
+        impl<'de> de::Visitor<'de> for Visitor {
             type Value = Slot;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -72,9 +72,10 @@ impl<'de> Deserialize<'de> for Slot {
             }
         }
 
-        deserializer.deserialize_seq(VarIntVisitor)
+        deserializer.deserialize_seq(Visitor)
     }
 }
+
 impl Slot {
     pub fn to_item(self) -> Option<Item> {
         let item_id = self.item_id?.0.try_into().unwrap();

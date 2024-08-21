@@ -3,7 +3,7 @@ use crate::commands::dispatcher::{CommandDispatcher, InvalidTreeError};
 use crate::commands::tree::{CommandTree, ConsumedArgs, RawArgs};
 use crate::commands::tree_builder::argument;
 use crate::commands::{dispatcher_init, CommandSender, DISPATCHER};
-use pumpkin_text::TextComponent;
+use pumpkin_core::text::TextComponent;
 
 pub(crate) const NAME: &str = "help";
 pub(crate) const ALIAS: &str = "?";

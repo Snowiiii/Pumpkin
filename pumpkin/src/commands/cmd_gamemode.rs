@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use num_traits::FromPrimitive;
-use pumpkin_text::TextComponent;
+use pumpkin_core::text::TextComponent;
 
 use crate::commands::arg_player::{consume_arg_player, parse_arg_player};
 

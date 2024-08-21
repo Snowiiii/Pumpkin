@@ -2,6 +2,7 @@ use std::{
     cell::{RefCell, RefMut},
     collections::HashMap,
     io::Cursor,
+    path::Path,
     rc::Rc,
     sync::{
         atomic::{AtomicI32, Ordering},
@@ -408,7 +409,12 @@ impl Server {
     }
 
     pub fn build_response(config: &BasicConfiguration) -> StatusResponse {
-        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/icon.png");
+        let icon_path = concat!(env!("CARGO_MANIFEST_DIR"), "/icon.png");
+        let icon = if Path::new(icon_path).exists() {
+            Some(Self::load_icon(icon_path))
+        } else {
+            None
+        };
 
         StatusResponse {
             version: Version {
@@ -424,7 +430,7 @@ impl Server {
                 }],
             },
             description: config.motd.clone(),
-            favicon: Self::load_icon(path),
+            favicon: icon,
         }
     }
 

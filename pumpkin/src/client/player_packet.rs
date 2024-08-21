@@ -7,6 +7,7 @@ use crate::{
     util::math::wrap_degrees,
 };
 use num_traits::FromPrimitive;
+use pumpkin_core::text::TextComponent;
 use pumpkin_entity::EntityId;
 use pumpkin_protocol::{
     client::play::{
@@ -22,7 +23,6 @@ use pumpkin_protocol::{
         SUseItemOn, Status,
     },
 };
-use pumpkin_text::TextComponent;
 use pumpkin_world::block::BlockFace;
 use pumpkin_world::global_registry;
 
@@ -302,7 +302,7 @@ impl Client {
                     if config.hurt_animation {
                         // TODO
                         // thats how we prevent borrow errors :c
-                        let packet = &CHurtAnimation::new(&entity_id, 10.0);
+                        let packet = &CHurtAnimation::new(&entity_id, attacker_player.entity.yaw);
                         self.send_packet(packet);
                         client.send_packet(packet);
                         server.broadcast_packet_expect(
