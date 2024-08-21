@@ -98,9 +98,9 @@ impl PlayerInventory {
 
     pub fn slots(&self) -> Vec<Option<&Item>> {
         let mut slots = vec![self.crafting_output.as_ref()];
-        slots.extend(self.crafting.iter().map(|c|c.as_ref()));
-        slots.extend(self.armor.iter().map(|c|c.as_ref()));
-        slots.extend(self.items.iter().map(|c|c.as_ref()));
+        slots.extend(self.crafting.iter().map(|c| c.as_ref()));
+        slots.extend(self.armor.iter().map(|c| c.as_ref()));
+        slots.extend(self.items.iter().map(|c| c.as_ref()));
         slots.push(self.offhand.as_ref());
         slots
     }

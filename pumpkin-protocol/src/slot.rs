@@ -1,7 +1,10 @@
 use crate::VarInt;
 use pumpkin_world::item::Item;
-use serde::{de::{self, SeqAccess, Visitor}, Deserialize, Serialize, Serializer};
 use serde::ser::SerializeSeq;
+use serde::{
+    de::{self, SeqAccess, Visitor},
+    Deserialize, Serialize, Serializer,
+};
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -84,8 +87,8 @@ impl Serialize for Slot {
             s.serialize_element(&self.item_count)?;
             s.end()
         } else {
-            match (&self.num_components_to_add,&self.num_components_to_remove) {
-                (Some(to_add),Some(to_remove)) => {
+            match (&self.num_components_to_add, &self.num_components_to_remove) {
+                (Some(to_add), Some(to_remove)) => {
                     let mut s = serializer.serialize_seq(Some(6))?;
                     s.serialize_element(&self.item_count)?;
                     s.serialize_element(self.item_id.as_ref().unwrap())?;
@@ -104,7 +107,7 @@ impl Serialize for Slot {
                     s.serialize_element(self.components_to_remove.as_ref().unwrap())?;
                     s.end()
                 }
-                (Some(to_add),None) => {
+                (Some(to_add), None) => {
                     let mut s = serializer.serialize_seq(Some(5))?;
                     s.serialize_element(&self.item_count)?;
                     s.serialize_element(self.item_id.as_ref().unwrap())?;
@@ -113,7 +116,7 @@ impl Serialize for Slot {
                     s.serialize_element(self.components_to_add.as_ref().unwrap())?;
                     s.end()
                 }
-                (None,None) => {
+                (None, None) => {
                     let mut s = serializer.serialize_seq(Some(4))?;
                     s.serialize_element(&self.item_count)?;
                     s.serialize_element(&self.item_id.as_ref().unwrap())?;
@@ -122,7 +125,6 @@ impl Serialize for Slot {
                     s.end()
                 }
             }
-            
         }
     }
 }
@@ -154,7 +156,7 @@ impl From<&Item> for Slot {
             item_count: item.item_count.into(),
             item_id: Some(item.item_id.into()),
             // TODO: add these
-            num_components_to_add:None, 
+            num_components_to_add: None,
             num_components_to_remove: None,
             components_to_add: None,
             components_to_remove: None,
