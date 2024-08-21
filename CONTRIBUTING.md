@@ -25,6 +25,10 @@ There are several ways you can contribute to Pumpkin:
   Ensure your code adheres to the project's coding style guidelines (if any).
   Write clear and concise commit messages that describe your changes.
 
+### Project Structure
+
+Before contributing, it would be helpful to get to know the project structure, for further information, visit [STRUCTURE.md](STRUCTURE.md)
+
 ### Additional Information
 
 We encourage you to comment on existing issues and pull requests to share your thoughts and provide feedback.
