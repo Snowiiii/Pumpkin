@@ -49,10 +49,7 @@ impl<'a> CommandDispatcher<'a> {
             }
         }
 
-        Err(format!(
-            "Invalid Syntax. Usage:{}",
-            tree.paths_formatted(key)
-        ))
+        Err(format!("Invalid Syntax. Usage: {}", tree))
     }
 
     fn try_is_fitting_path(
@@ -98,5 +95,18 @@ impl<'a> CommandDispatcher<'a> {
         }
 
         Ok(false)
+    }
+
+    /// Register a command with the dispatcher.
+    pub(crate) fn register(&mut self, tree: CommandTree<'a>) {
+        let mut names = tree.names.iter();
+
+        let primary_name = names.next().expect("at least one name must be provided");
+
+        for &name in names {
+            self.commands.insert(name, tree.clone());
+        }
+
+        self.commands.insert(primary_name, tree);
     }
 }

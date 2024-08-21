@@ -5,8 +5,7 @@ use crate::commands::tree_builder::argument;
 use crate::commands::{dispatcher_init, CommandSender, DISPATCHER};
 use pumpkin_text::TextComponent;
 
-pub(crate) const NAME: &str = "help";
-pub(crate) const ALIAS: &str = "?";
+const NAMES: [&str; 3] = ["help", "h", "?"];
 
 const DESCRIPTION: &str = "Print a help message.";
 
@@ -40,7 +39,7 @@ fn parse_arg_command<'a>(
 }
 
 pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
-    CommandTree::new(DESCRIPTION)
+    CommandTree::new(NAMES, DESCRIPTION)
         .with_child(
             argument(ARG_COMMAND, consume_arg_command).execute(&|sender, args| {
                 let dispatcher = DISPATCHER.get_or_init(dispatcher_init);
@@ -48,10 +47,8 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                 let (name, tree) = parse_arg_command(args, dispatcher)?;
 
                 sender.send_message(TextComponent::text(&format!(
-                    "{} - {} Usage:{}",
-                    name,
-                    tree.description,
-                    tree.paths_formatted(name)
+                    "{} - {} Usage: {}",
+                    name, tree.description, tree
                 )));
 
                 Ok(())
@@ -60,12 +57,15 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
         .execute(&|sender, _args| {
             let dispatcher = DISPATCHER.get_or_init(dispatcher_init);
 
-            for (name, tree) in &dispatcher.commands {
+            let mut names: Vec<&str> = dispatcher.commands.keys().copied().collect();
+            names.sort();
+
+            for name in names {
+                let tree = &dispatcher.commands[name];
+
                 sender.send_message(TextComponent::text(&format!(
-                    "{} - {} Usage:{}",
-                    name,
-                    tree.description,
-                    tree.paths_formatted(name)
+                    "{} - {} Usage: {}",
+                    name, tree.description, tree
                 )));
             }
 
