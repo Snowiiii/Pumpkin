@@ -10,7 +10,7 @@ pumpkin-text = { path = "../pumpkin-text" }
 
 bytes = "1.7"
 
-uuid = "1.10"
+uuid.workspace = true
 
 serde = { version = "1.0", features = ["derive"] }
 # to parse strings to json responses
