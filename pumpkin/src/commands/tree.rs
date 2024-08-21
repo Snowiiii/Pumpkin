@@ -12,13 +12,11 @@ pub(crate) type ConsumedArgs<'a> = HashMap<&'a str, String>;
 /// see [crate::commands::tree_builder::argument]
 pub(crate) type ArgumentConsumer<'a> = fn(&CommandSender, &mut RawArgs) -> Option<String>;
 
-#[derive(Clone)]
 pub(crate) struct Node<'a> {
     pub(crate) children: Vec<usize>,
     pub(crate) node_type: NodeType<'a>,
 }
 
-#[derive(Clone)]
 pub(crate) enum NodeType<'a> {
     ExecuteLeaf {
         run: &'a (dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync),
@@ -34,7 +32,11 @@ pub(crate) enum NodeType<'a> {
     },
 }
 
-#[derive(Clone)]
+pub(crate) enum Command<'a> {
+    Tree(CommandTree<'a>),
+    Alias(&'a str),
+}
+
 pub(crate) struct CommandTree<'a> {
     pub(crate) nodes: Vec<Node<'a>>,
     pub(crate) children: Vec<usize>,

@@ -1,6 +1,6 @@
 use crate::commands::dispatcher::InvalidTreeError::InvalidConsumptionError;
 use crate::commands::dispatcher::{CommandDispatcher, InvalidTreeError};
-use crate::commands::tree::{CommandTree, ConsumedArgs, RawArgs};
+use crate::commands::tree::{Command, CommandTree, ConsumedArgs, RawArgs};
 use crate::commands::tree_builder::argument;
 use crate::commands::{dispatcher_init, CommandSender, DISPATCHER};
 use pumpkin_text::TextComponent;
@@ -16,26 +16,20 @@ fn consume_arg_command(_src: &CommandSender, args: &mut RawArgs) -> Option<Strin
 
     let dispatcher = DISPATCHER.get_or_init(dispatcher_init);
 
-    if dispatcher.commands.contains_key(s) {
-        Some(s.into())
-    } else {
-        None
-    }
+    dispatcher.get_tree(s).ok().map(|tree| tree.names[0].into())
 }
 
 fn parse_arg_command<'a>(
     consumed_args: &'a ConsumedArgs,
     dispatcher: &'a CommandDispatcher,
-) -> Result<(&'a str, &'a CommandTree<'a>), InvalidTreeError> {
+) -> Result<&'a CommandTree<'a>, InvalidTreeError> {
     let command_name = consumed_args
         .get(ARG_COMMAND)
         .ok_or(InvalidConsumptionError(None))?;
 
-    if let Some(tree) = dispatcher.commands.get::<&str>(&command_name.as_str()) {
-        Ok((command_name, tree))
-    } else {
-        Err(InvalidConsumptionError(Some(command_name.into())))
-    }
+    dispatcher
+        .get_tree(command_name)
+        .map_err(|_| InvalidConsumptionError(Some(command_name.into())))
 }
 
 pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
@@ -44,11 +38,13 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
             argument(ARG_COMMAND, consume_arg_command).execute(&|sender, args| {
                 let dispatcher = DISPATCHER.get_or_init(dispatcher_init);
 
-                let (name, tree) = parse_arg_command(args, dispatcher)?;
+                let tree = parse_arg_command(args, dispatcher)?;
 
                 sender.send_message(TextComponent::text(&format!(
                     "{} - {} Usage: {}",
-                    name, tree.description, tree
+                    tree.names.join("/"),
+                    tree.description,
+                    tree
                 )));
 
                 Ok(())
@@ -57,15 +53,19 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
         .execute(&|sender, _args| {
             let dispatcher = DISPATCHER.get_or_init(dispatcher_init);
 
-            let mut names: Vec<&str> = dispatcher.commands.keys().copied().collect();
-            names.sort();
+            let mut keys: Vec<&str> = dispatcher.commands.keys().copied().collect();
+            keys.sort();
 
-            for name in names {
-                let tree = &dispatcher.commands[name];
+            for key in keys {
+                let Command::Tree(tree) = &dispatcher.commands[key] else {
+                    continue;
+                };
 
                 sender.send_message(TextComponent::text(&format!(
                     "{} - {} Usage: {}",
-                    name, tree.description, tree
+                    tree.names.join("/"),
+                    tree.description,
+                    tree
                 )));
             }
 

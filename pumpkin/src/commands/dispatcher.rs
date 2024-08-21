@@ -1,7 +1,7 @@
 use crate::commands::dispatcher::InvalidTreeError::{
     InvalidConsumptionError, InvalidRequirementError,
 };
-use crate::commands::tree::{CommandTree, ConsumedArgs, NodeType, RawArgs};
+use crate::commands::tree::{Command, CommandTree, ConsumedArgs, NodeType, RawArgs};
 use crate::commands::CommandSender;
 use std::collections::HashMap;
 
@@ -17,7 +17,7 @@ pub(crate) enum InvalidTreeError {
 }
 
 pub(crate) struct CommandDispatcher<'a> {
-    pub(crate) commands: HashMap<&'a str, CommandTree<'a>>,
+    pub(crate) commands: HashMap<&'a str, Command<'a>>,
 }
 
 /// Stores registered [CommandTree]s and dispatches commands to them.
@@ -28,7 +28,7 @@ impl<'a> CommandDispatcher<'a> {
         let key = parts.next().ok_or("Empty Command")?;
         let raw_args: Vec<&str> = parts.rev().collect();
 
-        let tree = self.commands.get(key).ok_or("Command not found")?;
+        let tree = self.get_tree(key)?;
 
         // try paths until fitting path is found
         for path in tree.iter_paths() {
@@ -50,6 +50,21 @@ impl<'a> CommandDispatcher<'a> {
         }
 
         Err(format!("Invalid Syntax. Usage: {}", tree))
+    }
+
+    pub(crate) fn get_tree(&'a self, key: &str) -> Result<&'a CommandTree<'a>, String> {
+        let command = self.commands.get(key).ok_or("Command not found")?;
+
+        match command {
+            Command::Tree(tree) => Ok(tree),
+            Command::Alias(target) => {
+                let Some(Command::Tree(tree)) = &self.commands.get(target) else {
+                    println!("Error while parsing command alias \"{key}\": pointing to \"{target}\" which is not a valid tree");
+                    return Err("Internal Error (See logs for details)".into());
+                };
+                Ok(tree)
+            }
+        }
     }
 
     fn try_is_fitting_path(
@@ -104,9 +119,9 @@ impl<'a> CommandDispatcher<'a> {
         let primary_name = names.next().expect("at least one name must be provided");
 
         for &name in names {
-            self.commands.insert(name, tree.clone());
+            self.commands.insert(name, Command::Alias(primary_name));
         }
 
-        self.commands.insert(primary_name, tree);
+        self.commands.insert(primary_name, Command::Tree(tree));
     }
 }
