@@ -168,10 +168,7 @@ impl ByteBuffer {
     /// some, then it also calls the `write` closure.
     pub fn put_option<T>(&mut self, val: &Option<T>, write: impl FnOnce(&mut Self, &T)) {
         self.put_bool(val.is_some());
-        match val {
-            Some(v) => write(self, v),
-            None => {}
-        }
+        if let Some(v) = val { write(self, v) }
     }
 
     pub fn get_list<T>(&mut self, val: impl Fn(&mut Self) -> T) -> Vec<T> {
