@@ -400,6 +400,10 @@ impl Client {
     }
 
     pub fn handle_set_creative_slot(&mut self, _server: &mut Server, packet: SSetCreativeSlot) {
+        let gamemode = self.player.as_ref().unwrap().gamemode;
+        if gamemode != GameMode::Creative {
+            self.kick("CHEATER")
+        }
         let inventory = &mut self.player.as_mut().unwrap().inventory;
 
         inventory.set_slot(packet.slot as usize, packet.clicked_item.to_item(), false);
