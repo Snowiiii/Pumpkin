@@ -3,9 +3,10 @@ use pumpkin_world::item::Item;
 use serde::{
     de::{self, SeqAccess, Visitor},
     Deserialize,
+    Serialize
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 #[allow(dead_code)]
 pub struct Slot {
     item_count: VarInt,
@@ -83,12 +84,29 @@ impl Slot {
             item_count: self.item_count.0.try_into().unwrap(),
         })
     }
+
+    pub const fn empty() -> Self {
+        Slot {
+            item_count: VarInt(0),
+            item_id: None,
+            num_components_to_add: None,
+            num_components_to_remove: None,
+            components_to_add: None,
+            components_to_remove: None,
+        }
+    }
 }
-impl From<Slot> for Item {
-    fn from(slot: Slot) -> Self {
-        Item {
-            item_count: slot.item_count.0.try_into().unwrap(),
-            item_id: slot.item_id.unwrap().0.try_into().unwrap(),
+
+impl From<&Item> for Slot {
+    fn from(item: &Item) -> Self {
+        Slot {
+            item_count: item.item_count.into(),
+            item_id: Some(item.item_id.into()),
+            // TODO: add these
+            num_components_to_add: None,
+            num_components_to_remove: None,
+            components_to_add: None,
+            components_to_remove: None,
         }
     }
 }

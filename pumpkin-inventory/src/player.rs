@@ -95,4 +95,13 @@ impl PlayerInventory {
         debug_assert!((0..9).contains(&self.selected));
         self.items[self.selected + 36 - 9].as_ref()
     }
+
+    pub fn slots(&self) -> Vec<Option<&Item>> {
+        let mut slots = vec![self.crafting_output.as_ref()];
+        slots.extend(self.crafting.iter().map(|c|c.as_ref()));
+        slots.extend(self.armor.iter().map(|c|c.as_ref()));
+        slots.extend(self.items.iter().map(|c|c.as_ref()));
+        slots.push(self.offhand.as_ref());
+        slots
+    }
 }
