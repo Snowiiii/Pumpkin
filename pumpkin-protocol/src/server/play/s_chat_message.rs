@@ -14,6 +14,7 @@ pub struct SChatMessage {
     pub salt: i64,
     pub signature: Option<Bytes>,
     pub messagee_count: VarInt,
+    // TODO: Properly implement BitSet decoding
     // acknowledged: BitSet,
 }
 
@@ -24,7 +25,7 @@ impl ServerPacket for SChatMessage {
             message: bytebuf.get_string().unwrap(),
             timestamp: bytebuf.get_i64(),
             salt: bytebuf.get_i64(),
-            signature: bytebuf.get_option(|v| v.copy_to_bytes(255)),
+            signature: bytebuf.get_option(|v| v.copy_to_bytes(256)),
             messagee_count: bytebuf.get_var_int(),
         })
     }
