@@ -204,7 +204,7 @@ impl Client {
         };
         let player = self.player.as_mut().unwrap();
         let id = player.entity_id();
-        server.broadcast_packet_expect(
+        server.broadcast_packet_except(
             &[&self.token],
             &CEntityAnimation::new(id.into(), animation as u8),
         )
@@ -305,7 +305,7 @@ impl Client {
                         let packet = &CHurtAnimation::new(&entity_id, attacker_player.entity.yaw);
                         self.send_packet(packet);
                         client.send_packet(packet);
-                        server.broadcast_packet_expect(
+                        server.broadcast_packet_except(
                             &[self.token.as_ref(), token.as_ref()],
                             &CHurtAnimation::new(&entity_id, 10.0),
                         )

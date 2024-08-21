@@ -141,11 +141,11 @@ impl Server {
         if client.is_player() {
             let id = client.player.as_ref().unwrap().entity_id();
             let uuid = client.gameprofile.as_ref().unwrap().id;
-            self.broadcast_packet_expect(
+            self.broadcast_packet_except(
                 &[&client.token],
                 &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]),
             );
-            self.broadcast_packet_expect(&[&client.token], &CRemoveEntities::new(&[id.into()]))
+            self.broadcast_packet_except(&[&client.token], &CRemoveEntities::new(&[id.into()]))
         }
     }
 
@@ -241,7 +241,7 @@ impl Server {
         let gameprofile = client.gameprofile.as_ref().unwrap();
 
         // spawn player for every client
-        self.broadcast_packet_expect(
+        self.broadcast_packet_except(
             &[&client.token],
             // TODO: add velo
             &CSpawnEntity::new(
@@ -327,7 +327,8 @@ impl Server {
         }
     }
 
-    pub fn broadcast_packet_expect<P>(&self, from: &[&Token], packet: &P)
+    /// Sends a packet to all players except those specified in `from`
+    pub fn broadcast_packet_except<P>(&self, from: &[&Token], packet: &P)
     where
         P: ClientPacket,
     {
