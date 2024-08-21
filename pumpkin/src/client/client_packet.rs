@@ -13,7 +13,7 @@ use pumpkin_protocol::{
     },
     ConnectionState, KnownPack, CURRENT_MC_PROTOCOL,
 };
-use pumpkin_text::TextComponent;
+use pumpkin_core::text::TextComponent;
 use rsa::Pkcs1v15Encrypt;
 use sha1::{Digest, Sha1};
 

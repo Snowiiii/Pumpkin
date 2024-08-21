@@ -1,6 +1,6 @@
 use crate::server::CURRENT_MC_VERSION;
+use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_protocol::CURRENT_MC_PROTOCOL;
-use pumpkin_text::{color::NamedColor, TextComponent};
 
 use crate::commands::tree::CommandTree;
 

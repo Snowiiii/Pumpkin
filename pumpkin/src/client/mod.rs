@@ -36,7 +36,7 @@ use pumpkin_protocol::{
     },
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
-use pumpkin_text::TextComponent;
+use pumpkin_core::text::TextComponent;
 
 use std::io::Read;
 use thiserror::Error;

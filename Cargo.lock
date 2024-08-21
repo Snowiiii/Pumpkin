@@ -1203,11 +1203,11 @@ dependencies = [
  "num-bigint",
  "num-derive",
  "num-traits",
+ "pumpkin-core",
  "pumpkin-entity",
  "pumpkin-inventory",
  "pumpkin-protocol",
  "pumpkin-registry",
- "pumpkin-text",
  "pumpkin-world",
  "rand",
  "rayon",
@@ -1222,6 +1222,15 @@ dependencies = [
  "thiserror",
  "tokio",
  "toml",
+ "uuid",
+]
+
+[[package]]
+name = "pumpkin-core"
+version = "0.1.0"
+dependencies = [
+ "fastnbt",
+ "serde",
  "uuid",
 ]
 
@@ -1264,8 +1273,8 @@ dependencies = [
  "log",
  "num-derive",
  "num-traits",
+ "pumpkin-core",
  "pumpkin-macros",
- "pumpkin-text",
  "pumpkin-world",
  "serde",
  "serde_json",
@@ -1280,18 +1289,9 @@ version = "0.1.0"
 dependencies = [
  "fastnbt",
  "fastsnbt",
+ "pumpkin-core",
  "pumpkin-protocol",
- "pumpkin-text",
  "serde",
-]
-
-[[package]]
-name = "pumpkin-text"
-version = "0.1.0"
-dependencies = [
- "fastnbt",
- "serde",
- "uuid",
 ]
 
 [[package]]

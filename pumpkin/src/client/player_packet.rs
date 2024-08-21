@@ -22,7 +22,7 @@ use pumpkin_protocol::{
         SUseItemOn, Status,
     },
 };
-use pumpkin_text::TextComponent;
+use pumpkin_core::text::TextComponent;
 use pumpkin_world::block::BlockFace;
 use pumpkin_world::global_registry;
 
