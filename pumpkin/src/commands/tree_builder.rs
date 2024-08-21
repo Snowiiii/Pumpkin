@@ -11,10 +11,23 @@ impl<'a> CommandTree<'a> {
         self
     }
 
-    pub fn new(description: &'a str) -> Self {
+    /// provide at least one name
+    pub fn new<const NAME_COUNT: usize>(
+        names: [&'a str; NAME_COUNT],
+        description: &'a str,
+    ) -> Self {
+        assert!(NAME_COUNT > 0);
+
+        let mut names_vec = Vec::with_capacity(NAME_COUNT);
+
+        for name in names {
+            names_vec.push(name);
+        }
+
         Self {
             nodes: Vec::new(),
             children: Vec::new(),
+            names: names_vec,
             description,
         }
     }

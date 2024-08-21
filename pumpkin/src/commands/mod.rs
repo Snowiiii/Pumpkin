@@ -12,6 +12,7 @@ mod cmd_stop;
 mod dispatcher;
 mod tree;
 mod tree_builder;
+mod tree_format;
 
 pub enum CommandSender<'a> {
     Rcon(&'a mut Vec<String>),
@@ -70,14 +71,14 @@ static DISPATCHER: OnceLock<CommandDispatcher> = OnceLock::new();
 
 /// create [CommandDispatcher] instance for [DISPATCHER]
 fn dispatcher_init<'a>() -> CommandDispatcher<'a> {
-    let mut map = HashMap::new();
+    let mut dispatcher = CommandDispatcher {
+        commands: HashMap::new(),
+    };
 
-    map.insert(cmd_pumpkin::NAME, cmd_pumpkin::init_command_tree());
-    map.insert(cmd_gamemode::NAME, cmd_gamemode::init_command_tree());
-    map.insert(cmd_stop::NAME, cmd_stop::init_command_tree());
-    map.insert(cmd_help::NAME, cmd_help::init_command_tree());
-    map.insert(cmd_help::ALIAS, cmd_help::init_command_tree());
-    CommandDispatcher { commands: map }
+    dispatcher.register(cmd_pumpkin::init_command_tree());
+    dispatcher.register(cmd_gamemode::init_command_tree());
+    dispatcher.register(cmd_stop::init_command_tree());
+    dispatcher.register(cmd_help::init_command_tree());
 }
 
 pub fn handle_command(sender: &mut CommandSender, cmd: &str) {
