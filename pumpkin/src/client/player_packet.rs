@@ -302,7 +302,7 @@ impl Client {
                     if config.hurt_animation {
                         // TODO
                         // thats how we prevent borrow errors :c
-                        let packet = &CHurtAnimation::new(&entity_id, 10.0);
+                        let packet = &CHurtAnimation::new(&entity_id, attacker_player.entity.yaw);
                         self.send_packet(packet);
                         client.send_packet(packet);
                         server.broadcast_packet_expect(
