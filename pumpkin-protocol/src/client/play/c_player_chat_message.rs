@@ -81,16 +81,14 @@ impl<'a> ClientPacket for CPlayerChatMessage<'a> {
         for previous_message in self.previous_messages {
             bytebuf.put_var_int(&previous_message.message_id);
             if let Some(prev_sig) = previous_message.signature {
+                // TODO: validate whether this should be None or not
                 bytebuf.put_slice(prev_sig);
             }
         }
 
-        if let Some(unsigned_component) = self.unsigned_content.as_ref() {
-            bytebuf.put_bool(true);
-            bytebuf.put_slice(unsigned_component.encode().as_slice());
-        } else {
-            bytebuf.put_bool(false);
-        }
+        bytebuf.put_option(&self.unsigned_content, |p, v| {
+            p.put_slice(v.encode().as_slice())
+        });
 
         bytebuf.put_var_int(&self.filter_type);
         match FilterType::from_i32(self.filter_type.0) {
@@ -108,12 +106,7 @@ impl<'a> ClientPacket for CPlayerChatMessage<'a> {
 
         bytebuf.put_var_int(&self.chat_type);
         bytebuf.put_slice(self.sender_name.encode().as_slice());
-        if let Some(target) = &self.target_name {
-            bytebuf.put_bool(true);
-            bytebuf.put_slice(target.encode().as_slice());
-        } else {
-            bytebuf.put_bool(false);
-        }
+        bytebuf.put_option(&self.target_name, |p, v| p.put_slice(v.encode().as_slice()));
     }
 }
 
