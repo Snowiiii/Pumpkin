@@ -48,6 +48,14 @@ impl ser::Error for SerializerError {
     }
 }
 
+// General notes on the serializer:
+//
+// Primitives are written as-is
+// Strings automatically pre-pend a varint
+// Enums are written as a varint of the index
+// Structs are ignored
+// Iterables' values are written in order, but NO information (e.g. size) about the
+// iterable itself is written (list sizes should be a seperate field)
 impl<'a> ser::Serializer for &'a mut Serializer {
     type Ok = ();
     type Error = SerializerError;
@@ -121,7 +129,8 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     where
         T: ?Sized + Serialize,
     {
-        unimplemented!()
+        self.output.put_var_int(&_variant_index.into());
+        _value.serialize(self)
     }
     fn serialize_none(self) -> Result<Self::Ok, Self::Error> {
         self.output.put_bool(false);
@@ -160,7 +169,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         unimplemented!()
     }
     fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple, Self::Error> {
-        unimplemented!()
+        Ok(self)
     }
     fn serialize_tuple_struct(
         self,
@@ -176,7 +185,9 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         _variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
-        unimplemented!()
+        // Serialize ENUM index as varint
+        self.output.put_var_int(&_variant_index.into());
+        Ok(self)
     }
     fn serialize_u128(self, _v: u128) -> Result<Self::Ok, Self::Error> {
         unimplemented!()
@@ -209,7 +220,9 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         _variant_index: u32,
         _variant: &'static str,
     ) -> Result<Self::Ok, Self::Error> {
-        todo!()
+        // For ENUMs, only write enum index as varint
+        self.output.put_var_int(&_variant_index.into());
+        Ok(())
     }
 }
 
@@ -241,11 +254,11 @@ impl<'a> ser::SerializeTuple for &'a mut Serializer {
     where
         T: ?Sized + Serialize,
     {
-        todo!()
+        _value.serialize(&mut **self)
     }
 
     fn end(self) -> Result<(), Self::Error> {
-        todo!()
+        Ok(())
     }
 }
 
