@@ -42,7 +42,6 @@ use pumpkin_protocol::{
 };
 
 use pumpkin_inventory::WindowType;
-use pumpkin_protocol::bytebuf::ByteBuffer;
 use pumpkin_protocol::client::play::COpenScreen;
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::Item;

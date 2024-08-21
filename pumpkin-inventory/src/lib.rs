@@ -44,8 +44,10 @@ pub enum WindowType {
 
 impl WindowType {
     pub const fn default_title(&self) -> &'static str {
-        match self {
+        // TODO: Add titles here:
+        /*match self {
             _ => "WINDOW TITLE",
-        }
+        }*/
+        "WINDOW TITLE"
     }
 }

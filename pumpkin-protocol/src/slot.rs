@@ -2,7 +2,7 @@ use crate::VarInt;
 use pumpkin_world::item::Item;
 use serde::ser::SerializeSeq;
 use serde::{
-    de::{self, SeqAccess, Visitor},
+    de::{self, SeqAccess},
     Deserialize, Serialize, Serializer,
 };
 
@@ -128,7 +128,6 @@ impl Serialize for Slot {
         }
     }
 }
-
 
 impl Slot {
     pub fn to_item(self) -> Option<Item> {
