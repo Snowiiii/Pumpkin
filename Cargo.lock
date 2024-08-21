@@ -1229,6 +1229,7 @@ dependencies = [
 name = "pumpkin-core"
 version = "0.1.0"
 dependencies = [
+ "colored",
  "fastnbt",
  "serde",
  "uuid",

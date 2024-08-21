@@ -3,6 +3,7 @@ use std::borrow::Cow;
 
 use click::ClickEvent;
 use color::Color;
+use colored::Colorize;
 use fastnbt::SerOpts;
 use hover::HoverEvent;
 use serde::{Deserialize, Serialize};
@@ -37,6 +38,36 @@ impl<'a> TextComponent<'a> {
             content: TextContent::Text { text: text.into() },
             style: Style::default(),
         }
+    }
+
+    pub fn to_pretty_console(self) -> String {
+        let style = self.style;
+        let color = style.color;
+        let mut text = match self.content {
+            TextContent::Text { text } => text.into_owned(),
+            TextContent::Translate { translate, with: _ } => translate.into_owned(),
+            TextContent::EntityNames {
+                selector,
+                separator: _,
+            } => selector.into_owned(),
+            TextContent::Keybind { keybind } => keybind.into_owned(),
+        };
+        if let Some(color) = color {
+            text = color.console_color(&text).to_string();
+        }
+        if style.bold.is_some() {
+            text = text.bold().to_string();
+        }
+        if style.italic.is_some() {
+            text = text.italic().to_string();
+        }
+        if style.underlined.is_some() {
+            text = text.underline().to_string();
+        }
+        if style.strikethrough.is_some() {
+            text = text.strikethrough().to_string();
+        }
+        text
     }
 }
 

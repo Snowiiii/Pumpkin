@@ -24,7 +24,7 @@ impl<'a> CommandSender<'a> {
     pub fn send_message(&mut self, text: TextComponent) {
         match self {
             // TODO: add color and stuff to console
-            CommandSender::Console => log::info!("{:?}", text.content),
+            CommandSender::Console => log::info!("{}", text.to_pretty_console()),
             CommandSender::Player(c) => c.send_system_message(text),
             CommandSender::Rcon(s) => s.push(format!("{:?}", text.content)),
         }
