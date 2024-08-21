@@ -26,7 +26,7 @@ impl<'a> CommandSender<'a> {
             // TODO: add color and stuff to console
             CommandSender::Console => log::info!("{}", text.to_pretty_console()),
             CommandSender::Player(c) => c.send_system_message(text),
-            CommandSender::Rcon(s) => s.push(format!("{}", text.to_pretty_console())),
+            CommandSender::Rcon(s) => s.push(text.to_pretty_console()),
         }
     }
 
