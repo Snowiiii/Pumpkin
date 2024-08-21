@@ -96,6 +96,21 @@ Then run:
 RUSTFLAGS="-C target-cpu=native" cargo run --release
 ```
 
+### Docker
+
+Experimental Docker support is available.
+The image is currently not published anywhere, but you can use the following command to build it:
+
+```shell
+docker build . -t pumpkin
+```
+
+To run it use the following command:
+
+```shell
+docker run --rm -v "./world:/pumpkin/world" pumpkin
+```
+
 ## Contributions
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md)
