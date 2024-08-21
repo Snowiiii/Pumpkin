@@ -32,6 +32,7 @@ mod c_sync_player_position;
 mod c_system_chat_message;
 mod c_unload_chunk;
 mod c_update_entity_pos;
+mod c_update_entity_pos_rot;
 mod c_update_entity_rot;
 mod c_worldevent;
 mod player_action;
