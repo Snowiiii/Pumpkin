@@ -122,15 +122,15 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     fn serialize_newtype_variant<T>(
         self,
         _name: &'static str,
-        _variant_index: u32,
+        variant_index: u32,
         _variant: &'static str,
-        _value: &T,
+        value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + Serialize,
     {
-        self.output.put_var_int(&_variant_index.into());
-        _value.serialize(self)
+        self.output.put_var_int(&variant_index.into());
+        value.serialize(self)
     }
     fn serialize_none(self) -> Result<Self::Ok, Self::Error> {
         self.output.put_bool(false);
@@ -181,12 +181,12 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     fn serialize_tuple_variant(
         self,
         _name: &'static str,
-        _variant_index: u32,
+        variant_index: u32,
         _variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
         // Serialize ENUM index as varint
-        self.output.put_var_int(&_variant_index.into());
+        self.output.put_var_int(&variant_index.into());
         Ok(self)
     }
     fn serialize_u128(self, _v: u128) -> Result<Self::Ok, Self::Error> {
@@ -217,11 +217,11 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     fn serialize_unit_variant(
         self,
         _name: &'static str,
-        _variant_index: u32,
+        variant_index: u32,
         _variant: &'static str,
     ) -> Result<Self::Ok, Self::Error> {
         // For ENUMs, only write enum index as varint
-        self.output.put_var_int(&_variant_index.into());
+        self.output.put_var_int(&variant_index.into());
         Ok(())
     }
 }
@@ -250,11 +250,11 @@ impl<'a> ser::SerializeTuple for &'a mut Serializer {
     type Ok = ();
     type Error = SerializerError;
 
-    fn serialize_element<T>(&mut self, _value: &T) -> Result<(), Self::Error>
+    fn serialize_element<T>(&mut self, value: &T) -> Result<(), Self::Error>
     where
         T: ?Sized + Serialize,
     {
-        _value.serialize(&mut **self)
+        value.serialize(&mut **self)
     }
 
     fn end(self) -> Result<(), Self::Error> {
