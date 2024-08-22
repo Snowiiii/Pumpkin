@@ -13,9 +13,3 @@ pub struct SUseItem {
     pub yaw: f32,
     pub pitch: f32,
 }
-
-#[derive(FromPrimitive)]
-pub enum Hand {
-    MainHand = 0,
-    OffHand,
-}
