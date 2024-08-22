@@ -20,7 +20,7 @@ use pumpkin_protocol::{
         config::CConfigDisconnect,
         login::CLoginDisconnect,
         play::{
-            CGameEvent, CPlayDisconnect, CSetContainerContent, CSyncPlayerPostion,
+            CGameEvent, CPlayDisconnect, CSyncPlayerPostion,
             CSystemChatMessge,
         },
     },
@@ -41,10 +41,6 @@ use pumpkin_protocol::{
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
 
-use pumpkin_inventory::WindowType;
-use pumpkin_protocol::client::play::COpenScreen;
-use pumpkin_protocol::slot::Slot;
-use pumpkin_world::item::Item;
 use std::io::Read;
 use thiserror::Error;
 

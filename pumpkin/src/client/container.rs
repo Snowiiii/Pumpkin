@@ -1,6 +1,6 @@
 use pumpkin_core::text::TextComponent;
 use pumpkin_inventory::WindowType;
-use pumpkin_protocol::client::play::{COpenScreen, CSetContainerContent};
+use pumpkin_protocol::client::play::{COpenScreen, CSetContainerContent, CSetContainerSlot};
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::Item;
 
@@ -67,5 +67,19 @@ impl super::Client {
         let packet =
             CSetContainerContent::new(window_type as u8 + 1, 0.into(), &slots, &carried_item);
         self.send_packet(&packet);
+    }
+
+    pub fn set_container_slot(
+        &mut self,
+        window_type: WindowType,
+        slot: usize,
+        item: Option<&Item>,
+    ) {
+        self.send_packet(&CSetContainerSlot::new(
+            window_type as i8,
+            0,
+            slot,
+            &item.into(),
+        ))
     }
 }
