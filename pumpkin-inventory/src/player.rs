@@ -51,7 +51,7 @@ impl PlayerInventory {
             1..=4 => self.crafting[slot - 1] = item,
             5..=8 => {
                 match item {
-                    None => self.armor[slot - 4] = None,
+                    None => self.armor[slot - 5] = None,
                     Some(item) => {
                         // TODO: Replace asserts with error handling
                         match slot - 5 {
