@@ -3,7 +3,7 @@ use pumpkin_macros::packet;
 
 use crate::{
     bytebuf::{ByteBuffer, DeserializerError},
-    ServerPacket, VarInt,
+    FixedBitSet, ServerPacket, VarInt,
 };
 
 // derive(Deserialize)]
@@ -14,8 +14,7 @@ pub struct SChatMessage {
     pub salt: i64,
     pub signature: Option<Bytes>,
     pub messagee_count: VarInt,
-    // TODO: Properly implement BitSet decoding
-    // acknowledged: BitSet,
+    pub acknowledged: FixedBitSet,
 }
 
 // TODO
@@ -27,6 +26,7 @@ impl ServerPacket for SChatMessage {
             salt: bytebuf.get_i64(),
             signature: bytebuf.get_option(|v| v.copy_to_bytes(256)),
             messagee_count: bytebuf.get_var_int(),
+            acknowledged: bytebuf.get_fixed_bitset(20),
         })
     }
 }

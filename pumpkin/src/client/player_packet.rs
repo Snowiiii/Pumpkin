@@ -212,7 +212,13 @@ impl Client {
 
     pub fn handle_chat_message(&mut self, server: &mut Server, chat_message: SChatMessage) {
         dbg!("got message");
+
         let message = chat_message.message;
+        if message.len() > 256 {
+            self.kick("Oversized message");
+            return;
+        }
+
         // TODO: filter message & validation
         let gameprofile = self.gameprofile.as_ref().unwrap();
 
@@ -227,8 +233,7 @@ impl Client {
                 chat_message.salt,
                 &[],
                 Some(TextComponent::text(&message)),
-                pumpkin_protocol::VarInt(FilterType::PassThrough as i32),
-                None,
+                FilterType::PassThrough,
                 1.into(),
                 TextComponent::text(&gameprofile.name.clone()),
                 None,
