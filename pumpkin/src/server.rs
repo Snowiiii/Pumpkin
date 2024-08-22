@@ -17,7 +17,6 @@ use mio::{event::Event, Poll, Token};
 use num_traits::ToPrimitive;
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_protocol::{
-    bytebuf::ByteBuffer,
     client::{
         config::CPluginMessage,
         play::{
@@ -364,14 +363,15 @@ impl Server {
             chunk_z: 0.into(),
         });
 
-        while let Some((chunk_pos, chunk_data)) = chunk_receiver.recv().await {
+        while let Some((_chunk_pos, chunk_data)) = chunk_receiver.recv().await {
             // dbg!(chunk_pos);
             let chunk_data = match chunk_data {
                 Ok(d) => d,
                 Err(_) => continue,
             };
             #[cfg(debug_assertions)]
-            if chunk_pos == (0, 0) {
+            if _chunk_pos == (0, 0) {
+                use pumpkin_protocol::bytebuf::ByteBuffer;
                 let mut test = ByteBuffer::empty();
                 CChunkData(&chunk_data).write(&mut test);
                 let len = test.buf().len();
