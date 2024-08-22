@@ -9,7 +9,7 @@ env:
 
 jobs:
   format:
-    name: Rust project - latest
+    name: Check formatting
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -23,7 +23,7 @@ jobs:
 
       - run: cargo fmt --check
   clippy:
-    name: Rust project - latest
+    name: Run lints
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -37,7 +37,7 @@ jobs:
 
       - run: cargo clippy --all-targets --all-features --no-default-features -- -D warnings
   build_and_test:
-    name: Rust project - latest
+    name: Build project and test
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -52,7 +52,7 @@ jobs:
       - run: cargo build --verbose
       - run: cargo test --verbose
   build_release:
-    name: Rust project - latest
+    name: Build project in release
     runs-on: ubuntu-latest
     strategy:
       matrix:
