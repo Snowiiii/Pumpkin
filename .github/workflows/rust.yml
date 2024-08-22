@@ -65,4 +65,17 @@ jobs:
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
 
       - run: cargo build --verbose --release
-      - run: cargo clippy --release --all-targets --all-features --no-default-features -- -D warnings
+  clippy_release:
+    name: Run lints in release mode
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain:
+          - stable
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      
+      - run: cargo clippy --release --all-targets --all-features --no-default-features -- -D warnings 
