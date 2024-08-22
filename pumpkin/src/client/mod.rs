@@ -50,6 +50,7 @@ use thiserror::Error;
 
 pub mod authentication;
 mod client_packet;
+mod container;
 pub mod player_packet;
 
 pub struct PlayerConfig {
@@ -180,73 +181,6 @@ impl Client {
         let player = self.player.as_mut().unwrap();
         player.gamemode = gamemode;
         self.send_packet(&CGameEvent::new(3, gamemode.to_f32().unwrap()));
-    }
-
-    pub fn open_container(
-        &mut self,
-        window_type: WindowType,
-        minecraft_menu_id: &str,
-        window_title: Option<&str>,
-        items: Option<Vec<Option<&Item>>>,
-        carried_item: Option<&Item>,
-    ) {
-        let menu_protocol_id = (*pumpkin_world::global_registry::REGISTRY
-            .get("minecraft:menu")
-            .unwrap()
-            .entries
-            .get(minecraft_menu_id)
-            .expect("Should be a valid menu id")
-            .get("protocol_id")
-            .unwrap())
-        .into();
-        let title = TextComponent::text(window_title.unwrap_or(window_type.default_title()));
-        self.send_packet(&COpenScreen::new(
-            (window_type.clone() as u8 + 1).into(),
-            menu_protocol_id,
-            title,
-        ));
-        self.set_container_content(window_type, items, carried_item);
-    }
-
-    pub fn set_container_content<'a>(
-        &mut self,
-        window_type: WindowType,
-        items: Option<Vec<Option<&'a Item>>>,
-        carried_item: Option<&'a Item>,
-    ) {
-        let player = self.player.as_ref().unwrap();
-
-        let slots: Vec<Slot> = {
-            if let Some(mut items) = items {
-                items.extend(player.inventory.slots());
-                items
-            } else {
-                player.inventory.slots()
-            }
-            .into_iter()
-            .map(|item| {
-                if let Some(item) = item {
-                    Slot::from(item)
-                } else {
-                    Slot::empty()
-                }
-            })
-            .collect()
-        };
-
-        let carried_item = {
-            if let Some(item) = carried_item {
-                item.into()
-            } else {
-                Slot::empty()
-            }
-        };
-        self.send_packet(&CSetContainerContent::new(
-            window_type as u8 + 1,
-            0.into(),
-            &slots,
-            &carried_item,
-        ));
     }
 
     pub async fn process_packets(&mut self, server: &mut Server) {
