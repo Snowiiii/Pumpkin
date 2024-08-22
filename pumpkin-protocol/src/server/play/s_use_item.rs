@@ -1,4 +1,3 @@
-use num_derive::FromPrimitive;
 use pumpkin_macros::packet;
 use serde::Deserialize;
 
