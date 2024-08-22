@@ -1,4 +1,4 @@
-use pumpkin_text::TextComponent;
+use pumpkin_core::text::TextComponent;
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
@@ -12,6 +12,7 @@ mod cmd_stop;
 mod dispatcher;
 mod tree;
 mod tree_builder;
+mod tree_format;
 
 pub enum CommandSender<'a> {
     Rcon(&'a mut Vec<String>),
@@ -23,9 +24,9 @@ impl<'a> CommandSender<'a> {
     pub fn send_message(&mut self, text: TextComponent) {
         match self {
             // TODO: add color and stuff to console
-            CommandSender::Console => log::info!("{:?}", text.content),
+            CommandSender::Console => log::info!("{}", text.to_pretty_console()),
             CommandSender::Player(c) => c.send_system_message(text),
-            CommandSender::Rcon(s) => s.push(format!("{:?}", text.content)),
+            CommandSender::Rcon(s) => s.push(text.to_pretty_console()),
         }
     }
 
@@ -70,15 +71,16 @@ static DISPATCHER: OnceLock<CommandDispatcher> = OnceLock::new();
 
 /// create [CommandDispatcher] instance for [DISPATCHER]
 fn dispatcher_init<'a>() -> CommandDispatcher<'a> {
-    let mut map = HashMap::new();
+    let mut dispatcher = CommandDispatcher {
+        commands: HashMap::new(),
+    };
 
-    map.insert(cmd_pumpkin::NAME, cmd_pumpkin::init_command_tree());
-    map.insert(cmd_gamemode::NAME, cmd_gamemode::init_command_tree());
-    map.insert(cmd_stop::NAME, cmd_stop::init_command_tree());
-    map.insert(cmd_help::NAME, cmd_help::init_command_tree());
-    map.insert(cmd_help::ALIAS, cmd_help::init_command_tree());
+    dispatcher.register(cmd_pumpkin::init_command_tree());
+    dispatcher.register(cmd_gamemode::init_command_tree());
+    dispatcher.register(cmd_stop::init_command_tree());
+    dispatcher.register(cmd_help::init_command_tree());
 
-    CommandDispatcher { commands: map }
+    dispatcher
 }
 
 pub fn handle_command(sender: &mut CommandSender, cmd: &str) {
@@ -86,7 +88,7 @@ pub fn handle_command(sender: &mut CommandSender, cmd: &str) {
 
     if let Err(err) = dispatcher.dispatch(sender, cmd) {
         sender.send_message(
-            TextComponent::text(&err).color_named(pumpkin_text::color::NamedColor::Red),
+            TextComponent::text(&err).color_named(pumpkin_core::text::color::NamedColor::Red),
         )
     }
 }

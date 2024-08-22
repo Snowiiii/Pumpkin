@@ -86,3 +86,6 @@ world/
 # project's binary configurations
 configuration.toml
 features.toml
+
+
+*.local.nbt

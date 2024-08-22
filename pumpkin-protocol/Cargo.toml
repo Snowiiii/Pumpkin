@@ -6,7 +6,7 @@ edition.workspace = true
 [dependencies]
 pumpkin-macros = { path = "../pumpkin-macros" }
 pumpkin-world =  { path = "../pumpkin-world" }
-pumpkin-text = { path = "../pumpkin-text" }
+pumpkin-core = { path = "../pumpkin-core" }
 
 bytes = "1.7"
 

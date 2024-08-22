@@ -1,7 +1,7 @@
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
+use pumpkin_core::text::TextComponent;
 use pumpkin_macros::packet;
-use pumpkin_text::TextComponent;
 use serde::Serialize;
 
 use crate::{bytebuf::ByteBuffer, uuid::UUID, BitSet, ClientPacket, VarInt};

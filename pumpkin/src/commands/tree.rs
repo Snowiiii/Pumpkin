@@ -2,6 +2,7 @@ use std::collections::{HashMap, VecDeque};
 
 use crate::commands::dispatcher::InvalidTreeError;
 use crate::commands::CommandSender;
+
 /// see [crate::commands::tree_builder::argument]
 pub(crate) type RawArgs<'a> = Vec<&'a str>;
 
@@ -31,9 +32,15 @@ pub(crate) enum NodeType<'a> {
     },
 }
 
+pub(crate) enum Command<'a> {
+    Tree(CommandTree<'a>),
+    Alias(&'a str),
+}
+
 pub(crate) struct CommandTree<'a> {
     pub(crate) nodes: Vec<Node<'a>>,
     pub(crate) children: Vec<usize>,
+    pub(crate) names: Vec<&'a str>,
     pub(crate) description: &'a str,
 }
 
@@ -50,57 +57,6 @@ impl<'a> CommandTree<'a> {
             path: Vec::<usize>::new(),
             todo,
         }
-    }
-
-    /// format possible paths as [String], using ```name``` as the command name
-    ///
-    /// todo: merge into single line
-    pub(crate) fn paths_formatted(&'a self, name: &str) -> String {
-        let paths: Vec<Vec<&NodeType>> = self
-            .iter_paths()
-            .map(|path| path.iter().map(|&i| &self.nodes[i].node_type).collect())
-            .collect();
-
-        let len = paths
-            .iter()
-            .map(|path| {
-                path.iter()
-                    .map(|node| match node {
-                        NodeType::ExecuteLeaf { .. } => 0,
-                        NodeType::Literal { string } => string.len() + 1,
-                        NodeType::Argument { name, .. } => name.len() + 3,
-                        NodeType::Require { .. } => 0,
-                    })
-                    .sum::<usize>()
-                    + name.len()
-                    + 2
-            })
-            .sum::<usize>();
-
-        let mut s = String::with_capacity(len);
-
-        for path in paths.iter() {
-            s.push(if paths.len() > 1 { '\n' } else { ' ' });
-            s.push('/');
-            s.push_str(name);
-            for node in path {
-                match node {
-                    NodeType::Literal { string } => {
-                        s.push(' ');
-                        s.push_str(string);
-                    }
-                    NodeType::Argument { name, .. } => {
-                        s.push(' ');
-                        s.push('<');
-                        s.push_str(name);
-                        s.push('>');
-                    }
-                    _ => {}
-                }
-            }
-        }
-
-        s
     }
 }
 

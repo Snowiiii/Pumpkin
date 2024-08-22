@@ -1,5 +1,5 @@
 [package]
-name = "pumpkin-text"
+name = "pumpkin-core"
 version.workspace = true
 edition.workspace = true
 
@@ -7,3 +7,4 @@ edition.workspace = true
 serde = { version = "1.0", features = ["derive"] }
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 uuid.workspace = true
+colored = "2"

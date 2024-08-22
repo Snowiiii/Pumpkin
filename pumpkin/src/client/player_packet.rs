@@ -7,6 +7,7 @@ use crate::{
     util::math::wrap_degrees,
 };
 use num_traits::FromPrimitive;
+use pumpkin_core::text::TextComponent;
 use pumpkin_entity::EntityId;
 use pumpkin_protocol::{
     client::play::{
@@ -22,7 +23,6 @@ use pumpkin_protocol::{
         SUseItemOn, Status,
     },
 };
-use pumpkin_text::TextComponent;
 use pumpkin_world::block::BlockFace;
 use pumpkin_world::global_registry;
 
@@ -204,7 +204,7 @@ impl Client {
         };
         let player = self.player.as_mut().unwrap();
         let id = player.entity_id();
-        server.broadcast_packet_expect(
+        server.broadcast_packet_except(
             &[&self.token],
             &CEntityAnimation::new(id.into(), animation as u8),
         )
@@ -302,10 +302,10 @@ impl Client {
                     if config.hurt_animation {
                         // TODO
                         // thats how we prevent borrow errors :c
-                        let packet = &CHurtAnimation::new(&entity_id, 10.0);
+                        let packet = &CHurtAnimation::new(&entity_id, attacker_player.entity.yaw);
                         self.send_packet(packet);
                         client.send_packet(packet);
-                        server.broadcast_packet_expect(
+                        server.broadcast_packet_except(
                             &[self.token.as_ref(), token.as_ref()],
                             &CHurtAnimation::new(&entity_id, 10.0),
                         )
@@ -400,7 +400,12 @@ impl Client {
     }
 
     pub fn handle_set_creative_slot(&mut self, _server: &mut Server, packet: SSetCreativeSlot) {
-        let inventory = &mut self.player.as_mut().unwrap().inventory;
+        let player = self.player.as_mut().unwrap();
+        if player.gamemode != GameMode::Creative {
+            self.kick("Invalid action, you can only do that if you are in creative");
+            return;
+        }
+        let inventory = &mut player.inventory;
 
         inventory.set_slot(packet.slot as usize, packet.clicked_item.to_item(), false);
     }

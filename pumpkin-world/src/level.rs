@@ -36,6 +36,8 @@ pub enum WorldError {
     ErrorDeserializingChunk(String),
     #[error("The requested block state id does not exist")]
     BlockStateIdNotFound,
+    #[error("The block is not inside of the chunk")]
+    BlockOutsideChunk,
 }
 
 #[derive(Error, Debug)]
