@@ -163,3 +163,9 @@ impl From<&Item> for Slot {
         }
     }
 }
+
+impl From<Option<&Item>> for Slot {
+    fn from(item: Option<&Item>) -> Self {
+        item.map(Slot::from).unwrap_or(Slot::empty())
+    }
+}
