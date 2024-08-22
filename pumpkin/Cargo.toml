@@ -38,7 +38,7 @@ rsa = "0.9.6"
 rsa-der = "0.3.0"
 
 # authentication
-reqwest = { version = "0.12.5", features = ["json"]}
+reqwest = { version = "0.12.5", default-features=false, features = ["json", "rustls-tls", "http2", "macos-system-configuration"]}
 
 sha1 = "0.10.6"
 digest = "=0.11.0-pre.9"
