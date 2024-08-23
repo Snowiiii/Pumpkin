@@ -1,6 +1,6 @@
 use pumpkin_core::text::TextComponent;
 use pumpkin_inventory::WindowType;
-use pumpkin_protocol::client::play::{COpenScreen, CSetContainerContent, CSetContainerSlot};
+use pumpkin_protocol::client::play::{CCloseContainer, COpenScreen, CSetContainerContent, CSetContainerSlot};
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::Item;
 
@@ -81,5 +81,13 @@ impl super::Client {
             slot,
             &item.into(),
         ))
+    }
+    
+    /// The official Minecraft client is weird, and will always just close *any* window that is opened when this gets sent 
+    pub fn close_container(
+        &mut self,
+        window_type: WindowType
+    ) {
+        self.send_packet(&CCloseContainer::new(window_type as u8))
     }
 }
