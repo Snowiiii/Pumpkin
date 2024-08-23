@@ -1,6 +1,7 @@
 use num_derive::ToPrimitive;
 
 pub mod player;
+pub mod window_property;
 
 /// https://wiki.vg/Inventory
 #[derive(Debug, ToPrimitive, Clone)]
