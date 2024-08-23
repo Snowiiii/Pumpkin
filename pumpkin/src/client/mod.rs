@@ -28,8 +28,8 @@ use pumpkin_protocol::{
         handshake::SHandShake,
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
         play::{
-            SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
-            SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition,
+            SChatCommand, SChatMessage, SClientInformationPlay, SCloseContainer, SConfirmTeleport,
+            SInteract, SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition,
             SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm,
             SUseItemOn,
         },
@@ -311,6 +311,9 @@ impl Client {
             }
             SPlayPingRequest::PACKET_ID => {
                 self.handle_play_ping_request(server, SPlayPingRequest::read(bytebuf).unwrap())
+            }
+            SCloseContainer::PACKET_ID => {
+                self.handle_close_container(server, SCloseContainer::read(bytebuf).unwrap())
             }
             _ => log::error!("Failed to handle player packet id {:#04x}", packet.id.0),
         }

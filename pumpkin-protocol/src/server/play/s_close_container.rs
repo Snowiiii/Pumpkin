@@ -1,7 +1,7 @@
 use pumpkin_macros::packet;
-use serde::Serialize;
+use serde::Deserialize;
 
-#[derive(Serialize)]
+#[derive(Deserialize)]
 #[packet(0x0F)]
 pub struct SCloseContainer {
     pub window_id: u8,
