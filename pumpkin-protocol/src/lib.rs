@@ -21,6 +21,7 @@ pub const MAX_PACKET_SIZE: i32 = 2097152;
 pub type Identifier = String;
 pub type VarIntType = i32;
 pub type VarLongType = i64;
+pub type FixedBitSet = bytes::Bytes;
 
 pub struct BitSet<'a>(pub VarInt, pub &'a [i64]);
 
@@ -188,8 +189,8 @@ pub struct StatusResponse {
     pub version: Version,
     pub players: Players,
     pub description: String,
-    pub favicon: String, // data:image/png;base64,<data>
-                         // Players, favicon ...
+    pub favicon: Option<String>, // data:image/png;base64,<data>
+                                 // Players, favicon ...
 }
 #[derive(Serialize)]
 pub struct Version {

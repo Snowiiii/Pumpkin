@@ -3,7 +3,7 @@ use num_derive::ToPrimitive;
 pub mod player;
 
 /// https://wiki.vg/Inventory
-#[derive(Debug, ToPrimitive)]
+#[derive(Debug, ToPrimitive, Clone)]
 pub enum WindowType {
     // not used
     Generic9x1,
@@ -40,4 +40,14 @@ pub enum WindowType {
     Smoker,
     CartographyTable,
     Stonecutter,
+}
+
+impl WindowType {
+    pub const fn default_title(&self) -> &'static str {
+        // TODO: Add titles here:
+        /*match self {
+            _ => "WINDOW TITLE",
+        }*/
+        "WINDOW TITLE"
+    }
 }

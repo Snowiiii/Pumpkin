@@ -2,23 +2,9 @@
 	"name": "Pumpkin",
 	"image": "mcr.microsoft.com/devcontainers/base:noble",
 	"features": {
-		// rust is needed for compiling the server's code
-		"ghcr.io/devcontainers/features/rust:1": {},
-		// java is needed for decompiling Mojang's server jar
-		"ghcr.io/devcontainers/features/java:1": {
-			"version": "21",
-			"jdkDistro": "oracle",
-			"installMaven": true,
-			"mavenVersion": "latest"
-		},
-		// python is needed for decompiling Mojang's server jar
-		"ghcr.io/devcontainers/features/python:1": {
-			"installTools": true,
-			"version": "3.7"
-		}
+		"ghcr.io/devcontainers/features/rust:1": {}
 	},
 	"mounts": [
-		// mount SSH config & public keys from host to enable SSH-based Git remotes
 		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,readonly,type=bind"
 	],
 	"forwardPorts": [
@@ -28,8 +14,7 @@
 		"vscode": {
 			"extensions": [
 				"eamodio.gitlens",
-				"Swellaby.rust-pack",
-				"vscjava.vscode-java-pack"
+				"Swellaby.rust-pack"
 			]
 		}
 	}

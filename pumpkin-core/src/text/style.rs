@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
+use super::{
     click::ClickEvent,
     color::{self, Color},
     hover::HoverEvent,

@@ -2,6 +2,7 @@ use std::{
     cell::{RefCell, RefMut},
     collections::HashMap,
     io::Cursor,
+    path::Path,
     rc::Rc,
     sync::{
         atomic::{AtomicI32, Ordering},
@@ -16,7 +17,6 @@ use mio::{event::Event, Poll, Token};
 use num_traits::ToPrimitive;
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_protocol::{
-    bytebuf::ByteBuffer,
     client::{
         config::CPluginMessage,
         play::{
@@ -140,11 +140,11 @@ impl Server {
         if client.is_player() {
             let id = client.player.as_ref().unwrap().entity_id();
             let uuid = client.gameprofile.as_ref().unwrap().id;
-            self.broadcast_packet_expect(
+            self.broadcast_packet_except(
                 &[&client.token],
                 &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]),
             );
-            self.broadcast_packet_expect(&[&client.token], &CRemoveEntities::new(&[id.into()]))
+            self.broadcast_packet_except(&[&client.token], &CRemoveEntities::new(&[id.into()]))
         }
     }
 
@@ -240,7 +240,7 @@ impl Server {
         let gameprofile = client.gameprofile.as_ref().unwrap();
 
         // spawn player for every client
-        self.broadcast_packet_expect(
+        self.broadcast_packet_except(
             &[&client.token],
             // TODO: add velo
             &CSpawnEntity::new(
@@ -326,7 +326,8 @@ impl Server {
         }
     }
 
-    pub fn broadcast_packet_expect<P>(&self, from: &[&Token], packet: &P)
+    /// Sends a packet to all players except those specified in `from`
+    pub fn broadcast_packet_except<P>(&self, from: &[&Token], packet: &P)
     where
         P: ClientPacket,
     {
@@ -362,14 +363,15 @@ impl Server {
             chunk_z: 0.into(),
         });
 
-        while let Some((chunk_pos, chunk_data)) = chunk_receiver.recv().await {
+        while let Some((_chunk_pos, chunk_data)) = chunk_receiver.recv().await {
             // dbg!(chunk_pos);
             let chunk_data = match chunk_data {
                 Ok(d) => d,
                 Err(_) => continue,
             };
             #[cfg(debug_assertions)]
-            if chunk_pos == (0, 0) {
+            if _chunk_pos == (0, 0) {
+                use pumpkin_protocol::bytebuf::ByteBuffer;
                 let mut test = ByteBuffer::empty();
                 CChunkData(&chunk_data).write(&mut test);
                 let len = test.buf().len();
@@ -408,7 +410,12 @@ impl Server {
     }
 
     pub fn build_response(config: &BasicConfiguration) -> StatusResponse {
-        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/icon.png");
+        let icon_path = concat!(env!("CARGO_MANIFEST_DIR"), "/icon.png");
+        let icon = if Path::new(icon_path).exists() {
+            Some(Self::load_icon(icon_path))
+        } else {
+            None
+        };
 
         StatusResponse {
             version: Version {
@@ -424,7 +431,7 @@ impl Server {
                 }],
             },
             description: config.motd.clone(),
-            favicon: Self::load_icon(path),
+            favicon: icon,
         }
     }
 

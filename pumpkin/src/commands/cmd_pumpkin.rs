@@ -1,15 +1,15 @@
 use crate::server::CURRENT_MC_VERSION;
+use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_protocol::CURRENT_MC_PROTOCOL;
-use pumpkin_text::{color::NamedColor, TextComponent};
 
 use crate::commands::tree::CommandTree;
 
-pub(crate) const NAME: &str = "pumpkin";
+const NAMES: [&str; 1] = ["pumpkin"];
 
 const DESCRIPTION: &str = "Display information about Pumpkin.";
 
 pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
-    CommandTree::new(DESCRIPTION).execute(&|sender, _| {
+    CommandTree::new(NAMES, DESCRIPTION).execute(&|sender, _| {
         let version = env!("CARGO_PKG_VERSION");
         let description = env!("CARGO_PKG_DESCRIPTION");
 

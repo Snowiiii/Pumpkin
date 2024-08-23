@@ -1,4 +1,4 @@
-use crate::{BitSet, VarInt, VarLongType};
+use crate::{BitSet, FixedBitSet, VarInt, VarLongType};
 use bytes::{Buf, BufMut, BytesMut};
 use core::str;
 use std::io::{self, Error, ErrorKind};
@@ -107,6 +107,10 @@ impl ByteBuffer {
         uuid::Uuid::from_slice(&bytes).expect("Failed to parse UUID")
     }
 
+    pub fn get_fixed_bitset(&mut self, bits: usize) -> FixedBitSet {
+        self.copy_to_bytes(bits.div_ceil(8))
+    }
+
     pub fn put_bool(&mut self, v: bool) {
         if v {
             self.buffer.put_u8(1);
@@ -168,9 +172,8 @@ impl ByteBuffer {
     /// some, then it also calls the `write` closure.
     pub fn put_option<T>(&mut self, val: &Option<T>, write: impl FnOnce(&mut Self, &T)) {
         self.put_bool(val.is_some());
-        match val {
-            Some(v) => write(self, v),
-            None => {}
+        if let Some(v) = val {
+            write(self, v)
         }
     }
 

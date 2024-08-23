@@ -51,7 +51,7 @@ impl PlayerInventory {
             1..=4 => self.crafting[slot - 1] = item,
             5..=8 => {
                 match item {
-                    None => self.armor[slot - 4] = None,
+                    None => self.armor[slot - 5] = None,
                     Some(item) => {
                         // TODO: Replace asserts with error handling
                         match slot - 5 {
@@ -94,5 +94,14 @@ impl PlayerInventory {
     pub fn held_item(&self) -> Option<&Item> {
         debug_assert!((0..9).contains(&self.selected));
         self.items[self.selected + 36 - 9].as_ref()
+    }
+
+    pub fn slots(&self) -> Vec<Option<&Item>> {
+        let mut slots = vec![self.crafting_output.as_ref()];
+        slots.extend(self.crafting.iter().map(|c| c.as_ref()));
+        slots.extend(self.armor.iter().map(|c| c.as_ref()));
+        slots.extend(self.items.iter().map(|c| c.as_ref()));
+        slots.push(self.offhand.as_ref());
+        slots
     }
 }

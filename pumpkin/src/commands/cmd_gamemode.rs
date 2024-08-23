@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use num_traits::FromPrimitive;
-use pumpkin_text::TextComponent;
+use pumpkin_core::text::TextComponent;
 
 use crate::commands::arg_player::{consume_arg_player, parse_arg_player};
 
@@ -15,7 +15,7 @@ use crate::commands::CommandSender;
 use crate::commands::CommandSender::Player;
 use crate::entity::player::GameMode;
 
-pub(crate) const NAME: &str = "gamemode";
+const NAMES: [&str; 1] = ["gamemode"];
 
 const DESCRIPTION: &str = "Change a player's gamemode.";
 
@@ -57,7 +57,7 @@ pub fn parse_arg_gamemode(consumed_args: &ConsumedArgs) -> Result<GameMode, Inva
 }
 
 pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
-    CommandTree::new(DESCRIPTION).with_child(
+    CommandTree::new(NAMES, DESCRIPTION).with_child(
         require(&|sender| sender.permission_lvl() >= 2).with_child(
             argument(ARG_GAMEMODE, consume_arg_gamemode)
                 .with_child(
