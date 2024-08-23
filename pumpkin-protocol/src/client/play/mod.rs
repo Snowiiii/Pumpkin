@@ -37,6 +37,7 @@ mod c_update_entity_rot;
 mod c_worldevent;
 mod player_action;
 mod c_close_container;
+mod c_set_container_property;
 
 pub use c_acknowledge_block::*;
 pub use c_actionbar::*;
@@ -77,3 +78,4 @@ pub use c_update_entity_rot::*;
 pub use c_worldevent::*;
 pub use player_action::*;
 pub use c_close_container::*;
+pub use c_set_container_property::*;
