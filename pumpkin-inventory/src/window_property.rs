@@ -6,28 +6,27 @@ pub trait WindowPropertyTrait: Sized {
 
 pub struct WindowProperty<T: WindowPropertyTrait> {
     window_property: T,
-    value: i16
+    value: i16,
 }
 
 impl<T: WindowPropertyTrait> WindowProperty<T> {
-    pub fn new(window_property: T,value: i16) -> Self {
+    pub fn new(window_property: T, value: i16) -> Self {
         Self {
             window_property,
-            value
+            value,
         }
     }
-    
-    pub fn into_packet(self) -> (i16,i16) {
+
+    pub fn into_packet(self) -> (i16, i16) {
         (self.window_property.to_id(), self.value)
     }
 }
-
 
 pub enum Furnace {
     FireIcon,
     MaximumFuelBurnTime,
     ProgressArrow,
-    MaximumProgress
+    MaximumProgress,
 }
 
 impl WindowPropertyTrait for Furnace {
@@ -36,17 +35,11 @@ impl WindowPropertyTrait for Furnace {
     }
 }
 
-
-
 pub enum EnchantmentTable {
-    LevelRequirement{
-        slot:u8
-    },
+    LevelRequirement { slot: u8 },
     EnchantmentSeed,
-    EnchantmentId{
-        slot:u8
-    },
-    EnchantmentLevel{slot:u8},
+    EnchantmentId { slot: u8 },
+    EnchantmentLevel { slot: u8 },
 }
 
 impl WindowPropertyTrait for EnchantmentTable {
@@ -54,10 +47,10 @@ impl WindowPropertyTrait for EnchantmentTable {
         use EnchantmentTable::*;
 
         (match self {
-            LevelRequirement{slot} => slot,
+            LevelRequirement { slot } => slot,
             EnchantmentSeed => 3,
-            EnchantmentId{slot} => 4+slot,
-            EnchantmentLevel{slot} => 7+slot,
+            EnchantmentId { slot } => 4 + slot,
+            EnchantmentLevel { slot } => 7 + slot,
         }) as i16
     }
 }
@@ -65,7 +58,7 @@ impl WindowPropertyTrait for EnchantmentTable {
 pub enum Beacon {
     PowerLevel,
     FirstPotionEffect,
-    SecondPotionEffect
+    SecondPotionEffect,
 }
 
 impl WindowPropertyTrait for Beacon {
@@ -75,14 +68,14 @@ impl WindowPropertyTrait for Beacon {
 }
 
 pub enum Anvil {
-    RepairCost
+    RepairCost,
 }
 
 impl WindowPropertyTrait for Anvil {}
 
-pub enum BrewingStand{
+pub enum BrewingStand {
     BrewTime,
-    FuelTime
+    FuelTime,
 }
 
 impl WindowPropertyTrait for BrewingStand {
@@ -92,20 +85,19 @@ impl WindowPropertyTrait for BrewingStand {
 }
 
 pub enum Stonecutter {
-    SelectedRecipe
+    SelectedRecipe,
 }
 
 impl WindowPropertyTrait for Stonecutter {}
 
 pub enum Loom {
-    SelectedPattern
+    SelectedPattern,
 }
 
 impl WindowPropertyTrait for Loom {}
 
 pub enum Lectern {
-    PageNumber
+    PageNumber,
 }
 
 impl WindowPropertyTrait for Lectern {}
-

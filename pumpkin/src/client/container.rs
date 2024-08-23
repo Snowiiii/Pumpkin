@@ -1,7 +1,9 @@
 use pumpkin_core::text::TextComponent;
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
 use pumpkin_inventory::WindowType;
-use pumpkin_protocol::client::play::{CCloseContainer, COpenScreen, CSetContainerContent, CSetContainerProperty, CSetContainerSlot};
+use pumpkin_protocol::client::play::{
+    CCloseContainer, COpenScreen, CSetContainerContent, CSetContainerProperty, CSetContainerSlot,
+};
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::Item;
 
@@ -83,17 +85,18 @@ impl super::Client {
             &item.into(),
         ))
     }
-    
-    /// The official Minecraft client is weird, and will always just close *any* window that is opened when this gets sent 
-    pub fn close_container(
-        &mut self,
-        window_type: WindowType
-    ) {
+
+    /// The official Minecraft client is weird, and will always just close *any* window that is opened when this gets sent
+    pub fn close_container(&mut self, window_type: WindowType) {
         self.send_packet(&CCloseContainer::new(window_type as u8))
     }
-    
-    pub fn set_container_property<T: WindowPropertyTrait>(&mut self, window_type: WindowType, window_property: WindowProperty<T>) {
-        let (id,value) = window_property.into_packet();
-        self.send_packet(&CSetContainerProperty::new(window_type as u8,id,value));
+
+    pub fn set_container_property<T: WindowPropertyTrait>(
+        &mut self,
+        window_type: WindowType,
+        window_property: WindowProperty<T>,
+    ) {
+        let (id, value) = window_property.into_packet();
+        self.send_packet(&CSetContainerProperty::new(window_type as u8, id, value));
     }
 }
