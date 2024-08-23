@@ -143,7 +143,7 @@ pub enum PacketError {
     #[error("packet length is out of bounds")]
     OutOfBounds,
     #[error("malformed packet length VarInt")]
-    MailformedLength,
+    MalformedLength,
 }
 
 #[derive(Debug, PartialEq)]
