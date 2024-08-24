@@ -1,5 +1,6 @@
 mod s_chat_command;
 mod s_chat_message;
+mod s_click_container;
 mod s_client_information;
 mod s_close_container;
 mod s_confirm_teleport;
