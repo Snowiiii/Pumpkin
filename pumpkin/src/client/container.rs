@@ -7,7 +7,9 @@ use pumpkin_protocol::client::play::{
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::Item;
 
-impl super::Client {
+use crate::entity::player::Player;
+
+impl Player {
     pub fn open_container(
         &mut self,
         window_type: WindowType,
@@ -26,7 +28,7 @@ impl super::Client {
             .unwrap())
         .into();
         let title = TextComponent::text(window_title.unwrap_or(window_type.default_title()));
-        self.send_packet(&COpenScreen::new(
+        self.client.send_packet(&COpenScreen::new(
             (window_type.clone() as u8 + 1).into(),
             menu_protocol_id,
             title,
@@ -40,14 +42,12 @@ impl super::Client {
         items: Option<Vec<Option<&'a Item>>>,
         carried_item: Option<&'a Item>,
     ) {
-        let player = self.player.as_ref().unwrap();
-
         let slots: Vec<Slot> = {
             if let Some(mut items) = items {
-                items.extend(player.inventory.slots());
+                items.extend(self.inventory.slots());
                 items
             } else {
-                player.inventory.slots()
+                self.inventory.slots()
             }
             .into_iter()
             .map(|item| {
@@ -69,7 +69,7 @@ impl super::Client {
         };
         let packet =
             CSetContainerContent::new(window_type as u8 + 1, 0.into(), &slots, &carried_item);
-        self.send_packet(&packet);
+        self.client.send_packet(&packet);
     }
 
     pub fn set_container_slot(
@@ -78,7 +78,7 @@ impl super::Client {
         slot: usize,
         item: Option<&Item>,
     ) {
-        self.send_packet(&CSetContainerSlot::new(
+        self.client.send_packet(&CSetContainerSlot::new(
             window_type as i8,
             0,
             slot,

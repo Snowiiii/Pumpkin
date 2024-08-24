@@ -28,7 +28,7 @@ impl PacketDecoder {
         let packet_len = match VarInt::decode_partial(&mut r) {
             Ok(len) => len,
             Err(VarIntDecodeError::Incomplete) => return Ok(None),
-            Err(VarIntDecodeError::TooLarge) => Err(PacketError::MailformedLength)?,
+            Err(VarIntDecodeError::TooLarge) => Err(PacketError::MalformedLength)?,
         };
 
         if !(0..=MAX_PACKET_SIZE).contains(&packet_len) {

@@ -13,7 +13,7 @@ use std::{
 
 use base64::{engine::general_purpose, Engine};
 use image::GenericImageView;
-use mio::{event::Event, Poll, Token};
+use mio::Token;
 use num_traits::ToPrimitive;
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_protocol::{
@@ -60,7 +60,7 @@ pub struct Server {
     /// Cache the registry so we don't have to parse it every time a player joins
     pub cached_registry: Vec<Registry>,
 
-    pub current_clients: HashMap<Rc<Token>, Rc<RefCell<Client>>>,
+    pub current_players: HashMap<Rc<Token>, Rc<RefCell<Player>>>,
 
     // TODO: replace with HashMap <World, Player>
     entity_id: AtomicI32, // TODO: place this into every world
@@ -115,54 +115,48 @@ impl Server {
             status_response,
             status_response_json,
             public_key_der,
-            current_clients: HashMap::new(),
+            current_players: HashMap::new(),
             base_config: config.0,
             auth_client,
             advanced_config: config.1,
         }
     }
 
-    // Returns Tokens to remove
-    pub async fn poll(&mut self, client: &mut Client, _poll: &Poll, event: &Event) {
-        // TODO: Poll players in every world
-        client.poll(self, event).await
-    }
-
-    pub fn add_client(&mut self, token: Rc<Token>, client: Rc<RefCell<Client>>) {
-        self.current_clients.insert(token, client);
-    }
-
-    pub fn remove_client(&mut self, token: &Token) {
-        let client = self.current_clients.remove(token).unwrap();
-        let client = client.borrow();
-        // despawn the player
-        // todo: put this into the entitiy struct
-        if client.is_player() {
-            let id = client.player.as_ref().unwrap().entity_id();
-            let uuid = client.gameprofile.as_ref().unwrap().id;
-            self.broadcast_packet_except(
-                &[&client.token],
-                &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]),
-            );
-            self.broadcast_packet_except(&[&client.token], &CRemoveEntities::new(&[id.into()]))
-        }
-    }
-
-    // here is where the magic happens
-    // TODO: do this in a world
-    pub async fn spawn_player(&mut self, client: &mut Client) {
-        // This code follows the vanilla packet order
+    pub fn add_player(&mut self, token: Rc<Token>, client: Client) -> Rc<RefCell<Player>> {
         let entity_id = self.new_entity_id();
         let gamemode = match self.base_config.default_gamemode {
             GameMode::Undefined => GameMode::Survival,
             game_mode => game_mode,
         };
+        let player = Rc::new(RefCell::new(Player::new(client, entity_id, gamemode)));
+        self.current_players.insert(token, player.clone());
+        player
+    }
+
+    pub fn remove_player(&mut self, token: &Token) {
+        let player = self.current_players.remove(token).unwrap();
+        let player = player.as_ref().borrow();
+        // despawn the player
+        // todo: put this into the entitiy struct
+        let id = player.entity_id();
+        let uuid = player.client.gameprofile.as_ref().unwrap().id;
+        self.broadcast_packet_except(
+            &[&player.client.token],
+            &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]),
+        );
+        self.broadcast_packet_except(&[&player.client.token], &CRemoveEntities::new(&[id.into()]))
+    }
+
+    // here is where the magic happens
+    // TODO: do this in a world
+    pub async fn spawn_player(&mut self, player: &mut Player) {
+        // This code follows the vanilla packet order
+        let entity_id = player.entity_id();
+        let gamemode = player.gamemode;
         log::debug!("spawning player, entity id {}", entity_id);
-        let player = Player::new(entity_id, gamemode);
-        client.player = Some(player);
 
         // login packet for our new player
-        client.send_packet(&CLogin::new(
+        player.client.send_packet(&CLogin::new(
             entity_id,
             self.base_config.hardcore,
             &["minecraft:overworld"],
@@ -185,7 +179,9 @@ impl Server {
         ));
         dbg!("sending abilities");
         // player abilities
-        client.send_packet(&CPlayerAbilities::new(0x02, 0.1, 0.1));
+        player
+            .client
+            .send_packet(&CPlayerAbilities::new(0x02, 0.1, 0.1));
 
         // teleport
         let x = 10.0;
@@ -193,12 +189,12 @@ impl Server {
         let z = 10.0;
         let yaw = 10.0;
         let pitch = 10.0;
-        client.teleport(x, y, z, 10.0, 10.0);
-        let gameprofile = client.gameprofile.as_ref().unwrap();
+        player.teleport(x, y, z, 10.0, 10.0);
+        let gameprofile = player.client.gameprofile.as_ref().unwrap();
         // first send info update to our new player, So he can see his Skin
         // also send his info to everyone else
         self.broadcast_packet(
-            client,
+            player,
             &CPlayerInfoUpdate::new(
                 0x01 | 0x08,
                 &[pumpkin_protocol::client::play::Player {
@@ -216,32 +212,36 @@ impl Server {
 
         // here we send all the infos of already joined players
         let mut entries = Vec::new();
-        for (_, client) in self.current_clients.iter().filter(|c| c.0 != &client.token) {
-            let client = client.borrow();
-            if client.is_player() {
-                let gameprofile = client.gameprofile.as_ref().unwrap();
-                entries.push(pumpkin_protocol::client::play::Player {
-                    uuid: gameprofile.id,
-                    actions: vec![
-                        PlayerAction::AddPlayer {
-                            name: gameprofile.name.clone(),
-                            properties: gameprofile.properties.clone(),
-                        },
-                        PlayerAction::UpdateListed { listed: true },
-                    ],
-                })
-            }
+        for (_, playerr) in self
+            .current_players
+            .iter()
+            .filter(|c| c.0 != &player.client.token)
+        {
+            let playerr = playerr.as_ref().borrow();
+            let gameprofile = &playerr.client.gameprofile.as_ref().unwrap();
+            entries.push(pumpkin_protocol::client::play::Player {
+                uuid: gameprofile.id,
+                actions: vec![
+                    PlayerAction::AddPlayer {
+                        name: gameprofile.name.clone(),
+                        properties: gameprofile.properties.clone(),
+                    },
+                    PlayerAction::UpdateListed { listed: true },
+                ],
+            })
         }
-        client.send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries));
+        player
+            .client
+            .send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries));
 
         // Start waiting for level chunks
-        client.send_packet(&CGameEvent::new(13, 0.0));
+        player.client.send_packet(&CGameEvent::new(13, 0.0));
 
-        let gameprofile = client.gameprofile.as_ref().unwrap();
+        let gameprofile = player.client.gameprofile.as_ref().unwrap();
 
         // spawn player for every client
         self.broadcast_packet_except(
-            &[&client.token],
+            &[&player.client.token],
             // TODO: add velo
             &CSpawnEntity::new(
                 entity_id.into(),
@@ -260,33 +260,31 @@ impl Server {
             ),
         );
         // spawn players for our client
-        let token = client.token.clone();
-        for (_, existing_client) in self.current_clients.iter().filter(|c| c.0 != &token) {
-            let existing_client = existing_client.borrow();
-            if let Some(player) = &existing_client.player {
-                let entity = &player.entity;
-                let gameprofile = existing_client.gameprofile.as_ref().unwrap();
-                client.send_packet(&CSpawnEntity::new(
-                    player.entity_id().into(),
-                    UUID(gameprofile.id),
-                    EntityType::Player.to_i32().unwrap().into(),
-                    entity.x,
-                    entity.y,
-                    entity.z,
-                    entity.yaw,
-                    entity.pitch,
-                    entity.pitch,
-                    0.into(),
-                    0.0,
-                    0.0,
-                    0.0,
-                ))
-            }
+        let token = player.client.token.clone();
+        for (_, existing_player) in self.current_players.iter().filter(|c| c.0 != &token) {
+            let existing_player = existing_player.as_ref().borrow();
+            let entity = &existing_player.entity;
+            let gameprofile = existing_player.client.gameprofile.as_ref().unwrap();
+            player.client.send_packet(&CSpawnEntity::new(
+                player.entity_id().into(),
+                UUID(gameprofile.id),
+                EntityType::Player.to_i32().unwrap().into(),
+                entity.x,
+                entity.y,
+                entity.z,
+                entity.yaw,
+                entity.pitch,
+                entity.pitch,
+                0.into(),
+                0.0,
+                0.0,
+                0.0,
+            ))
         }
         // entity meta data
-        if let Some(config) = &client.config {
+        if let Some(config) = player.client.config.clone() {
             self.broadcast_packet(
-                client,
+                player,
                 &CSetEntityMetadata::new(
                     entity_id.into(),
                     Metadata::new(17, VarInt(0), config.skin_parts),
@@ -294,35 +292,41 @@ impl Server {
             )
         }
 
-        self.spawn_test_chunk(client, self.base_config.view_distance as u32)
+        self.spawn_test_chunk(player, self.base_config.view_distance as u32)
             .await;
     }
 
     /// TODO: This definitly should be in world
-    pub fn get_by_entityid(&self, from: &Client, id: EntityId) -> Option<RefMut<Client>> {
-        for (_, client) in self.current_clients.iter().filter(|c| c.0 != &from.token) {
+    pub fn get_by_entityid(&self, from: &Player, id: EntityId) -> Option<RefMut<Player>> {
+        for (_, player) in self
+            .current_players
+            .iter()
+            .filter(|c| c.0 != &from.client.token)
+        {
             // Check if client is a player
-            let client = client.borrow_mut();
-            if client.is_player() && client.player.as_ref().unwrap().entity_id() == id {
-                return Some(client);
+            let player = player.borrow_mut();
+            if player.entity_id() == id {
+                return Some(player);
             }
         }
         None
     }
 
     /// Sends a Packet to all Players
-    pub fn broadcast_packet<P>(&self, from: &mut Client, packet: &P)
+    pub fn broadcast_packet<P>(&self, from: &mut Player, packet: &P)
     where
         P: ClientPacket,
     {
         // we can't borrow twice at same time
-        from.send_packet(packet);
-        for (_, client) in self.current_clients.iter().filter(|c| c.0 != &from.token) {
+        from.client.send_packet(packet);
+        for (_, player) in self
+            .current_players
+            .iter()
+            .filter(|c| c.0 != &from.client.token)
+        {
             // Check if client is a player
-            let mut client = client.borrow_mut();
-            if client.is_player() {
-                client.send_packet(packet);
-            }
+            let mut player = player.borrow_mut();
+            player.client.send_packet(packet);
         }
     }
 
@@ -331,21 +335,19 @@ impl Server {
     where
         P: ClientPacket,
     {
-        for (_, client) in self
-            .current_clients
+        for (_, player) in self
+            .current_players
             .iter()
             .filter(|c| !from.contains(&c.0.as_ref()))
         {
             // Check if client is a player
-            let mut client = client.borrow_mut();
-            if client.is_player() {
-                client.send_packet(packet);
-            }
+            let mut player = player.borrow_mut();
+            player.client.send_packet(packet);
         }
     }
 
     // TODO: do this in a world
-    async fn spawn_test_chunk(&self, client: &mut Client, distance: u32) {
+    async fn spawn_test_chunk(&self, player: &mut Player, distance: u32) {
         let inst = std::time::Instant::now();
         let (sender, mut chunk_receiver) = mpsc::channel(distance as usize);
         let world = self.world.clone();
@@ -358,7 +360,7 @@ impl Server {
                 .await;
         });
 
-        client.send_packet(&CCenterChunk {
+        player.client.send_packet(&CCenterChunk {
             chunk_x: 0.into(),
             chunk_z: 0.into(),
         });
@@ -382,7 +384,7 @@ impl Server {
                     len / (1024 * 1024)
                 );
             }
-            client.send_packet(&CChunkData(&chunk_data));
+            player.client.send_packet(&CChunkData(&chunk_data));
         }
         let t = inst.elapsed();
         dbg!("DONE", t);

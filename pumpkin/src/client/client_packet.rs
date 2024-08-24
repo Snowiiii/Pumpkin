@@ -269,12 +269,11 @@ impl Client {
 
     pub async fn handle_config_acknowledged(
         &mut self,
-        server: &mut Server,
+        _server: &mut Server,
         _config_acknowledged: SAcknowledgeFinishConfig,
     ) {
         dbg!("config acknowledged");
         self.connection_state = ConnectionState::Play;
-        // generate a player
-        server.spawn_player(self).await;
+        self.make_player = true;
     }
 }

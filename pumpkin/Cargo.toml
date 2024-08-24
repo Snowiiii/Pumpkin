@@ -33,6 +33,8 @@ num-traits = "0.2"
 num-derive = "0.4"
 num-bigint = "0.4.6"
 
+ctrlc = "3.4"
+
 # encryption
 rsa = "0.9.6"
 rsa-der = "0.3.0"
