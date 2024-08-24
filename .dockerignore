@@ -1,0 +1,12 @@
+# A whitelist of files that should be included into docker
+# Put an exclaimation mark before everything to include
+
+# Ignore everything
+*
+
+# Allow the source code folders
+!/pumpkin*/
+
+# Dependencies
+!Cargo.lock
+!Cargo.toml

@@ -107,6 +107,7 @@ fn main() -> io::Result<()> {
                     stdin
                         .read_line(&mut out)
                         .expect("Failed to read console line");
+
                     if !out.is_empty() {
                         handle_command(&mut commands::CommandSender::Console, &out);
                     }
