@@ -41,8 +41,8 @@ impl Player {
         _server: &mut Server,
         confirm_teleport: SConfirmTeleport,
     ) {
-        if let Some(id) = self.awaiting_teleport.clone() {
-            if id == confirm_teleport.teleport_id {
+        if let Some(id) = self.awaiting_teleport.as_ref() {
+            if id == &confirm_teleport.teleport_id {
             } else {
                 log::warn!("Teleport id does not match, Weird but okay");
             }
