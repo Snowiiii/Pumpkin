@@ -422,7 +422,7 @@ impl Client {
     // But this is not possible yet
     pub fn handle_close_container(&mut self, _server: &mut Server, packet: SCloseContainer) {
         // window_id 0 represents both 9x1 Generic AND inventory here
-        let Ok(_window_type) = WindowType::try_from(packet.window_id) else {
+        let Some(_window_type) = WindowType::from_u8(packet.window_id) else {
             self.kick("Invalid window ID");
             return;
         };

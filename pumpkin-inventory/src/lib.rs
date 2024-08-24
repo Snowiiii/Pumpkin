@@ -1,10 +1,10 @@
-use num_derive::ToPrimitive;
+use num_derive::{FromPrimitive, ToPrimitive};
 
 pub mod player;
 pub mod window_property;
 
 /// https://wiki.vg/Inventory
-#[derive(Debug, ToPrimitive, Clone)]
+#[derive(Debug, ToPrimitive, FromPrimitive, Clone)]
 pub enum WindowType {
     // not used
     Generic9x1,
@@ -50,39 +50,5 @@ impl WindowType {
             _ => "WINDOW TITLE",
         }*/
         "WINDOW TITLE"
-    }
-}
-impl TryFrom<u8> for WindowType {
-    type Error = ();
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0 => Ok(WindowType::Generic9x1),
-            1 => Ok(WindowType::Generic9x2),
-            2 => Ok(WindowType::Generic9x3),
-            3 => Ok(WindowType::Generic9x4),
-            4 => Ok(WindowType::Generic9x5),
-            5 => Ok(WindowType::Generic9x6),
-            6 => Ok(WindowType::Generic3x3),
-            7 => Ok(WindowType::Craft3x3),
-            8 => Ok(WindowType::Anvil),
-            9 => Ok(WindowType::Beacon),
-            10 => Ok(WindowType::BlastFurnace),
-            11 => Ok(WindowType::BrewingStand),
-            12 => Ok(WindowType::CraftingTable),
-            13 => Ok(WindowType::EnchantmentTable),
-            14 => Ok(WindowType::Furnace),
-            15 => Ok(WindowType::Grindstone),
-            16 => Ok(WindowType::Hopper),
-            17 => Ok(WindowType::Lectern),
-            18 => Ok(WindowType::Loom),
-            19 => Ok(WindowType::Merchant),
-            20 => Ok(WindowType::ShulkerBox),
-            21 => Ok(WindowType::SmithingTable),
-            22 => Ok(WindowType::Smoker),
-            23 => Ok(WindowType::CartographyTable),
-            24 => Ok(WindowType::Stonecutter),
-            _ => Err(()),
-        }
     }
 }
