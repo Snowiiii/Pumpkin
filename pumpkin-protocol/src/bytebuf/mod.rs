@@ -1,4 +1,4 @@
-use crate::{BitSet, VarInt, VarLongType};
+use crate::{BitSet, FixedBitSet, VarInt, VarLongType};
 use bytes::{Buf, BufMut, BytesMut};
 use core::str;
 use std::io::{self, Error, ErrorKind};
@@ -105,6 +105,10 @@ impl ByteBuffer {
         let mut bytes = [0u8; 16];
         self.buffer.copy_to_slice(&mut bytes);
         uuid::Uuid::from_slice(&bytes).expect("Failed to parse UUID")
+    }
+
+    pub fn get_fixed_bitset(&mut self, bits: usize) -> FixedBitSet {
+        self.copy_to_bytes(bits.div_ceil(8))
     }
 
     pub fn put_bool(&mut self, v: bool) {

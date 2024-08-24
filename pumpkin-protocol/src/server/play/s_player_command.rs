@@ -5,7 +5,7 @@ use crate::{bytebuf::DeserializerError, ServerPacket, VarInt};
 
 #[packet(0x25)]
 pub struct SPlayerCommand {
-    pub entitiy_id: VarInt,
+    pub entity_id: VarInt,
     pub action: VarInt,
     pub jump_boost: VarInt,
 }
@@ -16,8 +16,8 @@ pub enum Action {
     LeaveBed,
     StartSprinting,
     StopSprinting,
-    StartHourseJump,
-    StopHourseJump,
+    StartHorseJump,
+    StopHorseJump,
     OpenVehicleInventory,
     StartFlyingElytra,
 }
@@ -25,7 +25,7 @@ pub enum Action {
 impl ServerPacket for SPlayerCommand {
     fn read(bytebuf: &mut crate::bytebuf::ByteBuffer) -> Result<Self, DeserializerError> {
         Ok(Self {
-            entitiy_id: bytebuf.get_var_int(),
+            entity_id: bytebuf.get_var_int(),
             action: bytebuf.get_var_int(),
             jump_boost: bytebuf.get_var_int(),
         })

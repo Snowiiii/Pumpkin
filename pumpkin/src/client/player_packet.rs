@@ -176,7 +176,7 @@ impl Client {
     pub fn handle_player_command(&mut self, _server: &mut Server, command: SPlayerCommand) {
         let player = self.player.as_mut().unwrap();
 
-        if command.entitiy_id != player.entity.entity_id.into() {
+        if command.entity_id != player.entity.entity_id.into() {
             return;
         }
 
@@ -187,8 +187,8 @@ impl Client {
                 pumpkin_protocol::server::play::Action::LeaveBed => todo!(),
                 pumpkin_protocol::server::play::Action::StartSprinting => player.sprinting = true,
                 pumpkin_protocol::server::play::Action::StopSprinting => player.sprinting = false,
-                pumpkin_protocol::server::play::Action::StartHourseJump => todo!(),
-                pumpkin_protocol::server::play::Action::StopHourseJump => todo!(),
+                pumpkin_protocol::server::play::Action::StartHorseJump => todo!(),
+                pumpkin_protocol::server::play::Action::StopHorseJump => todo!(),
                 pumpkin_protocol::server::play::Action::OpenVehicleInventory => todo!(),
                 pumpkin_protocol::server::play::Action::StartFlyingElytra => {} // TODO
             }
@@ -204,7 +204,7 @@ impl Client {
         };
         let player = self.player.as_mut().unwrap();
         let id = player.entity_id();
-        server.broadcast_packet_expect(
+        server.broadcast_packet_except(
             &[&self.token],
             &CEntityAnimation::new(id.into(), animation as u8),
         )
@@ -212,7 +212,13 @@ impl Client {
 
     pub fn handle_chat_message(&mut self, server: &mut Server, chat_message: SChatMessage) {
         dbg!("got message");
+
         let message = chat_message.message;
+        if message.len() > 256 {
+            self.kick("Oversized message");
+            return;
+        }
+
         // TODO: filter message & validation
         let gameprofile = self.gameprofile.as_ref().unwrap();
 
@@ -227,8 +233,7 @@ impl Client {
                 chat_message.salt,
                 &[],
                 Some(TextComponent::text(&message)),
-                pumpkin_protocol::VarInt(FilterType::PassThrough as i32),
-                None,
+                FilterType::PassThrough,
                 1.into(),
                 TextComponent::text(&gameprofile.name.clone()),
                 None,
@@ -305,14 +310,14 @@ impl Client {
                         let packet = &CHurtAnimation::new(&entity_id, attacker_player.entity.yaw);
                         self.send_packet(packet);
                         client.send_packet(packet);
-                        server.broadcast_packet_expect(
+                        server.broadcast_packet_except(
                             &[self.token.as_ref(), token.as_ref()],
                             &CHurtAnimation::new(&entity_id, 10.0),
                         )
                     }
                     if config.swing {}
                 } else {
-                    self.kick("Interacted with invalid entitiy id")
+                    self.kick("Interacted with invalid entity id")
                 }
             }
         }
@@ -400,7 +405,12 @@ impl Client {
     }
 
     pub fn handle_set_creative_slot(&mut self, _server: &mut Server, packet: SSetCreativeSlot) {
-        let inventory = &mut self.player.as_mut().unwrap().inventory;
+        let player = self.player.as_mut().unwrap();
+        if player.gamemode != GameMode::Creative {
+            self.kick("Invalid action, you can only do that if you are in creative");
+            return;
+        }
+        let inventory = &mut player.inventory;
 
         inventory.set_slot(packet.slot as usize, packet.clicked_item.to_item(), false);
     }

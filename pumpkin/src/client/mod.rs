@@ -19,7 +19,7 @@ use pumpkin_protocol::{
     client::{
         config::CConfigDisconnect,
         login::CLoginDisconnect,
-        play::{CGameEvent, CPlayDisconnect, CSyncPlayerPostion, CSystemChatMessge},
+        play::{CGameEvent, CPlayDisconnect, CSyncPlayerPosition, CSystemChatMessage},
     },
     packet_decoder::PacketDecoder,
     packet_encoder::PacketEncoder,
@@ -43,6 +43,7 @@ use thiserror::Error;
 
 pub mod authentication;
 mod client_packet;
+mod container;
 pub mod player_packet;
 
 pub struct PlayerConfig {
@@ -159,7 +160,7 @@ impl Client {
         entity.yaw = yaw;
         entity.pitch = pitch;
         player.awaiting_teleport = Some(id.into());
-        self.send_packet(&CSyncPlayerPostion::new(x, y, z, yaw, pitch, 0, id.into()));
+        self.send_packet(&CSyncPlayerPosition::new(x, y, z, yaw, pitch, 0, id.into()));
     }
 
     pub fn update_health(&mut self, health: f32, food: i32, food_saturation: f32) {
@@ -311,7 +312,7 @@ impl Client {
             SPlayPingRequest::PACKET_ID => {
                 self.handle_play_ping_request(server, SPlayPingRequest::read(bytebuf).unwrap())
             }
-            _ => log::error!("Failed to handle player packet id {}", packet.id.0),
+            _ => log::error!("Failed to handle player packet id {:#04x}", packet.id.0),
         }
     }
 
@@ -361,7 +362,7 @@ impl Client {
     }
 
     pub fn send_system_message(&mut self, text: TextComponent) {
-        self.send_packet(&CSystemChatMessge::new(text, false));
+        self.send_packet(&CSystemChatMessage::new(text, false));
     }
 
     /// Kicks the Client with a reason depending on the connection state

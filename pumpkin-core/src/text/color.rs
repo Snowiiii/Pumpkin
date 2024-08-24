@@ -1,3 +1,4 @@
+use colored::{ColoredString, Colorize};
 use serde::{Deserialize, Serialize};
 
 /// Text color
@@ -11,6 +12,32 @@ pub enum Color {
     Reset,
     /// One of the 16 named Minecraft colors
     Named(NamedColor),
+}
+
+impl Color {
+    pub fn console_color(&self, text: &str) -> ColoredString {
+        match self {
+            Color::Reset => text.clear(),
+            Color::Named(color) => match color {
+                NamedColor::Black => text.black(),
+                NamedColor::DarkBlue => text.blue(),
+                NamedColor::DarkGreen => text.green(),
+                NamedColor::DarkAqua => text.cyan(),
+                NamedColor::DarkRed => text.red(),
+                NamedColor::DarkPurple => text.purple(),
+                NamedColor::Gold => text.yellow(),
+                NamedColor::Gray => text.bright_black(),
+                NamedColor::DarkGray => text.bright_black(), // ?
+                NamedColor::Blue => text.bright_blue(),
+                NamedColor::Green => text.bright_green(),
+                NamedColor::Aqua => text.cyan(),
+                NamedColor::Red => text.red(),
+                NamedColor::LightPurple => text.bright_purple(),
+                NamedColor::Yellow => text.bright_yellow(),
+                NamedColor::White => text.white(),
+            },
+        }
+    }
 }
 
 /// Named Minecraft color

@@ -5,7 +5,7 @@ use crate::VarInt;
 
 #[derive(Serialize)]
 #[packet(0x40)]
-pub struct CSyncPlayerPostion {
+pub struct CSyncPlayerPosition {
     x: f64,
     y: f64,
     z: f64,
@@ -15,7 +15,7 @@ pub struct CSyncPlayerPostion {
     teleport_id: VarInt,
 }
 
-impl CSyncPlayerPostion {
+impl CSyncPlayerPosition {
     pub fn new(
         x: f64,
         y: f64,
