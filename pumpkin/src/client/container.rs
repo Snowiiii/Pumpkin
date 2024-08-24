@@ -97,7 +97,7 @@ impl Player {
         window_type: WindowType,
         window_property: WindowProperty<T>,
     ) {
-        let (id, value) = window_property.into_packet();
+        let (id, value) = window_property.into_tuple();
         self.client
             .send_packet(&CSetContainerProperty::new(window_type as u8, id, value));
     }

@@ -24,7 +24,7 @@ impl<T: WindowPropertyTrait> WindowProperty<T> {
         }
     }
 
-    pub fn into_packet(self) -> (i16, i16) {
+    pub fn into_tuple(self) -> (i16, i16) {
         (self.window_property.to_id(), self.value)
     }
 }
