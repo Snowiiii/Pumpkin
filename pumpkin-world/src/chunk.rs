@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use fastnbt::LongArray;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     coordinates::{ChunkCoordinates, ChunkRelativeBlockCoordinates},
@@ -14,27 +15,27 @@ pub struct ChunkData {
     pub heightmaps: ChunkHeightmaps,
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct PaletteEntry {
     name: String,
     properties: Option<HashMap<String, String>>,
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 struct ChunkSectionBlockStates {
     data: Option<LongArray>,
     palette: Vec<PaletteEntry>,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct ChunkHeightmaps {
     motion_blocking: LongArray,
     world_surface: LongArray,
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 struct ChunkSection {
     #[serde(rename = "Y")]
@@ -42,7 +43,7 @@ struct ChunkSection {
     block_states: Option<ChunkSectionBlockStates>,
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 struct ChunkNbt {
     #[serde(rename = "DataVersion")]

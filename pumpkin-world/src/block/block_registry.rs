@@ -1,26 +1,27 @@
 use std::collections::HashMap;
 
 use lazy_static::lazy_static;
+use serde::Deserialize;
 
 use crate::level::WorldError;
 
 const BLOCKS_JSON: &str = include_str!("../../assets/blocks.json");
 
-#[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct BlockDefinition {
     #[serde(rename = "type")]
     kind: String,
     block_set_type: Option<String>,
 }
 
-#[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct BlockState {
     default: Option<bool>,
     id: i64,
     properties: Option<HashMap<String, String>>,
 }
 
-#[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct BlocksElement {
     definition: BlockDefinition,
     properties: Option<HashMap<String, Vec<String>>>,
