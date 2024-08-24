@@ -228,7 +228,6 @@ impl Client {
         }
     }
 
-
     // Reads the connection until our buffer of len 4096 is full, then decode
     /// Close connection when an error occurs
     pub async fn poll(&mut self, event: &Event) {

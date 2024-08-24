@@ -88,7 +88,8 @@ impl Player {
 
     /// The official Minecraft client is weird, and will always just close *any* window that is opened when this gets sent
     pub fn close_container(&mut self, window_type: WindowType) {
-        self.send_packet(&CCloseContainer::new(window_type as u8))
+        self.client
+            .send_packet(&CCloseContainer::new(window_type as u8))
     }
 
     pub fn set_container_property<T: WindowPropertyTrait>(
@@ -97,6 +98,7 @@ impl Player {
         window_property: WindowProperty<T>,
     ) {
         let (id, value) = window_property.into_packet();
-        self.send_packet(&CSetContainerProperty::new(window_type as u8, id, value));
+        self.client
+            .send_packet(&CSetContainerProperty::new(window_type as u8, id, value));
     }
 }

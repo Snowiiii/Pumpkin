@@ -415,7 +415,7 @@ impl Player {
     pub fn handle_close_container(&mut self, _server: &mut Server, packet: SCloseContainer) {
         // window_id 0 represents both 9x1 Generic AND inventory here
         let Some(_window_type) = WindowType::from_u8(packet.window_id) else {
-            self.kick("Invalid window ID");
+            self.kick(TextComponent::text("Invalid window ID"));
             return;
         };
     }
