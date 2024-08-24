@@ -4,35 +4,35 @@ use serde::Serialize;
 use crate::VarInt;
 
 #[derive(Serialize)]
-#[packet(0x40)]
-pub struct CSyncPlayerPosition {
+#[packet(0x70)]
+pub struct CTeleportEntitiy {
+    entity_id: VarInt,
     x: f64,
     y: f64,
     z: f64,
-    yaw: f32,
-    pitch: f32,
-    flags: i8,
-    teleport_id: VarInt,
+    yaw: u8,
+    pitch: u8,
+    on_ground: bool,
 }
 
-impl CSyncPlayerPosition {
+impl CTeleportEntitiy {
     pub fn new(
+        entity_id: VarInt,
         x: f64,
         y: f64,
         z: f64,
-        yaw: f32,
-        pitch: f32,
-        flags: i8,
-        teleport_id: VarInt,
+        yaw: u8,
+        pitch: u8,
+        on_ground: bool,
     ) -> Self {
         Self {
+            entity_id,
             x,
             y,
             z,
             yaw,
             pitch,
-            flags,
-            teleport_id,
+            on_ground,
         }
     }
 }

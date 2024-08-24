@@ -6,33 +6,22 @@ use std::{
 };
 
 use crate::{
-    entity::player::{ChatMode, GameMode, Hand, Player},
+    entity::player::{ChatMode, Hand},
     server::Server,
 };
 
 use authentication::GameProfile;
 use mio::{event::Event, net::TcpStream, Token};
-use num_traits::ToPrimitive;
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
-    client::{
-        config::CConfigDisconnect,
-        login::CLoginDisconnect,
-        play::{CGameEvent, CPlayDisconnect, CSyncPlayerPostion, CSystemChatMessge},
-    },
+    client::{config::CConfigDisconnect, login::CLoginDisconnect, play::CPlayDisconnect},
     packet_decoder::PacketDecoder,
     packet_encoder::PacketEncoder,
     server::{
         config::{SAcknowledgeFinishConfig, SClientInformationConfig, SKnownPacks, SPluginMessage},
         handshake::SHandShake,
         login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
-        play::{
-            SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
-            SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition,
-            SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm,
-            SUseItemOn,
-        },
         status::{SStatusPingRequest, SStatusRequest},
     },
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
@@ -57,9 +46,22 @@ pub struct PlayerConfig {
     pub server_listing: bool,
 }
 
-pub struct Client {
-    pub player: Option<Player>,
+impl Default for PlayerConfig {
+    fn default() -> Self {
+        Self {
+            locale: "en_us".to_string(),
+            view_distance: 2,
+            chat_mode: ChatMode::Enabled,
+            chat_colors: true,
+            skin_parts: 0,
+            main_hand: Hand::Main,
+            text_filtering: false,
+            server_listing: false,
+        }
+    }
+}
 
+pub struct Client {
     pub gameprofile: Option<GameProfile>,
 
     pub config: Option<PlayerConfig>,
@@ -75,6 +77,8 @@ pub struct Client {
     enc: PacketEncoder,
     dec: PacketDecoder,
     pub client_packets_queue: VecDeque<RawPacket>,
+
+    pub make_player: bool,
 }
 
 impl Client {
@@ -86,7 +90,6 @@ impl Client {
             brand: None,
             token,
             address,
-            player: None,
             connection_state: ConnectionState::HandShake,
             connection,
             enc: PacketEncoder::default(),
@@ -94,6 +97,7 @@ impl Client {
             encryption: true,
             closed: false,
             client_packets_queue: VecDeque::new(),
+            make_player: false,
         }
     }
 
@@ -122,10 +126,6 @@ impl Client {
         self.enc.set_compression(compression);
     }
 
-    pub fn is_player(&self) -> bool {
-        self.player.is_some()
-    }
-
     /// Send a Clientbound Packet to the Client
     pub fn send_packet<P: ClientPacket>(&mut self, packet: &P) {
         self.enc
@@ -145,37 +145,6 @@ impl Client {
         Ok(())
     }
 
-    pub fn teleport(&mut self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
-        assert!(self.is_player());
-        // TODO
-        let id = 0;
-        let player = self.player.as_mut().unwrap();
-        let entity = &mut player.entity;
-        entity.x = x;
-        entity.y = y;
-        entity.z = z;
-        entity.lastx = x;
-        entity.lasty = y;
-        entity.lastz = z;
-        entity.yaw = yaw;
-        entity.pitch = pitch;
-        player.awaiting_teleport = Some(id.into());
-        self.send_packet(&CSyncPlayerPostion::new(x, y, z, yaw, pitch, 0, id.into()));
-    }
-
-    pub fn update_health(&mut self, health: f32, food: i32, food_saturation: f32) {
-        let player = self.player.as_mut().unwrap();
-        player.health = health;
-        player.food = food;
-        player.food_saturation = food_saturation;
-    }
-
-    pub fn set_gamemode(&mut self, gamemode: GameMode) {
-        let player = self.player.as_mut().unwrap();
-        player.gamemode = gamemode;
-        self.send_packet(&CGameEvent::new(3, gamemode.to_f32().unwrap()));
-    }
-
     pub async fn process_packets(&mut self, server: &mut Server) {
         let mut i = 0;
         while i < self.client_packets_queue.len() {
@@ -185,7 +154,7 @@ impl Client {
         }
     }
 
-    /// Handles an incoming decoded Packet
+    /// Handles an incoming decoded not Play state Packet
     pub async fn handle_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
         // TODO: handle each packet's Error instead of calling .unwrap()
         let bytebuf = &mut packet.bytebuf;
@@ -254,71 +223,13 @@ impl Client {
                     packet.id.0
                 ),
             },
-            pumpkin_protocol::ConnectionState::Play => {
-                if self.player.is_some() {
-                    self.handle_play_packet(server, packet);
-                } else {
-                    // should be impossible
-                    self.kick("no player in play state?")
-                }
-            }
             _ => log::error!("Invalid Connection state {:?}", self.connection_state),
-        }
-    }
-
-    pub fn handle_play_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
-        let bytebuf = &mut packet.bytebuf;
-        match packet.id.0 {
-            SConfirmTeleport::PACKET_ID => {
-                self.handle_confirm_teleport(server, SConfirmTeleport::read(bytebuf).unwrap())
-            }
-            SChatCommand::PACKET_ID => {
-                self.handle_chat_command(server, SChatCommand::read(bytebuf).unwrap())
-            }
-            SPlayerPosition::PACKET_ID => {
-                self.handle_position(server, SPlayerPosition::read(bytebuf).unwrap())
-            }
-            SPlayerPositionRotation::PACKET_ID => self
-                .handle_position_rotation(server, SPlayerPositionRotation::read(bytebuf).unwrap()),
-            SPlayerRotation::PACKET_ID => {
-                self.handle_rotation(server, SPlayerRotation::read(bytebuf).unwrap())
-            }
-            SPlayerCommand::PACKET_ID => {
-                self.handle_player_command(server, SPlayerCommand::read(bytebuf).unwrap())
-            }
-            SSwingArm::PACKET_ID => {
-                self.handle_swing_arm(server, SSwingArm::read(bytebuf).unwrap())
-            }
-            SChatMessage::PACKET_ID => {
-                self.handle_chat_message(server, SChatMessage::read(bytebuf).unwrap())
-            }
-            SClientInformationPlay::PACKET_ID => self.handle_client_information_play(
-                server,
-                SClientInformationPlay::read(bytebuf).unwrap(),
-            ),
-            SInteract::PACKET_ID => self.handle_interact(server, SInteract::read(bytebuf).unwrap()),
-            SPlayerAction::PACKET_ID => {
-                self.handle_player_action(server, SPlayerAction::read(bytebuf).unwrap())
-            }
-            SUseItemOn::PACKET_ID => {
-                self.handle_use_item_on(server, SUseItemOn::read(bytebuf).unwrap())
-            }
-            SSetHeldItem::PACKET_ID => {
-                self.handle_set_held_item(server, SSetHeldItem::read(bytebuf).unwrap())
-            }
-            SSetCreativeSlot::PACKET_ID => {
-                self.handle_set_creative_slot(server, SSetCreativeSlot::read(bytebuf).unwrap())
-            }
-            SPlayPingRequest::PACKET_ID => {
-                self.handle_play_ping_request(server, SPlayPingRequest::read(bytebuf).unwrap())
-            }
-            _ => log::error!("Failed to handle player packet id {}", packet.id.0),
         }
     }
 
     // Reads the connection until our buffer of len 4096 is full, then decode
     /// Close connection when an error occurs
-    pub async fn poll(&mut self, server: &mut Server, event: &Event) {
+    pub async fn poll(&mut self, event: &Event) {
         if event.is_readable() {
             let mut received_data = vec![0; 4096];
             let mut bytes_read = 0;
@@ -351,7 +262,6 @@ impl Client {
                     Ok(packet) => {
                         if let Some(packet) = packet {
                             self.add_packet(packet);
-                            self.process_packets(server).await;
                         }
                     }
                     Err(err) => self.kick(&err.to_string()),
@@ -359,10 +269,6 @@ impl Client {
                 self.dec.clear();
             }
         }
-    }
-
-    pub fn send_system_message(&mut self, text: TextComponent) {
-        self.send_packet(&CSystemChatMessge::new(text, false));
     }
 
     /// Kicks the Client with a reason depending on the connection state
@@ -379,6 +285,7 @@ impl Client {
                 self.try_send_packet(&CConfigDisconnect::new(reason))
                     .unwrap_or_else(|_| self.close());
             }
+            // So we can also kick on errors, but generally should use Player::kick
             ConnectionState::Play => {
                 self.try_send_packet(&CPlayDisconnect::new(TextComponent::text(reason)))
                     .unwrap_or_else(|_| self.close());

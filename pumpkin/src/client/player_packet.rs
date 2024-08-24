@@ -2,13 +2,15 @@ use std::f32::consts::PI;
 
 use crate::{
     commands::{handle_command, CommandSender},
-    entity::player::{ChatMode, GameMode, Hand},
+    entity::player::{ChatMode, GameMode, Hand, Player},
     server::Server,
     util::math::wrap_degrees,
 };
 use num_traits::FromPrimitive;
 use pumpkin_core::text::TextComponent;
 use pumpkin_entity::EntityId;
+use pumpkin_inventory::WindowType;
+use pumpkin_protocol::server::play::SCloseContainer;
 use pumpkin_protocol::{
     client::play::{
         Animation, CAcknowledgeBlockChange, CBlockUpdate, CEntityAnimation, CEntityVelocity,
@@ -26,28 +28,34 @@ use pumpkin_protocol::{
 use pumpkin_world::block::BlockFace;
 use pumpkin_world::global_registry;
 
-use super::{Client, PlayerConfig};
+use super::PlayerConfig;
 
 fn modulus(a: f32, b: f32) -> f32 {
     ((a % b) + b) % b
 }
 
 /// Handles all Play Packets send by a real Player
-impl Client {
+impl Player {
     pub fn handle_confirm_teleport(
         &mut self,
         _server: &mut Server,
         confirm_teleport: SConfirmTeleport,
     ) {
-        let player = self.player.as_mut().unwrap();
-        if let Some(id) = player.awaiting_teleport.clone() {
-            if id == confirm_teleport.teleport_id {
+        if let Some((id, position)) = self.awaiting_teleport.as_ref() {
+            if id == &confirm_teleport.teleport_id {
+                // we should set the pos now to that we requested in the teleport packet, Is may fixed issues when the client sended position packets while being teleported
+                self.entity.x = position.x;
+                self.entity.y = position.y;
+                self.entity.z = position.z;
+
+                self.awaiting_teleport = None;
             } else {
-                log::warn!("Teleport id does not match, Weird but okay");
+                self.kick(TextComponent::text("Wrong teleport id"))
             }
-            player.awaiting_teleport = None;
         } else {
-            self.kick("Send Teleport confirm, but we did not teleport")
+            self.kick(TextComponent::text(
+                "Send Teleport confirm, but we did not teleport",
+            ))
         }
     }
 
@@ -61,11 +69,10 @@ impl Client {
 
     pub fn handle_position(&mut self, server: &mut Server, position: SPlayerPosition) {
         if position.x.is_nan() || position.feet_y.is_nan() || position.z.is_nan() {
-            self.kick("Invalid movement");
+            self.kick(TextComponent::text("Invalid movement"));
             return;
         }
-        let player = self.player.as_mut().unwrap();
-        let entity = &mut player.entity;
+        let entity = &mut self.entity;
         entity.lastx = entity.x;
         entity.lasty = entity.y;
         entity.lastz = entity.z;
@@ -75,7 +82,7 @@ impl Client {
         // TODO: teleport when moving > 8 block
 
         // send new position to all other players
-        let on_ground = player.on_ground;
+        let on_ground = self.on_ground;
         let entity_id = entity.entity_id;
         let (x, lastx) = (entity.x, entity.lastx);
         let (y, lasty) = (entity.y, entity.lasty);
@@ -102,15 +109,14 @@ impl Client {
             || position_rotation.feet_y.is_nan()
             || position_rotation.z.is_nan()
         {
-            self.kick("Invalid movement");
+            self.kick(TextComponent::text("Invalid movement"));
             return;
         }
         if !position_rotation.yaw.is_finite() || !position_rotation.pitch.is_finite() {
-            self.kick("Invalid rotation");
+            self.kick(TextComponent::text("Invalid rotation"));
             return;
         }
-        let player = self.player.as_mut().unwrap();
-        let entity = &mut player.entity;
+        let entity = &mut self.entity;
 
         entity.lastx = entity.x;
         entity.lasty = entity.y;
@@ -122,7 +128,7 @@ impl Client {
         entity.pitch = wrap_degrees(position_rotation.pitch).clamp(-90.0, 90.0) % 360.0;
 
         // send new position to all other players
-        let on_ground = player.on_ground;
+        let on_ground = self.on_ground;
         let entity_id = entity.entity_id;
         let (x, lastx) = (entity.x, entity.lastx);
         let (y, lasty) = (entity.y, entity.lasty);
@@ -148,15 +154,14 @@ impl Client {
 
     pub fn handle_rotation(&mut self, server: &mut Server, rotation: SPlayerRotation) {
         if !rotation.yaw.is_finite() || !rotation.pitch.is_finite() {
-            self.kick("Invalid rotation");
+            self.kick(TextComponent::text("Invalid rotation"));
             return;
         }
-        let player = self.player.as_mut().unwrap();
-        let entity = &mut player.entity;
+        let entity = &mut self.entity;
         entity.yaw = wrap_degrees(rotation.yaw) % 360.0;
         entity.pitch = wrap_degrees(rotation.pitch).clamp(-90.0, 90.0) % 360.0;
         // send new position to all other players
-        let on_ground = player.on_ground;
+        let on_ground = self.on_ground;
         let entity_id = entity.entity_id;
         let yaw = modulus(entity.yaw * 256.0 / 360.0, 256.0);
         let pitch = modulus(entity.pitch * 256.0 / 360.0, 256.0);
@@ -174,26 +179,24 @@ impl Client {
     }
 
     pub fn handle_player_command(&mut self, _server: &mut Server, command: SPlayerCommand) {
-        let player = self.player.as_mut().unwrap();
-
-        if command.entitiy_id != player.entity.entity_id.into() {
+        if command.entity_id != self.entity.entity_id.into() {
             return;
         }
 
         if let Some(action) = Action::from_i32(command.action.0) {
             match action {
-                pumpkin_protocol::server::play::Action::StartSneaking => player.sneaking = true,
-                pumpkin_protocol::server::play::Action::StopSneaking => player.sneaking = false,
+                pumpkin_protocol::server::play::Action::StartSneaking => self.sneaking = true,
+                pumpkin_protocol::server::play::Action::StopSneaking => self.sneaking = false,
                 pumpkin_protocol::server::play::Action::LeaveBed => todo!(),
-                pumpkin_protocol::server::play::Action::StartSprinting => player.sprinting = true,
-                pumpkin_protocol::server::play::Action::StopSprinting => player.sprinting = false,
-                pumpkin_protocol::server::play::Action::StartHourseJump => todo!(),
-                pumpkin_protocol::server::play::Action::StopHourseJump => todo!(),
+                pumpkin_protocol::server::play::Action::StartSprinting => self.sprinting = true,
+                pumpkin_protocol::server::play::Action::StopSprinting => self.sprinting = false,
+                pumpkin_protocol::server::play::Action::StartHorseJump => todo!(),
+                pumpkin_protocol::server::play::Action::StopHorseJump => todo!(),
                 pumpkin_protocol::server::play::Action::OpenVehicleInventory => todo!(),
                 pumpkin_protocol::server::play::Action::StartFlyingElytra => {} // TODO
             }
         } else {
-            self.kick("Invalid player command")
+            self.kick(TextComponent::text("Invalid player command"))
         }
     }
 
@@ -202,10 +205,9 @@ impl Client {
             Hand::Main => Animation::SwingMainArm,
             Hand::Off => Animation::SwingOffhand,
         };
-        let player = self.player.as_mut().unwrap();
-        let id = player.entity_id();
+        let id = self.entity_id();
         server.broadcast_packet_except(
-            &[&self.token],
+            &[&self.client.token],
             &CEntityAnimation::new(id.into(), animation as u8),
         )
     }
@@ -215,12 +217,12 @@ impl Client {
 
         let message = chat_message.message;
         if message.len() > 256 {
-            self.kick("Oversized message");
+            self.kick(TextComponent::text("Oversized message"));
             return;
         }
 
         // TODO: filter message & validation
-        let gameprofile = self.gameprofile.as_ref().unwrap();
+        let gameprofile = self.client.gameprofile.as_ref().unwrap();
 
         server.broadcast_packet(
             self,
@@ -256,7 +258,7 @@ impl Client {
         _server: &mut Server,
         client_information: SClientInformationPlay,
     ) {
-        self.config = Some(PlayerConfig {
+        self.client.config = Some(PlayerConfig {
             locale: client_information.locale,
             view_distance: client_information.view_distance,
             chat_mode: ChatMode::from_i32(client_information.chat_mode.into()).unwrap(),
@@ -275,18 +277,16 @@ impl Client {
             // TODO: do validation and stuff
             let config = &server.advanced_config.pvp;
             if config.enabled {
-                let attacked_client = server.get_by_entityid(self, entity_id.0 as EntityId);
-                let attacker_player = self.player.as_mut().unwrap();
-                attacker_player.sneaking = interact.sneaking;
-                if let Some(mut client) = attacked_client {
-                    let token = client.token.clone();
-                    let player = client.player.as_mut().unwrap();
+                let attacked_player = server.get_by_entityid(self, entity_id.0 as EntityId);
+                self.sneaking = interact.sneaking;
+                if let Some(mut player) = attacked_player {
+                    let token = player.client.token.clone();
                     let velo = player.velocity;
                     if config.protect_creative && player.gamemode == GameMode::Creative {
                         return;
                     }
                     if config.knockback {
-                        let yaw = attacker_player.entity.yaw;
+                        let yaw = self.entity.yaw;
                         let strength = 1.0;
                         player.knockback(
                             strength * 0.5,
@@ -299,25 +299,25 @@ impl Client {
                             player.velocity.y as f32,
                             player.velocity.z as f32,
                         );
-                        attacker_player.velocity = attacker_player.velocity.multiply(0.6, 1.0, 0.6);
+                        self.velocity = self.velocity.multiply(0.6, 1.0, 0.6);
 
                         player.velocity = velo;
-                        client.send_packet(packet);
+                        player.client.send_packet(packet);
                     }
                     if config.hurt_animation {
                         // TODO
                         // thats how we prevent borrow errors :c
-                        let packet = &CHurtAnimation::new(&entity_id, attacker_player.entity.yaw);
-                        self.send_packet(packet);
-                        client.send_packet(packet);
+                        let packet = &CHurtAnimation::new(&entity_id, self.entity.yaw);
+                        self.client.send_packet(packet);
+                        player.client.send_packet(packet);
                         server.broadcast_packet_except(
-                            &[self.token.as_ref(), token.as_ref()],
+                            &[self.client.token.as_ref(), token.as_ref()],
                             &CHurtAnimation::new(&entity_id, 10.0),
                         )
                     }
                     if config.swing {}
                 } else {
-                    self.kick("Interacted with invalid entitiy id")
+                    self.kick(TextComponent::text("Interacted with invalid entity id"))
                 }
             }
         }
@@ -326,9 +326,8 @@ impl Client {
         match Status::from_i32(player_action.status.0).unwrap() {
             Status::StartedDigging => {
                 // TODO: do validation
-                let player = self.player.as_mut().unwrap();
                 // TODO: Config
-                if player.gamemode == GameMode::Creative {
+                if self.gamemode == GameMode::Creative {
                     let location = player_action.location;
                     // Block break & block break sound
                     // TODO: currently this is always dirt replace it
@@ -338,8 +337,7 @@ impl Client {
                 }
             }
             Status::CancelledDigging => {
-                let player = self.player.as_mut().unwrap();
-                player.current_block_destroy_stage = 0;
+                self.current_block_destroy_stage = 0;
             }
             Status::FinishedDigging => {
                 // TODO: do validation
@@ -350,7 +348,8 @@ impl Client {
                 // AIR
                 server.broadcast_packet(self, &CBlockUpdate::new(location, 0.into()));
                 // TODO: Send this every tick
-                self.send_packet(&CAcknowledgeBlockChange::new(player_action.sequence));
+                self.client
+                    .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence));
             }
             Status::DropItemStack => {
                 dbg!("todo");
@@ -368,16 +367,18 @@ impl Client {
     }
 
     pub fn handle_play_ping_request(&mut self, _server: &mut Server, request: SPlayPingRequest) {
-        self.send_packet(&CPingResponse::new(request.payload));
+        self.client
+            .send_packet(&CPingResponse::new(request.payload));
     }
 
     pub fn handle_use_item_on(&mut self, server: &mut Server, use_item_on: SUseItemOn) {
-        self.send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence));
+        self.client
+            .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence));
 
         let location = use_item_on.location;
         let face = BlockFace::from_i32(use_item_on.face.0).unwrap();
         let location = WorldPosition(location.0 + face.to_offset());
-        if let Some(item) = self.player.as_ref().unwrap().inventory.held_item() {
+        if let Some(item) = self.inventory.held_item() {
             let minecraft_id =
                 global_registry::find_minecraft_id(global_registry::ITEM_REGISTRY, item.item_id)
                     .expect("All item ids are in the global registry");
@@ -398,20 +399,30 @@ impl Client {
     pub fn handle_set_held_item(&mut self, _server: &mut Server, held: SSetHeldItem) {
         let slot = held.slot;
         if !(0..=8).contains(&slot) {
-            self.kick("Invalid held slot")
+            self.kick(TextComponent::text("Invalid held slot"))
         }
-        let player = self.player.as_mut().unwrap();
-        player.inventory.set_selected(slot as usize);
+        self.inventory.set_selected(slot as usize);
     }
 
     pub fn handle_set_creative_slot(&mut self, _server: &mut Server, packet: SSetCreativeSlot) {
-        let player = self.player.as_mut().unwrap();
-        if player.gamemode != GameMode::Creative {
-            self.kick("Invalid action, you can only do that if you are in creative");
+        if self.gamemode != GameMode::Creative {
+            self.kick(TextComponent::text(
+                "Invalid action, you can only do that if you are in creative",
+            ));
             return;
         }
-        let inventory = &mut player.inventory;
+        self.inventory
+            .set_slot(packet.slot as usize, packet.clicked_item.to_item(), false);
+    }
 
-        inventory.set_slot(packet.slot as usize, packet.clicked_item.to_item(), false);
+    // TODO:
+    // This function will in the future be used to keep track of if the client is in a valid state.
+    // But this is not possible yet
+    pub fn handle_close_container(&mut self, _server: &mut Server, packet: SCloseContainer) {
+        // window_id 0 represents both 9x1 Generic AND inventory here
+        let Some(_window_type) = WindowType::from_u8(packet.window_id) else {
+            self.kick(TextComponent::text("Invalid window ID"));
+            return;
+        };
     }
 }

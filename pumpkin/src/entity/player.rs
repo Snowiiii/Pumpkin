@@ -1,13 +1,27 @@
 use std::str::FromStr;
 
 use num_derive::{FromPrimitive, ToPrimitive};
+use num_traits::ToPrimitive;
+use pumpkin_core::text::TextComponent;
 use pumpkin_entity::{entity_type::EntityType, Entity, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
-use pumpkin_protocol::VarInt;
+use pumpkin_protocol::{
+    bytebuf::packet_id::Packet,
+    client::play::{CGameEvent, CPlayDisconnect, CSyncPlayerPosition, CSystemChatMessage},
+    server::play::{
+        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
+        SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
+        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn,
+    },
+    ConnectionState, RawPacket, ServerPacket, VarInt,
+};
 use pumpkin_world::vector3::Vector3;
 use serde::{Deserialize, Serialize};
 
+use crate::{client::Client, server::Server};
+
 pub struct Player {
+    pub client: Client,
     pub entity: Entity,
     // current gamemode
     pub gamemode: GameMode,
@@ -29,13 +43,15 @@ pub struct Player {
     // TODO: prbly should put this into an Living Entitiy or something
     pub velocity: Vector3<f64>,
 
-    // Current awaiting teleport id, None if did not teleport
-    pub awaiting_teleport: Option<VarInt>,
+    pub teleport_id_count: i32,
+    // Current awaiting teleport id and location, None if did not teleport
+    pub awaiting_teleport: Option<(VarInt, Vector3<f64>)>,
 }
 
 impl Player {
-    pub fn new(entity_id: EntityId, gamemode: GameMode) -> Self {
+    pub fn new(client: Client, entity_id: EntityId, gamemode: GameMode) -> Self {
         Self {
+            client,
             entity: Entity::new(entity_id, EntityType::Player),
             on_ground: false,
             awaiting_teleport: None,
@@ -48,6 +64,7 @@ impl Player {
             current_block_destroy_stage: 0,
             velocity: Vector3::new(0.0, 0.0, 0.0),
             inventory: PlayerInventory::new(),
+            teleport_id_count: 0,
             gamemode,
         }
     }
@@ -76,6 +93,122 @@ impl Player {
             },
             var7.z / 2.0 - var8.z,
         );
+    }
+
+    pub fn teleport(&mut self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
+        // this is the ultra special magic code used to create the teleport id
+        self.teleport_id_count += 1;
+        if self.teleport_id_count == i32::MAX {
+            self.teleport_id_count = 0;
+        }
+        let entity = &mut self.entity;
+        entity.x = x;
+        entity.y = y;
+        entity.z = z;
+        entity.lastx = x;
+        entity.lasty = y;
+        entity.lastz = z;
+        entity.yaw = yaw;
+        entity.pitch = pitch;
+        self.awaiting_teleport = Some((self.teleport_id_count.into(), Vector3::new(x, y, z)));
+        self.client.send_packet(&CSyncPlayerPosition::new(
+            x,
+            y,
+            z,
+            yaw,
+            pitch,
+            0,
+            self.teleport_id_count.into(),
+        ));
+    }
+
+    /// Kicks the Client with a reason depending on the connection state
+    pub fn kick(&mut self, reason: TextComponent) {
+        assert!(self.client.connection_state == ConnectionState::Play);
+        dbg!(&reason);
+        self.client
+            .try_send_packet(&CPlayDisconnect::new(reason))
+            .unwrap_or_else(|_| self.client.close());
+
+        self.client.close()
+    }
+
+    pub fn update_health(&mut self, health: f32, food: i32, food_saturation: f32) {
+        self.health = health;
+        self.food = food;
+        self.food_saturation = food_saturation;
+    }
+
+    pub fn set_gamemode(&mut self, gamemode: GameMode) {
+        self.gamemode = gamemode;
+        self.client
+            .send_packet(&CGameEvent::new(3, gamemode.to_f32().unwrap()));
+    }
+
+    pub fn send_system_message(&mut self, text: TextComponent) {
+        self.client
+            .send_packet(&CSystemChatMessage::new(text, false));
+    }
+}
+
+impl Player {
+    pub fn process_packets(&mut self, server: &mut Server) {
+        let mut i = 0;
+        while i < self.client.client_packets_queue.len() {
+            let mut packet = self.client.client_packets_queue.remove(i).unwrap();
+            self.handle_play_packet(server, &mut packet);
+            i += 1;
+        }
+    }
+
+    pub fn handle_play_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
+        let bytebuf = &mut packet.bytebuf;
+        match packet.id.0 {
+            SConfirmTeleport::PACKET_ID => {
+                self.handle_confirm_teleport(server, SConfirmTeleport::read(bytebuf).unwrap())
+            }
+            SChatCommand::PACKET_ID => {
+                self.handle_chat_command(server, SChatCommand::read(bytebuf).unwrap())
+            }
+            SPlayerPosition::PACKET_ID => {
+                self.handle_position(server, SPlayerPosition::read(bytebuf).unwrap())
+            }
+            SPlayerPositionRotation::PACKET_ID => self
+                .handle_position_rotation(server, SPlayerPositionRotation::read(bytebuf).unwrap()),
+            SPlayerRotation::PACKET_ID => {
+                self.handle_rotation(server, SPlayerRotation::read(bytebuf).unwrap())
+            }
+            SPlayerCommand::PACKET_ID => {
+                self.handle_player_command(server, SPlayerCommand::read(bytebuf).unwrap())
+            }
+            SSwingArm::PACKET_ID => {
+                self.handle_swing_arm(server, SSwingArm::read(bytebuf).unwrap())
+            }
+            SChatMessage::PACKET_ID => {
+                self.handle_chat_message(server, SChatMessage::read(bytebuf).unwrap())
+            }
+            SClientInformationPlay::PACKET_ID => self.handle_client_information_play(
+                server,
+                SClientInformationPlay::read(bytebuf).unwrap(),
+            ),
+            SInteract::PACKET_ID => self.handle_interact(server, SInteract::read(bytebuf).unwrap()),
+            SPlayerAction::PACKET_ID => {
+                self.handle_player_action(server, SPlayerAction::read(bytebuf).unwrap())
+            }
+            SUseItemOn::PACKET_ID => {
+                self.handle_use_item_on(server, SUseItemOn::read(bytebuf).unwrap())
+            }
+            SSetHeldItem::PACKET_ID => {
+                self.handle_set_held_item(server, SSetHeldItem::read(bytebuf).unwrap())
+            }
+            SSetCreativeSlot::PACKET_ID => {
+                self.handle_set_creative_slot(server, SSetCreativeSlot::read(bytebuf).unwrap())
+            }
+            SPlayPingRequest::PACKET_ID => {
+                self.handle_play_ping_request(server, SPlayPingRequest::read(bytebuf).unwrap())
+            }
+            _ => log::error!("Failed to handle player packet id {:#04x}", packet.id.0),
+        }
     }
 }
 

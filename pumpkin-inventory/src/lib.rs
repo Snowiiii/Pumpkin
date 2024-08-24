@@ -1,9 +1,10 @@
-use num_derive::ToPrimitive;
+use num_derive::{FromPrimitive, ToPrimitive};
 
 pub mod player;
+pub mod window_property;
 
 /// https://wiki.vg/Inventory
-#[derive(Debug, ToPrimitive, Clone)]
+#[derive(Debug, ToPrimitive, FromPrimitive, Clone)]
 pub enum WindowType {
     // not used
     Generic9x1,

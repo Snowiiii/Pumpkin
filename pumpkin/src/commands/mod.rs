@@ -2,8 +2,8 @@ use pumpkin_core::text::TextComponent;
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use crate::client::Client;
 use crate::commands::dispatcher::CommandDispatcher;
+use crate::entity::player::Player;
 mod arg_player;
 mod cmd_gamemode;
 mod cmd_help;
@@ -17,7 +17,7 @@ mod tree_format;
 pub enum CommandSender<'a> {
     Rcon(&'a mut Vec<String>),
     Console,
-    Player(&'a mut Client),
+    Player(&'a mut Player),
 }
 
 impl<'a> CommandSender<'a> {
@@ -45,9 +45,9 @@ impl<'a> CommandSender<'a> {
             CommandSender::Rcon(_) => true,
         }
     }
-    pub fn as_mut_player(&mut self) -> Option<&mut Client> {
+    pub fn as_mut_player(&mut self) -> Option<&mut Player> {
         match self {
-            CommandSender::Player(client) => Some(client),
+            CommandSender::Player(player) => Some(player),
             CommandSender::Console => None,
             CommandSender::Rcon(_) => None,
         }
