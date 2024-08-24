@@ -98,7 +98,7 @@ impl Player {
     pub fn teleport(&mut self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
         // this is the ultra special magic code used to create the teleport id
         self.teleport_id_count += 1;
-        if self.teleport_id_count == i32::max_value() {
+        if self.teleport_id_count == i32::MAX {
             self.teleport_id_count = 0;
         }
         let entity = &mut self.entity;

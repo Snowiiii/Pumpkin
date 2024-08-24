@@ -50,9 +50,7 @@ impl Player {
 
                 self.awaiting_teleport = None;
             } else {
-                self.kick(TextComponent::text(
-                    "Wrong teleport id",
-                ))
+                self.kick(TextComponent::text("Wrong teleport id"))
             }
         } else {
             self.kick(TextComponent::text(
