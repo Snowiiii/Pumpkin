@@ -266,7 +266,7 @@ impl Server {
             let entity = &existing_player.entity;
             let gameprofile = existing_player.client.gameprofile.as_ref().unwrap();
             player.client.send_packet(&CSpawnEntity::new(
-                player.entity_id().into(),
+                existing_player.entity_id().into(),
                 UUID(gameprofile.id),
                 EntityType::Player.to_i32().unwrap().into(),
                 entity.x,
@@ -303,7 +303,6 @@ impl Server {
             .iter()
             .filter(|c| c.0 != &from.client.token)
         {
-            // Check if client is a player
             let player = player.borrow_mut();
             if player.entity_id() == id {
                 return Some(player);
@@ -324,7 +323,6 @@ impl Server {
             .iter()
             .filter(|c| c.0 != &from.client.token)
         {
-            // Check if client is a player
             let mut player = player.borrow_mut();
             player.client.send_packet(packet);
         }
@@ -340,7 +338,6 @@ impl Server {
             .iter()
             .filter(|c| !from.contains(&c.0.as_ref()))
         {
-            // Check if client is a player
             let mut player = player.borrow_mut();
             player.client.send_packet(packet);
         }
