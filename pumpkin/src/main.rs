@@ -31,6 +31,8 @@ static ALLOC: dhat::Alloc = dhat::Alloc;
 
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
+    use pumpkin_core::text::{color::NamedColor, TextComponent};
+
     #[cfg(feature = "dhat-heap")]
     let _profiler = dhat::Profiler::new_heap();
     #[cfg(feature = "dhat-heap")]
@@ -39,6 +41,17 @@ fn main() -> io::Result<()> {
         .enable_all()
         .build()
         .unwrap();
+
+    ctrlc::set_handler(|| {
+        log::warn!(
+            "{}",
+            TextComponent::text("Stopping Server")
+                .color_named(NamedColor::Red)
+                .to_pretty_console()
+        );
+        std::process::exit(0);
+    })
+    .unwrap();
     // ensure rayon is built outside of tokio scope
     rayon::ThreadPoolBuilder::new().build_global().unwrap();
     rt.block_on(async {
