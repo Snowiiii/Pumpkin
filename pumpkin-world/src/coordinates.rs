@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use crate::{WORLD_HEIGHT, WORLD_Y_START_AT};
+use crate::{WORLD_LOWEST_Y, WORLD_MAX_Y};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Height {
@@ -9,20 +9,20 @@ pub struct Height {
 
 impl Height {
     pub fn new(height: i16) -> Self {
-        assert!(height <= (WORLD_HEIGHT as i16 - WORLD_Y_START_AT.abs() as i16));
-        assert!(height >= WORLD_Y_START_AT as i16);
+        assert!(height <= WORLD_MAX_Y);
+        assert!(height >= WORLD_LOWEST_Y);
 
         Self { height }
     }
 
     pub fn from_absolute(height: u16) -> Self {
-        Self::new(height as i16 - WORLD_Y_START_AT.abs() as i16)
+        Self::new(height as i16 - WORLD_LOWEST_Y.abs())
     }
 
     /// Absolute height ranges from `0..WORLD_HEIGHT`
-    /// instead of `WORLD_Y_START_AT..(WORLD_HEIGHT-WORLD_Y_START_AT)`
+    /// instead of `WORLD_LOWEST_Y..WORLD_MAX_Y`
     pub fn get_absolute(&self) -> u16 {
-        (self.height + WORLD_Y_START_AT.abs() as i16) as u16
+        (self.height + WORLD_LOWEST_Y.abs()) as u16
     }
 }
 
