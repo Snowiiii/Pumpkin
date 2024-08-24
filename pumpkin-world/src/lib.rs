@@ -1,6 +1,7 @@
 use level::Level;
 
 pub mod chunk;
+pub mod coordinates;
 pub mod dimension;
 pub const WORLD_HEIGHT: usize = 384;
 pub const WORLD_Y_START_AT: i32 = -64;

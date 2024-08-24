@@ -10,7 +10,7 @@ use rayon::prelude::*;
 use thiserror::Error;
 use tokio::sync::mpsc;
 
-use crate::chunk::ChunkData;
+use crate::{chunk::ChunkData, coordinates::ChunkCoordinates};
 
 #[allow(dead_code)]
 /// The Level represents a
@@ -102,15 +102,15 @@ impl Level {
     /// Note: The order of the output chunks will almost never be in the same order as the order of input chunks
     pub async fn read_chunks(
         &self,
-        chunks: Vec<(i32, i32)>,
-        channel: mpsc::Sender<((i32, i32), Result<ChunkData, WorldError>)>,
+        chunks: Vec<ChunkCoordinates>,
+        channel: mpsc::Sender<(ChunkCoordinates, Result<ChunkData, WorldError>)>,
     ) {
         chunks
             .into_par_iter()
             .map(|chunk| {
                 let region = (
-                    ((chunk.0 as f32) / 32.0).floor() as i32,
-                    ((chunk.1 as f32) / 32.0).floor() as i32,
+                    ((chunk.x as f32) / 32.0).floor() as i32,
+                    ((chunk.z as f32) / 32.0).floor() as i32,
                 );
                 let channel = channel.clone();
 
@@ -157,8 +157,8 @@ impl Level {
                 }
 
                 let modulus = |a: i32, b: i32| ((a % b) + b) % b;
-                let chunk_x = modulus(chunk.0, 32) as u32;
-                let chunk_z = modulus(chunk.1, 32) as u32;
+                let chunk_x = modulus(chunk.x, 32) as u32;
+                let chunk_z = modulus(chunk.z, 32) as u32;
                 let channel = channel.clone();
                 let table_entry = (chunk_x + chunk_z * 32) * 4;
 
@@ -170,23 +170,20 @@ impl Level {
                 let size = location_table[table_entry as usize + 3] as usize * 4096;
 
                 if offset == 0 && size == 0 {
-                    let _ =
-                        channel.blocking_send(((chunk.0, chunk.1), Err(WorldError::ChunkNotFound)));
+                    let _ = channel.blocking_send((chunk, Err(WorldError::ChunkNotFound)));
                     return;
                 }
                 // Read the file using the offset and size
                 let mut file_buf = {
                     let seek_result = region_file.seek(std::io::SeekFrom::Start(offset));
                     if seek_result.is_err() {
-                        let _ = channel
-                            .blocking_send(((chunk.0, chunk.1), Err(WorldError::RegionIsInvalid)));
+                        let _ = channel.blocking_send((chunk, Err(WorldError::RegionIsInvalid)));
                         return;
                     }
                     let mut out = vec![0; size];
                     let read_result = region_file.read_exact(&mut out);
                     if read_result.is_err() {
-                        let _ = channel
-                            .blocking_send(((chunk.0, chunk.1), Err(WorldError::RegionIsInvalid)));
+                        let _ = channel.blocking_send((chunk, Err(WorldError::RegionIsInvalid)));
                         return;
                     }
                     out
@@ -199,7 +196,7 @@ impl Level {
                     Some(c) => c,
                     None => {
                         let _ = channel.blocking_send((
-                            (chunk.0, chunk.1),
+                            chunk,
                             Err(WorldError::Compression(
                                 CompressionError::UnknownCompression,
                             )),
@@ -216,7 +213,7 @@ impl Level {
                     Ok(data) => data,
                     Err(e) => {
                         channel
-                            .blocking_send(((chunk.0, chunk.1), Err(WorldError::Compression(e))))
+                            .blocking_send((chunk, Err(WorldError::Compression(e))))
                             .expect("Failed to send Compression error");
                         return;
                     }

@@ -11,9 +11,9 @@ pub struct CChunkData<'a>(pub &'a ChunkData);
 impl<'a> ClientPacket for CChunkData<'a> {
     fn write(&self, buf: &mut crate::bytebuf::ByteBuffer) {
         // Chunk X
-        buf.put_i32(self.0.position.0);
+        buf.put_i32(self.0.position.x);
         // Chunk Z
-        buf.put_i32(self.0.position.1);
+        buf.put_i32(self.0.position.z);
 
         let heightmap_nbt =
             fastnbt::to_bytes_with_opts(&self.0.heightmaps, fastnbt::SerOpts::network_nbt())

@@ -374,7 +374,7 @@ impl Server {
                 Err(_) => continue,
             };
             #[cfg(debug_assertions)]
-            if _chunk_pos == (0, 0) {
+            if _chunk_pos == (pumpkin_world::coordinates::ChunkCoordinates { x: 0, z: 0 }) {
                 use pumpkin_protocol::bytebuf::ByteBuffer;
                 let mut test = ByteBuffer::empty();
                 CChunkData(&chunk_data).write(&mut test);
