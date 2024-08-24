@@ -1,3 +1,5 @@
+#![allow(dead_code, unused)]
+
 pub struct ClickMode {
     slot: Slot,
     click_type: ClickType,
@@ -35,8 +37,8 @@ impl ClickMode {
             }
         };
         let button = match button {
-            0 => Click::LeftClick,
-            1 => Click::RightClick,
+            0 => Click::Left,
+            1 => Click::Right,
             // TODO: Error here
             _ => unreachable!(),
         };
@@ -84,50 +86,50 @@ impl ClickMode {
     fn new_drag_item(button: i8, slot: i16) -> Self {
         let (mouse_type, state, slot) = match button {
             0 => (
-                MouseDragType::LeftMouse,
+                MouseDragType::Left,
                 MouseDragState::Start,
                 Slot::OutsideInventory,
             ),
             1 => (
-                MouseDragType::LeftMouse,
+                MouseDragType::Left,
                 MouseDragState::AddSlot,
                 Slot::Normal(slot.try_into().unwrap()),
             ),
             2 => (
-                MouseDragType::LeftMouse,
+                MouseDragType::Left,
                 MouseDragState::End,
                 Slot::OutsideInventory,
             ),
 
             4 => (
-                MouseDragType::RightMouse,
+                MouseDragType::Right,
                 MouseDragState::Start,
                 Slot::OutsideInventory,
             ),
             5 => (
-                MouseDragType::RightMouse,
+                MouseDragType::Right,
                 MouseDragState::AddSlot,
                 Slot::Normal(slot.try_into().unwrap()),
             ),
             6 => (
-                MouseDragType::RightMouse,
+                MouseDragType::Right,
                 MouseDragState::End,
                 Slot::OutsideInventory,
             ),
 
             // ONLY FOR CREATIVE
             8 => (
-                MouseDragType::MiddleMouse,
+                MouseDragType::Middle,
                 MouseDragState::Start,
                 Slot::OutsideInventory,
             ),
             9 => (
-                MouseDragType::MiddleMouse,
+                MouseDragType::Middle,
                 MouseDragState::AddSlot,
                 Slot::Normal(slot.try_into().unwrap()),
             ),
             10 => (
-                MouseDragType::MiddleMouse,
+                MouseDragType::Middle,
                 MouseDragState::End,
                 Slot::OutsideInventory,
             ),
@@ -157,9 +159,9 @@ enum ClickType {
     DoubleClick,
 }
 enum Click {
-    LeftClick,
-    RightClick,
-    MiddleClick,
+    Left,
+    Right,
+    Middle,
 }
 
 enum KeyClick {
@@ -178,9 +180,9 @@ enum DropType {
 }
 
 enum MouseDragType {
-    LeftMouse,
-    RightMouse,
-    MiddleMouse,
+    Left,
+    Right,
+    Middle,
 }
 
 enum MouseDragState {

@@ -2,7 +2,7 @@ use crate::slot::Slot;
 use crate::VarInt;
 use pumpkin_macros::packet;
 use serde::Deserialize;
-
+#[allow(dead_code)]
 #[derive(Deserialize)]
 #[packet(0x0E)]
 pub struct SClickContainer {
