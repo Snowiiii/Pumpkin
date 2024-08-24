@@ -1,6 +1,7 @@
 mod s_chat_command;
 mod s_chat_message;
 mod s_client_information;
+mod s_close_container;
 mod s_confirm_teleport;
 mod s_interact;
 mod s_ping_request;
@@ -17,6 +18,7 @@ mod s_use_item_on;
 pub use s_chat_command::*;
 pub use s_chat_message::*;
 pub use s_client_information::*;
+pub use s_close_container::*;
 pub use s_confirm_teleport::*;
 pub use s_interact::*;
 pub use s_ping_request::*;

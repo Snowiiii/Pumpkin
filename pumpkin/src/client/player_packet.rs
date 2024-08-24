@@ -9,6 +9,8 @@ use crate::{
 use num_traits::FromPrimitive;
 use pumpkin_core::text::TextComponent;
 use pumpkin_entity::EntityId;
+use pumpkin_inventory::WindowType;
+use pumpkin_protocol::server::play::SCloseContainer;
 use pumpkin_protocol::{
     client::play::{
         Animation, CAcknowledgeBlockChange, CBlockUpdate, CEntityAnimation, CEntityVelocity,
@@ -405,5 +407,16 @@ impl Player {
         }
         self.inventory
             .set_slot(packet.slot as usize, packet.clicked_item.to_item(), false);
+    }
+
+    // TODO:
+    // This function will in the future be used to keep track of if the client is in a valid state.
+    // But this is not possible yet
+    pub fn handle_close_container(&mut self, _server: &mut Server, packet: SCloseContainer) {
+        // window_id 0 represents both 9x1 Generic AND inventory here
+        let Some(_window_type) = WindowType::from_u8(packet.window_id) else {
+            self.kick(TextComponent::text("Invalid window ID"));
+            return;
+        };
     }
 }
