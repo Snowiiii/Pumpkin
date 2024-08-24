@@ -41,15 +41,23 @@ impl Player {
         _server: &mut Server,
         confirm_teleport: SConfirmTeleport,
     ) {
-        if let Some(id) = self.awaiting_teleport.as_ref() {
+        if let Some((id, position)) = self.awaiting_teleport.as_ref() {
             if id == &confirm_teleport.teleport_id {
+                // we should set the pos now to that we requested in the teleport packet, Is may fixed issues when the client sended position packets while being teleported
+                self.entity.x = position.x;
+                self.entity.y = position.y;
+                self.entity.z = position.z;
+
+                self.awaiting_teleport = None;
             } else {
-                log::warn!("Teleport id does not match, Weird but okay");
+                self.kick(TextComponent::text(
+                    "Wrong teleport id",
+                ))
             }
-            self.awaiting_teleport = None;
         } else {
-            self.client
-                .kick("Send Teleport confirm, but we did not teleport")
+            self.kick(TextComponent::text(
+                "Send Teleport confirm, but we did not teleport",
+            ))
         }
     }
 

@@ -43,8 +43,9 @@ pub struct Player {
     // TODO: prbly should put this into an Living Entitiy or something
     pub velocity: Vector3<f64>,
 
-    // Current awaiting teleport id, None if did not teleport
-    pub awaiting_teleport: Option<VarInt>,
+    pub teleport_id_count: i32,
+    // Current awaiting teleport id and location, None if did not teleport
+    pub awaiting_teleport: Option<(VarInt, Vector3<f64>)>,
 }
 
 impl Player {
@@ -63,6 +64,7 @@ impl Player {
             current_block_destroy_stage: 0,
             velocity: Vector3::new(0.0, 0.0, 0.0),
             inventory: PlayerInventory::new(),
+            teleport_id_count: 0,
             gamemode,
         }
     }
@@ -94,8 +96,11 @@ impl Player {
     }
 
     pub fn teleport(&mut self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
-        // TODO
-        let id = 0;
+        // this is the ultra special magic code used to create the teleport id
+        self.teleport_id_count += 1;
+        if self.teleport_id_count == i32::max_value() {
+            self.teleport_id_count = 0;
+        }
         let entity = &mut self.entity;
         entity.x = x;
         entity.y = y;
@@ -105,9 +110,16 @@ impl Player {
         entity.lastz = z;
         entity.yaw = yaw;
         entity.pitch = pitch;
-        self.awaiting_teleport = Some(id.into());
-        self.client
-            .send_packet(&CSyncPlayerPosition::new(x, y, z, yaw, pitch, 0, id.into()));
+        self.awaiting_teleport = Some((self.teleport_id_count.into(), Vector3::new(x, y, z)));
+        self.client.send_packet(&CSyncPlayerPosition::new(
+            x,
+            y,
+            z,
+            yaw,
+            pitch,
+            0,
+            self.teleport_id_count.into(),
+        ));
     }
 
     /// Kicks the Client with a reason depending on the connection state
