@@ -1,4 +1,3 @@
-use crate::client::Client;
 use crate::commands::dispatcher::InvalidTreeError;
 use crate::commands::dispatcher::InvalidTreeError::InvalidConsumptionError;
 use crate::commands::tree::{ConsumedArgs, RawArgs};
@@ -16,8 +15,8 @@ pub fn consume_arg_player(src: &CommandSender, args: &mut RawArgs) -> Option<Str
         "@a" | "@e" => None, // todo: implement all players target selector
         _ => {
             // todo: implement any other player than sender
-            if let Player(client) = src {
-                if let Some(profile) = &client.gameprofile {
+            if let Player(player) = src {
+                if let Some(profile) = &player.client.gameprofile {
                     if profile.name == s {
                         return Some(s.into());
                     };
@@ -33,7 +32,7 @@ pub fn parse_arg_player<'a>(
     src: &'a mut CommandSender,
     arg_name: &str,
     consumed_args: &ConsumedArgs,
-) -> Result<&'a mut Client, InvalidTreeError> {
+) -> Result<&'a mut crate::entity::player::Player, InvalidTreeError> {
     let s = consumed_args
         .get(arg_name)
         .ok_or(InvalidConsumptionError(None))?
@@ -46,10 +45,10 @@ pub fn parse_arg_player<'a>(
         "@a" | "@e" => Err(InvalidConsumptionError(Some(s.into()))), // todo: implement all players target selector
         _ => {
             // todo: implement any other player than sender
-            if let Player(client) = src {
-                if let Some(profile) = &client.gameprofile {
+            if let Player(player) = src {
+                if let Some(profile) = &player.client.gameprofile {
                     if profile.name == s {
-                        return Ok(client);
+                        return Ok(player);
                     };
                 };
             };

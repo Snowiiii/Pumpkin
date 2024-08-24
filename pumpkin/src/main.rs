@@ -31,6 +31,7 @@ static ALLOC: dhat::Alloc = dhat::Alloc;
 
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
+    use entity::player::Player;
     use pumpkin_core::text::{color::NamedColor, TextComponent};
 
     #[cfg(feature = "dhat-heap")]
@@ -93,7 +94,8 @@ fn main() -> io::Result<()> {
         let use_console = advanced_configuration.commands.use_console;
         let rcon = advanced_configuration.rcon.clone();
 
-        let mut connections: HashMap<Token, Rc<RefCell<Client>>> = HashMap::new();
+        let mut clients: HashMap<Token, Client> = HashMap::new();
+        let mut players: HashMap<Rc<Token>, Rc<RefCell<Player>>> = HashMap::new();
 
         let mut server = Server::new((basic_config, advanced_configuration));
         log::info!("Started Server took {}ms", time.elapsed().as_millis());
@@ -160,30 +162,50 @@ fn main() -> io::Result<()> {
                             Interest::READABLE.add(Interest::WRITABLE),
                         )?;
                         let rc_token = Rc::new(token);
-                        let client = Rc::new(RefCell::new(Client::new(
-                            Rc::clone(&rc_token),
-                            connection,
-                            addr,
-                        )));
-                        server.add_client(rc_token, Rc::clone(&client));
-                        connections.insert(token, client);
+                        let client = Client::new(Rc::clone(&rc_token), connection, addr);
+                        clients.insert(token, client);
                     },
 
                     token => {
-                        // Maybe received an event for a TCP connection.
-                        let done = if let Some(client) = connections.get_mut(&token) {
-                            let mut client = client.borrow_mut();
-                            client.poll(&mut server, event).await;
-                            client.closed
+                        // Poll Players
+                        let done = if let Some(player) = players.get_mut(&token) {
+                            let mut player = player.borrow_mut();
+                            player.client.poll(event).await;
+                            player.process_packets(&mut server);
+                            player.client.closed
                         } else {
-                            // Sporadic events happen, we can safely ignore them.
                             false
                         };
+
                         if done {
-                            if let Some(client) = connections.remove(&token) {
-                                server.remove_client(&token);
-                                let mut client = client.borrow_mut();
-                                poll.registry().deregister(&mut client.connection)?;
+                            if let Some(player) = players.remove(&token) {
+                                server.remove_player(&token);
+                                let mut player = player.borrow_mut();
+                                poll.registry().deregister(&mut player.client.connection)?;
+                            }
+                        }
+
+                        // Poll current Clients (non players)
+                        // Maybe received an event for a TCP connection.
+                        let (done, make_player) = if let Some(client) = clients.get_mut(&token) {
+                            client.poll(event).await;
+                            client.process_packets(&mut server).await;
+                            (client.closed, client.make_player)
+                        } else {
+                            // Sporadic events happen, we can safely ignore them.
+                            (false, false)
+                        };
+                        if done || make_player {
+                            if let Some(mut client) = clients.remove(&token) {
+                                if done {
+                                    poll.registry().deregister(&mut client.connection)?;
+                                } else if make_player {
+                                    let token = client.token.clone();
+                                    let player = server.add_player(token.clone(), client);
+                                    players.insert(token, player.clone());
+                                    let mut player = player.borrow_mut();
+                                    server.spawn_player(&mut player).await;
+                                }
                             }
                         }
                     }
