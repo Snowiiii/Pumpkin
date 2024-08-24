@@ -282,7 +282,7 @@ impl Server {
             ))
         }
         // entity meta data
-        if let Some(config) = player.client.config.clone() {
+        if let Some(config) = player.client.config.as_ref() {
             self.broadcast_packet(
                 player,
                 &CSetEntityMetadata::new(

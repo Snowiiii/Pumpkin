@@ -35,7 +35,6 @@ mod client_packet;
 mod container;
 pub mod player_packet;
 
-#[derive(Clone)]
 pub struct PlayerConfig {
     pub locale: String, // 16
     pub view_distance: i8,

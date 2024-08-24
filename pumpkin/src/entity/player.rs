@@ -200,13 +200,13 @@ impl Player {
     }
 }
 
-#[derive(FromPrimitive, Clone)]
+#[derive(FromPrimitive)]
 pub enum Hand {
     Main,
     Off,
 }
 
-#[derive(FromPrimitive, Clone)]
+#[derive(FromPrimitive)]
 pub enum ChatMode {
     Enabled,
     CommandsOnly,
