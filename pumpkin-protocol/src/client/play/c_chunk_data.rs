@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{bytebuf::ByteBuffer, BitSet, ClientPacket, VarInt};
 use itertools::Itertools;
 use pumpkin_macros::packet;
-use pumpkin_world::{chunk::ChunkData, DIRECT_PALETTE_BITS};
+use pumpkin_world::{block::block_registry::BlockId, chunk::ChunkData, DIRECT_PALETTE_BITS};
 
 #[packet(0x27)]
 pub struct CChunkData<'a>(pub &'a ChunkData);
@@ -26,7 +26,11 @@ impl<'a> ClientPacket for CChunkData<'a> {
             let block_count = chunk
                 .iter()
                 .dedup()
-                .filter(|block| **block != 0 && **block != 12959 && **block != 12958)
+                .filter(|block| {
+                    !block.is_air()
+                        && **block != BlockId::from_id(12959)
+                        && **block != BlockId::from_id(12958)
+                })
                 .count() as i16;
             // Block count
             data_buf.put_i16(block_count);
@@ -63,7 +67,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
                     palette.iter().enumerate().for_each(|(i, id)| {
                         palette_map.insert(*id, i);
                         // Palette
-                        data_buf.put_var_int(&VarInt(**id));
+                        data_buf.put_var_int(&VarInt(id.get_id_mojang_repr()));
                     });
                     for block_clump in chunk.chunks(64 / block_size as usize) {
                         let mut out_long: i64 = 0;
@@ -83,7 +87,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
                         let mut out_long: i64 = 0;
                         let mut shift = 0;
                         for block in block_clump {
-                            out_long |= (*block as i64) << shift;
+                            out_long |= (block.get_id() as i64) << shift;
                             shift += DIRECT_PALETTE_BITS;
                         }
                         block_data_array.push(out_long);

@@ -7,6 +7,56 @@ use crate::level::WorldError;
 
 const BLOCKS_JSON: &str = include_str!("../../assets/blocks.json");
 
+// 0 is air -> reasonable default
+#[derive(Default, Deserialize, Debug, Hash, Clone, Copy, PartialEq, Eq)]
+#[serde(transparent)]
+pub struct BlockId {
+    data: u16,
+}
+
+impl BlockId {
+    pub fn new(
+        block_id: &str,
+        properties: Option<&HashMap<String, String>>,
+    ) -> Result<Self, WorldError> {
+        let mut block_states = BLOCKS
+            .get(block_id)
+            .ok_or(WorldError::BlockStateIdNotFound)?
+            .states
+            .iter();
+
+        let block_state = match properties {
+            Some(properties) => match block_states.find(|state| &state.properties == properties) {
+                Some(state) => state,
+                None => return Err(WorldError::BlockStateIdNotFound),
+            },
+            None => block_states
+                .find(|state| state.is_default)
+                .expect("Every Block should have at least 1 default state"),
+        };
+
+        Ok(block_state.id)
+    }
+
+    pub fn from_id(id: u16) -> Self {
+        // TODO: add check if the id is actually valid
+        Self { data: id }
+    }
+
+    pub fn is_air(&self) -> bool {
+        self.data == 0
+    }
+
+    pub fn get_id(&self) -> u16 {
+        self.data
+    }
+
+    /// An i32 is the way mojang internally represents their Blocks
+    pub fn get_id_mojang_repr(&self) -> i32 {
+        self.data as i32
+    }
+}
+
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct BlockDefinition {
     /// e.g. minecraft:door or minecraft:button
@@ -23,7 +73,7 @@ pub struct BlockDefinition {
 /// This could e.g. be an extended piston facing left.
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct BlockState {
-    id: i64,
+    id: BlockId,
 
     /// Whether this is the default state of the Block
     #[serde(default, rename = "default")]
@@ -50,29 +100,4 @@ pub struct BlockType {
 lazy_static! {
     pub static ref BLOCKS: HashMap<String, BlockType> =
         serde_json::from_str(BLOCKS_JSON).expect("Could not parse block.json registry.");
-}
-
-pub fn block_id_and_properties_to_block_state_id(
-    block_id: &str,
-    properties: Option<&HashMap<String, String>>,
-) -> Result<i64, WorldError> {
-    let block = match BLOCKS.get(block_id) {
-        Some(block) => block,
-        None => return Err(WorldError::BlockStateIdNotFound),
-    };
-    let block_state_id = match properties {
-        None => Ok(block
-            .states
-            .iter()
-            .find(|state| state.is_default)
-            .expect("Each block should have at least one default state")
-            .id),
-        Some(properties) => block
-            .states
-            .iter()
-            .find(|state| &state.properties == properties)
-            .map(|state| state.id)
-            .ok_or(WorldError::BlockStateIdNotFound),
-    };
-    block_state_id
 }

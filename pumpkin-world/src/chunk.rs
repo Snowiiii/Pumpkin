@@ -4,13 +4,14 @@ use fastnbt::LongArray;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    block::block_registry::BlockId,
     coordinates::{ChunkCoordinates, ChunkRelativeBlockCoordinates},
     level::WorldError,
     WORLD_HEIGHT,
 };
 
 pub struct ChunkData {
-    pub blocks: Box<[i32; 16 * 16 * WORLD_HEIGHT]>,
+    pub blocks: Box<[BlockId; 16 * 16 * WORLD_HEIGHT]>,
     pub position: ChunkCoordinates,
     pub heightmaps: ChunkHeightmaps,
 }
@@ -61,23 +62,18 @@ impl ChunkData {
         };
 
         // this needs to be boxed, otherwise it will cause a stack-overflow
-        let mut blocks = Box::new([0; 16 * 16 * WORLD_HEIGHT]);
+        let mut blocks = Box::new([BlockId::default(); 16 * 16 * WORLD_HEIGHT]);
 
         for (k, section) in chunk_data.sections.into_iter().enumerate() {
             let block_states = match section.block_states {
                 Some(states) => states,
                 None => continue, // this should instead fill all blocks with the only element of the palette
             };
+
             let palette = block_states
                 .palette
                 .iter()
-                .map(|entry| {
-                    crate::block::block_registry::block_id_and_properties_to_block_state_id(
-                        &entry.name,
-                        entry.properties.as_ref(),
-                    )
-                    .map(|v| v as i32)
-                })
+                .map(|entry| BlockId::new(&entry.name, entry.properties.as_ref()))
                 .collect::<Result<Vec<_>, _>>()?;
             let block_data = match block_states.data {
                 None => continue,
@@ -119,8 +115,8 @@ impl ChunkData {
     pub fn set_block(
         &mut self,
         at: ChunkRelativeBlockCoordinates,
-        block_id: i32,
-    ) -> Result<i32, WorldError> {
+        block_id: BlockId,
+    ) -> Result<BlockId, WorldError> {
         Ok(std::mem::replace(
             &mut self.blocks
                 [(at.y.get_absolute() * 16 * 16 + *at.z as u16 * 16 + *at.x as u16) as usize],
