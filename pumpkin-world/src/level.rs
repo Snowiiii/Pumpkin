@@ -107,125 +107,121 @@ impl Level {
         chunks: Vec<ChunkCoordinates>,
         channel: mpsc::Sender<(ChunkCoordinates, Result<ChunkData, WorldError>)>,
     ) {
-        chunks
-            .into_par_iter()
-            .map(|chunk| {
-                let region = (
-                    ((chunk.x as f32) / 32.0).floor() as i32,
-                    ((chunk.z as f32) / 32.0).floor() as i32,
-                );
-                let channel = channel.clone();
+        chunks.into_par_iter().for_each(|chunk| {
+            let region = (
+                ((chunk.x as f32) / 32.0).floor() as i32,
+                ((chunk.z as f32) / 32.0).floor() as i32,
+            );
+            let channel = channel.clone();
 
-                // return different error when file is not found (because that means that the chunks have just not been generated yet)
-                let mut region_file = match OpenOptions::new().read(true).open(
-                    self.region_folder
-                        .join(format!("r.{}.{}.mca", region.0, region.1)),
-                ) {
-                    Ok(f) => f,
-                    Err(err) => match err.kind() {
-                        std::io::ErrorKind::NotFound => {
-                            let _ = channel.blocking_send((chunk, Err(WorldError::RegionNotFound)));
-                            return;
-                        }
-                        _ => {
-                            let _ = channel
-                                .blocking_send((chunk, Err(WorldError::IoError(err.kind()))));
-                            return;
-                        }
-                    },
-                };
-
-                let mut location_table: [u8; 4096] = [0; 4096];
-                let mut timestamp_table: [u8; 4096] = [0; 4096];
-
-                // fill the location and timestamp tables
-                {
-                    match region_file.read_exact(&mut location_table) {
-                        Ok(_) => {}
-                        Err(err) => {
-                            let _ = channel
-                                .blocking_send((chunk, Err(WorldError::IoError(err.kind()))));
-                            return;
-                        }
+            // return different error when file is not found (because that means that the chunks have just not been generated yet)
+            let mut region_file = match OpenOptions::new().read(true).open(
+                self.region_folder
+                    .join(format!("r.{}.{}.mca", region.0, region.1)),
+            ) {
+                Ok(f) => f,
+                Err(err) => match err.kind() {
+                    std::io::ErrorKind::NotFound => {
+                        let _ = channel.blocking_send((chunk, Err(WorldError::RegionNotFound)));
+                        return;
                     }
-                    match region_file.read_exact(&mut timestamp_table) {
-                        Ok(_) => {}
-                        Err(err) => {
-                            let _ = channel
-                                .blocking_send((chunk, Err(WorldError::IoError(err.kind()))));
-                            return;
-                        }
+                    _ => {
+                        let _ =
+                            channel.blocking_send((chunk, Err(WorldError::IoError(err.kind()))));
+                        return;
+                    }
+                },
+            };
+
+            let mut location_table: [u8; 4096] = [0; 4096];
+            let mut timestamp_table: [u8; 4096] = [0; 4096];
+
+            // fill the location and timestamp tables
+            {
+                match region_file.read_exact(&mut location_table) {
+                    Ok(_) => {}
+                    Err(err) => {
+                        let _ =
+                            channel.blocking_send((chunk, Err(WorldError::IoError(err.kind()))));
+                        return;
                     }
                 }
+                match region_file.read_exact(&mut timestamp_table) {
+                    Ok(_) => {}
+                    Err(err) => {
+                        let _ =
+                            channel.blocking_send((chunk, Err(WorldError::IoError(err.kind()))));
+                        return;
+                    }
+                }
+            }
 
-                let modulus = |a: i32, b: i32| ((a % b) + b) % b;
-                let chunk_x = modulus(chunk.x, 32) as u32;
-                let chunk_z = modulus(chunk.z, 32) as u32;
-                let channel = channel.clone();
-                let table_entry = (chunk_x + chunk_z * 32) * 4;
+            let modulus = |a: i32, b: i32| ((a % b) + b) % b;
+            let chunk_x = modulus(chunk.x, 32) as u32;
+            let chunk_z = modulus(chunk.z, 32) as u32;
+            let channel = channel.clone();
+            let table_entry = (chunk_x + chunk_z * 32) * 4;
 
-                let mut offset = vec![0u8];
-                offset.extend_from_slice(
-                    &location_table[table_entry as usize..table_entry as usize + 3],
-                );
-                let offset = u32::from_be_bytes(offset.try_into().unwrap()) as u64 * 4096;
-                let size = location_table[table_entry as usize + 3] as usize * 4096;
+            let mut offset = vec![0u8];
+            offset
+                .extend_from_slice(&location_table[table_entry as usize..table_entry as usize + 3]);
+            let offset = u32::from_be_bytes(offset.try_into().unwrap()) as u64 * 4096;
+            let size = location_table[table_entry as usize + 3] as usize * 4096;
 
-                if offset == 0 && size == 0 {
-                    let _ = channel.blocking_send((chunk, Err(WorldError::ChunkNotFound)));
+            if offset == 0 && size == 0 {
+                let _ = channel.blocking_send((chunk, Err(WorldError::ChunkNotFound)));
+                return;
+            }
+            // Read the file using the offset and size
+            let mut file_buf = {
+                let seek_result = region_file.seek(std::io::SeekFrom::Start(offset));
+                if seek_result.is_err() {
+                    let _ = channel.blocking_send((chunk, Err(WorldError::RegionIsInvalid)));
                     return;
                 }
-                // Read the file using the offset and size
-                let mut file_buf = {
-                    let seek_result = region_file.seek(std::io::SeekFrom::Start(offset));
-                    if seek_result.is_err() {
-                        let _ = channel.blocking_send((chunk, Err(WorldError::RegionIsInvalid)));
-                        return;
-                    }
-                    let mut out = vec![0; size];
-                    let read_result = region_file.read_exact(&mut out);
-                    if read_result.is_err() {
-                        let _ = channel.blocking_send((chunk, Err(WorldError::RegionIsInvalid)));
-                        return;
-                    }
-                    out
-                };
+                let mut out = vec![0; size];
+                let read_result = region_file.read_exact(&mut out);
+                if read_result.is_err() {
+                    let _ = channel.blocking_send((chunk, Err(WorldError::RegionIsInvalid)));
+                    return;
+                }
+                out
+            };
 
-                // TODO: check checksum to make sure chunk is not corrupted
-                let header = file_buf.drain(0..5).collect_vec();
+            // TODO: check checksum to make sure chunk is not corrupted
+            let header = file_buf.drain(0..5).collect_vec();
 
-                let compression = match Compression::from_byte(header[4]) {
-                    Some(c) => c,
-                    None => {
-                        let _ = channel.blocking_send((
-                            chunk,
-                            Err(WorldError::Compression(
-                                CompressionError::UnknownCompression,
-                            )),
-                        ));
-                        return;
-                    }
-                };
+            let compression = match Compression::from_byte(header[4]) {
+                Some(c) => c,
+                None => {
+                    let _ = channel.blocking_send((
+                        chunk,
+                        Err(WorldError::Compression(
+                            CompressionError::UnknownCompression,
+                        )),
+                    ));
+                    return;
+                }
+            };
 
-                let size = u32::from_be_bytes(header[..4].try_into().unwrap());
+            let size = u32::from_be_bytes(header[..4].try_into().unwrap());
 
-                // size includes the compression scheme byte, so we need to subtract 1
-                let chunk_data = file_buf.drain(0..size as usize - 1).collect_vec();
-                let decompressed_chunk = match Self::decompress_data(compression, chunk_data) {
-                    Ok(data) => data,
-                    Err(e) => {
-                        channel
-                            .blocking_send((chunk, Err(WorldError::Compression(e))))
-                            .expect("Failed to send Compression error");
-                        return;
-                    }
-                };
+            // size includes the compression scheme byte, so we need to subtract 1
+            let chunk_data = file_buf.drain(0..size as usize - 1).collect_vec();
+            let decompressed_chunk = match Self::decompress_data(compression, chunk_data) {
+                Ok(data) => data,
+                Err(e) => {
+                    channel
+                        .blocking_send((chunk, Err(WorldError::Compression(e))))
+                        .expect("Failed to send Compression error");
+                    return;
+                }
+            };
 
-                channel
-                    .blocking_send((chunk, ChunkData::from_bytes(decompressed_chunk, chunk)))
-                    .expect("Error sending decompressed chunk");
-            })
-            .collect::<Vec<()>>();
+            channel
+                .blocking_send((chunk, ChunkData::from_bytes(decompressed_chunk, chunk)))
+                .expect("Error sending decompressed chunk");
+        })
     }
 
     fn decompress_data(
