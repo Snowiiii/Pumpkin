@@ -34,6 +34,8 @@ pub enum WorldError {
     Compression(CompressionError),
     #[error("Error deserializing chunk: {0}")]
     ErrorDeserializingChunk(String),
+    #[error("The requested block identifier does not exist")]
+    BlockIdentifierNotFound,
     #[error("The requested block state id does not exist")]
     BlockStateIdNotFound,
     #[error("The block is not inside of the chunk")]

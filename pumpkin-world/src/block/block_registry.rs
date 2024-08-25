@@ -21,7 +21,7 @@ impl BlockId {
     ) -> Result<Self, WorldError> {
         let mut block_states = BLOCKS
             .get(block_id)
-            .ok_or(WorldError::BlockStateIdNotFound)?
+            .ok_or(WorldError::BlockIdentifierNotFound)?
             .states
             .iter();
 
