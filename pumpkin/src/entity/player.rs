@@ -9,9 +9,7 @@ use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{CGameEvent, CPlayDisconnect, CSyncPlayerPosition, CSystemChatMessage},
     server::play::{
-        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
-        SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
-        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn,
+        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract, SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItem, SUseItemOn
     },
     ConnectionState, RawPacket, ServerPacket, VarInt,
 };
@@ -197,6 +195,9 @@ impl Player {
             }
             SUseItemOn::PACKET_ID => {
                 self.handle_use_item_on(server, SUseItemOn::read(bytebuf).unwrap())
+            }
+            SUseItem::PACKET_ID => {
+                log::error!("An item was used(SUseItem), but the packet is not implemented yet");
             }
             SSetHeldItem::PACKET_ID => {
                 self.handle_set_held_item(server, SSetHeldItem::read(bytebuf).unwrap())
