@@ -70,15 +70,25 @@ struct ChunkNbt {
     heightmaps: ChunkHeightmaps,
 }
 
-// TODO @DaniD3v implement once Fre is done with heightmaps
-// impl Default for ChunkBlocks {
-//     fn default() -> Self {
-//         Self {
-//             blocks: Box::new([BlockId::default(); CHUNK_VOLUME]),
-//             heightmap: todo!(),
-//         }
-//     }
-// }
+/// The Heightmap for a completely empty chunk
+impl Default for ChunkHeightmaps {
+    fn default() -> Self {
+        Self {
+            // 0 packed into an i64 7 times.
+            motion_blocking: LongArray::new(vec![0; 37]),
+            world_surface: LongArray::new(vec![0; 37]),
+        }
+    }
+}
+
+impl Default for ChunkBlocks {
+    fn default() -> Self {
+        Self {
+            blocks: Box::new([BlockId::default(); CHUNK_VOLUME]),
+            heightmap: ChunkHeightmaps::default(),
+        }
+    }
+}
 
 impl ChunkBlocks {
     pub fn empty_with_heightmap(heightmap: ChunkHeightmaps) -> Self {
