@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::collections::HashMap;
 
 use fastnbt::LongArray;
@@ -63,11 +64,12 @@ impl ChunkData {
 
         // this needs to be boxed, otherwise it will cause a stack-overflow
         let mut blocks = Box::new([BlockId::default(); 16 * 16 * WORLD_HEIGHT]);
+        let mut block_index = 0; // which block we're currently at
 
-        for (k, section) in chunk_data.sections.into_iter().enumerate() {
+        for section in chunk_data.sections.into_iter() {
             let block_states = match section.block_states {
                 Some(states) => states,
-                None => continue, // this should instead fill all blocks with the only element of the palette
+                None => continue, // TODO @lukas0008 this should instead fill all blocks with the only element of the palette
             };
 
             let palette = block_states
@@ -75,32 +77,40 @@ impl ChunkData {
                 .iter()
                 .map(|entry| BlockId::new(&entry.name, entry.properties.as_ref()))
                 .collect::<Result<Vec<_>, _>>()?;
+
             let block_data = match block_states.data {
-                None => continue,
+                None => {
+                    // We skipped placing an empty subchunk.
+                    // We need to increase the y coordinate of the next subchunk being placed.
+                    block_index += 16 * 16 * 16;
+                    continue;
+                }
                 Some(d) => d,
             }
             .into_inner();
+
+            // How many bits each block has in one of the pallete u64s
             let block_bit_size = {
                 let size = 64 - (palette.len() as i64 - 1).leading_zeros();
-                if size >= 4 {
-                    size
-                } else {
-                    4
-                }
+                max(4, size)
             };
+            // How many blocks there are in one of the palletes u64s
+            let blocks_in_pallete = 64 / block_bit_size;
 
             let mask = (1 << block_bit_size) - 1;
-            let mut blocks_left = 16 * 16 * 16;
-            'block_loop: for (j, block) in block_data.iter().enumerate() {
-                for i in 0..64 / block_bit_size {
-                    if blocks_left <= 0 {
-                        break 'block_loop;
-                    }
+            'block_loop: for block in block_data.iter() {
+                for i in 0..blocks_in_pallete {
                     let index = (block >> (i * block_bit_size)) & mask;
                     let block = palette[index as usize];
-                    blocks[k * 16 * 16 * 16 + j * ((64 / block_bit_size) as usize) + i as usize] =
-                        block;
-                    blocks_left -= 1;
+
+                    blocks[block_index] = block;
+                    block_index += 1;
+
+                    // if `SUBCHUNK_VOLUME `is not divisible by `blocks_in_pallete` the block_data
+                    // can sometimes spill into other subchunks. We avoid that by aborting early
+                    if (block_index % (16 * 16 * 16)) == 0 {
+                        break 'block_loop;
+                    }
                 }
             }
         }
