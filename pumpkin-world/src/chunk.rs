@@ -1,12 +1,13 @@
 use std::cmp::max;
 use std::collections::HashMap;
+use std::ops::Index;
 
 use fastnbt::LongArray;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     block::block_registry::BlockId,
-    coordinates::{ChunkCoordinates, ChunkRelativeBlockCoordinates},
+    coordinates::{ChunkCoordinates, ChunkRelativeBlockCoordinates, Height},
     level::WorldError,
     WORLD_HEIGHT,
 };
@@ -16,9 +17,19 @@ const SUBCHUNK_VOLUME: usize = CHUNK_AREA * 16;
 const CHUNK_VOLUME: usize = CHUNK_AREA * WORLD_HEIGHT;
 
 pub struct ChunkData {
-    pub blocks: Box<[BlockId; CHUNK_VOLUME]>,
+    pub blocks: ChunkBlocks,
     pub position: ChunkCoordinates,
-    pub heightmaps: ChunkHeightmaps,
+}
+
+pub struct ChunkBlocks {
+    // TODO make this a Vec that doesn't store the upper layers that only contain air
+
+    // The packet relies on this ordering -> leave it like this for performance
+    /// Ordering: yzx (y being the most significant)
+    blocks: Box<[BlockId; CHUNK_VOLUME]>,
+
+    /// See `https://minecraft.fandom.com/wiki/Heightmap` for more info
+    pub heightmap: ChunkHeightmaps,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -59,6 +70,74 @@ struct ChunkNbt {
     heightmaps: ChunkHeightmaps,
 }
 
+// TODO @DaniD3v implement once Fre is done with heightmaps
+// impl Default for ChunkBlocks {
+//     fn default() -> Self {
+//         Self {
+//             blocks: Box::new([BlockId::default(); CHUNK_VOLUME]),
+//             heightmap: todo!(),
+//         }
+//     }
+// }
+
+impl ChunkBlocks {
+    pub fn empty_with_heightmap(heightmap: ChunkHeightmaps) -> Self {
+        Self {
+            blocks: Box::new([BlockId::default(); CHUNK_VOLUME]),
+            heightmap,
+        }
+    }
+
+    /// Sets the given block in the chunk, returning the old block
+    pub fn set_block(
+        &mut self,
+        position: ChunkRelativeBlockCoordinates,
+        block: BlockId,
+    ) -> BlockId {
+        // TODO @LUK_ESC? update the heightmap
+        self.set_block_no_heightmap_update(position, block)
+    }
+
+    /// Sets the given block in the chunk, returning the old block
+    /// Contrary to `set_block` this does not update the heightmap.
+    ///
+    /// Only use this if you know you don't need to update the heightmap
+    /// or if you manually set the heightmap in `empty_with_heightmap`
+    pub fn set_block_no_heightmap_update(
+        &mut self,
+        position: ChunkRelativeBlockCoordinates,
+        block: BlockId,
+    ) -> BlockId {
+        std::mem::replace(&mut self.blocks[Self::convert_index(position)], block)
+    }
+
+    pub fn iter_subchunks(&self) -> impl Iterator<Item = &[BlockId; SUBCHUNK_VOLUME]> {
+        self.blocks
+            .chunks(SUBCHUNK_VOLUME)
+            .map(|subchunk| subchunk.try_into().unwrap())
+    }
+
+    fn convert_index(index: ChunkRelativeBlockCoordinates) -> usize {
+        // % works for negative numbers as intended.
+        index.y.get_absolute() as usize * CHUNK_AREA + *index.z as usize * 16 + *index.x as usize
+    }
+
+    #[allow(dead_code)]
+    fn calculate_heightmap(&self) -> ChunkHeightmaps {
+        // figure out how LongArray is formatted
+        // figure out how to find out if block is motion blocking
+        todo!()
+    }
+}
+
+impl Index<ChunkRelativeBlockCoordinates> for ChunkBlocks {
+    type Output = BlockId;
+
+    fn index(&self, index: ChunkRelativeBlockCoordinates) -> &Self::Output {
+        &self.blocks[Self::convert_index(index)]
+    }
+}
+
 impl ChunkData {
     pub fn from_bytes(chunk_data: Vec<u8>, at: ChunkCoordinates) -> Result<Self, WorldError> {
         let chunk_data = match fastnbt::from_bytes::<ChunkNbt>(chunk_data.as_slice()) {
@@ -67,7 +146,7 @@ impl ChunkData {
         };
 
         // this needs to be boxed, otherwise it will cause a stack-overflow
-        let mut blocks = Box::new([BlockId::default(); CHUNK_VOLUME]);
+        let mut blocks = ChunkBlocks::empty_with_heightmap(chunk_data.heightmaps);
         let mut block_index = 0; // which block we're currently at
 
         for section in chunk_data.sections.into_iter() {
@@ -107,7 +186,18 @@ impl ChunkData {
                     let index = (block >> (i * block_bit_size)) & mask;
                     let block = palette[index as usize];
 
-                    blocks[block_index] = block;
+                    // TODO allow indexing blocks directly so we can just use block_index and save some time?
+                    // this is fine because we initalized the heightmap of `blocks`
+                    // from the cached value in the world file
+                    blocks.set_block_no_heightmap_update(
+                        ChunkRelativeBlockCoordinates {
+                            z: ((block_index % CHUNK_AREA) / 16).into(),
+                            y: Height::from_absolute((block_index / CHUNK_AREA) as u16),
+                            x: (block_index % 16).into(),
+                        },
+                        block,
+                    );
+
                     block_index += 1;
 
                     // if `SUBCHUNK_VOLUME `is not divisible by `blocks_in_pallete` the block_data
@@ -122,19 +212,6 @@ impl ChunkData {
         Ok(ChunkData {
             blocks,
             position: at,
-            heightmaps: chunk_data.heightmaps,
         })
-    }
-    /// Sets the given block in the chunk, returning the old block
-    pub fn set_block(
-        &mut self,
-        at: ChunkRelativeBlockCoordinates,
-        block_id: BlockId,
-    ) -> Result<BlockId, WorldError> {
-        Ok(std::mem::replace(
-            &mut self.blocks
-                [at.y.get_absolute() as usize * CHUNK_AREA + (*at.z * 16 + *at.x) as usize],
-            block_id,
-        ))
     }
 }

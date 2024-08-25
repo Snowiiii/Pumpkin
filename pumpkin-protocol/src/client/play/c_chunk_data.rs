@@ -16,13 +16,13 @@ impl<'a> ClientPacket for CChunkData<'a> {
         buf.put_i32(self.0.position.z);
 
         let heightmap_nbt =
-            fastnbt::to_bytes_with_opts(&self.0.heightmaps, fastnbt::SerOpts::network_nbt())
+            fastnbt::to_bytes_with_opts(&self.0.blocks.heightmap, fastnbt::SerOpts::network_nbt())
                 .unwrap();
         // Heightmaps
         buf.put_slice(&heightmap_nbt);
 
         let mut data_buf = ByteBuffer::empty();
-        self.0.blocks.chunks(16 * 16 * 16).for_each(|chunk| {
+        self.0.blocks.iter_subchunks().for_each(|chunk| {
             let block_count = chunk
                 .iter()
                 .dedup()
