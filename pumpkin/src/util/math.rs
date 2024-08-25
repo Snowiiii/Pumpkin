@@ -10,3 +10,7 @@ pub fn wrap_degrees(var: f32) -> f32 {
 
     var1
 }
+
+pub fn squared_magnitude(a: f64, b: f64, c: f64) -> f64 {
+    a * a + b * b + c * c
+}

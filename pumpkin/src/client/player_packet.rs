@@ -329,6 +329,10 @@ impl Player {
     pub fn handle_player_action(&mut self, server: &mut Server, player_action: SPlayerAction) {
         match Status::from_i32(player_action.status.0).unwrap() {
             Status::StartedDigging => {
+                if !self.can_interact_with_block_at(&player_action.location, 1.0) {
+                    // TODO: maybe log?
+                    return;
+                }
                 // TODO: do validation
                 // TODO: Config
                 if self.gamemode == GameMode::Creative {
@@ -337,20 +341,28 @@ impl Player {
                     // TODO: currently this is always dirt replace it
                     server.broadcast_packet(self, &CWorldEvent::new(2001, &location, 11, false));
                     // AIR
-                    server.broadcast_packet(self, &CBlockUpdate::new(location, 0.into()));
+                    server.broadcast_packet(self, &CBlockUpdate::new(&location, 0.into()));
                 }
             }
             Status::CancelledDigging => {
+                if !self.can_interact_with_block_at(&player_action.location, 1.0) {
+                    // TODO: maybe log?
+                    return;
+                }
                 self.current_block_destroy_stage = 0;
             }
             Status::FinishedDigging => {
                 // TODO: do validation
                 let location = player_action.location;
+                if !self.can_interact_with_block_at(&location, 1.0) {
+                    // TODO: maybe log?
+                    return;
+                }
                 // Block break & block break sound
                 // TODO: currently this is always dirt replace it
                 server.broadcast_packet(self, &CWorldEvent::new(2001, &location, 11, false));
                 // AIR
-                server.broadcast_packet(self, &CBlockUpdate::new(location, 0.into()));
+                server.broadcast_packet(self, &CBlockUpdate::new(&location, 0.into()));
                 // TODO: Send this every tick
                 self.client
                     .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence));
@@ -376,12 +388,14 @@ impl Player {
     }
 
     pub fn handle_use_item_on(&mut self, server: &mut Server, use_item_on: SUseItemOn) {
-        self.client
-            .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence));
-
         let location = use_item_on.location;
+
+        if !self.can_interact_with_block_at(&location, 1.0) {
+            // TODO: maybe log?
+            return;
+        }
+
         let face = BlockFace::from_i32(use_item_on.face.0).unwrap();
-        let location = WorldPosition(location.0 + face.to_offset());
         if let Some(item) = self.inventory.held_item() {
             let minecraft_id =
                 global_registry::find_minecraft_id(global_registry::ITEM_REGISTRY, item.item_id)
@@ -394,10 +408,19 @@ impl Player {
             {
                 server.broadcast_packet(
                     self,
-                    &CBlockUpdate::new(location, (block_state_id as i32).into()),
+                    &CBlockUpdate::new(&location, (block_state_id as i32).into()),
+                );
+                server.broadcast_packet(
+                    self,
+                    &CBlockUpdate::new(
+                        &WorldPosition(location.0 + face.to_offset()),
+                        (block_state_id as i32).into(),
+                    ),
                 );
             }
         }
+        self.client
+            .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence));
     }
 
     pub fn handle_set_held_item(&mut self, _server: &mut Server, held: SSetHeldItem) {

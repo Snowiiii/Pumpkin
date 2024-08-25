@@ -5,13 +5,13 @@ use crate::{position::WorldPosition, VarInt};
 
 #[derive(Serialize)]
 #[packet(0x09)]
-pub struct CBlockUpdate {
-    location: WorldPosition,
+pub struct CBlockUpdate<'a> {
+    location: &'a WorldPosition,
     block_id: VarInt,
 }
 
-impl CBlockUpdate {
-    pub fn new(location: WorldPosition, block_id: VarInt) -> Self {
+impl<'a> CBlockUpdate<'a> {
+    pub fn new(location: &'a WorldPosition, block_id: VarInt) -> Self {
         Self { location, block_id }
     }
 }

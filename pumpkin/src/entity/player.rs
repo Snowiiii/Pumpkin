@@ -11,6 +11,7 @@ use pumpkin_protocol::{
         CGameEvent, CPlayDisconnect, CPlayerInfoUpdate, CSyncPlayerPosition, CSystemChatMessage,
         PlayerAction,
     },
+    position::WorldPosition,
     server::play::{
         SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
         SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
@@ -21,7 +22,7 @@ use pumpkin_protocol::{
 use pumpkin_world::vector3::Vector3;
 use serde::{Deserialize, Serialize};
 
-use crate::{client::Client, server::Server};
+use crate::{client::Client, server::Server, util::boundingbox::BoundingBox};
 
 pub struct Player {
     pub client: Client,
@@ -55,7 +56,7 @@ impl Player {
     pub fn new(client: Client, entity_id: EntityId, gamemode: GameMode) -> Self {
         Self {
             client,
-            entity: Entity::new(entity_id, EntityType::Player),
+            entity: Entity::new(entity_id, EntityType::Player, 1.62),
             on_ground: false,
             awaiting_teleport: None,
             sneaking: false,
@@ -123,6 +124,24 @@ impl Player {
             0,
             self.teleport_id_count.into(),
         ));
+    }
+
+    pub fn block_interaction_range(&self) -> f64 {
+        if self.gamemode == GameMode::Creative {
+            5.0
+        } else {
+            4.5
+        }
+    }
+
+    pub fn can_interact_with_block_at(&self, pos: &WorldPosition, additional_range: f64) -> bool {
+        let d = self.block_interaction_range() + additional_range;
+        let box_pos = BoundingBox::from_block(pos);
+        box_pos.squared_magnitude(Vector3 {
+            x: self.entity.x,
+            y: self.entity.y + self.entity.standing_eye_height as f64,
+            z: self.entity.z,
+        }) < d * d
     }
 
     /// Kicks the Client with a reason depending on the connection state
