@@ -180,7 +180,9 @@ impl Client {
                     packet.id.0
                 ),
             },
-            pumpkin_protocol::ConnectionState::Login => match packet.id.0 {
+            // TODO: Check config if transfer is enabled
+            pumpkin_protocol::ConnectionState::Login
+            | pumpkin_protocol::ConnectionState::Transfer => match packet.id.0 {
                 SLoginStart::PACKET_ID => {
                     self.handle_login_start(server, SLoginStart::read(bytebuf).unwrap())
                 }
