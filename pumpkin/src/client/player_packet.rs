@@ -10,7 +10,7 @@ use num_traits::FromPrimitive;
 use pumpkin_core::text::TextComponent;
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::WindowType;
-use pumpkin_protocol::server::play::SCloseContainer;
+use pumpkin_protocol::server::play::{SCloseContainer, SSetPlayerGround};
 use pumpkin_protocol::{
     client::play::{
         Animation, CAcknowledgeBlockChange, CBlockUpdate, CEntityAnimation, CEntityVelocity,
@@ -176,6 +176,10 @@ impl Player {
 
     pub fn handle_chat_command(&mut self, _server: &mut Server, command: SChatCommand) {
         handle_command(&mut CommandSender::Player(self), &command.command);
+    }
+
+    pub fn handle_player_ground(&mut self, _server: &mut Server, ground: SSetPlayerGround) {
+        self.on_ground = ground.on_ground;
     }
 
     pub fn handle_player_command(&mut self, _server: &mut Server, command: SPlayerCommand) {

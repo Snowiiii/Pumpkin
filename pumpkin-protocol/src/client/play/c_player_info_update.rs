@@ -25,7 +25,7 @@ impl<'a> ClientPacket for CPlayerInfoUpdate<'a> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_i8(self.actions);
         bytebuf.put_list::<Player>(self.players, |p, v| {
-            p.put_uuid(v.uuid);
+            p.put_uuid(&v.uuid);
             for action in &v.actions {
                 match action {
                     PlayerAction::AddPlayer { name, properties } => {

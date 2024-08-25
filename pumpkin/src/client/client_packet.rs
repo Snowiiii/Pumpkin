@@ -175,7 +175,7 @@ impl Client {
         }
 
         if let Some(profile) = self.gameprofile.as_ref().cloned() {
-            let packet = CLoginSuccess::new(profile.id, &profile.name, &profile.properties, false);
+            let packet = CLoginSuccess::new(&profile.id, &profile.name, &profile.properties, false);
             self.send_packet(&packet);
         } else {
             self.kick("game profile is none");
