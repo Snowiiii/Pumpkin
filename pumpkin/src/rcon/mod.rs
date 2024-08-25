@@ -88,7 +88,7 @@ impl RCONServer {
 
                     token => {
                         let done = if let Some(client) = connections.get_mut(&token) {
-                            client.handle(&server, &password).await
+                            client.handle(server, &password).await
                         } else {
                             false
                         };

@@ -1,7 +1,6 @@
 use std::{
     io::{self, Write},
     net::SocketAddr,
-    rc::Rc,
     sync::Arc,
 };
 

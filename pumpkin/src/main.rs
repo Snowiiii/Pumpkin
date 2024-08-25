@@ -8,7 +8,7 @@ use client::Client;
 use commands::handle_command;
 use config::AdvancedConfiguration;
 
-use std::{collections::HashMap, rc::Rc, thread};
+use std::{collections::HashMap, thread};
 
 use client::interrupted;
 use config::BasicConfiguration;
@@ -31,7 +31,7 @@ static ALLOC: dhat::Alloc = dhat::Alloc;
 
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
-    use std::{borrow::BorrowMut, sync::{Arc, Mutex}};
+    use std::sync::{Arc, Mutex};
 
     use entity::player::Player;
     use pumpkin_core::text::{color::NamedColor, TextComponent};
@@ -59,9 +59,9 @@ fn main() -> io::Result<()> {
     rayon::ThreadPoolBuilder::new().build_global().unwrap();
     rt.block_on(async {
         const SERVER: Token = Token(0);
-        use std::{cell::RefCell, time::Instant};
+        use std::time::Instant;
 
-        use rcon::RCONServer;
+        
 
         let time = Instant::now();
         let basic_config = BasicConfiguration::load("configuration.toml");
@@ -99,7 +99,7 @@ fn main() -> io::Result<()> {
         let mut clients: HashMap<Token, Client> = HashMap::new();
         let mut players: HashMap<Arc<Token>, Arc<Mutex<Player>>> = HashMap::new();
 
-        let mut server = Arc::new(Mutex::new(Server::new((
+        let server = Arc::new(Mutex::new(Server::new((
             basic_config,
             advanced_configuration,
         ))));
