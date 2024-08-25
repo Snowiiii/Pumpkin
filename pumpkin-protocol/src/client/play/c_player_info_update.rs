@@ -37,8 +37,8 @@ impl<'a> ClientPacket for CPlayerInfoUpdate<'a> {
                         });
                     }
                     PlayerAction::InitializeChat(_) => todo!(),
-                    PlayerAction::UpdateGameMode(_) => todo!(),
-                    PlayerAction::UpdateListed { listed } => p.put_bool(*listed),
+                    PlayerAction::UpdateGameMode(gamemode) => p.put_var_int(gamemode),
+                    PlayerAction::UpdateListed(listed) => p.put_bool(*listed),
                     PlayerAction::UpdateLatency(_) => todo!(),
                     PlayerAction::UpdateDisplayName(_) => todo!(),
                 }

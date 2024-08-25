@@ -174,8 +174,8 @@ impl Player {
         server.broadcast_packet(self, &CHeadRot::new(entity_id.into(), yaw as u8));
     }
 
-    pub fn handle_chat_command(&mut self, _server: &mut Server, command: SChatCommand) {
-        handle_command(&mut CommandSender::Player(self), &command.command);
+    pub fn handle_chat_command(&mut self, server: &mut Server, command: SChatCommand) {
+        handle_command(&mut CommandSender::Player(self), server, &command.command);
     }
 
     pub fn handle_player_ground(&mut self, _server: &mut Server, ground: SSetPlayerGround) {

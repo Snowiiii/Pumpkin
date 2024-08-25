@@ -4,6 +4,7 @@ use std::sync::OnceLock;
 
 use crate::commands::dispatcher::CommandDispatcher;
 use crate::entity::player::Player;
+use crate::server::Server;
 mod arg_player;
 mod cmd_gamemode;
 mod cmd_help;
@@ -83,10 +84,10 @@ fn dispatcher_init<'a>() -> CommandDispatcher<'a> {
     dispatcher
 }
 
-pub fn handle_command(sender: &mut CommandSender, cmd: &str) {
+pub fn handle_command(sender: &mut CommandSender, server: &mut Server, cmd: &str) {
     let dispatcher = DISPATCHER.get_or_init(dispatcher_init);
 
-    if let Err(err) = dispatcher.dispatch(sender, cmd) {
+    if let Err(err) = dispatcher.dispatch(sender, server, cmd) {
         sender.send_message(
             TextComponent::text(&err).color_named(pumpkin_core::text::color::NamedColor::Red),
         )

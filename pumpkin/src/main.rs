@@ -31,6 +31,8 @@ static ALLOC: dhat::Alloc = dhat::Alloc;
 
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
+    use std::{borrow::BorrowMut, sync::{Arc, Mutex}};
+
     use entity::player::Player;
     use pumpkin_core::text::{color::NamedColor, TextComponent};
 
@@ -95,12 +97,16 @@ fn main() -> io::Result<()> {
         let rcon = advanced_configuration.rcon.clone();
 
         let mut clients: HashMap<Token, Client> = HashMap::new();
-        let mut players: HashMap<Rc<Token>, Rc<RefCell<Player>>> = HashMap::new();
+        let mut players: HashMap<Arc<Token>, Arc<Mutex<Player>>> = HashMap::new();
 
-        let mut server = Server::new((basic_config, advanced_configuration));
+        let mut server = Arc::new(Mutex::new(Server::new((
+            basic_config,
+            advanced_configuration,
+        ))));
         log::info!("Started Server took {}ms", time.elapsed().as_millis());
         log::info!("You now can connect to the server, Listening on {}", addr);
 
+        let server1 = server.clone();
         if use_console {
             thread::spawn(move || {
                 let stdin = std::io::stdin();
@@ -111,15 +117,17 @@ fn main() -> io::Result<()> {
                         .expect("Failed to read console line");
 
                     if !out.is_empty() {
-                        handle_command(&mut commands::CommandSender::Console, &out);
+                        let mut server = server1.lock().unwrap();
+                        handle_command(&mut commands::CommandSender::Console, &mut server, &out);
                     }
                 }
             });
         }
         if rcon.enabled {
-            tokio::spawn(async move {
-                RCONServer::new(&rcon).await.unwrap();
-            });
+            let server = server.clone();
+            // tokio::spawn(async move {
+            //     RCONServer::new(&rcon, &server).await.unwrap();
+            // });
         }
         loop {
             if let Err(err) = poll.poll(&mut events, None) {
@@ -161,16 +169,17 @@ fn main() -> io::Result<()> {
                             token,
                             Interest::READABLE.add(Interest::WRITABLE),
                         )?;
-                        let rc_token = Rc::new(token);
-                        let client = Client::new(Rc::clone(&rc_token), connection, addr);
+                        let rc_token = Arc::new(token);
+                        let client = Client::new(Arc::clone(&rc_token), connection, addr);
                         clients.insert(token, client);
                     },
 
                     token => {
                         // Poll Players
                         let done = if let Some(player) = players.get_mut(&token) {
-                            let mut player = player.borrow_mut();
+                            let mut player = player.lock().unwrap();
                             player.client.poll(event).await;
+                            let mut server = server.lock().unwrap();
                             player.process_packets(&mut server);
                             player.client.closed
                         } else {
@@ -179,8 +188,9 @@ fn main() -> io::Result<()> {
 
                         if done {
                             if let Some(player) = players.remove(&token) {
+                                let mut server = server.lock().unwrap();
                                 server.remove_player(&token);
-                                let mut player = player.borrow_mut();
+                                let mut player = player.lock().unwrap();
                                 poll.registry().deregister(&mut player.client.connection)?;
                             }
                         }
@@ -189,6 +199,7 @@ fn main() -> io::Result<()> {
                         // Maybe received an event for a TCP connection.
                         let (done, make_player) = if let Some(client) = clients.get_mut(&token) {
                             client.poll(event).await;
+                            let mut server = server.lock().unwrap();
                             client.process_packets(&mut server).await;
                             (client.closed, client.make_player)
                         } else {
@@ -201,9 +212,10 @@ fn main() -> io::Result<()> {
                                     poll.registry().deregister(&mut client.connection)?;
                                 } else if make_player {
                                     let token = client.token.clone();
+                                    let mut server = server.lock().unwrap();
                                     let player = server.add_player(token.clone(), client);
                                     players.insert(token, player.clone());
-                                    let mut player = player.borrow_mut();
+                                    let mut player = player.lock().unwrap();
                                     server.spawn_player(&mut player).await;
                                 }
                             }

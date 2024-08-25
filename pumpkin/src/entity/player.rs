@@ -7,7 +7,10 @@ use pumpkin_entity::{entity_type::EntityType, Entity, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_protocol::{
     bytebuf::{packet_id::Packet, DeserializerError},
-    client::play::{CGameEvent, CPlayDisconnect, CSyncPlayerPosition, CSystemChatMessage},
+    client::play::{
+        CGameEvent, CPlayDisconnect, CPlayerInfoUpdate, CSyncPlayerPosition, CSystemChatMessage,
+        PlayerAction,
+    },
     server::play::{
         SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
         SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
@@ -139,8 +142,18 @@ impl Player {
         self.food_saturation = food_saturation;
     }
 
-    pub fn set_gamemode(&mut self, gamemode: GameMode) {
+    pub fn set_gamemode(&mut self, server: &mut Server, gamemode: GameMode) {
         self.gamemode = gamemode;
+        server.broadcast_packet(
+            self,
+            &CPlayerInfoUpdate::new(
+                0x04,
+                &[pumpkin_protocol::client::play::Player {
+                    uuid: self.client.gameprofile.as_ref().unwrap().id,
+                    actions: vec![PlayerAction::UpdateGameMode((self.gamemode as i32).into())],
+                }],
+            ),
+        );
         self.client
             .send_packet(&CGameEvent::new(3, gamemode.to_f32().unwrap()));
     }

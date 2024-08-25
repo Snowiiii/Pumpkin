@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     io::{self, Read},
+    sync::{Arc, Mutex},
 };
 
 use mio::{
@@ -10,7 +11,7 @@ use mio::{
 use packet::{Packet, PacketError, PacketType};
 use thiserror::Error;
 
-use crate::{commands::handle_command, config::RCONConfig};
+use crate::{commands::handle_command, config::RCONConfig, server::Server};
 
 mod packet;
 
@@ -29,7 +30,7 @@ const SERVER: Token = Token(0);
 pub struct RCONServer {}
 
 impl RCONServer {
-    pub async fn new(config: &RCONConfig) -> Result<Self, io::Error> {
+    pub async fn new(config: &RCONConfig, server: &Arc<Mutex<Server>>) -> Result<Self, io::Error> {
         assert!(config.enabled, "RCON is not enabled");
         let addr = format!("{}:{}", config.ip, config.port)
             .parse()
@@ -87,7 +88,7 @@ impl RCONServer {
 
                     token => {
                         let done = if let Some(client) = connections.get_mut(&token) {
-                            client.handle(&password).await
+                            client.handle(&server, &password).await
                         } else {
                             false
                         };
@@ -126,7 +127,7 @@ impl RCONClient {
         }
     }
 
-    pub async fn handle(&mut self, password: &str) -> bool {
+    pub async fn handle(&mut self, server: &Arc<Mutex<Server>>, password: &str) -> bool {
         if !self.closed {
             loop {
                 match self.read_bytes() {
@@ -141,7 +142,7 @@ impl RCONClient {
                 }
             }
             // If we get a close here, we might have a reply, which we still want to write.
-            match self.poll(password).await {
+            match self.poll(server, password).await {
                 Ok(()) => {}
                 Err(e) => {
                     log::error!("rcon error: {e}");
@@ -152,7 +153,11 @@ impl RCONClient {
         self.closed
     }
 
-    async fn poll(&mut self, password: &str) -> Result<(), PacketError> {
+    async fn poll(
+        &mut self,
+        server: &Arc<Mutex<Server>>,
+        password: &str,
+    ) -> Result<(), PacketError> {
         loop {
             let packet = match self.receive_packet().await? {
                 Some(p) => p,
@@ -183,8 +188,10 @@ impl RCONClient {
                 PacketType::ExecCommand => {
                     if self.logged_in {
                         let mut output = Vec::new();
+                        let mut server = server.lock().unwrap();
                         handle_command(
                             &mut crate::commands::CommandSender::Rcon(&mut output),
+                            &mut server,
                             packet.get_body(),
                         );
                         for line in output {

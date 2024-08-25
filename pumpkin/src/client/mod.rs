@@ -2,6 +2,7 @@ use std::{
     io::{self, Write},
     net::SocketAddr,
     rc::Rc,
+    sync::Arc,
 };
 
 use crate::{
@@ -70,7 +71,7 @@ pub struct Client {
     pub connection_state: ConnectionState,
     pub encryption: bool,
     pub closed: bool,
-    pub token: Rc<Token>,
+    pub token: Arc<Token>,
     pub connection: TcpStream,
     pub address: SocketAddr,
     enc: PacketEncoder,
@@ -81,7 +82,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(token: Rc<Token>, connection: TcpStream, address: SocketAddr) -> Self {
+    pub fn new(token: Arc<Token>, connection: TcpStream, address: SocketAddr) -> Self {
         Self {
             protocol_version: 0,
             gameprofile: None,
