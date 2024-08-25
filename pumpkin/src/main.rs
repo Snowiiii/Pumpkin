@@ -1,4 +1,5 @@
 #![allow(clippy::await_holding_refcell_ref)]
+#![allow(clippy::await_holding_lock)]
 
 use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
@@ -8,7 +9,7 @@ use client::Client;
 use commands::handle_command;
 use config::AdvancedConfiguration;
 
-use std::{collections::HashMap, thread};
+use std::collections::HashMap;
 
 use client::interrupted;
 use config::BasicConfiguration;
@@ -35,6 +36,7 @@ fn main() -> io::Result<()> {
 
     use entity::player::Player;
     use pumpkin_core::text::{color::NamedColor, TextComponent};
+    use rcon::RCONServer;
 
     #[cfg(feature = "dhat-heap")]
     let _profiler = dhat::Profiler::new_heap();
@@ -60,8 +62,6 @@ fn main() -> io::Result<()> {
     rt.block_on(async {
         const SERVER: Token = Token(0);
         use std::time::Instant;
-
-        
 
         let time = Instant::now();
         let basic_config = BasicConfiguration::load("configuration.toml");
@@ -99,7 +99,7 @@ fn main() -> io::Result<()> {
         let mut clients: HashMap<Token, Client> = HashMap::new();
         let mut players: HashMap<Arc<Token>, Arc<Mutex<Player>>> = HashMap::new();
 
-        let server = Arc::new(Mutex::new(Server::new((
+        let server = Arc::new(tokio::sync::Mutex::new(Server::new((
             basic_config,
             advanced_configuration,
         ))));
@@ -108,7 +108,7 @@ fn main() -> io::Result<()> {
 
         let server1 = server.clone();
         if use_console {
-            thread::spawn(move || {
+            tokio::spawn(async move {
                 let stdin = std::io::stdin();
                 loop {
                     let mut out = String::new();
@@ -117,7 +117,7 @@ fn main() -> io::Result<()> {
                         .expect("Failed to read console line");
 
                     if !out.is_empty() {
-                        let mut server = server1.lock().unwrap();
+                        let mut server = server1.lock().await;
                         handle_command(&mut commands::CommandSender::Console, &mut server, &out);
                     }
                 }
@@ -125,9 +125,9 @@ fn main() -> io::Result<()> {
         }
         if rcon.enabled {
             let server = server.clone();
-            // tokio::spawn(async move {
-            //     RCONServer::new(&rcon, &server).await.unwrap();
-            // });
+            tokio::spawn(async move {
+                RCONServer::new(&rcon, server).await.unwrap();
+            });
         }
         loop {
             if let Err(err) = poll.poll(&mut events, None) {
@@ -179,7 +179,7 @@ fn main() -> io::Result<()> {
                         let done = if let Some(player) = players.get_mut(&token) {
                             let mut player = player.lock().unwrap();
                             player.client.poll(event).await;
-                            let mut server = server.lock().unwrap();
+                            let mut server = server.lock().await;
                             player.process_packets(&mut server);
                             player.client.closed
                         } else {
@@ -188,7 +188,7 @@ fn main() -> io::Result<()> {
 
                         if done {
                             if let Some(player) = players.remove(&token) {
-                                let mut server = server.lock().unwrap();
+                                let mut server = server.lock().await;
                                 server.remove_player(&token);
                                 let mut player = player.lock().unwrap();
                                 poll.registry().deregister(&mut player.client.connection)?;
@@ -199,7 +199,7 @@ fn main() -> io::Result<()> {
                         // Maybe received an event for a TCP connection.
                         let (done, make_player) = if let Some(client) = clients.get_mut(&token) {
                             client.poll(event).await;
-                            let mut server = server.lock().unwrap();
+                            let mut server = server.lock().await;
                             client.process_packets(&mut server).await;
                             (client.closed, client.make_player)
                         } else {
@@ -212,7 +212,7 @@ fn main() -> io::Result<()> {
                                     poll.registry().deregister(&mut client.connection)?;
                                 } else if make_player {
                                     let token = client.token.clone();
-                                    let mut server = server.lock().unwrap();
+                                    let mut server = server.lock().await;
                                     let player = server.add_player(token.clone(), client);
                                     players.insert(token, player.clone());
                                     let mut player = player.lock().unwrap();

@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     io::{self, Read},
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 
 use mio::{
@@ -30,7 +30,10 @@ const SERVER: Token = Token(0);
 pub struct RCONServer {}
 
 impl RCONServer {
-    pub async fn new(config: &RCONConfig, server: &Arc<Mutex<Server>>) -> Result<Self, io::Error> {
+    pub async fn new(
+        config: &RCONConfig,
+        server: Arc<tokio::sync::Mutex<Server>>,
+    ) -> Result<Self, io::Error> {
         assert!(config.enabled, "RCON is not enabled");
         let addr = format!("{}:{}", config.ip, config.port)
             .parse()
@@ -44,7 +47,7 @@ impl RCONServer {
 
         let mut unique_token = Token(SERVER.0 + 1);
 
-        let mut events = Events::with_capacity(128);
+        let mut events = Events::with_capacity(20);
 
         let mut connections: HashMap<Token, RCONClient> = HashMap::new();
 
@@ -88,7 +91,7 @@ impl RCONServer {
 
                     token => {
                         let done = if let Some(client) = connections.get_mut(&token) {
-                            client.handle(server, &password).await
+                            client.handle(&server, &password).await
                         } else {
                             false
                         };
@@ -127,7 +130,11 @@ impl RCONClient {
         }
     }
 
-    pub async fn handle(&mut self, server: &Arc<Mutex<Server>>, password: &str) -> bool {
+    pub async fn handle(
+        &mut self,
+        server: &Arc<tokio::sync::Mutex<Server>>,
+        password: &str,
+    ) -> bool {
         if !self.closed {
             loop {
                 match self.read_bytes() {
@@ -155,7 +162,7 @@ impl RCONClient {
 
     async fn poll(
         &mut self,
-        server: &Arc<Mutex<Server>>,
+        server: &Arc<tokio::sync::Mutex<Server>>,
         password: &str,
     ) -> Result<(), PacketError> {
         loop {
@@ -188,7 +195,7 @@ impl RCONClient {
                 PacketType::ExecCommand => {
                     if self.logged_in {
                         let mut output = Vec::new();
-                        let mut server = server.lock().unwrap();
+                        let mut server = server.lock().await;
                         handle_command(
                             &mut crate::commands::CommandSender::Rcon(&mut output),
                             &mut server,
