@@ -11,8 +11,12 @@ use crate::{
     WORLD_HEIGHT,
 };
 
+const CHUNK_AREA: usize = 16 * 16;
+const SUBCHUNK_VOLUME: usize = CHUNK_AREA * 16;
+const CHUNK_VOLUME: usize = CHUNK_AREA * WORLD_HEIGHT;
+
 pub struct ChunkData {
-    pub blocks: Box<[BlockId; 16 * 16 * WORLD_HEIGHT]>,
+    pub blocks: Box<[BlockId; CHUNK_VOLUME]>,
     pub position: ChunkCoordinates,
     pub heightmaps: ChunkHeightmaps,
 }
@@ -63,7 +67,7 @@ impl ChunkData {
         };
 
         // this needs to be boxed, otherwise it will cause a stack-overflow
-        let mut blocks = Box::new([BlockId::default(); 16 * 16 * WORLD_HEIGHT]);
+        let mut blocks = Box::new([BlockId::default(); CHUNK_VOLUME]);
         let mut block_index = 0; // which block we're currently at
 
         for section in chunk_data.sections.into_iter() {
@@ -82,7 +86,7 @@ impl ChunkData {
                 None => {
                     // We skipped placing an empty subchunk.
                     // We need to increase the y coordinate of the next subchunk being placed.
-                    block_index += 16 * 16 * 16;
+                    block_index += SUBCHUNK_VOLUME;
                     continue;
                 }
                 Some(d) => d,
@@ -108,7 +112,7 @@ impl ChunkData {
 
                     // if `SUBCHUNK_VOLUME `is not divisible by `blocks_in_pallete` the block_data
                     // can sometimes spill into other subchunks. We avoid that by aborting early
-                    if (block_index % (16 * 16 * 16)) == 0 {
+                    if (block_index % SUBCHUNK_VOLUME) == 0 {
                         break 'block_loop;
                     }
                 }
@@ -129,7 +133,7 @@ impl ChunkData {
     ) -> Result<BlockId, WorldError> {
         Ok(std::mem::replace(
             &mut self.blocks
-                [(at.y.get_absolute() * 16 * 16 + *at.z as u16 * 16 + *at.x as u16) as usize],
+                [at.y.get_absolute() as usize * CHUNK_AREA + (*at.z * 16 + *at.x) as usize],
             block_id,
         ))
     }
