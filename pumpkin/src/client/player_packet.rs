@@ -10,7 +10,7 @@ use num_traits::FromPrimitive;
 use pumpkin_core::text::TextComponent;
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::WindowType;
-use pumpkin_protocol::server::play::{SCloseContainer, SSetPlayerGround};
+use pumpkin_protocol::server::play::{SCloseContainer, SSetPlayerGround, SUseItem};
 use pumpkin_protocol::{
     client::play::{
         Animation, CAcknowledgeBlockChange, CBlockUpdate, CEntityAnimation, CEntityVelocity,
@@ -421,6 +421,11 @@ impl Player {
         }
         self.client
             .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence));
+    }
+
+    pub fn handle_use_item(&mut self, _server: &mut Server, _use_item: SUseItem) {
+        // TODO: handle packet correctly
+        log::error!("An item was used(SUseItem), but the packet is not implemented yet");
     }
 
     pub fn handle_set_held_item(&mut self, _server: &mut Server, held: SSetHeldItem) {

@@ -15,7 +15,8 @@ use pumpkin_protocol::{
     server::play::{
         SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
         SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
-        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItemOn,
+        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem,
+        SUseItemOn,
     },
     ConnectionState, RawPacket, ServerPacket, VarInt,
 };
@@ -254,6 +255,10 @@ impl Player {
             }
             SUseItemOn::PACKET_ID => {
                 self.handle_use_item_on(server, SUseItemOn::read(bytebuf)?);
+                Ok(())
+            }
+            SUseItem::PACKET_ID => {
+                self.handle_use_item(server, SUseItem::read(bytebuf)?);
                 Ok(())
             }
             SSetHeldItem::PACKET_ID => {
