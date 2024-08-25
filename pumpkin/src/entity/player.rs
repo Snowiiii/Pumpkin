@@ -239,7 +239,7 @@ impl Player {
                 Ok(())
             }
             SUseItem::PACKET_ID => {
-                log::error!("An item was used(SUseItem), but the packet is not implemented yet");
+                self.handle_use_item(server, SUseItem::read(bytebuf)?);
                 Ok(())
             }
             SSetHeldItem::PACKET_ID => {
