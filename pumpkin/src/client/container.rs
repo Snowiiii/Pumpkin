@@ -1,9 +1,12 @@
 use pumpkin_core::text::TextComponent;
+use pumpkin_inventory::container_click;
+use pumpkin_inventory::container_click::KeyClick;
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
 use pumpkin_inventory::WindowType;
 use pumpkin_protocol::client::play::{
     CCloseContainer, COpenScreen, CSetContainerContent, CSetContainerProperty, CSetContainerSlot,
 };
+use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::Item;
 

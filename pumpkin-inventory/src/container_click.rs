@@ -1,8 +1,17 @@
-#![allow(dead_code, unused)]
+use crate::WindowType;
+use pumpkin_world::item::Item;
 
 pub struct ClickMode {
-    slot: Slot,
-    click_type: ClickType,
+    pub slot: Slot,
+    pub click_type: ClickType,
+}
+
+pub struct Click {
+    pub mode: ClickMode,
+    pub state_id: u32,
+    pub window_type: WindowType,
+    pub changed_items: Vec<(usize, Item)>,
+    pub carried_item: Option<Item>,
 }
 
 impl ClickMode {
@@ -37,13 +46,13 @@ impl ClickMode {
             }
         };
         let button = match button {
-            0 => Click::Left,
-            1 => Click::Right,
+            0 => MouseClick::Left,
+            1 => MouseClick::Right,
             // TODO: Error here
             _ => unreachable!(),
         };
         Self {
-            click_type: ClickType::NormalClick(button),
+            click_type: ClickType::MouseClick(button),
             slot,
         }
     }
@@ -146,8 +155,8 @@ impl ClickMode {
     }
 }
 
-enum ClickType {
-    NormalClick(Click),
+pub enum ClickType {
+    MouseClick(MouseClick),
     ShiftClick,
     KeyClick(KeyClick),
     CreativePickItem,
@@ -158,34 +167,34 @@ enum ClickType {
     },
     DoubleClick,
 }
-enum Click {
+pub enum MouseClick {
     Left,
     Right,
     Middle,
 }
 
-enum KeyClick {
+pub enum KeyClick {
     Slot(u8),
     Offhand,
 }
 
-enum Slot {
+pub enum Slot {
     Normal(usize),
     OutsideInventory,
 }
 
-enum DropType {
+pub enum DropType {
     SingleItem,
     FullStack,
 }
 
-enum MouseDragType {
+pub enum MouseDragType {
     Left,
     Right,
     Middle,
 }
 
-enum MouseDragState {
+pub enum MouseDragState {
     Start,
     AddSlot,
     End,
