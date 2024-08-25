@@ -6,10 +6,13 @@ use pumpkin_core::text::TextComponent;
 use pumpkin_entity::{entity_type::EntityType, Entity, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_protocol::{
-    bytebuf::packet_id::Packet,
-    client::play::{CGameEvent, CPlayDisconnect, CSyncPlayerPosition, CSystemChatMessage},
+    bytebuf::{packet_id::Packet, DeserializerError},
+    client::play::{
+        CGameEvent, CPlayDisconnect, CPlayerInfoUpdate, CSyncPlayerPosition, CSystemChatMessage,
+        PlayerAction,
+    },
     server::play::{
-        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract, SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItem, SUseItemOn
+        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract, SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn
     },
     ConnectionState, RawPacket, ServerPacket, VarInt,
 };
@@ -137,8 +140,18 @@ impl Player {
         self.food_saturation = food_saturation;
     }
 
-    pub fn set_gamemode(&mut self, gamemode: GameMode) {
+    pub fn set_gamemode(&mut self, server: &mut Server, gamemode: GameMode) {
         self.gamemode = gamemode;
+        server.broadcast_packet(
+            self,
+            &CPlayerInfoUpdate::new(
+                0x04,
+                &[pumpkin_protocol::client::play::Player {
+                    uuid: self.client.gameprofile.as_ref().unwrap().id,
+                    actions: vec![PlayerAction::UpdateGameMode((self.gamemode as i32).into())],
+                }],
+            ),
+        );
         self.client
             .send_packet(&CGameEvent::new(3, gamemode.to_f32().unwrap()));
     }
@@ -151,64 +164,97 @@ impl Player {
 
 impl Player {
     pub fn process_packets(&mut self, server: &mut Server) {
-        let mut i = 0;
-        while i < self.client.client_packets_queue.len() {
-            let mut packet = self.client.client_packets_queue.remove(i).unwrap();
-            self.handle_play_packet(server, &mut packet);
-            i += 1;
+        while let Some(mut packet) = self.client.client_packets_queue.pop() {
+            match self.handle_play_packet(server, &mut packet) {
+                Ok(_) => {}
+                Err(e) => {
+                    let text = format!("Error while reading incoming packet {}", e);
+                    log::error!("{}", text);
+                    self.kick(TextComponent::text(&text))
+                }
+            };
         }
     }
 
-    pub fn handle_play_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
+    pub fn handle_play_packet(
+        &mut self,
+        server: &mut Server,
+        packet: &mut RawPacket,
+    ) -> Result<(), DeserializerError> {
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SConfirmTeleport::PACKET_ID => {
-                self.handle_confirm_teleport(server, SConfirmTeleport::read(bytebuf).unwrap())
+                self.handle_confirm_teleport(server, SConfirmTeleport::read(bytebuf)?);
+                Ok(())
             }
             SChatCommand::PACKET_ID => {
-                self.handle_chat_command(server, SChatCommand::read(bytebuf).unwrap())
+                self.handle_chat_command(server, SChatCommand::read(bytebuf)?);
+                Ok(())
             }
             SPlayerPosition::PACKET_ID => {
-                self.handle_position(server, SPlayerPosition::read(bytebuf).unwrap())
+                self.handle_position(server, SPlayerPosition::read(bytebuf)?);
+                Ok(())
             }
-            SPlayerPositionRotation::PACKET_ID => self
-                .handle_position_rotation(server, SPlayerPositionRotation::read(bytebuf).unwrap()),
+            SPlayerPositionRotation::PACKET_ID => {
+                self.handle_position_rotation(server, SPlayerPositionRotation::read(bytebuf)?);
+                Ok(())
+            }
             SPlayerRotation::PACKET_ID => {
-                self.handle_rotation(server, SPlayerRotation::read(bytebuf).unwrap())
+                self.handle_rotation(server, SPlayerRotation::read(bytebuf)?);
+                Ok(())
+            }
+            SSetPlayerGround::PACKET_ID => {
+                self.handle_player_ground(server, SSetPlayerGround::read(bytebuf)?);
+                Ok(())
             }
             SPlayerCommand::PACKET_ID => {
-                self.handle_player_command(server, SPlayerCommand::read(bytebuf).unwrap())
+                self.handle_player_command(server, SPlayerCommand::read(bytebuf)?);
+                Ok(())
             }
             SSwingArm::PACKET_ID => {
-                self.handle_swing_arm(server, SSwingArm::read(bytebuf).unwrap())
+                self.handle_swing_arm(server, SSwingArm::read(bytebuf)?);
+                Ok(())
             }
             SChatMessage::PACKET_ID => {
-                self.handle_chat_message(server, SChatMessage::read(bytebuf).unwrap())
+                self.handle_chat_message(server, SChatMessage::read(bytebuf)?);
+                Ok(())
             }
-            SClientInformationPlay::PACKET_ID => self.handle_client_information_play(
-                server,
-                SClientInformationPlay::read(bytebuf).unwrap(),
-            ),
-            SInteract::PACKET_ID => self.handle_interact(server, SInteract::read(bytebuf).unwrap()),
+            SClientInformationPlay::PACKET_ID => {
+                self.handle_client_information_play(server, SClientInformationPlay::read(bytebuf)?);
+                Ok(())
+            }
+            SInteract::PACKET_ID => {
+                self.handle_interact(server, SInteract::read(bytebuf)?);
+                Ok(())
+            }
             SPlayerAction::PACKET_ID => {
-                self.handle_player_action(server, SPlayerAction::read(bytebuf).unwrap())
+                self.handle_player_action(server, SPlayerAction::read(bytebuf)?);
+                Ok(())
             }
             SUseItemOn::PACKET_ID => {
-                self.handle_use_item_on(server, SUseItemOn::read(bytebuf).unwrap())
+                self.handle_use_item_on(server, SUseItemOn::read(bytebuf)?);
+                Ok(())
             }
             SUseItem::PACKET_ID => {
                 log::error!("An item was used(SUseItem), but the packet is not implemented yet");
+                Ok(())
             }
             SSetHeldItem::PACKET_ID => {
-                self.handle_set_held_item(server, SSetHeldItem::read(bytebuf).unwrap())
+                self.handle_set_held_item(server, SSetHeldItem::read(bytebuf)?);
+                Ok(())
             }
             SSetCreativeSlot::PACKET_ID => {
-                self.handle_set_creative_slot(server, SSetCreativeSlot::read(bytebuf).unwrap())
+                self.handle_set_creative_slot(server, SSetCreativeSlot::read(bytebuf)?);
+                Ok(())
             }
             SPlayPingRequest::PACKET_ID => {
-                self.handle_play_ping_request(server, SPlayPingRequest::read(bytebuf).unwrap())
+                self.handle_play_ping_request(server, SPlayPingRequest::read(bytebuf)?);
+                Ok(())
             }
-            _ => log::error!("Failed to handle player packet id {:#04x}", packet.id.0),
+            _ => {
+                log::error!("Failed to handle player packet id {:#04x}", packet.id.0);
+                Ok(())
+            }
         }
     }
 }

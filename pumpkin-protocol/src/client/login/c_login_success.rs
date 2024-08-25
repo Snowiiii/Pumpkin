@@ -4,7 +4,7 @@ use crate::{bytebuf::ByteBuffer, ClientPacket, Property};
 
 #[packet(0x02)]
 pub struct CLoginSuccess<'a> {
-    pub uuid: uuid::Uuid,
+    pub uuid: &'a uuid::Uuid,
     pub username: &'a str, // 16
     pub properties: &'a [Property],
     pub strict_error_handling: bool,
@@ -12,7 +12,7 @@ pub struct CLoginSuccess<'a> {
 
 impl<'a> CLoginSuccess<'a> {
     pub fn new(
-        uuid: uuid::Uuid,
+        uuid: &'a uuid::Uuid,
         username: &'a str,
         properties: &'a [Property],
         strict_error_handling: bool,

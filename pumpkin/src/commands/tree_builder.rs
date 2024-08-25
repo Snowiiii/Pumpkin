@@ -1,6 +1,7 @@
 use crate::commands::dispatcher::InvalidTreeError;
 use crate::commands::tree::{ArgumentConsumer, CommandTree, ConsumedArgs, Node, NodeType};
 use crate::commands::CommandSender;
+use crate::server::Server;
 
 impl<'a> CommandTree<'a> {
     /// Add a child [Node] to the root of this [CommandTree].
@@ -41,7 +42,8 @@ impl<'a> CommandTree<'a> {
     /// Also see [NonLeafNodeBuilder::execute].
     pub fn execute(
         mut self,
-        run: &'a (dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync),
+        run: &'a (dyn Fn(&mut CommandSender, &mut Server, &ConsumedArgs) -> Result<(), InvalidTreeError>
+                 + Sync),
     ) -> Self {
         let node = Node {
             node_type: NodeType::ExecuteLeaf { run },
@@ -117,7 +119,8 @@ impl<'a> NonLeafNodeBuilder<'a> {
     /// Also see [CommandTree::execute].
     pub fn execute(
         mut self,
-        run: &'a (dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync),
+        run: &'a (dyn Fn(&mut CommandSender, &mut Server, &ConsumedArgs) -> Result<(), InvalidTreeError>
+                 + Sync),
     ) -> Self {
         self.leaf_nodes.push(LeafNodeBuilder {
             node_type: NodeType::ExecuteLeaf { run },

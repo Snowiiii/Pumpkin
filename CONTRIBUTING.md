@@ -22,7 +22,7 @@ There are several ways you can contribute to Pumpkin:
   If you'd like to contribute code changes, fork the Pumpkin repository on GitHub.
   Install Rust at [rust-lang.org](https://www.rust-lang.org/).
   Make your changes on your local fork and create a pull request to the main repository.
-  Ensure your code adheres to the project's coding style guidelines (if any).
+  Ensure your code adheres to our project structure and style guidelines.
   Write clear and concise commit messages that describe your changes.
 
 ### Project Structure

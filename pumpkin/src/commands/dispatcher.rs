@@ -3,6 +3,7 @@ use crate::commands::dispatcher::InvalidTreeError::{
 };
 use crate::commands::tree::{Command, CommandTree, ConsumedArgs, NodeType, RawArgs};
 use crate::commands::CommandSender;
+use crate::server::Server;
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -23,7 +24,12 @@ pub(crate) struct CommandDispatcher<'a> {
 /// Stores registered [CommandTree]s and dispatches commands to them.
 impl<'a> CommandDispatcher<'a> {
     /// Execute a command using its corresponding [CommandTree].
-    pub(crate) fn dispatch(&'a self, src: &mut CommandSender, cmd: &str) -> Result<(), String> {
+    pub(crate) fn dispatch(
+        &'a self,
+        src: &mut CommandSender,
+        server: &mut Server,
+        cmd: &str,
+    ) -> Result<(), String> {
         let mut parts = cmd.split_ascii_whitespace();
         let key = parts.next().ok_or("Empty Command")?;
         let raw_args: Vec<&str> = parts.rev().collect();
@@ -32,7 +38,7 @@ impl<'a> CommandDispatcher<'a> {
 
         // try paths until fitting path is found
         for path in tree.iter_paths() {
-            match Self::try_is_fitting_path(src, path, tree, raw_args.clone()) {
+            match Self::try_is_fitting_path(src, server, path, tree, raw_args.clone()) {
                 Err(InvalidConsumptionError(s)) => {
                     println!("Error while parsing command \"{cmd}\": {s:?} was consumed, but couldn't be parsed");
                     return Err("Internal Error (See logs for details)".into());
@@ -69,6 +75,7 @@ impl<'a> CommandDispatcher<'a> {
 
     fn try_is_fitting_path(
         src: &mut CommandSender,
+        server: &mut Server,
         path: Vec<usize>,
         tree: &CommandTree,
         mut raw_args: RawArgs,
@@ -79,7 +86,7 @@ impl<'a> CommandDispatcher<'a> {
             match node.node_type {
                 NodeType::ExecuteLeaf { run } => {
                     return if raw_args.is_empty() {
-                        run(src, &parsed_args)?;
+                        run(src, server, &parsed_args)?;
                         Ok(true)
                     } else {
                         Ok(false)

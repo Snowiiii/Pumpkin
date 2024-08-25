@@ -36,7 +36,7 @@ impl Client {
         dbg!("handshake");
         self.protocol_version = handshake.protocol_version.0;
         self.connection_state = handshake.next_state;
-        if self.connection_state == ConnectionState::Login {
+        if self.connection_state != ConnectionState::Status {
             let protocol = self.protocol_version;
             match protocol.cmp(&(CURRENT_MC_PROTOCOL as i32)) {
                 std::cmp::Ordering::Less => {
@@ -65,7 +65,7 @@ impl Client {
     }
 
     pub fn handle_login_start(&mut self, server: &mut Server, login_start: SLoginStart) {
-        dbg!("login start");
+        log::debug!("login start, State {:?}", self.connection_state);
 
         if !Self::is_valid_player_name(&login_start.name) {
             self.kick("Invalid characters in username");
@@ -175,7 +175,7 @@ impl Client {
         }
 
         if let Some(profile) = self.gameprofile.as_ref().cloned() {
-            let packet = CLoginSuccess::new(profile.id, &profile.name, &profile.properties, false);
+            let packet = CLoginSuccess::new(&profile.id, &profile.name, &profile.properties, false);
             self.send_packet(&packet);
         } else {
             self.kick("game profile is none");
