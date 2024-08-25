@@ -80,7 +80,7 @@ impl ChunkData {
                 Some(d) => d,
             }
             .into_inner();
-            let block_size = {
+            let block_bit_size = {
                 let size = 64 - (palette.len() as i64 - 1).leading_zeros();
                 if size >= 4 {
                     size
@@ -89,16 +89,16 @@ impl ChunkData {
                 }
             };
 
-            let mask = (1 << block_size) - 1;
+            let mask = (1 << block_bit_size) - 1;
             let mut blocks_left = 16 * 16 * 16;
             'block_loop: for (j, block) in block_data.iter().enumerate() {
-                for i in 0..64 / block_size {
+                for i in 0..64 / block_bit_size {
                     if blocks_left <= 0 {
                         break 'block_loop;
                     }
-                    let index = (block >> (i * block_size)) & mask;
+                    let index = (block >> (i * block_bit_size)) & mask;
                     let block = palette[index as usize];
-                    blocks[k * 16 * 16 * 16 + j * ((64 / block_size) as usize) + i as usize] =
+                    blocks[k * 16 * 16 * 16 + j * ((64 / block_bit_size) as usize) + i as usize] =
                         block;
                     blocks_left -= 1;
                 }
