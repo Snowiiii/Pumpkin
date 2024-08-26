@@ -6,7 +6,7 @@ use fastnbt::LongArray;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::block_registry::BlockId,
+    block::BlockId,
     coordinates::{ChunkCoordinates, ChunkRelativeBlockCoordinates, Height},
     level::WorldError,
     WORLD_HEIGHT,

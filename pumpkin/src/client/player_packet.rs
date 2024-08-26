@@ -25,7 +25,7 @@ use pumpkin_protocol::{
         SUseItemOn, Status,
     },
 };
-use pumpkin_world::block::{block_registry::BlockId, BlockFace};
+use pumpkin_world::block::{BlockFace, BlockId};
 use pumpkin_world::global_registry;
 
 use super::PlayerConfig;
