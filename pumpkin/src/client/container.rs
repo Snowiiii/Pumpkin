@@ -1,8 +1,8 @@
 use pumpkin_core::text::TextComponent;
-use pumpkin_inventory::container_click;
-use pumpkin_inventory::container_click::KeyClick;
+use pumpkin_inventory::container_click::MouseClick;
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
 use pumpkin_inventory::WindowType;
+use pumpkin_inventory::{container_click, ContainerStruct};
 use pumpkin_protocol::client::play::{
     CCloseContainer, COpenScreen, CSetContainerContent, CSetContainerProperty, CSetContainerSlot,
 };
@@ -11,6 +11,7 @@ use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::Item;
 
 use crate::entity::player::Player;
+use crate::server::Server;
 
 impl Player {
     pub fn open_container(
@@ -104,4 +105,49 @@ impl Player {
         self.client
             .send_packet(&CSetContainerProperty::new(window_type as u8, id, value));
     }
+
+    pub fn handle_click_container(&mut self, packet: SClickContainer) {
+        use container_click::*;
+        let click = Click {
+            state_id: packet.state_id.0.try_into().unwrap(),
+            changed_items: packet
+                .array_of_changed_slots
+                .into_iter()
+                .map(|(slot, item)| {
+                    let slot = slot.try_into().unwrap();
+                    if let Some(item) = item.to_item() {
+                        ItemChange::Add { slot, item }
+                    } else {
+                        ItemChange::Remove { slot }
+                    }
+                })
+                .collect::<Vec<_>>(),
+            window_type: WindowType::from_u8(packet.window_id).unwrap(),
+            carried_item: packet.carried_item.to_item(),
+            mode: ClickMode::new(
+                packet
+                    .mode
+                    .0
+                    .try_into()
+                    .expect("Mode can only be between 0-6"),
+                packet.button,
+                packet.slot,
+            ),
+        };
+
+        match click.mode.click_type {
+            ClickType::MouseClick(mouse_click) => self.mouse_click(mouse_click),
+            _ => todo!(),
+        }
+    }
+
+    pub fn mouse_click(&mut self, mouse_click: MouseClick) {
+        dbg!(mouse_click);
+    }
 }
+
+/*impl<const SLOTS: usize> ContainerStruct<SLOTS> {
+    pub fn opened_by_players(&mut self, server: Server) -> Vec<&Player> {
+
+    }
+}*/

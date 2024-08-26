@@ -10,13 +10,12 @@ pub struct Click {
     pub mode: ClickMode,
     pub state_id: u32,
     pub window_type: WindowType,
-    pub changed_items: Vec<(usize, Item)>,
+    pub changed_items: Vec<ItemChange>,
     pub carried_item: Option<Item>,
 }
 
 impl ClickMode {
-    fn new(mode: u8, button: i8, slot: i16, total_slots: usize) -> Self {
-        assert!(slot < total_slots.try_into().unwrap());
+    pub fn new(mode: u8, button: i8, slot: i16) -> Self {
         match mode {
             0 => Self::new_normal_click(button, slot),
             // Both buttons do the same here, so we omit it
@@ -167,6 +166,7 @@ pub enum ClickType {
     },
     DoubleClick,
 }
+#[derive(Debug)]
 pub enum MouseClick {
     Left,
     Right,
@@ -198,4 +198,9 @@ pub enum MouseDragState {
     Start,
     AddSlot,
     End,
+}
+
+pub enum ItemChange {
+    Remove { slot: usize },
+    Add { slot: usize, item: Item },
 }

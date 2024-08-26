@@ -53,3 +53,27 @@ impl WindowType {
         "WINDOW TITLE"
     }
 }
+
+pub trait Container {
+    const SLOTS: usize;
+
+    fn item_mut(&mut self, slot: usize) -> &mut Item;
+}
+
+pub struct ContainerStruct<const SLOTS: usize> {
+    slots: [Option<Item>; SLOTS],
+    state_id: usize,
+    open_by: Option<Vec<i32>>,
+}
+
+impl<const T: usize> ContainerStruct<T> {
+    pub fn take_item(&mut self, slot: usize) -> Item {
+        assert!(slot < T);
+        let Some(item) = self.slots[slot] else {
+            panic!()
+        };
+        self.slots[slot] = None;
+        self.state_id += 1;
+        item
+    }
+}

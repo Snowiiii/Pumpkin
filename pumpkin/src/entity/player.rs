@@ -9,9 +9,10 @@ use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{CGameEvent, CPlayDisconnect, CSyncPlayerPosition, CSystemChatMessage},
     server::play::{
-        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
-        SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
-        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn,
+        SChatCommand, SChatMessage, SClickContainer, SClientInformationPlay, SConfirmTeleport,
+        SInteract, SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition,
+        SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm,
+        SUseItemOn,
     },
     ConnectionState, RawPacket, ServerPacket, VarInt,
 };
@@ -30,6 +31,7 @@ pub struct Player {
     pub food: i32,
     pub food_saturation: f32,
     pub inventory: PlayerInventory,
+    pub open_container: Option<()>,
 
     // Client side value, Should be not trusted
     pub on_ground: bool,
@@ -63,6 +65,7 @@ impl Player {
             current_block_destroy_stage: 0,
             velocity: Vector3::new(0.0, 0.0, 0.0),
             inventory: PlayerInventory::new(),
+            open_container: None,
             gamemode,
         }
     }
@@ -194,6 +197,9 @@ impl Player {
             }
             SPlayPingRequest::PACKET_ID => {
                 self.handle_play_ping_request(server, SPlayPingRequest::read(bytebuf).unwrap())
+            }
+            SClickContainer::PACKET_ID => {
+                self.handle_click_container(SClickContainer::read(bytebuf).unwrap())
             }
             _ => log::error!("Failed to handle player packet id {:#04x}", packet.id.0),
         }
