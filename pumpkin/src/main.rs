@@ -26,10 +26,6 @@ pub mod rcon;
 pub mod server;
 pub mod util;
 
-#[cfg(feature = "dhat-heap")]
-#[global_allocator]
-static ALLOC: dhat::Alloc = dhat::Alloc;
-
 #[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
     use std::sync::{Arc, Mutex};
@@ -38,10 +34,6 @@ fn main() -> io::Result<()> {
     use pumpkin_core::text::{color::NamedColor, TextComponent};
     use rcon::RCONServer;
 
-    #[cfg(feature = "dhat-heap")]
-    let _profiler = dhat::Profiler::new_heap();
-    #[cfg(feature = "dhat-heap")]
-    println!("Using a memory profiler");
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
