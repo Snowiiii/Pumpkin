@@ -65,12 +65,19 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                         let gamemode = parse_arg_gamemode(args)?;
 
                         return if let Player(target) = sender {
-                            target.set_gamemode(server, gamemode);
-                            target.send_system_message(TextComponent::text(&format!(
-                                "Game mode was set to {:?}",
-                                gamemode
-                            )));
-
+                            dbg!("1");
+                            if target.gamemode == gamemode {
+                                target.send_system_message(TextComponent::text(&format!(
+                                    "You already in {:?} gamemode",
+                                    gamemode
+                                )));
+                            } else {
+                                target.set_gamemode(server, gamemode);
+                                target.send_system_message(TextComponent::text(&format!(
+                                    "Game mode was set to {:?}",
+                                    gamemode
+                                )));
+                            }
                             Ok(())
                         } else {
                             Err(InvalidRequirementError)
@@ -82,11 +89,18 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                         let gamemode = parse_arg_gamemode(args)?;
                         let target = parse_arg_player(sender, ARG_TARGET, args)?;
 
-                        target.set_gamemode(server, gamemode);
-                        target.send_system_message(TextComponent::text(&format!(
-                            "Set own game mode to {:?}",
-                            gamemode
-                        )));
+                        if target.gamemode == gamemode {
+                            target.send_system_message(TextComponent::text(&format!(
+                                "You already in {:?} gamemode",
+                                gamemode
+                            )));
+                        } else {
+                            target.set_gamemode(server, gamemode);
+                            target.send_system_message(TextComponent::text(&format!(
+                                "Game mode was set to {:?}",
+                                gamemode
+                            )));
+                        }
 
                         Ok(())
                     },

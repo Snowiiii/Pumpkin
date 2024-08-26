@@ -8,8 +8,8 @@ use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_protocol::{
     bytebuf::{packet_id::Packet, DeserializerError},
     client::play::{
-        CGameEvent, CPlayDisconnect, CPlayerInfoUpdate, CSyncPlayerPosition, CSystemChatMessage,
-        PlayerAction,
+        CGameEvent, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSyncPlayerPosition,
+        CSystemChatMessage, PlayerAction,
     },
     position::WorldPosition,
     server::play::{
@@ -25,6 +25,28 @@ use serde::{Deserialize, Serialize};
 
 use crate::{client::Client, server::Server, util::boundingbox::BoundingBox};
 
+pub struct PlayerAbilities {
+    pub invulnerable: bool,
+    pub flying: bool,
+    pub allow_flying: bool,
+    pub creative: bool,
+    pub fly_speed: f32,
+    pub walk_speed_fov: f32,
+}
+
+impl Default for PlayerAbilities {
+    fn default() -> Self {
+        Self {
+            invulnerable: false,
+            flying: false,
+            allow_flying: false,
+            creative: false,
+            fly_speed: 0.5,
+            walk_speed_fov: 0.1,
+        }
+    }
+}
+
 pub struct Player {
     pub client: Client,
     pub entity: Entity,
@@ -35,6 +57,8 @@ pub struct Player {
     pub food: i32,
     pub food_saturation: f32,
     pub inventory: PlayerInventory,
+    /// send `send_abilties_update` when changed
+    pub abilities: PlayerAbilities,
 
     // Client side value, Should be not trusted
     pub on_ground: bool,
@@ -70,6 +94,7 @@ impl Player {
             velocity: Vector3::new(0.0, 0.0, 0.0),
             inventory: PlayerInventory::new(),
             teleport_id_count: 0,
+            abilities: PlayerAbilities::default(),
             gamemode,
         }
     }
@@ -98,6 +123,29 @@ impl Player {
             },
             var7.z / 2.0 - var8.z,
         );
+    }
+
+    pub fn send_abilties_update(&mut self) {
+        let mut b = 0i8;
+        let abilities = &self.abilities;
+
+        if abilities.invulnerable {
+            b |= 1;
+        }
+        if abilities.flying {
+            b |= 2;
+        }
+        if abilities.allow_flying {
+            b |= 4;
+        }
+        if abilities.creative {
+            b |= 8;
+        }
+        self.client.send_packet(&CPlayerAbilities::new(
+            b,
+            abilities.fly_speed,
+            abilities.walk_speed_fov,
+        ));
     }
 
     pub fn teleport(&mut self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
@@ -163,7 +211,14 @@ impl Player {
     }
 
     pub fn set_gamemode(&mut self, server: &mut Server, gamemode: GameMode) {
+        // We could send the same gamemode without problems. But why waste bandwidth ?
+        assert!(
+            self.gamemode != gamemode,
+            "Setting the same gamemode as already is"
+        );
         self.gamemode = gamemode;
+        // So a little story time. I actually made an abitlties_from_gamemode function. I looked at vanilla and they always send the abilties from the gamemode. But the funny thing actually is. That the client
+        // does actually use the same method and set the abilties when receiving the CGameEvent gamemode packet. Just Mojang nonsense
         server.broadcast_packet(
             self,
             &CPlayerInfoUpdate::new(
