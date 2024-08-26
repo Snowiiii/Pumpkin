@@ -160,16 +160,6 @@ impl Player {
                     container_click::Slot::OutsideInventory => (),
                 };
 
-                dbg!(&self.carried_item);
-                let filled_inventory_slots = self
-                    .inventory
-                    .slots()
-                    .into_iter()
-                    .enumerate()
-                    .filter_map(|(slot, item)| item.map(|item| (slot, item.item_count)))
-                    .collect::<Vec<_>>();
-                dbg!(filled_inventory_slots);
-
                 return;
             } else {
                 return;
