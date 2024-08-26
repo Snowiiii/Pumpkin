@@ -139,8 +139,18 @@ impl Player {
             ClickType::MouseClick(mouse_click) => {
                 self.mouse_click(mouse_click, click.window_type, click.mode.slot)
             }
+            ClickType::ShiftClick => self.shift_mouse_click(click.window_type, click.mode.slot),
             _ => todo!(),
         }
+        dbg!(&self.carried_item);
+        let filled_inventory_slots = self
+            .inventory
+            .slots()
+            .into_iter()
+            .enumerate()
+            .filter_map(|(slot, item)| item.map(|item| (slot, item.item_count)))
+            .collect::<Vec<_>>();
+        dbg!(filled_inventory_slots);
     }
 
     pub fn mouse_click(
@@ -156,6 +166,58 @@ impl Player {
                     container_click::Slot::Normal(slot) => {
                         self.inventory
                             .handle_item_change(&mut self.carried_item, slot, mouse_click)
+                    }
+                    container_click::Slot::OutsideInventory => (),
+                };
+
+                return;
+            } else {
+                return;
+            }
+        };
+    }
+
+    pub fn shift_mouse_click(&mut self, window_type: WindowType, slot: container_click::Slot) {
+        let Some(_) = &self.open_container else {
+            // Inventory
+            if window_type == WindowType::Generic9x1 {
+                match slot {
+                    container_click::Slot::Normal(slot) => {
+                        if let Some(item_in_pressed_slot) = self.inventory.slots()[slot] {
+                            let mut slots = self.inventory.slots().into_iter().enumerate();
+                            // Hotbar
+                            let slots = if slot > 35 {
+                                slots
+                                    .skip(9)
+                                    .find(|(_, slot)| {
+                                        slot.is_none_or(|item| {
+                                            item.item_id == item_in_pressed_slot.item_id
+                                        })
+                                    })
+                                    .map(|(slot_num, _)| slot_num)
+                            } else {
+                                slots
+                                    .skip(36)
+                                    .rev()
+                                    .find(|(_, slot)| {
+                                        slot.is_none_or(|item| {
+                                            item.item_id == item_in_pressed_slot.item_id
+                                        })
+                                    })
+                                    .map(|(slot_num, _)| slot_num)
+                            };
+                            if let Some(slot) = slots {
+                                let mut item_slot =
+                                    self.inventory.slots()[slot].map(|i| i.to_owned());
+
+                                self.inventory.handle_item_change(
+                                    &mut item_slot,
+                                    slot,
+                                    MouseClick::Left,
+                                );
+                                *self.inventory.slots_mut()[slot] = item_slot;
+                            }
+                        }
                     }
                     container_click::Slot::OutsideInventory => (),
                 };
