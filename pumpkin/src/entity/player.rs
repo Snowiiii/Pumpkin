@@ -1,10 +1,12 @@
 use std::str::FromStr;
 
+use crate::{client::Client, server::Server};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::ToPrimitive;
 use pumpkin_core::text::TextComponent;
 use pumpkin_entity::{entity_type::EntityType, Entity, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
+use pumpkin_inventory::Container;
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{CGameEvent, CPlayDisconnect, CSyncPlayerPosition, CSystemChatMessage},
@@ -16,10 +18,9 @@ use pumpkin_protocol::{
     },
     ConnectionState, RawPacket, ServerPacket, VarInt,
 };
+use pumpkin_world::item::ItemStack;
 use pumpkin_world::vector3::Vector3;
 use serde::{Deserialize, Serialize};
-
-use crate::{client::Client, server::Server};
 
 pub struct Player {
     pub client: Client,
@@ -31,8 +32,8 @@ pub struct Player {
     pub food: i32,
     pub food_saturation: f32,
     pub inventory: PlayerInventory,
-    pub open_container: Option<()>,
-
+    pub open_container: Option<Box<dyn Container>>,
+    pub carried_item: Option<ItemStack>,
     // Client side value, Should be not trusted
     pub on_ground: bool,
 
@@ -66,6 +67,7 @@ impl Player {
             velocity: Vector3::new(0.0, 0.0, 0.0),
             inventory: PlayerInventory::new(),
             open_container: None,
+            carried_item: None,
             gamemode,
         }
     }

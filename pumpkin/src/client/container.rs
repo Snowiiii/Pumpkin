@@ -1,17 +1,17 @@
+use num_traits::FromPrimitive;
 use pumpkin_core::text::TextComponent;
+use pumpkin_inventory::container_click;
 use pumpkin_inventory::container_click::MouseClick;
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
-use pumpkin_inventory::WindowType;
-use pumpkin_inventory::{container_click, ContainerStruct};
+use pumpkin_inventory::{Container, WindowType};
 use pumpkin_protocol::client::play::{
     CCloseContainer, COpenScreen, CSetContainerContent, CSetContainerProperty, CSetContainerSlot,
 };
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
-use pumpkin_world::item::Item;
+use pumpkin_world::item::ItemStack;
 
 use crate::entity::player::Player;
-use crate::server::Server;
 
 impl Player {
     pub fn open_container(
@@ -19,8 +19,8 @@ impl Player {
         window_type: WindowType,
         minecraft_menu_id: &str,
         window_title: Option<&str>,
-        items: Option<Vec<Option<&Item>>>,
-        carried_item: Option<&Item>,
+        items: Option<Vec<Option<&ItemStack>>>,
+        carried_item: Option<&ItemStack>,
     ) {
         let menu_protocol_id = (*pumpkin_world::global_registry::REGISTRY
             .get("minecraft:menu")
@@ -43,8 +43,8 @@ impl Player {
     pub fn set_container_content<'a>(
         &mut self,
         window_type: WindowType,
-        items: Option<Vec<Option<&'a Item>>>,
-        carried_item: Option<&'a Item>,
+        items: Option<Vec<Option<&'a ItemStack>>>,
+        carried_item: Option<&'a ItemStack>,
     ) {
         let slots: Vec<Slot> = {
             if let Some(mut items) = items {
@@ -80,7 +80,7 @@ impl Player {
         &mut self,
         window_type: WindowType,
         slot: usize,
-        item: Option<&Item>,
+        item: Option<&ItemStack>,
     ) {
         self.client.send_packet(&CSetContainerSlot::new(
             window_type as i8,
@@ -136,13 +136,45 @@ impl Player {
         };
 
         match click.mode.click_type {
-            ClickType::MouseClick(mouse_click) => self.mouse_click(mouse_click),
+            ClickType::MouseClick(mouse_click) => {
+                self.mouse_click(mouse_click, click.window_type, click.mode.slot)
+            }
             _ => todo!(),
         }
     }
 
-    pub fn mouse_click(&mut self, mouse_click: MouseClick) {
-        dbg!(mouse_click);
+    pub fn mouse_click(
+        &mut self,
+        mouse_click: MouseClick,
+        window_type: WindowType,
+        slot: container_click::Slot,
+    ) {
+        let Some(_) = &self.open_container else {
+            // Inventory
+            if window_type == WindowType::Generic9x1 {
+                match slot {
+                    container_click::Slot::Normal(slot) => {
+                        self.inventory
+                            .handle_item_change(&mut self.carried_item, slot, mouse_click)
+                    }
+                    container_click::Slot::OutsideInventory => (),
+                };
+
+                dbg!(&self.carried_item);
+                let filled_inventory_slots = self
+                    .inventory
+                    .slots()
+                    .into_iter()
+                    .enumerate()
+                    .filter_map(|(slot, item)| item.map(|item| (slot, item.item_count)))
+                    .collect::<Vec<_>>();
+                dbg!(filled_inventory_slots);
+
+                return;
+            } else {
+                return;
+            }
+        };
     }
 }
 

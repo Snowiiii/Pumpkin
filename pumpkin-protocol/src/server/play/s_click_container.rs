@@ -4,6 +4,7 @@ use pumpkin_macros::packet;
 use serde::de::SeqAccess;
 use serde::{de, Deserialize};
 
+#[derive(Debug)]
 #[packet(0x0E)]
 pub struct SClickContainer {
     pub window_id: u8,
@@ -52,12 +53,17 @@ impl<'de> Deserialize<'de> for SClickContainer {
                 let length_of_array = seq
                     .next_element::<VarInt>()?
                     .ok_or(de::Error::custom("Failed to decode VarInt"))?;
-                let array_of_changed_slots = if length_of_array.0 != 0 {
-                    seq.next_element::<Vec<(i16, Slot)>>()?
-                        .ok_or(de::Error::custom("Unable to parse changed slots list"))?
-                } else {
-                    vec![]
-                };
+                let mut array_of_changed_slots = vec![];
+                for _ in 0..length_of_array.0 {
+                    let slot_number = seq
+                        .next_element::<i16>()?
+                        .ok_or(de::Error::custom("Unable to parse slot"))?;
+                    let slot = seq
+                        .next_element::<Slot>()?
+                        .ok_or(de::Error::custom("Unable to parse item"))?;
+                    array_of_changed_slots.push((slot_number, slot));
+                }
+
                 let carried_item = seq
                     .next_element::<Slot>()?
                     .ok_or(de::Error::custom("Failed to decode carried item"))?;

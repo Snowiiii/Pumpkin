@@ -11,9 +11,9 @@ pub enum Rarity {
     Epic,
 }
 
-#[derive(Clone, Copy)]
-pub struct Item {
-    pub item_count: u32,
+#[derive(Clone, Copy, Debug)]
+pub struct ItemStack {
+    pub item_count: u8,
     // This ID is the numerical protocol ID, not the usual minecraft::block ID.
     pub item_id: u32,
     // TODO: Add Item Components

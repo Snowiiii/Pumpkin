@@ -1,13 +1,16 @@
-use pumpkin_world::item::Item;
+use crate::container_click::MouseClick;
+use crate::{handle_item_change, Container, WindowType};
+use pumpkin_world::item::ItemStack;
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct PlayerInventory {
     // Main Inventory + Hotbar
-    crafting: [Option<Item>; 4],
-    crafting_output: Option<Item>,
-    items: [Option<Item>; 36],
-    armor: [Option<Item>; 4],
-    offhand: Option<Item>,
+    crafting: [Option<ItemStack>; 4],
+    crafting_output: Option<ItemStack>,
+    items: [Option<ItemStack>; 36],
+    armor: [Option<ItemStack>; 4],
+    offhand: Option<ItemStack>,
     // current selected slot in hotbar
     selected: usize,
 }
@@ -42,7 +45,7 @@ impl PlayerInventory {
     /// ## Item allowed override
     /// An override, which when enabled, makes it so that invalid items, can be placed in slots they normally can't.
     /// Useful functionality for plugins in the future.
-    pub fn set_slot(&mut self, slot: usize, item: Option<Item>, item_allowed_override: bool) {
+    pub fn set_slot(&mut self, slot: usize, item: Option<ItemStack>, item_allowed_override: bool) {
         match slot {
             0 => {
                 // TODO: Add crafting check here
@@ -85,23 +88,60 @@ impl PlayerInventory {
             _ => unreachable!(),
         }
     }
-
+    pub fn get_slot(&mut self, slot: usize) -> &mut Option<ItemStack> {
+        match slot {
+            0 => {
+                // TODO: Add crafting check here
+                &mut self.crafting_output
+            }
+            1..=4 => &mut self.crafting[slot - 1],
+            5..=8 => &mut self.armor[slot - 5],
+            9..=44 => &mut self.items[slot - 9],
+            45 => &mut self.offhand,
+            _ => unreachable!(),
+        }
+    }
     pub fn set_selected(&mut self, slot: usize) {
         assert!((0..9).contains(&slot));
         self.selected = slot;
     }
 
-    pub fn held_item(&self) -> Option<&Item> {
+    pub fn held_item(&self) -> Option<&ItemStack> {
         debug_assert!((0..9).contains(&self.selected));
         self.items[self.selected + 36 - 9].as_ref()
     }
 
-    pub fn slots(&self) -> Vec<Option<&Item>> {
+    pub fn slots(&self) -> Vec<Option<&ItemStack>> {
         let mut slots = vec![self.crafting_output.as_ref()];
         slots.extend(self.crafting.iter().map(|c| c.as_ref()));
         slots.extend(self.armor.iter().map(|c| c.as_ref()));
         slots.extend(self.items.iter().map(|c| c.as_ref()));
         slots.push(self.offhand.as_ref());
         slots
+    }
+
+    pub fn slots_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
+        let mut slots = vec![&mut self.crafting_output];
+        slots.extend(self.crafting.iter_mut());
+        slots.extend(self.armor.iter_mut());
+        slots.extend(self.items.iter_mut());
+        slots.push(&mut self.offhand);
+        slots
+    }
+}
+
+impl Container for PlayerInventory {
+    fn window_type(&self) -> &WindowType {
+        &WindowType::Generic9x1
+    }
+
+    fn handle_item_change(
+        &mut self,
+        carried_slot: &mut Option<ItemStack>,
+        slot: usize,
+        mouse_click: MouseClick,
+    ) {
+        let item_slot = self.get_slot(slot);
+        handle_item_change(carried_slot, item_slot, mouse_click)
     }
 }

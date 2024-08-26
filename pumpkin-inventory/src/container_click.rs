@@ -1,5 +1,5 @@
 use crate::WindowType;
-use pumpkin_world::item::Item;
+use pumpkin_world::item::ItemStack;
 
 pub struct ClickMode {
     pub slot: Slot,
@@ -11,7 +11,7 @@ pub struct Click {
     pub state_id: u32,
     pub window_type: WindowType,
     pub changed_items: Vec<ItemChange>,
-    pub carried_item: Option<Item>,
+    pub carried_item: Option<ItemStack>,
 }
 
 impl ClickMode {
@@ -166,11 +166,10 @@ pub enum ClickType {
     },
     DoubleClick,
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum MouseClick {
     Left,
     Right,
-    Middle,
 }
 
 pub enum KeyClick {
@@ -202,5 +201,5 @@ pub enum MouseDragState {
 
 pub enum ItemChange {
     Remove { slot: usize },
-    Add { slot: usize, item: Item },
+    Add { slot: usize, item: ItemStack },
 }

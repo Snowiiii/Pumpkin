@@ -1,6 +1,6 @@
-use crate::item::Item;
+use crate::item::ItemStack;
 
-impl Item {
+impl ItemStack {
     pub fn is_helmet(&self) -> bool {
         [
             // Leather
