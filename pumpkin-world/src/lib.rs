@@ -10,6 +10,7 @@ pub mod item;
 mod level;
 pub mod radial_chunk_iterator;
 pub mod vector3;
+mod world_gen;
 
 pub const WORLD_HEIGHT: usize = 384;
 pub const WORLD_LOWEST_Y: i16 = -64;
