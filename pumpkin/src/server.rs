@@ -14,6 +14,7 @@ use image::GenericImageView;
 use mio::Token;
 use num_traits::ToPrimitive;
 use pumpkin_entity::{entity_type::EntityType, EntityId};
+use pumpkin_plugin::PluginLoader;
 use pumpkin_protocol::{
     client::{
         config::CPluginMessage,
@@ -46,6 +47,8 @@ pub struct Server {
     pub private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,
 
+    pub plugin_loader: PluginLoader,
+
     pub world: Arc<tokio::sync::Mutex<World>>,
     pub status_response: StatusResponse,
     // We cache the json response here so we don't parse it every time someone makes a Status request.
@@ -58,10 +61,10 @@ pub struct Server {
     /// Cache the registry so we don't have to parse it every time a player joins
     pub cached_registry: Vec<Registry>,
 
+    // TODO: place this into every world
     pub current_players: HashMap<Arc<Token>, Arc<Mutex<Player>>>,
 
-    // TODO: replace with HashMap <World, Player>
-    entity_id: AtomicI32, // TODO: place this into every world
+    entity_id: AtomicI32,
     pub base_config: BasicConfiguration,
     pub advanced_config: AdvancedConfiguration,
 
@@ -96,6 +99,9 @@ impl Server {
             None
         };
 
+        log::info!("Loading Plugins");
+        let plugin_loader = PluginLoader::load();
+
         log::warn!("Pumpkin does currently not have World or Chunk generation, Using ../world folder with vanilla pregenerated chunks");
         let world = World::load(Dimension::OverWorld.into_level(
             // TODO: load form config
@@ -103,6 +109,7 @@ impl Server {
         ));
 
         Self {
+            plugin_loader,
             cached_registry: Registry::get_static(),
             // 0 is invalid
             entity_id: 2.into(),

@@ -10,6 +10,7 @@ default = []
 [dependencies]
 # pumpkin
 pumpkin-core = { path = "../pumpkin-core"}
+pumpkin-plugin = { path = "../pumpkin-plugin"}
 pumpkin-inventory = { path = "../pumpkin-inventory"}
 pumpkin-world = { path = "../pumpkin-world"}
 pumpkin-entity = { path = "../pumpkin-entity"}
@@ -53,7 +54,7 @@ image = { version = "0.25", default-features = false, features = ["png"]}
 
 # logging
 simple_logger = "5.0.0"
-log = "0.4"
+log.workspace = true
 
 # networking
 mio = { version = "1.0.2", features = ["os-poll", "net"]}

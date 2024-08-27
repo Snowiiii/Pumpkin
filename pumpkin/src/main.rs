@@ -34,6 +34,11 @@ fn main() -> io::Result<()> {
     use pumpkin_core::text::{color::NamedColor, TextComponent};
     use rcon::RCONServer;
 
+    simple_logger::SimpleLogger::new()
+        .with_level(log::LevelFilter::Info)
+        .init()
+        .unwrap();
+
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -59,8 +64,6 @@ fn main() -> io::Result<()> {
         let basic_config = BasicConfiguration::load("configuration.toml");
 
         let advanced_configuration = AdvancedConfiguration::load("features.toml");
-
-        simple_logger::SimpleLogger::new().init().unwrap();
 
         // Create a poll instance.
         let mut poll = Poll::new()?;
