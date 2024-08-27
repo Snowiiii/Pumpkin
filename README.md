@@ -91,9 +91,12 @@ Then run:
 
 > [!NOTE]
 > This can take a while. Because we enabled heavy optimizations for release builds
+>
+> To apply further optimizations specfic to your CPU and use your CPU features. You should set the target-cpu=native
+> Rust flag.
 
 ```shell
-RUSTFLAGS="-C target-cpu=native" cargo run --release
+cargo run --release
 ```
 
 ### Docker
