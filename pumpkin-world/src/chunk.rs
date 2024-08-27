@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::BlockId,
     coordinates::{ChunkCoordinates, ChunkRelativeBlockCoordinates, Height},
-    level::WorldError,
+    level::{ChunkNotGeneratedError, WorldError},
     WORLD_HEIGHT,
 };
 
@@ -68,6 +68,37 @@ struct ChunkNbt {
     sections: Vec<ChunkSection>,
     #[serde(rename = "Heightmaps")]
     heightmaps: ChunkHeightmaps,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[serde(tag = "Status")]
+enum ChunkStatus {
+    #[serde(rename = "minecraft:empty")]
+    Empty,
+    #[serde(rename = "minecraft:structure_starts")]
+    StructureStarts,
+    #[serde(rename = "minecraft:structure_references")]
+    StructureReferences,
+    #[serde(rename = "minecraft:biomes")]
+    Biomes,
+    #[serde(rename = "minecraft:noise")]
+    Noise,
+    #[serde(rename = "minecraft:surface")]
+    Surface,
+    #[serde(rename = "minecraft:carvers")]
+    Carvers,
+    #[serde(rename = "minecraft:liquid_carvers")]
+    LiquidCarvers,
+    #[serde(rename = "minecraft:features")]
+    Features,
+    #[serde(rename = "minecraft:initialize_light")]
+    Light,
+    #[serde(rename = "minecraft:spawn")]
+    Spawn,
+    #[serde(rename = "minecraft:heightmaps")]
+    Heightmaps,
+    #[serde(rename = "minecraft:full")]
+    Full,
 }
 
 /// The Heightmap for a completely empty chunk
@@ -150,6 +181,14 @@ impl Index<ChunkRelativeBlockCoordinates> for ChunkBlocks {
 
 impl ChunkData {
     pub fn from_bytes(chunk_data: Vec<u8>, at: ChunkCoordinates) -> Result<Self, WorldError> {
+        if fastnbt::from_bytes::<ChunkStatus>(&chunk_data).expect("Failed reading chunk status.")
+            != ChunkStatus::Full
+        {
+            return Err(WorldError::ChunkNotGenerated(
+                ChunkNotGeneratedError::IncompleteGeneration,
+            ));
+        }
+
         let chunk_data = match fastnbt::from_bytes::<ChunkNbt>(chunk_data.as_slice()) {
             Ok(v) => v,
             Err(err) => return Err(WorldError::ErrorDeserializingChunk(err.to_string())),
