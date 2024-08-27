@@ -1,7 +1,6 @@
 use num_traits::FromPrimitive;
 use pumpkin_core::text::TextComponent;
-use pumpkin_inventory::container_click;
-use pumpkin_inventory::container_click::MouseClick;
+use pumpkin_inventory::container_click::{KeyClick, MouseClick};
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
 use pumpkin_inventory::{container_click, handle_item_change};
 use pumpkin_inventory::{Container, WindowType};
@@ -141,6 +140,14 @@ impl Player {
                 self.mouse_click(mouse_click, click.window_type, click.mode.slot)
             }
             ClickType::ShiftClick => self.shift_mouse_click(click.window_type, click.mode.slot),
+            ClickType::KeyClick(key_click) => match click.mode.slot {
+                container_click::Slot::Normal(slot) => {
+                    self.number_button_pressed(click.window_type, key_click, slot)
+                }
+                container_click::Slot::OutsideInventory => {
+                    unimplemented!("This is not a valid state")
+                }
+            },
             _ => todo!(),
         }
         dbg!(&self.carried_item);
@@ -224,6 +231,26 @@ impl Player {
                 return;
             }
         };
+    }
+
+    pub fn number_button_pressed(
+        &mut self,
+        window_type: WindowType,
+        key_click: KeyClick,
+        slot: usize,
+    ) {
+        if window_type == WindowType::Generic9x1 {
+            let changing_slot = match key_click {
+                KeyClick::Slot(slot) => slot,
+                KeyClick::Offhand => 45,
+            };
+            let mut changing_item_slot = self.inventory.get_slot(changing_slot as usize).to_owned();
+            let item_slot = self.inventory.get_slot(slot);
+            if item_slot.is_some() {
+                handle_item_change(&mut changing_item_slot, item_slot, MouseClick::Left);
+                *self.inventory.get_slot(changing_slot as usize) = changing_item_slot
+            }
+        }
     }
 }
 
