@@ -353,13 +353,10 @@ impl Server {
         let inst = std::time::Instant::now();
         let (sender, mut chunk_receiver) = mpsc::channel(distance as usize);
         let world = self.world.clone();
+
+        let chunks: Vec<_> = RadialIterator::new(distance).collect();
         tokio::spawn(async move {
-            world
-                .lock()
-                .await
-                .level
-                .read_chunks(RadialIterator::new(distance).collect(), sender)
-                .await;
+            world.lock().await.level.fetch_chunks(&chunks, sender).await;
         });
 
         player.client.send_packet(&CCenterChunk {
@@ -367,14 +364,15 @@ impl Server {
             chunk_z: 0.into(),
         });
 
-        while let Some((_chunk_pos, chunk_data)) = chunk_receiver.recv().await {
+        while let Some(chunk_data) = chunk_receiver.recv().await {
             // dbg!(chunk_pos);
             let chunk_data = match chunk_data {
                 Ok(d) => d,
                 Err(_) => continue,
             };
             #[cfg(debug_assertions)]
-            if _chunk_pos == (pumpkin_world::coordinates::ChunkCoordinates { x: 0, z: 0 }) {
+            if chunk_data.position == (pumpkin_world::coordinates::ChunkCoordinates { x: 0, z: 0 })
+            {
                 use pumpkin_protocol::bytebuf::ByteBuffer;
                 let mut test = ByteBuffer::empty();
                 CChunkData(&chunk_data).write(&mut test);
