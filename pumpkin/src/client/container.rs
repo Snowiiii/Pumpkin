@@ -3,6 +3,7 @@ use pumpkin_core::text::TextComponent;
 use pumpkin_inventory::container_click;
 use pumpkin_inventory::container_click::MouseClick;
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
+use pumpkin_inventory::{container_click, handle_item_change};
 use pumpkin_inventory::{Container, WindowType};
 use pumpkin_protocol::client::play::{
     CCloseContainer, COpenScreen, CSetContainerContent, CSetContainerProperty, CSetContainerSlot,
@@ -184,26 +185,22 @@ impl Player {
                 match slot {
                     container_click::Slot::Normal(slot) => {
                         if let Some(item_in_pressed_slot) = self.inventory.slots()[slot] {
-                            let mut slots = self.inventory.slots().into_iter().enumerate();
+                            let slots = self.inventory.slots().into_iter().enumerate();
                             // Hotbar
+                            let find_condition = |(_, slot): &(usize, Option<&ItemStack>)| {
+                                slot.is_none_or(|item| item.item_id == item_in_pressed_slot.item_id)
+                            };
+
                             let slots = if slot > 35 {
                                 slots
                                     .skip(9)
-                                    .find(|(_, slot)| {
-                                        slot.is_none_or(|item| {
-                                            item.item_id == item_in_pressed_slot.item_id
-                                        })
-                                    })
+                                    .find(find_condition)
                                     .map(|(slot_num, _)| slot_num)
                             } else {
                                 slots
                                     .skip(36)
                                     .rev()
-                                    .find(|(_, slot)| {
-                                        slot.is_none_or(|item| {
-                                            item.item_id == item_in_pressed_slot.item_id
-                                        })
-                                    })
+                                    .find(find_condition)
                                     .map(|(slot_num, _)| slot_num)
                             };
                             if let Some(slot) = slots {
