@@ -65,6 +65,8 @@ pub trait Container {
         slot: usize,
         mouse_click: MouseClick,
     );
+
+    fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>>;
 }
 
 pub fn handle_item_take(
@@ -172,5 +174,9 @@ impl<const T: usize> Container for ContainerStruct<T> {
     ) {
         let current_slot = &mut self.slots[slot];
         handle_item_change(carried_slot, current_slot, mouse_click)
+    }
+
+    fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
+        self.slots.iter_mut().collect()
     }
 }

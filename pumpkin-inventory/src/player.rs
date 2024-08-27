@@ -144,4 +144,8 @@ impl Container for PlayerInventory {
         let item_slot = self.get_slot(slot);
         handle_item_change(carried_slot, item_slot, mouse_click)
     }
+
+    fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
+        self.slots_mut()
+    }
 }

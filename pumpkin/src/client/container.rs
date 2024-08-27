@@ -148,7 +148,18 @@ impl Player {
                     unimplemented!("This is not a valid state")
                 }
             },
-            _ => todo!(),
+            ClickType::CreativePickItem => {
+                if let container_click::Slot::Normal(slot) = click.mode.slot {
+                    self.creative_pick_item(slot)
+                }
+            }
+            ClickType::DoubleClick => {}
+            ClickType::MouseDrag {
+                drag_state,
+                drag_type,
+            } => {
+                todo!()
+            }
         }
         dbg!(&self.carried_item);
         let filled_inventory_slots = self
@@ -225,7 +236,6 @@ impl Player {
                     }
                     container_click::Slot::OutsideInventory => (),
                 };
-
                 return;
             } else {
                 return;
@@ -250,6 +260,22 @@ impl Player {
                 handle_item_change(&mut changing_item_slot, item_slot, MouseClick::Left);
                 *self.inventory.get_slot(changing_slot as usize) = changing_item_slot
             }
+        }
+    }
+
+    pub fn creative_pick_item(&mut self, slot: usize) {
+        let mut container = {
+            match &mut self.open_container {
+                Some(container) => {
+                    let mut out = container.all_slots();
+                    out.extend(self.inventory.slots_mut());
+                    out
+                }
+                None => self.inventory.slots_mut(),
+            }
+        };
+        if let Some(Some(item)) = container.get_mut(slot) {
+            self.carried_item = Some(item.to_owned())
         }
     }
 }
