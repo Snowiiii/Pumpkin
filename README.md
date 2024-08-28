@@ -48,6 +48,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Entity Spawning
   - [x] Chunk Loading
   - [ ] World Generation
+  - [x] Chunk Generation
   - [ ] World Borders
   - [ ] World Saving
 - Player
@@ -56,7 +57,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Player Teleport
   - [x] Player Movement
   - [x] Player Animation
-  - [ ] Player Inventory
+  - [x] Player Inventory
   - [x] Player Combat
 - Server
   - [ ] Query
@@ -83,9 +84,7 @@ cd Pumpkin
 
 You also may have to [install rust](https://www.rust-lang.org/tools/install) when you don't already have.
 
-For Now, until we don't have own chunk generation.
-You need to pregenerate the world and place it inside of the Pumpkin/ directory.
-Make sure to generate chunks close to (0,0) since that is where the player gets spawned by default.
+You can place a vanilla world into the Pumpkin/ directory when you want. Just name the World to `world`
 
 Then run:
 
