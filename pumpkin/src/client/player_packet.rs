@@ -35,6 +35,7 @@ fn modulus(a: f32, b: f32) -> f32 {
 }
 
 /// Handles all Play Packets send by a real Player
+/// NEVER TRUST THE CLIENT. HANDLE EVERY ERROR, UNWRAP/EXPECT ARE FORBIDDEN
 impl Player {
     pub fn handle_confirm_teleport(
         &mut self,
@@ -205,15 +206,22 @@ impl Player {
     }
 
     pub fn handle_swing_arm(&mut self, server: &mut Server, swing_arm: SSwingArm) {
-        let animation = match Hand::from_i32(swing_arm.hand.0).unwrap() {
-            Hand::Main => Animation::SwingMainArm,
-            Hand::Off => Animation::SwingOffhand,
+        match Hand::from_i32(swing_arm.hand.0) {
+            Some(hand) => {
+                let animation = match hand {
+                    Hand::Main => Animation::SwingMainArm,
+                    Hand::Off => Animation::SwingOffhand,
+                };
+                let id = self.entity_id();
+                server.broadcast_packet_except(
+                    &[&self.client.token],
+                    &CEntityAnimation::new(id.into(), animation as u8),
+                )
+            }
+            None => {
+                self.kick(TextComponent::text("Invalid hand"));
+            }
         };
-        let id = self.entity_id();
-        server.broadcast_packet_except(
-            &[&self.client.token],
-            &CEntityAnimation::new(id.into(), animation as u8),
-        )
     }
 
     pub fn handle_chat_message(&mut self, server: &mut Server, chat_message: SChatMessage) {
@@ -226,7 +234,7 @@ impl Player {
         }
 
         // TODO: filter message & validation
-        let gameprofile = self.client.gameprofile.as_ref().unwrap();
+        let gameprofile = &self.gameprofile;
 
         server.broadcast_packet(
             self,
@@ -262,123 +270,144 @@ impl Player {
         _server: &mut Server,
         client_information: SClientInformationPlay,
     ) {
-        self.client.config = Some(PlayerConfig {
-            locale: client_information.locale,
-            view_distance: client_information.view_distance,
-            chat_mode: ChatMode::from_i32(client_information.chat_mode.into()).unwrap(),
-            chat_colors: client_information.chat_colors,
-            skin_parts: client_information.skin_parts,
-            main_hand: Hand::from_i32(client_information.main_hand.into()).unwrap(),
-            text_filtering: client_information.text_filtering,
-            server_listing: client_information.server_listing,
-        });
+        if let (Some(main_hand), Some(chat_mode)) = (
+            Hand::from_i32(client_information.main_hand.into()),
+            ChatMode::from_i32(client_information.chat_mode.into()),
+        ) {
+            self.client.config = Some(PlayerConfig {
+                locale: client_information.locale,
+                view_distance: client_information.view_distance,
+                chat_mode,
+                chat_colors: client_information.chat_colors,
+                skin_parts: client_information.skin_parts,
+                main_hand,
+                text_filtering: client_information.text_filtering,
+                server_listing: client_information.server_listing,
+            });
+        } else {
+            self.kick(TextComponent::text("Invalid hand or chat type"))
+        }
     }
 
     pub fn handle_interact(&mut self, server: &mut Server, interact: SInteract) {
-        let action = ActionType::from_i32(interact.typ.0).unwrap();
-        if action == ActionType::Attack {
-            let entity_id = interact.entity_id;
-            // TODO: do validation and stuff
-            let config = &server.advanced_config.pvp;
-            if config.enabled {
-                let attacked_player = server.get_by_entityid(self, entity_id.0 as EntityId);
-                self.sneaking = interact.sneaking;
-                if let Some(mut player) = attacked_player {
-                    let token = player.client.token.clone();
-                    let velo = player.velocity;
-                    if config.protect_creative && player.gamemode == GameMode::Creative {
-                        return;
-                    }
-                    if config.knockback {
-                        let yaw = self.entity.yaw;
-                        let strength = 1.0;
-                        player.knockback(
-                            strength * 0.5,
-                            (yaw * (PI / 180.0)).sin() as f64,
-                            -(yaw * (PI / 180.0)).cos() as f64,
-                        );
-                        let packet = &CEntityVelocity::new(
-                            &entity_id,
-                            player.velocity.x as f32,
-                            player.velocity.y as f32,
-                            player.velocity.z as f32,
-                        );
-                        self.velocity = self.velocity.multiply(0.6, 1.0, 0.6);
+        match ActionType::from_i32(interact.typ.0) {
+            Some(action) => match action {
+                ActionType::Attack => {
+                    let entity_id = interact.entity_id;
+                    // TODO: do validation and stuff
+                    let config = &server.advanced_config.pvp;
+                    if config.enabled {
+                        let attacked_player = server.get_by_entityid(self, entity_id.0 as EntityId);
+                        self.sneaking = interact.sneaking;
+                        if let Some(mut player) = attacked_player {
+                            let token = player.client.token.clone();
+                            let velo = player.velocity;
+                            if config.protect_creative && player.gamemode == GameMode::Creative {
+                                return;
+                            }
+                            if config.knockback {
+                                let yaw = self.entity.yaw;
+                                let strength = 1.0;
+                                player.knockback(
+                                    strength * 0.5,
+                                    (yaw * (PI / 180.0)).sin() as f64,
+                                    -(yaw * (PI / 180.0)).cos() as f64,
+                                );
+                                let packet = &CEntityVelocity::new(
+                                    &entity_id,
+                                    player.velocity.x as f32,
+                                    player.velocity.y as f32,
+                                    player.velocity.z as f32,
+                                );
+                                self.velocity = self.velocity.multiply(0.6, 1.0, 0.6);
 
-                        player.velocity = velo;
-                        player.client.send_packet(packet);
+                                player.velocity = velo;
+                                player.client.send_packet(packet);
+                            }
+                            if config.hurt_animation {
+                                // TODO
+                                // thats how we prevent borrow errors :c
+                                let packet = &CHurtAnimation::new(&entity_id, self.entity.yaw);
+                                self.client.send_packet(packet);
+                                player.client.send_packet(packet);
+                                server.broadcast_packet_except(
+                                    &[self.client.token.as_ref(), token.as_ref()],
+                                    &CHurtAnimation::new(&entity_id, 10.0),
+                                )
+                            }
+                            if config.swing {}
+                        } else {
+                            self.kick(TextComponent::text("Interacted with invalid entity id"))
+                        }
                     }
-                    if config.hurt_animation {
-                        // TODO
-                        // thats how we prevent borrow errors :c
-                        let packet = &CHurtAnimation::new(&entity_id, self.entity.yaw);
-                        self.client.send_packet(packet);
-                        player.client.send_packet(packet);
-                        server.broadcast_packet_except(
-                            &[self.client.token.as_ref(), token.as_ref()],
-                            &CHurtAnimation::new(&entity_id, 10.0),
-                        )
-                    }
-                    if config.swing {}
-                } else {
-                    self.kick(TextComponent::text("Interacted with invalid entity id"))
                 }
-            }
+                ActionType::Interact => {
+                    dbg!("todo");
+                }
+                ActionType::InteractAt => {
+                    dbg!("todo");
+                }
+            },
+            None => self.kick(TextComponent::text("Invalid action type")),
         }
     }
     pub fn handle_player_action(&mut self, server: &mut Server, player_action: SPlayerAction) {
-        match Status::from_i32(player_action.status.0).unwrap() {
-            Status::StartedDigging => {
-                if !self.can_interact_with_block_at(&player_action.location, 1.0) {
-                    // TODO: maybe log?
-                    return;
+        match Status::from_i32(player_action.status.0) {
+            Some(status) => match status {
+                Status::StartedDigging => {
+                    if !self.can_interact_with_block_at(&player_action.location, 1.0) {
+                        // TODO: maybe log?
+                        return;
+                    }
+                    // TODO: do validation
+                    // TODO: Config
+                    if self.gamemode == GameMode::Creative {
+                        let location = player_action.location;
+                        // Block break & block break sound
+                        // TODO: currently this is always dirt replace it
+                        server
+                            .broadcast_packet(self, &CWorldEvent::new(2001, &location, 11, false));
+                        // AIR
+                        server.broadcast_packet(self, &CBlockUpdate::new(&location, 0.into()));
+                    }
                 }
-                // TODO: do validation
-                // TODO: Config
-                if self.gamemode == GameMode::Creative {
+                Status::CancelledDigging => {
+                    if !self.can_interact_with_block_at(&player_action.location, 1.0) {
+                        // TODO: maybe log?
+                        return;
+                    }
+                    self.current_block_destroy_stage = 0;
+                }
+                Status::FinishedDigging => {
+                    // TODO: do validation
                     let location = player_action.location;
+                    if !self.can_interact_with_block_at(&location, 1.0) {
+                        // TODO: maybe log?
+                        return;
+                    }
                     // Block break & block break sound
                     // TODO: currently this is always dirt replace it
                     server.broadcast_packet(self, &CWorldEvent::new(2001, &location, 11, false));
                     // AIR
                     server.broadcast_packet(self, &CBlockUpdate::new(&location, 0.into()));
+                    // TODO: Send this every tick
+                    self.client
+                        .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence));
                 }
-            }
-            Status::CancelledDigging => {
-                if !self.can_interact_with_block_at(&player_action.location, 1.0) {
-                    // TODO: maybe log?
-                    return;
+                Status::DropItemStack => {
+                    dbg!("todo");
                 }
-                self.current_block_destroy_stage = 0;
-            }
-            Status::FinishedDigging => {
-                // TODO: do validation
-                let location = player_action.location;
-                if !self.can_interact_with_block_at(&location, 1.0) {
-                    // TODO: maybe log?
-                    return;
+                Status::DropItem => {
+                    dbg!("todo");
                 }
-                // Block break & block break sound
-                // TODO: currently this is always dirt replace it
-                server.broadcast_packet(self, &CWorldEvent::new(2001, &location, 11, false));
-                // AIR
-                server.broadcast_packet(self, &CBlockUpdate::new(&location, 0.into()));
-                // TODO: Send this every tick
-                self.client
-                    .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence));
-            }
-            Status::DropItemStack => {
-                dbg!("todo");
-            }
-            Status::DropItem => {
-                dbg!("todo");
-            }
-            Status::ShootArrowOrFinishEating => {
-                dbg!("todo");
-            }
-            Status::SwapItem => {
-                dbg!("todo");
-            }
+                Status::ShootArrowOrFinishEating => {
+                    dbg!("todo");
+                }
+                Status::SwapItem => {
+                    dbg!("todo");
+                }
+            },
+            None => self.kick(TextComponent::text("Invalid status")),
         }
     }
 
@@ -395,27 +424,32 @@ impl Player {
             return;
         }
 
-        let face = BlockFace::from_i32(use_item_on.face.0).unwrap();
-        if let Some(item) = self.inventory.held_item() {
-            let minecraft_id =
-                global_registry::find_minecraft_id(global_registry::ITEM_REGISTRY, item.item_id)
-                    .expect("All item ids are in the global registry");
-            if let Ok(block_state_id) = BlockId::new(minecraft_id, None) {
-                server.broadcast_packet(
-                    self,
-                    &CBlockUpdate::new(&location, block_state_id.get_id_mojang_repr().into()),
-                );
-                server.broadcast_packet(
-                    self,
-                    &CBlockUpdate::new(
-                        &WorldPosition(location.0 + face.to_offset()),
-                        block_state_id.get_id_mojang_repr().into(),
-                    ),
-                );
+        if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
+            if let Some(item) = self.inventory.held_item() {
+                let minecraft_id = global_registry::find_minecraft_id(
+                    global_registry::ITEM_REGISTRY,
+                    item.item_id,
+                )
+                .expect("All item ids are in the global registry");
+                if let Ok(block_state_id) = BlockId::new(minecraft_id, None) {
+                    server.broadcast_packet(
+                        self,
+                        &CBlockUpdate::new(&location, block_state_id.get_id_mojang_repr().into()),
+                    );
+                    server.broadcast_packet(
+                        self,
+                        &CBlockUpdate::new(
+                            &WorldPosition(location.0 + face.to_offset()),
+                            block_state_id.get_id_mojang_repr().into(),
+                        ),
+                    );
+                }
             }
+            self.client
+                .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence));
+        } else {
+            self.kick(TextComponent::text("Invalid block face"))
         }
-        self.client
-            .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence));
     }
 
     pub fn handle_use_item(&mut self, _server: &mut Server, _use_item: SUseItem) {

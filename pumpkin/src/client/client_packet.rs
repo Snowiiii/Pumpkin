@@ -31,6 +31,8 @@ use super::{
 
 /// Processes incoming Packets from the Client to the Server
 /// Implements the `Client` Packets
+/// NEVER TRUST THE CLIENT. HANDLE EVERY ERROR, UNWRAP/EXPECT
+/// TODO: REMOVE ALL UNWRAPS
 impl Client {
     pub fn handle_handshake(&mut self, _server: &mut Server, handshake: SHandShake) {
         dbg!("handshake");

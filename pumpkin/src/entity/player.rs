@@ -23,7 +23,11 @@ use pumpkin_protocol::{
 use pumpkin_world::vector3::Vector3;
 use serde::{Deserialize, Serialize};
 
-use crate::{client::Client, server::Server, util::boundingbox::BoundingBox};
+use crate::{
+    client::{authentication::GameProfile, Client},
+    server::Server,
+    util::boundingbox::BoundingBox,
+};
 
 pub struct PlayerAbilities {
     pub invulnerable: bool,
@@ -48,6 +52,7 @@ impl Default for PlayerAbilities {
 }
 
 pub struct Player {
+    pub gameprofile: GameProfile,
     pub client: Client,
     pub entity: Entity,
     // current gamemode
@@ -79,7 +84,21 @@ pub struct Player {
 
 impl Player {
     pub fn new(client: Client, entity_id: EntityId, gamemode: GameMode) -> Self {
+        let gameprofile = match client.gameprofile.clone() {
+            Some(profile) => profile,
+            None => {
+                log::error!("No gameprofile?. Impossible");
+                GameProfile {
+                    id: uuid::Uuid::new_v4(),
+                    name: "".to_string(),
+                    properties: vec![],
+                    profile_actions: None,
+                }
+            }
+        };
+
         Self {
+            gameprofile,
             client,
             entity: Entity::new(entity_id, EntityType::Player, 1.62),
             on_ground: false,

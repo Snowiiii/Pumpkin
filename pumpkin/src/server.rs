@@ -143,7 +143,7 @@ impl Server {
         // despawn the player
         // todo: put this into the entitiy struct
         let id = player.entity_id();
-        let uuid = player.client.gameprofile.as_ref().unwrap().id;
+        let uuid = player.gameprofile.id;
         self.broadcast_packet_except(
             &[&player.client.token],
             &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]),
@@ -194,7 +194,7 @@ impl Server {
         let yaw = 10.0;
         let pitch = 10.0;
         player.teleport(x, y, z, 10.0, 10.0);
-        let gameprofile = player.client.gameprofile.as_ref().unwrap();
+        let gameprofile = &player.gameprofile;
         // first send info update to our new player, So he can see his Skin
         // also send his info to everyone else
         self.broadcast_packet(
@@ -222,7 +222,7 @@ impl Server {
             .filter(|c| c.0 != &player.client.token)
         {
             let playerr = playerr.as_ref().lock().unwrap();
-            let gameprofile = &playerr.client.gameprofile.as_ref().unwrap();
+            let gameprofile = &playerr.gameprofile;
             entries.push(pumpkin_protocol::client::play::Player {
                 uuid: gameprofile.id,
                 actions: vec![
@@ -241,7 +241,7 @@ impl Server {
         // Start waiting for level chunks
         player.client.send_packet(&CGameEvent::new(13, 0.0));
 
-        let gameprofile = player.client.gameprofile.as_ref().unwrap();
+        let gameprofile = &player.gameprofile;
 
         // spawn player for every client
         self.broadcast_packet_except(
@@ -268,7 +268,7 @@ impl Server {
         for (_, existing_player) in self.current_players.iter().filter(|c| c.0 != &token) {
             let existing_player = existing_player.as_ref().lock().unwrap();
             let entity = &existing_player.entity;
-            let gameprofile = existing_player.client.gameprofile.as_ref().unwrap();
+            let gameprofile = &existing_player.gameprofile;
             player.client.send_packet(&CSpawnEntity::new(
                 existing_player.entity_id().into(),
                 UUID(gameprofile.id),
