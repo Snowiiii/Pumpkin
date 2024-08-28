@@ -1,8 +1,11 @@
 use num_traits::FromPrimitive;
 use pumpkin_core::text::TextComponent;
 use pumpkin_inventory::container_click::{KeyClick, MouseClick};
+use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
-use pumpkin_inventory::{container_click, handle_item_change};
+use pumpkin_inventory::{
+    container_click, handle_item_change, ContainerStruct, OptionallyCombinedContainer,
+};
 use pumpkin_inventory::{Container, WindowType};
 use pumpkin_protocol::client::play::{
     CCloseContainer, COpenScreen, CSetContainerContent, CSetContainerProperty, CSetContainerSlot,
@@ -160,8 +163,10 @@ impl Player {
             } => {
                 todo!()
             }
+            ClickType::DropType(drop_type) => {
+                todo!()
+            }
         }
-        dbg!(&self.carried_item);
         let filled_inventory_slots = self
             .inventory
             .slots()
@@ -169,113 +174,100 @@ impl Player {
             .enumerate()
             .filter_map(|(slot, item)| item.map(|item| (slot, item.item_count)))
             .collect::<Vec<_>>();
-        dbg!(filled_inventory_slots);
     }
 
-    pub fn mouse_click(
+    fn mouse_click(
         &mut self,
         mouse_click: MouseClick,
         window_type: WindowType,
         slot: container_click::Slot,
     ) {
-        let Some(_) = &self.open_container else {
-            // Inventory
-            if window_type == WindowType::Generic9x1 {
-                match slot {
-                    container_click::Slot::Normal(slot) => {
+        let mut container = get_full_container(&mut self.inventory, self.open_container.as_mut());
+        if container.window_type() != &window_type {
+            return;
+        }
+
+        match slot {
+            container_click::Slot::Normal(slot) => {
+                container.handle_item_change(&mut self.carried_item, slot, mouse_click)
+            }
+            container_click::Slot::OutsideInventory => (),
+        };
+    }
+
+    fn shift_mouse_click(&mut self, window_type: WindowType, slot: container_click::Slot) {
+        let mut container = get_full_container(&mut self.inventory, self.open_container.as_mut());
+        if container.window_type() != &window_type {
+            return;
+        }
+
+        match slot {
+            container_click::Slot::Normal(slot) => {
+                if let Some(item_in_pressed_slot) = self.inventory.slots()[slot] {
+                    let slots = self.inventory.slots().into_iter().enumerate();
+                    // Hotbar
+                    let find_condition = |(_, slot): &(usize, Option<&ItemStack>)| {
+                        slot.is_none_or(|item| item.item_id == item_in_pressed_slot.item_id)
+                    };
+
+                    let slots = if slot > 35 {
+                        slots
+                            .skip(9)
+                            .find(find_condition)
+                            .map(|(slot_num, _)| slot_num)
+                    } else {
+                        slots
+                            .skip(36)
+                            .rev()
+                            .find(find_condition)
+                            .map(|(slot_num, _)| slot_num)
+                    };
+                    if let Some(slot) = slots {
+                        let mut item_slot = self.inventory.slots()[slot].map(|i| i.to_owned());
+
                         self.inventory
-                            .handle_item_change(&mut self.carried_item, slot, mouse_click)
+                            .handle_item_change(&mut item_slot, slot, MouseClick::Left);
+                        *self.inventory.slots_mut()[slot] = item_slot;
                     }
-                    container_click::Slot::OutsideInventory => (),
-                };
-
-                return;
-            } else {
-                return;
+                }
             }
+            container_click::Slot::OutsideInventory => (),
         };
     }
 
-    pub fn shift_mouse_click(&mut self, window_type: WindowType, slot: container_click::Slot) {
-        let Some(_) = &self.open_container else {
-            // Inventory
-            if window_type == WindowType::Generic9x1 {
-                match slot {
-                    container_click::Slot::Normal(slot) => {
-                        if let Some(item_in_pressed_slot) = self.inventory.slots()[slot] {
-                            let slots = self.inventory.slots().into_iter().enumerate();
-                            // Hotbar
-                            let find_condition = |(_, slot): &(usize, Option<&ItemStack>)| {
-                                slot.is_none_or(|item| item.item_id == item_in_pressed_slot.item_id)
-                            };
-
-                            let slots = if slot > 35 {
-                                slots
-                                    .skip(9)
-                                    .find(find_condition)
-                                    .map(|(slot_num, _)| slot_num)
-                            } else {
-                                slots
-                                    .skip(36)
-                                    .rev()
-                                    .find(find_condition)
-                                    .map(|(slot_num, _)| slot_num)
-                            };
-                            if let Some(slot) = slots {
-                                let mut item_slot =
-                                    self.inventory.slots()[slot].map(|i| i.to_owned());
-
-                                self.inventory.handle_item_change(
-                                    &mut item_slot,
-                                    slot,
-                                    MouseClick::Left,
-                                );
-                                *self.inventory.slots_mut()[slot] = item_slot;
-                            }
-                        }
-                    }
-                    container_click::Slot::OutsideInventory => (),
-                };
-                return;
-            } else {
-                return;
-            }
+    fn number_button_pressed(&mut self, window_type: WindowType, key_click: KeyClick, slot: usize) {
+        let changing_slot = match key_click {
+            KeyClick::Slot(slot) => slot,
+            KeyClick::Offhand => 45,
         };
-    }
+        let mut changing_item_slot = self.inventory.get_slot(changing_slot as usize).to_owned();
+        let mut container = get_full_container(&mut self.inventory, self.open_container.as_mut());
+        if container.window_type() != &window_type {
+            return;
+        }
 
-    pub fn number_button_pressed(
-        &mut self,
-        window_type: WindowType,
-        key_click: KeyClick,
-        slot: usize,
-    ) {
-        if window_type == WindowType::Generic9x1 {
-            let changing_slot = match key_click {
-                KeyClick::Slot(slot) => slot,
-                KeyClick::Offhand => 45,
-            };
-            let mut changing_item_slot = self.inventory.get_slot(changing_slot as usize).to_owned();
-            let item_slot = self.inventory.get_slot(slot);
-            if item_slot.is_some() {
-                handle_item_change(&mut changing_item_slot, item_slot, MouseClick::Left);
-                *self.inventory.get_slot(changing_slot as usize) = changing_item_slot
-            }
+        let item_slot = &mut container.all_slots()[slot];
+        if item_slot.is_some() {
+            handle_item_change(&mut changing_item_slot, item_slot, MouseClick::Left);
+            *self.inventory.get_slot(changing_slot as usize) = changing_item_slot
         }
     }
 
-    pub fn creative_pick_item(&mut self, slot: usize) {
-        let mut container = {
-            match &mut self.open_container {
-                Some(container) => {
-                    let mut out = container.all_slots();
-                    out.extend(self.inventory.slots_mut());
-                    out
-                }
-                None => self.inventory.slots_mut(),
-            }
-        };
-        if let Some(Some(item)) = container.get_mut(slot) {
+    fn creative_pick_item(&mut self, slot: usize) {
+        let mut container = get_full_container(&mut self.inventory, self.open_container.as_mut());
+
+        if let Some(Some(item)) = container.all_slots().get_mut(slot) {
             self.carried_item = Some(item.to_owned())
+        }
+    }
+
+    fn double_click(&mut self, slot: usize) {}
+
+    fn get_container_type(&mut self) -> &WindowType {
+        match &self.open_container {
+            Some(container) => container.window_type(),
+            // This is the one the inventory uses for some stupid reason
+            None => &WindowType::Generic9x1,
         }
     }
 }
@@ -285,3 +277,10 @@ impl Player {
 
     }
 }*/
+
+fn get_full_container<'a>(
+    inventory: &'a mut PlayerInventory,
+    open_container: Option<&'a mut Box<dyn Container>>,
+) -> OptionallyCombinedContainer<'a> {
+    OptionallyCombinedContainer::new(inventory, open_container)
+}

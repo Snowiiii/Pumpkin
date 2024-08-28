@@ -1,4 +1,5 @@
 use crate::container_click::MouseClick;
+use crate::player::PlayerInventory;
 use num_derive::{FromPrimitive, ToPrimitive};
 use pumpkin_world::item::ItemStack;
 
@@ -178,5 +179,49 @@ impl<const T: usize> Container for ContainerStruct<T> {
 
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
         self.slots.iter_mut().collect()
+    }
+}
+
+pub struct OptionallyCombinedContainer<'a> {
+    container: Option<&'a mut Box<dyn Container>>,
+    inventory: &'a mut PlayerInventory,
+}
+impl<'a> OptionallyCombinedContainer<'a> {
+    pub fn new(
+        player_inventory: &'a mut PlayerInventory,
+        container: Option<&'a mut Box<dyn Container>>,
+    ) -> Self {
+        Self {
+            inventory: player_inventory,
+            container,
+        }
+    }
+}
+
+impl<'a> Container for OptionallyCombinedContainer<'a> {
+    fn window_type(&self) -> &WindowType {
+        if let Some(container) = &self.container {
+            container.window_type()
+        } else {
+            &WindowType::Generic9x1
+        }
+    }
+
+    fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
+        let mut slots = if let Some(container) = &mut self.container {
+            container.all_slots()
+        } else {
+            vec![]
+        };
+        slots.extend(self.inventory.all_slots());
+        slots
+    }
+
+    fn handle_item_change(
+        &mut self,
+        carried_item: &mut Option<ItemStack>,
+        slot: usize,
+        mouse_click: MouseClick,
+    ) {
     }
 }
