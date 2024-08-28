@@ -61,12 +61,14 @@ struct ChunkSection {
 }
 
 #[derive(Deserialize, Debug)]
-#[allow(dead_code)]
+#[serde(rename_all = "PascalCase")]
 struct ChunkNbt {
-    #[serde(rename = "DataVersion")]
+    #[allow(dead_code)]
     data_version: usize,
+
+    #[serde(rename = "sections")]
     sections: Vec<ChunkSection>,
-    #[serde(rename = "Heightmaps")]
+
     heightmaps: ChunkHeightmaps,
 }
 
