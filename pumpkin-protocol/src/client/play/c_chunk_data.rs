@@ -23,7 +23,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
 
         let mut data_buf = ByteBuffer::empty();
         self.0.blocks.iter_subchunks().for_each(|chunk| {
-            let block_count = chunk.iter().dedup().filter(|block| !block.is_air()).count() as i16;
+            let block_count = chunk.iter().filter(|block| !block.is_air()).count() as i16;
             // Block count
             data_buf.put_i16(block_count);
             //// Block states
