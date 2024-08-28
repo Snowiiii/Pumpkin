@@ -11,23 +11,19 @@ pub struct CChunkData<'a>(pub &'a ChunkData);
 impl<'a> ClientPacket for CChunkData<'a> {
     fn write(&self, buf: &mut crate::bytebuf::ByteBuffer) {
         // Chunk X
-        buf.put_i32(self.0.position.0);
+        buf.put_i32(self.0.position.x);
         // Chunk Z
-        buf.put_i32(self.0.position.1);
+        buf.put_i32(self.0.position.z);
 
         let heightmap_nbt =
-            fastnbt::to_bytes_with_opts(&self.0.heightmaps, fastnbt::SerOpts::network_nbt())
+            fastnbt::to_bytes_with_opts(&self.0.blocks.heightmap, fastnbt::SerOpts::network_nbt())
                 .unwrap();
         // Heightmaps
         buf.put_slice(&heightmap_nbt);
 
         let mut data_buf = ByteBuffer::empty();
-        self.0.blocks.chunks(16 * 16 * 16).for_each(|chunk| {
-            let block_count = chunk
-                .iter()
-                .dedup()
-                .filter(|block| **block != 0 && **block != 12959 && **block != 12958)
-                .count() as i16;
+        self.0.blocks.iter_subchunks().for_each(|chunk| {
+            let block_count = chunk.iter().filter(|block| !block.is_air()).count() as i16;
             // Block count
             data_buf.put_i16(block_count);
             //// Block states
@@ -63,7 +59,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
                     palette.iter().enumerate().for_each(|(i, id)| {
                         palette_map.insert(*id, i);
                         // Palette
-                        data_buf.put_var_int(&VarInt(**id));
+                        data_buf.put_var_int(&VarInt(id.get_id_mojang_repr()));
                     });
                     for block_clump in chunk.chunks(64 / block_size as usize) {
                         let mut out_long: i64 = 0;
@@ -83,7 +79,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
                         let mut out_long: i64 = 0;
                         let mut shift = 0;
                         for block in block_clump {
-                            out_long |= (*block as i64) << shift;
+                            out_long |= (block.get_id() as i64) << shift;
                             shift += DIRECT_PALETTE_BITS;
                         }
                         block_data_array.push(out_long);

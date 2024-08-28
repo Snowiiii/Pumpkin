@@ -25,7 +25,7 @@ use pumpkin_protocol::{
         SUseItemOn, Status,
     },
 };
-use pumpkin_world::block::BlockFace;
+use pumpkin_world::block::{BlockFace, BlockId};
 use pumpkin_world::global_registry;
 
 use super::PlayerConfig;
@@ -400,21 +400,16 @@ impl Player {
             let minecraft_id =
                 global_registry::find_minecraft_id(global_registry::ITEM_REGISTRY, item.item_id)
                     .expect("All item ids are in the global registry");
-            if let Ok(block_state_id) =
-                pumpkin_world::block::block_registry::block_id_and_properties_to_block_state_id(
-                    minecraft_id,
-                    None,
-                )
-            {
+            if let Ok(block_state_id) = BlockId::new(minecraft_id, None) {
                 server.broadcast_packet(
                     self,
-                    &CBlockUpdate::new(&location, (block_state_id as i32).into()),
+                    &CBlockUpdate::new(&location, block_state_id.get_id_mojang_repr().into()),
                 );
                 server.broadcast_packet(
                     self,
                     &CBlockUpdate::new(
                         &WorldPosition(location.0 + face.to_offset()),
-                        (block_state_id as i32).into(),
+                        block_state_id.get_id_mojang_repr().into(),
                     ),
                 );
             }
