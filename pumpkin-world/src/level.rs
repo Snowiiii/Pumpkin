@@ -1,7 +1,7 @@
 use std::{
     fs::OpenOptions,
     io::{Read, Seek},
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 use flate2::{bufread::ZlibDecoder, read::GzDecoder};
@@ -10,11 +10,20 @@ use rayon::prelude::*;
 use thiserror::Error;
 use tokio::sync::mpsc;
 
-use crate::{chunk::ChunkData, coordinates::ChunkCoordinates};
+use crate::{
+    chunk::ChunkData,
+    coordinates::ChunkCoordinates,
+    world_gen::{get_world_gen, Seed, WorldGenerator},
+};
 
-#[allow(dead_code)]
-/// The Level represents a
+/// The Level represents a single Dimension.
 pub struct Level {
+    save_file: Option<SaveFile>,
+    world_gen: Box<dyn WorldGenerator>,
+}
+
+struct SaveFile {
+    #[allow(dead_code)]
     root_folder: PathBuf,
     region_folder: PathBuf,
 }
@@ -84,16 +93,31 @@ impl Compression {
 
 impl Level {
     pub fn from_root_folder(root_folder: PathBuf) -> Self {
-        assert!(root_folder.exists(), "World root folder does not exist!");
-        let region_folder = root_folder.join("region");
-        assert!(
-            region_folder.exists(),
-            "World region folder does not exist!"
-        );
+        let world_gen = get_world_gen(Seed(0)); // TODO Read Seed from config.
 
-        Level {
-            root_folder,
-            region_folder,
+        if root_folder.exists() {
+            let region_folder = root_folder.join("region");
+            assert!(
+                region_folder.exists(),
+                "World region folder does not exist, despite there being a root folder."
+            );
+
+            Self {
+                world_gen,
+                save_file: Some(SaveFile {
+                    root_folder,
+                    region_folder,
+                }),
+            }
+        } else {
+            log::warn!(
+                "Pumpkin currently only supports Superflat World generation. Use a vanilla ./world folder to play in a normal world."
+            );
+
+            Self {
+                world_gen,
+                save_file: None,
+            }
         }
     }
 
@@ -121,19 +145,27 @@ impl Level {
             let channel = channel.clone();
 
             channel
-                .blocking_send(match Self::read_chunk(&self.region_folder, at) {
-                    Err(WorldError::ChunkNotGenerated(_)) => {
-                        // This chunk was not generated yet.
-                        todo!("generate chunk here")
+                .blocking_send(match &self.save_file {
+                    Some(save_file) => {
+                        match Self::read_chunk(save_file, at) {
+                            Err(WorldError::ChunkNotGenerated(_)) => {
+                                // This chunk was not generated yet.
+                                Ok(self.world_gen.generate_chunk(at))
+                            }
+                            // TODO this doesn't warn the user about the error. fix.
+                            result => result,
+                        }
                     }
-                    // TODO this doesn't warn the user about the error. fix.
-                    result => result,
+                    None => {
+                        // There is no savefile yet -> generate the chunks
+                        Ok(self.world_gen.generate_chunk(at))
+                    }
                 })
                 .expect("Failed sending ChunkData.");
         })
     }
 
-    fn read_chunk(region_folder: &Path, at: ChunkCoordinates) -> Result<ChunkData, WorldError> {
+    fn read_chunk(save_file: &SaveFile, at: ChunkCoordinates) -> Result<ChunkData, WorldError> {
         let region = (
             ((at.x as f32) / 32.0).floor() as i32,
             ((at.z as f32) / 32.0).floor() as i32,
@@ -141,7 +173,11 @@ impl Level {
 
         let mut region_file = OpenOptions::new()
             .read(true)
-            .open(region_folder.join(format!("r.{}.{}.mca", region.0, region.1)))
+            .open(
+                save_file
+                    .region_folder
+                    .join(format!("r.{}.{}.mca", region.0, region.1)),
+            )
             .map_err(|err| match err.kind() {
                 std::io::ErrorKind::NotFound => {
                     WorldError::ChunkNotGenerated(ChunkNotGeneratedError::RegionFileMissing)

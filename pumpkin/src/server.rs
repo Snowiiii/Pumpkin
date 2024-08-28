@@ -102,7 +102,6 @@ impl Server {
         log::info!("Loading Plugins");
         let plugin_loader = PluginLoader::load();
 
-        log::warn!("Pumpkin does currently not have World or Chunk generation, Using ../world folder with vanilla pregenerated chunks");
         let world = World::load(Dimension::OverWorld.into_level(
             // TODO: load form config
             "./world".parse().unwrap(),
