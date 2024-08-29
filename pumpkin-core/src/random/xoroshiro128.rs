@@ -54,7 +54,10 @@ impl Random for Xoroshiro {
     }
 
     fn next_splitter(&mut self) -> impl RandomSplitter {
-        XoroshiroSplitter::new(self.seed.next(), self.seed.next())
+        XoroshiroSplitter {
+            lo: self.seed.next(),
+            hi: self.seed.next(),
+        }
     }
 
     fn set_seed(&mut self, seed: i64) {
@@ -159,12 +162,6 @@ impl XoroshiroSeed {
 pub struct XoroshiroSplitter {
     lo: i64,
     hi: i64,
-}
-
-impl XoroshiroSplitter {
-    pub fn new(lo: i64, hi: i64) -> Self {
-        Self { lo, hi }
-    }
 }
 
 fn hash_pos(x: i32, y: i32, z: i32) -> i64 {
@@ -460,14 +457,20 @@ mod tests {
         let mut new_generator = xoroshiro.split();
         assert_eq!(new_generator.next_i32(), 542195535);
 
-        let splitter = new_generator.next_splitter();
-        let mut rand_1 = splitter.split_string("TEST STRING");
-        assert_eq!(rand_1.next_i32(), -641435713);
+        {
+            // Drop splitter out of scope, so we can mut call new_generator again
+            let splitter = new_generator.next_splitter();
+            let mut rand_1 = splitter.split_string("TEST STRING");
+            assert_eq!(rand_1.next_i32(), -641435713);
 
-        let mut rand_2 = splitter.split_i64(42069);
-        assert_eq!(rand_2.next_i32(), -340700677);
+            let mut rand_2 = splitter.split_i64(42069);
+            assert_eq!(rand_2.next_i32(), -340700677);
 
-        let mut rand_3 = splitter.split_pos(1337, 80085, -69420);
-        assert_eq!(rand_3.next_i32(), 790449132);
+            let mut rand_3 = splitter.split_pos(1337, 80085, -69420);
+            assert_eq!(rand_3.next_i32(), 790449132);
+        }
+        // Verify we didn't mutate the originals
+        assert_eq!(xoroshiro.next_i32(), 653572596);
+        assert_eq!(new_generator.next_i32(), 435917842);
     }
 }
