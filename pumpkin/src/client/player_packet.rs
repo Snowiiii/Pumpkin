@@ -34,7 +34,8 @@ fn modulus(a: f32, b: f32) -> f32 {
     ((a % b) + b) % b
 }
 
-/// Handles all Play Packets send by a real Player
+/// Contains method implementations for handling play packets regarding a specific Minecraft player connected to the server.
+/// Handles all Play packets sent by a real Player
 /// NEVER TRUST THE CLIENT. HANDLE EVERY ERROR, UNWRAP/EXPECT ARE FORBIDDEN
 impl Player {
     pub fn handle_confirm_teleport(

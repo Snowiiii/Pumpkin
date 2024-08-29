@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 use biomes::Biome;
 use chat_type::ChatType;
 use dimensions::Dimension;

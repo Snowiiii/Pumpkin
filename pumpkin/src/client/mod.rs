@@ -60,6 +60,7 @@ impl Default for PlayerConfig {
     }
 }
 
+/// Represents a Minecraft client connected to, or attempting to connect to the server. 
 pub struct Client {
     pub gameprofile: Option<GameProfile>,
 

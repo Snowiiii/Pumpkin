@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 use bytebuf::{packet_id::Packet, ByteBuffer, DeserializerError};
 use bytes::Buf;
 use serde::{Deserialize, Serialize};

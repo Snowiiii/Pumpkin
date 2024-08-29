@@ -1,5 +1,9 @@
 ### Pumpkin Protocol
-Contains all Serverbound(Client->Server) and Clientbound(Server->Client) Packets.
+Contains all serverbound and clientbound packets.
+
+**Clientbound** meaning that it's a packet being sent from the server to the client. (Server->Client)
+
+**Serverbound** meaning that it's a packet the client sends to the server. (Client->Server)
 
 Packets in the Pumpkin protocol are organized by functionality and state.
 

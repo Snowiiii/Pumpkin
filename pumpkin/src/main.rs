@@ -1,3 +1,6 @@
+#![doc = include_str!("../../README.md")]
+#![doc = include_str!("../../STRUCTURE.md")]
+
 #![allow(clippy::await_holding_refcell_ref)]
 #![allow(clippy::await_holding_lock)]
 
