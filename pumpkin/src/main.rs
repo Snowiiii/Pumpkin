@@ -74,14 +74,7 @@ fn main() -> io::Result<()> {
         let mut events = Events::with_capacity(128);
 
         // Setup the TCP server socket.
-
-        let addr = format!(
-            "{}:{}",
-            basic_config.server_address, basic_config.server_port
-        )
-        .parse()
-        .unwrap();
-
+        let addr = basic_config.server_address;
         let mut listener = TcpListener::bind(addr)?;
 
         // Register the server with poll we can receive events for it.

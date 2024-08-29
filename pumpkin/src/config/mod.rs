@@ -1,9 +1,11 @@
-use std::path::Path;
-
 use auth_config::AuthenticationConfig;
 use proxy::ProxyConfig;
 use resource_pack::ResourcePackConfig;
 use serde::{Deserialize, Serialize};
+use std::{
+    net::{Ipv4Addr, SocketAddr},
+    path::Path,
+};
 
 use crate::{entity::player::GameMode, server::Difficulty};
 
@@ -33,8 +35,7 @@ pub struct AdvancedConfiguration {
 #[derive(Deserialize, Serialize, Clone)]
 pub struct RCONConfig {
     pub enabled: bool,
-    pub ip: String,
-    pub port: u16,
+    pub address: SocketAddr,
     pub password: String,
 }
 
@@ -42,8 +43,7 @@ impl Default for RCONConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            ip: "0.0.0.0".to_string(),
-            port: 25575,
+            address: SocketAddr::new(Ipv4Addr::new(0, 0, 0, 0).into(), 25575),
             password: "".to_string(),
         }
     }
@@ -116,9 +116,7 @@ pub struct BasicConfiguration {
     /// A version identifier for the configuration format.
     pub config_version: String,
     /// The address to bind the server to.
-    pub server_address: String,
-    /// The port to listen on.
-    pub server_port: u16,
+    pub server_address: SocketAddr,
     /// The seed for world generation.
     pub seed: String,
     /// The maximum number of players allowed on the server.
@@ -147,8 +145,7 @@ impl Default for BasicConfiguration {
     fn default() -> Self {
         Self {
             config_version: CURRENT_BASE_VERSION.to_string(),
-            server_address: "0.0.0.0".to_string(),
-            server_port: 25565,
+            server_address: SocketAddr::new(Ipv4Addr::new(0, 0, 0, 0).into(), 25565),
             seed: "".to_string(),
             max_players: 100000,
             view_distance: 10,
