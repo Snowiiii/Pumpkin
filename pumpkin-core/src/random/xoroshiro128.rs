@@ -73,7 +73,7 @@ impl Random for Xoroshiro {
         if n < bound as u64 {
             let i = (((!bound).wrapping_add(1)) as u64) % (bound as u64);
             while n < i {
-                l = self.next_i32() as u64;
+                l = (self.next_i32() as u64) & 0xFFFFFFFF;
                 m = l.wrapping_mul(bound as u64);
                 n = m & 4294967295u64;
             }
@@ -121,7 +121,6 @@ fn mix_stafford_13(seed: i64) -> i64 {
 }
 
 impl XoroshiroSeed {
-    #[allow(dead_code)]
     fn split(&self, lo: i64, hi: i64) -> Self {
         Self {
             lo: self.lo ^ lo,
