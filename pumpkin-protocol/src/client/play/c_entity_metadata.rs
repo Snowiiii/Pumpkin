@@ -5,14 +5,14 @@ use crate::VarInt;
 
 #[derive(Serialize)]
 #[packet(0x58)]
-pub struct CSetEntityMetadata {
+pub struct CSetEntityMetadata<T> {
     entity_id: VarInt,
-    metadata: Metadata,
+    metadata: Metadata<T>,
     end: u8,
 }
 
-impl CSetEntityMetadata {
-    pub fn new(entity_id: VarInt, metadata: Metadata) -> Self {
+impl<T> CSetEntityMetadata<T> {
+    pub fn new(entity_id: VarInt, metadata: Metadata<T>) -> Self {
         Self {
             entity_id,
             metadata,
@@ -22,14 +22,14 @@ impl CSetEntityMetadata {
 }
 
 #[derive(Serialize)]
-pub struct Metadata {
+pub struct Metadata<T> {
     index: u8,
     typ: VarInt,
-    value: u8,
+    value: T,
 }
 
-impl Metadata {
-    pub fn new(index: u8, typ: VarInt, value: u8) -> Self {
+impl<T> Metadata<T> {
+    pub fn new(index: u8, typ: VarInt, value: T) -> Self {
         Self { index, typ, value }
     }
 }

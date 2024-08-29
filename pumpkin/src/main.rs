@@ -1,6 +1,9 @@
 #![allow(clippy::await_holding_refcell_ref)]
 #![allow(clippy::await_holding_lock)]
 
+#[cfg(target_os = "wasi")]
+compile_error!("Compiling for WASI targets is not supported!");
+
 use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
 use std::io::{self};
@@ -26,7 +29,6 @@ pub mod rcon;
 pub mod server;
 pub mod util;
 
-#[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
     use std::sync::{Arc, Mutex};
 
@@ -226,9 +228,4 @@ fn next(current: &mut Token) -> Token {
     let next = current.0;
     current.0 += 1;
     Token(next)
-}
-
-#[cfg(target_os = "wasi")]
-fn main() {
-    panic!("can't bind to an address with wasi")
 }

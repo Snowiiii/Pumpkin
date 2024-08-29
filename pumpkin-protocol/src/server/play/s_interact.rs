@@ -2,7 +2,7 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use pumpkin_macros::packet;
 
-use crate::{ServerPacket, VarInt};
+use crate::{bytebuf::DeserializerError, ServerPacket, VarInt};
 
 #[packet(0x16)]
 pub struct SInteract {
@@ -20,7 +20,9 @@ impl ServerPacket for SInteract {
     ) -> Result<Self, crate::bytebuf::DeserializerError> {
         let entity_id = bytebuf.get_var_int();
         let typ = bytebuf.get_var_int();
-        let action = ActionType::from_i32(typ.0).unwrap();
+        let action = ActionType::from_i32(typ.0).ok_or(DeserializerError::Message(
+            "invalid action type".to_string(),
+        ))?;
         let target_position: Option<(f32, f32, f32)> = match action {
             ActionType::Interact => None,
             ActionType::Attack => None,

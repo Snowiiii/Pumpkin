@@ -3,13 +3,13 @@ use std::str::FromStr;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::ToPrimitive;
 use pumpkin_core::text::TextComponent;
-use pumpkin_entity::{entity_type::EntityType, Entity, EntityId};
+use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, Entity, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_protocol::{
     bytebuf::{packet_id::Packet, DeserializerError},
     client::play::{
-        CGameEvent, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSyncPlayerPosition,
-        CSystemChatMessage, PlayerAction,
+        CGameEvent, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSetEntityMetadata,
+        CSyncPlayerPosition, CSystemChatMessage, Metadata, PlayerAction,
     },
     position::WorldPosition,
     server::play::{
@@ -167,6 +167,15 @@ impl Player {
         ));
     }
 
+    pub fn set_pose(&mut self, pose: EntityPose) {
+        self.entity.pose = pose;
+        let pose = self.entity.pose as i32;
+        self.client.send_packet(&CSetEntityMetadata::<VarInt>::new(
+            self.entity_id().into(),
+            Metadata::new(6, 10.into(), (pose).into()),
+        ))
+    }
+
     pub fn teleport(&mut self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
         // this is the ultra special magic code used to create the teleport id
         self.teleport_id_count += 1;
@@ -243,7 +252,7 @@ impl Player {
             &CPlayerInfoUpdate::new(
                 0x04,
                 &[pumpkin_protocol::client::play::Player {
-                    uuid: self.client.gameprofile.as_ref().unwrap().id,
+                    uuid: self.gameprofile.id,
                     actions: vec![PlayerAction::UpdateGameMode((self.gamemode as i32).into())],
                 }],
             ),

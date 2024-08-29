@@ -59,16 +59,16 @@ pub async fn authenticate(
         .authentication
         .prevent_proxy_connections
     {
-        let test = format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}");
-        dbg!(&test);
-        test
+        format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}")
     } else {
         format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}")
     };
-    let response = server
+    let auth_client = server
         .auth_client
         .as_ref()
-        .unwrap()
+        .ok_or(AuthError::MissingAuthClient)?;
+
+    let response = auth_client
         .get(address)
         .send()
         .await
@@ -109,6 +109,8 @@ pub fn is_texture_url_valid(url: Url, config: &TextureConfig) -> bool {
 
 #[derive(Error, Debug)]
 pub enum AuthError {
+    #[error("Missing auth client")]
+    MissingAuthClient,
     #[error("Authentication servers are down")]
     FailedResponse,
     #[error("Failed to verify username")]
