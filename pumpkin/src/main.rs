@@ -6,16 +6,13 @@ compile_error!("Compiling for WASI targets is not supported!");
 
 use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
-use std::io::{self};
-
-use client::Client;
-use commands::handle_command;
-use config::AdvancedConfiguration;
 
 use std::collections::HashMap;
+use std::io::{self};
 
-use client::interrupted;
-use config::BasicConfiguration;
+use client::{interrupted, Client};
+use commands::handle_command;
+use config::{AdvancedConfiguration, BasicConfiguration};
 use server::Server;
 
 // Setup some tokens to allow us to identify which event is for which socket.
