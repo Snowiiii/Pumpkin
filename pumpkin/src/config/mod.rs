@@ -1,7 +1,9 @@
+use log::warn;
 use proxy::ProxyConfig;
 use resource_pack::ResourcePackConfig;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
+    fs,
     net::{Ipv4Addr, SocketAddr},
     path::Path,
 };
@@ -162,44 +164,62 @@ impl Default for BasicConfiguration {
     }
 }
 
-impl AdvancedConfiguration {
-    pub fn load<P: AsRef<Path>>(path: P) -> AdvancedConfiguration {
-        if path.as_ref().exists() {
-            let toml = std::fs::read_to_string(path).expect("Couldn't read configuration");
-            let config: AdvancedConfiguration =
-                toml::from_str(toml.as_str()).expect("Couldn't parse features.toml, Probably old config, Replacing with a new one or just delete it");
-            config.validate();
-            config
+pub trait LoadConfiguration {
+    fn load() -> Self
+    where
+        Self: Sized + Default + Serialize + DeserializeOwned,
+    {
+        let path = Self::get_path();
+
+        let config = if path.exists() {
+            let file_content = fs::read_to_string(path)
+                .unwrap_or_else(|_| panic!("Couldn't read configuration file at {:?}", path));
+
+            toml::from_str(&file_content).unwrap_or_else(|err| {
+                panic!(
+                    "Couldn't parse config at {:?}. Reason: {}",
+                    path,
+                    err.message()
+                )
+            })
         } else {
-            let config = AdvancedConfiguration::default();
-            let toml = toml::to_string(&config).expect("Couldn't create toml!");
-            std::fs::write(path, toml).expect("Couldn't save configuration");
-            config.validate();
-            config
-        }
+            let content = Self::default();
+
+            if let Err(err) = fs::write(path, toml::to_string(&content).unwrap()) {
+                warn!(
+                    "Couldn't write default config to {:?}. Reason: {}",
+                    path, err
+                );
+            }
+
+            content
+        };
+
+        config.validate();
+        config
     }
-    pub fn validate(&self) {
+
+    fn get_path() -> &'static Path;
+
+    fn validate(&self);
+}
+
+impl LoadConfiguration for AdvancedConfiguration {
+    fn get_path() -> &'static Path {
+        Path::new("features.toml")
+    }
+
+    fn validate(&self) {
         self.resource_pack.validate()
     }
 }
 
-impl BasicConfiguration {
-    pub fn load<P: AsRef<Path>>(path: P) -> BasicConfiguration {
-        if path.as_ref().exists() {
-            let toml = std::fs::read_to_string(path).expect("Couldn't read configuration");
-            let config: BasicConfiguration = toml::from_str(toml.as_str()).expect("Couldn't parse configuration.toml, Probably old config, Replacing with a new one or just delete it");
-            config.validate();
-            config
-        } else {
-            let config = BasicConfiguration::default();
-            let toml = toml::to_string(&config).expect("Couldn't create toml!");
-            std::fs::write(path, toml).expect("Couldn't save configuration");
-            config.validate();
-            config
-        }
+impl LoadConfiguration for BasicConfiguration {
+    fn get_path() -> &'static Path {
+        Path::new("configuration.toml")
     }
 
-    pub fn validate(&self) {
+    fn validate(&self) {
         assert_eq!(
             self.config_version, CURRENT_BASE_VERSION,
             "Config version does not match used Config version. Please update your config"

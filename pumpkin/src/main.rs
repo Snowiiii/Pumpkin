@@ -12,7 +12,7 @@ use std::io::{self};
 
 use client::{interrupted, Client};
 use commands::handle_command;
-use config::{AdvancedConfiguration, BasicConfiguration};
+use config::{AdvancedConfiguration, BasicConfiguration, LoadConfiguration};
 use server::Server;
 
 // Setup some tokens to allow us to identify which event is for which socket.
@@ -61,9 +61,9 @@ fn main() -> io::Result<()> {
         use std::time::Instant;
 
         let time = Instant::now();
-        let basic_config = BasicConfiguration::load("configuration.toml");
+        let basic_config = BasicConfiguration::load();
 
-        let advanced_configuration = AdvancedConfiguration::load("features.toml");
+        let advanced_configuration = AdvancedConfiguration::load();
 
         // Create a poll instance.
         let mut poll = Poll::new()?;
