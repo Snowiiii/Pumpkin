@@ -14,10 +14,12 @@ pub mod resource_pack;
 /// Current Config version of the Base Config
 const CURRENT_BASE_VERSION: &str = "1.0.0";
 
-#[derive(Deserialize, Serialize)]
-/// The idea is that Pumpkin should very customizable, You can Enable or Disable Features depending on your needs.
+/// The idea is that Pumpkin should very customizable.
+/// You can Enable or Disable Features depending on your needs.
+///
 /// This also allows you get some Performance or Resource boosts.
 /// Important: The Configuration should match Vanilla by default
+#[derive(Deserialize, Serialize)]
 pub struct AdvancedConfiguration {
     pub proxy: ProxyConfig,
     pub authentication: AuthenticationConfig,
