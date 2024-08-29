@@ -167,13 +167,54 @@ impl Player {
         ));
     }
 
-    pub fn set_pose(&mut self, pose: EntityPose) {
+    pub fn set_sneaking(&mut self, server: &mut Server, sneaking: bool) {
+        assert!(self.sneaking != sneaking);
+        self.sneaking = sneaking;
+        self.set_flag(server, Self::SNEAKING_FLAG_INDEX, sneaking);
+        if sneaking {
+            self.set_pose(server, EntityPose::Crouching);
+        } else {
+            self.set_pose(server, EntityPose::Standing);
+        }
+    }
+
+    pub fn set_sprinting(&mut self, server: &mut Server, sprinting: bool) {
+        assert!(self.sprinting != sprinting);
+        self.sprinting = sprinting;
+        self.set_flag(server, Self::SPRINTING_FLAG_INDEX, sprinting);
+    }
+
+    pub const ON_FIRE_FLAG_INDEX: u32 = 0;
+    pub const SNEAKING_FLAG_INDEX: u32 = 1;
+    pub const SPRINTING_FLAG_INDEX: u32 = 3;
+    pub const SWIMMING_FLAG_INDEX: u32 = 4;
+    pub const INVISIBLE_FLAG_INDEX: u32 = 5;
+    pub const GLOWING_FLAG_INDEX: u32 = 6;
+    pub const FALL_FLYING_FLAG_INDEX: u32 = 7;
+    fn set_flag(&mut self, server: &mut Server, index: u32, value: bool) {
+        let mut b = 0i8;
+        if value {
+            b |= 1 << index;
+        } else {
+            b &= !(1 << index);
+        }
+        server.broadcast_packet(
+            self,
+            &CSetEntityMetadata::new(self.entity_id().into(), Metadata::new(0, 0.into(), b)),
+        );
+    }
+
+    pub fn set_pose(&mut self, server: &mut Server, pose: EntityPose) {
         self.entity.pose = pose;
         let pose = self.entity.pose as i32;
-        self.client.send_packet(&CSetEntityMetadata::<VarInt>::new(
-            self.entity_id().into(),
-            Metadata::new(6, 10.into(), (pose).into()),
-        ))
+        dbg!(pose);
+        server.broadcast_packet(
+            self,
+            &CSetEntityMetadata::<VarInt>::new(
+                self.entity_id().into(),
+                Metadata::new(6, 20.into(), (pose).into()),
+            ),
+        )
     }
 
     pub fn teleport(&mut self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {

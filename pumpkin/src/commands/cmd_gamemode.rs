@@ -65,7 +65,6 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                         let gamemode = parse_arg_gamemode(args)?;
 
                         return if let Player(target) = sender {
-                            dbg!("1");
                             if target.gamemode == gamemode {
                                 target.send_system_message(TextComponent::text(&format!(
                                     "You already in {:?} gamemode",

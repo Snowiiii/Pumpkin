@@ -183,18 +183,34 @@ impl Player {
         self.on_ground = ground.on_ground;
     }
 
-    pub fn handle_player_command(&mut self, _server: &mut Server, command: SPlayerCommand) {
+    pub fn handle_player_command(&mut self, server: &mut Server, command: SPlayerCommand) {
         if command.entity_id != self.entity.entity_id.into() {
             return;
         }
 
         if let Some(action) = Action::from_i32(command.action.0) {
             match action {
-                pumpkin_protocol::server::play::Action::StartSneaking => self.sneaking = true,
-                pumpkin_protocol::server::play::Action::StopSneaking => self.sneaking = false,
+                pumpkin_protocol::server::play::Action::StartSneaking => {
+                    if !self.sneaking {
+                        self.set_sneaking(server, true)
+                    }
+                }
+                pumpkin_protocol::server::play::Action::StopSneaking => {
+                    if self.sneaking {
+                        self.set_sneaking(server, false)
+                    }
+                }
                 pumpkin_protocol::server::play::Action::LeaveBed => todo!(),
-                pumpkin_protocol::server::play::Action::StartSprinting => self.sprinting = true,
-                pumpkin_protocol::server::play::Action::StopSprinting => self.sprinting = false,
+                pumpkin_protocol::server::play::Action::StartSprinting => {
+                    if !self.sprinting {
+                        self.set_sprinting(server, true)
+                    }
+                }
+                pumpkin_protocol::server::play::Action::StopSprinting => {
+                    if self.sprinting {
+                        self.set_sprinting(server, false)
+                    }
+                }
                 pumpkin_protocol::server::play::Action::StartHorseJump => todo!(),
                 pumpkin_protocol::server::play::Action::StopHorseJump => todo!(),
                 pumpkin_protocol::server::play::Action::OpenVehicleInventory => todo!(),
@@ -290,6 +306,10 @@ impl Player {
     }
 
     pub fn handle_interact(&mut self, server: &mut Server, interact: SInteract) {
+        let sneaking = interact.sneaking;
+        if self.sneaking != sneaking {
+            self.set_sneaking(server, sneaking);
+        }
         match ActionType::from_i32(interact.typ.0) {
             Some(action) => match action {
                 ActionType::Attack => {
@@ -298,7 +318,6 @@ impl Player {
                     let config = &server.advanced_config.pvp;
                     if config.enabled {
                         let attacked_player = server.get_by_entityid(self, entity_id.0 as EntityId);
-                        self.sneaking = interact.sneaking;
                         if let Some(mut player) = attacked_player {
                             let token = player.client.token.clone();
                             let velo = player.velocity;
