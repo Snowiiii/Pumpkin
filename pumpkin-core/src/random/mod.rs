@@ -3,11 +3,13 @@ pub mod xoroshiro128;
 mod gaussian;
 
 pub trait Random {
+    fn from_seed(seed: u64) -> Self;
+
     fn split(&mut self) -> Self;
 
     fn next_splitter(&mut self) -> impl RandomSplitter;
 
-    fn set_seed(&mut self, seed: i64);
+    fn next(&mut self, bits: u64) -> u64;
 
     fn next_i32(&mut self) -> i32;
 
@@ -45,7 +47,7 @@ pub trait Random {
 pub trait RandomSplitter {
     fn split_string(&self, seed: &str) -> impl Random;
 
-    fn split_i64(&self, seed: i64) -> impl Random;
+    fn split_u64(&self, seed: u64) -> impl Random;
 
     fn split_pos(&self, x: i32, y: i32, z: i32) -> impl Random;
 }
