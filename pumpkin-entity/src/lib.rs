@@ -1,6 +1,8 @@
 use entity_type::EntityType;
+use pose::EntityPose;
 
 pub mod entity_type;
+pub mod pose;
 
 pub type EntityId = i32;
 
@@ -18,6 +20,7 @@ pub struct Entity {
     pub pitch: f32,
     // TODO: Change this in diffrent poses
     pub standing_eye_height: f32,
+    pub pose: EntityPose,
 }
 
 impl Entity {
@@ -35,6 +38,7 @@ impl Entity {
             head_yaw: 0.0,
             pitch: 0.0,
             standing_eye_height,
+            pose: EntityPose::Standing,
         }
     }
 }
