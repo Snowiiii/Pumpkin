@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::{config::auth_config::TextureConfig, server::Server};
+use crate::{config::auth::TextureConfig, server::Server};
 
 #[derive(Deserialize, Clone, Debug)]
 #[allow(non_snake_case)]

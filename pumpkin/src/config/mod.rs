@@ -1,4 +1,3 @@
-use auth_config::AuthenticationConfig;
 use proxy::ProxyConfig;
 use resource_pack::ResourcePackConfig;
 use serde::{Deserialize, Serialize};
@@ -9,9 +8,11 @@ use std::{
 
 use crate::{entity::player::GameMode, server::Difficulty};
 
-pub mod auth_config;
+pub mod auth;
 pub mod proxy;
 pub mod resource_pack;
+
+use auth::AuthenticationConfig;
 
 /// Current Config version of the Base Config
 const CURRENT_BASE_VERSION: &str = "1.0.0";
