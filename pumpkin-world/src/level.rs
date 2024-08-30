@@ -1,7 +1,9 @@
 use std::{
+    collections::HashMap,
     fs::OpenOptions,
     io::{Read, Seek},
     path::PathBuf,
+    sync::{Arc, Mutex},
 };
 
 use flate2::{bufread::ZlibDecoder, read::GzDecoder};
@@ -19,6 +21,7 @@ use crate::{
 /// The Level represents a single Dimension.
 pub struct Level {
     save_file: Option<SaveFile>,
+    loaded_chunks: Arc<Mutex<HashMap<Vector2<i32>, Arc<ChunkData>>>>,
     world_gen: Box<dyn WorldGenerator>,
 }
 
@@ -108,6 +111,7 @@ impl Level {
                     root_folder,
                     region_folder,
                 }),
+                loaded_chunks: Arc::new(Mutex::new(HashMap::new())),
             }
         } else {
             log::warn!(
@@ -117,6 +121,7 @@ impl Level {
             Self {
                 world_gen,
                 save_file: None,
+                loaded_chunks: Arc::new(Mutex::new(HashMap::new())),
             }
         }
     }
@@ -136,32 +141,45 @@ impl Level {
     /// MUST be called from a tokio runtime thread
     ///
     /// Note: The order of the output chunks will almost never be in the same order as the order of input chunks
-    pub async fn fetch_chunks(
+    pub fn fetch_chunks(
         &self,
         chunks: &[Vector2<i32>],
-        channel: mpsc::Sender<Result<ChunkData, WorldError>>,
+        channel: mpsc::Sender<Result<Arc<ChunkData>, WorldError>>,
     ) {
-        chunks.into_par_iter().copied().for_each(|at| {
+        chunks.into_par_iter().for_each(|at| {
             let channel = channel.clone();
 
-            channel
-                .blocking_send(match &self.save_file {
-                    Some(save_file) => {
-                        match Self::read_chunk(save_file, at) {
-                            Err(WorldError::ChunkNotGenerated(_)) => {
-                                // This chunk was not generated yet.
-                                Ok(self.world_gen.generate_chunk(at))
-                            }
-                            // TODO this doesn't warn the user about the error. fix.
-                            result => result,
+            // Check if chunks is already loaded
+            let mut loaded_chunks = self.loaded_chunks.lock().unwrap();
+            if loaded_chunks.contains_key(at) {
+                channel
+                    .blocking_send(Ok(loaded_chunks.get(at).unwrap().clone()))
+                    .expect("Failed sending ChunkData.");
+                return;
+            }
+            let at = *at;
+            let data = match &self.save_file {
+                Some(save_file) => {
+                    match Self::read_chunk(save_file, at) {
+                        Err(WorldError::ChunkNotGenerated(_)) => {
+                            // This chunk was not generated yet.
+                            Ok(self.world_gen.generate_chunk(at))
                         }
+                        // TODO this doesn't warn the user about the error. fix.
+                        result => result,
                     }
-                    None => {
-                        // There is no savefile yet -> generate the chunks
-                        Ok(self.world_gen.generate_chunk(at))
-                    }
-                })
+                }
+                None => {
+                    // There is no savefile yet -> generate the chunks
+                    Ok(self.world_gen.generate_chunk(at))
+                }
+            }
+            .unwrap();
+            let data = Arc::new(data);
+            channel
+                .blocking_send(Ok(data.clone()))
                 .expect("Failed sending ChunkData.");
+            loaded_chunks.insert(at, data);
         })
     }
 

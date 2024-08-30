@@ -355,7 +355,7 @@ impl Server {
 
         let chunks: Vec<_> = RadialIterator::new(distance).collect();
         tokio::spawn(async move {
-            world.lock().await.level.fetch_chunks(&chunks, sender).await;
+            world.lock().await.level.fetch_chunks(&chunks, sender);
         });
 
         player.client.send_packet(&CCenterChunk {

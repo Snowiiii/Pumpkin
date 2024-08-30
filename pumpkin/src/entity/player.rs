@@ -207,7 +207,6 @@ impl Player {
     pub fn set_pose(&mut self, server: &mut Server, pose: EntityPose) {
         self.entity.pose = pose;
         let pose = self.entity.pose as i32;
-        dbg!(pose);
         server.broadcast_packet(
             self,
             &CSetEntityMetadata::<VarInt>::new(
