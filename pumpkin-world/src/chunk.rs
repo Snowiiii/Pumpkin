@@ -131,6 +131,11 @@ impl ChunkBlocks {
         }
     }
 
+    /// Gets the given block in the chunk
+    pub fn get_block(&self, position: ChunkRelativeBlockCoordinates) -> BlockId {
+        self.blocks[Self::convert_index(position)]
+    }
+
     /// Sets the given block in the chunk, returning the old block
     pub fn set_block(
         &mut self,
