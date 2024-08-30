@@ -10,11 +10,20 @@ use rayon::prelude::*;
 use thiserror::Error;
 use tokio::sync::mpsc;
 
-use crate::chunk::ChunkData;
+use crate::{
+    chunk::ChunkData,
+    coordinates::ChunkCoordinates,
+    world_gen::{get_world_gen, Seed, WorldGenerator},
+};
 
-#[allow(dead_code)]
-/// The Level represents a
+/// The Level represents a single Dimension.
 pub struct Level {
+    save_file: Option<SaveFile>,
+    world_gen: Box<dyn WorldGenerator>,
+}
+
+struct SaveFile {
+    #[allow(dead_code)]
     root_folder: PathBuf,
     region_folder: PathBuf,
 }
@@ -24,20 +33,32 @@ pub enum WorldError {
     // using ErrorKind instead of Error, beacuse the function read_chunks and read_region_chunks is designed to return an error on a per-chunk basis, while std::io::Error does not implement Copy or Clone
     #[error("Io error: {0}")]
     IoError(std::io::ErrorKind),
-    #[error("Region not found")]
-    RegionNotFound,
     #[error("Region is invalid")]
     RegionIsInvalid,
-    #[error("Chunk not found")]
-    ChunkNotFound,
+    #[error("The chunk isn't generated yet: {0}")]
+    ChunkNotGenerated(ChunkNotGeneratedError),
     #[error("Compression Error")]
     Compression(CompressionError),
     #[error("Error deserializing chunk: {0}")]
     ErrorDeserializingChunk(String),
+    #[error("The requested block identifier does not exist")]
+    BlockIdentifierNotFound,
     #[error("The requested block state id does not exist")]
     BlockStateIdNotFound,
     #[error("The block is not inside of the chunk")]
     BlockOutsideChunk,
+}
+
+#[derive(Error, Debug)]
+pub enum ChunkNotGeneratedError {
+    #[error("The region file does not exist.")]
+    RegionFileMissing,
+
+    #[error("The chunks generation is incomplete.")]
+    IncompleteGeneration,
+
+    #[error("Chunk not found.")]
+    NotFound,
 }
 
 #[derive(Error, Debug)]
@@ -72,16 +93,31 @@ impl Compression {
 
 impl Level {
     pub fn from_root_folder(root_folder: PathBuf) -> Self {
-        assert!(root_folder.exists(), "World root folder does not exist!");
-        let region_folder = root_folder.join("region");
-        assert!(
-            region_folder.exists(),
-            "World region folder does not exist!"
-        );
+        let world_gen = get_world_gen(Seed(0)); // TODO Read Seed from config.
 
-        Level {
-            root_folder,
-            region_folder,
+        if root_folder.exists() {
+            let region_folder = root_folder.join("region");
+            assert!(
+                region_folder.exists(),
+                "World region folder does not exist, despite there being a root folder."
+            );
+
+            Self {
+                world_gen,
+                save_file: Some(SaveFile {
+                    root_folder,
+                    region_folder,
+                }),
+            }
+        } else {
+            log::warn!(
+                "Pumpkin currently only supports Superflat World generation. Use a vanilla ./world folder to play in a normal world."
+            );
+
+            Self {
+                world_gen,
+                save_file: None,
+            }
         }
     }
 
@@ -96,137 +132,120 @@ impl Level {
     //         .1
     // }
 
-    /// Read many chunks in a world
+    /// Reads/Generates many chunks in a world
     /// MUST be called from a tokio runtime thread
     ///
     /// Note: The order of the output chunks will almost never be in the same order as the order of input chunks
-    pub async fn read_chunks(
+    pub async fn fetch_chunks(
         &self,
-        chunks: Vec<(i32, i32)>,
-        channel: mpsc::Sender<((i32, i32), Result<ChunkData, WorldError>)>,
+        chunks: &[ChunkCoordinates],
+        channel: mpsc::Sender<Result<ChunkData, WorldError>>,
     ) {
-        chunks
-            .into_par_iter()
-            .map(|chunk| {
-                let region = (
-                    ((chunk.0 as f32) / 32.0).floor() as i32,
-                    ((chunk.1 as f32) / 32.0).floor() as i32,
-                );
-                let channel = channel.clone();
+        chunks.into_par_iter().copied().for_each(|at| {
+            let channel = channel.clone();
 
-                // return different error when file is not found (because that means that the chunks have just not been generated yet)
-                let mut region_file = match OpenOptions::new().read(true).open(
-                    self.region_folder
-                        .join(format!("r.{}.{}.mca", region.0, region.1)),
-                ) {
-                    Ok(f) => f,
-                    Err(err) => match err.kind() {
-                        std::io::ErrorKind::NotFound => {
-                            let _ = channel.blocking_send((chunk, Err(WorldError::RegionNotFound)));
-                            return;
-                        }
-                        _ => {
-                            let _ = channel
-                                .blocking_send((chunk, Err(WorldError::IoError(err.kind()))));
-                            return;
-                        }
-                    },
-                };
-
-                let mut location_table: [u8; 4096] = [0; 4096];
-                let mut timestamp_table: [u8; 4096] = [0; 4096];
-
-                // fill the location and timestamp tables
-                {
-                    match region_file.read_exact(&mut location_table) {
-                        Ok(_) => {}
-                        Err(err) => {
-                            let _ = channel
-                                .blocking_send((chunk, Err(WorldError::IoError(err.kind()))));
-                            return;
+            channel
+                .blocking_send(match &self.save_file {
+                    Some(save_file) => {
+                        match Self::read_chunk(save_file, at) {
+                            Err(WorldError::ChunkNotGenerated(_)) => {
+                                // This chunk was not generated yet.
+                                Ok(self.world_gen.generate_chunk(at))
+                            }
+                            // TODO this doesn't warn the user about the error. fix.
+                            result => result,
                         }
                     }
-                    match region_file.read_exact(&mut timestamp_table) {
-                        Ok(_) => {}
-                        Err(err) => {
-                            let _ = channel
-                                .blocking_send((chunk, Err(WorldError::IoError(err.kind()))));
-                            return;
-                        }
-                    }
-                }
-
-                let modulus = |a: i32, b: i32| ((a % b) + b) % b;
-                let chunk_x = modulus(chunk.0, 32) as u32;
-                let chunk_z = modulus(chunk.1, 32) as u32;
-                let channel = channel.clone();
-                let table_entry = (chunk_x + chunk_z * 32) * 4;
-
-                let mut offset = vec![0u8];
-                offset.extend_from_slice(
-                    &location_table[table_entry as usize..table_entry as usize + 3],
-                );
-                let offset = u32::from_be_bytes(offset.try_into().unwrap()) as u64 * 4096;
-                let size = location_table[table_entry as usize + 3] as usize * 4096;
-
-                if offset == 0 && size == 0 {
-                    let _ =
-                        channel.blocking_send(((chunk.0, chunk.1), Err(WorldError::ChunkNotFound)));
-                    return;
-                }
-                // Read the file using the offset and size
-                let mut file_buf = {
-                    let seek_result = region_file.seek(std::io::SeekFrom::Start(offset));
-                    if seek_result.is_err() {
-                        let _ = channel
-                            .blocking_send(((chunk.0, chunk.1), Err(WorldError::RegionIsInvalid)));
-                        return;
-                    }
-                    let mut out = vec![0; size];
-                    let read_result = region_file.read_exact(&mut out);
-                    if read_result.is_err() {
-                        let _ = channel
-                            .blocking_send(((chunk.0, chunk.1), Err(WorldError::RegionIsInvalid)));
-                        return;
-                    }
-                    out
-                };
-
-                // TODO: check checksum to make sure chunk is not corrupted
-                let header = file_buf.drain(0..5).collect_vec();
-
-                let compression = match Compression::from_byte(header[4]) {
-                    Some(c) => c,
                     None => {
-                        let _ = channel.blocking_send((
-                            (chunk.0, chunk.1),
-                            Err(WorldError::Compression(
-                                CompressionError::UnknownCompression,
-                            )),
-                        ));
-                        return;
+                        // There is no savefile yet -> generate the chunks
+                        Ok(self.world_gen.generate_chunk(at))
                     }
-                };
+                })
+                .expect("Failed sending ChunkData.");
+        })
+    }
 
-                let size = u32::from_be_bytes(header[..4].try_into().unwrap());
+    fn read_chunk(save_file: &SaveFile, at: ChunkCoordinates) -> Result<ChunkData, WorldError> {
+        let region = (
+            ((at.x as f32) / 32.0).floor() as i32,
+            ((at.z as f32) / 32.0).floor() as i32,
+        );
 
-                // size includes the compression scheme byte, so we need to subtract 1
-                let chunk_data = file_buf.drain(0..size as usize - 1).collect_vec();
-                let decompressed_chunk = match Self::decompress_data(compression, chunk_data) {
-                    Ok(data) => data,
-                    Err(e) => {
-                        channel
-                            .blocking_send(((chunk.0, chunk.1), Err(WorldError::Compression(e))))
-                            .expect("Failed to send Compression error");
-                        return;
-                    }
-                };
+        let mut region_file = OpenOptions::new()
+            .read(true)
+            .open(
+                save_file
+                    .region_folder
+                    .join(format!("r.{}.{}.mca", region.0, region.1)),
+            )
+            .map_err(|err| match err.kind() {
+                std::io::ErrorKind::NotFound => {
+                    WorldError::ChunkNotGenerated(ChunkNotGeneratedError::RegionFileMissing)
+                }
+                kind => WorldError::IoError(kind),
+            })?;
 
-                channel
-                    .blocking_send((chunk, ChunkData::from_bytes(decompressed_chunk, chunk)))
-                    .expect("Error sending decompressed chunk");
-            })
-            .collect::<Vec<()>>();
+        let mut location_table: [u8; 4096] = [0; 4096];
+        let mut timestamp_table: [u8; 4096] = [0; 4096];
+
+        // fill the location and timestamp tables
+        region_file
+            .read_exact(&mut location_table)
+            .map_err(|err| WorldError::IoError(err.kind()))?;
+        region_file
+            .read_exact(&mut timestamp_table)
+            .map_err(|err| WorldError::IoError(err.kind()))?;
+
+        let modulus = |a: i32, b: i32| ((a % b) + b) % b;
+        let chunk_x = modulus(at.x, 32) as u32;
+        let chunk_z = modulus(at.z, 32) as u32;
+        let table_entry = (chunk_x + chunk_z * 32) * 4;
+
+        let mut offset = vec![0u8];
+        offset.extend_from_slice(&location_table[table_entry as usize..table_entry as usize + 3]);
+        let offset = u32::from_be_bytes(offset.try_into().unwrap()) as u64 * 4096;
+        let size = location_table[table_entry as usize + 3] as usize * 4096;
+
+        if offset == 0 && size == 0 {
+            return Err(WorldError::ChunkNotGenerated(
+                ChunkNotGeneratedError::NotFound,
+            ));
+        }
+
+        // Read the file using the offset and size
+        let mut file_buf = {
+            let seek_result = region_file.seek(std::io::SeekFrom::Start(offset));
+            if seek_result.is_err() {
+                return Err(WorldError::RegionIsInvalid);
+            }
+            let mut out = vec![0; size];
+            let read_result = region_file.read_exact(&mut out);
+            if read_result.is_err() {
+                return Err(WorldError::RegionIsInvalid);
+            }
+            out
+        };
+
+        // TODO: check checksum to make sure chunk is not corrupted
+        let header = file_buf.drain(0..5).collect_vec();
+
+        let compression = match Compression::from_byte(header[4]) {
+            Some(c) => c,
+            None => {
+                return Err(WorldError::Compression(
+                    CompressionError::UnknownCompression,
+                ))
+            }
+        };
+
+        let size = u32::from_be_bytes(header[..4].try_into().unwrap());
+
+        // size includes the compression scheme byte, so we need to subtract 1
+        let chunk_data = file_buf.drain(0..size as usize - 1).collect_vec();
+        let decompressed_chunk =
+            Self::decompress_data(compression, chunk_data).map_err(WorldError::Compression)?;
+
+        ChunkData::from_bytes(decompressed_chunk, at)
     }
 
     fn decompress_data(

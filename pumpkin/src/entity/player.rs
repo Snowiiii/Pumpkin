@@ -4,16 +4,20 @@ use crate::{client::Client, server::Server};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::ToPrimitive;
 use pumpkin_core::text::TextComponent;
-use pumpkin_entity::{entity_type::EntityType, Entity, EntityId};
+use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, Entity, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_inventory::Container;
 use pumpkin_protocol::{
-    bytebuf::packet_id::Packet,
-    client::play::{CGameEvent, CPlayDisconnect, CSyncPlayerPosition, CSystemChatMessage},
+    bytebuf::{packet_id::Packet, DeserializerError},
+    client::play::{
+        CGameEvent, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSetEntityMetadata,
+        CSyncPlayerPosition, CSystemChatMessage, Metadata, PlayerAction,
+    },
+    position::WorldPosition,
     server::play::{
-        SChatCommand, SChatMessage, SClickContainer, SClientInformationPlay, SConfirmTeleport,
-        SInteract, SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition,
-        SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm,
+        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
+        SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
+        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem,
         SUseItemOn,
     },
     ConnectionState, RawPacket, ServerPacket, VarInt,
@@ -22,7 +26,36 @@ use pumpkin_world::item::ItemStack;
 use pumpkin_world::vector3::Vector3;
 use serde::{Deserialize, Serialize};
 
+use crate::{
+    client::{authentication::GameProfile, Client},
+    server::Server,
+    util::boundingbox::BoundingBox,
+};
+
+pub struct PlayerAbilities {
+    pub invulnerable: bool,
+    pub flying: bool,
+    pub allow_flying: bool,
+    pub creative: bool,
+    pub fly_speed: f32,
+    pub walk_speed_fov: f32,
+}
+
+impl Default for PlayerAbilities {
+    fn default() -> Self {
+        Self {
+            invulnerable: false,
+            flying: false,
+            allow_flying: false,
+            creative: false,
+            fly_speed: 0.5,
+            walk_speed_fov: 0.1,
+        }
+    }
+}
+
 pub struct Player {
+    pub gameprofile: GameProfile,
     pub client: Client,
     pub entity: Entity,
     // current gamemode
@@ -34,6 +67,10 @@ pub struct Player {
     pub inventory: PlayerInventory,
     pub open_container: Option<Box<dyn Container>>,
     pub carried_item: Option<ItemStack>,
+
+    /// send `send_abilties_update` when changed
+    pub abilities: PlayerAbilities,
+
     // Client side value, Should be not trusted
     pub on_ground: bool,
 
@@ -46,15 +83,30 @@ pub struct Player {
     // TODO: prbly should put this into an Living Entitiy or something
     pub velocity: Vector3<f64>,
 
-    // Current awaiting teleport id, None if did not teleport
-    pub awaiting_teleport: Option<VarInt>,
+    pub teleport_id_count: i32,
+    // Current awaiting teleport id and location, None if did not teleport
+    pub awaiting_teleport: Option<(VarInt, Vector3<f64>)>,
 }
 
 impl Player {
     pub fn new(client: Client, entity_id: EntityId, gamemode: GameMode) -> Self {
+        let gameprofile = match client.gameprofile.clone() {
+            Some(profile) => profile,
+            None => {
+                log::error!("No gameprofile?. Impossible");
+                GameProfile {
+                    id: uuid::Uuid::new_v4(),
+                    name: "".to_string(),
+                    properties: vec![],
+                    profile_actions: None,
+                }
+            }
+        };
+
         Self {
+            gameprofile,
             client,
-            entity: Entity::new(entity_id, EntityType::Player),
+            entity: Entity::new(entity_id, EntityType::Player, 1.62),
             on_ground: false,
             awaiting_teleport: None,
             sneaking: false,
@@ -68,6 +120,8 @@ impl Player {
             inventory: PlayerInventory::new(),
             open_container: None,
             carried_item: None,
+            teleport_id_count: 0,
+            abilities: PlayerAbilities::default(),
             gamemode,
         }
     }
@@ -98,9 +152,85 @@ impl Player {
         );
     }
 
+    pub fn send_abilties_update(&mut self) {
+        let mut b = 0i8;
+        let abilities = &self.abilities;
+
+        if abilities.invulnerable {
+            b |= 1;
+        }
+        if abilities.flying {
+            b |= 2;
+        }
+        if abilities.allow_flying {
+            b |= 4;
+        }
+        if abilities.creative {
+            b |= 8;
+        }
+        self.client.send_packet(&CPlayerAbilities::new(
+            b,
+            abilities.fly_speed,
+            abilities.walk_speed_fov,
+        ));
+    }
+
+    pub fn set_sneaking(&mut self, server: &mut Server, sneaking: bool) {
+        assert!(self.sneaking != sneaking);
+        self.sneaking = sneaking;
+        self.set_flag(server, Self::SNEAKING_FLAG_INDEX, sneaking);
+        if sneaking {
+            self.set_pose(server, EntityPose::Crouching);
+        } else {
+            self.set_pose(server, EntityPose::Standing);
+        }
+    }
+
+    pub fn set_sprinting(&mut self, server: &mut Server, sprinting: bool) {
+        assert!(self.sprinting != sprinting);
+        self.sprinting = sprinting;
+        self.set_flag(server, Self::SPRINTING_FLAG_INDEX, sprinting);
+    }
+
+    pub const ON_FIRE_FLAG_INDEX: u32 = 0;
+    pub const SNEAKING_FLAG_INDEX: u32 = 1;
+    pub const SPRINTING_FLAG_INDEX: u32 = 3;
+    pub const SWIMMING_FLAG_INDEX: u32 = 4;
+    pub const INVISIBLE_FLAG_INDEX: u32 = 5;
+    pub const GLOWING_FLAG_INDEX: u32 = 6;
+    pub const FALL_FLYING_FLAG_INDEX: u32 = 7;
+    fn set_flag(&mut self, server: &mut Server, index: u32, value: bool) {
+        let mut b = 0i8;
+        if value {
+            b |= 1 << index;
+        } else {
+            b &= !(1 << index);
+        }
+        server.broadcast_packet(
+            self,
+            &CSetEntityMetadata::new(self.entity_id().into(), Metadata::new(0, 0.into(), b)),
+        );
+    }
+
+    pub fn set_pose(&mut self, server: &mut Server, pose: EntityPose) {
+        self.entity.pose = pose;
+        let pose = self.entity.pose as i32;
+        dbg!(pose);
+        server.broadcast_packet(
+            self,
+            &CSetEntityMetadata::<VarInt>::new(
+                self.entity_id().into(),
+                Metadata::new(6, 20.into(), (pose).into()),
+            ),
+        )
+    }
+
     pub fn teleport(&mut self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
-        // TODO
-        let id = 0;
+        // this is the ultra special magic code used to create the teleport id
+        self.teleport_id_count += 1;
+        if self.teleport_id_count == i32::MAX {
+            self.teleport_id_count = 0;
+        }
         let entity = &mut self.entity;
         entity.x = x;
         entity.y = y;
@@ -110,9 +240,34 @@ impl Player {
         entity.lastz = z;
         entity.yaw = yaw;
         entity.pitch = pitch;
-        self.awaiting_teleport = Some(id.into());
-        self.client
-            .send_packet(&CSyncPlayerPosition::new(x, y, z, yaw, pitch, 0, id.into()));
+        self.awaiting_teleport = Some((self.teleport_id_count.into(), Vector3::new(x, y, z)));
+        self.client.send_packet(&CSyncPlayerPosition::new(
+            x,
+            y,
+            z,
+            yaw,
+            pitch,
+            0,
+            self.teleport_id_count.into(),
+        ));
+    }
+
+    pub fn block_interaction_range(&self) -> f64 {
+        if self.gamemode == GameMode::Creative {
+            5.0
+        } else {
+            4.5
+        }
+    }
+
+    pub fn can_interact_with_block_at(&self, pos: &WorldPosition, additional_range: f64) -> bool {
+        let d = self.block_interaction_range() + additional_range;
+        let box_pos = BoundingBox::from_block(pos);
+        box_pos.squared_magnitude(Vector3 {
+            x: self.entity.x,
+            y: self.entity.y + self.entity.standing_eye_height as f64,
+            z: self.entity.z,
+        }) < d * d
     }
 
     /// Kicks the Client with a reason depending on the connection state
@@ -132,8 +287,25 @@ impl Player {
         self.food_saturation = food_saturation;
     }
 
-    pub fn set_gamemode(&mut self, gamemode: GameMode) {
+    pub fn set_gamemode(&mut self, server: &mut Server, gamemode: GameMode) {
+        // We could send the same gamemode without problems. But why waste bandwidth ?
+        assert!(
+            self.gamemode != gamemode,
+            "Setting the same gamemode as already is"
+        );
         self.gamemode = gamemode;
+        // So a little story time. I actually made an abitlties_from_gamemode function. I looked at vanilla and they always send the abilties from the gamemode. But the funny thing actually is. That the client
+        // does actually use the same method and set the abilties when receiving the CGameEvent gamemode packet. Just Mojang nonsense
+        server.broadcast_packet(
+            self,
+            &CPlayerInfoUpdate::new(
+                0x04,
+                &[pumpkin_protocol::client::play::Player {
+                    uuid: self.gameprofile.id,
+                    actions: vec![PlayerAction::UpdateGameMode((self.gamemode as i32).into())],
+                }],
+            ),
+        );
         self.client
             .send_packet(&CGameEvent::new(3, gamemode.to_f32().unwrap()));
     }
@@ -146,59 +318,92 @@ impl Player {
 
 impl Player {
     pub fn process_packets(&mut self, server: &mut Server) {
-        let mut i = 0;
-        while i < self.client.client_packets_queue.len() {
-            let mut packet = self.client.client_packets_queue.remove(i).unwrap();
-            self.handle_play_packet(server, &mut packet);
-            i += 1;
+        while let Some(mut packet) = self.client.client_packets_queue.pop() {
+            match self.handle_play_packet(server, &mut packet) {
+                Ok(_) => {}
+                Err(e) => {
+                    let text = format!("Error while reading incoming packet {}", e);
+                    log::error!("{}", text);
+                    self.kick(TextComponent::text(&text))
+                }
+            };
         }
     }
 
-    pub fn handle_play_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
+    pub fn handle_play_packet(
+        &mut self,
+        server: &mut Server,
+        packet: &mut RawPacket,
+    ) -> Result<(), DeserializerError> {
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SConfirmTeleport::PACKET_ID => {
-                self.handle_confirm_teleport(server, SConfirmTeleport::read(bytebuf).unwrap())
+                self.handle_confirm_teleport(server, SConfirmTeleport::read(bytebuf)?);
+                Ok(())
             }
             SChatCommand::PACKET_ID => {
-                self.handle_chat_command(server, SChatCommand::read(bytebuf).unwrap())
+                self.handle_chat_command(server, SChatCommand::read(bytebuf)?);
+                Ok(())
             }
             SPlayerPosition::PACKET_ID => {
-                self.handle_position(server, SPlayerPosition::read(bytebuf).unwrap())
+                self.handle_position(server, SPlayerPosition::read(bytebuf)?);
+                Ok(())
             }
-            SPlayerPositionRotation::PACKET_ID => self
-                .handle_position_rotation(server, SPlayerPositionRotation::read(bytebuf).unwrap()),
+            SPlayerPositionRotation::PACKET_ID => {
+                self.handle_position_rotation(server, SPlayerPositionRotation::read(bytebuf)?);
+                Ok(())
+            }
             SPlayerRotation::PACKET_ID => {
-                self.handle_rotation(server, SPlayerRotation::read(bytebuf).unwrap())
+                self.handle_rotation(server, SPlayerRotation::read(bytebuf)?);
+                Ok(())
+            }
+            SSetPlayerGround::PACKET_ID => {
+                self.handle_player_ground(server, SSetPlayerGround::read(bytebuf)?);
+                Ok(())
             }
             SPlayerCommand::PACKET_ID => {
-                self.handle_player_command(server, SPlayerCommand::read(bytebuf).unwrap())
+                self.handle_player_command(server, SPlayerCommand::read(bytebuf)?);
+                Ok(())
             }
             SSwingArm::PACKET_ID => {
-                self.handle_swing_arm(server, SSwingArm::read(bytebuf).unwrap())
+                self.handle_swing_arm(server, SSwingArm::read(bytebuf)?);
+                Ok(())
             }
             SChatMessage::PACKET_ID => {
-                self.handle_chat_message(server, SChatMessage::read(bytebuf).unwrap())
+                self.handle_chat_message(server, SChatMessage::read(bytebuf)?);
+                Ok(())
             }
-            SClientInformationPlay::PACKET_ID => self.handle_client_information_play(
-                server,
-                SClientInformationPlay::read(bytebuf).unwrap(),
-            ),
-            SInteract::PACKET_ID => self.handle_interact(server, SInteract::read(bytebuf).unwrap()),
+            SClientInformationPlay::PACKET_ID => {
+                self.handle_client_information_play(server, SClientInformationPlay::read(bytebuf)?);
+                Ok(())
+            }
+            SInteract::PACKET_ID => {
+                self.handle_interact(server, SInteract::read(bytebuf)?);
+                Ok(())
+            }
             SPlayerAction::PACKET_ID => {
-                self.handle_player_action(server, SPlayerAction::read(bytebuf).unwrap())
+                self.handle_player_action(server, SPlayerAction::read(bytebuf)?);
+                Ok(())
             }
             SUseItemOn::PACKET_ID => {
-                self.handle_use_item_on(server, SUseItemOn::read(bytebuf).unwrap())
+                self.handle_use_item_on(server, SUseItemOn::read(bytebuf)?);
+                Ok(())
+            }
+            SUseItem::PACKET_ID => {
+                self.handle_use_item(server, SUseItem::read(bytebuf)?);
+                Ok(())
             }
             SSetHeldItem::PACKET_ID => {
-                self.handle_set_held_item(server, SSetHeldItem::read(bytebuf).unwrap())
+                self.handle_set_held_item(server, SSetHeldItem::read(bytebuf)?);
+                Ok(())
             }
             SSetCreativeSlot::PACKET_ID => {
-                self.handle_set_creative_slot(server, SSetCreativeSlot::read(bytebuf).unwrap())
+                self.handle_set_creative_slot(server, SSetCreativeSlot::read(bytebuf)?);
+                Ok(())
             }
             SPlayPingRequest::PACKET_ID => {
-                self.handle_play_ping_request(server, SPlayPingRequest::read(bytebuf).unwrap())
+                self.handle_play_ping_request(server, SPlayPingRequest::read(bytebuf)?);
+                Ok(())
             }
             SClickContainer::PACKET_ID => {
                 self.handle_click_container(SClickContainer::read(bytebuf).unwrap())
@@ -208,13 +413,13 @@ impl Player {
     }
 }
 
-#[derive(FromPrimitive, Clone)]
+#[derive(FromPrimitive)]
 pub enum Hand {
     Main,
     Off,
 }
 
-#[derive(FromPrimitive, Clone)]
+#[derive(FromPrimitive)]
 pub enum ChatMode {
     Enabled,
     CommandsOnly,

@@ -16,10 +16,9 @@ pub fn consume_arg_player(src: &CommandSender, args: &mut RawArgs) -> Option<Str
         _ => {
             // todo: implement any other player than sender
             if let Player(player) = src {
-                if let Some(profile) = &player.client.gameprofile {
-                    if profile.name == s {
-                        return Some(s.into());
-                    };
+                let profile = &player.gameprofile;
+                if profile.name == s {
+                    return Some(s.into());
                 };
             };
             None
@@ -46,10 +45,9 @@ pub fn parse_arg_player<'a>(
         _ => {
             // todo: implement any other player than sender
             if let Player(player) = src {
-                if let Some(profile) = &player.client.gameprofile {
-                    if profile.name == s {
-                        return Ok(player);
-                    };
+                let profile = &player.gameprofile;
+                if profile.name == s {
+                    return Ok(player);
                 };
             };
             Err(InvalidConsumptionError(Some(s.into())))

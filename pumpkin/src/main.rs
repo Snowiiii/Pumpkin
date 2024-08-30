@@ -1,4 +1,8 @@
 #![allow(clippy::await_holding_refcell_ref)]
+#![allow(clippy::await_holding_lock)]
+
+#[cfg(target_os = "wasi")]
+compile_error!("Compiling for WASI targets is not supported!");
 
 use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
@@ -8,7 +12,7 @@ use client::Client;
 use commands::handle_command;
 use config::AdvancedConfiguration;
 
-use std::{collections::HashMap, rc::Rc, thread};
+use std::collections::HashMap;
 
 use client::interrupted;
 use config::BasicConfiguration;
@@ -25,19 +29,18 @@ pub mod rcon;
 pub mod server;
 pub mod util;
 
-#[cfg(feature = "dhat-heap")]
-#[global_allocator]
-static ALLOC: dhat::Alloc = dhat::Alloc;
-
-#[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
+    use std::sync::{Arc, Mutex};
+
     use entity::player::Player;
     use pumpkin_core::text::{color::NamedColor, TextComponent};
+    use rcon::RCONServer;
 
-    #[cfg(feature = "dhat-heap")]
-    let _profiler = dhat::Profiler::new_heap();
-    #[cfg(feature = "dhat-heap")]
-    println!("Using a memory profiler");
+    simple_logger::SimpleLogger::new()
+        .with_level(log::LevelFilter::Info)
+        .init()
+        .unwrap();
+
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -57,16 +60,12 @@ fn main() -> io::Result<()> {
     rayon::ThreadPoolBuilder::new().build_global().unwrap();
     rt.block_on(async {
         const SERVER: Token = Token(0);
-        use std::{cell::RefCell, time::Instant};
-
-        use rcon::RCONServer;
+        use std::time::Instant;
 
         let time = Instant::now();
         let basic_config = BasicConfiguration::load("configuration.toml");
 
         let advanced_configuration = AdvancedConfiguration::load("features.toml");
-
-        simple_logger::SimpleLogger::new().init().unwrap();
 
         // Create a poll instance.
         let mut poll = Poll::new()?;
@@ -95,14 +94,18 @@ fn main() -> io::Result<()> {
         let rcon = advanced_configuration.rcon.clone();
 
         let mut clients: HashMap<Token, Client> = HashMap::new();
-        let mut players: HashMap<Rc<Token>, Rc<RefCell<Player>>> = HashMap::new();
+        let mut players: HashMap<Arc<Token>, Arc<Mutex<Player>>> = HashMap::new();
 
-        let mut server = Server::new((basic_config, advanced_configuration));
+        let server = Arc::new(tokio::sync::Mutex::new(Server::new((
+            basic_config,
+            advanced_configuration,
+        ))));
         log::info!("Started Server took {}ms", time.elapsed().as_millis());
         log::info!("You now can connect to the server, Listening on {}", addr);
 
+        let server1 = server.clone();
         if use_console {
-            thread::spawn(move || {
+            tokio::spawn(async move {
                 let stdin = std::io::stdin();
                 loop {
                     let mut out = String::new();
@@ -111,14 +114,16 @@ fn main() -> io::Result<()> {
                         .expect("Failed to read console line");
 
                     if !out.is_empty() {
-                        handle_command(&mut commands::CommandSender::Console, &out);
+                        let mut server = server1.lock().await;
+                        handle_command(&mut commands::CommandSender::Console, &mut server, &out);
                     }
                 }
             });
         }
         if rcon.enabled {
+            let server = server.clone();
             tokio::spawn(async move {
-                RCONServer::new(&rcon).await.unwrap();
+                RCONServer::new(&rcon, server).await.unwrap();
             });
         }
         loop {
@@ -161,16 +166,17 @@ fn main() -> io::Result<()> {
                             token,
                             Interest::READABLE.add(Interest::WRITABLE),
                         )?;
-                        let rc_token = Rc::new(token);
-                        let client = Client::new(Rc::clone(&rc_token), connection, addr);
+                        let rc_token = Arc::new(token);
+                        let client = Client::new(Arc::clone(&rc_token), connection, addr);
                         clients.insert(token, client);
                     },
 
                     token => {
                         // Poll Players
                         let done = if let Some(player) = players.get_mut(&token) {
-                            let mut player = player.borrow_mut();
+                            let mut player = player.lock().unwrap();
                             player.client.poll(event).await;
+                            let mut server = server.lock().await;
                             player.process_packets(&mut server);
                             player.client.closed
                         } else {
@@ -179,8 +185,9 @@ fn main() -> io::Result<()> {
 
                         if done {
                             if let Some(player) = players.remove(&token) {
+                                let mut server = server.lock().await;
                                 server.remove_player(&token);
-                                let mut player = player.borrow_mut();
+                                let mut player = player.lock().unwrap();
                                 poll.registry().deregister(&mut player.client.connection)?;
                             }
                         }
@@ -189,6 +196,7 @@ fn main() -> io::Result<()> {
                         // Maybe received an event for a TCP connection.
                         let (done, make_player) = if let Some(client) = clients.get_mut(&token) {
                             client.poll(event).await;
+                            let mut server = server.lock().await;
                             client.process_packets(&mut server).await;
                             (client.closed, client.make_player)
                         } else {
@@ -201,9 +209,10 @@ fn main() -> io::Result<()> {
                                     poll.registry().deregister(&mut client.connection)?;
                                 } else if make_player {
                                     let token = client.token.clone();
+                                    let mut server = server.lock().await;
                                     let player = server.add_player(token.clone(), client);
                                     players.insert(token, player.clone());
-                                    let mut player = player.borrow_mut();
+                                    let mut player = player.lock().unwrap();
                                     server.spawn_player(&mut player).await;
                                 }
                             }
@@ -219,9 +228,4 @@ fn next(current: &mut Token) -> Token {
     let next = current.0;
     current.0 += 1;
     Token(next)
-}
-
-#[cfg(target_os = "wasi")]
-fn main() {
-    panic!("can't bind to an address with wasi")
 }

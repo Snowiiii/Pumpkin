@@ -1,4 +1,4 @@
-use crate::Property;
+use crate::{Property, VarInt};
 
 pub enum PlayerAction {
     AddPlayer {
@@ -6,10 +6,10 @@ pub enum PlayerAction {
         properties: Vec<Property>,
     },
     InitializeChat(u8),
-    UpdateGameMode(u8),
-    UpdateListed {
-        listed: bool,
-    },
+    /// Gamemode ?
+    UpdateGameMode(VarInt),
+    /// Listed ?
+    UpdateListed(bool),
     UpdateLatency(u8),
     UpdateDisplayName(u8),
 }

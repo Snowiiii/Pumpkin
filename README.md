@@ -48,6 +48,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Entity Spawning
   - [x] Chunk Loading
   - [ ] World Generation
+  - [x] Chunk Generation
   - [ ] World Borders
   - [ ] World Saving
 - Player
@@ -56,7 +57,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Player Teleport
   - [x] Player Movement
   - [x] Player Animation
-  - [ ] Player Inventory
+  - [x] Player Inventory
   - [x] Player Combat
 - Server
   - [ ] Query
@@ -83,17 +84,18 @@ cd Pumpkin
 
 You also may have to [install rust](https://www.rust-lang.org/tools/install) when you don't already have.
 
-For Now, until we don't have own chunk generation.
-You need to pregenerate the world and place it inside of the Pumpkin/ directory.
-Make sure to generate chunks close to (0,0) since that is where the player gets spawned by default.
+You can place a vanilla world into the Pumpkin/ directory when you want. Just name the World to `world`
 
 Then run:
 
 > [!NOTE]
 > This can take a while. Because we enabled heavy optimizations for release builds
+>
+> To apply further optimizations specfic to your CPU and use your CPU features. You should set the target-cpu=native
+> Rust flag.
 
 ```shell
-RUSTFLAGS="-C target-cpu=native" cargo run --release
+cargo run --release
 ```
 
 ### Docker

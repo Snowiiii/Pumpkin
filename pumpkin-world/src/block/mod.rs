@@ -1,9 +1,11 @@
+use crate::vector3::Vector3;
 use num_derive::FromPrimitive;
 
-use crate::vector3::Vector3;
+pub mod block_id;
+mod block_registry;
 
-pub mod block_registry;
-pub use block_registry::BLOCKS;
+pub use block_id::BlockId;
+
 #[derive(FromPrimitive)]
 pub enum BlockFace {
     Bottom = 0,

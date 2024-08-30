@@ -60,37 +60,50 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
         require(&|sender| sender.permission_lvl() >= 2).with_child(
             argument(ARG_GAMEMODE, consume_arg_gamemode)
-                .with_child(
-                    require(&|sender| sender.is_player()).execute(&|sender, args| {
+                .with_child(require(&|sender| sender.is_player()).execute(
+                    &|sender, server, args| {
                         let gamemode = parse_arg_gamemode(args)?;
 
                         return if let Player(target) = sender {
-                            target.set_gamemode(gamemode);
-                            target.send_system_message(TextComponent::text(&format!(
-                                "Game mode was set to {:?}",
-                                gamemode
-                            )));
-
+                            if target.gamemode == gamemode {
+                                target.send_system_message(TextComponent::text(&format!(
+                                    "You already in {:?} gamemode",
+                                    gamemode
+                                )));
+                            } else {
+                                target.set_gamemode(server, gamemode);
+                                target.send_system_message(TextComponent::text(&format!(
+                                    "Game mode was set to {:?}",
+                                    gamemode
+                                )));
+                            }
                             Ok(())
                         } else {
                             Err(InvalidRequirementError)
                         };
-                    }),
-                )
-                .with_child(
-                    argument(ARG_TARGET, consume_arg_player).execute(&|sender, args| {
+                    },
+                ))
+                .with_child(argument(ARG_TARGET, consume_arg_player).execute(
+                    &|sender, server, args| {
                         let gamemode = parse_arg_gamemode(args)?;
                         let target = parse_arg_player(sender, ARG_TARGET, args)?;
 
-                        target.set_gamemode(gamemode);
-                        target.send_system_message(TextComponent::text(&format!(
-                            "Set own game mode to {:?}",
-                            gamemode
-                        )));
+                        if target.gamemode == gamemode {
+                            target.send_system_message(TextComponent::text(&format!(
+                                "You already in {:?} gamemode",
+                                gamemode
+                            )));
+                        } else {
+                            target.set_gamemode(server, gamemode);
+                            target.send_system_message(TextComponent::text(&format!(
+                                "Game mode was set to {:?}",
+                                gamemode
+                            )));
+                        }
 
                         Ok(())
-                    }),
-                ),
+                    },
+                )),
         ),
     )
 }

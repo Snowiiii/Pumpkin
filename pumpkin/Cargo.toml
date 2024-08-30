@@ -6,14 +6,11 @@ edition = "2021"
 
 [features]
 default = []
-dhat-heap = ["dhat"]
 
 [dependencies]
-# memory analysis
-dhat = { version = "0.3.3", optional = true }
-
 # pumpkin
 pumpkin-core = { path = "../pumpkin-core"}
+pumpkin-plugin = { path = "../pumpkin-plugin"}
 pumpkin-inventory = { path = "../pumpkin-inventory"}
 pumpkin-world = { path = "../pumpkin-world"}
 pumpkin-entity = { path = "../pumpkin-entity"}
@@ -40,7 +37,7 @@ rsa = "0.9.6"
 rsa-der = "0.3.0"
 
 # authentication
-reqwest = { version = "0.12.5", default-features=false, features = ["json", "rustls-tls", "http2", "macos-system-configuration"]}
+reqwest = { version = "0.12.7", default-features= false, features = ["json", "rustls-tls", "http2", "macos-system-configuration"]}
 
 sha1 = "0.10.6"
 digest = "=0.11.0-pre.9"
@@ -57,10 +54,10 @@ image = { version = "0.25", default-features = false, features = ["png"]}
 
 # logging
 simple_logger = "5.0.0"
-log = "0.4"
+log.workspace = true
 
 # networking
-mio = { version = "1.0.1", features = ["os-poll", "net"]}
+mio = { version = "1.0.2", features = ["os-poll", "net"]}
 crossbeam-channel = "0.5.13"
 
 uuid.workspace = true

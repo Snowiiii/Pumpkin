@@ -119,7 +119,7 @@ impl ByteBuffer {
         }
     }
 
-    pub fn put_uuid(&mut self, v: uuid::Uuid) {
+    pub fn put_uuid(&mut self, v: &uuid::Uuid) {
         // thats the vanilla way
         let pair = v.as_u64_pair();
         self.put_u64(pair.0);

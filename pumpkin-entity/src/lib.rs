@@ -1,6 +1,8 @@
 use entity_type::EntityType;
+use pose::EntityPose;
 
 pub mod entity_type;
+pub mod pose;
 
 pub type EntityId = i32;
 
@@ -16,10 +18,13 @@ pub struct Entity {
     pub yaw: f32,
     pub head_yaw: f32,
     pub pitch: f32,
+    // TODO: Change this in diffrent poses
+    pub standing_eye_height: f32,
+    pub pose: EntityPose,
 }
 
 impl Entity {
-    pub fn new(entity_id: EntityId, entity_type: EntityType) -> Self {
+    pub fn new(entity_id: EntityId, entity_type: EntityType, standing_eye_height: f32) -> Self {
         Self {
             entity_id,
             entity_type,
@@ -32,6 +37,8 @@ impl Entity {
             yaw: 0.0,
             head_yaw: 0.0,
             pitch: 0.0,
+            standing_eye_height,
+            pose: EntityPose::Standing,
         }
     }
 }

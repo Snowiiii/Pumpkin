@@ -35,7 +35,7 @@ fn parse_arg_command<'a>(
 pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION)
         .with_child(
-            argument(ARG_COMMAND, consume_arg_command).execute(&|sender, args| {
+            argument(ARG_COMMAND, consume_arg_command).execute(&|sender, _, args| {
                 let dispatcher = DISPATCHER.get_or_init(dispatcher_init);
 
                 let tree = parse_arg_command(args, dispatcher)?;
@@ -50,7 +50,7 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                 Ok(())
             }),
         )
-        .execute(&|sender, _args| {
+        .execute(&|sender, _, _args| {
             let dispatcher = DISPATCHER.get_or_init(dispatcher_init);
 
             let mut keys: Vec<&str> = dispatcher.commands.keys().copied().collect();

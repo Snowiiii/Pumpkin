@@ -2,6 +2,7 @@ use std::collections::{HashMap, VecDeque};
 
 use crate::commands::dispatcher::InvalidTreeError;
 use crate::commands::CommandSender;
+use crate::server::Server;
 
 /// see [crate::commands::tree_builder::argument]
 pub(crate) type RawArgs<'a> = Vec<&'a str>;
@@ -19,7 +20,8 @@ pub(crate) struct Node<'a> {
 
 pub(crate) enum NodeType<'a> {
     ExecuteLeaf {
-        run: &'a (dyn Fn(&mut CommandSender, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync),
+        run: &'a (dyn Fn(&mut CommandSender, &mut Server, &ConsumedArgs) -> Result<(), InvalidTreeError>
+                 + Sync),
     },
     #[allow(dead_code)] // todo: remove (so far no commands requiring this are implemented)
     Literal { string: &'a str },

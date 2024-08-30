@@ -1,12 +1,10 @@
 use std::{
-    cell::{RefCell, RefMut},
     collections::HashMap,
     io::Cursor,
     path::Path,
-    rc::Rc,
     sync::{
         atomic::{AtomicI32, Ordering},
-        Arc,
+        Arc, Mutex, MutexGuard,
     },
     time::Duration,
 };
@@ -16,6 +14,7 @@ use image::GenericImageView;
 use mio::Token;
 use num_traits::ToPrimitive;
 use pumpkin_entity::{entity_type::EntityType, EntityId};
+use pumpkin_plugin::PluginLoader;
 use pumpkin_protocol::{
     client::{
         config::CPluginMessage,
@@ -33,7 +32,7 @@ use pumpkin_world::{dimension::Dimension, radial_chunk_iterator::RadialIterator,
 use pumpkin_registry::Registry;
 use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::mpsc;
 
 use crate::{
     client::Client,
@@ -48,7 +47,9 @@ pub struct Server {
     pub private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,
 
-    pub world: Arc<Mutex<World>>,
+    pub plugin_loader: PluginLoader,
+
+    pub world: Arc<tokio::sync::Mutex<World>>,
     pub status_response: StatusResponse,
     // We cache the json response here so we don't parse it every time someone makes a Status request.
     // Keep in mind that we must parse this again, when the StatusResponse changes which usally happen when a player joins or leaves
@@ -60,10 +61,10 @@ pub struct Server {
     /// Cache the registry so we don't have to parse it every time a player joins
     pub cached_registry: Vec<Registry>,
 
-    pub current_players: HashMap<Rc<Token>, Rc<RefCell<Player>>>,
+    // TODO: place this into every world
+    pub current_players: HashMap<Arc<Token>, Arc<Mutex<Player>>>,
 
-    // TODO: replace with HashMap <World, Player>
-    entity_id: AtomicI32, // TODO: place this into every world
+    entity_id: AtomicI32,
     pub base_config: BasicConfiguration,
     pub advanced_config: AdvancedConfiguration,
 
@@ -98,17 +99,20 @@ impl Server {
             None
         };
 
-        log::warn!("Pumpkin does currently not have World or Chunk generation, Using ../world folder with vanilla pregenerated chunks");
+        log::info!("Loading Plugins");
+        let plugin_loader = PluginLoader::load();
+
         let world = World::load(Dimension::OverWorld.into_level(
             // TODO: load form config
             "./world".parse().unwrap(),
         ));
 
         Self {
+            plugin_loader,
             cached_registry: Registry::get_static(),
             // 0 is invalid
             entity_id: 2.into(),
-            world: Arc::new(Mutex::new(world)),
+            world: Arc::new(tokio::sync::Mutex::new(world)),
             public_key,
             cached_server_brand,
             private_key,
@@ -122,24 +126,24 @@ impl Server {
         }
     }
 
-    pub fn add_player(&mut self, token: Rc<Token>, client: Client) -> Rc<RefCell<Player>> {
+    pub fn add_player(&mut self, token: Arc<Token>, client: Client) -> Arc<Mutex<Player>> {
         let entity_id = self.new_entity_id();
         let gamemode = match self.base_config.default_gamemode {
             GameMode::Undefined => GameMode::Survival,
             game_mode => game_mode,
         };
-        let player = Rc::new(RefCell::new(Player::new(client, entity_id, gamemode)));
+        let player = Arc::new(Mutex::new(Player::new(client, entity_id, gamemode)));
         self.current_players.insert(token, player.clone());
         player
     }
 
     pub fn remove_player(&mut self, token: &Token) {
         let player = self.current_players.remove(token).unwrap();
-        let player = player.as_ref().borrow();
+        let player = player.as_ref().lock().unwrap();
         // despawn the player
         // todo: put this into the entitiy struct
         let id = player.entity_id();
-        let uuid = player.client.gameprofile.as_ref().unwrap().id;
+        let uuid = player.gameprofile.id;
         self.broadcast_packet_except(
             &[&player.client.token],
             &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]),
@@ -190,7 +194,7 @@ impl Server {
         let yaw = 10.0;
         let pitch = 10.0;
         player.teleport(x, y, z, 10.0, 10.0);
-        let gameprofile = player.client.gameprofile.as_ref().unwrap();
+        let gameprofile = &player.gameprofile;
         // first send info update to our new player, So he can see his Skin
         // also send his info to everyone else
         self.broadcast_packet(
@@ -204,7 +208,7 @@ impl Server {
                             name: gameprofile.name.clone(),
                             properties: gameprofile.properties.clone(),
                         },
-                        PlayerAction::UpdateListed { listed: true },
+                        PlayerAction::UpdateListed(true),
                     ],
                 }],
             ),
@@ -217,8 +221,8 @@ impl Server {
             .iter()
             .filter(|c| c.0 != &player.client.token)
         {
-            let playerr = playerr.as_ref().borrow();
-            let gameprofile = &playerr.client.gameprofile.as_ref().unwrap();
+            let playerr = playerr.as_ref().lock().unwrap();
+            let gameprofile = &playerr.gameprofile;
             entries.push(pumpkin_protocol::client::play::Player {
                 uuid: gameprofile.id,
                 actions: vec![
@@ -226,7 +230,7 @@ impl Server {
                         name: gameprofile.name.clone(),
                         properties: gameprofile.properties.clone(),
                     },
-                    PlayerAction::UpdateListed { listed: true },
+                    PlayerAction::UpdateListed(true),
                 ],
             })
         }
@@ -237,7 +241,7 @@ impl Server {
         // Start waiting for level chunks
         player.client.send_packet(&CGameEvent::new(13, 0.0));
 
-        let gameprofile = player.client.gameprofile.as_ref().unwrap();
+        let gameprofile = &player.gameprofile;
 
         // spawn player for every client
         self.broadcast_packet_except(
@@ -262,11 +266,11 @@ impl Server {
         // spawn players for our client
         let token = player.client.token.clone();
         for (_, existing_player) in self.current_players.iter().filter(|c| c.0 != &token) {
-            let existing_player = existing_player.as_ref().borrow();
+            let existing_player = existing_player.as_ref().lock().unwrap();
             let entity = &existing_player.entity;
-            let gameprofile = existing_player.client.gameprofile.as_ref().unwrap();
+            let gameprofile = &existing_player.gameprofile;
             player.client.send_packet(&CSpawnEntity::new(
-                player.entity_id().into(),
+                existing_player.entity_id().into(),
                 UUID(gameprofile.id),
                 EntityType::Player.to_i32().unwrap().into(),
                 entity.x,
@@ -282,7 +286,7 @@ impl Server {
             ))
         }
         // entity meta data
-        if let Some(config) = player.client.config.clone() {
+        if let Some(config) = player.client.config.as_ref() {
             self.broadcast_packet(
                 player,
                 &CSetEntityMetadata::new(
@@ -297,14 +301,13 @@ impl Server {
     }
 
     /// TODO: This definitly should be in world
-    pub fn get_by_entityid(&self, from: &Player, id: EntityId) -> Option<RefMut<Player>> {
+    pub fn get_by_entityid(&self, from: &Player, id: EntityId) -> Option<MutexGuard<Player>> {
         for (_, player) in self
             .current_players
             .iter()
             .filter(|c| c.0 != &from.client.token)
         {
-            // Check if client is a player
-            let player = player.borrow_mut();
+            let player = player.lock().unwrap();
             if player.entity_id() == id {
                 return Some(player);
             }
@@ -324,8 +327,7 @@ impl Server {
             .iter()
             .filter(|c| c.0 != &from.client.token)
         {
-            // Check if client is a player
-            let mut player = player.borrow_mut();
+            let mut player = player.lock().unwrap();
             player.client.send_packet(packet);
         }
     }
@@ -340,8 +342,7 @@ impl Server {
             .iter()
             .filter(|c| !from.contains(&c.0.as_ref()))
         {
-            // Check if client is a player
-            let mut player = player.borrow_mut();
+            let mut player = player.lock().unwrap();
             player.client.send_packet(packet);
         }
     }
@@ -351,13 +352,10 @@ impl Server {
         let inst = std::time::Instant::now();
         let (sender, mut chunk_receiver) = mpsc::channel(distance as usize);
         let world = self.world.clone();
+
+        let chunks: Vec<_> = RadialIterator::new(distance).collect();
         tokio::spawn(async move {
-            world
-                .lock()
-                .await
-                .level
-                .read_chunks(RadialIterator::new(distance).collect(), sender)
-                .await;
+            world.lock().await.level.fetch_chunks(&chunks, sender).await;
         });
 
         player.client.send_packet(&CCenterChunk {
@@ -365,14 +363,15 @@ impl Server {
             chunk_z: 0.into(),
         });
 
-        while let Some((_chunk_pos, chunk_data)) = chunk_receiver.recv().await {
+        while let Some(chunk_data) = chunk_receiver.recv().await {
             // dbg!(chunk_pos);
             let chunk_data = match chunk_data {
                 Ok(d) => d,
                 Err(_) => continue,
             };
             #[cfg(debug_assertions)]
-            if _chunk_pos == (0, 0) {
+            if chunk_data.position == (pumpkin_world::coordinates::ChunkCoordinates { x: 0, z: 0 })
+            {
                 use pumpkin_protocol::bytebuf::ByteBuffer;
                 let mut test = ByteBuffer::empty();
                 CChunkData(&chunk_data).write(&mut test);

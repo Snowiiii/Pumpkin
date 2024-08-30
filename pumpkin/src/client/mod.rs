@@ -1,8 +1,7 @@
 use std::{
-    collections::VecDeque,
     io::{self, Write},
     net::SocketAddr,
-    rc::Rc,
+    sync::Arc,
 };
 
 use crate::{
@@ -14,7 +13,7 @@ use authentication::GameProfile;
 use mio::{event::Event, net::TcpStream, Token};
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
-    bytebuf::packet_id::Packet,
+    bytebuf::{packet_id::Packet, DeserializerError},
     client::{config::CConfigDisconnect, login::CLoginDisconnect, play::CPlayDisconnect},
     packet_decoder::PacketDecoder,
     packet_encoder::PacketEncoder,
@@ -35,7 +34,6 @@ mod client_packet;
 mod container;
 pub mod player_packet;
 
-#[derive(Clone)]
 pub struct PlayerConfig {
     pub locale: String, // 16
     pub view_distance: i8,
@@ -72,18 +70,18 @@ pub struct Client {
     pub connection_state: ConnectionState,
     pub encryption: bool,
     pub closed: bool,
-    pub token: Rc<Token>,
+    pub token: Arc<Token>,
     pub connection: TcpStream,
     pub address: SocketAddr,
     enc: PacketEncoder,
     dec: PacketDecoder,
-    pub client_packets_queue: VecDeque<RawPacket>,
+    pub client_packets_queue: Vec<RawPacket>,
 
     pub make_player: bool,
 }
 
 impl Client {
-    pub fn new(token: Rc<Token>, connection: TcpStream, address: SocketAddr) -> Self {
+    pub fn new(token: Arc<Token>, connection: TcpStream, address: SocketAddr) -> Self {
         Self {
             protocol_version: 0,
             gameprofile: None,
@@ -97,14 +95,14 @@ impl Client {
             dec: PacketDecoder::default(),
             encryption: true,
             closed: false,
-            client_packets_queue: VecDeque::new(),
+            client_packets_queue: Vec::new(),
             make_player: false,
         }
     }
 
     /// adds a Incoming packet to the queue
     pub fn add_packet(&mut self, packet: RawPacket) {
-        self.client_packets_queue.push_back(packet);
+        self.client_packets_queue.push(packet);
     }
 
     /// enables encryption
@@ -147,84 +145,121 @@ impl Client {
     }
 
     pub async fn process_packets(&mut self, server: &mut Server) {
-        let mut i = 0;
-        while i < self.client_packets_queue.len() {
-            let mut packet = self.client_packets_queue.remove(i).unwrap();
-            self.handle_packet(server, &mut packet).await;
-            i += 1;
+        while let Some(mut packet) = self.client_packets_queue.pop() {
+            match self.handle_packet(server, &mut packet).await {
+                Ok(_) => {}
+                Err(e) => {
+                    let text = format!("Error while reading incoming packet {}", e);
+                    log::error!("{}", text);
+                    self.kick(&text)
+                }
+            };
         }
     }
 
     /// Handles an incoming decoded not Play state Packet
-    pub async fn handle_packet(&mut self, server: &mut Server, packet: &mut RawPacket) {
+    pub async fn handle_packet(
+        &mut self,
+        server: &mut Server,
+        packet: &mut RawPacket,
+    ) -> Result<(), DeserializerError> {
         // TODO: handle each packet's Error instead of calling .unwrap()
         let bytebuf = &mut packet.bytebuf;
         match self.connection_state {
             pumpkin_protocol::ConnectionState::HandShake => match packet.id.0 {
                 SHandShake::PACKET_ID => {
-                    self.handle_handshake(server, SHandShake::read(bytebuf).unwrap())
+                    self.handle_handshake(server, SHandShake::read(bytebuf)?);
+                    Ok(())
                 }
-                _ => log::error!(
-                    "Failed to handle packet id {} while in Handshake state",
-                    packet.id.0
-                ),
+                _ => {
+                    log::error!(
+                        "Failed to handle packet id {} while in Handshake state",
+                        packet.id.0
+                    );
+                    Ok(())
+                }
             },
             pumpkin_protocol::ConnectionState::Status => match packet.id.0 {
                 SStatusRequest::PACKET_ID => {
-                    self.handle_status_request(server, SStatusRequest::read(bytebuf).unwrap())
+                    self.handle_status_request(server, SStatusRequest::read(bytebuf)?);
+                    Ok(())
                 }
                 SStatusPingRequest::PACKET_ID => {
-                    self.handle_ping_request(server, SStatusPingRequest::read(bytebuf).unwrap())
+                    self.handle_ping_request(server, SStatusPingRequest::read(bytebuf)?);
+                    Ok(())
                 }
-                _ => log::error!(
-                    "Failed to handle packet id {} while in Status state",
-                    packet.id.0
-                ),
+                _ => {
+                    log::error!(
+                        "Failed to handle packet id {} while in Status state",
+                        packet.id.0
+                    );
+                    Ok(())
+                }
             },
-            pumpkin_protocol::ConnectionState::Login => match packet.id.0 {
+            // TODO: Check config if transfer is enabled
+            pumpkin_protocol::ConnectionState::Login
+            | pumpkin_protocol::ConnectionState::Transfer => match packet.id.0 {
                 SLoginStart::PACKET_ID => {
-                    self.handle_login_start(server, SLoginStart::read(bytebuf).unwrap())
+                    self.handle_login_start(server, SLoginStart::read(bytebuf)?);
+                    Ok(())
                 }
                 SEncryptionResponse::PACKET_ID => {
-                    self.handle_encryption_response(
-                        server,
-                        SEncryptionResponse::read(bytebuf).unwrap(),
-                    )
-                    .await
+                    self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf)?)
+                        .await;
+                    Ok(())
                 }
-                SLoginPluginResponse::PACKET_ID => self
-                    .handle_plugin_response(server, SLoginPluginResponse::read(bytebuf).unwrap()),
-                SLoginAcknowledged::PACKET_ID => self
-                    .handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf).unwrap()),
-                _ => log::error!(
-                    "Failed to handle packet id {} while in Login state",
-                    packet.id.0
-                ),
+                SLoginPluginResponse::PACKET_ID => {
+                    self.handle_plugin_response(server, SLoginPluginResponse::read(bytebuf)?);
+                    Ok(())
+                }
+                SLoginAcknowledged::PACKET_ID => {
+                    self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf)?);
+                    Ok(())
+                }
+                _ => {
+                    log::error!(
+                        "Failed to handle packet id {} while in Login state",
+                        packet.id.0
+                    );
+                    Ok(())
+                }
             },
             pumpkin_protocol::ConnectionState::Config => match packet.id.0 {
-                SClientInformationConfig::PACKET_ID => self.handle_client_information_config(
-                    server,
-                    SClientInformationConfig::read(bytebuf).unwrap(),
-                ),
+                SClientInformationConfig::PACKET_ID => {
+                    self.handle_client_information_config(
+                        server,
+                        SClientInformationConfig::read(bytebuf)?,
+                    );
+                    Ok(())
+                }
                 SPluginMessage::PACKET_ID => {
-                    self.handle_plugin_message(server, SPluginMessage::read(bytebuf).unwrap())
+                    self.handle_plugin_message(server, SPluginMessage::read(bytebuf)?);
+                    Ok(())
                 }
                 SAcknowledgeFinishConfig::PACKET_ID => {
                     self.handle_config_acknowledged(
                         server,
-                        SAcknowledgeFinishConfig::read(bytebuf).unwrap(),
+                        SAcknowledgeFinishConfig::read(bytebuf)?,
                     )
-                    .await
+                    .await;
+                    Ok(())
                 }
                 SKnownPacks::PACKET_ID => {
-                    self.handle_known_packs(server, SKnownPacks::read(bytebuf).unwrap())
+                    self.handle_known_packs(server, SKnownPacks::read(bytebuf)?);
+                    Ok(())
                 }
-                _ => log::error!(
-                    "Failed to handle packet id {} while in Config state",
-                    packet.id.0
-                ),
+                _ => {
+                    log::error!(
+                        "Failed to handle packet id {} while in Config state",
+                        packet.id.0
+                    );
+                    Ok(())
+                }
             },
-            _ => log::error!("Invalid Connection state {:?}", self.connection_state),
+            _ => {
+                log::error!("Invalid Connection state {:?}", self.connection_state);
+                Ok(())
+            }
         }
     }
 
@@ -278,7 +313,7 @@ impl Client {
         match self.connection_state {
             ConnectionState::Login => {
                 self.try_send_packet(&CLoginDisconnect::new(
-                    &serde_json::to_string_pretty(&reason).unwrap(),
+                    &serde_json::to_string_pretty(&reason).unwrap_or("".into()),
                 ))
                 .unwrap_or_else(|_| self.close());
             }
