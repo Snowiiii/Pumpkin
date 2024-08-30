@@ -1,8 +1,7 @@
 use crate::{
     chunk::{ChunkBlocks, ChunkData},
-    coordinates::{
-        ChunkCoordinates, ChunkRelativeBlockCoordinates, ChunkRelativeXZBlockCoordinates,
-    },
+    coordinates::{ChunkRelativeBlockCoordinates, ChunkRelativeXZBlockCoordinates},
+    vector2::Vector2,
     WORLD_LOWEST_Y, WORLD_MAX_Y,
 };
 
@@ -28,7 +27,7 @@ impl<B: BiomeGenerator + GeneratorInit, T: TerrainGenerator + GeneratorInit> Gen
 }
 
 impl<B: BiomeGenerator, T: TerrainGenerator> WorldGenerator for GenericGenerator<B, T> {
-    fn generate_chunk(&self, at: ChunkCoordinates) -> ChunkData {
+    fn generate_chunk(&self, at: Vector2<i32>) -> ChunkData {
         let mut blocks = ChunkBlocks::default();
 
         for x in 0..16u8 {

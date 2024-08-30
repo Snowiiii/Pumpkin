@@ -7,8 +7,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     block::BlockId,
-    coordinates::{ChunkCoordinates, ChunkRelativeBlockCoordinates, Height},
+    coordinates::{ChunkRelativeBlockCoordinates, Height},
     level::{ChunkNotGeneratedError, WorldError},
+    vector2::Vector2,
     WORLD_HEIGHT,
 };
 
@@ -18,7 +19,7 @@ const CHUNK_VOLUME: usize = CHUNK_AREA * WORLD_HEIGHT;
 
 pub struct ChunkData {
     pub blocks: ChunkBlocks,
-    pub position: ChunkCoordinates,
+    pub position: Vector2<i32>,
 }
 
 pub struct ChunkBlocks {
@@ -187,7 +188,7 @@ impl Index<ChunkRelativeBlockCoordinates> for ChunkBlocks {
 }
 
 impl ChunkData {
-    pub fn from_bytes(chunk_data: Vec<u8>, at: ChunkCoordinates) -> Result<Self, WorldError> {
+    pub fn from_bytes(chunk_data: Vec<u8>, at: Vector2<i32>) -> Result<Self, WorldError> {
         if fastnbt::from_bytes::<ChunkStatus>(&chunk_data).expect("Failed reading chunk status.")
             != ChunkStatus::Full
         {

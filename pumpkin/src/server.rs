@@ -370,8 +370,7 @@ impl Server {
                 Err(_) => continue,
             };
             #[cfg(debug_assertions)]
-            if chunk_data.position == (pumpkin_world::coordinates::ChunkCoordinates { x: 0, z: 0 })
-            {
+            if chunk_data.position == (0, 0).into() {
                 use pumpkin_protocol::bytebuf::ByteBuffer;
                 let mut test = ByteBuffer::empty();
                 CChunkData(&chunk_data).write(&mut test);

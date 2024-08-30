@@ -1,9 +1,9 @@
-use crate::coordinates::ChunkCoordinates;
+use crate::vector2::Vector2;
 
 pub struct RadialIterator {
     radius: u32,
     direction: usize,
-    current: ChunkCoordinates,
+    current: Vector2<i32>,
     step_size: i32,
     steps_taken: u32,
     steps_in_direction: i32,
@@ -14,7 +14,7 @@ impl RadialIterator {
         RadialIterator {
             radius,
             direction: 0,
-            current: ChunkCoordinates { x: 0, z: 0 },
+            current: Vector2::new(0, 0),
             step_size: 1,
             steps_taken: 0,
             steps_in_direction: 0,
@@ -23,7 +23,7 @@ impl RadialIterator {
 }
 
 impl Iterator for RadialIterator {
-    type Item = ChunkCoordinates;
+    type Item = Vector2<i32>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.steps_taken >= self.radius * self.radius * 4 {

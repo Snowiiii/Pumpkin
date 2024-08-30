@@ -12,7 +12,7 @@ use tokio::sync::mpsc;
 
 use crate::{
     chunk::ChunkData,
-    coordinates::ChunkCoordinates,
+    vector2::Vector2,
     world_gen::{get_world_gen, Seed, WorldGenerator},
 };
 
@@ -138,7 +138,7 @@ impl Level {
     /// Note: The order of the output chunks will almost never be in the same order as the order of input chunks
     pub async fn fetch_chunks(
         &self,
-        chunks: &[ChunkCoordinates],
+        chunks: &[Vector2<i32>],
         channel: mpsc::Sender<Result<ChunkData, WorldError>>,
     ) {
         chunks.into_par_iter().copied().for_each(|at| {
@@ -165,7 +165,7 @@ impl Level {
         })
     }
 
-    fn read_chunk(save_file: &SaveFile, at: ChunkCoordinates) -> Result<ChunkData, WorldError> {
+    fn read_chunk(save_file: &SaveFile, at: Vector2<i32>) -> Result<ChunkData, WorldError> {
         let region = (
             ((at.x as f32) / 32.0).floor() as i32,
             ((at.z as f32) / 32.0).floor() as i32,

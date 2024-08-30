@@ -10,6 +10,7 @@ pub mod item;
 mod level;
 pub mod radial_chunk_iterator;
 pub mod vector3;
+pub mod vector2;
 mod world_gen;
 
 pub const WORLD_HEIGHT: usize = 384;
