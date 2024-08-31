@@ -1,7 +1,6 @@
 use log::warn;
-use proxy::ProxyConfig;
-use resource_pack::ResourcePackConfig;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+
 use std::{
     fs,
     net::{Ipv4Addr, SocketAddr},
@@ -15,16 +14,19 @@ pub mod auth;
 pub mod proxy;
 pub mod resource_pack;
 
-mod commands;
-mod compression;
-mod pvp;
-mod rcon;
-
 pub use auth::AuthenticationConfig;
 pub use commands::CommandsConfig;
 pub use compression::CompressionConfig;
 pub use pvp::PVPConfig;
 pub use rcon::RCONConfig;
+
+mod commands;
+mod compression;
+mod pvp;
+mod rcon;
+
+use proxy::ProxyConfig;
+use resource_pack::ResourcePackConfig;
 
 /// Current Config version of the Base Config
 const CURRENT_BASE_VERSION: &str = "1.0.0";
