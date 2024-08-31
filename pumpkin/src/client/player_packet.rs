@@ -68,7 +68,7 @@ impl Player {
         pos.clamp(-2.0E7, 2.0E7)
     }
 
-    pub fn handle_position(&mut self, server: &mut Server, position: SPlayerPosition) {
+    pub async fn handle_position(&mut self, _server: &mut Server, position: SPlayerPosition) {
         if position.x.is_nan() || position.feet_y.is_nan() || position.z.is_nan() {
             self.kick(TextComponent::text("Invalid movement"));
             return;
@@ -88,9 +88,9 @@ impl Player {
         let (x, lastx) = (entity.x, entity.lastx);
         let (y, lasty) = (entity.y, entity.lasty);
         let (z, lastz) = (entity.z, entity.lastz);
-
-        server.broadcast_packet(
-            self,
+        let world = self.world.lock().await;
+        world.broadcast_packet(
+            &[&self.client.token],
             &CUpdateEntityPos::new(
                 entity_id.into(),
                 (x * 4096.0 - lastx * 4096.0) as i16,
@@ -101,9 +101,9 @@ impl Player {
         );
     }
 
-    pub fn handle_position_rotation(
+    pub async fn handle_position_rotation(
         &mut self,
-        server: &mut Server,
+        _server: &mut Server,
         position_rotation: SPlayerPositionRotation,
     ) {
         if position_rotation.x.is_nan()
@@ -137,9 +137,10 @@ impl Player {
         let yaw = modulus(entity.yaw * 256.0 / 360.0, 256.0);
         let pitch = modulus(entity.pitch * 256.0 / 360.0, 256.0);
         // let head_yaw = (entity.head_yaw * 256.0 / 360.0).floor();
+        let world = self.world.lock().await;
 
-        server.broadcast_packet(
-            self,
+        world.broadcast_packet(
+            &[&self.client.token],
             &CUpdateEntityPosRot::new(
                 entity_id.into(),
                 (x * 4096.0 - lastx * 4096.0) as i16,
@@ -150,10 +151,13 @@ impl Player {
                 on_ground,
             ),
         );
-        server.broadcast_packet(self, &CHeadRot::new(entity_id.into(), yaw as u8));
+        world.broadcast_packet(
+            &[&self.client.token],
+            &CHeadRot::new(entity_id.into(), yaw as u8),
+        );
     }
 
-    pub fn handle_rotation(&mut self, server: &mut Server, rotation: SPlayerRotation) {
+    pub async fn handle_rotation(&mut self, _server: &mut Server, rotation: SPlayerRotation) {
         if !rotation.yaw.is_finite() || !rotation.pitch.is_finite() {
             self.kick(TextComponent::text("Invalid rotation"));
             return;
@@ -168,11 +172,13 @@ impl Player {
         let pitch = modulus(entity.pitch * 256.0 / 360.0, 256.0);
         // let head_yaw = modulus(entity.head_yaw * 256.0 / 360.0, 256.0);
 
-        server.broadcast_packet(
-            self,
-            &CUpdateEntityRot::new(entity_id.into(), yaw as u8, pitch as u8, on_ground),
-        );
-        server.broadcast_packet(self, &CHeadRot::new(entity_id.into(), yaw as u8));
+        let world = self.world.lock().await;
+        let packet = CUpdateEntityRot::new(entity_id.into(), yaw as u8, pitch as u8, on_ground);
+        // self.client.send_packet(&packet);
+        world.broadcast_packet(&[&self.client.token], &packet);
+        let packet = CHeadRot::new(entity_id.into(), yaw as u8);
+        //        self.client.send_packet(&packet);
+        world.broadcast_packet(&[&self.client.token], &packet);
     }
 
     pub fn handle_chat_command(&mut self, server: &mut Server, command: SChatCommand) {
@@ -183,7 +189,7 @@ impl Player {
         self.on_ground = ground.on_ground;
     }
 
-    pub fn handle_player_command(&mut self, server: &mut Server, command: SPlayerCommand) {
+    pub async fn handle_player_command(&mut self, _server: &mut Server, command: SPlayerCommand) {
         if command.entity_id != self.entity.entity_id.into() {
             return;
         }
@@ -192,23 +198,23 @@ impl Player {
             match action {
                 pumpkin_protocol::server::play::Action::StartSneaking => {
                     if !self.sneaking {
-                        self.set_sneaking(server, true)
+                        self.set_sneaking(true).await
                     }
                 }
                 pumpkin_protocol::server::play::Action::StopSneaking => {
                     if self.sneaking {
-                        self.set_sneaking(server, false)
+                        self.set_sneaking(false).await
                     }
                 }
                 pumpkin_protocol::server::play::Action::LeaveBed => todo!(),
                 pumpkin_protocol::server::play::Action::StartSprinting => {
                     if !self.sprinting {
-                        self.set_sprinting(server, true)
+                        self.set_sprinting(true).await
                     }
                 }
                 pumpkin_protocol::server::play::Action::StopSprinting => {
                     if self.sprinting {
-                        self.set_sprinting(server, false)
+                        self.set_sprinting(false).await
                     }
                 }
                 pumpkin_protocol::server::play::Action::StartHorseJump => todo!(),
@@ -221,7 +227,7 @@ impl Player {
         }
     }
 
-    pub fn handle_swing_arm(&mut self, server: &mut Server, swing_arm: SSwingArm) {
+    pub async fn handle_swing_arm(&mut self, _server: &mut Server, swing_arm: SSwingArm) {
         match Hand::from_i32(swing_arm.hand.0) {
             Some(hand) => {
                 let animation = match hand {
@@ -229,7 +235,8 @@ impl Player {
                     Hand::Off => Animation::SwingOffhand,
                 };
                 let id = self.entity_id();
-                server.broadcast_packet_except(
+                let world = self.world.lock().await;
+                world.broadcast_packet(
                     &[&self.client.token],
                     &CEntityAnimation::new(id.into(), animation as u8),
                 )
@@ -240,7 +247,7 @@ impl Player {
         };
     }
 
-    pub fn handle_chat_message(&mut self, server: &mut Server, chat_message: SChatMessage) {
+    pub async fn handle_chat_message(&mut self, _server: &mut Server, chat_message: SChatMessage) {
         dbg!("got message");
 
         let message = chat_message.message;
@@ -252,8 +259,9 @@ impl Player {
         // TODO: filter message & validation
         let gameprofile = &self.gameprofile;
 
-        server.broadcast_packet(
-            self,
+        let world = self.world.lock().await;
+        world.broadcast_packet(
+            &[&self.client.token],
             &CPlayerChatMessage::new(
                 pumpkin_protocol::uuid::UUID(gameprofile.id),
                 1.into(),
@@ -305,10 +313,10 @@ impl Player {
         }
     }
 
-    pub fn handle_interact(&mut self, server: &mut Server, interact: SInteract) {
+    pub async fn handle_interact(&mut self, server: &mut Server, interact: SInteract) {
         let sneaking = interact.sneaking;
         if self.sneaking != sneaking {
-            self.set_sneaking(server, sneaking);
+            self.set_sneaking(sneaking).await;
         }
         match ActionType::from_i32(interact.typ.0) {
             Some(action) => match action {
@@ -317,7 +325,9 @@ impl Player {
                     // TODO: do validation and stuff
                     let config = &server.advanced_config.pvp;
                     if config.enabled {
-                        let attacked_player = server.get_by_entityid(self, entity_id.0 as EntityId);
+                        let world = self.world.clone();
+                        let world = world.lock().await;
+                        let attacked_player = world.get_by_entityid(self, entity_id.0 as EntityId);
                         if let Some(mut player) = attacked_player {
                             let token = player.client.token.clone();
                             let velo = player.velocity;
@@ -349,8 +359,8 @@ impl Player {
                                 let packet = &CHurtAnimation::new(&entity_id, self.entity.yaw);
                                 self.client.send_packet(packet);
                                 player.client.send_packet(packet);
-                                server.broadcast_packet_except(
-                                    &[self.client.token.as_ref(), token.as_ref()],
+                                world.broadcast_packet(
+                                    &[&self.client.token, &token],
                                     &CHurtAnimation::new(&entity_id, 10.0),
                                 )
                             }
@@ -370,7 +380,11 @@ impl Player {
             None => self.kick(TextComponent::text("Invalid action type")),
         }
     }
-    pub fn handle_player_action(&mut self, server: &mut Server, player_action: SPlayerAction) {
+    pub async fn handle_player_action(
+        &mut self,
+        _server: &mut Server,
+        player_action: SPlayerAction,
+    ) {
         match Status::from_i32(player_action.status.0) {
             Some(status) => match status {
                 Status::StartedDigging => {
@@ -384,10 +398,16 @@ impl Player {
                         let location = player_action.location;
                         // Block break & block break sound
                         // TODO: currently this is always dirt replace it
-                        server
-                            .broadcast_packet(self, &CWorldEvent::new(2001, &location, 11, false));
+                        let world = self.world.lock().await;
+                        world.broadcast_packet(
+                            &[&self.client.token],
+                            &CWorldEvent::new(2001, &location, 11, false),
+                        );
                         // AIR
-                        server.broadcast_packet(self, &CBlockUpdate::new(&location, 0.into()));
+                        world.broadcast_packet(
+                            &[&self.client.token],
+                            &CBlockUpdate::new(&location, 0.into()),
+                        );
                     }
                 }
                 Status::CancelledDigging => {
@@ -406,9 +426,16 @@ impl Player {
                     }
                     // Block break & block break sound
                     // TODO: currently this is always dirt replace it
-                    server.broadcast_packet(self, &CWorldEvent::new(2001, &location, 11, false));
+                    let world = self.world.lock().await;
+                    world.broadcast_packet(
+                        &[&self.client.token],
+                        &CWorldEvent::new(2001, &location, 11, false),
+                    );
                     // AIR
-                    server.broadcast_packet(self, &CBlockUpdate::new(&location, 0.into()));
+                    world.broadcast_packet(
+                        &[&self.client.token],
+                        &CBlockUpdate::new(&location, 0.into()),
+                    );
                     // TODO: Send this every tick
                     self.client
                         .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence));
@@ -435,7 +462,7 @@ impl Player {
             .send_packet(&CPingResponse::new(request.payload));
     }
 
-    pub fn handle_use_item_on(&mut self, server: &mut Server, use_item_on: SUseItemOn) {
+    pub async fn handle_use_item_on(&mut self, _server: &mut Server, use_item_on: SUseItemOn) {
         let location = use_item_on.location;
 
         if !self.can_interact_with_block_at(&location, 1.0) {
@@ -451,12 +478,13 @@ impl Player {
                 )
                 .expect("All item ids are in the global registry");
                 if let Ok(block_state_id) = BlockId::new(minecraft_id, None) {
-                    server.broadcast_packet(
-                        self,
+                    let world = self.world.lock().await;
+                    world.broadcast_packet(
+                        &[&self.client.token],
                         &CBlockUpdate::new(&location, block_state_id.get_id_mojang_repr().into()),
                     );
-                    server.broadcast_packet(
-                        self,
+                    world.broadcast_packet(
+                        &[&self.client.token],
                         &CBlockUpdate::new(
                             &WorldPosition(location.0 + face.to_offset()),
                             block_state_id.get_id_mojang_repr().into(),

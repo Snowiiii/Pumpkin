@@ -28,6 +28,7 @@ pub mod proxy;
 pub mod rcon;
 pub mod server;
 pub mod util;
+pub mod world;
 
 fn main() -> io::Result<()> {
     use std::sync::{Arc, Mutex};
@@ -177,7 +178,7 @@ fn main() -> io::Result<()> {
                             let mut player = player.lock().unwrap();
                             player.client.poll(event).await;
                             let mut server = server.lock().await;
-                            player.process_packets(&mut server);
+                            player.process_packets(&mut server).await;
                             player.client.closed
                         } else {
                             false
@@ -185,9 +186,8 @@ fn main() -> io::Result<()> {
 
                         if done {
                             if let Some(player) = players.remove(&token) {
-                                let mut server = server.lock().await;
-                                server.remove_player(&token);
                                 let mut player = player.lock().unwrap();
+                                player.remove().await;
                                 poll.registry().deregister(&mut player.client.connection)?;
                             }
                         }
@@ -210,10 +210,11 @@ fn main() -> io::Result<()> {
                                 } else if make_player {
                                     let token = client.token.clone();
                                     let mut server = server.lock().await;
-                                    let player = server.add_player(token.clone(), client);
+                                    let (player, world) =
+                                        server.add_player(token.clone(), client).await;
                                     players.insert(token, player.clone());
-                                    let mut player = player.lock().unwrap();
-                                    server.spawn_player(&mut player).await;
+                                    let mut world = world.lock().await;
+                                    world.spawn_player(&server.base_config, player).await;
                                 }
                             }
                         }

@@ -60,8 +60,8 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
         require(&|sender| sender.permission_lvl() >= 2).with_child(
             argument(ARG_GAMEMODE, consume_arg_gamemode)
-                .with_child(require(&|sender| sender.is_player()).execute(
-                    &|sender, server, args| {
+                .with_child(
+                    require(&|sender| sender.is_player()).execute(&|sender, _, args| {
                         let gamemode = parse_arg_gamemode(args)?;
 
                         return if let Player(target) = sender {
@@ -71,7 +71,9 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                                     gamemode
                                 )));
                             } else {
-                                target.set_gamemode(server, gamemode);
+                                // TODO
+                                #[allow(clippy::let_underscore_future)]
+                                let _ = target.set_gamemode(gamemode);
                                 target.send_system_message(TextComponent::text(&format!(
                                     "Game mode was set to {:?}",
                                     gamemode
@@ -81,10 +83,10 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                         } else {
                             Err(InvalidRequirementError)
                         };
-                    },
-                ))
+                    }),
+                )
                 .with_child(argument(ARG_TARGET, consume_arg_player).execute(
-                    &|sender, server, args| {
+                    &|sender, _, args| {
                         let gamemode = parse_arg_gamemode(args)?;
                         let target = parse_arg_player(sender, ARG_TARGET, args)?;
 
@@ -94,7 +96,9 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                                 gamemode
                             )));
                         } else {
-                            target.set_gamemode(server, gamemode);
+                            // TODO
+                            #[allow(clippy::let_underscore_future)]
+                            let _ = target.set_gamemode(gamemode);
                             target.send_system_message(TextComponent::text(&format!(
                                 "Game mode was set to {:?}",
                                 gamemode
