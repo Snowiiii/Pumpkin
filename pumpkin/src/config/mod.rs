@@ -19,7 +19,7 @@ const CURRENT_BASE_VERSION: &str = "1.0.0";
 ///
 /// This also allows you get some Performance or Resource boosts.
 /// Important: The Configuration should match Vanilla by default
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Default)]
 pub struct AdvancedConfiguration {
     pub proxy: ProxyConfig,
     pub authentication: AuthenticationConfig,
@@ -107,21 +107,6 @@ impl Default for CompressionConfig {
             enabled: true,
             compression_threshold: 256,
             compression_level: 4,
-        }
-    }
-}
-
-/// Important: The Configuration should match Vanilla by default
-impl Default for AdvancedConfiguration {
-    fn default() -> Self {
-        Self {
-            proxy: ProxyConfig::default(),
-            authentication: AuthenticationConfig::default(),
-            commands: CommandsConfig::default(),
-            packet_compression: CompressionConfig::default(),
-            resource_pack: ResourcePackConfig::default(),
-            rcon: RCONConfig::default(),
-            pvp: PVPConfig::default(),
         }
     }
 }
