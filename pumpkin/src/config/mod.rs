@@ -14,7 +14,16 @@ pub mod auth;
 pub mod proxy;
 pub mod resource_pack;
 
-use auth::AuthenticationConfig;
+mod commands;
+mod compression;
+mod pvp;
+mod rcon;
+
+pub use auth::AuthenticationConfig;
+pub use commands::CommandsConfig;
+pub use compression::CompressionConfig;
+pub use pvp::PVPConfig;
+pub use rcon::RCONConfig;
 
 /// Current Config version of the Base Config
 const CURRENT_BASE_VERSION: &str = "1.0.0";
@@ -33,85 +42,6 @@ pub struct AdvancedConfiguration {
     pub commands: CommandsConfig,
     pub rcon: RCONConfig,
     pub pvp: PVPConfig,
-}
-
-#[derive(Deserialize, Serialize, Clone)]
-pub struct RCONConfig {
-    pub enabled: bool,
-    pub address: SocketAddr,
-    pub password: String,
-}
-
-impl Default for RCONConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            address: SocketAddr::new(Ipv4Addr::new(0, 0, 0, 0).into(), 25575),
-            password: "".to_string(),
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct CommandsConfig {
-    /// Are commands from the Console accepted ?
-    pub use_console: bool,
-    // TODO: commands...
-}
-
-impl Default for CommandsConfig {
-    fn default() -> Self {
-        Self { use_console: true }
-    }
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct PVPConfig {
-    /// Is PVP enabled ?
-    pub enabled: bool,
-    /// Do we want to have the Red hurt animation & fov bobbing
-    pub hurt_animation: bool,
-    /// Should players in creative be protected against PVP
-    pub protect_creative: bool,
-    /// Has PVP Knockback?
-    pub knockback: bool,
-    /// Should player swing when attacking?
-    pub swing: bool,
-}
-
-impl Default for PVPConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            hurt_animation: true,
-            protect_creative: true,
-            knockback: true,
-            swing: true,
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize)]
-// Packet compression
-pub struct CompressionConfig {
-    /// Is compression enabled ?
-    pub enabled: bool,
-    /// The compression threshold used when compression is enabled
-    pub compression_threshold: u32,
-    /// A value between 0..9
-    /// 1 = Optimize for the best speed of encoding.
-    /// 9 = Optimize for the size of data being encoded.
-    pub compression_level: u32,
-}
-
-impl Default for CompressionConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            compression_threshold: 256,
-            compression_level: 4,
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize)]
