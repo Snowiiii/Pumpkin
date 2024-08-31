@@ -24,7 +24,6 @@ pub struct ProfileTextures {
 }
 
 #[derive(Deserialize, Clone, Debug)]
-#[allow(non_snake_case)]
 #[allow(dead_code)]
 pub struct Texture {
     url: String,

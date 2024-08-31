@@ -23,8 +23,9 @@ pub(crate) enum NodeType<'a> {
         run: &'a (dyn Fn(&mut CommandSender, &mut Server, &ConsumedArgs) -> Result<(), InvalidTreeError>
                  + Sync),
     },
-    #[allow(dead_code)] // todo: remove (so far no commands requiring this are implemented)
-    Literal { string: &'a str },
+    Literal {
+        string: &'a str,
+    },
     Argument {
         name: &'a str,
         consumer: ArgumentConsumer<'a>,

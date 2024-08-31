@@ -12,7 +12,6 @@ pub trait GeneratorInit {
 }
 
 pub trait WorldGenerator: Sync + Send {
-    #[allow(dead_code)]
     fn generate_chunk(&self, at: Vector2<i32>) -> ChunkData;
 }
 assert_obj_safe! {WorldGenerator}

@@ -9,7 +9,6 @@ use crate::{
     },
 };
 
-#[allow(dead_code)]
 pub type SuperflatGenerator = GenericGenerator<SuperflatBiomeGenerator, SuperflatTerrainGenerator>;
 
 pub(crate) struct SuperflatBiomeGenerator {}

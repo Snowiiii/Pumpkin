@@ -1,4 +1,3 @@
-#![allow(clippy::await_holding_refcell_ref)]
 #![allow(clippy::await_holding_lock)]
 
 #[cfg(target_os = "wasi")]
