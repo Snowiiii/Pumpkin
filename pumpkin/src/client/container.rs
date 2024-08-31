@@ -17,10 +17,9 @@ use crate::server::Server;
 impl Player {
     pub fn open_container(
         &mut self,
-        window_type: &WindowType,
+        container: &Box<dyn Container>,
         minecraft_menu_id: &str,
         window_title: Option<&str>,
-        items: Option<Vec<Option<&ItemStack>>>,
         carried_item: Option<&ItemStack>,
         state_id: i32,
     ) {
