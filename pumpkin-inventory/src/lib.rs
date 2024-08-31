@@ -69,7 +69,7 @@ pub trait Container: Sync + Send {
         slot: usize,
         mouse_click: MouseClick,
     ) {
-        handle_item_take(carried_item, self.all_slots()[slot], mouse_click)
+        handle_item_change(carried_item, self.all_slots()[slot], mouse_click)
     }
 
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>>;
