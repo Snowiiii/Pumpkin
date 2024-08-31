@@ -21,7 +21,7 @@ pub struct CParticle<'a> {
 }
 
 impl<'a> CParticle<'a> {
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     pub fn new(
         long_distance: bool,
         x: f64,

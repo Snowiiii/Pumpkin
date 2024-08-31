@@ -13,8 +13,8 @@ use uuid::Uuid;
 use crate::server::Server;
 
 #[derive(Deserialize, Clone, Debug)]
-#[allow(non_snake_case)]
-#[allow(dead_code)]
+#[expect(non_snake_case)]
+#[expect(dead_code)]
 pub struct ProfileTextures {
     timestamp: i64,
     profileId: Uuid,
@@ -24,7 +24,7 @@ pub struct ProfileTextures {
 }
 
 #[derive(Deserialize, Clone, Debug)]
-#[allow(dead_code)]
+#[expect(dead_code)]
 pub struct Texture {
     url: String,
     metadata: Option<HashMap<String, String>>,

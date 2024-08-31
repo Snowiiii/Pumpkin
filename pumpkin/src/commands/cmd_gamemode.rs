@@ -72,7 +72,7 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                                 )));
                             } else {
                                 // TODO
-                                #[allow(clippy::let_underscore_future)]
+                                #[expect(clippy::let_underscore_future)]
                                 let _ = target.set_gamemode(gamemode);
                                 target.send_system_message(TextComponent::text(&format!(
                                     "Game mode was set to {:?}",
@@ -97,7 +97,7 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                             )));
                         } else {
                             // TODO
-                            #[allow(clippy::let_underscore_future)]
+                            #[expect(clippy::let_underscore_future)]
                             let _ = target.set_gamemode(gamemode);
                             target.send_system_message(TextComponent::text(&format!(
                                 "Game mode was set to {:?}",

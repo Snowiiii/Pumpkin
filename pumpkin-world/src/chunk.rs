@@ -54,7 +54,7 @@ pub struct ChunkHeightmaps {
 }
 
 #[derive(Deserialize, Debug)]
-#[allow(dead_code)]
+#[expect(dead_code)]
 struct ChunkSection {
     #[serde(rename = "Y")]
     y: i32,
@@ -64,7 +64,7 @@ struct ChunkSection {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 struct ChunkNbt {
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     data_version: usize,
 
     #[serde(rename = "sections")]
@@ -171,7 +171,7 @@ impl ChunkBlocks {
         index.y.get_absolute() as usize * CHUNK_AREA + *index.z as usize * 16 + *index.x as usize
     }
 
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     fn calculate_heightmap(&self) -> ChunkHeightmaps {
         // figure out how LongArray is formatted
         // figure out how to find out if block is motion blocking
