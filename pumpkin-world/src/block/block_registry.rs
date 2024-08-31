@@ -1,15 +1,13 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::LazyLock};
 
-use lazy_static::lazy_static;
 use serde::Deserialize;
 
 use super::block_id::BlockId;
 
-lazy_static! {
-    pub static ref BLOCKS: HashMap<String, RegistryBlockType> =
-        serde_json::from_str(include_str!("../../assets/blocks.json"))
-            .expect("Could not parse block.json registry.");
-}
+pub static BLOCKS: LazyLock<HashMap<String, RegistryBlockType>> = LazyLock::new(|| {
+    serde_json::from_str(include_str!("../../assets/blocks.json"))
+        .expect("Could not parse block.json registry.")
+});
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct RegistryBlockDefinition {

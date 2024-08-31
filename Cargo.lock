@@ -2018,7 +2018,6 @@ dependencies = [
  "flate2",
  "futures",
  "itertools 0.13.0",
- "lazy_static",
  "log",
  "num-derive",
  "num-traits",
