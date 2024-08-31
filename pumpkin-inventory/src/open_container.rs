@@ -53,7 +53,7 @@ impl Chest {
     }
 }
 impl Container for Chest {
-    fn window_type(&self) -> &WindowType {
+    fn window_type(&self) -> &'static WindowType {
         &WindowType::Generic9x3
     }
 

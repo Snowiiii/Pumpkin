@@ -61,7 +61,7 @@ impl WindowType {
 }
 // Container needs Sync + Send to be able to be in async Server
 pub trait Container: Sync + Send {
-    fn window_type(&self) -> &WindowType;
+    fn window_type(&self) -> &'static WindowType;
 
     fn handle_item_change(
         &mut self,
@@ -189,7 +189,7 @@ impl<'a> OptionallyCombinedContainer<'a> {
 }
 
 impl<'a> Container for OptionallyCombinedContainer<'a> {
-    fn window_type(&self) -> &WindowType {
+    fn window_type(&self) -> &'static WindowType {
         if let Some(container) = &self.container {
             container.window_type()
         } else {
