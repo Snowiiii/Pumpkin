@@ -2,12 +2,12 @@ use std::f32::consts::PI;
 
 use crate::{
     commands::{handle_command, CommandSender},
-    config::ADVANCED_CONFIG,
     entity::player::{ChatMode, Hand, Player},
     server::Server,
     util::math::wrap_degrees,
 };
 use num_traits::FromPrimitive;
+use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::{text::TextComponent, GameMode};
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::WindowType;

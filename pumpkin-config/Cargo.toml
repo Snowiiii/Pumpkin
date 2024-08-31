@@ -1,0 +1,12 @@
+[package]
+name = "pumpkin-config"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+pumpkin-core = { path = "../pumpkin-core" }
+
+serde = "1.0"
+toml = "0.8"
+
+log.workspace = true

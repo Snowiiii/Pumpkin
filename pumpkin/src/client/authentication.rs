@@ -2,16 +2,15 @@ use std::{collections::HashMap, net::IpAddr};
 
 use base64::{engine::general_purpose, Engine};
 use num_bigint::BigInt;
+use pumpkin_config::{auth::TextureConfig, ADVANCED_CONFIG};
+use pumpkin_core::ProfileAction;
 use pumpkin_protocol::Property;
 use reqwest::{StatusCode, Url};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::{
-    config::{auth::TextureConfig, ADVANCED_CONFIG},
-    server::Server,
-};
+use crate::server::Server;
 
 #[derive(Deserialize, Clone, Debug)]
 #[allow(non_snake_case)]
@@ -30,14 +29,6 @@ pub struct ProfileTextures {
 pub struct Texture {
     url: String,
     metadata: Option<HashMap<String, String>>,
-}
-
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
-pub enum ProfileAction {
-    #[serde(rename = "FORCED_NAME_CHANGE")]
-    ForcedNameChange,
-    #[serde(rename = "USING_BANNED_SKIN")]
-    UsingBannedSkin,
 }
 
 #[derive(Deserialize, Clone, Debug)]

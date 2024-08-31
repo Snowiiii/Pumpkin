@@ -11,6 +11,7 @@ use std::{
 use base64::{engine::general_purpose, Engine};
 use image::GenericImageView;
 use mio::Token;
+use pumpkin_config::{BasicConfiguration, BASIC_CONFIG};
 use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
 use pumpkin_plugin::PluginLoader;
@@ -23,12 +24,7 @@ use pumpkin_world::dimension::Dimension;
 use pumpkin_registry::Registry;
 use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 
-use crate::{
-    client::Client,
-    config::{BasicConfiguration, BASIC_CONFIG},
-    entity::player::Player,
-    world::World,
-};
+use crate::{client::Client, entity::player::Player, world::World};
 
 pub const CURRENT_MC_VERSION: &str = "1.21.1";
 

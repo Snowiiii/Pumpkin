@@ -18,7 +18,6 @@ use server::Server;
 
 pub mod client;
 pub mod commands;
-pub mod config;
 pub mod entity;
 pub mod proxy;
 pub mod rcon;
@@ -29,8 +28,8 @@ pub mod world;
 fn main() -> io::Result<()> {
     use std::sync::{Arc, Mutex};
 
-    use config::{ADVANCED_CONFIG, BASIC_CONFIG};
     use entity::player::Player;
+    use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
     use pumpkin_core::text::{color::NamedColor, TextComponent};
     use rcon::RCONServer;
 

@@ -9,9 +9,10 @@ use mio::{
     Events, Interest, Poll, Token,
 };
 use packet::{Packet, PacketError, PacketType};
+use pumpkin_config::RCONConfig;
 use thiserror::Error;
 
-use crate::{commands::handle_command, config::RCONConfig, server::Server};
+use crate::{commands::handle_command, server::Server};
 
 mod packet;
 

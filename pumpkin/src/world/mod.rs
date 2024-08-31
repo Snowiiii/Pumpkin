@@ -6,6 +6,7 @@ use std::{
 
 use mio::Token;
 use num_traits::ToPrimitive;
+use pumpkin_config::BasicConfiguration;
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_protocol::{
     client::play::{
@@ -19,7 +20,7 @@ use pumpkin_protocol::{
 use pumpkin_world::{level::Level, radial_chunk_iterator::RadialIterator};
 use tokio::sync::mpsc;
 
-use crate::{config::BasicConfiguration, entity::player::Player};
+use crate::entity::player::Player;
 
 pub struct World {
     pub level: Arc<Mutex<Level>>,

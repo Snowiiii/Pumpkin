@@ -1906,6 +1906,7 @@ dependencies = [
  "num-bigint",
  "num-derive",
  "num-traits",
+ "pumpkin-config",
  "pumpkin-core",
  "pumpkin-entity",
  "pumpkin-inventory",
@@ -1927,6 +1928,16 @@ dependencies = [
  "tokio",
  "toml 0.8.19",
  "uuid",
+]
+
+[[package]]
+name = "pumpkin-config"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "pumpkin-core",
+ "serde",
+ "toml 0.8.19",
 ]
 
 [[package]]

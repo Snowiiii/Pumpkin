@@ -1,4 +1,5 @@
 use num_traits::FromPrimitive;
+use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
     client::{
@@ -19,7 +20,6 @@ use sha1::{Digest, Sha1};
 
 use crate::{
     client::authentication::{self, GameProfile},
-    config::{ADVANCED_CONFIG, BASIC_CONFIG},
     entity::player::{ChatMode, Hand},
     proxy::velocity::velocity_login,
     server::{Server, CURRENT_MC_VERSION},

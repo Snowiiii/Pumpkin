@@ -13,3 +13,10 @@ pub enum Difficulty {
     Normal,
     Hard,
 }
+
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ProfileAction {
+    ForcedNameChange,
+    UsingBannedSkin,
+}
