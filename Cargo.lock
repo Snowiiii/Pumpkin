@@ -1936,6 +1936,8 @@ dependencies = [
  "colored",
  "fastnbt",
  "md5",
+ "num-derive",
+ "num-traits",
  "serde",
  "uuid",
 ]

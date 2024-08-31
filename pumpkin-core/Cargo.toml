@@ -9,3 +9,6 @@ fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 uuid.workspace = true
 colored = "2"
 md5 = "0.7.0"
+
+num-traits = "0.2.19"
+num-derive = { version = "0.4.2" }

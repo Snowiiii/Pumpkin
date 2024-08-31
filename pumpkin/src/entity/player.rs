@@ -1,8 +1,8 @@
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
-use num_derive::{FromPrimitive, ToPrimitive};
+use num_derive::FromPrimitive;
 use num_traits::ToPrimitive;
-use pumpkin_core::text::TextComponent;
+use pumpkin_core::{text::TextComponent, GameMode};
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, Entity, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_protocol::{
@@ -21,7 +21,6 @@ use pumpkin_protocol::{
     ConnectionState, RawPacket, ServerPacket, VarInt,
 };
 use pumpkin_world::vector3::Vector3;
-use serde::{Deserialize, Serialize};
 
 use crate::{
     client::{authentication::GameProfile, Client},
@@ -453,30 +452,4 @@ pub enum ChatMode {
     Enabled,
     CommandsOnly,
     Hidden,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, FromPrimitive, ToPrimitive)]
-pub enum GameMode {
-    Undefined = -1,
-    Survival,
-    Creative,
-    Adventure,
-    Spectator,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct ParseGameModeError;
-
-impl FromStr for GameMode {
-    type Err = ParseGameModeError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "survival" => Ok(Self::Survival),
-            "creative" => Ok(Self::Creative),
-            "adventure" => Ok(Self::Adventure),
-            "spectator" => Ok(Self::Spectator),
-            _ => Err(ParseGameModeError),
-        }
-    }
 }

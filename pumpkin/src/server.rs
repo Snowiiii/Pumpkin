@@ -11,6 +11,7 @@ use std::{
 use base64::{engine::general_purpose, Engine};
 use image::GenericImageView;
 use mio::Token;
+use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
 use pumpkin_plugin::PluginLoader;
 use pumpkin_protocol::{
@@ -26,7 +27,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     client::Client,
     config::{BasicConfiguration, BASIC_CONFIG},
-    entity::player::{GameMode, Player},
+    entity::player::Player,
     world::World,
 };
 

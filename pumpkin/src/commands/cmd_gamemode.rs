@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use num_traits::FromPrimitive;
 use pumpkin_core::text::TextComponent;
+use pumpkin_core::GameMode;
 
 use crate::commands::arg_player::{consume_arg_player, parse_arg_player};
 
@@ -13,7 +14,6 @@ use crate::commands::tree::{CommandTree, ConsumedArgs, RawArgs};
 use crate::commands::tree_builder::{argument, require};
 use crate::commands::CommandSender;
 use crate::commands::CommandSender::Player;
-use crate::entity::player::GameMode;
 
 const NAMES: [&str; 1] = ["gamemode"];
 
