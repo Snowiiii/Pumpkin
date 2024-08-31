@@ -2,6 +2,7 @@ use std::f32::consts::PI;
 
 use crate::{
     commands::{handle_command, CommandSender},
+    config::ADVANCED_CONFIG,
     entity::player::{ChatMode, GameMode, Hand, Player},
     server::Server,
     util::math::wrap_degrees,
@@ -313,7 +314,7 @@ impl Player {
         }
     }
 
-    pub async fn handle_interact(&mut self, server: &mut Server, interact: SInteract) {
+    pub async fn handle_interact(&mut self, _: &mut Server, interact: SInteract) {
         let sneaking = interact.sneaking;
         if self.sneaking != sneaking {
             self.set_sneaking(sneaking).await;
@@ -323,7 +324,7 @@ impl Player {
                 ActionType::Attack => {
                     let entity_id = interact.entity_id;
                     // TODO: do validation and stuff
-                    let config = &server.advanced_config.pvp;
+                    let config = &ADVANCED_CONFIG.pvp;
                     if config.enabled {
                         let world = self.world.clone();
                         let world = world.lock().await;

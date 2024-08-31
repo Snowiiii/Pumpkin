@@ -25,7 +25,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     client::Client,
-    config::{AdvancedConfiguration, BasicConfiguration},
+    config::{BasicConfiguration, BASIC_CONFIG},
     entity::player::{GameMode, Player},
     world::World,
 };
@@ -52,16 +52,15 @@ pub struct Server {
     pub cached_registry: Vec<Registry>,
 
     entity_id: AtomicI32,
-    pub base_config: BasicConfiguration,
-    pub advanced_config: AdvancedConfiguration,
 
     /// Used for Authentication, None is Online mode is disabled
     pub auth_client: Option<reqwest::Client>,
 }
 
 impl Server {
-    pub fn new(config: (BasicConfiguration, AdvancedConfiguration)) -> Self {
-        let status_response = Self::build_response(&config.0);
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        let status_response = Self::build_response(&BASIC_CONFIG);
         let status_response_json = serde_json::to_string(&status_response)
             .expect("Failed to parse Status response into JSON");
         let cached_server_brand = Self::build_brand();
@@ -75,7 +74,7 @@ impl Server {
             &private_key.e().to_bytes_be(),
         )
         .into_boxed_slice();
-        let auth_client = if config.0.online_mode {
+        let auth_client = if BASIC_CONFIG.online_mode {
             Some(
                 reqwest::Client::builder()
                     .timeout(Duration::from_millis(5000))
@@ -106,9 +105,7 @@ impl Server {
             status_response,
             status_response_json,
             public_key_der,
-            base_config: config.0,
             auth_client,
-            advanced_config: config.1,
         }
     }
 
@@ -118,7 +115,7 @@ impl Server {
         client: Client,
     ) -> (Arc<Mutex<Player>>, Arc<tokio::sync::Mutex<World>>) {
         let entity_id = self.new_entity_id();
-        let gamemode = match self.base_config.default_gamemode {
+        let gamemode = match BASIC_CONFIG.default_gamemode {
             GameMode::Undefined => GameMode::Survival,
             game_mode => game_mode,
         };

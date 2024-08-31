@@ -8,7 +8,10 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::{config::auth::TextureConfig, server::Server};
+use crate::{
+    config::{auth::TextureConfig, ADVANCED_CONFIG},
+    server::Server,
+};
 
 #[derive(Deserialize, Clone, Debug)]
 #[allow(non_snake_case)]
@@ -52,13 +55,9 @@ pub async fn authenticate(
     ip: &IpAddr,
     server: &mut Server,
 ) -> Result<GameProfile, AuthError> {
-    assert!(server.advanced_config.authentication.enabled);
+    assert!(ADVANCED_CONFIG.authentication.enabled);
     assert!(server.auth_client.is_some());
-    let address = if server
-        .advanced_config
-        .authentication
-        .prevent_proxy_connections
-    {
+    let address = if ADVANCED_CONFIG.authentication.prevent_proxy_connections {
         format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}")
     } else {
         format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}")

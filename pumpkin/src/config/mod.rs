@@ -6,6 +6,7 @@ use std::{
     fs,
     net::{Ipv4Addr, SocketAddr},
     path::Path,
+    sync::LazyLock,
 };
 
 use crate::{entity::player::GameMode, server::Difficulty};
@@ -27,6 +28,11 @@ pub use rcon::RCONConfig;
 
 /// Current Config version of the Base Config
 const CURRENT_BASE_VERSION: &str = "1.0.0";
+
+pub static ADVANCED_CONFIG: LazyLock<AdvancedConfiguration> =
+    LazyLock::new(AdvancedConfiguration::load);
+
+pub static BASIC_CONFIG: LazyLock<BasicConfiguration> = LazyLock::new(BasicConfiguration::load);
 
 /// The idea is that Pumpkin should very customizable.
 /// You can Enable or Disable Features depending on your needs.
@@ -94,7 +100,7 @@ impl Default for BasicConfiguration {
     }
 }
 
-pub trait LoadConfiguration {
+trait LoadConfiguration {
     fn load() -> Self
     where
         Self: Sized + Default + Serialize + DeserializeOwned,

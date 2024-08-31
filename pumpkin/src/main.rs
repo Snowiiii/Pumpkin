@@ -12,7 +12,6 @@ use std::io::{self};
 
 use client::{interrupted, Client};
 use commands::handle_command;
-use config::{AdvancedConfiguration, BasicConfiguration, LoadConfiguration};
 use server::Server;
 
 // Setup some tokens to allow us to identify which event is for which socket.
@@ -30,6 +29,7 @@ pub mod world;
 fn main() -> io::Result<()> {
     use std::sync::{Arc, Mutex};
 
+    use config::{ADVANCED_CONFIG, BASIC_CONFIG};
     use entity::player::Player;
     use pumpkin_core::text::{color::NamedColor, TextComponent};
     use rcon::RCONServer;
@@ -61,9 +61,6 @@ fn main() -> io::Result<()> {
         use std::time::Instant;
 
         let time = Instant::now();
-        let basic_config = BasicConfiguration::load();
-
-        let advanced_configuration = AdvancedConfiguration::load();
 
         // Create a poll instance.
         let mut poll = Poll::new()?;
@@ -71,7 +68,7 @@ fn main() -> io::Result<()> {
         let mut events = Events::with_capacity(128);
 
         // Setup the TCP server socket.
-        let addr = basic_config.server_address;
+        let addr = BASIC_CONFIG.server_address;
         let mut listener = TcpListener::bind(addr)?;
 
         // Register the server with poll we can receive events for it.
@@ -81,16 +78,13 @@ fn main() -> io::Result<()> {
         // Unique token for each incoming connection.
         let mut unique_token = Token(SERVER.0 + 1);
 
-        let use_console = advanced_configuration.commands.use_console;
-        let rcon = advanced_configuration.rcon.clone();
+        let use_console = ADVANCED_CONFIG.commands.use_console;
+        let rcon = ADVANCED_CONFIG.rcon.clone();
 
         let mut clients: HashMap<Token, Client> = HashMap::new();
         let mut players: HashMap<Arc<Token>, Arc<Mutex<Player>>> = HashMap::new();
 
-        let server = Arc::new(tokio::sync::Mutex::new(Server::new((
-            basic_config,
-            advanced_configuration,
-        ))));
+        let server = Arc::new(tokio::sync::Mutex::new(Server::new()));
         log::info!("Started Server took {}ms", time.elapsed().as_millis());
         log::info!("You now can connect to the server, Listening on {}", addr);
 
@@ -204,7 +198,7 @@ fn main() -> io::Result<()> {
                                         server.add_player(token.clone(), client).await;
                                     players.insert(token, player.clone());
                                     let mut world = world.lock().await;
-                                    world.spawn_player(&server.base_config, player).await;
+                                    world.spawn_player(&BASIC_CONFIG, player).await;
                                 }
                             }
                         }
