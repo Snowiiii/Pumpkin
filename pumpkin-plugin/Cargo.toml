@@ -6,3 +6,4 @@ edition.workspace = true
 [dependencies]
 extism = "1.5.0"
 log.workspace = true
+serde ={ version = "1.0.209", features = ["derive"] }

@@ -1,3 +1,5 @@
+mod api;
+
 use std::path::Path;
 
 use extism::{Manifest, Plugin, Wasm};
