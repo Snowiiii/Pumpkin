@@ -22,7 +22,6 @@ use pumpkin_world::dimension::Dimension;
 
 use pumpkin_registry::Registry;
 use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
-use serde::{Deserialize, Serialize};
 
 use crate::{
     client::Client,
@@ -213,12 +212,4 @@ impl Server {
         let pub_key = RsaPublicKey::from(&priv_key);
         (pub_key, priv_key)
     }
-}
-
-#[derive(PartialEq, Serialize, Deserialize)]
-pub enum Difficulty {
-    Peaceful,
-    Easy,
-    Normal,
-    Hard,
 }

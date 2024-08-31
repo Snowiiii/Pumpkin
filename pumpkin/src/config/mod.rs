@@ -1,5 +1,5 @@
 use log::warn;
-use pumpkin_core::GameMode;
+use pumpkin_core::{Difficulty, GameMode};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use std::{
@@ -8,8 +8,6 @@ use std::{
     path::Path,
     sync::LazyLock,
 };
-
-use crate::server::Difficulty;
 
 pub mod auth;
 pub mod proxy;
