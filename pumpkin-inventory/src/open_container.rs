@@ -12,7 +12,23 @@ impl OpenContainer {
         if !self.players.contains(&player_id) {
             return None;
         }
-        Some(self.container.lock().unwrap())
+        let container = self.container.lock().unwrap();
+        container
+            .all_slots_ref()
+            .iter()
+            .enumerate()
+            .for_each(|(slot, item)| {
+                if let Some(item) = item {
+                    dbg!(slot, item);
+                }
+            });
+        Some(container)
+    }
+
+    pub fn add_player(&mut self, player_id: i32) {
+        if !self.players.contains(&player_id) {
+            self.players.push(player_id);
+        }
     }
 
     pub fn empty(player_id: i32) -> Self {
@@ -23,11 +39,17 @@ impl OpenContainer {
     }
 }
 
-struct Chest([Option<ItemStack>; 27]);
+struct Chest {
+    slots: [Option<ItemStack>; 27],
+    state_id: i32,
+}
 
 impl Chest {
     pub fn new() -> Self {
-        Self([None; 27])
+        Self {
+            slots: [None; 27],
+            state_id: 0,
+        }
     }
 }
 impl Container for Chest {
@@ -36,10 +58,15 @@ impl Container for Chest {
     }
 
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
-        self.0.iter_mut().collect()
+        self.slots.iter_mut().collect()
     }
 
     fn all_slots_ref(&self) -> Vec<Option<&ItemStack>> {
-        self.0.iter().map(|slot| slot.as_ref()).collect()
+        self.slots.iter().map(|slot| slot.as_ref()).collect()
+    }
+
+    fn state_id(&mut self) -> i32 {
+        self.state_id += 1;
+        self.state_id - 1
     }
 }

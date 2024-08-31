@@ -13,6 +13,7 @@ pub struct PlayerInventory {
     offhand: Option<ItemStack>,
     // current selected slot in hotbar
     selected: usize,
+    state_id: i32,
 }
 
 impl Default for PlayerInventory {
@@ -31,6 +32,7 @@ impl PlayerInventory {
             offhand: None,
             // TODO: What when player spawns in with an different index ?
             selected: 0,
+            state_id: 0,
         }
     }
 
@@ -131,7 +133,7 @@ impl PlayerInventory {
 }
 
 impl Container for PlayerInventory {
-    fn window_type(&self) -> &WindowType {
+    fn window_type(&self) -> &'static WindowType {
         &WindowType::Generic9x1
     }
 
@@ -151,5 +153,10 @@ impl Container for PlayerInventory {
 
     fn all_slots_ref(&self) -> Vec<Option<&ItemStack>> {
         self.slots()
+    }
+
+    fn state_id(&mut self) -> i32 {
+        self.state_id += 1;
+        self.state_id - 1
     }
 }

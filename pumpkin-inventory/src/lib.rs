@@ -75,6 +75,8 @@ pub trait Container: Sync + Send {
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>>;
 
     fn all_slots_ref(&self) -> Vec<Option<&ItemStack>>;
+
+    fn state_id(&mut self) -> i32;
 }
 
 pub fn handle_item_take(
@@ -104,6 +106,12 @@ pub fn handle_item_change(
     current_slot: &mut Option<ItemStack>,
     mouse_click: MouseClick,
 ) {
+    if let Some(carried) = carried_slot.as_ref() {
+        dbg!(carried);
+    }
+    if let Some(current) = current_slot.as_ref() {
+        dbg!(current);
+    }
     match (current_slot.as_mut(), carried_slot.as_mut()) {
         // Swap or combine current and carried
         (Some(current), Some(carried)) => {
@@ -162,40 +170,10 @@ pub fn combine_stacks(
     }
 }
 
-pub struct ContainerStruct<const SLOTS: usize> {
-    slots: [Option<ItemStack>; SLOTS],
-    _state_id: usize,
-    _open_by: Option<Vec<i32>>,
-    window_type: WindowType,
-}
-
-impl<const T: usize> Container for ContainerStruct<T> {
-    fn window_type(&self) -> &WindowType {
-        &self.window_type
-    }
-
-    fn handle_item_change(
-        &mut self,
-        carried_slot: &mut Option<ItemStack>,
-        slot: usize,
-        mouse_click: MouseClick,
-    ) {
-        let current_slot = &mut self.slots[slot];
-        handle_item_change(carried_slot, current_slot, mouse_click)
-    }
-
-    fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
-        self.slots.iter_mut().collect()
-    }
-
-    fn all_slots_ref(&self) -> Vec<Option<&ItemStack>> {
-        self.slots.iter().map(|slot| slot.as_ref()).collect()
-    }
-}
-
 pub struct OptionallyCombinedContainer<'a> {
     container: Option<&'a mut Box<dyn Container>>,
     inventory: &'a mut PlayerInventory,
+    state_id: i32,
 }
 impl<'a> OptionallyCombinedContainer<'a> {
     pub fn new(
@@ -205,6 +183,7 @@ impl<'a> OptionallyCombinedContainer<'a> {
         Self {
             inventory: player_inventory,
             container,
+            state_id: 0,
         }
     }
 }
@@ -236,5 +215,10 @@ impl<'a> Container for OptionallyCombinedContainer<'a> {
         };
         slots.extend(self.inventory.all_slots_ref());
         slots
+    }
+
+    fn state_id(&mut self) -> i32 {
+        self.state_id += 1;
+        self.state_id - 1
     }
 }

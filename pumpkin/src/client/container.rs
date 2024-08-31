@@ -22,6 +22,7 @@ impl Player {
         window_title: Option<&str>,
         items: Option<Vec<Option<&ItemStack>>>,
         carried_item: Option<&ItemStack>,
+        state_id: i32,
     ) {
         let menu_protocol_id = (*pumpkin_world::global_registry::REGISTRY
             .get("minecraft:menu")
@@ -32,27 +33,30 @@ impl Player {
             .get("protocol_id")
             .unwrap())
         .into();
+        let window_type = container.window_type();
         let title = TextComponent::text(window_title.unwrap_or(window_type.default_title()));
         self.client.send_packet(&COpenScreen::new(
             (*window_type as u8 + 1).into(),
             menu_protocol_id,
             title,
         ));
-        self.set_container_content(window_type, items, carried_item);
+
+        self.set_container_content(Some(container), carried_item, state_id);
     }
 
     pub fn set_container_content<'a>(
         &mut self,
-        window_type: &WindowType,
-        items: Option<Vec<Option<&'a ItemStack>>>,
+        container: Option<&Box<dyn Container>>,
         carried_item: Option<&'a ItemStack>,
+        state_id: i32,
     ) {
         let slots: Vec<Slot> = {
+            let items = container.map(|container| container.all_slots_ref());
             if let Some(mut items) = items {
-                items.extend(self.inventory.slots());
+                items.extend(self.inventory.all_slots_ref());
                 items
             } else {
-                self.inventory.slots()
+                self.inventory.all_slots_ref()
             }
             .into_iter()
             .map(|item| {
@@ -72,8 +76,13 @@ impl Player {
                 Slot::empty()
             }
         };
-        let packet =
-            CSetContainerContent::new(*window_type as u8 + 1, 0.into(), &slots, &carried_item);
+
+        let window_type = match container {
+            Some(container) => *container.window_type() as u8,
+            None => 0,
+        };
+
+        let packet = CSetContainerContent::new(window_type, state_id.into(), &slots, &carried_item);
         self.client.send_packet(&packet);
     }
 
@@ -82,10 +91,11 @@ impl Player {
         window_type: WindowType,
         slot: usize,
         item: Option<&ItemStack>,
+        state_id: i32,
     ) {
         self.client.send_packet(&CSetContainerSlot::new(
             window_type as i8,
-            0,
+            state_id,
             slot,
             &item.into(),
         ))
@@ -130,7 +140,12 @@ impl Player {
                     }
                 })
                 .collect::<Vec<_>>(),
-            window_type: WindowType::from_u8(packet.window_id).unwrap(),
+            window_type: WindowType::from_u8(if packet.window_id == 0 {
+                0
+            } else {
+                packet.window_id - 1
+            })
+            .unwrap(),
             carried_item: packet.carried_item.to_item(),
             mode: ClickMode::new(
                 packet
@@ -173,12 +188,8 @@ impl Player {
             ClickType::MouseDrag {
                 drag_state: _,
                 drag_type: _,
-            } => {
-                todo!()
-            }
-            ClickType::DropType(_drop_type) => {
-                todo!()
-            }
+            } => (),
+            ClickType::DropType(_drop_type) => (),
         }
     }
 
