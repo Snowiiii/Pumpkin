@@ -4,11 +4,14 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use pumpkin_world::item::ItemStack;
 
 pub mod container_click;
+mod open_container;
 pub mod player;
 pub mod window_property;
 
+pub use open_container::OpenContainer;
+
 /// https://wiki.vg/Inventory
-#[derive(Debug, ToPrimitive, FromPrimitive, Clone, Eq, PartialEq)]
+#[derive(Debug, ToPrimitive, FromPrimitive, Clone, Copy, Eq, PartialEq)]
 pub enum WindowType {
     // not used
     Generic9x1,
@@ -56,8 +59,8 @@ impl WindowType {
         "WINDOW TITLE"
     }
 }
-
-pub trait Container {
+// Container needs Sync + Send to be able to be in async Server
+pub trait Container: Sync + Send {
     fn window_type(&self) -> &WindowType;
 
     fn handle_item_change(
@@ -65,9 +68,13 @@ pub trait Container {
         carried_item: &mut Option<ItemStack>,
         slot: usize,
         mouse_click: MouseClick,
-    );
+    ) {
+        handle_item_take(carried_item, self.all_slots()[slot], mouse_click)
+    }
 
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>>;
+
+    fn all_slots_ref(&self) -> Vec<Option<&ItemStack>>;
 }
 
 pub fn handle_item_take(
@@ -180,6 +187,10 @@ impl<const T: usize> Container for ContainerStruct<T> {
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
         self.slots.iter_mut().collect()
     }
+
+    fn all_slots_ref(&self) -> Vec<Option<&ItemStack>> {
+        self.slots.iter().map(|slot| slot.as_ref()).collect()
+    }
 }
 
 pub struct OptionallyCombinedContainer<'a> {
@@ -217,11 +228,13 @@ impl<'a> Container for OptionallyCombinedContainer<'a> {
         slots
     }
 
-    fn handle_item_change(
-        &mut self,
-        carried_item: &mut Option<ItemStack>,
-        slot: usize,
-        mouse_click: MouseClick,
-    ) {
+    fn all_slots_ref(&self) -> Vec<Option<&ItemStack>> {
+        let mut slots = if let Some(container) = &self.container {
+            container.all_slots_ref()
+        } else {
+            vec![]
+        };
+        slots.extend(self.inventory.all_slots_ref());
+        slots
     }
 }

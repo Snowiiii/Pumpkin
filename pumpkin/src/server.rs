@@ -29,16 +29,16 @@ use pumpkin_protocol::{
 };
 use pumpkin_world::{dimension::Dimension, radial_chunk_iterator::RadialIterator, World};
 
-use pumpkin_registry::Registry;
-use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
-use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
-
 use crate::{
     client::Client,
     config::{AdvancedConfiguration, BasicConfiguration},
     entity::player::{GameMode, Player},
 };
+use pumpkin_inventory::{Container, OpenContainer};
+use pumpkin_registry::Registry;
+use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
+use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc;
 
 pub const CURRENT_MC_VERSION: &str = "1.21.1";
 
@@ -63,6 +63,7 @@ pub struct Server {
 
     // TODO: place this into every world
     pub current_players: HashMap<Arc<Token>, Arc<Mutex<Player>>>,
+    pub open_containers: HashMap<u64, OpenContainer>,
 
     entity_id: AtomicI32,
     pub base_config: BasicConfiguration,
@@ -120,6 +121,7 @@ impl Server {
             status_response_json,
             public_key_der,
             current_players: HashMap::new(),
+            open_containers: HashMap::new(),
             base_config: config.0,
             auth_client,
             advanced_config: config.1,
@@ -313,6 +315,14 @@ impl Server {
             }
         }
         None
+    }
+
+    pub fn try_get_container(
+        &self,
+        player_id: EntityId,
+        container_id: u64,
+    ) -> Option<MutexGuard<Box<dyn Container>>> {
+        self.open_containers.get(&container_id)?.try_open(player_id)
     }
 
     /// Sends a Packet to all Players

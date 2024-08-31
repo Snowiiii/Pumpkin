@@ -15,11 +15,12 @@ use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
 
 use crate::entity::player::Player;
+use crate::server::Server;
 
 impl Player {
     pub fn open_container(
         &mut self,
-        window_type: WindowType,
+        window_type: &WindowType,
         minecraft_menu_id: &str,
         window_title: Option<&str>,
         items: Option<Vec<Option<&ItemStack>>>,
@@ -45,7 +46,7 @@ impl Player {
 
     pub fn set_container_content<'a>(
         &mut self,
-        window_type: WindowType,
+        window_type: &WindowType,
         items: Option<Vec<Option<&'a ItemStack>>>,
         carried_item: Option<&'a ItemStack>,
     ) {
@@ -75,7 +76,7 @@ impl Player {
             }
         };
         let packet =
-            CSetContainerContent::new(window_type as u8 + 1, 0.into(), &slots, &carried_item);
+            CSetContainerContent::new(*window_type as u8 + 1, 0.into(), &slots, &carried_item);
         self.client.send_packet(&packet);
     }
 
@@ -109,8 +110,15 @@ impl Player {
             .send_packet(&CSetContainerProperty::new(window_type as u8, id, value));
     }
 
-    pub fn handle_click_container(&mut self, packet: SClickContainer) {
+    pub fn handle_click_container(&mut self, server: &mut Server, packet: SClickContainer) {
         use container_click::*;
+        let mut opened_container = if let Some(id) = self.open_container {
+            server.try_get_container(self.entity_id(), self.open_container.unwrap())
+        } else {
+            None
+        };
+        let opened_container = opened_container.as_deref_mut();
+
         let click = Click {
             state_id: packet.state_id.0.try_into().unwrap(),
             changed_items: packet
@@ -137,15 +145,19 @@ impl Player {
                 packet.slot,
             ),
         };
-
         match click.mode.click_type {
-            ClickType::MouseClick(mouse_click) => {
-                self.mouse_click(mouse_click, click.window_type, click.mode.slot)
+            ClickType::MouseClick(mouse_click) => self.mouse_click(
+                opened_container,
+                mouse_click,
+                click.window_type,
+                click.mode.slot,
+            ),
+            ClickType::ShiftClick => {
+                self.shift_mouse_click(opened_container, click.window_type, click.mode.slot)
             }
-            ClickType::ShiftClick => self.shift_mouse_click(click.window_type, click.mode.slot),
             ClickType::KeyClick(key_click) => match click.mode.slot {
                 container_click::Slot::Normal(slot) => {
-                    self.number_button_pressed(click.window_type, key_click, slot)
+                    self.number_button_pressed(opened_container, click.window_type, key_click, slot)
                 }
                 container_click::Slot::OutsideInventory => {
                     unimplemented!("This is not a valid state")
@@ -153,7 +165,7 @@ impl Player {
             },
             ClickType::CreativePickItem => {
                 if let container_click::Slot::Normal(slot) = click.mode.slot {
-                    self.creative_pick_item(slot)
+                    self.creative_pick_item(opened_container, slot)
                 }
             }
             ClickType::DoubleClick => {}
@@ -178,11 +190,12 @@ impl Player {
 
     fn mouse_click(
         &mut self,
+        opened_container: Option<&mut Box<dyn Container>>,
         mouse_click: MouseClick,
         window_type: WindowType,
         slot: container_click::Slot,
     ) {
-        let mut container = get_full_container(&mut self.inventory, self.open_container.as_mut());
+        let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
         if container.window_type() != &window_type {
             return;
         }
@@ -195,8 +208,13 @@ impl Player {
         };
     }
 
-    fn shift_mouse_click(&mut self, window_type: WindowType, slot: container_click::Slot) {
-        let mut container = get_full_container(&mut self.inventory, self.open_container.as_mut());
+    fn shift_mouse_click(
+        &mut self,
+        opened_container: Option<&mut Box<dyn Container>>,
+        window_type: WindowType,
+        slot: container_click::Slot,
+    ) {
+        let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
         if container.window_type() != &window_type {
             return;
         }
@@ -235,13 +253,19 @@ impl Player {
         };
     }
 
-    fn number_button_pressed(&mut self, window_type: WindowType, key_click: KeyClick, slot: usize) {
+    fn number_button_pressed(
+        &mut self,
+        opened_container: Option<&mut Box<dyn Container>>,
+        window_type: WindowType,
+        key_click: KeyClick,
+        slot: usize,
+    ) {
         let changing_slot = match key_click {
             KeyClick::Slot(slot) => slot,
             KeyClick::Offhand => 45,
         };
         let mut changing_item_slot = self.inventory.get_slot(changing_slot as usize).to_owned();
-        let mut container = get_full_container(&mut self.inventory, self.open_container.as_mut());
+        let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
         if container.window_type() != &window_type {
             return;
         }
@@ -253,34 +277,16 @@ impl Player {
         }
     }
 
-    fn creative_pick_item(&mut self, slot: usize) {
-        let mut container = get_full_container(&mut self.inventory, self.open_container.as_mut());
-
+    fn creative_pick_item(
+        &mut self,
+        mut opened_container: Option<&mut Box<dyn Container>>,
+        slot: usize,
+    ) {
+        let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
         if let Some(Some(item)) = container.all_slots().get_mut(slot) {
             self.carried_item = Some(item.to_owned())
         }
     }
 
     fn double_click(&mut self, slot: usize) {}
-
-    fn get_container_type(&mut self) -> &WindowType {
-        match &self.open_container {
-            Some(container) => container.window_type(),
-            // This is the one the inventory uses for some stupid reason
-            None => &WindowType::Generic9x1,
-        }
-    }
-}
-
-/*impl<const SLOTS: usize> ContainerStruct<SLOTS> {
-    pub fn opened_by_players(&mut self, server: Server) -> Vec<&Player> {
-
-    }
-}*/
-
-fn get_full_container<'a>(
-    inventory: &'a mut PlayerInventory,
-    open_container: Option<&'a mut Box<dyn Container>>,
-) -> OptionallyCombinedContainer<'a> {
-    OptionallyCombinedContainer::new(inventory, open_container)
 }

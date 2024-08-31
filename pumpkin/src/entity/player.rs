@@ -15,10 +15,10 @@ use pumpkin_protocol::{
     },
     position::WorldPosition,
     server::play::{
-        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
-        SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
-        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem,
-        SUseItemOn,
+        SChatCommand, SChatMessage, SClickContainer, SClientInformationPlay, SConfirmTeleport,
+        SInteract, SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition,
+        SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround,
+        SSwingArm, SUseItem, SUseItemOn,
     },
     ConnectionState, RawPacket, ServerPacket, VarInt,
 };
@@ -26,11 +26,7 @@ use pumpkin_world::item::ItemStack;
 use pumpkin_world::vector3::Vector3;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    client::{authentication::GameProfile, Client},
-    server::Server,
-    util::boundingbox::BoundingBox,
-};
+use crate::{client::authentication::GameProfile, util::boundingbox::BoundingBox};
 
 pub struct PlayerAbilities {
     pub invulnerable: bool,
@@ -65,7 +61,7 @@ pub struct Player {
     pub food: i32,
     pub food_saturation: f32,
     pub inventory: PlayerInventory,
-    pub open_container: Option<Box<dyn Container>>,
+    pub open_container: Option<u64>,
     pub carried_item: Option<ItemStack>,
 
     /// send `send_abilties_update` when changed
@@ -406,9 +402,13 @@ impl Player {
                 Ok(())
             }
             SClickContainer::PACKET_ID => {
-                self.handle_click_container(SClickContainer::read(bytebuf).unwrap())
+                self.handle_click_container(server, SClickContainer::read(bytebuf)?);
+                Ok(())
             }
-            _ => log::error!("Failed to handle player packet id {:#04x}", packet.id.0),
+            _ => {
+                log::error!("Failed to handle player packet id {:#04x}", packet.id.0);
+                Ok(())
+            }
         }
     }
 }

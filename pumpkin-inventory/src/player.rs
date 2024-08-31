@@ -148,4 +148,8 @@ impl Container for PlayerInventory {
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
         self.slots_mut()
     }
+
+    fn all_slots_ref(&self) -> Vec<Option<&ItemStack>> {
+        self.slots()
+    }
 }
