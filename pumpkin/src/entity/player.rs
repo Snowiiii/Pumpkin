@@ -6,7 +6,6 @@ use num_traits::ToPrimitive;
 use pumpkin_core::text::TextComponent;
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, Entity, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
-use pumpkin_inventory::Container;
 use pumpkin_protocol::{
     bytebuf::{packet_id::Packet, DeserializerError},
     client::play::{

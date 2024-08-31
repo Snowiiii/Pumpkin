@@ -1,5 +1,4 @@
-use crate::container_click::MouseClick;
-use crate::{handle_item_change, Container, WindowType};
+use crate::{Container, WindowType};
 use pumpkin_world::item::ItemStack;
 use std::sync::{Mutex, MutexGuard};
 

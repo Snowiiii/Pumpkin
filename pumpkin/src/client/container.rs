@@ -1,11 +1,8 @@
 use num_traits::FromPrimitive;
 use pumpkin_core::text::TextComponent;
 use pumpkin_inventory::container_click::{KeyClick, MouseClick};
-use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
-use pumpkin_inventory::{
-    container_click, handle_item_change, ContainerStruct, OptionallyCombinedContainer,
-};
+use pumpkin_inventory::{container_click, handle_item_change, OptionallyCombinedContainer};
 use pumpkin_inventory::{Container, WindowType};
 use pumpkin_protocol::client::play::{
     CCloseContainer, COpenScreen, CSetContainerContent, CSetContainerProperty, CSetContainerSlot,
@@ -37,7 +34,7 @@ impl Player {
         .into();
         let title = TextComponent::text(window_title.unwrap_or(window_type.default_title()));
         self.client.send_packet(&COpenScreen::new(
-            (window_type.clone() as u8 + 1).into(),
+            (*window_type as u8 + 1).into(),
             menu_protocol_id,
             title,
         ));
@@ -113,7 +110,7 @@ impl Player {
     pub fn handle_click_container(&mut self, server: &mut Server, packet: SClickContainer) {
         use container_click::*;
         let mut opened_container = if let Some(id) = self.open_container {
-            server.try_get_container(self.entity_id(), self.open_container.unwrap())
+            server.try_get_container(self.entity_id(), id)
         } else {
             None
         };
@@ -168,24 +165,21 @@ impl Player {
                     self.creative_pick_item(opened_container, slot)
                 }
             }
-            ClickType::DoubleClick => {}
+            ClickType::DoubleClick => {
+                if let container_click::Slot::Normal(slot) = click.mode.slot {
+                    self.double_click(slot)
+                }
+            }
             ClickType::MouseDrag {
-                drag_state,
-                drag_type,
+                drag_state: _,
+                drag_type: _,
             } => {
                 todo!()
             }
-            ClickType::DropType(drop_type) => {
+            ClickType::DropType(_drop_type) => {
                 todo!()
             }
         }
-        let filled_inventory_slots = self
-            .inventory
-            .slots()
-            .into_iter()
-            .enumerate()
-            .filter_map(|(slot, item)| item.map(|item| (slot, item.item_count)))
-            .collect::<Vec<_>>();
     }
 
     fn mouse_click(
@@ -214,7 +208,7 @@ impl Player {
         window_type: WindowType,
         slot: container_click::Slot,
     ) {
-        let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
+        let container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
         if container.window_type() != &window_type {
             return;
         }
@@ -279,7 +273,7 @@ impl Player {
 
     fn creative_pick_item(
         &mut self,
-        mut opened_container: Option<&mut Box<dyn Container>>,
+        opened_container: Option<&mut Box<dyn Container>>,
         slot: usize,
     ) {
         let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
@@ -288,5 +282,5 @@ impl Player {
         }
     }
 
-    fn double_click(&mut self, slot: usize) {}
+    fn double_click(&mut self, _slot: usize) {}
 }
