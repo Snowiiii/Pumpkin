@@ -1,4 +1,4 @@
-use super::{gaussian::GaussianGenerator, Random, RandomSplitter};
+use super::{gaussian::GaussianGenerator, hash_block_pos, Random, RandomSplitter};
 
 pub struct Xoroshiro {
     lo: u64,
@@ -130,12 +130,6 @@ impl Random for Xoroshiro {
     fn next_gaussian(&mut self) -> f64 {
         self.calculate_gaussian()
     }
-
-    fn skip(&mut self, count: i32) {
-        for _ in 0..count {
-            self.next_random();
-        }
-    }
 }
 
 pub struct XoroshiroSplitter {
@@ -143,19 +137,9 @@ pub struct XoroshiroSplitter {
     hi: u64,
 }
 
-fn hash_pos(x: i32, y: i32, z: i32) -> i64 {
-    let l =
-        ((x.wrapping_mul(3129871)) as i64) ^ ((z as i64).wrapping_mul(116129781i64)) ^ (y as i64);
-    let l = l
-        .wrapping_mul(l)
-        .wrapping_mul(42317861i64)
-        .wrapping_add(l.wrapping_mul(11i64));
-    l >> 16
-}
-
 impl RandomSplitter for XoroshiroSplitter {
     fn split_pos(&self, x: i32, y: i32, z: i32) -> impl Random {
-        let l = hash_pos(x, y, z) as u64;
+        let l = hash_block_pos(x, y, z) as u64;
         let m = l ^ self.lo;
         Xoroshiro::new(m, self.hi)
     }
@@ -177,27 +161,9 @@ impl RandomSplitter for XoroshiroSplitter {
 mod tests {
     use crate::random::{Random, RandomSplitter};
 
-    use super::{hash_pos, mix_stafford_13, Xoroshiro};
+    use super::{mix_stafford_13, Xoroshiro};
 
     // Values checked against results from the equivalent Java source
-
-    #[test]
-    fn block_position_hash() {
-        let values: [((i32, i32, i32), i64); 8] = [
-            ((0, 0, 0), 0),
-            ((1, 1, 1), 60311958971344),
-            ((4, 4, 4), 120566413180880),
-            ((25, 25, 25), 111753446486209),
-            ((676, 676, 676), 75210837988243),
-            ((458329, 458329, 458329), -43764888250),
-            ((-387008604, -387008604, -387008604), 8437923733503),
-            ((176771161, 176771161, 176771161), 18421337580760),
-        ];
-
-        for ((x, y, z), value) in values {
-            assert_eq!(hash_pos(x, y, z), value);
-        }
-    }
 
     #[test]
     fn test_mix_stafford_13() {
