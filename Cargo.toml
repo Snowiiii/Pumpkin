@@ -17,3 +17,4 @@ tokio = { version = "1.39.2", features = ["net", "macros", "rt-multi-thread", "f
 rayon = "1.10.0"
 uuid = { version = "1.10.0", features = ["serde", "v3"] }
 derive_more = { version = "1.0.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
