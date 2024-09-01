@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 /// Used to keep track of things created by plugins.
 /// This can include things like events, commands, etc.
 #[derive(Hash, PartialEq, Eq, ToBytes, FromBytes, Serialize, Deserialize)]
-#[encoding(Msgpack)]
+#[encoding(Msgpack)] // TODO: Switch to protocal buffers for smaller size
 struct Identifier {
     namespace: String,
     path: String,
