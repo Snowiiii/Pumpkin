@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
+serde.workspace = true
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 uuid.workspace = true
 colored = "2"

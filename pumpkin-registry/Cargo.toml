@@ -11,4 +11,4 @@ pumpkin-core = { path = "../pumpkin-core"}
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 fastsnbt = "0.2"
 
-serde = { version = "1.0", features = ["derive"] }
+serde.workspace = true
