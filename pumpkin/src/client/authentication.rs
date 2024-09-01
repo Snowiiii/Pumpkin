@@ -2,13 +2,15 @@ use std::{collections::HashMap, net::IpAddr};
 
 use base64::{engine::general_purpose, Engine};
 use num_bigint::BigInt;
+use pumpkin_config::{auth::TextureConfig, ADVANCED_CONFIG};
+use pumpkin_core::ProfileAction;
 use pumpkin_protocol::Property;
 use reqwest::{StatusCode, Url};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::{config::auth_config::TextureConfig, server::Server};
+use crate::server::Server;
 
 #[derive(Deserialize, Clone, Debug)]
 #[allow(non_snake_case)]
@@ -29,14 +31,6 @@ pub struct Texture {
     metadata: Option<HashMap<String, String>>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
-pub enum ProfileAction {
-    #[serde(rename = "FORCED_NAME_CHANGE")]
-    ForcedNameChange,
-    #[serde(rename = "USING_BANNED_SKIN")]
-    UsingBannedSkin,
-}
-
 #[derive(Deserialize, Clone, Debug)]
 pub struct GameProfile {
     pub id: Uuid,
@@ -52,13 +46,9 @@ pub async fn authenticate(
     ip: &IpAddr,
     server: &mut Server,
 ) -> Result<GameProfile, AuthError> {
-    assert!(server.advanced_config.authentication.enabled);
+    assert!(ADVANCED_CONFIG.authentication.enabled);
     assert!(server.auth_client.is_some());
-    let address = if server
-        .advanced_config
-        .authentication
-        .prevent_proxy_connections
-    {
+    let address = if ADVANCED_CONFIG.authentication.prevent_proxy_connections {
         format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}")
     } else {
         format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}")

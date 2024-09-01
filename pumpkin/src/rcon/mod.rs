@@ -9,9 +9,10 @@ use mio::{
     Events, Interest, Poll, Token,
 };
 use packet::{Packet, PacketError, PacketType};
+use pumpkin_config::RCONConfig;
 use thiserror::Error;
 
-use crate::{commands::handle_command, config::RCONConfig, server::Server};
+use crate::{commands::handle_command, server::Server};
 
 mod packet;
 
@@ -35,11 +36,8 @@ impl RCONServer {
         server: Arc<tokio::sync::Mutex<Server>>,
     ) -> Result<Self, io::Error> {
         assert!(config.enabled, "RCON is not enabled");
-        let addr = format!("{}:{}", config.ip, config.port)
-            .parse()
-            .expect("Failed to parse RCON address");
         let mut poll = Poll::new().unwrap();
-        let mut listener = TcpListener::bind(addr).unwrap();
+        let mut listener = TcpListener::bind(config.address).unwrap();
 
         poll.registry()
             .register(&mut listener, SERVER, Interest::READABLE)

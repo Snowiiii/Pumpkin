@@ -2,12 +2,13 @@ use std::net::SocketAddr;
 
 use bytes::{BufMut, BytesMut};
 use hmac::{Hmac, Mac};
+use pumpkin_config::proxy::VelocityConfig;
 use pumpkin_protocol::{
     bytebuf::ByteBuffer, client::login::CLoginPluginRequest, server::login::SLoginPluginResponse,
 };
 use sha2::Sha256;
 
-use crate::{client::Client, config::proxy::VelocityConfig};
+use crate::client::Client;
 
 type HmacSha256 = Hmac<Sha256>;
 

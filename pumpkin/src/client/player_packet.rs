@@ -2,12 +2,13 @@ use std::f32::consts::PI;
 
 use crate::{
     commands::{handle_command, CommandSender},
-    entity::player::{ChatMode, GameMode, Hand, Player},
+    entity::player::{ChatMode, Hand, Player},
     server::Server,
     util::math::wrap_degrees,
 };
 use num_traits::FromPrimitive;
-use pumpkin_core::text::TextComponent;
+use pumpkin_config::ADVANCED_CONFIG;
+use pumpkin_core::{text::TextComponent, GameMode};
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::WindowType;
 use pumpkin_protocol::server::play::{SCloseContainer, SSetPlayerGround, SUseItem};
@@ -313,7 +314,7 @@ impl Player {
         }
     }
 
-    pub async fn handle_interact(&mut self, server: &mut Server, interact: SInteract) {
+    pub async fn handle_interact(&mut self, _: &mut Server, interact: SInteract) {
         let sneaking = interact.sneaking;
         if self.sneaking != sneaking {
             self.set_sneaking(sneaking).await;
@@ -323,7 +324,7 @@ impl Player {
                 ActionType::Attack => {
                     let entity_id = interact.entity_id;
                     // TODO: do validation and stuff
-                    let config = &server.advanced_config.pvp;
+                    let config = &ADVANCED_CONFIG.pvp;
                     if config.enabled {
                         let world = self.world.clone();
                         let world = world.lock().await;
