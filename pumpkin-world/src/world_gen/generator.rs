@@ -1,10 +1,10 @@
+use pumpkin_core::math::vector2::Vector2;
 use static_assertions::assert_obj_safe;
 
 use crate::biome::Biome;
 use crate::block::BlockId;
 use crate::chunk::ChunkData;
 use crate::coordinates::{BlockCoordinates, XZBlockCoordinates};
-use crate::vector2::Vector2;
 use crate::world_gen::Seed;
 
 pub trait GeneratorInit {

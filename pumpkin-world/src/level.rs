@@ -8,13 +8,13 @@ use std::{
 
 use flate2::{bufread::ZlibDecoder, read::GzDecoder};
 use itertools::Itertools;
+use pumpkin_core::math::vector2::Vector2;
 use rayon::prelude::*;
 use thiserror::Error;
 use tokio::sync::mpsc;
 
 use crate::{
     chunk::ChunkData,
-    vector2::Vector2,
     world_gen::{get_world_gen, Seed, WorldGenerator},
 };
 

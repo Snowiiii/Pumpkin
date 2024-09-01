@@ -4,11 +4,15 @@ use crate::{
     commands::{handle_command, CommandSender},
     entity::player::{ChatMode, Hand, Player},
     server::Server,
-    util::math::wrap_degrees,
+    world::player_chunker,
 };
 use num_traits::FromPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
-use pumpkin_core::{text::TextComponent, GameMode};
+use pumpkin_core::{
+    math::{position::WorldPosition, wrap_degrees},
+    text::TextComponent,
+    GameMode,
+};
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::WindowType;
 use pumpkin_protocol::server::play::{SCloseContainer, SSetPlayerGround, SUseItem};
@@ -18,7 +22,6 @@ use pumpkin_protocol::{
         CHeadRot, CHurtAnimation, CPingResponse, CPlayerChatMessage, CUpdateEntityPos,
         CUpdateEntityPosRot, CUpdateEntityRot, CWorldEvent, FilterType,
     },
-    position::WorldPosition,
     server::play::{
         Action, ActionType, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport,
         SInteract, SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition,
@@ -46,9 +49,7 @@ impl Player {
         if let Some((id, position)) = self.awaiting_teleport.as_ref() {
             if id == &confirm_teleport.teleport_id {
                 // we should set the pos now to that we requested in the teleport packet, Is may fixed issues when the client sended position packets while being teleported
-                self.entity.x = position.x;
-                self.entity.y = position.y;
-                self.entity.z = position.z;
+                self.entity.set_pos(position.x, position.y, position.z);
 
                 self.awaiting_teleport = None;
             } else {
@@ -75,21 +76,24 @@ impl Player {
             return;
         }
         let entity = &mut self.entity;
-        entity.lastx = entity.x;
-        entity.lasty = entity.y;
-        entity.lastz = entity.z;
-        entity.x = Self::clamp_horizontal(position.x);
-        entity.y = Self::clamp_vertical(position.feet_y);
-        entity.z = Self::clamp_horizontal(position.z);
+        self.lastx = entity.pos.x;
+        self.lasty = entity.pos.y;
+        self.lastz = entity.pos.z;
+        entity.set_pos(
+            Self::clamp_horizontal(position.x),
+            Self::clamp_vertical(position.feet_y),
+            Self::clamp_horizontal(position.z),
+        );
         // TODO: teleport when moving > 8 block
 
         // send new position to all other players
         let on_ground = self.on_ground;
         let entity_id = entity.entity_id;
-        let (x, lastx) = (entity.x, entity.lastx);
-        let (y, lasty) = (entity.y, entity.lasty);
-        let (z, lastz) = (entity.z, entity.lastz);
-        let world = self.world.lock().await;
+        let (x, lastx) = (entity.pos.x, self.lastx);
+        let (y, lasty) = (entity.pos.y, self.lasty);
+        let (z, lastz) = (entity.pos.z, self.lastz);
+        let world = self.world.clone();
+        let world = world.lock().await;
         world.broadcast_packet(
             &[&self.client.token],
             &CUpdateEntityPos::new(
@@ -100,6 +104,7 @@ impl Player {
                 on_ground,
             ),
         );
+        player_chunker::update_position(&world, self).await;
     }
 
     pub async fn handle_position_rotation(
@@ -120,25 +125,28 @@ impl Player {
         }
         let entity = &mut self.entity;
 
-        entity.lastx = entity.x;
-        entity.lasty = entity.y;
-        entity.lastz = entity.z;
-        entity.x = Self::clamp_horizontal(position_rotation.x);
-        entity.y = Self::clamp_vertical(position_rotation.feet_y);
-        entity.z = Self::clamp_horizontal(position_rotation.z);
+        self.lastx = entity.pos.x;
+        self.lasty = entity.pos.y;
+        self.lastz = entity.pos.z;
+        entity.set_pos(
+            Self::clamp_horizontal(position_rotation.x),
+            Self::clamp_vertical(position_rotation.feet_y),
+            Self::clamp_horizontal(position_rotation.z),
+        );
         entity.yaw = wrap_degrees(position_rotation.yaw) % 360.0;
         entity.pitch = wrap_degrees(position_rotation.pitch).clamp(-90.0, 90.0) % 360.0;
 
         // send new position to all other players
         let on_ground = self.on_ground;
         let entity_id = entity.entity_id;
-        let (x, lastx) = (entity.x, entity.lastx);
-        let (y, lasty) = (entity.y, entity.lasty);
-        let (z, lastz) = (entity.z, entity.lastz);
+        let (x, lastx) = (entity.pos.x, self.lastx);
+        let (y, lasty) = (entity.pos.y, self.lasty);
+        let (z, lastz) = (entity.pos.z, self.lastz);
         let yaw = modulus(entity.yaw * 256.0 / 360.0, 256.0);
         let pitch = modulus(entity.pitch * 256.0 / 360.0, 256.0);
         // let head_yaw = (entity.head_yaw * 256.0 / 360.0).floor();
-        let world = self.world.lock().await;
+        let world = self.world.clone();
+        let world = world.lock().await;
 
         world.broadcast_packet(
             &[&self.client.token],
@@ -156,6 +164,8 @@ impl Player {
             &[&self.client.token],
             &CHeadRot::new(entity_id.into(), yaw as u8),
         );
+
+        player_chunker::update_position(&world, self).await;
     }
 
     pub async fn handle_rotation(&mut self, _server: &mut Server, rotation: SPlayerRotation) {
@@ -299,7 +309,7 @@ impl Player {
             Hand::from_i32(client_information.main_hand.into()),
             ChatMode::from_i32(client_information.chat_mode.into()),
         ) {
-            self.client.config = Some(PlayerConfig {
+            self.config = PlayerConfig {
                 locale: client_information.locale,
                 view_distance: client_information.view_distance,
                 chat_mode,
@@ -308,7 +318,7 @@ impl Player {
                 main_hand,
                 text_filtering: client_information.text_filtering,
                 server_listing: client_information.server_listing,
-            });
+            };
         } else {
             self.kick(TextComponent::text("Invalid hand or chat type"))
         }

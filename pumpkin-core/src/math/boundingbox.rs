@@ -1,5 +1,4 @@
-use pumpkin_protocol::position::WorldPosition;
-use pumpkin_world::vector3::Vector3;
+use super::{position::WorldPosition, vector3::Vector3};
 
 pub struct BoundingBox {
     pub min_x: f64,
@@ -38,6 +37,6 @@ impl BoundingBox {
         let d = f64::max(f64::max(self.min_x - pos.x, pos.x - self.max_x), 0.0);
         let e = f64::max(f64::max(self.min_y - pos.y, pos.y - self.max_y), 0.0);
         let f = f64::max(f64::max(self.min_z - pos.z, pos.z - self.max_z), 0.0);
-        super::math::squared_magnitude(d, e, f)
+        super::squared_magnitude(d, e, f)
     }
 }

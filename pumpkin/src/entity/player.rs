@@ -2,7 +2,11 @@ use std::sync::Arc;
 
 use num_derive::FromPrimitive;
 use num_traits::ToPrimitive;
-use pumpkin_core::{text::TextComponent, GameMode};
+use pumpkin_core::{
+    math::{boundingbox::BoundingBox, position::WorldPosition, vector3::Vector3},
+    text::TextComponent,
+    GameMode,
+};
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, Entity, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_protocol::{
@@ -11,7 +15,6 @@ use pumpkin_protocol::{
         CGameEvent, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSetEntityMetadata,
         CSyncPlayerPosition, CSystemChatMessage, Metadata, PlayerAction,
     },
-    position::WorldPosition,
     server::play::{
         SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
         SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
@@ -20,12 +23,10 @@ use pumpkin_protocol::{
     },
     ConnectionState, RawPacket, ServerPacket, VarInt,
 };
-use pumpkin_world::vector3::Vector3;
 
 use crate::{
-    client::{authentication::GameProfile, Client},
+    client::{authentication::GameProfile, Client, PlayerConfig},
     server::Server,
-    util::boundingbox::BoundingBox,
     world::World,
 };
 
@@ -55,6 +56,7 @@ pub struct Player {
     pub gameprofile: GameProfile,
     pub client: Client,
     pub entity: Entity,
+    pub config: PlayerConfig,
     // TODO: Put this into entity
     pub world: Arc<tokio::sync::Mutex<World>>,
     /// Current gamemode
@@ -67,6 +69,9 @@ pub struct Player {
     /// send `send_abilties_update` when changed
     pub abilities: PlayerAbilities,
 
+    pub lastx: f64,
+    pub lasty: f64,
+    pub lastz: f64,
     // Client side value, Should be not trusted
     pub on_ground: bool,
 
@@ -82,6 +87,8 @@ pub struct Player {
     pub teleport_id_count: i32,
     // Current awaiting teleport id and location, None if did not teleport
     pub awaiting_teleport: Option<(VarInt, Vector3<f64>)>,
+
+    pub watched_section: Vector3<i32>,
 }
 
 impl Player {
@@ -103,8 +110,9 @@ impl Player {
                 }
             }
         };
-
+        let config = client.config.clone().unwrap_or_default();
         Self {
+            config,
             gameprofile,
             client,
             entity: Entity::new(entity_id, EntityType::Player, 1.62),
@@ -123,6 +131,10 @@ impl Player {
             teleport_id_count: 0,
             abilities: PlayerAbilities::default(),
             gamemode,
+            watched_section: Vector3::new(0, 0, 0),
+            lastx: 0.0,
+            lasty: 0.0,
+            lastz: 0.0,
         }
     }
 
@@ -185,11 +197,11 @@ impl Player {
         assert!(self.sneaking != sneaking);
         self.sneaking = sneaking;
         self.set_flag(Self::SNEAKING_FLAG_INDEX, sneaking).await;
-        if sneaking {
-            self.set_pose(EntityPose::Crouching).await;
-        } else {
-            self.set_pose(EntityPose::Standing).await;
-        }
+        // if sneaking {
+        //     self.set_pose(EntityPose::Crouching).await;
+        // } else {
+        //     self.set_pose(EntityPose::Standing).await;
+        // }
     }
 
     pub async fn set_sprinting(&mut self, sprinting: bool) {
@@ -242,12 +254,10 @@ impl Player {
             self.teleport_id_count = 0;
         }
         let entity = &mut self.entity;
-        entity.x = x;
-        entity.y = y;
-        entity.z = z;
-        entity.lastx = x;
-        entity.lasty = y;
-        entity.lastz = z;
+        entity.set_pos(x, y, z);
+        self.lastx = x;
+        self.lasty = y;
+        self.lastz = z;
         entity.yaw = yaw;
         entity.pitch = pitch;
         self.awaiting_teleport = Some((self.teleport_id_count.into(), Vector3::new(x, y, z)));
@@ -274,9 +284,9 @@ impl Player {
         let d = self.block_interaction_range() + additional_range;
         let box_pos = BoundingBox::from_block(pos);
         box_pos.squared_magnitude(Vector3 {
-            x: self.entity.x,
-            y: self.entity.y + self.entity.standing_eye_height as f64,
-            z: self.entity.z,
+            x: self.entity.pos.x,
+            y: self.entity.pos.y + self.entity.standing_eye_height as f64,
+            z: self.entity.pos.z,
         }) < d * d
     }
 
@@ -441,13 +451,13 @@ impl Player {
     }
 }
 
-#[derive(FromPrimitive)]
+#[derive(FromPrimitive, Clone)]
 pub enum Hand {
     Main,
     Off,
 }
 
-#[derive(FromPrimitive)]
+#[derive(FromPrimitive, Clone)]
 pub enum ChatMode {
     Enabled,
     CommandsOnly,

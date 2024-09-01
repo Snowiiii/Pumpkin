@@ -1959,6 +1959,7 @@ version = "0.1.0"
 dependencies = [
  "num-derive",
  "num-traits",
+ "pumpkin-core",
 ]
 
 [[package]]
@@ -2034,6 +2035,7 @@ dependencies = [
  "log",
  "num-derive",
  "num-traits",
+ "pumpkin-core",
  "rayon",
  "serde",
  "serde_json",

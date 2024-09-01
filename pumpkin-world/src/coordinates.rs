@@ -2,9 +2,10 @@ use std::ops::Deref;
 
 use derive_more::derive::{AsMut, AsRef, Display, Into};
 use num_traits::{PrimInt, Signed, Unsigned};
+use pumpkin_core::math::vector2::Vector2;
 use serde::{Deserialize, Serialize};
 
-use crate::{vector2::Vector2, WORLD_LOWEST_Y, WORLD_MAX_Y};
+use crate::{WORLD_LOWEST_Y, WORLD_MAX_Y};
 
 #[derive(
     Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, AsRef, AsMut, Into, Display,

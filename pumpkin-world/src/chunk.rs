@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use std::ops::Index;
 
 use fastnbt::LongArray;
+use pumpkin_core::math::vector2::Vector2;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     block::BlockId,
     coordinates::{ChunkRelativeBlockCoordinates, Height},
     level::{ChunkNotGeneratedError, WorldError},
-    vector2::Vector2,
     WORLD_HEIGHT,
 };
 
