@@ -1,12 +1,13 @@
-use std::collections::HashMap;
-
-use lazy_static::lazy_static;
-
-use crate::global_registry::{self, ITEM_REGISTRY};
+use std::{collections::HashMap, sync::LazyLock};
 
 use super::Rarity;
+use crate::global_registry::{self, ITEM_REGISTRY};
 
 const ITEMS_JSON: &str = include_str!("../../assets/items.json");
+
+pub static ITEMS: LazyLock<HashMap<String, ItemElement>> = LazyLock::new(|| {
+    serde_json::from_str(ITEMS_JSON).expect("Could not parse items.json registry.")
+});
 
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct ItemComponents {
@@ -25,11 +26,6 @@ pub struct ItemComponents {
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct ItemElement {
     components: ItemComponents,
-}
-
-lazy_static! {
-    pub static ref ITEMS: HashMap<String, ItemElement> =
-        serde_json::from_str(ITEMS_JSON).expect("Could not parse items.json registry.");
 }
 
 #[allow(dead_code)]

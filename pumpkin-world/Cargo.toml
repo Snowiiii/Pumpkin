@@ -4,7 +4,9 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-# fastanvil = "0.31"
+pumpkin-core = { path = "../pumpkin-core"}
+
+
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 fastsnbt = "0.2"
 tokio.workspace = true
@@ -15,7 +17,6 @@ thiserror = "1.0.63"
 futures = "0.3.30"
 flate2 = "1.0.33"
 serde.workspace = true
-lazy_static = "1.5.0"
 serde_json = "1.0"
 static_assertions = "1.1.0"
 log.workspace = true

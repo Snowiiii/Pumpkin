@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = [ "pumpkin-core", "pumpkin-entity", "pumpkin-inventory", "pumpkin-macros/", "pumpkin-plugin", "pumpkin-protocol/", "pumpkin-registry/", "pumpkin-world", "pumpkin/"]
+members = [ "pumpkin-config", "pumpkin-core", "pumpkin-entity", "pumpkin-inventory", "pumpkin-macros/", "pumpkin-plugin", "pumpkin-protocol/", "pumpkin-registry/", "pumpkin-world", "pumpkin/"]
 
 [workspace.package]
 version = "0.1.0"

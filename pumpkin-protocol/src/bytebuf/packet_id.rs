@@ -1,3 +1,4 @@
+use bytes::BufMut;
 use serde::{
     de::{self, DeserializeOwned, SeqAccess, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
@@ -22,19 +23,16 @@ impl Serialize for VarInt {
     where
         S: Serializer,
     {
-        let mut val = self.0;
-        let mut buf: Vec<u8> = Vec::new();
-        for _ in 0..5 {
-            let mut b: u8 = val as u8 & 0b01111111;
-            val >>= 7;
-            if val != 0 {
-                b |= 0b10000000;
-            }
-            buf.push(b);
-            if val == 0 {
-                break;
-            }
+        let mut value = self.0 as u32;
+        let mut buf = Vec::new();
+
+        while value > 0x7F {
+            buf.put_u8(value as u8 | 0x80);
+            value >>= 7;
         }
+
+        buf.put_u8(value as u8);
+
         serializer.serialize_bytes(&buf)
     }
 }

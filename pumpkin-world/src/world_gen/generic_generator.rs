@@ -1,7 +1,8 @@
+use pumpkin_core::math::vector2::Vector2;
+
 use crate::{
     chunk::{ChunkBlocks, ChunkData},
     coordinates::{ChunkRelativeBlockCoordinates, ChunkRelativeXZBlockCoordinates},
-    vector2::Vector2,
     WORLD_LOWEST_Y, WORLD_MAX_Y,
 };
 

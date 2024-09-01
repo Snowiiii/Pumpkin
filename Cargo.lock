@@ -1906,6 +1906,7 @@ dependencies = [
  "num-bigint",
  "num-derive",
  "num-traits",
+ "pumpkin-config",
  "pumpkin-core",
  "pumpkin-entity",
  "pumpkin-inventory",
@@ -1930,12 +1931,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "pumpkin-config"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "pumpkin-core",
+ "serde",
+ "toml 0.8.19",
+]
+
+[[package]]
 name = "pumpkin-core"
 version = "0.1.0"
 dependencies = [
  "colored",
  "fastnbt",
  "md5",
+ "num-derive",
+ "num-traits",
  "serde",
  "uuid",
 ]
@@ -1946,6 +1959,7 @@ version = "0.1.0"
 dependencies = [
  "num-derive",
  "num-traits",
+ "pumpkin-core",
 ]
 
 [[package]]
@@ -2019,10 +2033,10 @@ dependencies = [
  "flate2",
  "futures",
  "itertools 0.13.0",
- "lazy_static",
  "log",
  "num-derive",
  "num-traits",
+ "pumpkin-core",
  "rayon",
  "serde",
  "serde_json",

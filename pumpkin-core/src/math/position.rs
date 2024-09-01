@@ -1,6 +1,8 @@
-use pumpkin_world::vector3::Vector3;
 use serde::{Deserialize, Serialize};
 
+use super::vector3::Vector3;
+
+/// Aka Block Position
 pub struct WorldPosition(pub Vector3<i32>);
 
 impl Serialize for WorldPosition {

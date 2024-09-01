@@ -4,22 +4,25 @@ use std::{
     sync::{Arc, Mutex, MutexGuard},
 };
 
+pub mod player_chunker;
+
 use mio::Token;
 use num_traits::ToPrimitive;
+use pumpkin_config::BasicConfiguration;
+use pumpkin_core::math::vector2::Vector2;
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_protocol::{
     client::play::{
-        CCenterChunk, CChunkData, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate,
-        CRemoveEntities, CRemovePlayerInfo, CSetEntityMetadata, CSpawnEntity, Metadata,
-        PlayerAction,
+        CChunkData, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate, CRemoveEntities,
+        CRemovePlayerInfo, CSetEntityMetadata, CSpawnEntity, Metadata, PlayerAction,
     },
     uuid::UUID,
     ClientPacket, VarInt,
 };
-use pumpkin_world::{level::Level, radial_chunk_iterator::RadialIterator};
+use pumpkin_world::level::Level;
 use tokio::sync::mpsc;
 
-use crate::{config::BasicConfiguration, entity::player::Player};
+use crate::{client::Client, entity::player::Player};
 
 pub struct World {
     pub level: Arc<Mutex<Level>>,
@@ -89,7 +92,7 @@ impl World {
         // TODO: this is for debug purpose, remove later
         player
             .client
-            .send_packet(&CPlayerAbilities::new(0x02, 0.1, 0.1));
+            .send_packet(&CPlayerAbilities::new(0x02, 0.4, 0.1));
 
         // teleport
         let x = 10.0;
@@ -190,12 +193,12 @@ impl World {
                 existing_player.entity_id().into(),
                 UUID(gameprofile.id),
                 (EntityType::Player as i32).into(),
-                entity.x,
-                entity.y,
-                entity.z,
+                entity.pos.x,
+                entity.pos.y,
+                entity.pos.z,
                 entity.yaw,
                 entity.pitch,
-                entity.pitch,
+                entity.head_yaw,
                 0.into(),
                 0.0,
                 0.0,
@@ -213,26 +216,28 @@ impl World {
             self.broadcast_packet(&[&player.client.token], &packet)
         }
 
-        self.spawn_test_chunk(player, base_config.view_distance as u32)
-            .await;
+        // Spawn in inital chunks
+        player_chunker::player_join(self, player).await;
     }
 
-    async fn spawn_test_chunk(&self, player: &mut Player, distance: u32) {
+    async fn spawn_world_chunks(
+        &self,
+        client: &mut Client,
+        chunks: Vec<Vector2<i32>>,
+        distance: i32,
+    ) {
         let inst = std::time::Instant::now();
         let (sender, mut chunk_receiver) = mpsc::channel(distance as usize);
 
-        let chunks: Vec<_> = RadialIterator::new(distance).collect();
         let level = self.level.clone();
         tokio::spawn(async move {
             level.lock().unwrap().fetch_chunks(&chunks, sender);
         });
 
-        player.client.send_packet(&CCenterChunk {
-            chunk_x: 0.into(),
-            chunk_z: 0.into(),
-        });
-
         while let Some(chunk_data) = chunk_receiver.recv().await {
+            if client.closed {
+                return;
+            }
             // dbg!(chunk_pos);
             let chunk_data = match chunk_data {
                 Ok(d) => d,
@@ -251,10 +256,9 @@ impl World {
                     len / (1024 * 1024)
                 );
             }
-            player.client.send_packet(&CChunkData(&chunk_data));
+            client.send_packet(&CChunkData(&chunk_data));
         }
-        let t = inst.elapsed();
-        dbg!("DONE", t);
+        dbg!("DONE CHUNKS", inst.elapsed());
     }
 
     /// TODO: This definitly should be in world
@@ -282,12 +286,10 @@ impl World {
         // todo: put this into the entitiy struct
         let id = player.entity_id();
         let uuid = player.gameprofile.id;
-        dbg!("1");
         self.broadcast_packet(
             &[&player.client.token],
             &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]),
         );
-        dbg!("2");
         self.broadcast_packet(&[&player.client.token], &CRemoveEntities::new(&[id.into()]))
     }
 }
