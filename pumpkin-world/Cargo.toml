@@ -16,7 +16,7 @@ itertools = "0.13.0"
 thiserror = "1.0.63"
 futures = "0.3.30"
 flate2 = "1.0.33"
-serde = { version = "1.0", features = ["derive"] }
+serde.workspace = true
 serde_json = "1.0"
 static_assertions = "1.1.0"
 log.workspace = true
