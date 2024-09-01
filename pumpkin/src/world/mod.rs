@@ -230,12 +230,13 @@ impl World {
         let (sender, mut chunk_receiver) = mpsc::channel(distance as usize);
 
         let level = self.level.clone();
+        let closed = client.closed;
         tokio::spawn(async move {
-            level.lock().unwrap().fetch_chunks(&chunks, sender);
+            level.lock().unwrap().fetch_chunks(&chunks, sender, closed);
         });
 
         while let Some(chunk_data) = chunk_receiver.recv().await {
-            if client.closed {
+            if closed {
                 return;
             }
             // dbg!(chunk_pos);

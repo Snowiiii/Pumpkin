@@ -160,8 +160,10 @@ fn main() -> io::Result<()> {
                         let done = if let Some(player) = players.get_mut(&token) {
                             let mut player = player.lock().unwrap();
                             player.client.poll(event).await;
-                            let mut server = server.lock().await;
-                            player.process_packets(&mut server).await;
+                            if !player.client.closed {
+                                let mut server = server.lock().await;
+                                player.process_packets(&mut server).await;
+                            }
                             player.client.closed
                         } else {
                             false
@@ -179,8 +181,10 @@ fn main() -> io::Result<()> {
                         // Maybe received an event for a TCP connection.
                         let (done, make_player) = if let Some(client) = clients.get_mut(&token) {
                             client.poll(event).await;
-                            let mut server = server.lock().await;
-                            client.process_packets(&mut server).await;
+                            if !client.closed {
+                                let mut server = server.lock().await;
+                                client.process_packets(&mut server).await;
+                            }
                             (client.closed, client.make_player)
                         } else {
                             // Sporadic events happen, we can safely ignore them.

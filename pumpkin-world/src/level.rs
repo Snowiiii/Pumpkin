@@ -145,8 +145,12 @@ impl Level {
         &self,
         chunks: &[Vector2<i32>],
         channel: mpsc::Sender<Result<Arc<ChunkData>, WorldError>>,
+        is_alive: bool,
     ) {
         chunks.into_par_iter().for_each(|at| {
+            if is_alive {
+                return;
+            }
             let channel = channel.clone();
 
             // Check if chunks is already loaded
