@@ -26,7 +26,7 @@ use crate::{client::Client, entity::player::Player};
 
 pub struct World {
     pub level: Arc<Mutex<Level>>,
-    pub current_players: HashMap<Arc<Token>, Arc<Mutex<Player>>>,
+    pub current_players: HashMap<Token, Arc<Mutex<Player>>>,
     // entities, players...
 }
 
@@ -39,7 +39,7 @@ impl World {
     }
 
     /// Sends a Packet to all Players, Expect some players. Because we can't lock them twice
-    pub fn broadcast_packet<P>(&self, expect: &[&Arc<Token>], packet: &P)
+    pub fn broadcast_packet<P>(&self, expect: &[&Token], packet: &P)
     where
         P: ClientPacket,
     {
@@ -139,7 +139,7 @@ impl World {
         for (_, playerr) in self
             .current_players
             .iter()
-            .filter(|c| c.0 != &player.client.token)
+            .filter(|(c, _)| **c != player.client.token)
         {
             let playerr = playerr.as_ref().lock().unwrap();
             let gameprofile = &playerr.gameprofile;
@@ -184,7 +184,7 @@ impl World {
             ),
         );
         // spawn players for our client
-        let token = player.client.token.clone();
+        let token = player.client.token;
         for (_, existing_player) in self.current_players.iter().filter(|c| c.0 != &token) {
             let existing_player = existing_player.as_ref().lock().unwrap();
             let entity = &existing_player.entity;
@@ -277,7 +277,7 @@ impl World {
         None
     }
 
-    pub fn add_player(&mut self, token: Arc<Token>, player: Arc<Mutex<Player>>) {
+    pub fn add_player(&mut self, token: Token, player: Arc<Mutex<Player>>) {
         self.current_players.insert(token, player);
     }
 

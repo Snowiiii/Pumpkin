@@ -340,7 +340,7 @@ impl Player {
                         let world = world.lock().await;
                         let attacked_player = world.get_by_entityid(self, entity_id.0 as EntityId);
                         if let Some(mut player) = attacked_player {
-                            let token = player.client.token.clone();
+                            let token = player.client.token;
                             let velo = player.velocity;
                             if config.protect_creative && player.gamemode == GameMode::Creative {
                                 return;

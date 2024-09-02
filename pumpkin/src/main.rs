@@ -81,7 +81,7 @@ fn main() -> io::Result<()> {
         let rcon = ADVANCED_CONFIG.rcon.clone();
 
         let mut clients: HashMap<Token, Client> = HashMap::new();
-        let mut players: HashMap<Arc<Token>, Arc<Mutex<Player>>> = HashMap::new();
+        let mut players: HashMap<Token, Arc<Mutex<Player>>> = HashMap::new();
 
         let server = Arc::new(tokio::sync::Mutex::new(Server::new()));
         log::info!("Started Server took {}ms", time.elapsed().as_millis());
@@ -150,8 +150,7 @@ fn main() -> io::Result<()> {
                             token,
                             Interest::READABLE.add(Interest::WRITABLE),
                         )?;
-                        let rc_token = Arc::new(token);
-                        let client = Client::new(Arc::clone(&rc_token), connection, addr);
+                        let client = Client::new(token, connection, addr);
                         clients.insert(token, client);
                     },
 
@@ -195,10 +194,9 @@ fn main() -> io::Result<()> {
                                 if done {
                                     poll.registry().deregister(&mut client.connection)?;
                                 } else if make_player {
-                                    let token = client.token.clone();
+                                    let token = client.token;
                                     let mut server = server.lock().await;
-                                    let (player, world) =
-                                        server.add_player(token.clone(), client).await;
+                                    let (player, world) = server.add_player(token, client).await;
                                     players.insert(token, player.clone());
                                     let mut world = world.lock().await;
                                     world.spawn_player(&BASIC_CONFIG, player).await;
