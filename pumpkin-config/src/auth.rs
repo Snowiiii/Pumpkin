@@ -1,6 +1,5 @@
+use pumpkin_core::ProfileAction;
 use serde::{Deserialize, Serialize};
-
-use crate::client::authentication::ProfileAction;
 
 #[derive(Deserialize, Serialize)]
 pub struct AuthenticationConfig {

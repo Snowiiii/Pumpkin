@@ -1,4 +1,5 @@
 use num_traits::FromPrimitive;
+use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
     client::{
@@ -81,7 +82,7 @@ impl Client {
             properties: vec![],
             profile_actions: None,
         });
-        let proxy = &server.advanced_config.proxy;
+        let proxy = &ADVANCED_CONFIG.proxy;
         if proxy.enabled {
             if proxy.velocity.enabled {
                 velocity_login(self)
@@ -96,7 +97,7 @@ impl Client {
             "",
             public_key_der,
             &verify_token,
-            server.base_config.online_mode, // TODO
+            BASIC_CONFIG.online_mode, // TODO
         );
         self.send_packet(&packet);
     }
@@ -114,7 +115,7 @@ impl Client {
         self.enable_encryption(&shared_secret)
             .unwrap_or_else(|e| self.kick(&e.to_string()));
 
-        if server.base_config.online_mode {
+        if BASIC_CONFIG.online_mode {
             let hash = Sha1::new()
                 .chain_update(&shared_secret)
                 .chain_update(&server.public_key_der)
@@ -132,8 +133,7 @@ impl Client {
                 Ok(p) => {
                     // Check if player should join
                     if let Some(p) = &p.profile_actions {
-                        if !server
-                            .advanced_config
+                        if !ADVANCED_CONFIG
                             .authentication
                             .player_profile
                             .allow_banned_players
@@ -142,8 +142,7 @@ impl Client {
                                 self.kick("Your account can't join");
                             }
                         } else {
-                            for allowed in server
-                                .advanced_config
+                            for allowed in ADVANCED_CONFIG
                                 .authentication
                                 .player_profile
                                 .allowed_actions
@@ -162,16 +161,13 @@ impl Client {
         }
         for ele in self.gameprofile.as_ref().unwrap().properties.clone() {
             // todo, use this
-            unpack_textures(ele, &server.advanced_config.authentication.textures);
+            unpack_textures(ele, &ADVANCED_CONFIG.authentication.textures);
         }
 
         // enable compression
-        if server.advanced_config.packet_compression.enabled {
-            let threshold = server
-                .advanced_config
-                .packet_compression
-                .compression_threshold;
-            let level = server.advanced_config.packet_compression.compression_level;
+        if ADVANCED_CONFIG.packet_compression.enabled {
+            let threshold = ADVANCED_CONFIG.packet_compression.compression_threshold;
+            let level = ADVANCED_CONFIG.packet_compression.compression_level;
             self.send_packet(&CSetCompression::new(threshold.into()));
             self.set_compression(Some((threshold, level)));
         }
@@ -199,7 +195,7 @@ impl Client {
         self.connection_state = ConnectionState::Config;
         server.send_brand(self);
 
-        let resource_config = &server.advanced_config.resource_pack;
+        let resource_config = &ADVANCED_CONFIG.resource_pack;
         if resource_config.enabled {
             let prompt_message = if resource_config.prompt_message.is_empty() {
                 None

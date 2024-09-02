@@ -1,10 +1,9 @@
 use std::{
-    collections::HashMap,
     io::Cursor,
     path::Path,
     sync::{
         atomic::{AtomicI32, Ordering},
-        Arc, Mutex, MutexGuard,
+        Arc, Mutex,
     },
     time::Duration,
 };
@@ -12,33 +11,28 @@ use std::{
 use base64::{engine::general_purpose, Engine};
 use image::GenericImageView;
 use mio::Token;
-use num_traits::ToPrimitive;
-use pumpkin_entity::{entity_type::EntityType, EntityId};
+use pumpkin_config::{BasicConfiguration, BASIC_CONFIG};
+use pumpkin_core::GameMode;
+use pumpkin_entity::EntityId;
 use pumpkin_plugin::PluginLoader;
 use pumpkin_protocol::{
-    client::{
-        config::CPluginMessage,
-        play::{
-            CCenterChunk, CChunkData, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate,
-            CRemoveEntities, CRemovePlayerInfo, CSetEntityMetadata, CSpawnEntity, Metadata,
-            PlayerAction,
-        },
-    },
-    uuid::UUID,
-    ClientPacket, Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
+    client::config::CPluginMessage, ClientPacket, Players, Sample, StatusResponse, VarInt, Version,
+    CURRENT_MC_PROTOCOL,
 };
-use pumpkin_world::{dimension::Dimension, radial_chunk_iterator::RadialIterator, World};
+use pumpkin_world::dimension::Dimension;
 
 use crate::{
     client::Client,
     config::{AdvancedConfiguration, BasicConfiguration},
     entity::player::{GameMode, Player},
+    world::World,
 };
 use pumpkin_inventory::{Container, OpenContainer};
 use pumpkin_registry::Registry;
 use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
+
 
 pub const CURRENT_MC_VERSION: &str = "1.21.1";
 
@@ -49,7 +43,7 @@ pub struct Server {
 
     pub plugin_loader: PluginLoader,
 
-    pub world: Arc<tokio::sync::Mutex<World>>,
+    pub worlds: Vec<Arc<tokio::sync::Mutex<World>>>,
     pub status_response: StatusResponse,
     // We cache the json response here so we don't parse it every time someone makes a Status request.
     // Keep in mind that we must parse this again, when the StatusResponse changes which usally happen when a player joins or leaves
@@ -61,21 +55,18 @@ pub struct Server {
     /// Cache the registry so we don't have to parse it every time a player joins
     pub cached_registry: Vec<Registry>,
 
-    // TODO: place this into every world
     pub current_players: HashMap<Arc<Token>, Arc<Mutex<Player>>>,
     pub open_containers: HashMap<u64, OpenContainer>,
-
     entity_id: AtomicI32,
-    pub base_config: BasicConfiguration,
-    pub advanced_config: AdvancedConfiguration,
 
     /// Used for Authentication, None is Online mode is disabled
     pub auth_client: Option<reqwest::Client>,
 }
 
 impl Server {
-    pub fn new(config: (BasicConfiguration, AdvancedConfiguration)) -> Self {
-        let status_response = Self::build_response(&config.0);
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        let status_response = Self::build_response(&BASIC_CONFIG);
         let status_response_json = serde_json::to_string(&status_response)
             .expect("Failed to parse Status response into JSON");
         let cached_server_brand = Self::build_brand();
@@ -89,7 +80,7 @@ impl Server {
             &private_key.e().to_bytes_be(),
         )
         .into_boxed_slice();
-        let auth_client = if config.0.online_mode {
+        let auth_client = if BASIC_CONFIG.online_mode {
             Some(
                 reqwest::Client::builder()
                     .timeout(Duration::from_millis(5000))
@@ -113,56 +104,35 @@ impl Server {
             cached_registry: Registry::get_static(),
             // 0 is invalid
             entity_id: 2.into(),
-            world: Arc::new(tokio::sync::Mutex::new(world)),
+            worlds: vec![Arc::new(tokio::sync::Mutex::new(world))],
             public_key,
             cached_server_brand,
             private_key,
             status_response,
             status_response_json,
             public_key_der,
-            current_players: HashMap::new(),
             open_containers: HashMap::new(),
             base_config: config.0,
             auth_client,
-            advanced_config: config.1,
         }
     }
 
-    pub fn add_player(&mut self, token: Arc<Token>, client: Client) -> Arc<Mutex<Player>> {
+    pub async fn add_player(
+        &mut self,
+        token: Arc<Token>,
+        client: Client,
+    ) -> (Arc<Mutex<Player>>, Arc<tokio::sync::Mutex<World>>) {
         let entity_id = self.new_entity_id();
-        let gamemode = match self.base_config.default_gamemode {
+        let gamemode = match BASIC_CONFIG.default_gamemode {
             GameMode::Undefined => GameMode::Survival,
             game_mode => game_mode,
         };
-        let player = Arc::new(Mutex::new(Player::new(client, entity_id, gamemode)));
-        self.current_players.insert(token, player.clone());
-        player
-    }
-
-    pub fn remove_player(&mut self, token: &Token) {
-        let player = self.current_players.remove(token).unwrap();
-        let player = player.as_ref().lock().unwrap();
-        // despawn the player
-        // todo: put this into the entitiy struct
-        let id = player.entity_id();
-        let uuid = player.gameprofile.id;
-        self.broadcast_packet_except(
-            &[&player.client.token],
-            &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]),
-        );
-        self.broadcast_packet_except(&[&player.client.token], &CRemoveEntities::new(&[id.into()]))
-    }
-
-    // here is where the magic happens
-    // TODO: do this in a world
-    pub async fn spawn_player(&mut self, player: &mut Player) {
-        // This code follows the vanilla packet order
-        let entity_id = player.entity_id();
-        let gamemode = player.gamemode;
-        log::debug!("spawning player, entity id {}", entity_id);
-
-        // login packet for our new player
-        player.client.send_packet(&CLogin::new(
+        // Basicly the default world
+        // TODO: select default from config
+        let world = self.worlds[0].clone();
+        let player = Arc::new(Mutex::new(Player::new(
+            client,
+            world.clone(),
             entity_id,
             self.base_config.hardcore,
             &["minecraft:overworld"],
@@ -340,63 +310,20 @@ impl Server {
             let mut player = player.lock().unwrap();
             player.client.send_packet(packet);
         }
+            gamemode,
+        )));
+        world.lock().await.add_player(token, player.clone());
+        (player, world)
     }
 
-    /// Sends a packet to all players except those specified in `from`
-    pub fn broadcast_packet_except<P>(&self, from: &[&Token], packet: &P)
+    /// Sends a Packet to all Players in all worlds
+    pub fn broadcast_packet_all<P>(&self, expect: &[&Arc<Token>], packet: &P)
     where
         P: ClientPacket,
     {
-        for (_, player) in self
-            .current_players
-            .iter()
-            .filter(|c| !from.contains(&c.0.as_ref()))
-        {
-            let mut player = player.lock().unwrap();
-            player.client.send_packet(packet);
+        for world in &self.worlds {
+            world.blocking_lock().broadcast_packet(expect, packet)
         }
-    }
-
-    // TODO: do this in a world
-    async fn spawn_test_chunk(&self, player: &mut Player, distance: u32) {
-        let inst = std::time::Instant::now();
-        let (sender, mut chunk_receiver) = mpsc::channel(distance as usize);
-        let world = self.world.clone();
-
-        let chunks: Vec<_> = RadialIterator::new(distance).collect();
-        tokio::spawn(async move {
-            world.lock().await.level.fetch_chunks(&chunks, sender).await;
-        });
-
-        player.client.send_packet(&CCenterChunk {
-            chunk_x: 0.into(),
-            chunk_z: 0.into(),
-        });
-
-        while let Some(chunk_data) = chunk_receiver.recv().await {
-            // dbg!(chunk_pos);
-            let chunk_data = match chunk_data {
-                Ok(d) => d,
-                Err(_) => continue,
-            };
-            #[cfg(debug_assertions)]
-            if chunk_data.position == (pumpkin_world::coordinates::ChunkCoordinates { x: 0, z: 0 })
-            {
-                use pumpkin_protocol::bytebuf::ByteBuffer;
-                let mut test = ByteBuffer::empty();
-                CChunkData(&chunk_data).write(&mut test);
-                let len = test.buf().len();
-                log::debug!(
-                    "Chunk packet size: {}B {}KB {}MB",
-                    len,
-                    len / 1024,
-                    len / (1024 * 1024)
-                );
-            }
-            player.client.send_packet(&CChunkData(&chunk_data));
-        }
-        let t = inst.elapsed();
-        dbg!("DONE", t);
     }
 
     // move to world
@@ -469,12 +396,4 @@ impl Server {
         let pub_key = RsaPublicKey::from(&priv_key);
         (pub_key, priv_key)
     }
-}
-
-#[derive(PartialEq, Serialize, Deserialize)]
-pub enum Difficulty {
-    Peaceful,
-    Easy,
-    Normal,
-    Hard,
 }

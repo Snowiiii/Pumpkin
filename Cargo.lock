@@ -1497,6 +1497,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "md5"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "490cc448043f947bae3cbee9c203358d62dbee0db12107a74be5c30ccfd09771"
+
+[[package]]
 name = "memchr"
 version = "2.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1900,6 +1906,7 @@ dependencies = [
  "num-bigint",
  "num-derive",
  "num-traits",
+ "pumpkin-config",
  "pumpkin-core",
  "pumpkin-entity",
  "pumpkin-inventory",
@@ -1924,11 +1931,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "pumpkin-config"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "pumpkin-core",
+ "serde",
+ "toml 0.8.19",
+]
+
+[[package]]
 name = "pumpkin-core"
 version = "0.1.0"
 dependencies = [
  "colored",
  "fastnbt",
+ "md5",
+ "num-derive",
+ "num-traits",
  "serde",
  "uuid",
 ]
@@ -1939,6 +1959,7 @@ version = "0.1.0"
 dependencies = [
  "num-derive",
  "num-traits",
+ "pumpkin-core",
 ]
 
 [[package]]
@@ -1965,6 +1986,7 @@ version = "0.1.0"
 dependencies = [
  "extism",
  "log",
+ "serde",
 ]
 
 [[package]]
@@ -2011,10 +2033,10 @@ dependencies = [
  "flate2",
  "futures",
  "itertools 0.13.0",
- "lazy_static",
  "log",
  "num-derive",
  "num-traits",
+ "pumpkin-core",
  "rayon",
  "serde",
  "serde_json",
@@ -2397,9 +2419,9 @@ checksum = "61697e0a1c7e512e84a621326239844a24d8207b4669b41bc18b32ea5cbf988b"
 
 [[package]]
 name = "serde"
-version = "1.0.205"
+version = "1.0.209"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e33aedb1a7135da52b7c21791455563facbbcc43d0f0f66165b42c21b3dfb150"
+checksum = "99fce0ffe7310761ca6bf9faf5115afbc19688edd00171d81b1bb1b116c63e09"
 dependencies = [
  "serde_derive",
 ]
@@ -2415,9 +2437,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.205"
+version = "1.0.209"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "692d6f5ac90220161d6774db30c662202721e64aed9058d2c394f451261420c1"
+checksum = "a5831b979fd7b5439637af1752d535ff49f4860c0f341d1baeb6faf0f4242170"
 dependencies = [
  "proc-macro2",
  "quote",

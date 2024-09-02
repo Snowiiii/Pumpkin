@@ -1,7 +1,6 @@
+use pumpkin_core::math::position::WorldPosition;
 use pumpkin_macros::packet;
 use serde::Serialize;
-
-use crate::position::WorldPosition;
 
 #[derive(Serialize)]
 #[packet(0x28)]

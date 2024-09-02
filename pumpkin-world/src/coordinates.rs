@@ -2,6 +2,7 @@ use std::ops::Deref;
 
 use derive_more::derive::{AsMut, AsRef, Display, Into};
 use num_traits::{PrimInt, Signed, Unsigned};
+use pumpkin_core::math::vector2::Vector2;
 use serde::{Deserialize, Serialize};
 
 use crate::{WORLD_LOWEST_Y, WORLD_MAX_Y};
@@ -98,7 +99,7 @@ pub struct ChunkRelativeBlockCoordinates {
 }
 
 impl ChunkRelativeBlockCoordinates {
-    pub fn with_chunk_coordinates(self, chunk_coordinates: ChunkCoordinates) -> BlockCoordinates {
+    pub fn with_chunk_coordinates(self, chunk_coordinates: Vector2<i32>) -> BlockCoordinates {
         BlockCoordinates {
             x: *self.x as i32 + chunk_coordinates.x * 16,
             y: self.y,
@@ -114,10 +115,7 @@ pub struct ChunkRelativeXZBlockCoordinates {
 }
 
 impl ChunkRelativeXZBlockCoordinates {
-    pub fn with_chunk_coordinates(
-        &self,
-        chunk_coordinates: ChunkCoordinates,
-    ) -> XZBlockCoordinates {
+    pub fn with_chunk_coordinates(&self, chunk_coordinates: Vector2<i32>) -> XZBlockCoordinates {
         XZBlockCoordinates {
             x: *self.x as i32 + chunk_coordinates.x * 16,
             z: *self.z as i32 + chunk_coordinates.z * 16,
@@ -131,10 +129,4 @@ impl ChunkRelativeXZBlockCoordinates {
             z: self.z,
         }
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ChunkCoordinates {
-    pub x: i32,
-    pub z: i32,
 }

@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use lazy_static::lazy_static;
+use std::{collections::HashMap, sync::LazyLock};
 
 pub const ITEM_REGISTRY: &str = "minecraft:item";
 
@@ -12,10 +10,9 @@ pub struct RegistryElement {
     pub entries: HashMap<String, HashMap<String, u32>>,
 }
 
-lazy_static! {
-    pub static ref REGISTRY: HashMap<String, RegistryElement> =
-        serde_json::from_str(REGISTRY_JSON).expect("Could not parse registry.json registry.");
-}
+pub static REGISTRY: LazyLock<HashMap<String, RegistryElement>> = LazyLock::new(|| {
+    serde_json::from_str(REGISTRY_JSON).expect("Could not parse registry.json registry.")
+});
 
 pub fn get_protocol_id(category: &str, entry: &str) -> u32 {
     *REGISTRY

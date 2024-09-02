@@ -1,10 +1,10 @@
-use crate::vector3::Vector3;
 use num_derive::FromPrimitive;
 
 pub mod block_id;
 mod block_registry;
 
 pub use block_id::BlockId;
+use pumpkin_core::math::vector3::Vector3;
 
 #[derive(FromPrimitive)]
 pub enum BlockFace {
