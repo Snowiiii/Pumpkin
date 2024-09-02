@@ -23,5 +23,5 @@ features:
   - title: Feature complete
     details: With all vanilla features supported, you will have no issues.
   - title: Extensible
-    details: Using <a>Extism</a> you can extend Pumpkin to your needs. Play your way!
+    details: Using Extism you can extend Pumpkin to your needs. Play your way!
 ---
