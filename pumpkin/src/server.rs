@@ -1,13 +1,3 @@
-use std::{
-    io::Cursor,
-    path::Path,
-    sync::{
-        atomic::{AtomicI32, Ordering},
-        Arc, Mutex,
-    },
-    time::Duration,
-};
-
 use base64::{engine::general_purpose, Engine};
 use image::GenericImageView;
 use mio::Token;
@@ -20,19 +10,21 @@ use pumpkin_protocol::{
     CURRENT_MC_PROTOCOL,
 };
 use pumpkin_world::dimension::Dimension;
-
-use crate::{
-    client::Client,
-    config::{AdvancedConfiguration, BasicConfiguration},
-    entity::player::{GameMode, Player},
-    world::World,
+use std::collections::HashMap;
+use std::{
+    io::Cursor,
+    path::Path,
+    sync::{
+        atomic::{AtomicI32, Ordering},
+        Arc, Mutex, MutexGuard,
+    },
+    time::Duration,
 };
+
+use crate::{client::Client, entity::player::Player, world::World};
 use pumpkin_inventory::{Container, OpenContainer};
 use pumpkin_registry::Registry;
 use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
-use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
-
 
 pub const CURRENT_MC_VERSION: &str = "1.21.1";
 
@@ -55,7 +47,6 @@ pub struct Server {
     /// Cache the registry so we don't have to parse it every time a player joins
     pub cached_registry: Vec<Registry>,
 
-    pub current_players: HashMap<Arc<Token>, Arc<Mutex<Player>>>,
     pub open_containers: HashMap<u64, OpenContainer>,
     entity_id: AtomicI32,
 
@@ -102,6 +93,7 @@ impl Server {
         Self {
             plugin_loader,
             cached_registry: Registry::get_static(),
+            open_containers: HashMap::new(),
             // 0 is invalid
             entity_id: 2.into(),
             worlds: vec![Arc::new(tokio::sync::Mutex::new(world))],
@@ -111,8 +103,6 @@ impl Server {
             status_response,
             status_response_json,
             public_key_der,
-            open_containers: HashMap::new(),
-            base_config: config.0,
             auth_client,
         }
     }
@@ -134,186 +124,18 @@ impl Server {
             client,
             world.clone(),
             entity_id,
-            self.base_config.hardcore,
-            &["minecraft:overworld"],
-            self.base_config.max_players.into(),
-            self.base_config.view_distance.into(), //  TODO: view distance
-            self.base_config.simulation_distance.into(), // TODO: sim view dinstance
-            false,
-            false,
-            false,
-            0.into(),
-            "minecraft:overworld",
-            0, // seed
-            gamemode.to_u8().unwrap(),
-            self.base_config.default_gamemode.to_i8().unwrap(),
-            false,
-            false,
-            None,
-            0.into(),
-            false,
-        ));
-        dbg!("sending abilities");
-        // player abilities
-        player
-            .client
-            .send_packet(&CPlayerAbilities::new(0x02, 0.1, 0.1));
-
-        // teleport
-        let x = 10.0;
-        let y = 120.0;
-        let z = 10.0;
-        let yaw = 10.0;
-        let pitch = 10.0;
-        player.teleport(x, y, z, 10.0, 10.0);
-        let gameprofile = &player.gameprofile;
-        // first send info update to our new player, So he can see his Skin
-        // also send his info to everyone else
-        self.broadcast_packet(
-            player,
-            &CPlayerInfoUpdate::new(
-                0x01 | 0x08,
-                &[pumpkin_protocol::client::play::Player {
-                    uuid: gameprofile.id,
-                    actions: vec![
-                        PlayerAction::AddPlayer {
-                            name: gameprofile.name.clone(),
-                            properties: gameprofile.properties.clone(),
-                        },
-                        PlayerAction::UpdateListed(true),
-                    ],
-                }],
-            ),
-        );
-
-        // here we send all the infos of already joined players
-        let mut entries = Vec::new();
-        for (_, playerr) in self
-            .current_players
-            .iter()
-            .filter(|c| c.0 != &player.client.token)
-        {
-            let playerr = playerr.as_ref().lock().unwrap();
-            let gameprofile = &playerr.gameprofile;
-            entries.push(pumpkin_protocol::client::play::Player {
-                uuid: gameprofile.id,
-                actions: vec![
-                    PlayerAction::AddPlayer {
-                        name: gameprofile.name.clone(),
-                        properties: gameprofile.properties.clone(),
-                    },
-                    PlayerAction::UpdateListed(true),
-                ],
-            })
-        }
-        player
-            .client
-            .send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries));
-
-        // Start waiting for level chunks
-        player.client.send_packet(&CGameEvent::new(13, 0.0));
-
-        let gameprofile = &player.gameprofile;
-
-        // spawn player for every client
-        self.broadcast_packet_except(
-            &[&player.client.token],
-            // TODO: add velo
-            &CSpawnEntity::new(
-                entity_id.into(),
-                UUID(gameprofile.id),
-                (EntityType::Player as i32).into(),
-                x,
-                y,
-                z,
-                pitch,
-                yaw,
-                yaw,
-                0.into(),
-                0.0,
-                0.0,
-                0.0,
-            ),
-        );
-        // spawn players for our client
-        let token = player.client.token.clone();
-        for (_, existing_player) in self.current_players.iter().filter(|c| c.0 != &token) {
-            let existing_player = existing_player.as_ref().lock().unwrap();
-            let entity = &existing_player.entity;
-            let gameprofile = &existing_player.gameprofile;
-            player.client.send_packet(&CSpawnEntity::new(
-                existing_player.entity_id().into(),
-                UUID(gameprofile.id),
-                EntityType::Player.to_i32().unwrap().into(),
-                entity.x,
-                entity.y,
-                entity.z,
-                entity.yaw,
-                entity.pitch,
-                entity.pitch,
-                0.into(),
-                0.0,
-                0.0,
-                0.0,
-            ))
-        }
-        // entity meta data
-        if let Some(config) = player.client.config.as_ref() {
-            self.broadcast_packet(
-                player,
-                &CSetEntityMetadata::new(
-                    entity_id.into(),
-                    Metadata::new(17, VarInt(0), config.skin_parts),
-                ),
-            )
-        }
-
-        self.spawn_test_chunk(player, self.base_config.view_distance as u32)
-            .await;
-    }
-
-    /// TODO: This definitly should be in world
-    pub fn get_by_entityid(&self, from: &Player, id: EntityId) -> Option<MutexGuard<Player>> {
-        for (_, player) in self
-            .current_players
-            .iter()
-            .filter(|c| c.0 != &from.client.token)
-        {
-            let player = player.lock().unwrap();
-            if player.entity_id() == id {
-                return Some(player);
-            }
-        }
-        None
+            gamemode,
+        )));
+        world.lock().await.add_player(token, player.clone());
+        (player, world)
     }
 
     pub fn try_get_container(
         &self,
         player_id: EntityId,
         container_id: u64,
-    ) -> Option<MutexGuard<Box<dyn Container>>> {
+    ) -> Option<MutexGuard<'_, Box<dyn Container>>> {
         self.open_containers.get(&container_id)?.try_open(player_id)
-    }
-
-    /// Sends a Packet to all Players
-    pub fn broadcast_packet<P>(&self, from: &mut Player, packet: &P)
-    where
-        P: ClientPacket,
-    {
-        // we can't borrow twice at same time
-        from.client.send_packet(packet);
-        for (_, player) in self
-            .current_players
-            .iter()
-            .filter(|c| c.0 != &from.client.token)
-        {
-            let mut player = player.lock().unwrap();
-            player.client.send_packet(packet);
-        }
-            gamemode,
-        )));
-        world.lock().await.add_player(token, player.clone());
-        (player, world)
     }
 
     /// Sends a Packet to all Players in all worlds

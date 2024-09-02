@@ -1,4 +1,3 @@
-use crate::WindowType;
 use pumpkin_world::item::ItemStack;
 
 pub struct ClickMode {
@@ -8,8 +7,6 @@ pub struct ClickMode {
 
 pub struct Click {
     pub mode: ClickMode,
-    pub state_id: u32,
-    pub window_type: WindowType,
     pub changed_items: Vec<ItemChange>,
     pub carried_item: Option<ItemStack>,
 }
@@ -25,7 +22,7 @@ impl ClickMode {
                 click_type: ClickType::CreativePickItem,
                 slot: Slot::Normal(slot.try_into().unwrap()),
             },
-            4 => Self::new_drop_item(button, slot),
+            4 => Self::new_drop_item(button),
             5 => Self::new_drag_item(button, slot),
             6 => Self {
                 click_type: ClickType::DoubleClick,
@@ -78,7 +75,7 @@ impl ClickMode {
         }
     }
 
-    fn new_drop_item(button: i8, slot: i16) -> Self {
+    fn new_drop_item(button: i8) -> Self {
         let drop_type = match button {
             0 => DropType::SingleItem,
             1 => DropType::FullStack,
@@ -87,7 +84,7 @@ impl ClickMode {
         };
         Self {
             click_type: ClickType::DropType(drop_type),
-            slot: Slot::Normal(slot.try_into().unwrap()),
+            slot: Slot::OutsideInventory,
         }
     }
 
@@ -108,7 +105,6 @@ impl ClickMode {
                 MouseDragState::End,
                 Slot::OutsideInventory,
             ),
-
             4 => (
                 MouseDragType::Right,
                 MouseDragState::Start,

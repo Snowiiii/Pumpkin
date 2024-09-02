@@ -14,6 +14,7 @@ pub struct PlayerInventory {
     // current selected slot in hotbar
     selected: usize,
     state_id: i32,
+    pub total_opened_containers: u8,
 }
 
 impl Default for PlayerInventory {
@@ -33,6 +34,7 @@ impl PlayerInventory {
             // TODO: What when player spawns in with an different index ?
             selected: 0,
             state_id: 0,
+            total_opened_containers: 2,
         }
     }
 
@@ -155,8 +157,23 @@ impl Container for PlayerInventory {
         self.slots()
     }
 
-    fn state_id(&mut self) -> i32 {
+    fn all_combinable_slots(&self) -> Vec<Option<&ItemStack>> {
+        self.items.iter().map(|item| item.as_ref()).collect()
+    }
+
+    fn all_combinable_slots_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
+        self.items.iter_mut().collect()
+    }
+
+    fn advance_state_id(&mut self) -> i32 {
         self.state_id += 1;
-        self.state_id - 1
+        self.state_id
+    }
+
+    fn reset_state_id(&mut self) {
+        self.state_id = 0;
+    }
+    fn state_id(&self) -> i32 {
+        self.state_id
     }
 }

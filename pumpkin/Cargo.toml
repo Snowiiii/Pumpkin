@@ -64,3 +64,4 @@ crossbeam-channel = "0.5.13"
 uuid.workspace = true
 tokio.workspace = true
 rayon.workspace = true
+itertools = "0.13.0"

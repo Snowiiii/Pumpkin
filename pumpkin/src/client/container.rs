@@ -1,8 +1,8 @@
-use num_traits::FromPrimitive;
+use itertools::Itertools;
 use pumpkin_core::text::TextComponent;
 use pumpkin_inventory::container_click::{KeyClick, MouseClick};
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
-use pumpkin_inventory::{container_click, handle_item_change, OptionallyCombinedContainer};
+use pumpkin_inventory::{container_click, OptionallyCombinedContainer};
 use pumpkin_inventory::{Container, WindowType};
 use pumpkin_protocol::client::play::{
     CCloseContainer, COpenScreen, CSetContainerContent, CSetContainerProperty, CSetContainerSlot,
@@ -10,6 +10,7 @@ use pumpkin_protocol::client::play::{
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
+use std::sync::MutexGuard;
 
 use crate::entity::player::Player;
 use crate::server::Server;
@@ -17,12 +18,12 @@ use crate::server::Server;
 impl Player {
     pub fn open_container(
         &mut self,
-        container: &Box<dyn Container>,
+        server: &mut Server,
         minecraft_menu_id: &str,
         window_title: Option<&str>,
-        carried_item: Option<&ItemStack>,
-        state_id: i32,
     ) {
+        let mut container = self.get_open_container(server);
+        let container = container.as_deref_mut();
         let menu_protocol_id = (*pumpkin_world::global_registry::REGISTRY
             .get("minecraft:menu")
             .unwrap()
@@ -32,56 +33,48 @@ impl Player {
             .get("protocol_id")
             .unwrap())
         .into();
-        let window_type = container.window_type();
+        let window_type = match &container {
+            Some(container) => container.window_type(),
+            None => &WindowType::Generic9x1,
+        }
+        .to_owned();
         let title = TextComponent::text(window_title.unwrap_or(window_type.default_title()));
+
+        self.inventory.reset_state_id();
+
         self.client.send_packet(&COpenScreen::new(
-            (*window_type as u8 + 1).into(),
+            self.inventory.total_opened_containers.into(),
             menu_protocol_id,
             title,
         ));
-
-        self.set_container_content(Some(container), carried_item, state_id);
+        self.set_container_content(container);
     }
 
-    pub fn set_container_content<'a>(
-        &mut self,
-        container: Option<&Box<dyn Container>>,
-        carried_item: Option<&'a ItemStack>,
-        state_id: i32,
-    ) {
-        let slots: Vec<Slot> = {
-            let items = container.map(|container| container.all_slots_ref());
-            if let Some(mut items) = items {
-                items.extend(self.inventory.all_slots_ref());
-                items
-            } else {
-                self.inventory.all_slots_ref()
-            }
+    pub fn set_container_content(&mut self, container: Option<&mut Box<dyn Container>>) {
+        let total_opened_containers = self.inventory.total_opened_containers;
+        let container = OptionallyCombinedContainer::new(&mut self.inventory, container);
+
+        let slots = container
+            .all_slots_ref()
             .into_iter()
-            .map(|item| {
-                if let Some(item) = item {
-                    Slot::from(item)
-                } else {
-                    Slot::empty()
-                }
-            })
-            .collect()
-        };
+            .map(Slot::from)
+            .collect_vec();
 
         let carried_item = {
-            if let Some(item) = carried_item {
+            if let Some(item) = self.carried_item.as_ref() {
                 item.into()
             } else {
                 Slot::empty()
             }
         };
 
-        let window_type = match container {
-            Some(container) => *container.window_type() as u8,
-            None => 0,
-        };
-
-        let packet = CSetContainerContent::new(window_type, state_id.into(), &slots, &carried_item);
+        let packet = CSetContainerContent::new(
+            total_opened_containers,
+            self.inventory.state_id().into(),
+            &slots,
+            &carried_item,
+        );
+        self.inventory.advance_state_id();
         self.client.send_packet(&packet);
     }
 
@@ -101,32 +94,54 @@ impl Player {
     }
 
     /// The official Minecraft client is weird, and will always just close *any* window that is opened when this gets sent
-    pub fn close_container(&mut self, window_type: WindowType) {
-        self.client
-            .send_packet(&CCloseContainer::new(window_type as u8))
+    pub fn close_container(&mut self) {
+        self.inventory.total_opened_containers += 1;
+        self.client.send_packet(&CCloseContainer::new(
+            self.inventory.total_opened_containers,
+        ))
     }
 
     pub fn set_container_property<T: WindowPropertyTrait>(
         &mut self,
-        window_type: WindowType,
         window_property: WindowProperty<T>,
     ) {
         let (id, value) = window_property.into_tuple();
-        self.client
-            .send_packet(&CSetContainerProperty::new(window_type as u8, id, value));
+        self.client.send_packet(&CSetContainerProperty::new(
+            self.inventory.total_opened_containers,
+            id,
+            value,
+        ));
     }
 
     pub fn handle_click_container(&mut self, server: &mut Server, packet: SClickContainer) {
         use container_click::*;
-        let mut opened_container = if let Some(id) = self.open_container {
-            server.try_get_container(self.entity_id(), id)
-        } else {
-            None
-        };
+        let mut opened_container = self.get_open_container(server);
         let opened_container = opened_container.as_deref_mut();
 
+        let current_state_id = if let Some(container) = opened_container.as_ref() {
+            container.state_id()
+        } else {
+            self.inventory.state_id()
+        };
+        if current_state_id != packet.state_id.0 {
+            dbg!(current_state_id, packet.state_id.0);
+            //self.set_container_content(opened_container.as_deref_mut());
+            //return;
+        }
+
+        if opened_container.is_some() {
+            if packet.window_id != self.inventory.total_opened_containers {
+                dbg!(
+                    self.inventory.total_opened_containers,
+                    opened_container.unwrap().window_type()
+                );
+                return;
+            }
+        } else if packet.window_id != 0 {
+            dbg!("weird");
+            return;
+        }
         let click = Click {
-            state_id: packet.state_id.0.try_into().unwrap(),
             changed_items: packet
                 .array_of_changed_slots
                 .into_iter()
@@ -139,12 +154,6 @@ impl Player {
                     }
                 })
                 .collect::<Vec<_>>(),
-            window_type: WindowType::from_u8(if packet.window_id == 0 {
-                0
-            } else {
-                packet.window_id - 1
-            })
-            .unwrap(),
             carried_item: packet.carried_item.to_item(),
             mode: ClickMode::new(
                 packet
@@ -157,18 +166,13 @@ impl Player {
             ),
         };
         match click.mode.click_type {
-            ClickType::MouseClick(mouse_click) => self.mouse_click(
-                opened_container,
-                mouse_click,
-                click.window_type,
-                click.mode.slot,
-            ),
-            ClickType::ShiftClick => {
-                self.shift_mouse_click(opened_container, click.window_type, click.mode.slot)
+            ClickType::MouseClick(mouse_click) => {
+                self.mouse_click(opened_container, mouse_click, click.mode.slot)
             }
+            ClickType::ShiftClick => self.shift_mouse_click(opened_container, click.mode.slot),
             ClickType::KeyClick(key_click) => match click.mode.slot {
                 container_click::Slot::Normal(slot) => {
-                    self.number_button_pressed(opened_container, click.window_type, key_click, slot)
+                    self.number_button_pressed(opened_container, key_click, slot)
                 }
                 container_click::Slot::OutsideInventory => {
                     unimplemented!("This is not a valid state")
@@ -189,20 +193,16 @@ impl Player {
                 drag_type: _,
             } => (),
             ClickType::DropType(_drop_type) => (),
-        }
+        };
     }
 
     fn mouse_click(
         &mut self,
         opened_container: Option<&mut Box<dyn Container>>,
         mouse_click: MouseClick,
-        window_type: WindowType,
         slot: container_click::Slot,
     ) {
         let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
-        if container.window_type() != &window_type {
-            return;
-        }
 
         match slot {
             container_click::Slot::Normal(slot) => {
@@ -215,41 +215,42 @@ impl Player {
     fn shift_mouse_click(
         &mut self,
         opened_container: Option<&mut Box<dyn Container>>,
-        window_type: WindowType,
         slot: container_click::Slot,
     ) {
-        let container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
-        if container.window_type() != &window_type {
-            return;
-        }
+        let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
 
         match slot {
             container_click::Slot::Normal(slot) => {
-                if let Some(item_in_pressed_slot) = self.inventory.slots()[slot] {
-                    let slots = self.inventory.slots().into_iter().enumerate();
+                let all_slots = container.all_slots();
+                if let Some(item_in_pressed_slot) = all_slots[slot].to_owned() {
+                    let slots = all_slots.into_iter().enumerate();
                     // Hotbar
-                    let find_condition = |(_, slot): &(usize, Option<&ItemStack>)| {
-                        slot.is_none_or(|item| item.item_id == item_in_pressed_slot.item_id)
+                    let find_condition = |(slot_number, slot): (usize, &mut Option<ItemStack>)| {
+                        // TODO: Check for max item count here
+                        match slot {
+                            Some(item) => {
+                                if item.item_id == item_in_pressed_slot.item_id
+                                    && item.item_count != 64
+                                {
+                                    Some(slot_number)
+                                } else {
+                                    None
+                                }
+                            }
+                            None => Some(slot_number),
+                        }
                     };
 
                     let slots = if slot > 35 {
-                        slots
-                            .skip(9)
-                            .find(find_condition)
-                            .map(|(slot_num, _)| slot_num)
+                        slots.skip(9).find_map(find_condition)
                     } else {
-                        slots
-                            .skip(36)
-                            .rev()
-                            .find(find_condition)
-                            .map(|(slot_num, _)| slot_num)
+                        slots.skip(36).rev().find_map(find_condition)
                     };
                     if let Some(slot) = slots {
-                        let mut item_slot = self.inventory.slots()[slot].map(|i| i.to_owned());
+                        let mut item_slot = container.all_slots()[slot].map(|i| i.to_owned());
 
-                        self.inventory
-                            .handle_item_change(&mut item_slot, slot, MouseClick::Left);
-                        *self.inventory.slots_mut()[slot] = item_slot;
+                        container.handle_item_change(&mut item_slot, slot, MouseClick::Left);
+                        *container.all_slots()[slot] = item_slot;
                     }
                 }
             }
@@ -260,7 +261,6 @@ impl Player {
     fn number_button_pressed(
         &mut self,
         opened_container: Option<&mut Box<dyn Container>>,
-        window_type: WindowType,
         key_click: KeyClick,
         slot: usize,
     ) {
@@ -270,15 +270,9 @@ impl Player {
         };
         let mut changing_item_slot = self.inventory.get_slot(changing_slot as usize).to_owned();
         let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
-        if container.window_type() != &window_type {
-            return;
-        }
 
-        let item_slot = &mut container.all_slots()[slot];
-        if item_slot.is_some() {
-            handle_item_change(&mut changing_item_slot, item_slot, MouseClick::Left);
-            *self.inventory.get_slot(changing_slot as usize) = changing_item_slot
-        }
+        container.handle_item_change(&mut changing_item_slot, slot, MouseClick::Left);
+        *self.inventory.get_slot(changing_slot as usize) = changing_item_slot
     }
 
     fn creative_pick_item(
@@ -293,4 +287,15 @@ impl Player {
     }
 
     fn double_click(&mut self, _slot: usize) {}
+
+    pub fn get_open_container<'a>(
+        &self,
+        server: &'a Server,
+    ) -> Option<MutexGuard<'a, Box<dyn Container>>> {
+        if let Some(id) = self.open_container {
+            server.try_get_container(self.entity_id(), id)
+        } else {
+            None
+        }
+    }
 }

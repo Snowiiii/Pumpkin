@@ -537,8 +537,14 @@ impl Player {
     // TODO:
     // This function will in the future be used to keep track of if the client is in a valid state.
     // But this is not possible yet
-    pub fn handle_close_container(&mut self, _server: &mut Server, packet: SCloseContainer) {
+    pub fn handle_close_container(&mut self, server: &mut Server, packet: SCloseContainer) {
         // window_id 0 represents both 9x1 Generic AND inventory here
+        if let Some(id) = self.open_container {
+            if let Some(container) = server.open_containers.get_mut(&id) {
+                container.remove_player(self.entity_id())
+            }
+            self.open_container = None;
+        }
         let Some(_window_type) = WindowType::from_u8(packet.window_id) else {
             self.kick(TextComponent::text("Invalid window ID"));
             return;

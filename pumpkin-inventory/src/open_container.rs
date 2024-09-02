@@ -10,6 +10,7 @@ pub struct OpenContainer {
 impl OpenContainer {
     pub fn try_open(&self, player_id: i32) -> Option<MutexGuard<Box<dyn Container>>> {
         if !self.players.contains(&player_id) {
+            dbg!("couldn't open container");
             return None;
         }
         let container = self.container.lock().unwrap();
@@ -28,6 +29,18 @@ impl OpenContainer {
     pub fn add_player(&mut self, player_id: i32) {
         if !self.players.contains(&player_id) {
             self.players.push(player_id);
+        }
+    }
+
+    pub fn remove_player(&mut self, player_id: i32) {
+        if let Some(index) = self.players.iter().enumerate().find_map(|(index, id)| {
+            if *id == player_id {
+                Some(index)
+            } else {
+                None
+            }
+        }) {
+            self.players.remove(index);
         }
     }
 
@@ -58,6 +71,7 @@ impl Container for Chest {
     }
 
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
+        dbg!(self.slots.iter().len());
         self.slots.iter_mut().collect()
     }
 
@@ -65,8 +79,16 @@ impl Container for Chest {
         self.slots.iter().map(|slot| slot.as_ref()).collect()
     }
 
-    fn state_id(&mut self) -> i32 {
+    fn advance_state_id(&mut self) -> i32 {
         self.state_id += 1;
         self.state_id - 1
+    }
+
+    fn reset_state_id(&mut self) {
+        self.state_id = 0;
+    }
+
+    fn state_id(&self) -> i32 {
+        self.state_id
     }
 }

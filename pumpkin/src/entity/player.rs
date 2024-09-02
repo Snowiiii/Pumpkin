@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-
-use crate::{client::Client, server::Server};
-use num_derive::{FromPrimitive, ToPrimitive};
+use num_derive::FromPrimitive;
 use num_traits::ToPrimitive;
 use pumpkin_core::{
     math::{boundingbox::BoundingBox, position::WorldPosition, vector3::Vector3},
@@ -26,16 +24,13 @@ use pumpkin_protocol::{
     ConnectionState, RawPacket, ServerPacket, VarInt,
 };
 
+use pumpkin_protocol::server::play::SCloseContainer;
 use pumpkin_world::item::ItemStack;
-use pumpkin_world::vector3::Vector3;
-use serde::{Deserialize, Serialize};
-
 
 use crate::{
     client::{authentication::GameProfile, Client, PlayerConfig},
     server::Server,
     world::World,
-    util::boundingbox::BoundingBox
 };
 
 pub struct PlayerAbilities {
@@ -458,6 +453,10 @@ impl Player {
             }
             SClickContainer::PACKET_ID => {
                 self.handle_click_container(server, SClickContainer::read(bytebuf)?);
+                Ok(())
+            }
+            SCloseContainer::PACKET_ID => {
+                self.handle_close_container(server, SCloseContainer::read(bytebuf)?);
                 Ok(())
             }
             _ => {
