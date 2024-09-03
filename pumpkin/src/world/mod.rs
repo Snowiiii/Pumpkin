@@ -39,14 +39,14 @@ impl World {
     }
 
     /// Sends a Packet to all Players, Expect some players. Because we can't lock them twice
-    pub fn broadcast_packet<P>(&self, expect: &[Token], packet: &P)
+    pub fn broadcast_packet<P>(&self, except: &[Token], packet: &P)
     where
         P: ClientPacket,
     {
         for (_, player) in self
             .current_players
             .iter()
-            .filter(|c| !expect.contains(c.0))
+            .filter(|c| !except.contains(c.0))
         {
             let mut player = player.lock().unwrap();
             player.client.send_packet(packet);

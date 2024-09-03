@@ -129,12 +129,12 @@ impl Server {
     }
 
     /// Sends a Packet to all Players in all worlds
-    pub fn broadcast_packet_all<P>(&self, expect: &[Token], packet: &P)
+    pub fn broadcast_packet_all<P>(&self, except: &[Token], packet: &P)
     where
         P: ClientPacket,
     {
         for world in &self.worlds {
-            world.blocking_lock().broadcast_packet(expect, packet)
+            world.blocking_lock().broadcast_packet(except, packet)
         }
     }
 
