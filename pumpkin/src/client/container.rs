@@ -141,36 +141,22 @@ impl Player {
             dbg!("weird");
             return;
         }
-        let click = Click {
-            changed_items: packet
-                .array_of_changed_slots
-                .into_iter()
-                .map(|(slot, item)| {
-                    let slot = slot.try_into().unwrap();
-                    if let Some(item) = item.to_item() {
-                        ItemChange::Add { slot, item }
-                    } else {
-                        ItemChange::Remove { slot }
-                    }
-                })
-                .collect::<Vec<_>>(),
-            carried_item: packet.carried_item.to_item(),
-            mode: ClickMode::new(
-                packet
-                    .mode
-                    .0
-                    .try_into()
-                    .expect("Mode can only be between 0-6"),
-                packet.button,
-                packet.slot,
-            ),
-        };
-        match click.mode.click_type {
+
+        let click = Click::new(
+            packet
+                .mode
+                .0
+                .try_into()
+                .expect("Mode can only be between 0-6"),
+            packet.button,
+            packet.slot,
+        );
+        match click.click_type {
             ClickType::MouseClick(mouse_click) => {
-                self.mouse_click(opened_container, mouse_click, click.mode.slot)
+                self.mouse_click(opened_container, mouse_click, click.slot)
             }
-            ClickType::ShiftClick => self.shift_mouse_click(opened_container, click.mode.slot),
-            ClickType::KeyClick(key_click) => match click.mode.slot {
+            ClickType::ShiftClick => self.shift_mouse_click(opened_container, click.slot),
+            ClickType::KeyClick(key_click) => match click.slot {
                 container_click::Slot::Normal(slot) => {
                     self.number_button_pressed(opened_container, key_click, slot)
                 }
@@ -179,12 +165,12 @@ impl Player {
                 }
             },
             ClickType::CreativePickItem => {
-                if let container_click::Slot::Normal(slot) = click.mode.slot {
+                if let container_click::Slot::Normal(slot) = click.slot {
                     self.creative_pick_item(opened_container, slot)
                 }
             }
             ClickType::DoubleClick => {
-                if let container_click::Slot::Normal(slot) = click.mode.slot {
+                if let container_click::Slot::Normal(slot) = click.slot {
                     self.double_click(slot)
                 }
             }

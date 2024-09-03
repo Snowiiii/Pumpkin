@@ -1,17 +1,11 @@
 use pumpkin_world::item::ItemStack;
 
-pub struct ClickMode {
+pub struct Click {
     pub slot: Slot,
     pub click_type: ClickType,
 }
 
-pub struct Click {
-    pub mode: ClickMode,
-    pub changed_items: Vec<ItemChange>,
-    pub carried_item: Option<ItemStack>,
-}
-
-impl ClickMode {
+impl Click {
     pub fn new(mode: u8, button: i8, slot: i16) -> Self {
         match mode {
             0 => Self::new_normal_click(button, slot),
