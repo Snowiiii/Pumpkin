@@ -156,25 +156,22 @@ fn main() -> io::Result<()> {
 
                     token => {
                         // Poll Players
-                        let done = if let Some(player) = players.get_mut(&token) {
+                        if let Some(player) = players.get_mut(&token) {
                             let mut player = player.lock().unwrap();
                             player.client.poll(event).await;
                             if !player.client.closed {
                                 let mut server = server.lock().await;
                                 player.process_packets(&mut server).await;
                             }
-                            player.client.closed
-                        } else {
-                            false
-                        };
-
-                        if done {
-                            if let Some(player) = players.remove(&token) {
-                                let mut player = player.lock().unwrap();
-                                player.remove().await;
-                                poll.registry().deregister(&mut player.client.connection)?;
+                            if player.client.closed {
+                                drop(player);
+                                if let Some(player) = players.remove(&token) {
+                                    let mut player = player.lock().unwrap();
+                                    player.remove().await;
+                                    poll.registry().deregister(&mut player.client.connection)?;
+                                }
                             }
-                        }
+                        };
 
                         // Poll current Clients (non players)
                         // Maybe received an event for a TCP connection.
