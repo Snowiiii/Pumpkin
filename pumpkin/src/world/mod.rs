@@ -39,14 +39,14 @@ impl World {
     }
 
     /// Sends a Packet to all Players, Expect some players. Because we can't lock them twice
-    pub fn broadcast_packet<P>(&self, expect: &[&Token], packet: &P)
+    pub fn broadcast_packet<P>(&self, expect: &[Token], packet: &P)
     where
         P: ClientPacket,
     {
         for (_, player) in self
             .current_players
             .iter()
-            .filter(|c| !expect.contains(&c.0))
+            .filter(|c| !expect.contains(c.0))
         {
             let mut player = player.lock().unwrap();
             player.client.send_packet(packet);
@@ -118,7 +118,7 @@ impl World {
             }],
         ));
         self.broadcast_packet(
-            &[&player.client.token],
+            &[player.client.token],
             &CPlayerInfoUpdate::new(
                 0x01 | 0x08,
                 &[pumpkin_protocol::client::play::Player {
@@ -165,7 +165,7 @@ impl World {
 
         // spawn player for every client
         self.broadcast_packet(
-            &[&player.client.token],
+            &[player.client.token],
             // TODO: add velo
             &CSpawnEntity::new(
                 entity_id.into(),
@@ -213,7 +213,7 @@ impl World {
                 Metadata::new(17, VarInt(0), config.skin_parts),
             );
             player.client.send_packet(&packet);
-            self.broadcast_packet(&[&player.client.token], &packet)
+            self.broadcast_packet(&[player.client.token], &packet)
         }
 
         // Spawn in inital chunks
@@ -288,9 +288,9 @@ impl World {
         let id = player.entity_id();
         let uuid = player.gameprofile.id;
         self.broadcast_packet(
-            &[&player.client.token],
+            &[player.client.token],
             &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]),
         );
-        self.broadcast_packet(&[&player.client.token], &CRemoveEntities::new(&[id.into()]))
+        self.broadcast_packet(&[player.client.token], &CRemoveEntities::new(&[id.into()]))
     }
 }

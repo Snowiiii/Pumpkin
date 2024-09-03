@@ -230,7 +230,7 @@ impl Player {
         self.world
             .lock()
             .await
-            .broadcast_packet(&[&self.client.token], &packet);
+            .broadcast_packet(&[self.client.token], &packet);
     }
 
     pub async fn set_pose(&mut self, pose: EntityPose) {
@@ -244,7 +244,7 @@ impl Player {
         self.world
             .lock()
             .await
-            .broadcast_packet(&[&self.client.token], &packet)
+            .broadcast_packet(&[self.client.token], &packet)
     }
 
     pub fn teleport(&mut self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
@@ -326,7 +326,7 @@ impl Player {
             }],
         ));
         self.world.lock().await.broadcast_packet(
-            &[&self.client.token],
+            &[self.client.token],
             &CPlayerInfoUpdate::new(
                 0x04,
                 &[pumpkin_protocol::client::play::Player {
