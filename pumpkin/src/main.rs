@@ -6,9 +6,12 @@ compile_error!("Compiling for WASI targets is not supported!");
 
 use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
+use pumpkin_protocol::client::play::CKeepAlive;
+use tokio::time::sleep;
 
 use std::collections::HashMap;
 use std::io::{self};
+use std::time::Duration;
 
 use client::{interrupted, Client};
 use commands::handle_command;
@@ -81,7 +84,10 @@ fn main() -> io::Result<()> {
         let rcon = ADVANCED_CONFIG.rcon.clone();
 
         let mut clients: HashMap<Token, Client> = HashMap::new();
-        let mut players: HashMap<Arc<Token>, Arc<Mutex<Player>>> = HashMap::new();
+        let players = Arc::new(tokio::sync::RwLock::new(HashMap::<
+            Arc<Token>,
+            Arc<Mutex<Player>>,
+        >::new()));
 
         let server = Arc::new(tokio::sync::Mutex::new(Server::new()));
         log::info!("Started Server took {}ms", time.elapsed().as_millis());
@@ -110,6 +116,28 @@ fn main() -> io::Result<()> {
                 RCONServer::new(&rcon, server).await.unwrap();
             });
         }
+
+        {
+            let players = players.clone();
+            // Broadcast keep alive packets
+            // TODO: random id & validate response
+            tokio::spawn(async move {
+                loop {
+                    {
+                        let players = players.read().await;
+                        for player in players.values() {
+                            let mut player = player.lock().unwrap();
+                            if let Err(e) = player.client.try_send_packet(&CKeepAlive::new(0)) {
+                                log::warn!("Failed to send keep alive ({e})");
+                            }
+                        }
+                    }
+                    // Let lock out of scope so we dont continuously hold it
+                    sleep(Duration::from_secs(15)).await;
+                }
+            });
+        }
+
         loop {
             if let Err(err) = poll.poll(&mut events, None) {
                 if interrupted(&err) {
@@ -157,11 +185,15 @@ fn main() -> io::Result<()> {
 
                     token => {
                         // Poll Players
+
+                        let mut players = players.write().await;
                         let done = if let Some(player) = players.get_mut(&token) {
                             let mut player = player.lock().unwrap();
                             player.client.poll(event).await;
                             if !player.client.closed {
                                 let mut server = server.lock().await;
+
+                                log::debug!("Processing packets");
                                 player.process_packets(&mut server).await;
                             }
                             player.client.closed
@@ -172,6 +204,8 @@ fn main() -> io::Result<()> {
                         if done {
                             if let Some(player) = players.remove(&token) {
                                 let mut player = player.lock().unwrap();
+                                let name = &player.gameprofile.name;
+                                log::debug!("Removing player {name}");
                                 player.remove().await;
                                 poll.registry().deregister(&mut player.client.connection)?;
                             }
@@ -195,10 +229,16 @@ fn main() -> io::Result<()> {
                                 if done {
                                     poll.registry().deregister(&mut client.connection)?;
                                 } else if make_player {
+                                    let name = match client.gameprofile.as_ref() {
+                                        Some(profile) => &profile.name,
+                                        None => "[Unknown]",
+                                    };
+                                    log::debug!("Adding player {name}");
                                     let token = client.token.clone();
                                     let mut server = server.lock().await;
                                     let (player, world) =
                                         server.add_player(token.clone(), client).await;
+
                                     players.insert(token, player.clone());
                                     let mut world = world.lock().await;
                                     world.spawn_player(&BASIC_CONFIG, player).await;
