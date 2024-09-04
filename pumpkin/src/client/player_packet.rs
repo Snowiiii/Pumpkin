@@ -76,9 +76,7 @@ impl Player {
             return;
         }
         let entity = &mut self.entity;
-        self.lastx = entity.pos.x;
-        self.lasty = entity.pos.y;
-        self.lastz = entity.pos.z;
+        self.last_position = entity.pos;
         entity.set_pos(
             Self::clamp_horizontal(position.x),
             Self::clamp_vertical(position.feet_y),
@@ -89,9 +87,8 @@ impl Player {
         // send new position to all other players
         let on_ground = self.on_ground;
         let entity_id = entity.entity_id;
-        let (x, lastx) = (entity.pos.x, self.lastx);
-        let (y, lasty) = (entity.pos.y, self.lasty);
-        let (z, lastz) = (entity.pos.z, self.lastz);
+        let (x, y, z) = entity.pos.into();
+        let (lastx, lasty, lastz) = self.last_position.into();
         let world = self.world.clone();
         let world = world.lock().await;
         world.broadcast_packet(
@@ -125,9 +122,7 @@ impl Player {
         }
         let entity = &mut self.entity;
 
-        self.lastx = entity.pos.x;
-        self.lasty = entity.pos.y;
-        self.lastz = entity.pos.z;
+        self.last_position = entity.pos;
         entity.set_pos(
             Self::clamp_horizontal(position_rotation.x),
             Self::clamp_vertical(position_rotation.feet_y),
@@ -139,9 +134,8 @@ impl Player {
         // send new position to all other players
         let on_ground = self.on_ground;
         let entity_id = entity.entity_id;
-        let (x, lastx) = (entity.pos.x, self.lastx);
-        let (y, lasty) = (entity.pos.y, self.lasty);
-        let (z, lastz) = (entity.pos.z, self.lastz);
+        let (x, y, z) = entity.pos.into();
+        let (lastx, lasty, lastz) = self.last_position.into();
         let yaw = modulus(entity.yaw * 256.0 / 360.0, 256.0);
         let pitch = modulus(entity.pitch * 256.0 / 360.0, 256.0);
         // let head_yaw = (entity.head_yaw * 256.0 / 360.0).floor();
