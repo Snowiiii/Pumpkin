@@ -1,6 +1,7 @@
+use crate::drag_handler::DragHandler;
 use crate::{Container, WindowType};
 use pumpkin_world::item::ItemStack;
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 
 pub struct OpenContainer {
     players: Vec<i32>,
@@ -8,21 +9,12 @@ pub struct OpenContainer {
 }
 
 impl OpenContainer {
-    pub fn try_open(&self, player_id: i32) -> Option<MutexGuard<Box<dyn Container>>> {
+    pub fn try_open(&self, player_id: i32) -> Option<&Mutex<Box<dyn Container>>> {
         if !self.players.contains(&player_id) {
             dbg!("couldn't open container");
             return None;
         }
-        let container = self.container.lock().unwrap();
-        container
-            .all_slots_ref()
-            .iter()
-            .enumerate()
-            .for_each(|(slot, item)| {
-                if let Some(item) = item {
-                    dbg!(slot, item);
-                }
-            });
+        let container = &self.container;
         Some(container)
     }
 

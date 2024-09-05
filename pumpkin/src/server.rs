@@ -22,6 +22,7 @@ use std::{
 };
 
 use crate::{client::Client, entity::player::Player, world::World};
+use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::{Container, OpenContainer};
 use pumpkin_registry::Registry;
 use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
@@ -48,6 +49,7 @@ pub struct Server {
     pub cached_registry: Vec<Registry>,
 
     pub open_containers: HashMap<u64, OpenContainer>,
+    pub drag_handler: DragHandler,
     entity_id: AtomicI32,
 
     /// Used for Authentication, None is Online mode is disabled
@@ -94,6 +96,7 @@ impl Server {
             plugin_loader,
             cached_registry: Registry::get_static(),
             open_containers: HashMap::new(),
+            drag_handler: DragHandler::new(),
             // 0 is invalid
             entity_id: 2.into(),
             worlds: vec![Arc::new(tokio::sync::Mutex::new(world))],
@@ -134,8 +137,11 @@ impl Server {
         &self,
         player_id: EntityId,
         container_id: u64,
-    ) -> Option<MutexGuard<'_, Box<dyn Container>>> {
-        self.open_containers.get(&container_id)?.try_open(player_id)
+    ) -> Option<&Mutex<Box<dyn Container>>> {
+        self.open_containers
+            .get(&container_id)?
+            .try_open(player_id)
+            .map(|container| container)
     }
 
     /// Sends a Packet to all Players in all worlds

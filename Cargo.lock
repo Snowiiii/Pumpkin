@@ -1967,9 +1967,11 @@ dependencies = [
 name = "pumpkin-inventory"
 version = "0.1.0"
 dependencies = [
+ "itertools 0.13.0",
  "num-derive",
  "num-traits",
  "pumpkin-world",
+ "thiserror",
 ]
 
 [[package]]

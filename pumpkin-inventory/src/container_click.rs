@@ -83,63 +83,21 @@ impl Click {
     }
 
     fn new_drag_item(button: i8, slot: i16) -> Self {
-        let (mouse_type, state, slot) = match button {
-            0 => (
-                MouseDragType::Left,
-                MouseDragState::Start,
-                Slot::OutsideInventory,
-            ),
-            1 => (
-                MouseDragType::Left,
-                MouseDragState::AddSlot,
-                Slot::Normal(slot.try_into().unwrap()),
-            ),
-            2 => (
-                MouseDragType::Left,
-                MouseDragState::End,
-                Slot::OutsideInventory,
-            ),
-            4 => (
-                MouseDragType::Right,
-                MouseDragState::Start,
-                Slot::OutsideInventory,
-            ),
-            5 => (
-                MouseDragType::Right,
-                MouseDragState::AddSlot,
-                Slot::Normal(slot.try_into().unwrap()),
-            ),
-            6 => (
-                MouseDragType::Right,
-                MouseDragState::End,
-                Slot::OutsideInventory,
-            ),
-
-            // ONLY FOR CREATIVE
-            8 => (
-                MouseDragType::Middle,
-                MouseDragState::Start,
-                Slot::OutsideInventory,
-            ),
-            9 => (
-                MouseDragType::Middle,
-                MouseDragState::AddSlot,
-                Slot::Normal(slot.try_into().unwrap()),
-            ),
-            10 => (
-                MouseDragType::Middle,
-                MouseDragState::End,
-                Slot::OutsideInventory,
-            ),
+        let state = match button {
+            0 => MouseDragState::Start(MouseDragType::Left),
+            4 => MouseDragState::Start(MouseDragType::Right),
+            8 => MouseDragState::Start(MouseDragType::Middle),
+            1 | 5 | 9 => MouseDragState::AddSlot(slot.try_into().unwrap()),
+            2 | 6 | 10 => MouseDragState::End,
             // TODO: Error handling
             _ => unreachable!(),
         };
         Self {
-            click_type: ClickType::MouseDrag {
-                drag_state: state,
-                drag_type: mouse_type,
+            slot: match &state {
+                MouseDragState::AddSlot(slot) => Slot::Normal(*slot),
+                _ => Slot::OutsideInventory,
             },
-            slot,
+            click_type: ClickType::MouseDrag { drag_state: state },
         }
     }
 }
@@ -150,10 +108,7 @@ pub enum ClickType {
     KeyClick(KeyClick),
     CreativePickItem,
     DropType(DropType),
-    MouseDrag {
-        drag_state: MouseDragState,
-        drag_type: MouseDragType,
-    },
+    MouseDrag { drag_state: MouseDragState },
     DoubleClick,
 }
 #[derive(Debug, PartialEq, Eq)]
@@ -176,7 +131,7 @@ pub enum DropType {
     SingleItem,
     FullStack,
 }
-
+#[derive(Debug)]
 pub enum MouseDragType {
     Left,
     Right,
@@ -184,8 +139,8 @@ pub enum MouseDragType {
 }
 
 pub enum MouseDragState {
-    Start,
-    AddSlot,
+    Start(MouseDragType),
+    AddSlot(usize),
     End,
 }
 

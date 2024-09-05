@@ -1,13 +1,16 @@
-use crate::container_click::MouseClick;
+use crate::container_click::{MouseClick, MouseDragState, MouseDragType};
 use crate::player::PlayerInventory;
 use num_derive::{FromPrimitive, ToPrimitive};
 use pumpkin_world::item::ItemStack;
 
 pub mod container_click;
+pub mod drag_handler;
+mod error;
 mod open_container;
 pub mod player;
 pub mod window_property;
 
+pub use error::InventoryError;
 pub use open_container::OpenContainer;
 
 /// https://wiki.vg/Inventory
@@ -68,8 +71,13 @@ pub trait Container: Sync + Send {
         carried_item: &mut Option<ItemStack>,
         slot: usize,
         mouse_click: MouseClick,
-    ) {
-        handle_item_change(carried_item, self.all_slots()[slot], mouse_click)
+    ) -> Result<(), InventoryError> {
+        let mut all_slots = self.all_slots();
+        if slot < all_slots.len() {
+            Err(InventoryError::InvalidSlot)?
+        }
+        handle_item_change(carried_item, all_slots[slot], mouse_click);
+        Ok(())
     }
 
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>>;
@@ -97,6 +105,10 @@ pub trait Container: Sync + Send {
             .for_each(|(slot, item)| {
                 dbg!(slot, item);
             });
+    }
+
+    fn internal_pumpkin_id(&self) -> u64 {
+        0
     }
 }
 

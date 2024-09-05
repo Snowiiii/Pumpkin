@@ -1,5 +1,6 @@
 use crate::container_click::MouseClick;
-use crate::{handle_item_change, Container, WindowType};
+use crate::drag_handler::DragHandler;
+use crate::{handle_item_change, Container, InventoryError, WindowType};
 use pumpkin_world::item::ItemStack;
 
 #[allow(dead_code)]
@@ -92,17 +93,17 @@ impl PlayerInventory {
             _ => unreachable!(),
         }
     }
-    pub fn get_slot(&mut self, slot: usize) -> &mut Option<ItemStack> {
+    pub fn get_slot(&mut self, slot: usize) -> Result<&mut Option<ItemStack>, InventoryError> {
         match slot {
             0 => {
                 // TODO: Add crafting check here
-                &mut self.crafting_output
+                Ok(&mut self.crafting_output)
             }
-            1..=4 => &mut self.crafting[slot - 1],
-            5..=8 => &mut self.armor[slot - 5],
-            9..=44 => &mut self.items[slot - 9],
-            45 => &mut self.offhand,
-            _ => unreachable!(),
+            1..=4 => Ok(&mut self.crafting[slot - 1]),
+            5..=8 => Ok(&mut self.armor[slot - 5]),
+            9..=44 => Ok(&mut self.items[slot - 9]),
+            45 => Ok(&mut self.offhand),
+            _ => Err(InventoryError::InvalidSlot),
         }
     }
     pub fn set_selected(&mut self, slot: usize) {
@@ -144,9 +145,11 @@ impl Container for PlayerInventory {
         carried_slot: &mut Option<ItemStack>,
         slot: usize,
         mouse_click: MouseClick,
-    ) {
-        let item_slot = self.get_slot(slot);
-        handle_item_change(carried_slot, item_slot, mouse_click)
+    ) -> Result<(), InventoryError> {
+        let item_slot = self.get_slot(slot)?;
+
+        handle_item_change(carried_slot, item_slot, mouse_click);
+        Ok(())
     }
 
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {

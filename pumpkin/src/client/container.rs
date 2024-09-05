@@ -1,8 +1,12 @@
+use crate::entity::player::Player;
+use crate::server::Server;
 use itertools::Itertools;
 use pumpkin_core::text::TextComponent;
-use pumpkin_inventory::container_click::{KeyClick, MouseClick};
+use pumpkin_core::GameMode;
+use pumpkin_inventory::container_click::{KeyClick, MouseClick, MouseDragState, MouseDragType};
+use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
-use pumpkin_inventory::{container_click, OptionallyCombinedContainer};
+use pumpkin_inventory::{container_click, InventoryError, OptionallyCombinedContainer};
 use pumpkin_inventory::{Container, WindowType};
 use pumpkin_protocol::client::play::{
     CCloseContainer, COpenScreen, CSetContainerContent, CSetContainerProperty, CSetContainerSlot,
@@ -10,10 +14,7 @@ use pumpkin_protocol::client::play::{
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
-use std::sync::MutexGuard;
-
-use crate::entity::player::Player;
-use crate::server::Server;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 impl Player {
     pub fn open_container(
@@ -22,8 +23,11 @@ impl Player {
         minecraft_menu_id: &str,
         window_title: Option<&str>,
     ) {
-        let mut container = self.get_open_container(server);
-        let container = container.as_deref_mut();
+        self.inventory.reset_state_id();
+        let total_opened_containers = self.inventory.total_opened_containers;
+        let mut container = self
+            .get_open_container(server)
+            .map(|container| container.lock().unwrap());
         let menu_protocol_id = (*pumpkin_world::global_registry::REGISTRY
             .get("minecraft:menu")
             .unwrap()
@@ -40,14 +44,12 @@ impl Player {
         .to_owned();
         let title = TextComponent::text(window_title.unwrap_or(window_type.default_title()));
 
-        self.inventory.reset_state_id();
-
         self.client.send_packet(&COpenScreen::new(
-            self.inventory.total_opened_containers.into(),
+            total_opened_containers.into(),
             menu_protocol_id,
             title,
         ));
-        self.set_container_content(container);
+        self.set_container_content(container.as_deref_mut());
     }
 
     pub fn set_container_content(&mut self, container: Option<&mut Box<dyn Container>>) {
@@ -113,33 +115,35 @@ impl Player {
         ));
     }
 
-    pub fn handle_click_container(&mut self, server: &mut Server, packet: SClickContainer) {
+    pub fn handle_click_container(
+        &mut self,
+        server: &mut Server,
+        packet: SClickContainer,
+    ) -> Result<(), InventoryError> {
         use container_click::*;
-        let mut opened_container = self.get_open_container(server);
-        let opened_container = opened_container.as_deref_mut();
+        let mut opened_container = self
+            .get_open_container(server)
+            .map(|container| container.lock().unwrap());
+        let mut opened_container = opened_container.as_deref_mut();
+        let drag_handler = &server.drag_handler;
 
         let current_state_id = if let Some(container) = opened_container.as_ref() {
             container.state_id()
         } else {
             self.inventory.state_id()
         };
+        // This is just checking for regular desync, client hasn't done anything malicious
         if current_state_id != packet.state_id.0 {
-            dbg!(current_state_id, packet.state_id.0);
-            //self.set_container_content(opened_container.as_deref_mut());
-            //return;
+            self.set_container_content(opened_container.as_deref_mut());
+            return Ok(());
         }
 
         if opened_container.is_some() {
             if packet.window_id != self.inventory.total_opened_containers {
-                dbg!(
-                    self.inventory.total_opened_containers,
-                    opened_container.unwrap().window_type()
-                );
-                return;
+                return Err(InventoryError::ClosedContainerInteract(self.entity_id()));
             }
         } else if packet.window_id != 0 {
-            dbg!("weird");
-            return;
+            return Err(InventoryError::ClosedContainerInteract(self.entity_id()));
         }
 
         let click = Click::new(
@@ -160,26 +164,27 @@ impl Player {
                 container_click::Slot::Normal(slot) => {
                     self.number_button_pressed(opened_container, key_click, slot)
                 }
-                container_click::Slot::OutsideInventory => {
-                    unimplemented!("This is not a valid state")
-                }
+                container_click::Slot::OutsideInventory => Err(InventoryError::InvalidPacket),
             },
             ClickType::CreativePickItem => {
                 if let container_click::Slot::Normal(slot) = click.slot {
                     self.creative_pick_item(opened_container, slot)
+                } else {
+                    Err(InventoryError::InvalidPacket)
                 }
             }
             ClickType::DoubleClick => {
                 if let container_click::Slot::Normal(slot) = click.slot {
                     self.double_click(slot)
+                } else {
+                    Err(InventoryError::InvalidPacket)
                 }
             }
-            ClickType::MouseDrag {
-                drag_state: _,
-                drag_type: _,
-            } => (),
-            ClickType::DropType(_drop_type) => (),
-        };
+            ClickType::MouseDrag { drag_state } => {
+                self.mouse_drag(drag_handler, opened_container, drag_state)
+            }
+            ClickType::DropType(_drop_type) => todo!(),
+        }
     }
 
     fn mouse_click(
@@ -187,22 +192,22 @@ impl Player {
         opened_container: Option<&mut Box<dyn Container>>,
         mouse_click: MouseClick,
         slot: container_click::Slot,
-    ) {
+    ) -> Result<(), InventoryError> {
         let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
 
         match slot {
             container_click::Slot::Normal(slot) => {
                 container.handle_item_change(&mut self.carried_item, slot, mouse_click)
             }
-            container_click::Slot::OutsideInventory => (),
-        };
+            container_click::Slot::OutsideInventory => todo!(),
+        }
     }
 
     fn shift_mouse_click(
         &mut self,
         opened_container: Option<&mut Box<dyn Container>>,
         slot: container_click::Slot,
-    ) {
+    ) -> Result<(), InventoryError> {
         let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
 
         match slot {
@@ -235,13 +240,14 @@ impl Player {
                     if let Some(slot) = slots {
                         let mut item_slot = container.all_slots()[slot].map(|i| i.to_owned());
 
-                        container.handle_item_change(&mut item_slot, slot, MouseClick::Left);
+                        container.handle_item_change(&mut item_slot, slot, MouseClick::Left)?;
                         *container.all_slots()[slot] = item_slot;
                     }
                 }
             }
             container_click::Slot::OutsideInventory => (),
         };
+        Ok(())
     }
 
     fn number_button_pressed(
@@ -249,35 +255,74 @@ impl Player {
         opened_container: Option<&mut Box<dyn Container>>,
         key_click: KeyClick,
         slot: usize,
-    ) {
+    ) -> Result<(), InventoryError> {
         let changing_slot = match key_click {
             KeyClick::Slot(slot) => slot,
             KeyClick::Offhand => 45,
         };
-        let mut changing_item_slot = self.inventory.get_slot(changing_slot as usize).to_owned();
+        let mut changing_item_slot = self.inventory.get_slot(changing_slot as usize)?.to_owned();
         let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
 
-        container.handle_item_change(&mut changing_item_slot, slot, MouseClick::Left);
-        *self.inventory.get_slot(changing_slot as usize) = changing_item_slot
+        container.handle_item_change(&mut changing_item_slot, slot, MouseClick::Left)?;
+        *self.inventory.get_slot(changing_slot as usize)? = changing_item_slot;
+        Ok(())
     }
 
     fn creative_pick_item(
         &mut self,
         opened_container: Option<&mut Box<dyn Container>>,
         slot: usize,
-    ) {
+    ) -> Result<(), InventoryError> {
+        if self.gamemode != GameMode::Creative {
+            return Err(InventoryError::PermissionError);
+        }
         let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
         if let Some(Some(item)) = container.all_slots().get_mut(slot) {
             self.carried_item = Some(item.to_owned())
         }
+        Ok(())
     }
 
-    fn double_click(&mut self, _slot: usize) {}
+    fn double_click(&mut self, _slot: usize) -> Result<(), InventoryError> {
+        Ok(())
+    }
+
+    fn mouse_drag(
+        &mut self,
+        drag_handler: &DragHandler,
+        opened_container: Option<&mut Box<dyn Container>>,
+        mouse_drag_state: MouseDragState,
+    ) -> Result<(), InventoryError> {
+        let player_id = self.entity_id();
+        let container_id = opened_container
+            .as_ref()
+            .map(|container| container.internal_pumpkin_id())
+            .unwrap_or(player_id as u64);
+        match mouse_drag_state {
+            MouseDragState::Start(drag_type) => {
+                drag_handler.new_drag(container_id, player_id, drag_type)?
+            }
+            MouseDragState::AddSlot(slot) => {
+                drag_handler.add_slot(container_id, player_id, slot)?
+            }
+            MouseDragState::End => {
+                let mut container =
+                    OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
+                drag_handler.apply_drag(
+                    &mut self.carried_item,
+                    &mut container,
+                    &container_id,
+                    player_id,
+                )?
+            }
+        }
+        Ok(())
+    }
 
     pub fn get_open_container<'a>(
         &self,
         server: &'a Server,
-    ) -> Option<MutexGuard<'a, Box<dyn Container>>> {
+    ) -> Option<&'a Mutex<Box<dyn Container>>> {
         if let Some(id) = self.open_container {
             server.try_get_container(self.entity_id(), id)
         } else {

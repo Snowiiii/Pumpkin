@@ -18,3 +18,9 @@ pub struct ItemStack {
     pub item_id: u32,
     // TODO: Add Item Components
 }
+
+impl PartialEq for ItemStack {
+    fn eq(&self, other: &Self) -> bool {
+        self.item_id == other.item_id
+    }
+}

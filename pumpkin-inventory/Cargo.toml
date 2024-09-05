@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 num-traits = "0.2"
 num-derive = "0.4"
-
+thiserror = "1.0.63"
+itertools = "0.13.0"
 # For items
 pumpkin-world = { path = "../pumpkin-world"}
