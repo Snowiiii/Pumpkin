@@ -14,6 +14,7 @@ use pumpkin_protocol::client::play::{
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
+use std::ops::DerefMut;
 use std::sync::Mutex;
 
 impl Player {
@@ -80,21 +81,6 @@ impl Player {
         self.client.send_packet(&packet);
     }
 
-    pub fn set_container_slot(
-        &mut self,
-        window_type: WindowType,
-        slot: usize,
-        item: Option<&ItemStack>,
-        state_id: i32,
-    ) {
-        self.client.send_packet(&CSetContainerSlot::new(
-            window_type as i8,
-            state_id,
-            slot,
-            &item.into(),
-        ))
-    }
-
     /// The official Minecraft client is weird, and will always just close *any* window that is opened when this gets sent
     pub fn close_container(&mut self) {
         self.inventory.total_opened_containers += 1;
@@ -115,7 +101,7 @@ impl Player {
         ));
     }
 
-    pub fn handle_click_container(
+    pub async fn handle_click_container(
         &mut self,
         server: &mut Server,
         packet: SClickContainer,
@@ -155,6 +141,8 @@ impl Player {
             packet.button,
             packet.slot,
         );
+
+        let slot = click.slot.clone();
         match click.click_type {
             ClickType::MouseClick(mouse_click) => {
                 self.mouse_click(opened_container, mouse_click, click.slot)
@@ -184,7 +172,11 @@ impl Player {
                 self.mouse_drag(drag_handler, opened_container, drag_state)
             }
             ClickType::DropType(_drop_type) => todo!(),
+        }?;
+        if let container_click::Slot::Normal(slot) = click.slot {
+            self.send_container_changes(server, slot).await?;
         }
+        Ok(())
     }
 
     fn mouse_click(
@@ -239,7 +231,6 @@ impl Player {
                     };
                     if let Some(slot) = slots {
                         let mut item_slot = container.all_slots()[slot].map(|i| i.to_owned());
-
                         container.handle_item_change(&mut item_slot, slot, MouseClick::Left)?;
                         *container.all_slots()[slot] = item_slot;
                     }
@@ -317,6 +308,45 @@ impl Player {
                 )
             }
         }
+    }
+
+    async fn send_container_changes(
+        &mut self,
+        server: &Server,
+        slot_index: usize,
+    ) -> Result<(), InventoryError> {
+        // If we don't have a container open, then we don't need to share state
+        let Some(container) = self.get_open_container(server) else {
+            return Ok(());
+        };
+        let player_ids = server
+            .open_containers
+            .get(&self.open_container.unwrap())
+            .unwrap()
+            .all_player_ids()
+            .into_iter()
+            .filter(|player_id| *player_id != self.entity_id())
+            .collect_vec();
+        let mut container = container.lock().or(Err(InventoryError::LockError))?;
+
+        // TODO: Figure out better way to get only the players from player_ids
+        // Also refactor out a better method to get individual advanced state ids
+        for player in self.world.lock().await.current_players.values() {
+            let mut container =
+                OptionallyCombinedContainer::new(&mut self.inventory, Some(container.deref_mut()));
+            let state_id = container.advance_state_id();
+            let all_slots = container.all_slots_ref();
+
+            let slot = Slot::from(all_slots[slot_index]);
+            let packet =
+                CSetContainerSlot::new(*container.window_type() as i8, state_id, slot_index, &slot);
+            let mut player = player.lock().or(Err(InventoryError::LockError))?;
+            if player_ids.contains(&player.entity_id()) {
+                player.client.send_packet(&packet)
+            }
+        }
+
+        Ok(())
     }
 
     pub fn get_open_container<'a>(

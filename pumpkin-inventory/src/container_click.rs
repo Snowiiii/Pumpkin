@@ -121,7 +121,7 @@ pub enum KeyClick {
     Slot(u8),
     Offhand,
 }
-
+#[derive(Copy, Clone)]
 pub enum Slot {
     Normal(usize),
     OutsideInventory,

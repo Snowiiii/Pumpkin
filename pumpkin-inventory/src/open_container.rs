@@ -41,6 +41,10 @@ impl OpenContainer {
             container: Mutex::new(Box::new(Chest::new())),
         }
     }
+
+    pub fn all_player_ids(&self) -> Vec<i32> {
+        self.players.clone()
+    }
 }
 
 struct Chest {

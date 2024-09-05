@@ -73,7 +73,7 @@ pub trait Container: Sync + Send {
         mouse_click: MouseClick,
     ) -> Result<(), InventoryError> {
         let mut all_slots = self.all_slots();
-        if slot < all_slots.len() {
+        if slot > all_slots.len() || slot < 0 {
             Err(InventoryError::InvalidSlot)?
         }
         handle_item_change(carried_item, all_slots[slot], mouse_click);
@@ -231,7 +231,6 @@ impl<'a> Container for OptionallyCombinedContainer<'a, 'a> {
             }
             None => self.inventory.all_slots(),
         };
-        dbg!(slots.len());
         slots
     }
 

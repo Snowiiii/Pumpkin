@@ -453,6 +453,7 @@ impl Player {
             }
             SClickContainer::PACKET_ID => {
                 self.handle_click_container(server, SClickContainer::read(bytebuf)?)
+                    .await
                     .unwrap();
                 Ok(())
             }
