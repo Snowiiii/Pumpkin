@@ -14,8 +14,8 @@ pub struct SLoginStart {
 impl ServerPacket for SLoginStart {
     fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError> {
         Ok(Self {
-            name: bytebuf.get_string_len(16).unwrap(),
-            uuid: bytebuf.get_uuid(),
+            name: bytebuf.get_string_len(16)?,
+            uuid: bytebuf.get_uuid()?,
         })
     }
 }

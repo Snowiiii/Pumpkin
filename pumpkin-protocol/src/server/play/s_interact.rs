@@ -18,8 +18,8 @@ impl ServerPacket for SInteract {
     fn read(
         bytebuf: &mut crate::bytebuf::ByteBuffer,
     ) -> Result<Self, crate::bytebuf::DeserializerError> {
-        let entity_id = bytebuf.get_var_int();
-        let typ = bytebuf.get_var_int();
+        let entity_id = bytebuf.get_var_int()?;
+        let typ = bytebuf.get_var_int()?;
         let action = ActionType::from_i32(typ.0).ok_or(DeserializerError::Message(
             "invalid action type".to_string(),
         ))?;
@@ -27,13 +27,13 @@ impl ServerPacket for SInteract {
             ActionType::Interact => None,
             ActionType::Attack => None,
             ActionType::InteractAt => {
-                Some((bytebuf.get_f32(), bytebuf.get_f32(), bytebuf.get_f32()))
+                Some((bytebuf.get_f32()?, bytebuf.get_f32()?, bytebuf.get_f32()?))
             }
         };
         let hand = match action {
-            ActionType::Interact => Some(bytebuf.get_var_int()),
+            ActionType::Interact => Some(bytebuf.get_var_int()?),
             ActionType::Attack => None,
-            ActionType::InteractAt => Some(bytebuf.get_var_int()),
+            ActionType::InteractAt => Some(bytebuf.get_var_int()?),
         };
 
         Ok(Self {
@@ -41,7 +41,7 @@ impl ServerPacket for SInteract {
             typ,
             target_position,
             hand,
-            sneaking: bytebuf.get_bool(),
+            sneaking: bytebuf.get_bool()?,
         })
     }
 }

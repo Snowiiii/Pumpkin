@@ -25,9 +25,9 @@ pub enum Action {
 impl ServerPacket for SPlayerCommand {
     fn read(bytebuf: &mut crate::bytebuf::ByteBuffer) -> Result<Self, DeserializerError> {
         Ok(Self {
-            entity_id: bytebuf.get_var_int(),
-            action: bytebuf.get_var_int(),
-            jump_boost: bytebuf.get_var_int(),
+            entity_id: bytebuf.get_var_int()?,
+            action: bytebuf.get_var_int()?,
+            jump_boost: bytebuf.get_var_int()?,
         })
     }
 }

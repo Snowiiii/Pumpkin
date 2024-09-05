@@ -1,7 +1,6 @@
 use crate::{BitSet, FixedBitSet, VarInt, VarLongType};
 use bytes::{Buf, BufMut, BytesMut};
 use core::str;
-use std::io::{self, Error, ErrorKind};
 
 mod deserializer;
 pub use deserializer::DeserializerError;
@@ -26,12 +25,12 @@ impl ByteBuffer {
         Self { buffer }
     }
 
-    pub fn get_var_int(&mut self) -> VarInt {
+    pub fn get_var_int(&mut self) -> Result<VarInt, DeserializerError> {
         let mut value: i32 = 0;
         let mut position: i32 = 0;
 
         loop {
-            let read = self.buffer.get_u8();
+            let read = self.get_u8()?;
 
             value |= ((read & SEGMENT_BITS) as i32) << position;
 
@@ -42,19 +41,19 @@ impl ByteBuffer {
             position += 7;
 
             if position >= 32 {
-                panic!("VarInt is too big");
+                return Err(DeserializerError::Message("VarInt is too big".to_string()));
             }
         }
 
-        VarInt(value)
+        Ok(VarInt(value))
     }
 
-    pub fn get_var_long(&mut self) -> VarLongType {
+    pub fn get_var_long(&mut self) -> Result<VarLongType, DeserializerError> {
         let mut value: i64 = 0;
         let mut position: i64 = 0;
 
         loop {
-            let read = self.buffer.get_u8();
+            let read = self.get_u8()?;
 
             value |= ((read & SEGMENT_BITS) as i64) << position;
 
@@ -65,57 +64,48 @@ impl ByteBuffer {
             position += 7;
 
             if position >= 64 {
-                panic!("VarInt is too big");
+                return Err(DeserializerError::Message("VarLong is too big".to_string()));
             }
         }
 
-        value
+        Ok(value)
     }
 
-    pub fn get_string(&mut self) -> Result<String, io::Error> {
+    pub fn get_string(&mut self) -> Result<String, DeserializerError> {
         self.get_string_len(32767)
     }
 
-    pub fn get_string_len(&mut self, max_size: usize) -> Result<String, io::Error> {
-        let size = self.get_var_int().0;
+    pub fn get_string_len(&mut self, max_size: usize) -> Result<String, DeserializerError> {
+        let size = self.get_var_int()?.0;
         if size as usize > max_size {
-            return Err(Error::new(
-                ErrorKind::InvalidData,
-                "String length is bigger than max size",
+            return Err(DeserializerError::Message(
+                "String length is bigger than max size".to_string(),
             ));
         }
 
-        if size as usize > self.buffer.len() {
-            return Err(Error::new(
-                ErrorKind::InvalidData,
-                "String length is bigger than packet",
-            ));
-        }
-
-        let data = self.buffer.copy_to_bytes(size as usize);
+        let data = self.copy_to_bytes(size as usize)?;
         if data.len() > max_size {
-            return Err(Error::new(
-                ErrorKind::InvalidData,
-                "String is bigger than max size",
+            return Err(DeserializerError::Message(
+                "String is bigger than max size".to_string(),
             ));
         }
         match str::from_utf8(&data) {
             Ok(string_result) => Ok(string_result.to_string()),
-            Err(e) => Err(Error::new(ErrorKind::InvalidData, e)),
+            Err(e) => Err(DeserializerError::Message(e.to_string())),
         }
     }
 
-    pub fn get_bool(&mut self) -> bool {
-        self.buffer.get_u8() != 0
+    pub fn get_bool(&mut self) -> Result<bool, DeserializerError> {
+        Ok(self.get_u8()? != 0)
     }
 
-    pub fn get_uuid(&mut self) -> uuid::Uuid {
+    pub fn get_uuid(&mut self) -> Result<uuid::Uuid, DeserializerError> {
         let mut bytes = [0u8; 16];
-        self.buffer.copy_to_slice(&mut bytes);
-        uuid::Uuid::from_slice(&bytes).expect("Failed to parse UUID")
+        self.copy_to_slice(&mut bytes)?;
+        Ok(uuid::Uuid::from_slice(&bytes).expect("Failed to parse UUID"))
     }
 
-    pub fn get_fixed_bitset(&mut self, bits: usize) -> FixedBitSet {
+    pub fn get_fixed_bitset(&mut self, bits: usize) -> Result<FixedBitSet, DeserializerError> {
         self.copy_to_bytes(bits.div_ceil(8))
     }
 
@@ -169,11 +159,14 @@ impl ByteBuffer {
 
     /// Reads a boolean. If true, the closure is called, and the returned value is
     /// wrapped in Some. Otherwise, this returns None.
-    pub fn get_option<T>(&mut self, val: impl FnOnce(&mut Self) -> T) -> Option<T> {
-        if self.get_bool() {
-            Some(val(self))
+    pub fn get_option<T>(
+        &mut self,
+        val: impl FnOnce(&mut Self) -> Result<T, DeserializerError>,
+    ) -> Result<Option<T>, DeserializerError> {
+        if self.get_bool()? {
+            Ok(Some(val(self)?))
         } else {
-            None
+            Ok(None)
         }
     }
     /// Writes `true` if the option is Some, or `false` if None. If the option is
@@ -185,13 +178,16 @@ impl ByteBuffer {
         }
     }
 
-    pub fn get_list<T>(&mut self, val: impl Fn(&mut Self) -> T) -> Vec<T> {
-        let len = self.get_var_int().0 as usize;
+    pub fn get_list<T>(
+        &mut self,
+        val: impl Fn(&mut Self) -> Result<T, DeserializerError>,
+    ) -> Result<Vec<T>, DeserializerError> {
+        let len = self.get_var_int()?.0 as usize;
         let mut list = Vec::with_capacity(len);
         for _ in 0..len {
-            list.push(val(self));
+            list.push(val(self)?);
         }
-        list
+        Ok(list)
     }
     /// Writes a list to the buffer.
     pub fn put_list<T>(&mut self, list: &[T], write: impl Fn(&mut Self, &T)) {
@@ -219,50 +215,109 @@ impl ByteBuffer {
     pub fn buf(&mut self) -> &mut BytesMut {
         &mut self.buffer
     }
-}
 
-// trait
-impl ByteBuffer {
-    pub fn get_u8(&mut self) -> u8 {
-        self.buffer.get_u8()
+    // Trait equivalents
+    pub fn get_u8(&mut self) -> Result<u8, DeserializerError> {
+        if self.buffer.has_remaining() {
+            Ok(self.buffer.get_u8())
+        } else {
+            Err(DeserializerError::Message(
+                "No bytes left to consume".to_string(),
+            ))
+        }
     }
 
-    pub fn get_i8(&mut self) -> i8 {
-        self.buffer.get_i8()
+    pub fn get_i8(&mut self) -> Result<i8, DeserializerError> {
+        if self.buffer.has_remaining() {
+            Ok(self.buffer.get_i8())
+        } else {
+            Err(DeserializerError::Message(
+                "No bytes left to consume".to_string(),
+            ))
+        }
     }
 
-    pub fn get_u16(&mut self) -> u16 {
-        self.buffer.get_u16()
+    pub fn get_u16(&mut self) -> Result<u16, DeserializerError> {
+        if self.buffer.remaining() >= 2 {
+            Ok(self.buffer.get_u16())
+        } else {
+            Err(DeserializerError::Message(
+                "Less than 2 bytes left to consume".to_string(),
+            ))
+        }
     }
 
-    pub fn get_i16(&mut self) -> i16 {
-        self.buffer.get_i16()
+    pub fn get_i16(&mut self) -> Result<i16, DeserializerError> {
+        if self.buffer.remaining() >= 2 {
+            Ok(self.buffer.get_i16())
+        } else {
+            Err(DeserializerError::Message(
+                "Less than 2 bytes left to consume".to_string(),
+            ))
+        }
     }
 
-    pub fn get_u32(&mut self) -> u32 {
-        self.buffer.get_u32()
+    pub fn get_u32(&mut self) -> Result<u32, DeserializerError> {
+        if self.buffer.remaining() >= 4 {
+            Ok(self.buffer.get_u32())
+        } else {
+            Err(DeserializerError::Message(
+                "Less than 4 bytes left to consume".to_string(),
+            ))
+        }
     }
 
-    pub fn get_i32(&mut self) -> i32 {
-        self.buffer.get_i32()
+    pub fn get_i32(&mut self) -> Result<i32, DeserializerError> {
+        if self.buffer.remaining() >= 4 {
+            Ok(self.buffer.get_i32())
+        } else {
+            Err(DeserializerError::Message(
+                "Less than 4 bytes left to consume".to_string(),
+            ))
+        }
     }
 
-    pub fn get_u64(&mut self) -> u64 {
-        self.buffer.get_u64()
+    pub fn get_u64(&mut self) -> Result<u64, DeserializerError> {
+        if self.buffer.remaining() >= 8 {
+            Ok(self.buffer.get_u64())
+        } else {
+            Err(DeserializerError::Message(
+                "Less than 8 bytes left to consume".to_string(),
+            ))
+        }
     }
 
-    pub fn get_i64(&mut self) -> i64 {
-        self.buffer.get_i64()
+    pub fn get_i64(&mut self) -> Result<i64, DeserializerError> {
+        if self.buffer.remaining() >= 8 {
+            Ok(self.buffer.get_i64())
+        } else {
+            Err(DeserializerError::Message(
+                "Less than 8 bytes left to consume".to_string(),
+            ))
+        }
     }
 
-    pub fn get_f32(&mut self) -> f32 {
-        self.buffer.get_f32()
+    pub fn get_f32(&mut self) -> Result<f32, DeserializerError> {
+        if self.buffer.remaining() >= 4 {
+            Ok(self.buffer.get_f32())
+        } else {
+            Err(DeserializerError::Message(
+                "Less than 4 bytes left to consume".to_string(),
+            ))
+        }
     }
 
-    pub fn get_f64(&mut self) -> f64 {
-        self.buffer.get_f64()
+    pub fn get_f64(&mut self) -> Result<f64, DeserializerError> {
+        if self.buffer.remaining() >= 8 {
+            Ok(self.buffer.get_f64())
+        } else {
+            Err(DeserializerError::Message(
+                "Less than 8 bytes left to consume".to_string(),
+            ))
+        }
     }
 
+    // TODO: SerializerError?
     pub fn put_u8(&mut self, n: u8) {
         self.buffer.put_u8(n)
     }
@@ -303,12 +358,21 @@ impl ByteBuffer {
         self.buffer.put_f64(n)
     }
 
-    pub fn copy_to_bytes(&mut self, len: usize) -> bytes::Bytes {
-        self.buffer.copy_to_bytes(len)
+    pub fn copy_to_bytes(&mut self, len: usize) -> Result<bytes::Bytes, DeserializerError> {
+        if self.buffer.remaining() >= len {
+            Ok(self.buffer.copy_to_bytes(len))
+        } else {
+            Err(DeserializerError::Message("Unable to copy".to_string()))
+        }
     }
 
-    pub fn copy_to_slice(&mut self, dst: &mut [u8]) {
-        self.buffer.copy_to_slice(dst)
+    pub fn copy_to_slice(&mut self, dst: &mut [u8]) -> Result<(), DeserializerError> {
+        if self.buffer.remaining() > dst.len() {
+            self.buffer.copy_to_slice(dst);
+            Ok(())
+        } else {
+            Err(DeserializerError::Message("Unable to copy".to_string()))
+        }
     }
 
     pub fn put_slice(&mut self, src: &[u8]) {
