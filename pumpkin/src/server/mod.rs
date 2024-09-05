@@ -138,10 +138,7 @@ impl Server {
         player_id: EntityId,
         container_id: u64,
     ) -> Option<&Mutex<Box<dyn Container>>> {
-        self.open_containers
-            .get(&container_id)?
-            .try_open(player_id)
-            .map(|container| container)
+        self.open_containers.get(&container_id)?.try_open(player_id)
     }
 
     /// Sends a Packet to all Players in all worlds

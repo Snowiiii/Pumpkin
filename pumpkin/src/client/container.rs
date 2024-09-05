@@ -142,7 +142,6 @@ impl Player {
             packet.slot,
         );
 
-        let slot = click.slot.clone();
         match click.click_type {
             ClickType::MouseClick(mouse_click) => {
                 self.mouse_click(opened_container, mouse_click, click.slot)

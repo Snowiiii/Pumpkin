@@ -89,12 +89,12 @@ impl DragHandler {
             // Checked in any function that uses this function.
             MouseDragType::Middle => {
                 for slot in &drag.slots {
-                    *slots[*slot] = carried_item.clone();
+                    *slots[*slot] = *carried_item;
                 }
             }
             MouseDragType::Right => {
                 let amount_of_items = carried_item.unwrap().item_count as usize;
-                let mut single_item = carried_item.clone().unwrap();
+                let mut single_item = carried_item.unwrap();
                 single_item.item_count = 1;
                 let changing_slots = drag.changing_slots(
                     amount_of_items,
@@ -104,7 +104,7 @@ impl DragHandler {
                 let mut amount_removed = 0;
                 changing_slots.for_each(|slot| {
                     amount_removed += 1;
-                    *slots[slot] = Some(single_item.clone())
+                    *slots[slot] = Some(single_item)
                 });
 
                 let mut remaining = carried_item.unwrap();
@@ -128,12 +128,12 @@ impl DragHandler {
                 let amount_of_slots = changing_slots.clone().count();
                 let (amount_per_slot, remainder) =
                     (carried_item.unwrap().item_count as usize).div_rem_euclid(&amount_of_slots);
-                let mut item_in_each_slot = carried_item.unwrap().clone();
+                let mut item_in_each_slot = carried_item.unwrap();
                 item_in_each_slot.item_count = amount_per_slot as u8;
-                changing_slots.for_each(|slot| *slots[slot] = Some(item_in_each_slot.clone()));
+                changing_slots.for_each(|slot| *slots[slot] = Some(item_in_each_slot));
 
                 if remainder > 0 {
-                    let mut remaining = carried_item.unwrap().clone();
+                    let mut remaining = carried_item.unwrap();
                     remaining.item_count = remainder as u8;
                     *carried_item = Some(remaining)
                 } else {
