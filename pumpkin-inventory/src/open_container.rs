@@ -66,7 +66,6 @@ impl Container for Chest {
     }
 
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
-        dbg!(self.slots.iter().len());
         self.slots.iter_mut().collect()
     }
 

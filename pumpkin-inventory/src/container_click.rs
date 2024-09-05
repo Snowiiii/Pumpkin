@@ -32,7 +32,12 @@ impl Click {
             -999 => Slot::OutsideInventory,
             _ => {
                 // TODO: Error here
-                Slot::Normal(slot.try_into().unwrap())
+                let slot = slot.try_into();
+                if let Ok(slot) = slot {
+                    Slot::Normal(slot)
+                } else {
+                    Slot::OutsideInventory
+                }
             }
         };
         let button = match button {

@@ -123,6 +123,7 @@ impl Server {
         // Basicly the default world
         // TODO: select default from config
         let world = self.worlds[0].clone();
+
         let player = Arc::new(Mutex::new(Player::new(
             client,
             world.clone(),

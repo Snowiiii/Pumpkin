@@ -119,6 +119,7 @@ impl Player {
         };
         // This is just checking for regular desync, client hasn't done anything malicious
         if current_state_id != packet.state_id.0 {
+            dbg!(current_state_id, packet.state_id.0);
             self.set_container_content(opened_container.as_deref_mut());
             return Ok(());
         }
@@ -328,36 +329,54 @@ impl Player {
             .into_iter()
             .filter(|player_id| *player_id != self.entity_id())
             .collect_vec();
-        let mut container = container.lock().or(Err(InventoryError::LockError))?;
+        dbg!(&player_ids);
+        let player_token = self.client.token;
 
         // TODO: Figure out better way to get only the players from player_ids
         // Also refactor out a better method to get individual advanced state ids
 
         let world = self.world.lock().await;
+        dbg!("here");
         let players = world
             .current_players
             .iter()
             .filter_map(|(token, player)| {
-                if player_ids.contains(&(token.0 as i32)) {
-                    Some(player.clone())
+                dbg!(token);
+                if *token != player_token {
+                    let entity_id = player.lock().unwrap().entity_id();
+                    if player_ids.contains(&entity_id) {
+                        Some(player.clone())
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
             })
             .collect_vec();
-        std::mem::drop(world);
+        drop(world);
         for player in players {
-            dbg!("really shouldn't be here");
+            dbg!("here");
             let mut player = player.lock().unwrap();
-            let mut container =
-                OptionallyCombinedContainer::new(&mut self.inventory, Some(container.deref_mut()));
-            let state_id = container.advance_state_id();
-            let all_slots = container.all_slots_ref();
+            dbg!(player.entity_id());
+            let total_opened_containers = player.inventory.total_opened_containers;
+            let mut container = container.lock().or(Err(InventoryError::LockError))?;
+            let mut combined_container = OptionallyCombinedContainer::new(
+                &mut player.inventory,
+                Some(container.deref_mut()),
+            );
+            let state_id = combined_container.advance_state_id();
+            let all_slots = combined_container.all_slots_ref();
 
             let slot = Slot::from(all_slots[slot_index]);
-            let packet =
-                CSetContainerSlot::new(*container.window_type() as i8, state_id, slot_index, &slot);
-            player.client.send_packet(&packet)
+            let packet = CSetContainerSlot::new(
+                dbg!(total_opened_containers) as i8,
+                state_id,
+                slot_index,
+                slot,
+            );
+            player.client.send_packet(&packet);
+            drop(container)
         }
 
         Ok(())
