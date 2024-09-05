@@ -110,7 +110,6 @@ impl Player {
         let mut opened_container = self
             .get_open_container(server)
             .map(|container| container.lock().unwrap());
-        let mut opened_container = opened_container.as_deref_mut();
         let drag_handler = &server.drag_handler;
 
         let current_state_id = if let Some(container) = opened_container.as_ref() {
@@ -144,18 +143,20 @@ impl Player {
 
         match click.click_type {
             ClickType::MouseClick(mouse_click) => {
-                self.mouse_click(opened_container, mouse_click, click.slot)
+                self.mouse_click(opened_container.as_deref_mut(), mouse_click, click.slot)
             }
-            ClickType::ShiftClick => self.shift_mouse_click(opened_container, click.slot),
+            ClickType::ShiftClick => {
+                self.shift_mouse_click(opened_container.as_deref_mut(), click.slot)
+            }
             ClickType::KeyClick(key_click) => match click.slot {
                 container_click::Slot::Normal(slot) => {
-                    self.number_button_pressed(opened_container, key_click, slot)
+                    self.number_button_pressed(opened_container.as_deref_mut(), key_click, slot)
                 }
                 container_click::Slot::OutsideInventory => Err(InventoryError::InvalidPacket),
             },
             ClickType::CreativePickItem => {
                 if let container_click::Slot::Normal(slot) = click.slot {
-                    self.creative_pick_item(opened_container, slot)
+                    self.creative_pick_item(opened_container.as_deref_mut(), slot)
                 } else {
                     Err(InventoryError::InvalidPacket)
                 }
@@ -168,10 +169,11 @@ impl Player {
                 }
             }
             ClickType::MouseDrag { drag_state } => {
-                self.mouse_drag(drag_handler, opened_container, drag_state)
+                self.mouse_drag(drag_handler, opened_container.as_deref_mut(), drag_state)
             }
             ClickType::DropType(_drop_type) => todo!(),
         }?;
+        std::mem::drop(opened_container);
         if let container_click::Slot::Normal(slot) = click.slot {
             self.send_container_changes(server, slot).await?;
         }
@@ -357,7 +359,6 @@ impl Player {
                 CSetContainerSlot::new(*container.window_type() as i8, state_id, slot_index, &slot);
             player.client.send_packet(&packet)
         }
-        dbg!("got here");
 
         Ok(())
     }
