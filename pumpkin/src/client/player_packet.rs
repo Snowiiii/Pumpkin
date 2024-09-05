@@ -76,9 +76,7 @@ impl Player {
             return;
         }
         let entity = &mut self.entity;
-        self.lastx = entity.pos.x;
-        self.lasty = entity.pos.y;
-        self.lastz = entity.pos.z;
+        self.last_position = entity.pos;
         entity.set_pos(
             Self::clamp_horizontal(position.x),
             Self::clamp_vertical(position.feet_y),
@@ -89,13 +87,12 @@ impl Player {
         // send new position to all other players
         let on_ground = self.on_ground;
         let entity_id = entity.entity_id;
-        let (x, lastx) = (entity.pos.x, self.lastx);
-        let (y, lasty) = (entity.pos.y, self.lasty);
-        let (z, lastz) = (entity.pos.z, self.lastz);
+        let (x, y, z) = entity.pos.into();
+        let (lastx, lasty, lastz) = self.last_position.into();
         let world = self.world.clone();
         let world = world.lock().await;
         world.broadcast_packet(
-            &[&self.client.token],
+            &[self.client.token],
             &CUpdateEntityPos::new(
                 entity_id.into(),
                 (x * 4096.0 - lastx * 4096.0) as i16,
@@ -125,9 +122,7 @@ impl Player {
         }
         let entity = &mut self.entity;
 
-        self.lastx = entity.pos.x;
-        self.lasty = entity.pos.y;
-        self.lastz = entity.pos.z;
+        self.last_position = entity.pos;
         entity.set_pos(
             Self::clamp_horizontal(position_rotation.x),
             Self::clamp_vertical(position_rotation.feet_y),
@@ -139,9 +134,8 @@ impl Player {
         // send new position to all other players
         let on_ground = self.on_ground;
         let entity_id = entity.entity_id;
-        let (x, lastx) = (entity.pos.x, self.lastx);
-        let (y, lasty) = (entity.pos.y, self.lasty);
-        let (z, lastz) = (entity.pos.z, self.lastz);
+        let (x, y, z) = entity.pos.into();
+        let (lastx, lasty, lastz) = self.last_position.into();
         let yaw = modulus(entity.yaw * 256.0 / 360.0, 256.0);
         let pitch = modulus(entity.pitch * 256.0 / 360.0, 256.0);
         // let head_yaw = (entity.head_yaw * 256.0 / 360.0).floor();
@@ -149,7 +143,7 @@ impl Player {
         let world = world.lock().await;
 
         world.broadcast_packet(
-            &[&self.client.token],
+            &[self.client.token],
             &CUpdateEntityPosRot::new(
                 entity_id.into(),
                 (x * 4096.0 - lastx * 4096.0) as i16,
@@ -161,7 +155,7 @@ impl Player {
             ),
         );
         world.broadcast_packet(
-            &[&self.client.token],
+            &[self.client.token],
             &CHeadRot::new(entity_id.into(), yaw as u8),
         );
 
@@ -186,10 +180,10 @@ impl Player {
         let world = self.world.lock().await;
         let packet = CUpdateEntityRot::new(entity_id.into(), yaw as u8, pitch as u8, on_ground);
         // self.client.send_packet(&packet);
-        world.broadcast_packet(&[&self.client.token], &packet);
+        world.broadcast_packet(&[self.client.token], &packet);
         let packet = CHeadRot::new(entity_id.into(), yaw as u8);
         //        self.client.send_packet(&packet);
-        world.broadcast_packet(&[&self.client.token], &packet);
+        world.broadcast_packet(&[self.client.token], &packet);
     }
 
     pub fn handle_chat_command(&mut self, server: &mut Server, command: SChatCommand) {
@@ -248,7 +242,7 @@ impl Player {
                 let id = self.entity_id();
                 let world = self.world.lock().await;
                 world.broadcast_packet(
-                    &[&self.client.token],
+                    &[self.client.token],
                     &CEntityAnimation::new(id.into(), animation as u8),
                 )
             }
@@ -272,7 +266,7 @@ impl Player {
 
         let world = self.world.lock().await;
         world.broadcast_packet(
-            &[&self.client.token],
+            &[self.client.token],
             &CPlayerChatMessage::new(
                 pumpkin_protocol::uuid::UUID(gameprofile.id),
                 1.into(),
@@ -340,7 +334,7 @@ impl Player {
                         let world = world.lock().await;
                         let attacked_player = world.get_by_entityid(self, entity_id.0 as EntityId);
                         if let Some(mut player) = attacked_player {
-                            let token = player.client.token.clone();
+                            let token = player.client.token;
                             let velo = player.velocity;
                             if config.protect_creative && player.gamemode == GameMode::Creative {
                                 return;
@@ -371,7 +365,7 @@ impl Player {
                                 self.client.send_packet(packet);
                                 player.client.send_packet(packet);
                                 world.broadcast_packet(
-                                    &[&self.client.token, &token],
+                                    &[self.client.token, token],
                                     &CHurtAnimation::new(&entity_id, 10.0),
                                 )
                             }
@@ -411,12 +405,12 @@ impl Player {
                         // TODO: currently this is always dirt replace it
                         let world = self.world.lock().await;
                         world.broadcast_packet(
-                            &[&self.client.token],
+                            &[self.client.token],
                             &CWorldEvent::new(2001, &location, 11, false),
                         );
                         // AIR
                         world.broadcast_packet(
-                            &[&self.client.token],
+                            &[self.client.token],
                             &CBlockUpdate::new(&location, 0.into()),
                         );
                     }
@@ -439,12 +433,12 @@ impl Player {
                     // TODO: currently this is always dirt replace it
                     let world = self.world.lock().await;
                     world.broadcast_packet(
-                        &[&self.client.token],
+                        &[self.client.token],
                         &CWorldEvent::new(2001, &location, 11, false),
                     );
                     // AIR
                     world.broadcast_packet(
-                        &[&self.client.token],
+                        &[self.client.token],
                         &CBlockUpdate::new(&location, 0.into()),
                     );
                     // TODO: Send this every tick
@@ -491,11 +485,11 @@ impl Player {
                 if let Ok(block_state_id) = BlockId::new(minecraft_id, None) {
                     let world = self.world.lock().await;
                     world.broadcast_packet(
-                        &[&self.client.token],
+                        &[self.client.token],
                         &CBlockUpdate::new(&location, block_state_id.get_id_mojang_repr().into()),
                     );
                     world.broadcast_packet(
-                        &[&self.client.token],
+                        &[self.client.token],
                         &CBlockUpdate::new(
                             &WorldPosition(location.0 + face.to_offset()),
                             block_state_id.get_id_mojang_repr().into(),

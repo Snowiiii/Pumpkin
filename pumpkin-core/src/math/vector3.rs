@@ -98,6 +98,12 @@ impl<T> From<(T, T, T)> for Vector3<T> {
     }
 }
 
+impl<T> From<Vector3<T>> for (T, T, T) {
+    fn from(vector: Vector3<T>) -> Self {
+        (vector.x, vector.y, vector.z)
+    }
+}
+
 pub trait Math:
     Mul<Output = Self>
     + Neg<Output = Self>

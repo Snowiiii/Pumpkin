@@ -69,9 +69,7 @@ pub struct Player {
     /// send `send_abilties_update` when changed
     pub abilities: PlayerAbilities,
 
-    pub lastx: f64,
-    pub lasty: f64,
-    pub lastz: f64,
+    pub last_position: Vector3<f64>,
     // Client side value, Should be not trusted
     pub on_ground: bool,
 
@@ -132,9 +130,7 @@ impl Player {
             abilities: PlayerAbilities::default(),
             gamemode,
             watched_section: Vector3::new(0, 0, 0),
-            lastx: 0.0,
-            lasty: 0.0,
-            lastz: 0.0,
+            last_position: Vector3::new(0.0, 0.0, 0.0),
         }
     }
 
@@ -230,7 +226,7 @@ impl Player {
         self.world
             .lock()
             .await
-            .broadcast_packet(&[&self.client.token], &packet);
+            .broadcast_packet(&[self.client.token], &packet);
     }
 
     pub async fn set_pose(&mut self, pose: EntityPose) {
@@ -244,7 +240,7 @@ impl Player {
         self.world
             .lock()
             .await
-            .broadcast_packet(&[&self.client.token], &packet)
+            .broadcast_packet(&[self.client.token], &packet)
     }
 
     pub fn teleport(&mut self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
@@ -255,9 +251,7 @@ impl Player {
         }
         let entity = &mut self.entity;
         entity.set_pos(x, y, z);
-        self.lastx = x;
-        self.lasty = y;
-        self.lastz = z;
+        self.last_position = entity.pos;
         entity.yaw = yaw;
         entity.pitch = pitch;
         self.awaiting_teleport = Some((self.teleport_id_count.into(), Vector3::new(x, y, z)));
@@ -326,7 +320,7 @@ impl Player {
             }],
         ));
         self.world.lock().await.broadcast_packet(
-            &[&self.client.token],
+            &[self.client.token],
             &CPlayerInfoUpdate::new(
                 0x04,
                 &[pumpkin_protocol::client::play::Player {

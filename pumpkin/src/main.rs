@@ -81,7 +81,7 @@ fn main() -> io::Result<()> {
         let rcon = ADVANCED_CONFIG.rcon.clone();
 
         let mut clients: HashMap<Token, Client> = HashMap::new();
-        let mut players: HashMap<Arc<Token>, Arc<Mutex<Player>>> = HashMap::new();
+        let mut players: HashMap<Token, Arc<Mutex<Player>>> = HashMap::new();
 
         let server = Arc::new(tokio::sync::Mutex::new(Server::new()));
         log::info!("Started Server took {}ms", time.elapsed().as_millis());
@@ -150,32 +150,28 @@ fn main() -> io::Result<()> {
                             token,
                             Interest::READABLE.add(Interest::WRITABLE),
                         )?;
-                        let rc_token = Arc::new(token);
-                        let client = Client::new(Arc::clone(&rc_token), connection, addr);
+                        let client = Client::new(token, connection, addr);
                         clients.insert(token, client);
                     },
 
                     token => {
                         // Poll Players
-                        let done = if let Some(player) = players.get_mut(&token) {
+                        if let Some(player) = players.get_mut(&token) {
                             let mut player = player.lock().unwrap();
                             player.client.poll(event).await;
                             if !player.client.closed {
                                 let mut server = server.lock().await;
                                 player.process_packets(&mut server).await;
                             }
-                            player.client.closed
-                        } else {
-                            false
-                        };
-
-                        if done {
-                            if let Some(player) = players.remove(&token) {
-                                let mut player = player.lock().unwrap();
-                                player.remove().await;
-                                poll.registry().deregister(&mut player.client.connection)?;
+                            if player.client.closed {
+                                drop(player);
+                                if let Some(player) = players.remove(&token) {
+                                    let mut player = player.lock().unwrap();
+                                    player.remove().await;
+                                    poll.registry().deregister(&mut player.client.connection)?;
+                                }
                             }
-                        }
+                        };
 
                         // Poll current Clients (non players)
                         // Maybe received an event for a TCP connection.
@@ -195,10 +191,9 @@ fn main() -> io::Result<()> {
                                 if done {
                                     poll.registry().deregister(&mut client.connection)?;
                                 } else if make_player {
-                                    let token = client.token.clone();
+                                    let token = client.token;
                                     let mut server = server.lock().await;
-                                    let (player, world) =
-                                        server.add_player(token.clone(), client).await;
+                                    let (player, world) = server.add_player(token, client).await;
                                     players.insert(token, player.clone());
                                     let mut world = world.lock().await;
                                     world.spawn_player(&BASIC_CONFIG, player).await;

@@ -107,7 +107,7 @@ impl Server {
 
     pub async fn add_player(
         &mut self,
-        token: Arc<Token>,
+        token: Token,
         client: Client,
     ) -> (Arc<Mutex<Player>>, Arc<tokio::sync::Mutex<World>>) {
         let entity_id = self.new_entity_id();
@@ -129,12 +129,12 @@ impl Server {
     }
 
     /// Sends a Packet to all Players in all worlds
-    pub fn broadcast_packet_all<P>(&self, expect: &[&Arc<Token>], packet: &P)
+    pub fn broadcast_packet_all<P>(&self, except: &[Token], packet: &P)
     where
         P: ClientPacket,
     {
         for world in &self.worlds {
-            world.blocking_lock().broadcast_packet(expect, packet)
+            world.blocking_lock().broadcast_packet(except, packet)
         }
     }
 
