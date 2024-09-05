@@ -359,19 +359,23 @@ impl ByteBuffer {
     }
 
     pub fn copy_to_bytes(&mut self, len: usize) -> Result<bytes::Bytes, DeserializerError> {
-        if self.buffer.remaining() >= len {
+        if self.buffer.len() >= len {
             Ok(self.buffer.copy_to_bytes(len))
         } else {
-            Err(DeserializerError::Message("Unable to copy".to_string()))
+            Err(DeserializerError::Message(
+                "Unable to copy bytes".to_string(),
+            ))
         }
     }
 
     pub fn copy_to_slice(&mut self, dst: &mut [u8]) -> Result<(), DeserializerError> {
-        if self.buffer.remaining() > dst.len() {
+        if self.buffer.remaining() >= dst.len() {
             self.buffer.copy_to_slice(dst);
             Ok(())
         } else {
-            Err(DeserializerError::Message("Unable to copy".to_string()))
+            Err(DeserializerError::Message(
+                "Unable to copy slice".to_string(),
+            ))
         }
     }
 
