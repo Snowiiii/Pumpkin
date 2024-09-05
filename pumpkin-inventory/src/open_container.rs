@@ -1,7 +1,6 @@
-use crate::drag_handler::DragHandler;
 use crate::{Container, WindowType};
 use pumpkin_world::item::ItemStack;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 pub struct OpenContainer {
     players: Vec<i32>,

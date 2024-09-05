@@ -16,7 +16,7 @@ use std::{
     path::Path,
     sync::{
         atomic::{AtomicI32, Ordering},
-        Arc, Mutex, MutexGuard,
+        Arc, Mutex,
     },
     time::Duration,
 };

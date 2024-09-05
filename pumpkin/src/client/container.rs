@@ -3,7 +3,7 @@ use crate::server::Server;
 use itertools::Itertools;
 use pumpkin_core::text::TextComponent;
 use pumpkin_core::GameMode;
-use pumpkin_inventory::container_click::{KeyClick, MouseClick, MouseDragState, MouseDragType};
+use pumpkin_inventory::container_click::{KeyClick, MouseClick, MouseDragState};
 use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
 use pumpkin_inventory::{container_click, InventoryError, OptionallyCombinedContainer};
@@ -14,7 +14,7 @@ use pumpkin_protocol::client::play::{
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::Mutex;
 
 impl Player {
     pub fn open_container(

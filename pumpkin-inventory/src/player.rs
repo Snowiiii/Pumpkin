@@ -1,5 +1,4 @@
 use crate::container_click::MouseClick;
-use crate::drag_handler::DragHandler;
 use crate::{handle_item_change, Container, InventoryError, WindowType};
 use pumpkin_world::item::ItemStack;
 

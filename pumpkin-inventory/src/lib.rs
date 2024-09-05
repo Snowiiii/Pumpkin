@@ -1,4 +1,4 @@
-use crate::container_click::{MouseClick, MouseDragState, MouseDragType};
+use crate::container_click::MouseClick;
 use crate::player::PlayerInventory;
 use num_derive::{FromPrimitive, ToPrimitive};
 use pumpkin_world::item::ItemStack;

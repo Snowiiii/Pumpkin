@@ -4,9 +4,7 @@ use itertools::Itertools;
 use num_traits::Euclid;
 use pumpkin_world::item::ItemStack;
 use std::collections::HashMap;
-use std::iter::{Enumerate, Filter, TakeWhile};
 use std::sync::{Arc, Mutex, RwLock};
-use std::vec::IntoIter;
 #[derive(Debug, Default)]
 pub struct DragHandler(RwLock<HashMap<u64, Arc<Mutex<Drag>>>>);
 
@@ -76,7 +74,7 @@ impl DragHandler {
         let Some((_, drag)) = drags.remove_entry(container_id) else {
             Err(InventoryError::OutOfOrderDragging)?
         };
-        let mut drag = drag.lock().unwrap();
+        let drag = drag.lock().unwrap();
 
         if player != drag.player {
             Err(InventoryError::MultiplePlayersDragging)?
