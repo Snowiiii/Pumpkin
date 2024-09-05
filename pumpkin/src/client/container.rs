@@ -330,7 +330,23 @@ impl Player {
 
         // TODO: Figure out better way to get only the players from player_ids
         // Also refactor out a better method to get individual advanced state ids
-        for player in self.world.lock().await.current_players.values() {
+
+        let world = self.world.lock().await;
+        let players = world
+            .current_players
+            .iter()
+            .filter_map(|(token, player)| {
+                if player_ids.contains(&(token.0 as i32)) {
+                    Some(player.clone())
+                } else {
+                    None
+                }
+            })
+            .collect_vec();
+        std::mem::drop(world);
+        for player in players {
+            dbg!("really shouldn't be here");
+            let mut player = player.lock().unwrap();
             let mut container =
                 OptionallyCombinedContainer::new(&mut self.inventory, Some(container.deref_mut()));
             let state_id = container.advance_state_id();
@@ -339,11 +355,9 @@ impl Player {
             let slot = Slot::from(all_slots[slot_index]);
             let packet =
                 CSetContainerSlot::new(*container.window_type() as i8, state_id, slot_index, &slot);
-            let mut player = player.lock().or(Err(InventoryError::LockError))?;
-            if player_ids.contains(&player.entity_id()) {
-                player.client.send_packet(&packet)
-            }
+            player.client.send_packet(&packet)
         }
+        dbg!("got here");
 
         Ok(())
     }
