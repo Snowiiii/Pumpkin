@@ -3,7 +3,7 @@ use crate::server::Server;
 use itertools::Itertools;
 use pumpkin_core::text::TextComponent;
 use pumpkin_core::GameMode;
-use pumpkin_inventory::container_click::{KeyClick, MouseClick, MouseDragState};
+use pumpkin_inventory::container_click::{KeyClick, MouseClick, MouseDragState, MouseDragType};
 use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
 use pumpkin_inventory::{container_click, InventoryError, OptionallyCombinedContainer};
@@ -300,11 +300,12 @@ impl Player {
             .unwrap_or(player_id as u64);
         match mouse_drag_state {
             MouseDragState::Start(drag_type) => {
-                drag_handler.new_drag(container_id, player_id, drag_type)?
+                if drag_type == MouseDragType::Middle && self.gamemode != GameMode::Creative {
+                    Err(InventoryError::PermissionError)?
+                }
+                drag_handler.new_drag(container_id, player_id, drag_type)
             }
-            MouseDragState::AddSlot(slot) => {
-                drag_handler.add_slot(container_id, player_id, slot)?
-            }
+            MouseDragState::AddSlot(slot) => drag_handler.add_slot(container_id, player_id, slot),
             MouseDragState::End => {
                 let mut container =
                     OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
@@ -313,10 +314,9 @@ impl Player {
                     &mut container,
                     &container_id,
                     player_id,
-                )?
+                )
             }
         }
-        Ok(())
     }
 
     pub fn get_open_container<'a>(

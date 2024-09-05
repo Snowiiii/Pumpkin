@@ -131,7 +131,7 @@ pub enum DropType {
     SingleItem,
     FullStack,
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum MouseDragType {
     Left,
     Right,
