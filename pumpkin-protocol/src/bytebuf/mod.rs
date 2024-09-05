@@ -84,6 +84,14 @@ impl ByteBuffer {
                 "String length is bigger than max size",
             ));
         }
+
+        if size as usize > self.buffer.len() {
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                "String length is bigger than packet",
+            ));
+        }
+
         let data = self.buffer.copy_to_bytes(size as usize);
         if data.len() > max_size {
             return Err(Error::new(
