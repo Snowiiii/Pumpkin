@@ -93,3 +93,8 @@ features.toml
 
 
 .vscode/settings.json
+
+# Documentation
+docs/.vitepress/dist
+docs/.vitepress/cache
+node_modules
