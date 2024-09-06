@@ -4,6 +4,6 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-extism = "1.5.0"
-log.workspace = true
 serde.workspace = true
+log.workspace = true
+extism = "1.6.0"

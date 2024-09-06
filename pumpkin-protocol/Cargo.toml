@@ -18,7 +18,7 @@ serde_json = "1.0"
 
 flate2 = "1.0.33"
 
-thiserror = "1.0.63"
+thiserror = "1.0"
 log.workspace = true
 num-traits = "0.2"
 num-derive = "0.4"

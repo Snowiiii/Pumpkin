@@ -6,16 +6,14 @@ edition.workspace = true
 [dependencies]
 pumpkin-core = { path = "../pumpkin-core"}
 
-
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
-fastsnbt = "0.2"
 tokio.workspace = true
 rayon.workspace = true
 derive_more.workspace = true
 itertools = "0.13.0"
-thiserror = "1.0.63"
-futures = "0.3.30"
-flate2 = "1.0.33"
+thiserror = "1.0"
+futures = "0.3"
+flate2 = "1.0"
 serde.workspace = true
 serde_json = "1.0"
 static_assertions = "1.1.0"
