@@ -92,11 +92,6 @@ pub trait Container: Sync + Send {
         self.all_slots()
     }
 
-    fn advance_state_id(&mut self) -> i32;
-
-    fn reset_state_id(&mut self);
-    fn state_id(&self) -> i32;
-
     fn print_all_contents(&self) {
         self.all_slots_ref()
             .into_iter()
@@ -211,6 +206,10 @@ impl<'a, 'b> OptionallyCombinedContainer<'a, 'b> {
             container,
         }
     }
+    /// Returns None if the slot is in the players inventory, Returns Some(Option<&ItemStack>) if it's inside of the container
+    pub fn get_slot_excluding_inventory(&self, slot: usize) -> Option<Option<&ItemStack>> {
+        self.container.as_ref()?.all_slots_ref().get(slot).copied()
+    }
 }
 
 impl<'a> Container for OptionallyCombinedContainer<'a, 'a> {
@@ -243,17 +242,5 @@ impl<'a> Container for OptionallyCombinedContainer<'a, 'a> {
             }
             None => self.inventory.all_slots_ref(),
         }
-    }
-
-    fn advance_state_id(&mut self) -> i32 {
-        self.inventory.advance_state_id()
-    }
-
-    fn reset_state_id(&mut self) {
-        self.inventory.reset_state_id()
-    }
-
-    fn state_id(&self) -> i32 {
-        self.inventory.state_id()
     }
 }

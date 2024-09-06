@@ -533,6 +533,7 @@ impl Player {
     // But this is not possible yet
     pub fn handle_close_container(&mut self, server: &mut Server, packet: SCloseContainer) {
         // window_id 0 represents both 9x1 Generic AND inventory here
+        self.inventory.state_id = 0;
         if let Some(id) = self.open_container {
             if let Some(container) = server.open_containers.get_mut(&id) {
                 container.remove_player(self.entity_id())

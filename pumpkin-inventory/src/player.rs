@@ -13,7 +13,8 @@ pub struct PlayerInventory {
     offhand: Option<ItemStack>,
     // current selected slot in hotbar
     selected: usize,
-    state_id: i32,
+    pub state_id: u32,
+    // Notchian server wraps this value at 100, we can just keep it as a u8 that automatically wraps
     pub total_opened_containers: u8,
 }
 
@@ -165,17 +166,5 @@ impl Container for PlayerInventory {
 
     fn all_combinable_slots_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
         self.items.iter_mut().collect()
-    }
-
-    fn advance_state_id(&mut self) -> i32 {
-        self.state_id += 1;
-        self.state_id
-    }
-
-    fn reset_state_id(&mut self) {
-        self.state_id = 0;
-    }
-    fn state_id(&self) -> i32 {
-        self.state_id
     }
 }

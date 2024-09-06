@@ -47,17 +47,11 @@ impl OpenContainer {
     }
 }
 
-struct Chest {
-    slots: [Option<ItemStack>; 27],
-    state_id: i32,
-}
+struct Chest([Option<ItemStack>; 27]);
 
 impl Chest {
     pub fn new() -> Self {
-        Self {
-            slots: [None; 27],
-            state_id: 0,
-        }
+        Self([None; 27])
     }
 }
 impl Container for Chest {
@@ -66,23 +60,10 @@ impl Container for Chest {
     }
 
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
-        self.slots.iter_mut().collect()
+        self.0.iter_mut().collect()
     }
 
     fn all_slots_ref(&self) -> Vec<Option<&ItemStack>> {
-        self.slots.iter().map(|slot| slot.as_ref()).collect()
-    }
-
-    fn advance_state_id(&mut self) -> i32 {
-        self.state_id += 1;
-        self.state_id - 1
-    }
-
-    fn reset_state_id(&mut self) {
-        self.state_id = 0;
-    }
-
-    fn state_id(&self) -> i32 {
-        self.state_id
+        self.0.iter().map(|slot| slot.as_ref()).collect()
     }
 }

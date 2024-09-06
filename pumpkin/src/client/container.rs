@@ -3,7 +3,9 @@ use crate::server::Server;
 use itertools::Itertools;
 use pumpkin_core::text::TextComponent;
 use pumpkin_core::GameMode;
-use pumpkin_inventory::container_click::{KeyClick, MouseClick, MouseDragState, MouseDragType};
+use pumpkin_inventory::container_click::{
+    Click, ClickType, KeyClick, MouseClick, MouseDragState, MouseDragType,
+};
 use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
 use pumpkin_inventory::{container_click, InventoryError, OptionallyCombinedContainer};
@@ -14,7 +16,6 @@ use pumpkin_protocol::client::play::{
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
-use std::ops::DerefMut;
 use std::sync::Mutex;
 
 impl Player {
@@ -24,7 +25,7 @@ impl Player {
         minecraft_menu_id: &str,
         window_title: Option<&str>,
     ) {
-        self.inventory.reset_state_id();
+        self.inventory.state_id = 0;
         let total_opened_containers = self.inventory.total_opened_containers;
         let mut container = self
             .get_open_container(server)
@@ -70,14 +71,13 @@ impl Player {
                 Slot::empty()
             }
         };
-
+        self.inventory.state_id += 1;
         let packet = CSetContainerContent::new(
             total_opened_containers,
-            self.inventory.state_id().into(),
+            (self.inventory.state_id as i32).into(),
             &slots,
             &carried_item,
         );
-        self.inventory.advance_state_id();
         self.client.send_packet(&packet);
     }
 
@@ -106,20 +106,14 @@ impl Player {
         server: &mut Server,
         packet: SClickContainer,
     ) -> Result<(), InventoryError> {
-        use container_click::*;
         let mut opened_container = self
             .get_open_container(server)
             .map(|container| container.lock().unwrap());
         let drag_handler = &server.drag_handler;
 
-        let current_state_id = if let Some(container) = opened_container.as_ref() {
-            container.state_id()
-        } else {
-            self.inventory.state_id()
-        };
+        let state_id = self.inventory.state_id;
         // This is just checking for regular desync, client hasn't done anything malicious
-        if current_state_id != packet.state_id.0 {
-            dbg!(current_state_id, packet.state_id.0);
+        if state_id != packet.state_id.0 as u32 {
             self.set_container_content(opened_container.as_deref_mut());
             return Ok(());
         }
@@ -174,9 +168,19 @@ impl Player {
             }
             ClickType::DropType(_drop_type) => todo!(),
         }?;
-        std::mem::drop(opened_container);
-        if let container_click::Slot::Normal(slot) = click.slot {
-            self.send_container_changes(server, slot).await?;
+        if let Some(mut opened_container) = opened_container {
+            if let container_click::Slot::Normal(slot_index) = click.slot {
+                let combined_container = OptionallyCombinedContainer::new(
+                    &mut self.inventory,
+                    Some(&mut opened_container),
+                );
+                if let Some(slot) = combined_container.get_slot_excluding_inventory(slot_index) {
+                    let slot = Slot::from(slot);
+                    drop(opened_container);
+                    self.send_container_changes(server, slot_index, slot)
+                        .await?;
+                }
+            }
         }
         Ok(())
     }
@@ -193,7 +197,7 @@ impl Player {
             container_click::Slot::Normal(slot) => {
                 container.handle_item_change(&mut self.carried_item, slot, mouse_click)
             }
-            container_click::Slot::OutsideInventory => todo!(),
+            container_click::Slot::OutsideInventory => Ok(()),
         }
     }
 
@@ -316,11 +320,8 @@ impl Player {
         &mut self,
         server: &Server,
         slot_index: usize,
+        slot: Slot,
     ) -> Result<(), InventoryError> {
-        // If we don't have a container open, then we don't need to share state
-        let Some(container) = self.get_open_container(server) else {
-            return Ok(());
-        };
         let player_ids = server
             .open_containers
             .get(&self.open_container.unwrap())
@@ -329,19 +330,16 @@ impl Player {
             .into_iter()
             .filter(|player_id| *player_id != self.entity_id())
             .collect_vec();
-        dbg!(&player_ids);
         let player_token = self.client.token;
 
         // TODO: Figure out better way to get only the players from player_ids
         // Also refactor out a better method to get individual advanced state ids
 
         let world = self.world.lock().await;
-        dbg!("here");
         let players = world
             .current_players
             .iter()
             .filter_map(|(token, player)| {
-                dbg!(token);
                 if *token != player_token {
                     let entity_id = player.lock().unwrap().entity_id();
                     if player_ids.contains(&entity_id) {
@@ -356,27 +354,17 @@ impl Player {
             .collect_vec();
         drop(world);
         for player in players {
-            dbg!("here");
             let mut player = player.lock().unwrap();
-            dbg!(player.entity_id());
             let total_opened_containers = player.inventory.total_opened_containers;
-            let mut container = container.lock().or(Err(InventoryError::LockError))?;
-            let mut combined_container = OptionallyCombinedContainer::new(
-                &mut player.inventory,
-                Some(container.deref_mut()),
-            );
-            let state_id = combined_container.advance_state_id();
-            let all_slots = combined_container.all_slots_ref();
 
-            let slot = Slot::from(all_slots[slot_index]);
+            player.inventory.state_id += 1;
             let packet = CSetContainerSlot::new(
-                dbg!(total_opened_containers) as i8,
-                state_id,
+                total_opened_containers as i8,
+                player.inventory.state_id as i32,
                 slot_index,
-                slot,
+                &slot,
             );
             player.client.send_packet(&packet);
-            drop(container)
         }
 
         Ok(())
