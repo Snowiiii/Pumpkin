@@ -142,7 +142,7 @@ pub enum MouseDragType {
     Right,
     Middle,
 }
-
+#[derive(PartialEq)]
 pub enum MouseDragState {
     Start(MouseDragType),
     AddSlot(usize),

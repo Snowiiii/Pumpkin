@@ -58,13 +58,13 @@ impl DragHandler {
 
     pub fn apply_drag<T: Container>(
         &self,
-        carried_item: &mut Option<ItemStack>,
+        maybe_carried_item: &mut Option<ItemStack>,
         container: &mut T,
         container_id: &u64,
         player: i32,
     ) -> Result<(), InventoryError> {
         // Minecraft client does still send dragging packets when not carrying an item!
-        if carried_item.is_none() {
+        if maybe_carried_item.is_none() {
             return Ok(());
         }
 
@@ -84,60 +84,60 @@ impl DragHandler {
             .iter()
             .map(|stack| stack.map(|item| item.to_owned()))
             .collect_vec();
+        let Some(carried_item) = maybe_carried_item else {
+            return Ok(());
+        };
         match drag.drag_type {
             // This is only valid in Creative GameMode.
             // Checked in any function that uses this function.
             MouseDragType::Middle => {
                 for slot in &drag.slots {
-                    *slots[*slot] = *carried_item;
+                    *slots[*slot] = *maybe_carried_item;
                 }
             }
             MouseDragType::Right => {
-                let amount_of_items = carried_item.unwrap().item_count as usize;
-                let mut single_item = carried_item.unwrap();
+                let mut single_item = *carried_item;
                 single_item.item_count = 1;
-                let changing_slots = drag.changing_slots(
-                    amount_of_items,
-                    &slots_cloned,
-                    carried_item.as_ref().unwrap(),
-                );
-                let mut amount_removed = 0;
+
+                let changing_slots =
+                    drag.possibly_changing_slots(&slots_cloned, carried_item.item_id);
                 changing_slots.for_each(|slot| {
-                    amount_removed += 1;
-                    *slots[slot] = Some(single_item)
+                    if carried_item.item_count != 0 {
+                        carried_item.item_count -= 1;
+                        if let Some(stack) = &mut slots[slot] {
+                            // TODO: Check for stack max here
+                            if stack.item_count + 1 < 64 {
+                                stack.item_count += 1;
+                            } else {
+                                carried_item.item_count += 1;
+                            }
+                        } else {
+                            *slots[slot] = Some(single_item)
+                        }
+                    }
                 });
 
-                let mut remaining = carried_item.unwrap();
-                if remaining.item_count == amount_removed {
-                    *carried_item = None
-                } else {
-                    remaining.item_count -= amount_removed;
-                    *carried_item = Some(remaining)
+                if carried_item.item_count == 0 {
+                    *maybe_carried_item = None
                 }
             }
             MouseDragType::Left => {
-                let amount_of_items = carried_item.unwrap().item_count as usize;
                 // TODO: Handle dragging a stack with greater amount than item allows as max unstackable
                 // In that specific case, follow MouseDragType::Right behaviours instead!
 
-                let changing_slots = drag.changing_slots(
-                    amount_of_items,
-                    &slots_cloned,
-                    carried_item.as_ref().unwrap(),
-                );
+                let changing_slots =
+                    drag.possibly_changing_slots(&slots_cloned, carried_item.item_id);
                 let amount_of_slots = changing_slots.clone().count();
                 let (amount_per_slot, remainder) =
-                    (carried_item.unwrap().item_count as usize).div_rem_euclid(&amount_of_slots);
-                let mut item_in_each_slot = carried_item.unwrap();
+                    (carried_item.item_count as usize).div_rem_euclid(&amount_of_slots);
+                let mut item_in_each_slot = *carried_item;
                 item_in_each_slot.item_count = amount_per_slot as u8;
                 changing_slots.for_each(|slot| *slots[slot] = Some(item_in_each_slot));
 
                 if remainder > 0 {
-                    let mut remaining = carried_item.unwrap();
-                    remaining.item_count = remainder as u8;
-                    *carried_item = Some(remaining)
+                    carried_item.item_count = remainder as u8;
                 } else {
-                    *carried_item = None
+                    *maybe_carried_item = None
                 }
             }
         }
@@ -152,25 +152,24 @@ struct Drag {
 }
 
 impl Drag {
-    fn changing_slots<'a>(
+    fn possibly_changing_slots<'a>(
         &'a self,
-        amount_of_items: usize,
         slots: &'a [Option<ItemStack>],
-        carried_item: &'a ItemStack,
+        carried_item_id: u32,
     ) -> impl Iterator<Item = usize> + 'a + Clone {
-        self.slots
-            .iter()
-            .enumerate()
-            .take_while(move |(slot_number, _)| *slot_number <= amount_of_items)
-            .filter_map(move |(_, slot)| match &slots[*slot] {
+        self.slots.iter().filter_map(move |slot_index| {
+            let slot = &slots[*slot_index];
+
+            match slot {
                 Some(item_slot) => {
-                    if *item_slot == *carried_item {
-                        Some(*slot)
+                    if item_slot.item_id == carried_item_id {
+                        Some(*slot_index)
                     } else {
                         None
                     }
                 }
-                None => Some(*slot),
-            })
+                None => Some(*slot_index),
+            }
+        })
     }
 }

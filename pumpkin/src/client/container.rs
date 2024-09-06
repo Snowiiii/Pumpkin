@@ -16,7 +16,7 @@ use pumpkin_protocol::client::play::{
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 impl Player {
     pub fn open_container(
@@ -135,6 +135,7 @@ impl Player {
             packet.button,
             packet.slot,
         );
+        let mut update_whole_container = false;
 
         match click.click_type {
             ClickType::MouseClick(mouse_click) => {
@@ -157,19 +158,26 @@ impl Player {
                 }
             }
             ClickType::DoubleClick => {
+                update_whole_container = true;
                 if let container_click::Slot::Normal(slot) = click.slot {
-                    self.double_click(slot)
+                    self.double_click(opened_container.as_deref_mut(), slot)
                 } else {
                     Err(InventoryError::InvalidPacket)
                 }
             }
             ClickType::MouseDrag { drag_state } => {
+                if drag_state == MouseDragState::End {
+                    update_whole_container = true;
+                }
                 self.mouse_drag(drag_handler, opened_container.as_deref_mut(), drag_state)
             }
             ClickType::DropType(_drop_type) => todo!(),
         }?;
         if let Some(mut opened_container) = opened_container {
-            if let container_click::Slot::Normal(slot_index) = click.slot {
+            if update_whole_container {
+                drop(opened_container);
+                self.send_whole_container_change(server).await?;
+            } else if let container_click::Slot::Normal(slot_index) = click.slot {
                 let combined_container = OptionallyCombinedContainer::new(
                     &mut self.inventory,
                     Some(&mut opened_container),
@@ -280,7 +288,40 @@ impl Player {
         Ok(())
     }
 
-    fn double_click(&mut self, _slot: usize) -> Result<(), InventoryError> {
+    fn double_click(
+        &mut self,
+        opened_container: Option<&mut Box<dyn Container>>,
+        slot: usize,
+    ) -> Result<(), InventoryError> {
+        let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
+        let mut slots = container.all_slots();
+
+        let Some(item) = slots.get_mut(slot) else {
+            return Ok(());
+        };
+        let Some(mut carried_item) = **item else {
+            return Ok(());
+        };
+        **item = None;
+
+        for slot in slots.iter_mut().filter_map(|slot| slot.as_mut()) {
+            if slot.item_id == carried_item.item_id {
+                // TODO: Check for max stack size
+                if slot.item_count + carried_item.item_count <= 64 {
+                    slot.item_count = 0;
+                    carried_item.item_count = 64;
+                } else {
+                    let to_remove = slot.item_count - (64 - carried_item.item_count);
+                    slot.item_count -= to_remove;
+                    carried_item.item_count += to_remove;
+                }
+
+                if carried_item.item_count == 64 {
+                    break;
+                }
+            }
+        }
+        self.carried_item = Some(carried_item);
         Ok(())
     }
 
@@ -316,12 +357,10 @@ impl Player {
         }
     }
 
-    async fn send_container_changes(
+    async fn get_current_players_in_container(
         &mut self,
         server: &Server,
-        slot_index: usize,
-        slot: Slot,
-    ) -> Result<(), InventoryError> {
+    ) -> Vec<Arc<Mutex<Player>>> {
         let player_ids = server
             .open_containers
             .get(&self.open_container.unwrap())
@@ -352,8 +391,16 @@ impl Player {
                 }
             })
             .collect_vec();
-        drop(world);
-        for player in players {
+        players
+    }
+
+    async fn send_container_changes(
+        &mut self,
+        server: &Server,
+        slot_index: usize,
+        slot: Slot,
+    ) -> Result<(), InventoryError> {
+        for player in self.get_current_players_in_container(server).await {
             let mut player = player.lock().unwrap();
             let total_opened_containers = player.inventory.total_opened_containers;
 
@@ -366,7 +413,20 @@ impl Player {
             );
             player.client.send_packet(&packet);
         }
+        Ok(())
+    }
 
+    async fn send_whole_container_change(&mut self, server: &Server) -> Result<(), InventoryError> {
+        let players = self.get_current_players_in_container(server).await;
+
+        for player in players {
+            let mut player = player.lock().unwrap();
+            let mut container = player
+                .get_open_container(server)
+                .map(|container| container.lock().unwrap());
+            player.set_container_content(container.as_deref_mut());
+            drop(container)
+        }
         Ok(())
     }
 
