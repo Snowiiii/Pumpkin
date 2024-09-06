@@ -21,7 +21,6 @@ pumpkin-registry = { path = "../pumpkin-registry"}
 # config
 serde.workspace = true
 serde_json = "1.0"
-toml = "0.8"
 
 bytes = "1.7"
 
@@ -59,7 +58,6 @@ log.workspace = true
 
 # networking
 mio = { version = "1.0.2", features = ["os-poll", "net"]}
-crossbeam-channel = "0.5.13"
 
 uuid.workspace = true
 tokio.workspace = true

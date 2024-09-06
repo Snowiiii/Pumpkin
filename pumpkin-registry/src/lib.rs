@@ -33,12 +33,12 @@ impl Registry {
             registry_id: "minecraft:worldgen/biome".to_string(),
             registry_entries: vec![
                 RegistryEntry {
-                    entry_id: "minecraft:snowy_taiga",
+                    entry_id: "minecraft:plains",
                     data: fastnbt::to_bytes_with_opts(&Biome::default(), SerOpts::network_nbt())
                         .unwrap(),
                 },
                 RegistryEntry {
-                    entry_id: "minecraft:plains",
+                    entry_id: "minecraft:snowy_taiga",
                     data: fastnbt::to_bytes_with_opts(&Biome::default(), SerOpts::network_nbt())
                         .unwrap(),
                 },

@@ -83,12 +83,13 @@ where
     P: Packet + Serialize,
 {
     fn write(&self, bytebuf: &mut ByteBuffer) {
-        take_mut::take(bytebuf, |bytebuf| {
-            let mut serializer = serializer::Serializer::new(bytebuf);
-            self.serialize(&mut serializer)
-                .expect("Could not serialize packet");
-            serializer.into()
-        });
+        let mut serializer = serializer::Serializer::new(ByteBuffer::empty());
+        self.serialize(&mut serializer)
+            .expect("Could not serialize packet");
+        // We write the packet in an empty bytebuffer and then put it into our current one.
+        // In the future we may do packet batching thats the reason i don't let every packet create a new bytebuffer and use
+        // an existing instead
+        bytebuf.put(serializer.output.buf());
     }
 }
 
