@@ -1,6 +1,6 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 #[derive(Clone, Copy)]
 pub struct Seed(pub i64);
 

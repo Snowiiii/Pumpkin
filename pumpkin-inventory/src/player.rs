@@ -1,6 +1,5 @@
 use pumpkin_world::item::Item;
 
-#[allow(dead_code)]
 pub struct PlayerInventory {
     // Main Inventory + Hotbar
     crafting: [Option<Item>; 4],

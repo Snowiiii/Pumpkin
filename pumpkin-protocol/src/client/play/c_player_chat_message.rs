@@ -22,7 +22,7 @@ pub struct CPlayerChatMessage<'a> {
 }
 
 impl<'a> CPlayerChatMessage<'a> {
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     pub fn new(
         sender: UUID,
         index: VarInt,

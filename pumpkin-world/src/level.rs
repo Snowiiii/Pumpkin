@@ -26,7 +26,7 @@ pub struct Level {
 }
 
 struct SaveFile {
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     root_folder: PathBuf,
     region_folder: PathBuf,
 }
