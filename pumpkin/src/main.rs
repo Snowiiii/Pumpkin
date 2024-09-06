@@ -1,5 +1,4 @@
-#![allow(clippy::await_holding_refcell_ref)]
-#![allow(clippy::await_holding_lock)]
+#![expect(clippy::await_holding_lock)]
 
 #[cfg(target_os = "wasi")]
 compile_error!("Compiling for WASI targets is not supported!");

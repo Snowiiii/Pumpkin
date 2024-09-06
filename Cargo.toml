@@ -1,6 +1,17 @@
 [workspace]
 resolver = "2"
-members = [ "pumpkin-config", "pumpkin-core", "pumpkin-entity", "pumpkin-inventory", "pumpkin-macros/", "pumpkin-plugin", "pumpkin-protocol/", "pumpkin-registry/", "pumpkin-world", "pumpkin/"]
+members = [
+    "pumpkin-config",
+    "pumpkin-core",
+    "pumpkin-entity",
+    "pumpkin-inventory",
+    "pumpkin-macros/",
+    "pumpkin-plugin",
+    "pumpkin-protocol/",
+    "pumpkin-registry/",
+    "pumpkin-world",
+    "pumpkin/",
+]
 
 [workspace.package]
 version = "0.1.0"
@@ -13,7 +24,14 @@ codegen-units = 1
 
 [workspace.dependencies]
 log = "0.4"
-tokio = { version = "1.39.2", features = ["net", "macros", "rt-multi-thread", "fs", "io-util", "sync"] }
+tokio = { version = "1.40", features = [
+    "net",
+    "macros",
+    "rt-multi-thread",
+    "fs",
+    "io-util",
+    "sync",
+] }
 rayon = "1.10.0"
 uuid = { version = "1.10.0", features = ["serde", "v3"] }
 derive_more = { version = "1.0.0", features = ["full"] }

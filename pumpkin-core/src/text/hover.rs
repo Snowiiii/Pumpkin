@@ -6,7 +6,6 @@ use super::Text;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "action", content = "contents", rename_all = "snake_case")]
-#[allow(clippy::enum_variant_names)]
 pub enum HoverEvent<'a> {
     /// Displays a tooltip with the given text.
     ShowText(Text<'a>),

@@ -1,3 +1,5 @@
+use pumpkin_core::math::vector2::Vector2;
+
 use crate::{
     biome::Biome,
     block::BlockId,
@@ -9,7 +11,7 @@ use crate::{
     },
 };
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 pub type SuperflatGenerator = GenericGenerator<SuperflatBiomeGenerator, SuperflatTerrainGenerator>;
 
 pub(crate) struct SuperflatBiomeGenerator {}
@@ -36,6 +38,7 @@ impl GeneratorInit for SuperflatTerrainGenerator {
 }
 
 impl TerrainGenerator for SuperflatTerrainGenerator {
+    fn prepare_chunk(&self, _at: &Vector2<i32>) {}
     // TODO allow specifying which blocks should be at which height in the config.
     fn generate_block(&self, at: BlockCoordinates, _: Biome) -> BlockId {
         match *at.y {

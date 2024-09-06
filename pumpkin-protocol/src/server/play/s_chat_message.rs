@@ -21,12 +21,12 @@ pub struct SChatMessage {
 impl ServerPacket for SChatMessage {
     fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError> {
         Ok(Self {
-            message: bytebuf.get_string().unwrap(),
-            timestamp: bytebuf.get_i64(),
-            salt: bytebuf.get_i64(),
-            signature: bytebuf.get_option(|v| v.copy_to_bytes(256)),
-            message_count: bytebuf.get_var_int(),
-            acknowledged: bytebuf.get_fixed_bitset(20),
+            message: bytebuf.get_string()?,
+            timestamp: bytebuf.get_i64()?,
+            salt: bytebuf.get_i64()?,
+            signature: bytebuf.get_option(|v| v.copy_to_bytes(256))?,
+            message_count: bytebuf.get_var_int()?,
+            acknowledged: bytebuf.get_fixed_bitset(20)?,
         })
     }
 }

@@ -26,7 +26,7 @@ pub struct Level {
 }
 
 struct SaveFile {
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     root_folder: PathBuf,
     region_folder: PathBuf,
 }
@@ -277,7 +277,7 @@ impl Level {
         match compression {
             Compression::Gzip => {
                 let mut z = GzDecoder::new(&compressed_data[..]);
-                let mut chunk_data = Vec::new();
+                let mut chunk_data = Vec::with_capacity(compressed_data.len());
                 match z.read_to_end(&mut chunk_data) {
                     Ok(_) => {}
                     Err(e) => {
@@ -288,7 +288,7 @@ impl Level {
             }
             Compression::Zlib => {
                 let mut z = ZlibDecoder::new(&compressed_data[..]);
-                let mut chunk_data = Vec::new();
+                let mut chunk_data = Vec::with_capacity(compressed_data.len());
                 match z.read_to_end(&mut chunk_data) {
                     Ok(_) => {}
                     Err(e) => {

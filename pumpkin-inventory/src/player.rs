@@ -2,8 +2,6 @@ use crate::container_click::MouseClick;
 use crate::{handle_item_change, Container, InventoryError, WindowType};
 use pumpkin_world::item::ItemStack;
 
-#[allow(dead_code)]
-#[derive(Debug)]
 pub struct PlayerInventory {
     // Main Inventory + Hotbar
     crafting: [Option<ItemStack>; 4],

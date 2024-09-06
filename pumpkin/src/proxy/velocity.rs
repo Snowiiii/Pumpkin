@@ -52,7 +52,7 @@ pub fn receive_plugin_response(
         buf.put_slice(data_without_signature);
 
         // check velocity version
-        let version = buf.get_var_int();
+        let version = buf.get_var_int().unwrap();
         let version = version.0;
         if version > MAX_SUPPORTED_FORWARDING_VERSION {
             client.kick(&format!(

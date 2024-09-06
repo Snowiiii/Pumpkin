@@ -7,7 +7,6 @@ use serde::{
 };
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct Slot {
     item_count: VarInt,
     item_id: Option<VarInt>,

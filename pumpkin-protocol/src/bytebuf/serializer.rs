@@ -9,7 +9,7 @@ use thiserror::Error;
 use super::ByteBuffer;
 
 pub struct Serializer {
-    output: ByteBuffer,
+    pub output: ByteBuffer,
 }
 
 impl Serializer {

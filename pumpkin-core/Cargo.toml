@@ -5,8 +5,8 @@ edition.workspace = true
 
 [dependencies]
 serde.workspace = true
-fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 uuid.workspace = true
+fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 colored = "2"
 md5 = "0.7.0"
 

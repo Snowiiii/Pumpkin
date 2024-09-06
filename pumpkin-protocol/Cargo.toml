@@ -13,12 +13,10 @@ bytes = "1.7"
 uuid.workspace = true
 
 serde.workspace = true
-# to parse strings to json responses
-serde_json = "1.0"
 
 flate2 = "1.0.33"
 
-thiserror = "1.0.63"
+thiserror = "1.0"
 log.workspace = true
 num-traits = "0.2"
 num-derive = "0.4"
@@ -26,6 +24,6 @@ num-derive = "0.4"
 # encryption
 aes = "0.8.4"
 cfb8 = "0.8.1"
-take_mut = "0.2.2"
+
 itertools = "0.13.0"
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }

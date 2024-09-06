@@ -5,6 +5,3 @@ edition.workspace = true
 
 [dependencies]
 pumpkin-core = { path = "../pumpkin-core"}
-
-num-traits = "0.2"
-num-derive = "0.4"
