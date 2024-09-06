@@ -1,3 +1,4 @@
+use noise::Perlin;
 use pumpkin_core::math::vector2::Vector2;
 use static_assertions::assert_obj_safe;
 
@@ -20,6 +21,17 @@ pub(crate) trait BiomeGenerator: Sync + Send {
     fn generate_biome(&self, at: XZBlockCoordinates) -> Biome;
 }
 
+#[expect(dead_code)]
 pub(crate) trait TerrainGenerator: Sync + Send {
+    fn prepare_chunk(&self, at: &Vector2<i32>);
+
+    /// Is static
     fn generate_block(&self, at: BlockCoordinates, biome: Biome) -> BlockId;
+}
+
+pub(crate) trait PerlinTerrainGenerator: Sync + Send {
+    fn prepare_chunk(&self, at: &Vector2<i32>, perlin: &Perlin);
+
+    /// Dependens on the perlin noise height
+    fn generate_block(&self, at: BlockCoordinates, chunk_height: i16, biome: Biome) -> BlockId;
 }
