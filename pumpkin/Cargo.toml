@@ -5,7 +5,8 @@ description = "Empowering everyone to host fast and efficient Minecraft servers.
 edition = "2021"
 
 [features]
-default = []
+default = ["plugins"]
+plugins = ["pumpkin-plugin/plugins"]
 
 [dependencies]
 # pumpkin
