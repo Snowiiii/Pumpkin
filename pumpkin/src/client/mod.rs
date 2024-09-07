@@ -323,7 +323,7 @@ impl Client {
             }
             // So we can also kick on errors, but generally should use Player::kick
             ConnectionState::Play => {
-                self.try_send_packet(&CPlayDisconnect::new(TextComponent::text(reason)))
+                self.try_send_packet(&CPlayDisconnect::new(&TextComponent::text(reason)))
                     .unwrap_or_else(|_| self.close());
             }
             _ => {

@@ -7,13 +7,13 @@ use pumpkin_core::{
     text::TextComponent,
     GameMode,
 };
-use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, Entity, EntityId};
+use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_protocol::{
     bytebuf::{packet_id::Packet, DeserializerError},
     client::play::{
-        CGameEvent, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSetEntityMetadata,
-        CSyncPlayerPosition, CSystemChatMessage, Metadata, PlayerAction,
+        CGameEvent, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSyncPlayerPosition,
+        CSystemChatMessage, PlayerAction,
     },
     server::play::{
         SChatCommand, SChatMessage, SClickContainer, SClientInformationPlay, SConfirmTeleport,
@@ -32,6 +32,8 @@ use crate::{
     server::Server,
     world::World,
 };
+
+use super::Entity;
 
 pub struct PlayerAbilities {
     pub invulnerable: bool,
@@ -56,9 +58,10 @@ impl Default for PlayerAbilities {
 }
 
 pub struct Player {
+    pub entity: Entity,
+
     pub gameprofile: GameProfile,
     pub client: Client,
-    pub entity: Entity,
     pub config: PlayerConfig,
     // TODO: Put this into entity
     pub world: Arc<tokio::sync::Mutex<World>>,
@@ -74,19 +77,10 @@ pub struct Player {
 
     /// send `send_abilties_update` when changed
     pub abilities: PlayerAbilities,
-
     pub last_position: Vector3<f64>,
-    // Client side value, Should be not trusted
-    pub on_ground: bool,
-
-    pub sneaking: bool,
-    pub sprinting: bool,
 
     // TODO: This is currently unused, We have to calculate the block breaking speed our own and then break the block our own if its done
     pub current_block_destroy_stage: u8,
-
-    // TODO: prbly should put this into an Living Entitiy or something
-    pub velocity: Vector3<f64>,
 
     pub teleport_id_count: i32,
     // Current awaiting teleport id and location, None if did not teleport
@@ -116,21 +110,17 @@ impl Player {
         };
         let config = client.config.clone().unwrap_or_default();
         Self {
+            entity: Entity::new(entity_id, EntityType::Player, 1.62),
             config,
             gameprofile,
             client,
-            entity: Entity::new(entity_id, EntityType::Player, 1.62),
             world,
-            on_ground: false,
             awaiting_teleport: None,
-            sneaking: false,
-            sprinting: false,
             // TODO: Load this from previous instance
             health: 20.0,
             food: 20,
             food_saturation: 20.0,
             current_block_destroy_stage: 0,
-            velocity: Vector3::new(0.0, 0.0, 0.0),
             inventory: PlayerInventory::new(),
             open_container: None,
             carried_item: None,
@@ -150,28 +140,6 @@ impl Player {
 
     pub fn entity_id(&self) -> EntityId {
         self.entity.entity_id
-    }
-
-    pub fn knockback(&mut self, strength: f64, x: f64, z: f64) {
-        // This has some vanilla magic
-        let mut x = x;
-        let mut z = z;
-        while x * x + z * z < 1.0E-5 {
-            x = (rand::random::<f64>() - rand::random::<f64>()) * 0.01;
-            z = (rand::random::<f64>() - rand::random::<f64>()) * 0.01;
-        }
-
-        let var8 = Vector3::new(x, 0.0, z).normalize() * strength;
-        let var7 = self.velocity;
-        self.velocity = Vector3::new(
-            var7.x / 2.0 - var8.x,
-            if self.on_ground {
-                (var7.y / 2.0 + strength).min(0.4)
-            } else {
-                var7.y
-            },
-            var7.z / 2.0 - var8.z,
-        );
     }
 
     pub fn send_abilties_update(&mut self) {
@@ -197,60 +165,6 @@ impl Player {
         ));
     }
 
-    pub async fn set_sneaking(&mut self, sneaking: bool) {
-        assert!(self.sneaking != sneaking);
-        self.sneaking = sneaking;
-        self.set_flag(Self::SNEAKING_FLAG_INDEX, sneaking).await;
-        // if sneaking {
-        //     self.set_pose(EntityPose::Crouching).await;
-        // } else {
-        //     self.set_pose(EntityPose::Standing).await;
-        // }
-    }
-
-    pub async fn set_sprinting(&mut self, sprinting: bool) {
-        assert!(self.sprinting != sprinting);
-        self.sprinting = sprinting;
-        self.set_flag(Self::SPRINTING_FLAG_INDEX, sprinting).await;
-    }
-
-    pub const ON_FIRE_FLAG_INDEX: u32 = 0;
-    pub const SNEAKING_FLAG_INDEX: u32 = 1;
-    pub const SPRINTING_FLAG_INDEX: u32 = 3;
-    pub const SWIMMING_FLAG_INDEX: u32 = 4;
-    pub const INVISIBLE_FLAG_INDEX: u32 = 5;
-    pub const GLOWING_FLAG_INDEX: u32 = 6;
-    pub const FALL_FLYING_FLAG_INDEX: u32 = 7;
-    async fn set_flag(&mut self, index: u32, value: bool) {
-        let mut b = 0i8;
-        if value {
-            b |= 1 << index;
-        } else {
-            b &= !(1 << index);
-        }
-        let packet =
-            CSetEntityMetadata::new(self.entity_id().into(), Metadata::new(0, 0.into(), b));
-        self.client.send_packet(&packet);
-        self.world
-            .lock()
-            .await
-            .broadcast_packet(&[self.client.token], &packet);
-    }
-
-    pub async fn set_pose(&mut self, pose: EntityPose) {
-        self.entity.pose = pose;
-        let pose = self.entity.pose as i32;
-        let packet = CSetEntityMetadata::<VarInt>::new(
-            self.entity_id().into(),
-            Metadata::new(6, 20.into(), (pose).into()),
-        );
-        self.client.send_packet(&packet);
-        self.world
-            .lock()
-            .await
-            .broadcast_packet(&[self.client.token], &packet)
-    }
-
     pub fn teleport(&mut self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
         // this is the ultra special magic code used to create the teleport id
         self.teleport_id_count += 1;
@@ -259,7 +173,6 @@ impl Player {
         }
         let entity = &mut self.entity;
         entity.set_pos(x, y, z);
-        self.last_position = entity.pos;
         entity.yaw = yaw;
         entity.pitch = pitch;
         self.awaiting_teleport = Some((self.teleport_id_count.into(), Vector3::new(x, y, z)));
@@ -295,11 +208,16 @@ impl Player {
     /// Kicks the Client with a reason depending on the connection state
     pub fn kick(&mut self, reason: TextComponent) {
         assert!(self.client.connection_state == ConnectionState::Play);
-        dbg!(&reason);
-        self.client
-            .try_send_packet(&CPlayDisconnect::new(reason))
-            .unwrap_or_else(|_| self.client.close());
+        assert!(!self.client.closed);
 
+        self.client
+            .try_send_packet(&CPlayDisconnect::new(&reason))
+            .unwrap_or_else(|_| self.client.close());
+        log::info!(
+            "Kicked {} for {}",
+            self.gameprofile.name,
+            reason.to_pretty_console()
+        );
         self.client.close()
     }
 

@@ -158,9 +158,6 @@ impl World {
             .client
             .send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries));
 
-        // Start waiting for level chunks
-        player.client.send_packet(&CGameEvent::new(13, 0.0));
-
         let gameprofile = &player.gameprofile;
 
         // spawn player for every client
@@ -216,6 +213,9 @@ impl World {
             self.broadcast_packet(&[player.client.token], &packet)
         }
 
+        // Start waiting for level chunks
+        player.client.send_packet(&CGameEvent::new(13, 0.0));
+
         // Spawn in inital chunks
         player_chunker::player_join(self, player).await;
     }
@@ -231,8 +231,9 @@ impl World {
 
         let level = self.level.clone();
         let closed = client.closed;
-        tokio::spawn(async move {
-            level.lock().unwrap().fetch_chunks(&chunks, sender, closed);
+        let chunks = Arc::new(chunks);
+        tokio::task::spawn_blocking(move || {
+            level.lock().unwrap().fetch_chunks(&chunks, sender, closed)
         });
 
         while let Some(chunk_data) = chunk_receiver.recv().await {
