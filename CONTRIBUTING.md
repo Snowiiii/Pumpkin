@@ -25,6 +25,20 @@ There are several ways you can contribute to Pumpkin:
   Ensure your code adheres to our project structure and style guidelines.
   Write clear and concise commit messages that describe your changes.
 
+### Faster Compiles
+
+We use extism for our plugins, unfortunately extism has quite a hefty impact on compile times, which can increase it by several minutes on release mode. To run Pumpkin without plugins, run the following:
+
+```shell
+cargo run --no-default-features
+```
+
+And in release:
+
+```shell
+cargo run --no-default-features --release
+```
+
 ### Project Structure
 
 Before contributing, it would be helpful to get to know the project structure, for further information, visit [STRUCTURE.md](STRUCTURE.md)
