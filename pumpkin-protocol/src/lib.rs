@@ -44,6 +44,9 @@ impl VarInt {
     pub fn decode_partial(r: &mut &[u8]) -> Result<i32, VarIntDecodeError> {
         let mut val = 0;
         for i in 0..Self::MAX_SIZE {
+            if !r.has_remaining() {
+                return Err(VarIntDecodeError::Incomplete);
+            }
             let byte = r.get_u8();
             val |= (i32::from(byte) & 0b01111111) << (i * 7);
             if byte & 0b10000000 == 0 {
@@ -71,6 +74,9 @@ impl VarInt {
     pub fn decode(r: &mut &[u8]) -> Result<Self, VarIntDecodeError> {
         let mut val = 0;
         for i in 0..Self::MAX_SIZE {
+            if !r.has_remaining() {
+                return Err(VarIntDecodeError::Incomplete);
+            }
             let byte = r.get_u8();
             val |= (i32::from(byte) & 0b01111111) << (i * 7);
             if byte & 0b10000000 == 0 {
