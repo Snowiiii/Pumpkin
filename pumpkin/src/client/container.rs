@@ -134,7 +134,7 @@ impl Player {
                 .expect("Mode can only be between 0-6"),
             packet.button,
             packet.slot,
-        );
+        )?;
         let mut update_whole_container = false;
 
         match click.click_type {
