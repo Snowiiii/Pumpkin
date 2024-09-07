@@ -8,8 +8,8 @@ use pumpkin_inventory::container_click::{
 };
 use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
+use pumpkin_inventory::Container;
 use pumpkin_inventory::{container_click, InventoryError, OptionallyCombinedContainer};
-use pumpkin_inventory::{Container, WindowType};
 use pumpkin_protocol::client::play::{
     CCloseContainer, COpenScreen, CSetContainerContent, CSetContainerProperty, CSetContainerSlot,
 };
@@ -19,12 +19,7 @@ use pumpkin_world::item::ItemStack;
 use std::sync::{Arc, Mutex};
 
 impl Player {
-    pub fn open_container(
-        &mut self,
-        server: &mut Server,
-        minecraft_menu_id: &str,
-        window_title: Option<&str>,
-    ) {
+    pub fn open_container(&mut self, server: &mut Server, minecraft_menu_id: &str) {
         self.inventory.state_id = 0;
         let total_opened_containers = self.inventory.total_opened_containers;
         let mut container = self
@@ -39,12 +34,11 @@ impl Player {
             .get("protocol_id")
             .unwrap())
         .into();
-        let window_type = match &container {
-            Some(container) => container.window_type(),
-            None => &WindowType::Generic9x1,
-        }
-        .to_owned();
-        let title = TextComponent::text(window_title.unwrap_or(window_type.default_title()));
+        let window_title = container
+            .as_ref()
+            .map(|container| container.window_name())
+            .unwrap_or(self.inventory.window_name());
+        let title = TextComponent::text(window_title);
 
         self.client.send_packet(&COpenScreen::new(
             total_opened_containers.into(),

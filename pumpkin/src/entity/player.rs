@@ -438,7 +438,8 @@ impl Player {
                 Ok(())
             }
             SSetCreativeSlot::PACKET_ID => {
-                self.handle_set_creative_slot(server, SSetCreativeSlot::read(bytebuf)?);
+                self.handle_set_creative_slot(server, SSetCreativeSlot::read(bytebuf)?)
+                    .unwrap();
                 Ok(())
             }
             SPlayPingRequest::PACKET_ID => {

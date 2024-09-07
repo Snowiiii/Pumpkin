@@ -59,6 +59,9 @@ impl Container for Chest {
         &WindowType::Generic9x3
     }
 
+    fn window_name(&self) -> &'static str {
+        "Chest"
+    }
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
         self.0.iter_mut().collect()
     }

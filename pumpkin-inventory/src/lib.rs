@@ -52,19 +52,13 @@ pub enum WindowType {
     CartographyTable,
     Stonecutter,
 }
+pub struct ContainerStruct<const SLOTS: usize>([Option<ItemStack>; SLOTS]);
 
-impl WindowType {
-    pub const fn default_title(&self) -> &'static str {
-        // TODO: Add titles here:
-        /*match self {
-            _ => "WINDOW TITLE",
-        }*/
-        "WINDOW TITLE"
-    }
-}
 // Container needs Sync + Send to be able to be in async Server
 pub trait Container: Sync + Send {
     fn window_type(&self) -> &'static WindowType;
+
+    fn window_name(&self) -> &'static str;
 
     fn handle_item_change(
         &mut self,
@@ -209,6 +203,13 @@ impl<'a> Container for OptionallyCombinedContainer<'a, 'a> {
         } else {
             &WindowType::Generic9x1
         }
+    }
+
+    fn window_name(&self) -> &'static str {
+        self.container
+            .as_ref()
+            .map(|container| container.window_name())
+            .unwrap_or(self.inventory.window_name())
     }
 
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {

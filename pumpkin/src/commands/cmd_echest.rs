@@ -21,7 +21,7 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                     server.open_containers.insert(0, open_container);
                 }
             }
-            player.open_container(server, "minecraft:generic_9x3", Some("Ender Chest"));
+            player.open_container(server, "minecraft:generic_9x3");
         }
 
         Ok(())

@@ -36,7 +36,6 @@ impl PlayerInventory {
             total_opened_containers: 2,
         }
     }
-
     /// Set the contents of an item in a slot
     ///
     /// ## Slot
@@ -48,48 +47,44 @@ impl PlayerInventory {
     /// ## Item allowed override
     /// An override, which when enabled, makes it so that invalid items, can be placed in slots they normally can't.
     /// Useful functionality for plugins in the future.
-    pub fn set_slot(&mut self, slot: usize, item: Option<ItemStack>, item_allowed_override: bool) {
-        match slot {
-            0 => {
-                // TODO: Add crafting check here
-                self.crafting_output = item
+    pub fn set_slot(
+        &mut self,
+        slot: usize,
+        item: Option<ItemStack>,
+        item_allowed_override: bool,
+    ) -> Result<(), InventoryError> {
+        if item_allowed_override {
+            if !(0..=45).contains(&slot) {
+                Err(InventoryError::InvalidSlot)?
             }
-            1..=4 => self.crafting[slot - 1] = item,
-            5..=8 => {
-                match item {
-                    None => self.armor[slot - 5] = None,
-                    Some(item) => {
-                        // TODO: Replace asserts with error handling
-                        match slot - 5 {
-                            0 => {
-                                assert!(item.is_helmet() || item_allowed_override);
-                                self.armor[0] = Some(item);
-                            }
-                            1 => {
-                                assert!(item.is_chestplate() || item_allowed_override);
-                                self.armor[1] = Some(item)
-                            }
-                            2 => {
-                                assert!(item.is_leggings() || item_allowed_override);
-                                self.armor[2] = Some(item);
-                            }
-                            3 => {
-                                assert!(item.is_boots() || item_allowed_override);
-                                self.armor[3] = Some(item)
-                            }
-                            _ => unreachable!(),
-                        }
-                    }
-                }
-            }
-            9..=44 => {
-                self.items[slot - 9] = item;
-            }
-            45 => {
-                self.offhand = item;
-            }
-            _ => unreachable!(),
+            *self.all_slots()[slot] = item;
+            return Ok(());
         }
+        let slot_condition = self.slot_condition(slot)?;
+        if let Some(item) = item {
+            if slot_condition(&item) {
+                *self.all_slots()[slot] = Some(item);
+            }
+        }
+        Ok(())
+    }
+    #[allow(clippy::type_complexity)]
+    pub fn slot_condition(
+        &self,
+        slot: usize,
+    ) -> Result<Box<dyn Fn(&ItemStack) -> bool>, InventoryError> {
+        if !(0..=45).contains(&slot) {
+            return Err(InventoryError::InvalidSlot);
+        }
+
+        Ok(Box::new(match slot {
+            0..=4 | 9..=45 => |_| true,
+            5 => |item: &ItemStack| item.is_helmet(),
+            6 => |item: &ItemStack| item.is_chestplate(),
+            7 => |item: &ItemStack| item.is_leggings(),
+            8 => |item: &ItemStack| item.is_boots(),
+            _ => unreachable!(),
+        }))
     }
     pub fn get_slot(&mut self, slot: usize) -> Result<&mut Option<ItemStack>, InventoryError> {
         match slot {
@@ -138,15 +133,26 @@ impl Container for PlayerInventory {
         &WindowType::Generic9x1
     }
 
+    fn window_name(&self) -> &'static str {
+        // We never send an OpenContainer with inventory, so it has no name.
+        ""
+    }
+
     fn handle_item_change(
         &mut self,
         carried_slot: &mut Option<ItemStack>,
         slot: usize,
         mouse_click: MouseClick,
     ) -> Result<(), InventoryError> {
+        let slot_condition = self.slot_condition(slot)?;
         let item_slot = self.get_slot(slot)?;
-
-        handle_item_change(carried_slot, item_slot, mouse_click);
+        if let Some(item) = carried_slot {
+            if slot_condition(item) {
+                handle_item_change(carried_slot, item_slot, mouse_click);
+            }
+        } else {
+            handle_item_change(carried_slot, item_slot, mouse_click)
+        }
         Ok(())
     }
 

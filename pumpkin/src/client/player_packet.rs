@@ -14,7 +14,7 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_entity::EntityId;
-use pumpkin_inventory::WindowType;
+use pumpkin_inventory::{InventoryError, WindowType};
 use pumpkin_protocol::server::play::{SCloseContainer, SSetPlayerGround, SUseItem};
 use pumpkin_protocol::{
     client::play::{
@@ -517,15 +517,16 @@ impl Player {
         self.inventory.set_selected(slot as usize);
     }
 
-    pub fn handle_set_creative_slot(&mut self, _server: &mut Server, packet: SSetCreativeSlot) {
+    pub fn handle_set_creative_slot(
+        &mut self,
+        _server: &mut Server,
+        packet: SSetCreativeSlot,
+    ) -> Result<(), InventoryError> {
         if self.gamemode != GameMode::Creative {
-            self.kick(TextComponent::text(
-                "Invalid action, you can only do that if you are in creative",
-            ));
-            return;
+            return Err(InventoryError::PermissionError);
         }
         self.inventory
-            .set_slot(packet.slot as usize, packet.clicked_item.to_item(), false);
+            .set_slot(packet.slot as usize, packet.clicked_item.to_item(), false)
     }
 
     // TODO:
