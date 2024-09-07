@@ -10,7 +10,6 @@ use std::collections::HashMap;
 use std::io::{self};
 
 use client::{interrupted, Client};
-use commands::handle_command;
 use server::Server;
 
 // Setup some tokens to allow us to identify which event is for which socket.
@@ -98,7 +97,12 @@ fn main() -> io::Result<()> {
 
                     if !out.is_empty() {
                         let mut server = server1.lock().await;
-                        handle_command(&mut commands::CommandSender::Console, &mut server, &out);
+                        let dispatcher = server.command_dispatcher.clone();
+                        dispatcher.handle_command(
+                            &mut commands::CommandSender::Console,
+                            &mut server,
+                            &out,
+                        );
                     }
                 }
             });

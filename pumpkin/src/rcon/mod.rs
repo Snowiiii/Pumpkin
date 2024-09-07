@@ -12,7 +12,7 @@ use packet::{Packet, PacketError, PacketType};
 use pumpkin_config::RCONConfig;
 use thiserror::Error;
 
-use crate::{commands::handle_command, server::Server};
+use crate::server::Server;
 
 mod packet;
 
@@ -194,7 +194,8 @@ impl RCONClient {
                     if self.logged_in {
                         let mut output = Vec::new();
                         let mut server = server.lock().await;
-                        handle_command(
+                        let dispatcher = server.command_dispatcher.clone();
+                        dispatcher.handle_command(
                             &mut crate::commands::CommandSender::Rcon(&mut output),
                             &mut server,
                             packet.get_body(),
