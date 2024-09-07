@@ -18,6 +18,8 @@ pumpkin-entity = { path = "../pumpkin-entity"}
 pumpkin-protocol = { path = "../pumpkin-protocol"}
 pumpkin-registry = { path = "../pumpkin-registry"}
 
+itertools = "0.13.0"
+
 # config
 serde.workspace = true
 serde_json = "1.0"
@@ -62,4 +64,3 @@ mio = { version = "1.0.2", features = ["os-poll", "net"]}
 uuid.workspace = true
 tokio.workspace = true
 rayon.workspace = true
-itertools = "0.13.0"
