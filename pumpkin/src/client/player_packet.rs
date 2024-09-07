@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use crate::{
-    commands::{handle_command, CommandSender},
+    commands::CommandSender,
     entity::player::{ChatMode, Hand, Player},
     server::Server,
     world::player_chunker,
@@ -214,7 +214,8 @@ impl Player {
     }
 
     pub fn handle_chat_command(&mut self, server: &mut Server, command: SChatCommand) {
-        handle_command(&mut CommandSender::Player(self), server, &command.command);
+        let dispatcher = server.command_dispatcher.clone();
+        dispatcher.handle_command(&mut CommandSender::Player(self), server, &command.command);
     }
 
     pub fn handle_player_ground(&mut self, _server: &mut Server, ground: SSetPlayerGround) {

@@ -1,3 +1,5 @@
+use pumpkin_core::text::TextComponent;
+
 use crate::commands::dispatcher::InvalidTreeError::{
     InvalidConsumptionError, InvalidRequirementError,
 };
@@ -17,12 +19,21 @@ pub(crate) enum InvalidTreeError {
     InvalidRequirementError,
 }
 
-pub(crate) struct CommandDispatcher<'a> {
+#[derive(Default)]
+pub struct CommandDispatcher<'a> {
     pub(crate) commands: HashMap<&'a str, Command<'a>>,
 }
 
 /// Stores registered [CommandTree]s and dispatches commands to them.
 impl<'a> CommandDispatcher<'a> {
+    pub fn handle_command(&self, sender: &mut CommandSender, server: &mut Server, cmd: &str) {
+        if let Err(err) = self.dispatch(sender, server, cmd) {
+            sender.send_message(
+                TextComponent::text(&err).color_named(pumpkin_core::text::color::NamedColor::Red),
+            )
+        }
+    }
+
     /// Execute a command using its corresponding [CommandTree].
     pub(crate) fn dispatch(
         &'a self,

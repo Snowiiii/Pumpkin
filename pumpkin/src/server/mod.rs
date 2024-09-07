@@ -24,7 +24,12 @@ use pumpkin_world::dimension::Dimension;
 use pumpkin_registry::Registry;
 use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 
-use crate::{client::Client, entity::player::Player, world::World};
+use crate::{
+    client::Client,
+    commands::{default_dispatcher, dispatcher::CommandDispatcher},
+    entity::player::Player,
+    world::World,
+};
 
 pub const CURRENT_MC_VERSION: &str = "1.21.1";
 
@@ -34,6 +39,8 @@ pub struct Server {
     pub public_key_der: Box<[u8]>,
 
     pub plugin_loader: PluginLoader,
+
+    pub command_dispatcher: Arc<CommandDispatcher<'static>>,
 
     pub worlds: Vec<Arc<tokio::sync::Mutex<World>>>,
     pub status_response: StatusResponse,
@@ -81,6 +88,8 @@ impl Server {
             None
         };
 
+        // First register default command, after that plugins can put in their own
+        let command_dispatcher = default_dispatcher();
         log::info!("Loading Plugins");
         let plugin_loader = PluginLoader::load();
 
@@ -88,7 +97,6 @@ impl Server {
             // TODO: load form config
             "./world".parse().unwrap(),
         ));
-
         Self {
             plugin_loader,
             cached_registry: Registry::get_static(),
@@ -98,6 +106,7 @@ impl Server {
             public_key,
             cached_server_brand,
             private_key,
+            command_dispatcher: Arc::new(command_dispatcher),
             status_response,
             status_response_json,
             public_key_der,

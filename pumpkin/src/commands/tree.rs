@@ -44,6 +44,7 @@ pub(crate) struct CommandTree<'a> {
     pub(crate) nodes: Vec<Node<'a>>,
     pub(crate) children: Vec<usize>,
     pub(crate) names: Vec<&'a str>,
+    #[expect(dead_code)]
     pub(crate) description: &'a str,
 }
 
