@@ -4,4 +4,3 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-pumpkin-core = { path = "../pumpkin-core"}

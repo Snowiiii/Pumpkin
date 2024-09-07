@@ -5,11 +5,11 @@ use serde::Serialize;
 #[derive(Serialize)]
 #[packet(0x1D)]
 pub struct CPlayDisconnect<'a> {
-    reason: TextComponent<'a>,
+    reason: &'a TextComponent<'a>,
 }
 
 impl<'a> CPlayDisconnect<'a> {
-    pub fn new(reason: TextComponent<'a>) -> Self {
+    pub fn new(reason: &'a TextComponent<'a>) -> Self {
         Self { reason }
     }
 }

@@ -82,15 +82,27 @@ impl Player {
             Self::clamp_vertical(position.feet_y),
             Self::clamp_horizontal(position.z),
         );
-        // TODO: teleport when moving > 8 block
-
-        // send new position to all other players
-        let on_ground = self.on_ground;
+        entity.on_ground = position.ground;
+        let on_ground = entity.on_ground;
         let entity_id = entity.entity_id;
         let (x, y, z) = entity.pos.into();
         let (lastx, lasty, lastz) = self.last_position.into();
         let world = self.world.clone();
         let world = world.lock().await;
+
+        // let delta = Vector3::new(x - lastx, y - lasty, z - lastz);
+        // let velocity = self.velocity;
+
+        // // Player is falling down fast, we should account for that
+        // let max_speed = if self.fall_flying { 300.0 } else { 100.0 };
+
+        // teleport when more than 8 blocks (i guess 8 blocks)
+        // TODO: REPLACE * 2.0 by movement packets. see vanilla for details
+        // if delta.length_squared() - velocity.length_squared() > max_speed * 2.0 {
+        //     self.teleport(x, y, z, self.entity.yaw, self.entity.pitch);
+        //     return;
+        // }
+        // send new position to all other players
         world.broadcast_packet(
             &[self.client.token],
             &CUpdateEntityPos::new(
@@ -128,11 +140,11 @@ impl Player {
             Self::clamp_vertical(position_rotation.feet_y),
             Self::clamp_horizontal(position_rotation.z),
         );
+        entity.on_ground = position_rotation.ground;
         entity.yaw = wrap_degrees(position_rotation.yaw) % 360.0;
         entity.pitch = wrap_degrees(position_rotation.pitch).clamp(-90.0, 90.0) % 360.0;
 
-        // send new position to all other players
-        let on_ground = self.on_ground;
+        let on_ground = entity.on_ground;
         let entity_id = entity.entity_id;
         let (x, y, z) = entity.pos.into();
         let (lastx, lasty, lastz) = self.last_position.into();
@@ -141,6 +153,20 @@ impl Player {
         // let head_yaw = (entity.head_yaw * 256.0 / 360.0).floor();
         let world = self.world.clone();
         let world = world.lock().await;
+
+        // let delta = Vector3::new(x - lastx, y - lasty, z - lastz);
+        // let velocity = self.velocity;
+
+        // // Player is falling down fast, we should account for that
+        // let max_speed = if self.fall_flying { 300.0 } else { 100.0 };
+
+        // // teleport when more than 8 blocks (i guess 8 blocks)
+        // // TODO: REPLACE * 2.0 by movement packets. see vanilla for details
+        // if delta.length_squared() - velocity.length_squared() > max_speed * 2.0 {
+        //     self.teleport(x, y, z, yaw, pitch);
+        //     return;
+        // }
+        // send new position to all other players
 
         world.broadcast_packet(
             &[self.client.token],
@@ -168,10 +194,11 @@ impl Player {
             return;
         }
         let entity = &mut self.entity;
+        entity.on_ground = rotation.ground;
         entity.yaw = wrap_degrees(rotation.yaw) % 360.0;
         entity.pitch = wrap_degrees(rotation.pitch).clamp(-90.0, 90.0) % 360.0;
         // send new position to all other players
-        let on_ground = self.on_ground;
+        let on_ground = entity.on_ground;
         let entity_id = entity.entity_id;
         let yaw = modulus(entity.yaw * 256.0 / 360.0, 256.0);
         let pitch = modulus(entity.pitch * 256.0 / 360.0, 256.0);
@@ -191,7 +218,7 @@ impl Player {
     }
 
     pub fn handle_player_ground(&mut self, _server: &mut Server, ground: SSetPlayerGround) {
-        self.on_ground = ground.on_ground;
+        self.entity.on_ground = ground.on_ground;
     }
 
     pub async fn handle_player_command(&mut self, _server: &mut Server, command: SPlayerCommand) {
@@ -202,30 +229,45 @@ impl Player {
         if let Some(action) = Action::from_i32(command.action.0) {
             match action {
                 pumpkin_protocol::server::play::Action::StartSneaking => {
-                    if !self.sneaking {
-                        self.set_sneaking(true).await
+                    if !self.entity.sneaking {
+                        self.entity
+                            .set_sneaking(&mut self.client, self.world.clone(), true)
+                            .await
                     }
                 }
                 pumpkin_protocol::server::play::Action::StopSneaking => {
-                    if self.sneaking {
-                        self.set_sneaking(false).await
+                    if self.entity.sneaking {
+                        self.entity
+                            .set_sneaking(&mut self.client, self.world.clone(), false)
+                            .await
                     }
                 }
                 pumpkin_protocol::server::play::Action::LeaveBed => todo!(),
                 pumpkin_protocol::server::play::Action::StartSprinting => {
-                    if !self.sprinting {
-                        self.set_sprinting(true).await
+                    if !self.entity.sprinting {
+                        self.entity
+                            .set_sprinting(&mut self.client, self.world.clone(), true)
+                            .await
                     }
                 }
                 pumpkin_protocol::server::play::Action::StopSprinting => {
-                    if self.sprinting {
-                        self.set_sprinting(false).await
+                    if self.entity.sprinting {
+                        self.entity
+                            .set_sprinting(&mut self.client, self.world.clone(), false)
+                            .await
                     }
                 }
                 pumpkin_protocol::server::play::Action::StartHorseJump => todo!(),
                 pumpkin_protocol::server::play::Action::StopHorseJump => todo!(),
                 pumpkin_protocol::server::play::Action::OpenVehicleInventory => todo!(),
-                pumpkin_protocol::server::play::Action::StartFlyingElytra => {} // TODO
+                pumpkin_protocol::server::play::Action::StartFlyingElytra => {
+                    let fall_flying = self.entity.check_fall_flying();
+                    if self.entity.fall_flying != fall_flying {
+                        self.entity
+                            .set_fall_flying(&mut self.client, self.world.clone(), fall_flying)
+                            .await;
+                    }
+                } // TODO
             }
         } else {
             self.kick(TextComponent::text("Invalid player command"))
@@ -320,8 +362,10 @@ impl Player {
 
     pub async fn handle_interact(&mut self, _: &mut Server, interact: SInteract) {
         let sneaking = interact.sneaking;
-        if self.sneaking != sneaking {
-            self.set_sneaking(sneaking).await;
+        if self.entity.sneaking != sneaking {
+            self.entity
+                .set_sneaking(&mut self.client, self.world.clone(), sneaking)
+                .await;
         }
         match ActionType::from_i32(interact.typ.0) {
             Some(action) => match action {
@@ -335,27 +379,27 @@ impl Player {
                         let attacked_player = world.get_by_entityid(self, entity_id.0 as EntityId);
                         if let Some(mut player) = attacked_player {
                             let token = player.client.token;
-                            let velo = player.velocity;
+                            let velo = player.entity.velocity;
                             if config.protect_creative && player.gamemode == GameMode::Creative {
                                 return;
                             }
                             if config.knockback {
                                 let yaw = self.entity.yaw;
                                 let strength = 1.0;
-                                player.knockback(
+                                player.entity.knockback(
                                     strength * 0.5,
                                     (yaw * (PI / 180.0)).sin() as f64,
                                     -(yaw * (PI / 180.0)).cos() as f64,
                                 );
                                 let packet = &CEntityVelocity::new(
                                     &entity_id,
-                                    player.velocity.x as f32,
-                                    player.velocity.y as f32,
-                                    player.velocity.z as f32,
+                                    velo.x as f32,
+                                    velo.y as f32,
+                                    velo.z as f32,
                                 );
-                                self.velocity = self.velocity.multiply(0.6, 1.0, 0.6);
+                                self.entity.velocity = self.entity.velocity.multiply(0.6, 1.0, 0.6);
 
-                                player.velocity = velo;
+                                player.entity.velocity = velo;
                                 player.client.send_packet(packet);
                             }
                             if config.hurt_animation {

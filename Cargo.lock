@@ -1916,9 +1916,6 @@ dependencies = [
 [[package]]
 name = "pumpkin-entity"
 version = "0.1.0"
-dependencies = [
- "pumpkin-core",
-]
 
 [[package]]
 name = "pumpkin-inventory"
