@@ -60,8 +60,6 @@ pub struct Player {
     pub gameprofile: GameProfile,
     pub client: Client,
     pub config: PlayerConfig,
-    // TODO: Put this into entity
-    pub world: Arc<tokio::sync::Mutex<World>>,
     /// Current gamemode
     pub gamemode: GameMode,
     // TODO: prbly should put this into an Living Entitiy or something
@@ -104,11 +102,10 @@ impl Player {
         };
         let config = client.config.clone().unwrap_or_default();
         Self {
-            entity: Entity::new(entity_id, EntityType::Player, 1.62),
+            entity: Entity::new(entity_id, world, EntityType::Player, 1.62),
             config,
             gameprofile,
             client,
-            world,
             awaiting_teleport: None,
             // TODO: Load this from previous instance
             health: 20.0,
@@ -127,7 +124,7 @@ impl Player {
     // TODO: Put this into entity
     /// Removes the Player out of the current World
     pub async fn remove(&mut self) {
-        self.world.lock().await.remove_player(self);
+        self.entity.world.lock().await.remove_player(self);
     }
 
     pub fn entity_id(&self) -> EntityId {
@@ -237,7 +234,7 @@ impl Player {
                 actions: vec![PlayerAction::UpdateGameMode((self.gamemode as i32).into())],
             }],
         ));
-        self.world.lock().await.broadcast_packet(
+        self.entity.world.lock().await.broadcast_packet(
             &[self.client.token],
             &CPlayerInfoUpdate::new(
                 0x04,

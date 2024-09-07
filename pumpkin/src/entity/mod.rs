@@ -16,6 +16,8 @@ pub mod player;
 pub struct Entity {
     pub entity_id: EntityId,
     pub entity_type: EntityType,
+    pub world: Arc<tokio::sync::Mutex<World>>,
+
     pub pos: Vector3<f64>,
     pub block_pos: WorldPosition,
     pub chunk_pos: Vector2<i32>,
@@ -38,7 +40,12 @@ pub struct Entity {
 
 // TODO: Remove client: &mut Client, world: Arc<tokio::sync::Mutex<World>> bs
 impl Entity {
-    pub fn new(entity_id: EntityId, entity_type: EntityType, standing_eye_height: f32) -> Self {
+    pub fn new(
+        entity_id: EntityId,
+        world: Arc<tokio::sync::Mutex<World>>,
+        entity_type: EntityType,
+        standing_eye_height: f32,
+    ) -> Self {
         Self {
             entity_id,
             entity_type,
@@ -47,6 +54,7 @@ impl Entity {
             block_pos: WorldPosition(Vector3::new(0, 0, 0)),
             chunk_pos: Vector2::new(0, 0),
             sneaking: false,
+            world,
             sprinting: false,
             fall_flying: false,
             yaw: 0.0,
@@ -101,15 +109,10 @@ impl Entity {
         );
     }
 
-    pub async fn set_sneaking(
-        &mut self,
-        client: &mut Client,
-        world: Arc<tokio::sync::Mutex<World>>,
-        sneaking: bool,
-    ) {
+    pub async fn set_sneaking(&mut self, client: &mut Client, sneaking: bool) {
         assert!(self.sneaking != sneaking);
         self.sneaking = sneaking;
-        self.set_flag(client, world, Self::SNEAKING_FLAG_INDEX, sneaking)
+        self.set_flag(client, Self::SNEAKING_FLAG_INDEX, sneaking)
             .await;
         // if sneaking {
         //     self.set_pose(EntityPose::Crouching).await;
@@ -118,15 +121,10 @@ impl Entity {
         // }
     }
 
-    pub async fn set_sprinting(
-        &mut self,
-        client: &mut Client,
-        world: Arc<tokio::sync::Mutex<World>>,
-        sprinting: bool,
-    ) {
+    pub async fn set_sprinting(&mut self, client: &mut Client, sprinting: bool) {
         assert!(self.sprinting != sprinting);
         self.sprinting = sprinting;
-        self.set_flag(client, world, Self::SPRINTING_FLAG_INDEX, sprinting)
+        self.set_flag(client, Self::SPRINTING_FLAG_INDEX, sprinting)
             .await;
     }
 
@@ -134,15 +132,10 @@ impl Entity {
         !self.on_ground
     }
 
-    pub async fn set_fall_flying(
-        &mut self,
-        client: &mut Client,
-        world: Arc<tokio::sync::Mutex<World>>,
-        fall_flying: bool,
-    ) {
+    pub async fn set_fall_flying(&mut self, client: &mut Client, fall_flying: bool) {
         assert!(self.fall_flying != fall_flying);
         self.fall_flying = fall_flying;
-        self.set_flag(client, world, Self::FALL_FLYING_FLAG_INDEX, fall_flying)
+        self.set_flag(client, Self::FALL_FLYING_FLAG_INDEX, fall_flying)
             .await;
     }
 
@@ -153,13 +146,7 @@ impl Entity {
     pub const INVISIBLE_FLAG_INDEX: u32 = 5;
     pub const GLOWING_FLAG_INDEX: u32 = 6;
     pub const FALL_FLYING_FLAG_INDEX: u32 = 7;
-    async fn set_flag(
-        &mut self,
-        client: &mut Client,
-        world: Arc<tokio::sync::Mutex<World>>,
-        index: u32,
-        value: bool,
-    ) {
+    async fn set_flag(&mut self, client: &mut Client, index: u32, value: bool) {
         let mut b = 0i8;
         if value {
             b |= 1 << index;
@@ -168,18 +155,13 @@ impl Entity {
         }
         let packet = CSetEntityMetadata::new(self.entity_id.into(), Metadata::new(0, 0.into(), b));
         client.send_packet(&packet);
-        world
+        self.world
             .lock()
             .await
             .broadcast_packet(&[client.token], &packet);
     }
 
-    pub async fn set_pose(
-        &mut self,
-        client: &mut Client,
-        world: Arc<tokio::sync::Mutex<World>>,
-        pose: EntityPose,
-    ) {
+    pub async fn set_pose(&mut self, client: &mut Client, pose: EntityPose) {
         self.pose = pose;
         let pose = self.pose as i32;
         let packet = CSetEntityMetadata::<VarInt>::new(
@@ -187,7 +169,7 @@ impl Entity {
             Metadata::new(6, 20.into(), (pose).into()),
         );
         client.send_packet(&packet);
-        world
+        self.world
             .lock()
             .await
             .broadcast_packet(&[client.token], &packet)

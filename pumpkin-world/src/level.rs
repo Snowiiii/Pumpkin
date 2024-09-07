@@ -149,41 +149,43 @@ impl Level {
     ) {
         chunks.into_par_iter().for_each(|at| {
             if is_alive {
+                dbg!("a");
                 return;
             }
-            let channel = channel.clone();
+            if let Ok(mut loaded_chunks) = self.loaded_chunks.lock() {
+                let channel = channel.clone();
 
-            // Check if chunks is already loaded
-            let mut loaded_chunks = self.loaded_chunks.lock().unwrap();
-            if loaded_chunks.contains_key(at) {
-                channel
-                    .blocking_send(Ok(loaded_chunks.get(at).unwrap().clone()))
-                    .expect("Failed sending ChunkData.");
-                return;
-            }
-            let at = *at;
-            let data = match &self.save_file {
-                Some(save_file) => {
-                    match Self::read_chunk(save_file, at) {
-                        Err(WorldError::ChunkNotGenerated(_)) => {
-                            // This chunk was not generated yet.
-                            Ok(self.world_gen.generate_chunk(at))
+                // Check if chunks is already loaded
+                if loaded_chunks.contains_key(at) {
+                    channel
+                        .blocking_send(Ok(loaded_chunks.get(at).unwrap().clone()))
+                        .expect("Failed sending ChunkData.");
+                    return;
+                }
+                let at = *at;
+                let data = match &self.save_file {
+                    Some(save_file) => {
+                        match Self::read_chunk(save_file, at) {
+                            Err(WorldError::ChunkNotGenerated(_)) => {
+                                // This chunk was not generated yet.
+                                Ok(self.world_gen.generate_chunk(at))
+                            }
+                            // TODO this doesn't warn the user about the error. fix.
+                            result => result,
                         }
-                        // TODO this doesn't warn the user about the error. fix.
-                        result => result,
+                    }
+                    None => {
+                        // There is no savefile yet -> generate the chunks
+                        Ok(self.world_gen.generate_chunk(at))
                     }
                 }
-                None => {
-                    // There is no savefile yet -> generate the chunks
-                    Ok(self.world_gen.generate_chunk(at))
-                }
+                .unwrap();
+                let data = Arc::new(data);
+                channel
+                    .blocking_send(Ok(data.clone()))
+                    .expect("Failed sending ChunkData.");
+                loaded_chunks.insert(at, data);
             }
-            .unwrap();
-            let data = Arc::new(data);
-            channel
-                .blocking_send(Ok(data.clone()))
-                .expect("Failed sending ChunkData.");
-            loaded_chunks.insert(at, data);
         })
     }
 

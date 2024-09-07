@@ -127,6 +127,8 @@ impl Client {
 
     /// Send a Clientbound Packet to the Client
     pub fn send_packet<P: ClientPacket>(&mut self, packet: &P) {
+        // assert!(!self.closed);
+
         self.enc
             .append_packet(packet)
             .unwrap_or_else(|e| self.kick(&e.to_string()));
@@ -137,6 +139,8 @@ impl Client {
     }
 
     pub fn try_send_packet<P: ClientPacket>(&mut self, packet: &P) -> Result<(), PacketError> {
+        // assert!(!self.closed);
+
         self.enc.append_packet(packet)?;
         self.connection
             .write_all(&self.enc.take())

@@ -87,7 +87,7 @@ impl Player {
         let entity_id = entity.entity_id;
         let (x, y, z) = entity.pos.into();
         let (lastx, lasty, lastz) = self.last_position.into();
-        let world = self.world.clone();
+        let world = self.entity.world.clone();
         let world = world.lock().await;
 
         // let delta = Vector3::new(x - lastx, y - lasty, z - lastz);
@@ -151,7 +151,7 @@ impl Player {
         let yaw = modulus(entity.yaw * 256.0 / 360.0, 256.0);
         let pitch = modulus(entity.pitch * 256.0 / 360.0, 256.0);
         // let head_yaw = (entity.head_yaw * 256.0 / 360.0).floor();
-        let world = self.world.clone();
+        let world = self.entity.world.clone();
         let world = world.lock().await;
 
         // let delta = Vector3::new(x - lastx, y - lasty, z - lastz);
@@ -204,7 +204,7 @@ impl Player {
         let pitch = modulus(entity.pitch * 256.0 / 360.0, 256.0);
         // let head_yaw = modulus(entity.head_yaw * 256.0 / 360.0, 256.0);
 
-        let world = self.world.lock().await;
+        let world = self.entity.world.lock().await;
         let packet = CUpdateEntityRot::new(entity_id.into(), yaw as u8, pitch as u8, on_ground);
         // self.client.send_packet(&packet);
         world.broadcast_packet(&[self.client.token], &packet);
@@ -231,31 +231,23 @@ impl Player {
             match action {
                 pumpkin_protocol::server::play::Action::StartSneaking => {
                     if !self.entity.sneaking {
-                        self.entity
-                            .set_sneaking(&mut self.client, self.world.clone(), true)
-                            .await
+                        self.entity.set_sneaking(&mut self.client, true).await
                     }
                 }
                 pumpkin_protocol::server::play::Action::StopSneaking => {
                     if self.entity.sneaking {
-                        self.entity
-                            .set_sneaking(&mut self.client, self.world.clone(), false)
-                            .await
+                        self.entity.set_sneaking(&mut self.client, false).await
                     }
                 }
                 pumpkin_protocol::server::play::Action::LeaveBed => todo!(),
                 pumpkin_protocol::server::play::Action::StartSprinting => {
                     if !self.entity.sprinting {
-                        self.entity
-                            .set_sprinting(&mut self.client, self.world.clone(), true)
-                            .await
+                        self.entity.set_sprinting(&mut self.client, true).await
                     }
                 }
                 pumpkin_protocol::server::play::Action::StopSprinting => {
                     if self.entity.sprinting {
-                        self.entity
-                            .set_sprinting(&mut self.client, self.world.clone(), false)
-                            .await
+                        self.entity.set_sprinting(&mut self.client, false).await
                     }
                 }
                 pumpkin_protocol::server::play::Action::StartHorseJump => todo!(),
@@ -265,7 +257,7 @@ impl Player {
                     let fall_flying = self.entity.check_fall_flying();
                     if self.entity.fall_flying != fall_flying {
                         self.entity
-                            .set_fall_flying(&mut self.client, self.world.clone(), fall_flying)
+                            .set_fall_flying(&mut self.client, fall_flying)
                             .await;
                     }
                 } // TODO
@@ -283,7 +275,7 @@ impl Player {
                     Hand::Off => Animation::SwingOffhand,
                 };
                 let id = self.entity_id();
-                let world = self.world.lock().await;
+                let world = self.entity.world.lock().await;
                 world.broadcast_packet(
                     &[self.client.token],
                     &CEntityAnimation::new(id.into(), animation as u8),
@@ -307,7 +299,7 @@ impl Player {
         // TODO: filter message & validation
         let gameprofile = &self.gameprofile;
 
-        let world = self.world.lock().await;
+        let world = self.entity.world.lock().await;
         world.broadcast_packet(
             &[self.client.token],
             &CPlayerChatMessage::new(
@@ -364,9 +356,7 @@ impl Player {
     pub async fn handle_interact(&mut self, _: &mut Server, interact: SInteract) {
         let sneaking = interact.sneaking;
         if self.entity.sneaking != sneaking {
-            self.entity
-                .set_sneaking(&mut self.client, self.world.clone(), sneaking)
-                .await;
+            self.entity.set_sneaking(&mut self.client, sneaking).await;
         }
         match ActionType::from_i32(interact.typ.0) {
             Some(action) => match action {
@@ -375,7 +365,7 @@ impl Player {
                     // TODO: do validation and stuff
                     let config = &ADVANCED_CONFIG.pvp;
                     if config.enabled {
-                        let world = self.world.clone();
+                        let world = self.entity.world.clone();
                         let world = world.lock().await;
                         let attacked_player = world.get_by_entityid(self, entity_id.0 as EntityId);
                         if let Some(mut player) = attacked_player {
@@ -448,7 +438,7 @@ impl Player {
                         let location = player_action.location;
                         // Block break & block break sound
                         // TODO: currently this is always dirt replace it
-                        let world = self.world.lock().await;
+                        let world = self.entity.world.lock().await;
                         world.broadcast_packet(
                             &[self.client.token],
                             &CWorldEvent::new(2001, &location, 11, false),
@@ -476,7 +466,7 @@ impl Player {
                     }
                     // Block break & block break sound
                     // TODO: currently this is always dirt replace it
-                    let world = self.world.lock().await;
+                    let world = self.entity.world.lock().await;
                     world.broadcast_packet(
                         &[self.client.token],
                         &CWorldEvent::new(2001, &location, 11, false),
@@ -528,7 +518,7 @@ impl Player {
                 )
                 .expect("All item ids are in the global registry");
                 if let Ok(block_state_id) = BlockId::new(minecraft_id, None) {
-                    let world = self.world.lock().await;
+                    let world = self.entity.world.lock().await;
                     world.broadcast_packet(
                         &[self.client.token],
                         &CBlockUpdate::new(&location, block_state_id.get_id_mojang_repr().into()),

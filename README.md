@@ -60,6 +60,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Player Inventory
   - [x] Player Combat
 - Server
+  - [x] Plugins
   - [ ] Query
   - [x] RCON
   - [x] Inventories

@@ -237,9 +237,6 @@ impl World {
         });
 
         while let Some(chunk_data) = chunk_receiver.recv().await {
-            if closed {
-                return;
-            }
             // dbg!(chunk_pos);
             let chunk_data = match chunk_data {
                 Ok(d) => d,
@@ -258,7 +255,9 @@ impl World {
                     len / (1024 * 1024)
                 );
             }
-            client.send_packet(&CChunkData(&chunk_data));
+            if !client.closed {
+                client.send_packet(&CChunkData(&chunk_data));
+            }
         }
         dbg!("DONE CHUNKS", inst.elapsed());
     }
