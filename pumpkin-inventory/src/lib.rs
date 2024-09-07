@@ -92,16 +92,6 @@ pub trait Container: Sync + Send {
         self.all_slots()
     }
 
-    fn print_all_contents(&self) {
-        self.all_slots_ref()
-            .into_iter()
-            .enumerate()
-            .filter_map(|(slot, item)| item.map(|item| (slot, item)))
-            .for_each(|(slot, item)| {
-                dbg!(slot, item);
-            });
-    }
-
     fn internal_pumpkin_id(&self) -> u64 {
         0
     }
