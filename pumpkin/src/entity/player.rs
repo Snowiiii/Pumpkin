@@ -263,7 +263,7 @@ impl Player {
 }
 
 impl Player {
-    pub async fn process_packets(&mut self, server: &mut Server) {
+    pub async fn process_packets(&mut self, server: &Arc<Server>) {
         while let Some(mut packet) = self.client.client_packets_queue.pop() {
             match self.handle_play_packet(server, &mut packet).await {
                 Ok(_) => {}
@@ -278,7 +278,7 @@ impl Player {
 
     pub async fn handle_play_packet(
         &mut self,
-        server: &mut Server,
+        server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
         let bytebuf = &mut packet.bytebuf;

@@ -1,7 +1,12 @@
+use std::sync::Arc;
+
+use dispatcher::InvalidTreeError;
 use pumpkin_core::text::TextComponent;
+use tree::ConsumedArgs;
 
 use crate::commands::dispatcher::CommandDispatcher;
 use crate::entity::player::Player;
+use crate::server::Server;
 mod arg_player;
 mod cmd_echest;
 mod cmd_gamemode;
@@ -73,3 +78,6 @@ pub fn default_dispatcher<'a>() -> CommandDispatcher<'a> {
 
     dispatcher
 }
+
+type RunFunctionType = (dyn Fn(&mut CommandSender, &Arc<Server>, &ConsumedArgs) -> Result<(), InvalidTreeError>
+     + Sync);

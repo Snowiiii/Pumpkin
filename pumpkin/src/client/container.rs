@@ -19,11 +19,12 @@ use pumpkin_world::item::ItemStack;
 use std::sync::{Arc, Mutex};
 
 impl Player {
-    pub fn open_container(&mut self, server: &mut Server, minecraft_menu_id: &str) {
+    pub fn open_container(&mut self, server: &Arc<Server>, minecraft_menu_id: &str) {
         self.inventory.state_id = 0;
         let total_opened_containers = self.inventory.total_opened_containers;
-        let mut container = self
-            .get_open_container(server)
+        let container = self.get_open_container(server);
+        let mut container = container
+            .as_ref()
             .map(|container| container.lock().unwrap());
         let menu_protocol_id = (*pumpkin_world::global_registry::REGISTRY
             .get("minecraft:menu")
@@ -97,11 +98,12 @@ impl Player {
 
     pub async fn handle_click_container(
         &mut self,
-        server: &mut Server,
+        server: &Arc<Server>,
         packet: SClickContainer,
     ) -> Result<(), InventoryError> {
-        let mut opened_container = self
-            .get_open_container(server)
+        let opened_container = self.get_open_container(server);
+        let mut opened_container = opened_container
+            .as_ref()
             .map(|container| container.lock().unwrap());
         let drag_handler = &server.drag_handler;
 
@@ -358,14 +360,19 @@ impl Player {
         &mut self,
         server: &Server,
     ) -> Vec<Arc<Mutex<Player>>> {
-        let player_ids = server
-            .open_containers
-            .get(&self.open_container.unwrap())
-            .unwrap()
-            .all_player_ids()
-            .into_iter()
-            .filter(|player_id| *player_id != self.entity_id())
-            .collect_vec();
+        let player_ids = {
+            let open_containers = server
+                .open_containers
+                .read()
+                .expect("open_containers is poisoned");
+            open_containers
+                .get(&self.open_container.unwrap())
+                .unwrap()
+                .all_player_ids()
+                .into_iter()
+                .filter(|player_id| *player_id != self.entity_id())
+                .collect_vec()
+        };
         let player_token = self.client.token;
 
         // TODO: Figure out better way to get only the players from player_ids
@@ -418,19 +425,14 @@ impl Player {
 
         for player in players {
             let mut player = player.lock().unwrap();
-            let mut container = player
-                .get_open_container(server)
-                .map(|container| container.lock().unwrap());
+            let container = player.get_open_container(server);
+            let mut container = container.as_ref().map(|v| v.lock().unwrap());
             player.set_container_content(container.as_deref_mut());
-            drop(container)
         }
         Ok(())
     }
 
-    pub fn get_open_container<'a>(
-        &self,
-        server: &'a Server,
-    ) -> Option<&'a Mutex<Box<dyn Container>>> {
+    pub fn get_open_container(&self, server: &Server) -> Option<Arc<Mutex<Box<dyn Container>>>> {
         if let Some(id) = self.open_container {
             server.try_get_container(self.entity_id(), id)
         } else {

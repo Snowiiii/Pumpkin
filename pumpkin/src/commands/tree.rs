@@ -1,8 +1,6 @@
-use std::collections::{HashMap, VecDeque};
-
-use crate::commands::dispatcher::InvalidTreeError;
+use super::RunFunctionType;
 use crate::commands::CommandSender;
-use crate::server::Server;
+use std::collections::{HashMap, VecDeque};
 
 /// see [crate::commands::tree_builder::argument]
 pub(crate) type RawArgs<'a> = Vec<&'a str>;
@@ -20,8 +18,7 @@ pub(crate) struct Node<'a> {
 
 pub(crate) enum NodeType<'a> {
     ExecuteLeaf {
-        run: &'a (dyn Fn(&mut CommandSender, &mut Server, &ConsumedArgs) -> Result<(), InvalidTreeError>
-                 + Sync),
+        run: &'a RunFunctionType,
     },
     Literal {
         string: &'a str,

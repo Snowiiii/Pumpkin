@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use std::{f32::consts::PI, sync::Arc};
 
 use crate::{
     commands::CommandSender,
@@ -43,7 +43,7 @@ fn modulus(a: f32, b: f32) -> f32 {
 impl Player {
     pub fn handle_confirm_teleport(
         &mut self,
-        _server: &mut Server,
+        _server: &Arc<Server>,
         confirm_teleport: SConfirmTeleport,
     ) {
         if let Some((id, position)) = self.awaiting_teleport.as_ref() {
@@ -70,7 +70,7 @@ impl Player {
         pos.clamp(-2.0E7, 2.0E7)
     }
 
-    pub async fn handle_position(&mut self, _server: &mut Server, position: SPlayerPosition) {
+    pub async fn handle_position(&mut self, _server: &Arc<Server>, position: SPlayerPosition) {
         if position.x.is_nan() || position.feet_y.is_nan() || position.z.is_nan() {
             self.kick(TextComponent::text("Invalid movement"));
             return;
@@ -118,7 +118,7 @@ impl Player {
 
     pub async fn handle_position_rotation(
         &mut self,
-        _server: &mut Server,
+        _server: &Arc<Server>,
         position_rotation: SPlayerPositionRotation,
     ) {
         if position_rotation.x.is_nan()
@@ -188,7 +188,7 @@ impl Player {
         player_chunker::update_position(&world, self).await;
     }
 
-    pub async fn handle_rotation(&mut self, _server: &mut Server, rotation: SPlayerRotation) {
+    pub async fn handle_rotation(&mut self, _server: &Arc<Server>, rotation: SPlayerRotation) {
         if !rotation.yaw.is_finite() || !rotation.pitch.is_finite() {
             self.kick(TextComponent::text("Invalid rotation"));
             return;
@@ -213,16 +213,16 @@ impl Player {
         world.broadcast_packet(&[self.client.token], &packet);
     }
 
-    pub fn handle_chat_command(&mut self, server: &mut Server, command: SChatCommand) {
+    pub fn handle_chat_command(&mut self, server: &Arc<Server>, command: SChatCommand) {
         let dispatcher = server.command_dispatcher.clone();
         dispatcher.handle_command(&mut CommandSender::Player(self), server, &command.command);
     }
 
-    pub fn handle_player_ground(&mut self, _server: &mut Server, ground: SSetPlayerGround) {
+    pub fn handle_player_ground(&mut self, _server: &Arc<Server>, ground: SSetPlayerGround) {
         self.entity.on_ground = ground.on_ground;
     }
 
-    pub async fn handle_player_command(&mut self, _server: &mut Server, command: SPlayerCommand) {
+    pub async fn handle_player_command(&mut self, _server: &Arc<Server>, command: SPlayerCommand) {
         if command.entity_id != self.entity.entity_id.into() {
             return;
         }
@@ -267,7 +267,7 @@ impl Player {
         }
     }
 
-    pub async fn handle_swing_arm(&mut self, _server: &mut Server, swing_arm: SSwingArm) {
+    pub async fn handle_swing_arm(&mut self, _server: &Arc<Server>, swing_arm: SSwingArm) {
         match Hand::from_i32(swing_arm.hand.0) {
             Some(hand) => {
                 let animation = match hand {
@@ -287,7 +287,7 @@ impl Player {
         };
     }
 
-    pub async fn handle_chat_message(&mut self, _server: &mut Server, chat_message: SChatMessage) {
+    pub async fn handle_chat_message(&mut self, _server: &Arc<Server>, chat_message: SChatMessage) {
         dbg!("got message");
 
         let message = chat_message.message;
@@ -331,7 +331,7 @@ impl Player {
 
     pub fn handle_client_information_play(
         &mut self,
-        _server: &mut Server,
+        _server: &Arc<Server>,
         client_information: SClientInformationPlay,
     ) {
         if let (Some(main_hand), Some(chat_mode)) = (
@@ -353,7 +353,7 @@ impl Player {
         }
     }
 
-    pub async fn handle_interact(&mut self, _: &mut Server, interact: SInteract) {
+    pub async fn handle_interact(&mut self, _: &Arc<Server>, interact: SInteract) {
         let sneaking = interact.sneaking;
         if self.entity.sneaking != sneaking {
             self.entity.set_sneaking(&mut self.client, sneaking).await;
@@ -422,7 +422,7 @@ impl Player {
     }
     pub async fn handle_player_action(
         &mut self,
-        _server: &mut Server,
+        _server: &Arc<Server>,
         player_action: SPlayerAction,
     ) {
         match Status::from_i32(player_action.status.0) {
@@ -497,12 +497,12 @@ impl Player {
         }
     }
 
-    pub fn handle_play_ping_request(&mut self, _server: &mut Server, request: SPlayPingRequest) {
+    pub fn handle_play_ping_request(&mut self, _server: &Arc<Server>, request: SPlayPingRequest) {
         self.client
             .send_packet(&CPingResponse::new(request.payload));
     }
 
-    pub async fn handle_use_item_on(&mut self, _server: &mut Server, use_item_on: SUseItemOn) {
+    pub async fn handle_use_item_on(&mut self, _server: &Arc<Server>, use_item_on: SUseItemOn) {
         let location = use_item_on.location;
 
         if !self.can_interact_with_block_at(&location, 1.0) {
@@ -539,12 +539,12 @@ impl Player {
         }
     }
 
-    pub fn handle_use_item(&mut self, _server: &mut Server, _use_item: SUseItem) {
+    pub fn handle_use_item(&mut self, _server: &Arc<Server>, _use_item: SUseItem) {
         // TODO: handle packet correctly
         log::error!("An item was used(SUseItem), but the packet is not implemented yet");
     }
 
-    pub fn handle_set_held_item(&mut self, _server: &mut Server, held: SSetHeldItem) {
+    pub fn handle_set_held_item(&mut self, _server: &Arc<Server>, held: SSetHeldItem) {
         let slot = held.slot;
         if !(0..=8).contains(&slot) {
             self.kick(TextComponent::text("Invalid held slot"))
@@ -554,7 +554,7 @@ impl Player {
 
     pub fn handle_set_creative_slot(
         &mut self,
-        _server: &mut Server,
+        _server: &Arc<Server>,
         packet: SSetCreativeSlot,
     ) -> Result<(), InventoryError> {
         if self.gamemode != GameMode::Creative {
@@ -567,11 +567,15 @@ impl Player {
     // TODO:
     // This function will in the future be used to keep track of if the client is in a valid state.
     // But this is not possible yet
-    pub fn handle_close_container(&mut self, server: &mut Server, packet: SCloseContainer) {
+    pub fn handle_close_container(&mut self, server: &Arc<Server>, packet: SCloseContainer) {
         // window_id 0 represents both 9x1 Generic AND inventory here
         self.inventory.state_id = 0;
         if let Some(id) = self.open_container {
-            if let Some(container) = server.open_containers.get_mut(&id) {
+            let mut open_containers = server
+                .open_containers
+                .write()
+                .expect("open_containers got poisoned");
+            if let Some(container) = open_containers.get_mut(&id) {
                 container.remove_player(self.entity_id())
             }
             self.open_container = None;

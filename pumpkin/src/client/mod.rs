@@ -1,6 +1,7 @@
 use std::{
     io::{self, Write},
     net::SocketAddr,
+    sync::Arc,
 };
 
 use crate::{
@@ -148,7 +149,7 @@ impl Client {
         Ok(())
     }
 
-    pub async fn process_packets(&mut self, server: &mut Server) {
+    pub async fn process_packets(&mut self, server: &Arc<Server>) {
         while let Some(mut packet) = self.client_packets_queue.pop() {
             match self.handle_packet(server, &mut packet).await {
                 Ok(_) => {}
@@ -164,7 +165,7 @@ impl Client {
     /// Handles an incoming decoded not Play state Packet
     pub async fn handle_packet(
         &mut self,
-        server: &mut Server,
+        server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
         // TODO: handle each packet's Error instead of calling .unwrap()

@@ -81,12 +81,12 @@ fn main() -> io::Result<()> {
         let mut clients: HashMap<Token, Client> = HashMap::new();
         let mut players: HashMap<Token, Arc<Mutex<Player>>> = HashMap::new();
 
-        let server = Arc::new(tokio::sync::Mutex::new(Server::new()));
+        let server = Arc::new(Server::new());
         log::info!("Started Server took {}ms", time.elapsed().as_millis());
         log::info!("You now can connect to the server, Listening on {}", addr);
 
-        let server1 = server.clone();
         if use_console {
+            let server = server.clone();
             tokio::spawn(async move {
                 let stdin = std::io::stdin();
                 loop {
@@ -96,11 +96,10 @@ fn main() -> io::Result<()> {
                         .expect("Failed to read console line");
 
                     if !out.is_empty() {
-                        let mut server = server1.lock().await;
                         let dispatcher = server.command_dispatcher.clone();
                         dispatcher.handle_command(
                             &mut commands::CommandSender::Console,
-                            &mut server,
+                            &server,
                             &out,
                         );
                     }
@@ -163,8 +162,7 @@ fn main() -> io::Result<()> {
                             let mut player = player.lock().unwrap();
                             player.client.poll(event).await;
                             if !player.client.closed {
-                                let mut server = server.lock().await;
-                                player.process_packets(&mut server).await;
+                                player.process_packets(&server).await;
                             }
                             if player.client.closed {
                                 drop(player);
@@ -181,8 +179,7 @@ fn main() -> io::Result<()> {
                         let (done, make_player) = if let Some(client) = clients.get_mut(&token) {
                             client.poll(event).await;
                             if !client.closed {
-                                let mut server = server.lock().await;
-                                client.process_packets(&mut server).await;
+                                client.process_packets(&server).await;
                             }
                             (client.closed, client.make_player)
                         } else {
@@ -195,7 +192,6 @@ fn main() -> io::Result<()> {
                                     poll.registry().deregister(&mut client.connection)?;
                                 } else if make_player {
                                     let token = client.token;
-                                    let mut server = server.lock().await;
                                     let (player, world) = server.add_player(token, client).await;
                                     players.insert(token, player.clone());
                                     let mut world = world.lock().await;
