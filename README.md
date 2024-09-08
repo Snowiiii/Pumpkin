@@ -130,7 +130,7 @@ Key Provisions:
 - You may create derivative works based on Pumpkin, but they must also be distributed under the Pumpkin License.
 - You may distribute Pumpkin or derivative works, either for free or commercially.
 - If you a hosting company. you are required to pay a 5% royalty fee on that revenue.
-- If you are not a hosting company, but generating over €500 in monthly net income, you are required to pay a 5% royalty fee on that net income
+- If you are not a hosting company, but generating over €2000 in monthly net income, you are required to pay a 3% royalty fee on that net income
 
 ## Thanks
 
