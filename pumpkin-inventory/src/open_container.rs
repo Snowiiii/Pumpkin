@@ -63,23 +63,23 @@ impl Container for Chest {
     fn window_name(&self) -> &'static str {
         "Chest"
     }
-    fn all_slots<'s>(
+    fn iter_slots_mut<'s>(
         &'s mut self,
     ) -> Box<(dyn ExactSizeIterator<Item = &'s mut Option<ItemStack>> + 's)> {
         Box::new(self.0.iter_mut())
     }
 
-    fn all_slots_ref<'s>(
+    fn iter_slots<'s>(
         &'s self,
     ) -> Box<(dyn ExactSizeIterator<Item = &'s Option<ItemStack>> + 's)> {
         Box::new(self.0.iter())
     }
 
-    fn get(&self, slot: usize) -> Option<&Option<ItemStack>> {
+    fn get_slot(&self, slot: usize) -> Option<&Option<ItemStack>> {
         todo!()
     }
 
-    fn get_mut(&mut self, slot: usize) -> Option<&mut Option<ItemStack>> {
+    fn get_slot_mut(&mut self, slot: usize) -> Option<&mut Option<ItemStack>> {
         todo!()
     }
 

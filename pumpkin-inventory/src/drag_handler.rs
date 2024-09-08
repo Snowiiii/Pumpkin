@@ -72,7 +72,7 @@ impl DragHandler {
         if player != drag.player {
             Err(InventoryError::MultiplePlayersDragging)?
         }
-        let mut slots = container.all_slots();
+        let mut slots = container.iter_slots_mut();
         let slots_cloned = slots
             .map(|stack| stack.map(|item| item.to_owned()))
             .collect_vec();
@@ -84,7 +84,7 @@ impl DragHandler {
             // Checked in any function that uses this function.
             MouseDragType::Middle => {
                 for slot in &drag.slots {
-                    if let Some(stack) = container.get_mut(*slot) {
+                    if let Some(stack) = container.get_slot_mut(*slot) {
                         *stack = *maybe_carried_item;
                     }
                 }
@@ -99,7 +99,7 @@ impl DragHandler {
                     if carried_item.item_count != 0 {
                         carried_item.item_count -= 1;
                         if let Ok(Some(stack)) =
-                            container.get_mut(slot).ok_or(InventoryError::InvalidSlot)
+                            container.get_slot_mut(slot).ok_or(InventoryError::InvalidSlot)
                         {
                             // TODO: Check for stack max here
                             if stack.item_count + 1 < 64 {
@@ -108,7 +108,7 @@ impl DragHandler {
                                 carried_item.item_count += 1;
                             }
                         } else {
-                            if let Some(slot) = container.get_mut(slot) {
+                            if let Some(slot) = container.get_slot_mut(slot) {
                                 *slot = Some(single_item);
                             }
                         }
@@ -131,7 +131,7 @@ impl DragHandler {
                 let mut item_in_each_slot = *carried_item;
                 item_in_each_slot.item_count = amount_per_slot as u8;
                 changing_slots.for_each(|slot| {
-                    if let Some(slot) = container.get_mut(slot) {
+                    if let Some(slot) = container.get_slot_mut(slot) {
                         *slot = Some(item_in_each_slot)
                     }
                 });

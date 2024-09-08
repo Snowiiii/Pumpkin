@@ -69,32 +69,32 @@ pub trait Container: Sync + Send {
     ) -> Result<(), InventoryError> {
         handle_item_change(
             carried_item,
-            self.get_mut(slot).ok_or(InventoryError::InvalidSlot)?,
+            self.get_slot_mut(slot).ok_or(InventoryError::InvalidSlot)?,
             mouse_click,
         );
         Ok(())
     }
 
-    fn all_slots<'s>(
+    fn iter_slots_mut<'s>(
         &'s mut self,
     ) -> Box<dyn ExactSizeIterator<Item = &mut Option<ItemStack>> + 's>;
 
-    fn all_slots_ref<'s>(&'s self) -> Box<dyn ExactSizeIterator<Item = &Option<ItemStack>> + 's>;
+    fn iter_slots<'s>(&'s self) -> Box<dyn ExactSizeIterator<Item = &Option<ItemStack>> + 's>;
 
     fn all_combinable_slots(&self) -> Vec<&Option<ItemStack>> {
-        self.all_slots_ref().collect_vec()
+        self.iter_slots().collect_vec()
     }
 
     fn all_combinable_slots_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
-        self.all_slots().collect_vec()
+        self.iter_slots_mut().collect_vec()
     }
 
     fn internal_pumpkin_id(&self) -> u64 {
         0
     }
 
-    fn get(&self, slot: usize) -> Option<&Option<ItemStack>>;
-    fn get_mut(&mut self, slot: usize) -> Option<&mut Option<ItemStack>>;
+    fn get_slot(&self, slot: usize) -> Option<&Option<ItemStack>>;
+    fn get_slot_mut(&mut self, slot: usize) -> Option<&mut Option<ItemStack>>;
 
     fn size(&self) -> usize;
 }
@@ -201,7 +201,7 @@ impl<'a, 'b> OptionallyCombinedContainer<'a, 'b> {
     /// Returns None if the slot is in the players inventory, Returns Some(Option<&ItemStack>) if it's inside of the container
     pub fn get_slot_excluding_inventory(&self, slot: usize) -> Option<&Option<ItemStack>> {
         if let Some(container) = &self.container {
-            return container.get(slot);
+            return container.get_slot(slot);
         }
         None
     }
@@ -223,7 +223,7 @@ impl<'a> Container for OptionallyCombinedContainer<'a, 'a> {
             .unwrap_or(self.inventory.window_name())
     }
 
-    fn all_slots<'s>(
+    fn iter_slots_mut<'s>(
         &'s mut self,
     ) -> Box<(dyn ExactSizeIterator<Item = &mut Option<ItemStack>> + 's)> {
         match &mut self.container {
@@ -233,35 +233,35 @@ impl<'a> Container for OptionallyCombinedContainer<'a, 'a> {
                 Box::new(ExactSizedChain {
                     iter: Box::new(
                         container
-                            .all_slots()
+                            .iter_slots_mut()
                             .chain(self.inventory.all_combinable_slots_mut()),
                     ),
                     len: 36 + container_size,
                 })
             }
-            None => self.inventory.all_slots(),
+            None => self.inventory.iter_slots_mut(),
         }
     }
 
-    fn all_slots_ref<'s>(&'s self) -> Box<(dyn ExactSizeIterator<Item = &Option<ItemStack>> + 's)> {
+    fn iter_slots<'s>(&'s self) -> Box<(dyn ExactSizeIterator<Item = &Option<ItemStack>> + 's)> {
         match &self.container {
             Some(container) => Box::new(ExactSizedChain {
                 iter: Box::new(
                     container
-                        .all_slots_ref()
+                        .iter_slots()
                         .chain(self.inventory.all_combinable_slots()),
                 ),
                 len: 36 + container.size(),
             }),
-            None => self.inventory.all_slots_ref(),
+            None => self.inventory.iter_slots(),
         }
     }
 
-    fn get(&self, slot: usize) -> Option<&Option<ItemStack>> {
+    fn get_slot(&self, slot: usize) -> Option<&Option<ItemStack>> {
         todo!()
     }
 
-    fn get_mut(&mut self, slot: usize) -> Option<&mut Option<ItemStack>> {
+    fn get_slot_mut(&mut self, slot: usize) -> Option<&mut Option<ItemStack>> {
         todo!()
     }
 
