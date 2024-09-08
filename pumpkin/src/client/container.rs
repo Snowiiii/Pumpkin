@@ -368,7 +368,7 @@ impl Player {
         // TODO: Figure out better way to get only the players from player_ids
         // Also refactor out a better method to get individual advanced state ids
 
-        let world = self.world.lock().await;
+        let world = self.entity.world.lock().await;
         let players = world
             .current_players
             .iter()
