@@ -17,6 +17,7 @@ use pumpkin_protocol::client::play::{
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
+use std::ops::Deref;
 use std::sync::Arc;
 
 impl Player {
@@ -231,9 +232,7 @@ impl Player {
 
         match slot {
             container_click::Slot::Normal(slot) => {
-                let all_slots = container.all_slots();
-                if let Some(item_in_pressed_slot) = all_slots[slot].to_owned() {
-                    let slots = all_slots.into_iter().enumerate();
+                if let Some(Some(item_in_pressed_slot)) = container.get_mut(slot) {
                     // Hotbar
                     let find_condition = |(slot_number, slot): (usize, &mut Option<ItemStack>)| {
                         // TODO: Check for max item count here
@@ -250,17 +249,17 @@ impl Player {
                             None => Some(slot_number),
                         }
                     };
-
-                    let slots = if slot > 35 {
-                        slots.skip(9).find_map(find_condition)
-                    } else {
-                        slots.skip(36).rev().find_map(find_condition)
-                    };
-                    if let Some(slot) = slots {
-                        let mut item_slot = container.all_slots()[slot].map(|i| i.to_owned());
-                        container.handle_item_change(&mut item_slot, slot, MouseClick::Left)?;
-                        *container.all_slots()[slot] = item_slot;
-                    }
+                    let all_slots = container.all_slots().enumerate();
+                    // let slots = if slot > 35 {
+                    //     all_slots.skip(9).find_map(find_condition)
+                    // } else {
+                    //     all_slots.skip(36).rev().find_map(find_condition)
+                    // };
+                    // if let Some(slot) = slots {
+                    //     let mut item_slot = container.get(slot).map(|i| i.to_owned());
+                    //     container.handle_item_change(&mut item_slot, slot, MouseClick::Left)?;
+                    //     *container.get_mut(slot) = item_slot;
+                    // }
                 }
             }
             container_click::Slot::OutsideInventory => (),
@@ -297,7 +296,7 @@ impl Player {
         }
         let mut inventory = self.inventory.lock();
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
-        if let Some(Some(item)) = container.all_slots().get_mut(slot) {
+        if let Some(Some(item)) = container.get_mut(slot) {
             self.carried_item.store(Some(item.to_owned()));
         }
         Ok(())
@@ -310,17 +309,16 @@ impl Player {
     ) -> Result<(), InventoryError> {
         let mut inventory = self.inventory.lock();
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
-        let mut slots = container.all_slots();
 
-        let Some(item) = slots.get_mut(slot) else {
+        let Some(item) = container.get_mut(slot) else {
             return Ok(());
         };
-        let Some(mut carried_item) = **item else {
+        let Some(mut carried_item) = *item else {
             return Ok(());
         };
-        **item = None;
-
-        for slot in slots.iter_mut().filter_map(|slot| slot.as_mut()) {
+        *item = None;
+        let slots = container.all_slots();
+        for slot in slots.filter_map(|slot| slot.as_mut()) {
             if slot.item_id == carried_item.item_id {
                 // TODO: Check for max stack size
                 if slot.item_count + carried_item.item_count <= 64 {
