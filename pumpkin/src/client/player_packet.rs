@@ -14,7 +14,7 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_entity::EntityId;
-use pumpkin_inventory::WindowType;
+use pumpkin_inventory::{InventoryError, WindowType};
 use pumpkin_protocol::server::play::{SCloseContainer, SSetPlayerGround, SUseItem};
 use pumpkin_protocol::{
     client::play::{
@@ -552,22 +552,30 @@ impl Player {
         self.inventory.set_selected(slot as usize);
     }
 
-    pub fn handle_set_creative_slot(&mut self, _server: &mut Server, packet: SSetCreativeSlot) {
+    pub fn handle_set_creative_slot(
+        &mut self,
+        _server: &mut Server,
+        packet: SSetCreativeSlot,
+    ) -> Result<(), InventoryError> {
         if self.gamemode != GameMode::Creative {
-            self.kick(TextComponent::text(
-                "Invalid action, you can only do that if you are in creative",
-            ));
-            return;
+            return Err(InventoryError::PermissionError);
         }
         self.inventory
-            .set_slot(packet.slot as usize, packet.clicked_item.to_item(), false);
+            .set_slot(packet.slot as usize, packet.clicked_item.to_item(), false)
     }
 
     // TODO:
     // This function will in the future be used to keep track of if the client is in a valid state.
     // But this is not possible yet
-    pub fn handle_close_container(&mut self, _server: &mut Server, packet: SCloseContainer) {
+    pub fn handle_close_container(&mut self, server: &mut Server, packet: SCloseContainer) {
         // window_id 0 represents both 9x1 Generic AND inventory here
+        self.inventory.state_id = 0;
+        if let Some(id) = self.open_container {
+            if let Some(container) = server.open_containers.get_mut(&id) {
+                container.remove_player(self.entity_id())
+            }
+            self.open_container = None;
+        }
         let Some(_window_type) = WindowType::from_u8(packet.window_id) else {
             self.kick(TextComponent::text("Invalid window ID"));
             return;

@@ -16,13 +16,16 @@ use pumpkin_protocol::{
         CSystemChatMessage, PlayerAction,
     },
     server::play::{
-        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
-        SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
-        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem,
-        SUseItemOn,
+        SChatCommand, SChatMessage, SClickContainer, SClientInformationPlay, SConfirmTeleport,
+        SInteract, SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition,
+        SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround,
+        SSwingArm, SUseItem, SUseItemOn,
     },
     ConnectionState, RawPacket, ServerPacket, VarInt,
 };
+
+use pumpkin_protocol::server::play::SCloseContainer;
+use pumpkin_world::item::ItemStack;
 
 use crate::{
     client::{authentication::GameProfile, Client, PlayerConfig},
@@ -67,6 +70,9 @@ pub struct Player {
     pub food: i32,
     pub food_saturation: f32,
     pub inventory: PlayerInventory,
+    pub open_container: Option<u64>,
+    pub carried_item: Option<ItemStack>,
+
     /// send `send_abilties_update` when changed
     pub abilities: PlayerAbilities,
     pub last_position: Vector3<f64>,
@@ -113,6 +119,8 @@ impl Player {
             food_saturation: 20.0,
             current_block_destroy_stage: 0,
             inventory: PlayerInventory::new(),
+            open_container: None,
+            carried_item: None,
             teleport_id_count: 0,
             abilities: PlayerAbilities::default(),
             gamemode,
@@ -345,11 +353,22 @@ impl Player {
                 Ok(())
             }
             SSetCreativeSlot::PACKET_ID => {
-                self.handle_set_creative_slot(server, SSetCreativeSlot::read(bytebuf)?);
+                self.handle_set_creative_slot(server, SSetCreativeSlot::read(bytebuf)?)
+                    .unwrap();
                 Ok(())
             }
             SPlayPingRequest::PACKET_ID => {
                 self.handle_play_ping_request(server, SPlayPingRequest::read(bytebuf)?);
+                Ok(())
+            }
+            SClickContainer::PACKET_ID => {
+                self.handle_click_container(server, SClickContainer::read(bytebuf)?)
+                    .await
+                    .unwrap();
+                Ok(())
+            }
+            SCloseContainer::PACKET_ID => {
+                self.handle_close_container(server, SCloseContainer::read(bytebuf)?);
                 Ok(())
             }
             _ => {

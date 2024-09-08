@@ -1,13 +1,3 @@
-use std::{
-    io::Cursor,
-    path::Path,
-    sync::{
-        atomic::{AtomicI32, Ordering},
-        Arc, Mutex,
-    },
-    time::Duration,
-};
-
 use base64::{engine::general_purpose, Engine};
 use image::GenericImageView;
 use mio::Token;
@@ -20,7 +10,19 @@ use pumpkin_protocol::{
     CURRENT_MC_PROTOCOL,
 };
 use pumpkin_world::dimension::Dimension;
+use std::collections::HashMap;
+use std::{
+    io::Cursor,
+    path::Path,
+    sync::{
+        atomic::{AtomicI32, Ordering},
+        Arc, Mutex,
+    },
+    time::Duration,
+};
 
+use pumpkin_inventory::drag_handler::DragHandler;
+use pumpkin_inventory::{Container, OpenContainer};
 use pumpkin_registry::Registry;
 use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 
@@ -54,6 +56,8 @@ pub struct Server {
     /// Cache the registry so we don't have to parse it every time a player joins
     pub cached_registry: Vec<Registry>,
 
+    pub open_containers: HashMap<u64, OpenContainer>,
+    pub drag_handler: DragHandler,
     entity_id: AtomicI32,
 
     /// Used for Authentication, None is Online mode is disabled
@@ -100,6 +104,8 @@ impl Server {
         Self {
             plugin_loader,
             cached_registry: Registry::get_static(),
+            open_containers: HashMap::new(),
+            drag_handler: DragHandler::new(),
             // 0 is invalid
             entity_id: 2.into(),
             worlds: vec![Arc::new(tokio::sync::Mutex::new(world))],
@@ -127,6 +133,7 @@ impl Server {
         // Basicly the default world
         // TODO: select default from config
         let world = self.worlds[0].clone();
+
         let player = Arc::new(Mutex::new(Player::new(
             client,
             world.clone(),
@@ -135,6 +142,14 @@ impl Server {
         )));
         world.lock().await.add_player(token, player.clone());
         (player, world)
+    }
+
+    pub fn try_get_container(
+        &self,
+        player_id: EntityId,
+        container_id: u64,
+    ) -> Option<&Mutex<Box<dyn Container>>> {
+        self.open_containers.get(&container_id)?.try_open(player_id)
     }
 
     /// Sends a Packet to all Players in all worlds

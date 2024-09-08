@@ -1,5 +1,5 @@
 use crate::VarInt;
-use pumpkin_world::item::Item;
+use pumpkin_world::item::ItemStack;
 use serde::ser::SerializeSeq;
 use serde::{
     de::{self, SeqAccess},
@@ -129,9 +129,9 @@ impl Serialize for Slot {
 }
 
 impl Slot {
-    pub fn to_item(self) -> Option<Item> {
+    pub fn to_item(self) -> Option<ItemStack> {
         let item_id = self.item_id?.0.try_into().unwrap();
-        Some(Item {
+        Some(ItemStack {
             item_id,
             item_count: self.item_count.0.try_into().unwrap(),
         })
@@ -149,8 +149,8 @@ impl Slot {
     }
 }
 
-impl From<&Item> for Slot {
-    fn from(item: &Item) -> Self {
+impl From<&ItemStack> for Slot {
+    fn from(item: &ItemStack) -> Self {
         Slot {
             item_count: item.item_count.into(),
             item_id: Some(item.item_id.into()),
@@ -163,8 +163,8 @@ impl From<&Item> for Slot {
     }
 }
 
-impl From<Option<&Item>> for Slot {
-    fn from(item: Option<&Item>) -> Self {
+impl From<Option<&ItemStack>> for Slot {
+    fn from(item: Option<&ItemStack>) -> Self {
         item.map(Slot::from).unwrap_or(Slot::empty())
     }
 }

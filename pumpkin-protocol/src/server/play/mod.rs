@@ -1,5 +1,6 @@
 mod s_chat_command;
 mod s_chat_message;
+mod s_click_container;
 mod s_client_information;
 mod s_close_container;
 mod s_confirm_teleport;
@@ -19,6 +20,7 @@ mod s_use_item_on;
 
 pub use s_chat_command::*;
 pub use s_chat_message::*;
+pub use s_click_container::*;
 pub use s_client_information::*;
 pub use s_close_container::*;
 pub use s_confirm_teleport::*;

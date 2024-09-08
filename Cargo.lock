@@ -1862,6 +1862,7 @@ dependencies = [
  "digest 0.11.0-pre.9",
  "hmac",
  "image",
+ "itertools 0.13.0",
  "log",
  "mio",
  "num-bigint",
@@ -1921,9 +1922,11 @@ version = "0.1.0"
 name = "pumpkin-inventory"
 version = "0.1.0"
 dependencies = [
+ "itertools 0.13.0",
  "num-derive",
  "num-traits",
  "pumpkin-world",
+ "thiserror",
 ]
 
 [[package]]
