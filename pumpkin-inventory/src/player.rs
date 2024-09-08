@@ -59,7 +59,7 @@ impl PlayerInventory {
             if !(0..=45).contains(&slot) {
                 Err(InventoryError::InvalidSlot)?
             }
-            let Some(slot) = self.get_mut(slot) else {
+            let Some(slot) = self.get_slot_mut(slot) else {
                 return Err(InventoryError::InvalidSlot);
             };
             *slot = item;
@@ -68,7 +68,7 @@ impl PlayerInventory {
         let slot_condition = self.slot_condition(slot)?;
         if let Some(item) = item {
             if slot_condition(&item) {
-                let Some(slot) = self.get_mut(slot) else {
+                let Some(slot) = self.get_slot_mut(slot) else {
                     return Err(InventoryError::InvalidSlot);
                 };
                 *slot = Some(item);
@@ -141,7 +141,7 @@ impl Container for PlayerInventory {
         mouse_click: MouseClick,
     ) -> Result<(), InventoryError> {
         let slot_condition = self.slot_condition(slot)?;
-        let item_slot = self.get_mut(slot).ok_or(InventoryError::InvalidSlot)?;
+        let item_slot = self.get_slot_mut(slot).ok_or(InventoryError::InvalidSlot)?;
         if let Some(item) = carried_slot {
             if slot_condition(item) {
                 handle_item_change(carried_slot, item_slot, mouse_click);
@@ -152,13 +152,13 @@ impl Container for PlayerInventory {
         Ok(())
     }
 
-    fn all_slots<'s>(
+    fn iter_slots_mut<'s>(
         &'s mut self,
     ) -> Box<(dyn ExactSizeIterator<Item = &'s mut Option<ItemStack>> + 's)> {
         Box::new(self.slots_mut().into_iter())
     }
 
-    fn all_slots_ref<'s>(
+    fn iter_slots<'s>(
         &'s self,
     ) -> Box<(dyn ExactSizeIterator<Item = &'s Option<ItemStack>> + 's)> {
         Box::new(self.slots().into_iter())
@@ -172,7 +172,7 @@ impl Container for PlayerInventory {
         self.items.iter_mut().collect()
     }
 
-    fn get(&self, slot: usize) -> Option<&Option<ItemStack>> {
+    fn get_slot(&self, slot: usize) -> Option<&Option<ItemStack>> {
         match slot {
             0 => {
                 // TODO: Add crafting check here
@@ -186,7 +186,7 @@ impl Container for PlayerInventory {
         }
     }
 
-    fn get_mut(&mut self, slot: usize) -> Option<&mut Option<ItemStack>> {
+    fn get_slot_mut(&mut self, slot: usize) -> Option<&mut Option<ItemStack>> {
         match slot {
             0 => {
                 // TODO: Add crafting check here

@@ -55,7 +55,7 @@ impl Player {
         let container = OptionallyCombinedContainer::new(&mut self.inventory.lock().unwrap(), container);
 
         let slots = container
-            .all_slots_ref()
+            .iter_slots()
             .into_iter()
             .map(Slot::from)
             .collect_vec();
@@ -219,7 +219,7 @@ impl Player {
 
         match slot {
             container_click::Slot::Normal(slot) => {
-                if let Some(Some(item_in_pressed_slot)) = container.get_mut(slot) {
+                if let Some(Some(item_in_pressed_slot)) = container.get_slot_mut(slot) {
                     // Hotbar
                     let find_condition = |(slot_number, slot): (usize, &mut Option<ItemStack>)| {
                         // TODO: Check for max item count here
@@ -236,7 +236,7 @@ impl Player {
                             None => Some(slot_number),
                         }
                     };
-                    let all_slots = container.all_slots().enumerate();
+                    let all_slots = container.iter_slots_mut().enumerate();
                     // let slots = if slot > 35 {
                     //     all_slots.skip(9).find_map(find_condition)
                     // } else {
@@ -266,7 +266,7 @@ impl Player {
         };
         let mut changing_item_slot = self
             .inventory
-            .get_mut(changing_slot as usize)
+            .get_slot_mut(changing_slot as usize)
             .ok_or(InventoryError::InvalidSlot)?
             .to_owned();
         let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
@@ -274,7 +274,7 @@ impl Player {
         container.handle_item_change(&mut changing_item_slot, slot, MouseClick::Left)?;
         *self
             .inventory
-            .get_mut(changing_slot as usize)
+            .get_slot_mut(changing_slot as usize)
             .ok_or(InventoryError::InvalidSlot)? = changing_item_slot;
         Ok(())
     }
@@ -288,7 +288,7 @@ impl Player {
             return Err(InventoryError::PermissionError);
         }
         let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
-        if let Some(Some(item)) = container.get_mut(slot) {
+        if let Some(Some(item)) = container.get_slot_mut(slot) {
             self.carried_item = Some(item.to_owned())
         }
         Ok(())
@@ -301,14 +301,14 @@ impl Player {
     ) -> Result<(), InventoryError> {
         let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
 
-        let Some(item) = container.get_mut(slot) else {
+        let Some(item) = container.get_slot_mut(slot) else {
             return Ok(());
         };
         let Some(mut carried_item) = *item else {
             return Ok(());
         };
         *item = None;
-        let slots = container.all_slots();
+        let slots = container.iter_slots_mut();
         for slot in slots.filter_map(|slot| slot.as_mut()) {
             if slot.item_id == carried_item.item_id {
                 // TODO: Check for max stack size
