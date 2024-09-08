@@ -66,7 +66,10 @@ impl Client {
     }
 
     fn is_valid_player_name(name: &str) -> bool {
-        name.len() <= 16 && name.chars().all(|c| c > 32 as char && c < 127 as char)
+        name.len() <= 16
+            && name
+                .chars()
+                .all(|c| c > 32_u8 as char && c < 127_u8 as char)
     }
 
     pub fn handle_login_start(&mut self, server: &Arc<Server>, login_start: SLoginStart) {
