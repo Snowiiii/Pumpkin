@@ -16,7 +16,6 @@ use pumpkin_protocol::client::play::{
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
-use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 
 impl Player {
