@@ -165,7 +165,10 @@ impl Player {
                 }
                 self.mouse_drag(drag_handler, opened_container.as_deref_mut(), drag_state)
             }
-            ClickType::DropType(_drop_type) => {dbg!("todo"); Ok(())},
+            ClickType::DropType(_drop_type) => {
+                dbg!("todo");
+                Ok(())
+            }
         }?;
         if let Some(mut opened_container) = opened_container {
             if update_whole_container {
