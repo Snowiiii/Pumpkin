@@ -94,19 +94,7 @@ impl PlayerInventory {
             _ => unreachable!(),
         }))
     }
-    pub fn get_slot(&mut self, slot: usize) -> Result<&mut Option<ItemStack>, InventoryError> {
-        match slot {
-            0 => {
-                // TODO: Add crafting check here
-                Ok(&mut self.crafting_output)
-            }
-            1..=4 => Ok(&mut self.crafting[slot - 1]),
-            5..=8 => Ok(&mut self.armor[slot - 5]),
-            9..=44 => Ok(&mut self.items[slot - 9]),
-            45 => Ok(&mut self.offhand),
-            _ => Err(InventoryError::InvalidSlot),
-        }
-    }
+
     pub fn set_selected(&mut self, slot: usize) {
         assert!((0..9).contains(&slot));
         self.selected = slot;
@@ -153,7 +141,7 @@ impl Container for PlayerInventory {
         mouse_click: MouseClick,
     ) -> Result<(), InventoryError> {
         let slot_condition = self.slot_condition(slot)?;
-        let item_slot = self.get_slot(slot)?;
+        let item_slot = self.get_mut(slot).ok_or(InventoryError::InvalidSlot)?;
         if let Some(item) = carried_slot {
             if slot_condition(item) {
                 handle_item_change(carried_slot, item_slot, mouse_click);
@@ -185,11 +173,31 @@ impl Container for PlayerInventory {
     }
 
     fn get(&self, slot: usize) -> Option<&Option<ItemStack>> {
-        todo!()
+        match slot {
+            0 => {
+                // TODO: Add crafting check here
+                Some(&self.crafting_output)
+            }
+            1..=4 => Some(&self.crafting[slot - 1]),
+            5..=8 => Some(&self.armor[slot - 5]),
+            9..=44 => Some(&self.items[slot - 9]),
+            45 => Some(&self.offhand),
+            _ => None,
+        }
     }
 
     fn get_mut(&mut self, slot: usize) -> Option<&mut Option<ItemStack>> {
-        todo!()
+        match slot {
+            0 => {
+                // TODO: Add crafting check here
+                Some(&mut self.crafting_output)
+            }
+            1..=4 => Some(&mut self.crafting[slot - 1]),
+            5..=8 => Some(&mut self.armor[slot - 5]),
+            9..=44 => Some(&mut self.items[slot - 9]),
+            45 => Some(&mut self.offhand),
+            _ => None,
+        }
     }
 
     fn size(&self) -> usize {

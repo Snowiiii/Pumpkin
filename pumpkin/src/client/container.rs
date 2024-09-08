@@ -264,11 +264,18 @@ impl Player {
             KeyClick::Slot(slot) => slot,
             KeyClick::Offhand => 45,
         };
-        let mut changing_item_slot = self.inventory.get_slot(changing_slot as usize)?.to_owned();
-        let mut container = OptionallyCombinedContainer::new(&mut self.inventory.lock().unwrap(), opened_container);
+        let mut changing_item_slot = self
+            .inventory
+            .get_mut(changing_slot as usize)
+            .ok_or(InventoryError::InvalidSlot)?
+            .to_owned();
+        let mut container = OptionallyCombinedContainer::new(&mut self.inventory, opened_container);
 
         container.handle_item_change(&mut changing_item_slot, slot, MouseClick::Left)?;
-        *self.inventory.get_slot(changing_slot as usize)? = changing_item_slot;
+        *self
+            .inventory
+            .get_mut(changing_slot as usize)
+            .ok_or(InventoryError::InvalidSlot)? = changing_item_slot;
         Ok(())
     }
 
