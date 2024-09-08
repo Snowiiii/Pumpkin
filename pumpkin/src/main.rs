@@ -82,6 +82,7 @@ fn main() -> io::Result<()> {
         let mut players: HashMap<Token, Arc<Mutex<Player>>> = HashMap::new();
 
         let server = Arc::new(tokio::sync::Mutex::new(Server::new()));
+        log::warn!("By using Pumpkin, you agree to the terms of our license. You can find the license here: https://github.com/Snowiiii/Pumpkin/blob/master/LICENSE");
         log::info!("Started Server took {}ms", time.elapsed().as_millis());
         log::info!("You now can connect to the server, Listening on {}", addr);
 

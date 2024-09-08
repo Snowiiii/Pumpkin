@@ -122,6 +122,16 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 Consider joining our [discord](https://discord.gg/wT8XjrjKkf) to stay up-to-date on events, updates, and connect with other members.
 
+## License
+Pumpkin is licensed under the [Pumpkin License](LICENSE). By using Pumpkin, you agree to the terms of this license.
+
+Key Provisions:
+- You must give credit to the original author(s) of Pumpkin and provide a link to the project's repository.
+- You may create derivative works based on Pumpkin, but they must also be distributed under the Pumpkin License.
+- You may distribute Pumpkin or derivative works, either for free or commercially.
+- If you a hosting company. you are required to pay a 5% royalty fee on that revenue.
+- If you are not a hosting company which generating over €500. you are required to pay a 5% royalty fee on that revenue.
+
 ## Thanks
 
 A big thanks to [wiki.vg](https://wiki.vg/) for providing valuable information used in the development of this project.

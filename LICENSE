@@ -1,21 +1,33 @@
-MIT License
+PUMKIN LICENSE
 
-Copyright (c) 2024 Aleksander Medvedev
+Copyright © 2024 Aleksandr Medvedev. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. Grant of License
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+a. This License applies to the Pumpkin software and its associated source code ("Software").
+b. You (the recipient) are granted a non-exclusive, worldwide, royalty-free, irrevocable copyright license, to:
+- Use, modify, and distribute copies of the Software, in source and binary forms.
+- Create derivative works based on the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. Permitted Use and Restrictions
+
+a. You may use, modify, and distribute copies of the Software, in source and binary forms.
+b. You may create derivative works based on the Software.
+c. If you are a hosting company providing services that utilize the Software, you are required to pay a 5% royalty fee on the revenue generated from those services. A hosting company is defined as any entity that provides hosting services for websites, applications, or other online content.
+d. If you are not a hosting company generating over €500 in monthly revenue directly attributable to the use of the Software, you are required to pay a 5% royalty fee on that revenue
+
+a. If you distribute the Software or a derivative work, you must:
+- Clearly identify the origin of the Software by including a prominent notice in the user documentation and/or about screen.
+- Provide a link to the official Pumpkin repository (if applicable).
+
+4. Disclaimer of Warranty
+
+The Software is provided "as is," without warranty of any kind, express or implied. The author(s) disclaim all warranties, including but not limited to warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event shall the author(s) be liable for any direct, indirect, incidental, special, exemplary, or consequential damages arising out of or in any way connected with the use of this Software, even if advised of the possibility of such damages.  
+
+5. Termination
+
+This License will terminate automatically if you fail to comply with any of its terms. Upon termination, you must cease all use and distribution of the Software.  
+
+6. Severability
+
+If any provision of this License is held to be invalid or unenforceable, such provision shall be struck and the remaining provisions shall remain in full force and effect.  
