@@ -75,11 +75,9 @@ pub trait Container: Sync + Send {
         Ok(())
     }
 
-    fn iter_slots_mut<'s>(
-        &'s mut self,
-    ) -> Box<dyn ExactSizeIterator<Item = &mut Option<ItemStack>> + 's>;
+    fn iter_slots_mut<'s>(&'s mut self) -> Box<dyn Iterator<Item = &mut Option<ItemStack>> + 's>;
 
-    fn iter_slots<'s>(&'s self) -> Box<dyn ExactSizeIterator<Item = &Option<ItemStack>> + 's>;
+    fn iter_slots<'s>(&'s self) -> Box<dyn Iterator<Item = &Option<ItemStack>> + 's>;
 
     fn all_combinable_slots(&self) -> Vec<&Option<ItemStack>> {
         self.iter_slots().collect_vec()
@@ -217,42 +215,28 @@ impl<'a> Container for OptionallyCombinedContainer<'a, 'a> {
     }
 
     fn window_name(&self) -> &'static str {
-        self.container
-            .as_ref()
-            .map(|container| container.window_name())
-            .unwrap_or(self.inventory.window_name())
+        let Some(container) = &self.container else {
+            return self.inventory.window_name();
+        };
+        container.window_name()
     }
 
-    fn iter_slots_mut<'s>(
-        &'s mut self,
-    ) -> Box<(dyn ExactSizeIterator<Item = &mut Option<ItemStack>> + 's)> {
+    fn iter_slots_mut<'s>(&'s mut self) -> Box<(dyn Iterator<Item = &mut Option<ItemStack>> + 's)> {
         match &mut self.container {
             Some(container) => {
-                let container_size = container.size();
-
-                Box::new(ExactSizedChain {
-                    iter: Box::new(
-                        container
-                            .iter_slots_mut()
-                            .chain(self.inventory.all_combinable_slots_mut()),
-                    ),
-                    len: 36 + container_size,
-                })
+                Box::new(
+                    container
+                        .iter_slots_mut()
+                        .chain(self.inventory.iter_slots_mut()),
+                )
             }
             None => self.inventory.iter_slots_mut(),
         }
     }
 
-    fn iter_slots<'s>(&'s self) -> Box<(dyn ExactSizeIterator<Item = &Option<ItemStack>> + 's)> {
+    fn iter_slots<'s>(&'s self) -> Box<(dyn Iterator<Item = &Option<ItemStack>> + 's)> {
         match &self.container {
-            Some(container) => Box::new(ExactSizedChain {
-                iter: Box::new(
-                    container
-                        .iter_slots()
-                        .chain(self.inventory.all_combinable_slots()),
-                ),
-                len: 36 + container.size(),
-            }),
+            Some(container) => Box::new(container.iter_slots().chain(self.inventory.iter_slots())),
             None => self.inventory.iter_slots(),
         }
     }

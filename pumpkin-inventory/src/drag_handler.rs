@@ -72,7 +72,7 @@ impl DragHandler {
         if player != drag.player {
             Err(InventoryError::MultiplePlayersDragging)?
         }
-        let mut slots = container.iter_slots_mut();
+        let slots = container.iter_slots_mut();
         let slots_cloned = slots
             .map(|stack| stack.map(|item| item.to_owned()))
             .collect_vec();

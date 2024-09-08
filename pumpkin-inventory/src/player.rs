@@ -1,3 +1,5 @@
+use std::iter;
+
 use std::sync::atomic::AtomicU32;
 
 use crate::container_click::MouseClick;
@@ -114,13 +116,13 @@ impl PlayerInventory {
         slots
     }
 
-    pub fn slots_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
-        let mut slots = vec![&mut self.crafting_output];
-        slots.extend(self.crafting.iter_mut());
-        slots.extend(self.armor.iter_mut());
-        slots.extend(self.items.iter_mut());
-        slots.push(&mut self.offhand);
-        slots
+    pub fn slots_mut<'s>(&'s mut self) -> Box<dyn Iterator<Item = &mut Option<ItemStack>> + 's> {
+        let crafting_output = iter::once(&mut self.crafting_output);
+        let crafting = self.crafting.iter_mut();
+        let armor    = self.armor.iter_mut();
+        let items    = self.items.iter_mut();
+        let offhand  = iter::once(&mut self.offhand);
+        Box::new(crafting_output.chain(crafting).chain(armor).chain(items).chain(offhand))
     }
 }
 
@@ -154,13 +156,11 @@ impl Container for PlayerInventory {
 
     fn iter_slots_mut<'s>(
         &'s mut self,
-    ) -> Box<(dyn ExactSizeIterator<Item = &'s mut Option<ItemStack>> + 's)> {
-        Box::new(self.slots_mut().into_iter())
+    ) -> Box<(dyn Iterator<Item = &'s mut Option<ItemStack>> + 's)> {
+        self.slots_mut()
     }
 
-    fn iter_slots<'s>(
-        &'s self,
-    ) -> Box<(dyn ExactSizeIterator<Item = &'s Option<ItemStack>> + 's)> {
+    fn iter_slots<'s>(&'s self) -> Box<(dyn Iterator<Item = &'s Option<ItemStack>> + 's)> {
         Box::new(self.slots().into_iter())
     }
 
@@ -201,6 +201,10 @@ impl Container for PlayerInventory {
     }
 
     fn size(&self) -> usize {
-        todo!()
+        1 + // Crafting output
+        self.crafting.len() +
+        self.armor.len() +
+        self.items.len() +
+        1 // Offhand
     }
 }
