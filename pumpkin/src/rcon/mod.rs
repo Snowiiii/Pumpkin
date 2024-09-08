@@ -31,10 +31,7 @@ const SERVER: Token = Token(0);
 pub struct RCONServer {}
 
 impl RCONServer {
-    pub async fn new(
-        config: &RCONConfig,
-        server: Arc<tokio::sync::Mutex<Server>>,
-    ) -> Result<Self, io::Error> {
+    pub async fn new(config: &RCONConfig, server: Arc<Server>) -> Result<Self, io::Error> {
         assert!(config.enabled, "RCON is not enabled");
         let mut poll = Poll::new().unwrap();
         let mut listener = TcpListener::bind(config.address).unwrap();
@@ -128,11 +125,7 @@ impl RCONClient {
         }
     }
 
-    pub async fn handle(
-        &mut self,
-        server: &Arc<tokio::sync::Mutex<Server>>,
-        password: &str,
-    ) -> bool {
+    pub async fn handle(&mut self, server: &Arc<Server>, password: &str) -> bool {
         if !self.closed {
             loop {
                 match self.read_bytes() {
@@ -158,11 +151,7 @@ impl RCONClient {
         self.closed
     }
 
-    async fn poll(
-        &mut self,
-        server: &Arc<tokio::sync::Mutex<Server>>,
-        password: &str,
-    ) -> Result<(), PacketError> {
+    async fn poll(&mut self, server: &Arc<Server>, password: &str) -> Result<(), PacketError> {
         loop {
             let packet = match self.receive_packet().await? {
                 Some(p) => p,
@@ -193,11 +182,10 @@ impl RCONClient {
                 PacketType::ExecCommand => {
                     if self.logged_in {
                         let mut output = Vec::new();
-                        let mut server = server.lock().await;
                         let dispatcher = server.command_dispatcher.clone();
                         dispatcher.handle_command(
                             &mut crate::commands::CommandSender::Rcon(&mut output),
-                            &mut server,
+                            server,
                             packet.get_body(),
                         );
                         for line in output {

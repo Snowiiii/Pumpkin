@@ -11,6 +11,7 @@ use pumpkin_protocol::{
 };
 use pumpkin_world::dimension::Dimension;
 use std::collections::HashMap;
+use std::sync::RwLock;
 use std::{
     io::Cursor,
     path::Path,
@@ -56,7 +57,7 @@ pub struct Server {
     /// Cache the registry so we don't have to parse it every time a player joins
     pub cached_registry: Vec<Registry>,
 
-    pub open_containers: HashMap<u64, OpenContainer>,
+    pub open_containers: RwLock<HashMap<u64, OpenContainer>>,
     pub drag_handler: DragHandler,
     entity_id: AtomicI32,
 
@@ -104,7 +105,7 @@ impl Server {
         Self {
             plugin_loader,
             cached_registry: Registry::get_static(),
-            open_containers: HashMap::new(),
+            open_containers: RwLock::new(HashMap::new()),
             drag_handler: DragHandler::new(),
             // 0 is invalid
             entity_id: 2.into(),
@@ -121,7 +122,7 @@ impl Server {
     }
 
     pub async fn add_player(
-        &mut self,
+        &self,
         token: Token,
         client: Client,
     ) -> (Arc<Mutex<Player>>, Arc<tokio::sync::Mutex<World>>) {
@@ -148,8 +149,15 @@ impl Server {
         &self,
         player_id: EntityId,
         container_id: u64,
-    ) -> Option<&Mutex<Box<dyn Container>>> {
-        self.open_containers.get(&container_id)?.try_open(player_id)
+    ) -> Option<Arc<Mutex<Box<dyn Container>>>> {
+        let open_containers = self
+            .open_containers
+            .read()
+            .expect("open_containers is poisoned");
+        open_containers
+            .get(&container_id)?
+            .try_open(player_id)
+            .cloned()
     }
 
     /// Sends a Packet to all Players in all worlds

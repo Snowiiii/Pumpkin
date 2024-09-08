@@ -1,14 +1,14 @@
 use crate::{Container, WindowType};
 use pumpkin_world::item::ItemStack;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 pub struct OpenContainer {
     players: Vec<i32>,
-    container: Mutex<Box<dyn Container>>,
+    container: Arc<Mutex<Box<dyn Container>>>,
 }
 
 impl OpenContainer {
-    pub fn try_open(&self, player_id: i32) -> Option<&Mutex<Box<dyn Container>>> {
+    pub fn try_open(&self, player_id: i32) -> Option<&Arc<Mutex<Box<dyn Container>>>> {
         if !self.players.contains(&player_id) {
             dbg!("couldn't open container");
             return None;
@@ -38,7 +38,7 @@ impl OpenContainer {
     pub fn empty(player_id: i32) -> Self {
         Self {
             players: vec![player_id],
-            container: Mutex::new(Box::new(Chest::new())),
+            container: Arc::new(Mutex::new(Box::new(Chest::new()))),
         }
     }
 

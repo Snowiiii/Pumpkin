@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use num_traits::FromPrimitive;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::TextComponent;
@@ -35,7 +37,7 @@ use super::{
 /// NEVER TRUST THE CLIENT. HANDLE EVERY ERROR, UNWRAP/EXPECT
 /// TODO: REMOVE ALL UNWRAPS
 impl Client {
-    pub fn handle_handshake(&mut self, _server: &mut Server, handshake: SHandShake) {
+    pub fn handle_handshake(&mut self, _server: &Arc<Server>, handshake: SHandShake) {
         dbg!("handshake");
         self.protocol_version = handshake.protocol_version.0;
         self.connection_state = handshake.next_state;
@@ -53,24 +55,21 @@ impl Client {
         }
     }
 
-    pub fn handle_status_request(&mut self, server: &mut Server, _status_request: SStatusRequest) {
+    pub fn handle_status_request(&mut self, server: &Arc<Server>, _status_request: SStatusRequest) {
         self.send_packet(&CStatusResponse::new(&server.status_response_json));
     }
 
-    pub fn handle_ping_request(&mut self, _server: &mut Server, ping_request: SStatusPingRequest) {
+    pub fn handle_ping_request(&mut self, _server: &Arc<Server>, ping_request: SStatusPingRequest) {
         dbg!("ping");
         self.send_packet(&CPingResponse::new(ping_request.payload));
         self.close();
     }
 
     fn is_valid_player_name(name: &str) -> bool {
-        name.len() <= 16
-            && name
-                .chars()
-                .all(|c| c > 32 as u8 as char && c < 127 as u8 as char)
+        name.len() <= 16 && name.chars().all(|c| c > 32 as char && c < 127 as char)
     }
 
-    pub fn handle_login_start(&mut self, server: &mut Server, login_start: SLoginStart) {
+    pub fn handle_login_start(&mut self, server: &Arc<Server>, login_start: SLoginStart) {
         log::debug!("login start, State {:?}", self.connection_state);
 
         if !Self::is_valid_player_name(&login_start.name) {
@@ -107,7 +106,7 @@ impl Client {
 
     pub async fn handle_encryption_response(
         &mut self,
-        server: &mut Server,
+        server: &Arc<Server>,
         encryption_response: SEncryptionResponse,
     ) {
         let shared_secret = server
@@ -185,14 +184,14 @@ impl Client {
 
     pub fn handle_plugin_response(
         &mut self,
-        _server: &mut Server,
+        _server: &Arc<Server>,
         _plugin_response: SLoginPluginResponse,
     ) {
     }
 
     pub fn handle_login_acknowledged(
         &mut self,
-        server: &mut Server,
+        server: &Arc<Server>,
         _login_acknowledged: SLoginAcknowledged,
     ) {
         self.connection_state = ConnectionState::Config;
@@ -227,7 +226,7 @@ impl Client {
     }
     pub fn handle_client_information_config(
         &mut self,
-        _server: &mut Server,
+        _server: &Arc<Server>,
         client_information: SClientInformationConfig,
     ) {
         dbg!("got client settings");
@@ -243,7 +242,7 @@ impl Client {
         });
     }
 
-    pub fn handle_plugin_message(&mut self, _server: &mut Server, plugin_message: SPluginMessage) {
+    pub fn handle_plugin_message(&mut self, _server: &Arc<Server>, plugin_message: SPluginMessage) {
         if plugin_message.channel.starts_with("minecraft:brand")
             || plugin_message.channel.starts_with("MC|Brand")
         {
@@ -255,7 +254,7 @@ impl Client {
         }
     }
 
-    pub fn handle_known_packs(&mut self, server: &mut Server, _config_acknowledged: SKnownPacks) {
+    pub fn handle_known_packs(&mut self, server: &Arc<Server>, _config_acknowledged: SKnownPacks) {
         for registry in &server.cached_registry {
             self.send_packet(&CRegistryData::new(
                 &registry.registry_id,
@@ -270,7 +269,7 @@ impl Client {
 
     pub async fn handle_config_acknowledged(
         &mut self,
-        _server: &mut Server,
+        _server: &Arc<Server>,
         _config_acknowledged: SAcknowledgeFinishConfig,
     ) {
         dbg!("config acknowledged");

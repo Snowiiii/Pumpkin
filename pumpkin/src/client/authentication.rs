@@ -1,4 +1,4 @@
-use std::{collections::HashMap, net::IpAddr};
+use std::{collections::HashMap, net::IpAddr, sync::Arc};
 
 use base64::{engine::general_purpose, Engine};
 use num_bigint::BigInt;
@@ -13,13 +13,13 @@ use uuid::Uuid;
 use crate::server::Server;
 
 #[derive(Deserialize, Clone, Debug)]
-#[expect(non_snake_case)]
 #[expect(dead_code)]
+#[serde(rename_all = "camelCase")]
 pub struct ProfileTextures {
     timestamp: i64,
-    profileId: Uuid,
-    profileName: String,
-    signatureRequired: bool,
+    profile_id: Uuid,
+    profile_name: String,
+    signature_required: bool,
     textures: HashMap<String, Texture>,
 }
 
@@ -43,7 +43,7 @@ pub async fn authenticate(
     username: &str,
     server_hash: &str,
     ip: &IpAddr,
-    server: &mut Server,
+    server: &Arc<Server>,
 ) -> Result<GameProfile, AuthError> {
     assert!(ADVANCED_CONFIG.authentication.enabled);
     assert!(server.auth_client.is_some());
