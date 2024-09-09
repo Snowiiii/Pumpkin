@@ -119,10 +119,16 @@ impl PlayerInventory {
     pub fn slots_mut<'s>(&'s mut self) -> Box<dyn Iterator<Item = &mut Option<ItemStack>> + 's> {
         let crafting_output = iter::once(&mut self.crafting_output);
         let crafting = self.crafting.iter_mut();
-        let armor    = self.armor.iter_mut();
-        let items    = self.items.iter_mut();
-        let offhand  = iter::once(&mut self.offhand);
-        Box::new(crafting_output.chain(crafting).chain(armor).chain(items).chain(offhand))
+        let armor = self.armor.iter_mut();
+        let items = self.items.iter_mut();
+        let offhand = iter::once(&mut self.offhand);
+        Box::new(
+            crafting_output
+                .chain(crafting)
+                .chain(armor)
+                .chain(items)
+                .chain(offhand),
+        )
     }
 }
 
