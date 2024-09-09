@@ -43,7 +43,7 @@ impl Client {
         self.protocol_version
             .store(version, std::sync::atomic::Ordering::Relaxed);
         let mut connection_state = self.connection_state.lock().unwrap();
-        
+
         *connection_state = handshake.next_state;
         if *connection_state != ConnectionState::Status {
             let protocol = version;

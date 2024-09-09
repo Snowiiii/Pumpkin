@@ -1,7 +1,7 @@
 use std::sync::{
-        atomic::{AtomicI32, AtomicU8},
-        Arc, Mutex,
-    };
+    atomic::{AtomicI32, AtomicU8},
+    Arc, Mutex,
+};
 
 use num_derive::FromPrimitive;
 use num_traits::ToPrimitive;
