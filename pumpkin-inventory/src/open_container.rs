@@ -62,11 +62,25 @@ impl Container for Chest {
     fn window_name(&self) -> &'static str {
         "Chest"
     }
-    fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
-        self.0.iter_mut().collect()
+    fn iter_slots_mut<'s>(
+        &'s mut self,
+    ) -> Box<(dyn Iterator<Item = &'s mut Option<ItemStack>> + 's)> {
+        Box::new(self.0.iter_mut())
     }
 
-    fn all_slots_ref(&self) -> Vec<Option<&ItemStack>> {
-        self.0.iter().map(|slot| slot.as_ref()).collect()
+    fn iter_slots<'s>(&'s self) -> Box<(dyn Iterator<Item = &'s Option<ItemStack>> + 's)> {
+        Box::new(self.0.iter())
+    }
+
+    fn get_slot(&self, slot: usize) -> Option<&Option<ItemStack>> {
+        self.0.get(slot)
+    }
+
+    fn get_slot_mut(&mut self, slot: usize) -> Option<&mut Option<ItemStack>> {
+        self.0.get_mut(slot)
+    }
+
+    fn size(&self) -> usize {
+        self.0.len()
     }
 }
