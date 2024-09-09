@@ -61,7 +61,7 @@ impl Default for PlayerAbilities {
 }
 
 pub struct Player {
-    pub entity: Mutex<Entity>,
+    pub entity: Entity,
 
     pub gameprofile: GameProfile,
     pub client: Client,
@@ -106,7 +106,7 @@ impl Player {
         };
         let config = client.config.lock().unwrap().clone().unwrap_or_default();
         Self {
-            entity: Mutex::new(Entity::new(entity_id, world, EntityType::Player, 1.62)),
+            entity: Entity::new(entity_id, world, EntityType::Player, 1.62),
             config: Mutex::new(config),
             gameprofile,
             client,
@@ -129,11 +129,11 @@ impl Player {
 
     /// Removes the Player out of the current World
     pub async fn remove(&self) {
-        self.entity.lock().unwrap().world.remove_player(self);
+        self.entity.world.remove_player(self);
     }
 
     pub fn entity_id(&self) -> EntityId {
-        self.entity.lock().unwrap().entity_id
+        self.entity.entity_id
     }
 
     pub fn send_abilties_update(&mut self) {
@@ -170,10 +170,9 @@ impl Player {
                 .store(0, std::sync::atomic::Ordering::Relaxed);
         }
         let teleport_id = i + 1;
-        let mut entity = self.entity.lock().unwrap();
+        let entity = &self.entity;
         entity.set_pos(x, y, z);
-        entity.yaw = yaw;
-        entity.pitch = pitch;
+        entity.set_rotation(yaw, pitch);
         *self.awaiting_teleport.lock().unwrap() = Some((teleport_id.into(), Vector3::new(x, y, z)));
         self.client.send_packet(&CSyncPlayerPosition::new(
             x,
@@ -197,11 +196,12 @@ impl Player {
     pub fn can_interact_with_block_at(&self, pos: &WorldPosition, additional_range: f64) -> bool {
         let d = self.block_interaction_range() + additional_range;
         let box_pos = BoundingBox::from_block(pos);
-        let entity = self.entity.lock().unwrap();
+        let entity_pos = self.entity.pos.lock().unwrap();
+        let standing_eye_height = self.entity.standing_eye_height;
         box_pos.squared_magnitude(Vector3 {
-            x: entity.pos.x,
-            y: entity.pos.y + entity.standing_eye_height as f64,
-            z: entity.pos.z,
+            x: entity_pos.x,
+            y: entity_pos.y + standing_eye_height as f64,
+            z: entity_pos.z,
         }) < d * d
     }
 
@@ -241,8 +241,6 @@ impl Player {
         // So a little story time. I actually made an abitlties_from_gamemode function. I looked at vanilla and they always send the abilties from the gamemode. But the funny thing actually is. That the client
         // does actually use the same method and set the abilties when receiving the CGameEvent gamemode packet. Just Mojang nonsense
         self.entity
-            .lock()
-            .unwrap()
             .world
             .broadcast_packet_all(&CPlayerInfoUpdate::new(
                 0x04,

@@ -50,10 +50,7 @@ impl Player {
         if let Some((id, position)) = awaiting_teleport.as_ref() {
             if id == &confirm_teleport.teleport_id {
                 // we should set the pos now to that we requested in the teleport packet, Is may fixed issues when the client sended position packets while being teleported
-                self.entity
-                    .lock()
-                    .unwrap()
-                    .set_pos(position.x, position.y, position.z);
+                self.entity.set_pos(position.x, position.y, position.z);
 
                 *awaiting_teleport = None;
             } else {
@@ -79,18 +76,20 @@ impl Player {
             self.kick(TextComponent::text("Invalid movement"));
             return;
         }
-        let mut entity = self.entity.lock().unwrap();
-        let mut last_position = self.last_position.lock().unwrap();
-        *last_position = entity.pos;
+        let entity = &self.entity;
         entity.set_pos(
             Self::clamp_horizontal(position.x),
             Self::clamp_vertical(position.feet_y),
             Self::clamp_horizontal(position.z),
         );
-        entity.on_ground = position.ground;
-        let on_ground = entity.on_ground;
+        let mut last_position = self.last_position.lock().unwrap();
+        let pos = entity.pos.lock().unwrap();
+        *last_position = *pos;
+        entity
+            .on_ground
+            .store(position.ground, std::sync::atomic::Ordering::Relaxed);
         let entity_id = entity.entity_id;
-        let (x, y, z) = entity.pos.into();
+        let (x, y, z) = (*pos).into();
         let (lastx, lasty, lastz) = (last_position.x, last_position.y, last_position.z);
         let world = entity.world.clone();
 
@@ -114,10 +113,10 @@ impl Player {
                 (x * 4096.0 - lastx * 4096.0) as i16,
                 (y * 4096.0 - lasty * 4096.0) as i16,
                 (z * 4096.0 - lastz * 4096.0) as i16,
-                on_ground,
+                position.ground,
             ),
         );
-        player_chunker::update_position(&world, self).await;
+        player_chunker::update_position(entity, self).await;
     }
 
     pub async fn handle_position_rotation(
@@ -136,27 +135,31 @@ impl Player {
             self.kick(TextComponent::text("Invalid rotation"));
             return;
         }
-        let mut entity = self.entity.lock().unwrap();
+        let entity = &self.entity;
 
-        let mut last_position = self.last_position.lock().unwrap();
-        *last_position = entity.pos;
         entity.set_pos(
             Self::clamp_horizontal(position_rotation.x),
             Self::clamp_vertical(position_rotation.feet_y),
             Self::clamp_horizontal(position_rotation.z),
         );
-        entity.on_ground = position_rotation.ground;
-        entity.yaw = wrap_degrees(position_rotation.yaw) % 360.0;
-        entity.pitch = wrap_degrees(position_rotation.pitch).clamp(-90.0, 90.0) % 360.0;
+        let mut last_position = self.last_position.lock().unwrap();
+        let pos = entity.pos.lock().unwrap();
+        *last_position = *pos;
+        entity.on_ground.store(
+            position_rotation.ground,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+        entity.set_rotation(
+            wrap_degrees(position_rotation.yaw) % 360.0,
+            wrap_degrees(position_rotation.pitch).clamp(-90.0, 90.0) % 360.0,
+        );
 
-        let on_ground = entity.on_ground;
         let entity_id = entity.entity_id;
-        let (x, y, z) = entity.pos.into();
+        let (x, y, z) = (*pos).into();
         let (lastx, lasty, lastz) = (last_position.x, last_position.y, last_position.z);
-        let yaw = modulus(entity.yaw * 256.0 / 360.0, 256.0);
-        let pitch = modulus(entity.pitch * 256.0 / 360.0, 256.0);
+        let yaw = modulus(*entity.yaw.lock().unwrap() * 256.0 / 360.0, 256.0);
+        let pitch = modulus(*entity.pitch.lock().unwrap() * 256.0 / 360.0, 256.0);
         // let head_yaw = (entity.head_yaw * 256.0 / 360.0).floor();
-        let entity = self.entity.lock().unwrap();
         let world = &entity.world;
 
         // let delta = Vector3::new(x - lastx, y - lasty, z - lastz);
@@ -182,15 +185,14 @@ impl Player {
                 (z * 4096.0 - lastz * 4096.0) as i16,
                 yaw as u8,
                 pitch as u8,
-                on_ground,
+                position_rotation.ground,
             ),
         );
         world.broadcast_packet_expect(
             &[self.client.token],
             &CHeadRot::new(entity_id.into(), yaw as u8),
         );
-
-        player_chunker::update_position(world, self).await;
+        player_chunker::update_position(entity, self).await;
     }
 
     pub async fn handle_rotation(&self, _server: &Arc<Server>, rotation: SPlayerRotation) {
@@ -198,19 +200,23 @@ impl Player {
             self.kick(TextComponent::text("Invalid rotation"));
             return;
         }
-        let mut entity = self.entity.lock().unwrap();
-        entity.on_ground = rotation.ground;
-        entity.yaw = wrap_degrees(rotation.yaw) % 360.0;
-        entity.pitch = wrap_degrees(rotation.pitch).clamp(-90.0, 90.0) % 360.0;
+        let entity = &self.entity;
+        entity
+            .on_ground
+            .store(rotation.ground, std::sync::atomic::Ordering::Relaxed);
+        entity.set_rotation(
+            wrap_degrees(rotation.yaw) % 360.0,
+            wrap_degrees(rotation.pitch).clamp(-90.0, 90.0) % 360.0,
+        );
         // send new position to all other players
-        let on_ground = entity.on_ground;
         let entity_id = entity.entity_id;
-        let yaw = modulus(entity.yaw * 256.0 / 360.0, 256.0);
-        let pitch = modulus(entity.pitch * 256.0 / 360.0, 256.0);
+        let yaw = modulus(*entity.yaw.lock().unwrap() * 256.0 / 360.0, 256.0);
+        let pitch = modulus(*entity.pitch.lock().unwrap() * 256.0 / 360.0, 256.0);
         // let head_yaw = modulus(entity.head_yaw * 256.0 / 360.0, 256.0);
 
         let world = &entity.world;
-        let packet = CUpdateEntityRot::new(entity_id.into(), yaw as u8, pitch as u8, on_ground);
+        let packet =
+            CUpdateEntityRot::new(entity_id.into(), yaw as u8, pitch as u8, rotation.ground);
         world.broadcast_packet_expect(&[self.client.token], &packet);
         let packet = CHeadRot::new(entity_id.into(), yaw as u8);
         world.broadcast_packet_expect(&[self.client.token], &packet);
@@ -222,7 +228,9 @@ impl Player {
     }
 
     pub fn handle_player_ground(&self, _server: &Arc<Server>, ground: SSetPlayerGround) {
-        self.entity.lock().unwrap().on_ground = ground.on_ground;
+        self.entity
+            .on_ground
+            .store(ground.on_ground, std::sync::atomic::Ordering::Relaxed);
     }
 
     pub async fn handle_player_command(&self, _server: &Arc<Server>, command: SPlayerCommand) {
@@ -231,26 +239,26 @@ impl Player {
         }
 
         if let Some(action) = Action::from_i32(command.action.0) {
-            let mut entity = self.entity.lock().unwrap();
+            let entity = &self.entity;
             match action {
                 pumpkin_protocol::server::play::Action::StartSneaking => {
-                    if !entity.sneaking {
+                    if !entity.sneaking.load(std::sync::atomic::Ordering::Relaxed) {
                         entity.set_sneaking(true).await
                     }
                 }
                 pumpkin_protocol::server::play::Action::StopSneaking => {
-                    if entity.sneaking {
+                    if entity.sneaking.load(std::sync::atomic::Ordering::Relaxed) {
                         entity.set_sneaking(false).await
                     }
                 }
                 pumpkin_protocol::server::play::Action::LeaveBed => todo!(),
                 pumpkin_protocol::server::play::Action::StartSprinting => {
-                    if !entity.sprinting {
+                    if !entity.sprinting.load(std::sync::atomic::Ordering::Relaxed) {
                         entity.set_sprinting(true).await
                     }
                 }
                 pumpkin_protocol::server::play::Action::StopSprinting => {
-                    if entity.sprinting {
+                    if entity.sprinting.load(std::sync::atomic::Ordering::Relaxed) {
                         entity.set_sprinting(false).await
                     }
                 }
@@ -259,7 +267,11 @@ impl Player {
                 pumpkin_protocol::server::play::Action::OpenVehicleInventory => todo!(),
                 pumpkin_protocol::server::play::Action::StartFlyingElytra => {
                     let fall_flying = entity.check_fall_flying();
-                    if entity.fall_flying != fall_flying {
+                    if entity
+                        .fall_flying
+                        .load(std::sync::atomic::Ordering::Relaxed)
+                        != fall_flying
+                    {
                         entity.set_fall_flying(fall_flying).await;
                     }
                 } // TODO
@@ -277,8 +289,7 @@ impl Player {
                     Hand::Off => Animation::SwingOffhand,
                 };
                 let id = self.entity_id();
-                let entity = self.entity.lock().unwrap();
-                let world = &entity.world;
+                let world = &self.entity.world;
                 world.broadcast_packet_expect(
                     &[self.client.token],
                     &CEntityAnimation::new(id.into(), animation as u8),
@@ -302,7 +313,7 @@ impl Player {
         // TODO: filter message & validation
         let gameprofile = &self.gameprofile;
 
-        let entity = self.entity.lock().unwrap();
+        let entity = &self.entity;
         let world = &entity.world;
         world.broadcast_packet_all(&CPlayerChatMessage::new(
             pumpkin_protocol::uuid::UUID(gameprofile.id),
@@ -356,8 +367,8 @@ impl Player {
 
     pub async fn handle_interact(&self, _: &Arc<Server>, interact: SInteract) {
         let sneaking = interact.sneaking;
-        let mut entity = self.entity.lock().unwrap();
-        if entity.sneaking != sneaking {
+        let entity = &self.entity;
+        if entity.sneaking.load(std::sync::atomic::Ordering::Relaxed) != sneaking {
             entity.set_sneaking(sneaking).await;
         }
         match ActionType::from_i32(interact.typ.0) {
@@ -370,35 +381,38 @@ impl Player {
                         let world = entity.world.clone();
                         let attacked_player = world.get_by_entityid(self, entity_id.0 as EntityId);
                         if let Some(player) = attacked_player {
-                            let mut victem_entity = player.entity.lock().unwrap();
-                            let velo = victem_entity.velocity;
+                            let victem_entity = &player.entity;
                             if config.protect_creative
                                 && *player.gamemode.lock().unwrap() == GameMode::Creative
                             {
                                 return;
                             }
                             if config.knockback {
-                                let yaw = entity.yaw;
+                                let yaw = entity.yaw.lock().unwrap();
                                 let strength = 1.0;
+                                let mut victem_velocity = victem_entity.velocity.lock().unwrap();
+                                let saved_velo = *victem_velocity;
                                 victem_entity.knockback(
                                     strength * 0.5,
-                                    (yaw * (PI / 180.0)).sin() as f64,
-                                    -(yaw * (PI / 180.0)).cos() as f64,
+                                    (*yaw * (PI / 180.0)).sin() as f64,
+                                    -(*yaw * (PI / 180.0)).cos() as f64,
                                 );
                                 let packet = &CEntityVelocity::new(
                                     &entity_id,
-                                    velo.x as f32,
-                                    velo.y as f32,
-                                    velo.z as f32,
+                                    victem_velocity.x as f32,
+                                    victem_velocity.y as f32,
+                                    victem_velocity.z as f32,
                                 );
-                                entity.velocity = entity.velocity.multiply(0.6, 1.0, 0.6);
+                                let mut velocity = entity.velocity.lock().unwrap();
+                                *velocity = velocity.multiply(0.6, 1.0, 0.6);
 
-                                victem_entity.velocity = velo;
+                                *victem_velocity = saved_velo;
                                 player.client.send_packet(packet);
                             }
                             if config.hurt_animation {
                                 world.broadcast_packet_all(&CHurtAnimation::new(
-                                    &entity_id, entity.yaw,
+                                    &entity_id,
+                                    *entity.yaw.lock().unwrap(),
                                 ))
                             }
                             if config.swing {}
@@ -431,7 +445,7 @@ impl Player {
                         let location = player_action.location;
                         // Block break & block break sound
                         // TODO: currently this is always dirt replace it
-                        let entity = self.entity.lock().unwrap();
+                        let entity = &self.entity;
                         let world = &entity.world;
                         world.broadcast_packet_all(&CWorldEvent::new(2001, &location, 11, false));
                         // AIR
@@ -455,7 +469,7 @@ impl Player {
                     }
                     // Block break & block break sound
                     // TODO: currently this is always dirt replace it
-                    let entity = self.entity.lock().unwrap();
+                    let entity = &self.entity;
                     let world = &entity.world;
                     world.broadcast_packet_all(&CWorldEvent::new(2001, &location, 11, false));
                     // AIR
@@ -502,7 +516,7 @@ impl Player {
                 )
                 .expect("All item ids are in the global registry");
                 if let Ok(block_state_id) = BlockId::new(minecraft_id, None) {
-                    let entity = self.entity.lock().unwrap();
+                    let entity = &self.entity;
                     let world = &entity.world;
                     world.broadcast_packet_all(&CBlockUpdate::new(
                         &location,

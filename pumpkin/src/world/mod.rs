@@ -177,18 +177,19 @@ impl World {
             .iter()
             .filter(|c| c.0 != &token)
         {
-            let entity = existing_player.entity.lock().unwrap();
+            let entity = &existing_player.entity;
+            let pos = entity.pos.lock().unwrap();
             let gameprofile = &existing_player.gameprofile;
             player.client.send_packet(&CSpawnEntity::new(
                 existing_player.entity_id().into(),
                 UUID(gameprofile.id),
                 (EntityType::Player as i32).into(),
-                entity.pos.x,
-                entity.pos.y,
-                entity.pos.z,
-                entity.yaw,
-                entity.pitch,
-                entity.head_yaw,
+                pos.x,
+                pos.y,
+                pos.z,
+                *entity.yaw.lock().unwrap(),
+                *entity.pitch.lock().unwrap(),
+                *entity.head_yaw.lock().unwrap(),
                 0.into(),
                 0.0,
                 0.0,
@@ -279,7 +280,7 @@ impl World {
             &[player.client.token],
             &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]),
         );
-        self.remove_entity(&player.entity.lock().unwrap());
+        self.remove_entity(&player.entity);
     }
 
     pub fn remove_entity(&self, entity: &Entity) {

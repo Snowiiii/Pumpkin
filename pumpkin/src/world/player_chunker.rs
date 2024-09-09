@@ -7,7 +7,7 @@ use pumpkin_core::math::{
 use pumpkin_protocol::client::play::{CCenterChunk, CUnloadChunk};
 use pumpkin_world::cylindrical_chunk_iterator::Cylindrical;
 
-use crate::entity::player::Player;
+use crate::entity::{player::Player, Entity};
 
 use super::World;
 
@@ -21,11 +21,10 @@ fn get_view_distance(player: &Player) -> i8 {
 }
 
 pub async fn player_join(world: &World, player: Arc<Player>) {
-    let entity = player.entity.lock().unwrap();
-    let new_watched = chunk_section_from_pos(&entity.block_pos);
+    let new_watched = chunk_section_from_pos(&player.entity.block_pos.lock().unwrap());
     let mut watched_section = player.watched_section.lock().unwrap();
     *watched_section = new_watched;
-    let chunk_pos = entity.chunk_pos;
+    let chunk_pos = player.entity.chunk_pos.lock().unwrap();
     player.client.send_packet(&CCenterChunk {
         chunk_x: chunk_pos.x.into(),
         chunk_z: chunk_pos.z.into(),
@@ -58,12 +57,11 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
     }
 }
 
-pub async fn update_position(world: &World, player: &Player) {
+pub async fn update_position(entity: &Entity, player: &Player) {
     let mut current_watched = player.watched_section.lock().unwrap();
-    let entity = player.entity.lock().unwrap();
-    let new_watched = chunk_section_from_pos(&entity.block_pos);
+    let new_watched = chunk_section_from_pos(&entity.block_pos.lock().unwrap());
     if *current_watched != new_watched {
-        let chunk_pos = entity.chunk_pos;
+        let chunk_pos = entity.chunk_pos.lock().unwrap();
         player.client.send_packet(&CCenterChunk {
             chunk_x: chunk_pos.x.into(),
             chunk_z: chunk_pos.z.into(),
@@ -92,7 +90,8 @@ pub async fn update_position(world: &World, player: &Player) {
             false,
         );
         if !loading_chunks.is_empty() {
-            world
+            entity
+                .world
                 .spawn_world_chunks(&player.client, loading_chunks, view_distance)
                 .await;
         }
