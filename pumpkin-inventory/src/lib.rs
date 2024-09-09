@@ -223,13 +223,11 @@ impl<'a> Container for OptionallyCombinedContainer<'a, 'a> {
 
     fn iter_slots_mut<'s>(&'s mut self) -> Box<(dyn Iterator<Item = &mut Option<ItemStack>> + 's)> {
         match &mut self.container {
-            Some(container) => {
-                Box::new(
-                    container
-                        .iter_slots_mut()
-                        .chain(self.inventory.iter_slots_mut()),
-                )
-            }
+            Some(container) => Box::new(
+                container
+                    .iter_slots_mut()
+                    .chain(self.inventory.iter_slots_mut()),
+            ),
             None => self.inventory.iter_slots_mut(),
         }
     }
@@ -242,33 +240,26 @@ impl<'a> Container for OptionallyCombinedContainer<'a, 'a> {
     }
 
     fn get_slot(&self, slot: usize) -> Option<&Option<ItemStack>> {
-        todo!()
+        if (0..self.inventory.size()).contains(&slot) {
+            return self.inventory.get_slot(slot);
+        }
+        if let Some(container) = &self.container {
+            return container.get_slot(slot);
+        }
+        None
     }
 
     fn get_slot_mut(&mut self, slot: usize) -> Option<&mut Option<ItemStack>> {
-        todo!()
+        if (0..self.inventory.size()).contains(&slot) {
+            return self.inventory.get_slot_mut(slot);
+        }
+        if let Some(container) = &mut self.container {
+            return container.get_slot_mut(slot);
+        }
+        None
     }
 
     fn size(&self) -> usize {
-        todo!()
-    }
-}
-
-struct ExactSizedChain<'s, T> {
-    iter: Box<dyn Iterator<Item = T> + 's>,
-    len: usize,
-}
-
-impl<'s, T> ExactSizeIterator for ExactSizedChain<'s, T> {
-    fn len(&self) -> usize {
-        self.len
-    }
-}
-
-impl<'s, T> Iterator for ExactSizedChain<'s, T> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
+        self.inventory.size() + self.container.as_ref().map_or(0, |c| c.size())
     }
 }

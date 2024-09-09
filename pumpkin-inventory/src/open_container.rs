@@ -69,21 +69,19 @@ impl Container for Chest {
         Box::new(self.0.iter_mut())
     }
 
-    fn iter_slots<'s>(
-        &'s self,
-    ) -> Box<(dyn Iterator<Item = &'s Option<ItemStack>> + 's)> {
+    fn iter_slots<'s>(&'s self) -> Box<(dyn Iterator<Item = &'s Option<ItemStack>> + 's)> {
         Box::new(self.0.iter())
     }
 
     fn get_slot(&self, slot: usize) -> Option<&Option<ItemStack>> {
-        todo!()
+        self.0.get(slot)
     }
 
     fn get_slot_mut(&mut self, slot: usize) -> Option<&mut Option<ItemStack>> {
-        todo!()
+        self.0.get_mut(slot)
     }
 
     fn size(&self) -> usize {
-        todo!()
+        self.0.len()
     }
 }
