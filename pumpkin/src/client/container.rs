@@ -230,34 +230,40 @@ impl Player {
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
 
         match slot {
+            // TODO: this is definitely not working as intended
             container_click::Slot::Normal(slot) => {
-                if let Some(Some(item_in_pressed_slot)) = container.get_slot_mut(slot) {
-                    // Hotbar
-                    let find_condition = |(slot_number, slot): (usize, &mut Option<ItemStack>)| {
-                        // TODO: Check for max item count here
-                        match slot {
-                            Some(item) => {
-                                if item.item_id == item_in_pressed_slot.item_id
-                                    && item.item_count != 64
-                                {
-                                    Some(slot_number)
-                                } else {
-                                    None
-                                }
+                let Some(Some(item_in_pressed_slot)) = container.get_slot(slot) else {
+                    todo!()
+                };
+                let item_in_pressed_slot = item_in_pressed_slot.clone();
+                // Hotbar
+                let find_condition = |(slot_number, slot): (usize, &mut Option<ItemStack>)| {
+                    // TODO: Check for max item count here
+                    match slot {
+                        Some(item) => {
+                            if item.item_id == item_in_pressed_slot.item_id && item.item_count != 64
+                            {
+                                Some(slot_number)
+                            } else {
+                                None
                             }
-                            None => Some(slot_number),
                         }
-                    };
-                    let all_slots = container.iter_slots_mut().enumerate();
-                    // let slots = if slot > 35 {
-                    //     all_slots.skip(9).find_map(find_condition)
-                    // } else {
-                    //     all_slots.skip(36).rev().find_map(find_condition)
-                    // };
-                    // if let Some(slot) = slots {
-                    //     let mut item_slot = container.get(slot).map(|i| i.to_owned());
-                    //     container.handle_item_change(&mut item_slot, slot, MouseClick::Left)?;
-                    //     *container.get_mut(slot) = item_slot;
+                        None => Some(slot_number),
+                    }
+                };
+                let all_slots = container.iter_slots_mut().enumerate();
+                let slots = if slot > 35 {
+                    all_slots.skip(9).find_map(find_condition)
+                } else {
+                    all_slots.skip(36).filter_map(find_condition).last()
+                };
+                if let Some(slot) = slots {
+                    let item_slot = container
+                        .get_slot_mut(slot)
+                        .ok_or(InventoryError::InvalidSlot)?;
+                    container.handle_item_change(&mut self.carried_item, slot, MouseClick::Left)?;
+                    // if let Some(slot) = container.get_slot_mut(slot) {
+                    //     *slot = *item_slot;
                     // }
                 }
             }

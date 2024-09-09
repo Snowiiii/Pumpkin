@@ -98,8 +98,9 @@ impl DragHandler {
                 changing_slots.for_each(|slot| {
                     if carried_item.item_count != 0 {
                         carried_item.item_count -= 1;
-                        if let Ok(Some(stack)) =
-                            container.get_slot_mut(slot).ok_or(InventoryError::InvalidSlot)
+                        if let Ok(Some(stack)) = container
+                            .get_slot_mut(slot)
+                            .ok_or(InventoryError::InvalidSlot)
                         {
                             // TODO: Check for stack max here
                             if stack.item_count + 1 < 64 {
