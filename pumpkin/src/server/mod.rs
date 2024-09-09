@@ -45,7 +45,7 @@ pub struct Server {
 
     pub command_dispatcher: Arc<CommandDispatcher<'static>>,
 
-    pub worlds: Vec<Arc<tokio::sync::Mutex<World>>>,
+    pub worlds: Vec<Arc<World>>,
     pub status_response: StatusResponse,
     // We cache the json response here so we don't parse it every time someone makes a Status request.
     // Keep in mind that we must parse this again, when the StatusResponse changes which usally happen when a player joins or leaves
@@ -109,7 +109,7 @@ impl Server {
             drag_handler: DragHandler::new(),
             // 0 is invalid
             entity_id: 2.into(),
-            worlds: vec![Arc::new(tokio::sync::Mutex::new(world))],
+            worlds: vec![Arc::new(world)],
             public_key,
             cached_server_brand,
             private_key,
@@ -121,11 +121,7 @@ impl Server {
         }
     }
 
-    pub async fn add_player(
-        &self,
-        token: Token,
-        client: Client,
-    ) -> (Arc<Mutex<Player>>, Arc<tokio::sync::Mutex<World>>) {
+    pub async fn add_player(&self, token: Token, client: Client) -> (Arc<Player>, Arc<World>) {
         let entity_id = self.new_entity_id();
         let gamemode = match BASIC_CONFIG.default_gamemode {
             GameMode::Undefined => GameMode::Survival,
@@ -135,13 +131,8 @@ impl Server {
         // TODO: select default from config
         let world = self.worlds[0].clone();
 
-        let player = Arc::new(Mutex::new(Player::new(
-            client,
-            world.clone(),
-            entity_id,
-            gamemode,
-        )));
-        world.lock().await.add_player(token, player.clone());
+        let player = Arc::new(Player::new(client, world.clone(), entity_id, gamemode));
+        world.add_player(token, player.clone());
         (player, world)
     }
 
@@ -161,12 +152,12 @@ impl Server {
     }
 
     /// Sends a Packet to all Players in all worlds
-    pub fn broadcast_packet_all<P>(&self, except: &[Token], packet: &P)
+    pub fn broadcast_packet_all<P>(&self, packet: &P)
     where
         P: ClientPacket,
     {
         for world in &self.worlds {
-            world.blocking_lock().broadcast_packet(except, packet)
+            world.broadcast_packet_all(packet)
         }
     }
 
@@ -183,7 +174,7 @@ impl Server {
         buf
     }
 
-    pub fn send_brand(&self, client: &mut Client) {
+    pub fn send_brand(&self, client: &Client) {
         // send server brand
         client.send_packet(&CPluginMessage::new(
             "minecraft:brand",

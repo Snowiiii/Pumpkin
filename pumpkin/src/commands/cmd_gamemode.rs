@@ -65,15 +65,14 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                         let gamemode = parse_arg_gamemode(args)?;
 
                         return if let Player(target) = sender {
-                            if target.gamemode == gamemode {
+                            if *target.gamemode.lock().unwrap() == gamemode {
                                 target.send_system_message(TextComponent::text(&format!(
                                     "You already in {:?} gamemode",
                                     gamemode
                                 )));
                             } else {
                                 // TODO
-                                #[expect(clippy::let_underscore_future)]
-                                let _ = target.set_gamemode(gamemode);
+                                target.set_gamemode(gamemode);
                                 target.send_system_message(TextComponent::text(&format!(
                                     "Game mode was set to {:?}",
                                     gamemode
@@ -90,15 +89,14 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                         let gamemode = parse_arg_gamemode(args)?;
                         let target = parse_arg_player(sender, ARG_TARGET, args)?;
 
-                        if target.gamemode == gamemode {
+                        if *target.gamemode.lock().unwrap() == gamemode {
                             target.send_system_message(TextComponent::text(&format!(
                                 "You already in {:?} gamemode",
                                 gamemode
                             )));
                         } else {
                             // TODO
-                            #[expect(clippy::let_underscore_future)]
-                            let _ = target.set_gamemode(gamemode);
+                            target.set_gamemode(gamemode);
                             target.send_system_message(TextComponent::text(&format!(
                                 "Game mode was set to {:?}",
                                 gamemode

@@ -9,14 +9,14 @@ use pumpkin_protocol::{
     VarInt,
 };
 
-use crate::{client::Client, world::World};
+use crate::world::World;
 
 pub mod player;
 
 pub struct Entity {
     pub entity_id: EntityId,
     pub entity_type: EntityType,
-    pub world: Arc<tokio::sync::Mutex<World>>,
+    pub world: Arc<World>,
 
     pub pos: Vector3<f64>,
     pub block_pos: WorldPosition,
@@ -38,11 +38,10 @@ pub struct Entity {
     pub pose: EntityPose,
 }
 
-// TODO: Remove client: &mut Client, world: Arc<tokio::sync::Mutex<World>> bs
 impl Entity {
     pub fn new(
         entity_id: EntityId,
-        world: Arc<tokio::sync::Mutex<World>>,
+        world: Arc<World>,
         entity_type: EntityType,
         standing_eye_height: f32,
     ) -> Self {
@@ -87,6 +86,10 @@ impl Entity {
         }
     }
 
+    pub async fn remove(&mut self) {
+        self.world.remove_entity(self);
+    }
+
     pub fn knockback(&mut self, strength: f64, x: f64, z: f64) {
         // This has some vanilla magic
         let mut x = x;
@@ -109,11 +112,10 @@ impl Entity {
         );
     }
 
-    pub async fn set_sneaking(&mut self, client: &mut Client, sneaking: bool) {
+    pub async fn set_sneaking(&mut self, sneaking: bool) {
         assert!(self.sneaking != sneaking);
         self.sneaking = sneaking;
-        self.set_flag(client, Self::SNEAKING_FLAG_INDEX, sneaking)
-            .await;
+        self.set_flag(Self::SNEAKING_FLAG_INDEX, sneaking).await;
         // if sneaking {
         //     self.set_pose(EntityPose::Crouching).await;
         // } else {
@@ -121,21 +123,20 @@ impl Entity {
         // }
     }
 
-    pub async fn set_sprinting(&mut self, client: &mut Client, sprinting: bool) {
+    pub async fn set_sprinting(&mut self, sprinting: bool) {
         assert!(self.sprinting != sprinting);
         self.sprinting = sprinting;
-        self.set_flag(client, Self::SPRINTING_FLAG_INDEX, sprinting)
-            .await;
+        self.set_flag(Self::SPRINTING_FLAG_INDEX, sprinting).await;
     }
 
     pub fn check_fall_flying(&self) -> bool {
         !self.on_ground
     }
 
-    pub async fn set_fall_flying(&mut self, client: &mut Client, fall_flying: bool) {
+    pub async fn set_fall_flying(&mut self, fall_flying: bool) {
         assert!(self.fall_flying != fall_flying);
         self.fall_flying = fall_flying;
-        self.set_flag(client, Self::FALL_FLYING_FLAG_INDEX, fall_flying)
+        self.set_flag(Self::FALL_FLYING_FLAG_INDEX, fall_flying)
             .await;
     }
 
@@ -146,7 +147,7 @@ impl Entity {
     pub const INVISIBLE_FLAG_INDEX: u32 = 5;
     pub const GLOWING_FLAG_INDEX: u32 = 6;
     pub const FALL_FLYING_FLAG_INDEX: u32 = 7;
-    async fn set_flag(&mut self, client: &mut Client, index: u32, value: bool) {
+    async fn set_flag(&mut self, index: u32, value: bool) {
         let mut b = 0i8;
         if value {
             b |= 1 << index;
@@ -154,24 +155,16 @@ impl Entity {
             b &= !(1 << index);
         }
         let packet = CSetEntityMetadata::new(self.entity_id.into(), Metadata::new(0, 0.into(), b));
-        client.send_packet(&packet);
-        self.world
-            .lock()
-            .await
-            .broadcast_packet(&[client.token], &packet);
+        self.world.broadcast_packet_all(&packet);
     }
 
-    pub async fn set_pose(&mut self, client: &mut Client, pose: EntityPose) {
+    pub async fn set_pose(&mut self, pose: EntityPose) {
         self.pose = pose;
         let pose = self.pose as i32;
         let packet = CSetEntityMetadata::<VarInt>::new(
             self.entity_id.into(),
             Metadata::new(6, 20.into(), (pose).into()),
         );
-        client.send_packet(&packet);
-        self.world
-            .lock()
-            .await
-            .broadcast_packet(&[client.token], &packet)
+        self.world.broadcast_packet_all(&packet)
     }
 }

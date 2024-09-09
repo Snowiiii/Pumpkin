@@ -15,7 +15,7 @@ type HmacSha256 = Hmac<Sha256>;
 const MAX_SUPPORTED_FORWARDING_VERSION: i32 = 4;
 const PLAYER_INFO_CHANNEL: &str = "velocity:player_info";
 
-pub fn velocity_login(client: &mut Client) {
+pub fn velocity_login(client: &Client) {
     let velocity_message_id: i32 = 0;
 
     let mut buf = BytesMut::new();
@@ -36,7 +36,7 @@ pub fn check_integrity(data: (&[u8], &[u8]), secret: String) -> bool {
 }
 
 pub fn receive_plugin_response(
-    client: &mut Client,
+    client: &Client,
     config: VelocityConfig,
     response: SLoginPluginResponse,
 ) {
@@ -62,7 +62,7 @@ pub fn receive_plugin_response(
         }
         // TODO: no unwrap
         let addr: SocketAddr = buf.get_string().unwrap().parse().unwrap();
-        client.address = addr;
+        *client.address.lock().unwrap() = addr;
         todo!()
     } else {
         client.kick("This server requires you to connect with Velocity.")
