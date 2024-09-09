@@ -151,7 +151,7 @@ pub enum PacketError {
     MalformedLength,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ConnectionState {
     HandShake,
     Status,

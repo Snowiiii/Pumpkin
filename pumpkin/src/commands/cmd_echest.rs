@@ -11,7 +11,7 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).execute(&|sender, server, _| {
         if let Some(player) = sender.as_mut_player() {
             let entity_id = player.entity_id();
-            player.open_container = Some(0);
+            *player.open_container.lock().unwrap() = Some(0);
             {
                 let mut open_containers = server
                     .open_containers
@@ -27,7 +27,8 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                     }
                 }
             }
-            player.open_container(server, "minecraft:generic_9x3");
+            // TODO
+            // player.open_container(server, "minecraft:generic_9x3");
         }
 
         Ok(())

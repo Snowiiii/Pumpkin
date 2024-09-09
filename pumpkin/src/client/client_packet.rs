@@ -37,12 +37,16 @@ use super::{
 /// NEVER TRUST THE CLIENT. HANDLE EVERY ERROR, UNWRAP/EXPECT
 /// TODO: REMOVE ALL UNWRAPS
 impl Client {
-    pub fn handle_handshake(&mut self, _server: &Arc<Server>, handshake: SHandShake) {
+    pub fn handle_handshake(&self, _server: &Arc<Server>, handshake: SHandShake) {
         dbg!("handshake");
-        self.protocol_version = handshake.protocol_version.0;
-        self.connection_state = handshake.next_state;
-        if self.connection_state != ConnectionState::Status {
-            let protocol = self.protocol_version;
+        let version = handshake.protocol_version.0;
+        self.protocol_version
+            .store(version, std::sync::atomic::Ordering::Relaxed);
+        let mut connection_state = self.connection_state.lock().unwrap();
+
+        *connection_state = handshake.next_state;
+        if *connection_state != ConnectionState::Status {
+            let protocol = version;
             match protocol.cmp(&(CURRENT_MC_PROTOCOL as i32)) {
                 std::cmp::Ordering::Less => {
                     self.kick(&format!("Client outdated ({protocol}), Server uses Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL}"));
@@ -55,11 +59,11 @@ impl Client {
         }
     }
 
-    pub fn handle_status_request(&mut self, server: &Arc<Server>, _status_request: SStatusRequest) {
+    pub fn handle_status_request(&self, server: &Arc<Server>, _status_request: SStatusRequest) {
         self.send_packet(&CStatusResponse::new(&server.status_response_json));
     }
 
-    pub fn handle_ping_request(&mut self, _server: &Arc<Server>, ping_request: SStatusPingRequest) {
+    pub fn handle_ping_request(&self, _server: &Arc<Server>, ping_request: SStatusPingRequest) {
         dbg!("ping");
         self.send_packet(&CPingResponse::new(ping_request.payload));
         self.close();
@@ -72,7 +76,7 @@ impl Client {
                 .all(|c| c > 32_u8 as char && c < 127_u8 as char)
     }
 
-    pub fn handle_login_start(&mut self, server: &Arc<Server>, login_start: SLoginStart) {
+    pub fn handle_login_start(&self, server: &Arc<Server>, login_start: SLoginStart) {
         log::debug!("login start, State {:?}", self.connection_state);
 
         if !Self::is_valid_player_name(&login_start.name) {
@@ -81,7 +85,8 @@ impl Client {
         }
         // default game profile, when no online mode
         // TODO: make offline uuid
-        self.gameprofile = Some(GameProfile {
+        let mut gameprofile = self.gameprofile.lock().unwrap();
+        *gameprofile = Some(GameProfile {
             id: login_start.uuid,
             name: login_start.name,
             properties: vec![],
@@ -108,7 +113,7 @@ impl Client {
     }
 
     pub async fn handle_encryption_response(
-        &mut self,
+        &self,
         server: &Arc<Server>,
         encryption_response: SEncryptionResponse,
     ) {
@@ -120,15 +125,17 @@ impl Client {
         self.enable_encryption(&shared_secret)
             .unwrap_or_else(|e| self.kick(&e.to_string()));
 
+        let mut gameprofile = self.gameprofile.lock().unwrap();
+
         if BASIC_CONFIG.online_mode {
             let hash = Sha1::new()
                 .chain_update(&shared_secret)
                 .chain_update(&server.public_key_der)
                 .finalize();
             let hash = auth_digest(&hash);
-            let ip = self.address.ip();
+            let ip = self.address.lock().unwrap().ip();
             match authentication::authenticate(
-                &self.gameprofile.as_ref().unwrap().name,
+                &gameprofile.as_ref().unwrap().name,
                 &hash,
                 &ip,
                 server,
@@ -159,12 +166,12 @@ impl Client {
                             }
                         }
                     }
-                    self.gameprofile = Some(p);
+                    *gameprofile = Some(p);
                 }
                 Err(e) => self.kick(&e.to_string()),
             }
         }
-        for ele in self.gameprofile.as_ref().unwrap().properties.clone() {
+        for ele in gameprofile.as_ref().unwrap().properties.clone() {
             // todo, use this
             unpack_textures(ele, &ADVANCED_CONFIG.authentication.textures);
         }
@@ -177,7 +184,7 @@ impl Client {
             self.set_compression(Some((threshold, level)));
         }
 
-        if let Some(profile) = self.gameprofile.as_ref().cloned() {
+        if let Some(profile) = gameprofile.as_ref().cloned() {
             let packet = CLoginSuccess::new(&profile.id, &profile.name, &profile.properties, false);
             self.send_packet(&packet);
         } else {
@@ -186,18 +193,18 @@ impl Client {
     }
 
     pub fn handle_plugin_response(
-        &mut self,
+        &self,
         _server: &Arc<Server>,
         _plugin_response: SLoginPluginResponse,
     ) {
     }
 
     pub fn handle_login_acknowledged(
-        &mut self,
+        &self,
         server: &Arc<Server>,
         _login_acknowledged: SLoginAcknowledged,
     ) {
-        self.connection_state = ConnectionState::Config;
+        *self.connection_state.lock().unwrap() = ConnectionState::Config;
         server.send_brand(self);
 
         let resource_config = &ADVANCED_CONFIG.resource_pack;
@@ -228,12 +235,12 @@ impl Client {
         dbg!("login achnowlaged");
     }
     pub fn handle_client_information_config(
-        &mut self,
+        &self,
         _server: &Arc<Server>,
         client_information: SClientInformationConfig,
     ) {
         dbg!("got client settings");
-        self.config = Some(PlayerConfig {
+        *self.config.lock().unwrap() = Some(PlayerConfig {
             locale: client_information.locale,
             view_distance: client_information.view_distance,
             chat_mode: ChatMode::from_i32(client_information.chat_mode.into()).unwrap(),
@@ -245,19 +252,19 @@ impl Client {
         });
     }
 
-    pub fn handle_plugin_message(&mut self, _server: &Arc<Server>, plugin_message: SPluginMessage) {
+    pub fn handle_plugin_message(&self, _server: &Arc<Server>, plugin_message: SPluginMessage) {
         if plugin_message.channel.starts_with("minecraft:brand")
             || plugin_message.channel.starts_with("MC|Brand")
         {
             dbg!("got a client brand");
             match String::from_utf8(plugin_message.data) {
-                Ok(brand) => self.brand = Some(brand),
+                Ok(brand) => *self.brand.lock().unwrap() = Some(brand),
                 Err(e) => self.kick(&e.to_string()),
             }
         }
     }
 
-    pub fn handle_known_packs(&mut self, server: &Arc<Server>, _config_acknowledged: SKnownPacks) {
+    pub fn handle_known_packs(&self, server: &Arc<Server>, _config_acknowledged: SKnownPacks) {
         for registry in &server.cached_registry {
             self.send_packet(&CRegistryData::new(
                 &registry.registry_id,
@@ -271,12 +278,13 @@ impl Client {
     }
 
     pub async fn handle_config_acknowledged(
-        &mut self,
+        &self,
         _server: &Arc<Server>,
         _config_acknowledged: SAcknowledgeFinishConfig,
     ) {
         dbg!("config acknowledged");
-        self.connection_state = ConnectionState::Play;
-        self.make_player = true;
+        *self.connection_state.lock().unwrap() = ConnectionState::Play;
+        self.make_player
+            .store(true, std::sync::atomic::Ordering::Relaxed);
     }
 }

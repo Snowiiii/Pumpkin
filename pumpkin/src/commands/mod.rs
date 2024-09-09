@@ -21,7 +21,7 @@ mod tree_format;
 pub enum CommandSender<'a> {
     Rcon(&'a mut Vec<String>),
     Console,
-    Player(&'a mut Player),
+    Player(&'a Player),
 }
 
 impl<'a> CommandSender<'a> {
@@ -49,7 +49,7 @@ impl<'a> CommandSender<'a> {
             CommandSender::Rcon(_) => true,
         }
     }
-    pub fn as_mut_player(&mut self) -> Option<&mut Player> {
+    pub fn as_mut_player(&mut self) -> Option<&Player> {
         match self {
             CommandSender::Player(player) => Some(player),
             CommandSender::Console => None,

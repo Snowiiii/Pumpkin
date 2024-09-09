@@ -1,7 +1,6 @@
 use std::{
     collections::HashMap,
-    ops::DerefMut,
-    sync::{Arc, Mutex, MutexGuard},
+    sync::{Arc, Mutex},
 };
 
 pub mod player_chunker;
@@ -22,11 +21,14 @@ use pumpkin_protocol::{
 use pumpkin_world::level::Level;
 use tokio::sync::mpsc;
 
-use crate::{client::Client, entity::player::Player};
+use crate::{
+    client::Client,
+    entity::{player::Player, Entity},
+};
 
 pub struct World {
     pub level: Arc<Mutex<Level>>,
-    pub current_players: HashMap<Token, Arc<Mutex<Player>>>,
+    pub current_players: Arc<Mutex<HashMap<Token, Arc<Player>>>>,
     // entities, players...
 }
 
@@ -34,35 +36,36 @@ impl World {
     pub fn load(level: Level) -> Self {
         Self {
             level: Arc::new(Mutex::new(level)),
-            current_players: HashMap::new(),
+            current_players: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
-    /// Sends a Packet to all Players, Expect some players. Because we can't lock them twice
-    pub fn broadcast_packet<P>(&self, except: &[Token], packet: &P)
+    /// Sends a Packet to all Players in the World
+    pub fn broadcast_packet_all<P>(&self, packet: &P)
     where
         P: ClientPacket,
     {
-        for (_, player) in self
-            .current_players
-            .iter()
-            .filter(|c| !except.contains(c.0))
-        {
-            let mut player = player.lock().unwrap();
+        let current_players = self.current_players.lock().unwrap();
+        for (_, player) in current_players.iter() {
             player.client.send_packet(packet);
         }
     }
 
-    pub async fn spawn_player(
-        &mut self,
-        base_config: &BasicConfiguration,
-        player: Arc<Mutex<Player>>,
-    ) {
-        let mut player = player.lock().unwrap();
-        let player = player.deref_mut();
+    /// Sends a Packet to all Players in the World, Expect the Players given the the expect parameter
+    pub fn broadcast_packet_expect<P>(&self, except: &[Token], packet: &P)
+    where
+        P: ClientPacket,
+    {
+        let current_players = self.current_players.lock().unwrap();
+        for (_, player) in current_players.iter().filter(|c| !except.contains(c.0)) {
+            player.client.send_packet(packet);
+        }
+    }
+
+    pub async fn spawn_player(&self, base_config: &BasicConfiguration, player: Arc<Player>) {
         // This code follows the vanilla packet order
         let entity_id = player.entity_id();
-        let gamemode = player.gamemode;
+        let gamemode = player.gamemode.lock().unwrap();
         log::debug!("spawning player, entity id {}", entity_id);
 
         // login packet for our new player
@@ -104,7 +107,7 @@ impl World {
         let gameprofile = &player.gameprofile;
         // first send info update to our new player, So he can see his Skin
         // also send his info to everyone else
-        player.client.send_packet(&CPlayerInfoUpdate::new(
+        self.broadcast_packet_all(&CPlayerInfoUpdate::new(
             0x01 | 0x08,
             &[pumpkin_protocol::client::play::Player {
                 uuid: gameprofile.id,
@@ -117,31 +120,16 @@ impl World {
                 ],
             }],
         ));
-        self.broadcast_packet(
-            &[player.client.token],
-            &CPlayerInfoUpdate::new(
-                0x01 | 0x08,
-                &[pumpkin_protocol::client::play::Player {
-                    uuid: gameprofile.id,
-                    actions: vec![
-                        PlayerAction::AddPlayer {
-                            name: gameprofile.name.clone(),
-                            properties: gameprofile.properties.clone(),
-                        },
-                        PlayerAction::UpdateListed(true),
-                    ],
-                }],
-            ),
-        );
 
         // here we send all the infos of already joined players
         let mut entries = Vec::new();
         for (_, playerr) in self
             .current_players
+            .lock()
+            .unwrap()
             .iter()
             .filter(|(c, _)| **c != player.client.token)
         {
-            let playerr = playerr.as_ref().lock().unwrap();
             let gameprofile = &playerr.gameprofile;
             entries.push(pumpkin_protocol::client::play::Player {
                 uuid: gameprofile.id,
@@ -161,7 +149,7 @@ impl World {
         let gameprofile = &player.gameprofile;
 
         // spawn player for every client
-        self.broadcast_packet(
+        self.broadcast_packet_expect(
             &[player.client.token],
             // TODO: add velo
             &CSpawnEntity::new(
@@ -182,20 +170,26 @@ impl World {
         );
         // spawn players for our client
         let token = player.client.token;
-        for (_, existing_player) in self.current_players.iter().filter(|c| c.0 != &token) {
-            let existing_player = existing_player.as_ref().lock().unwrap();
+        for (_, existing_player) in self
+            .current_players
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|c| c.0 != &token)
+        {
             let entity = &existing_player.entity;
+            let pos = entity.pos.lock().unwrap();
             let gameprofile = &existing_player.gameprofile;
             player.client.send_packet(&CSpawnEntity::new(
                 existing_player.entity_id().into(),
                 UUID(gameprofile.id),
                 (EntityType::Player as i32).into(),
-                entity.pos.x,
-                entity.pos.y,
-                entity.pos.z,
-                entity.yaw,
-                entity.pitch,
-                entity.head_yaw,
+                pos.x,
+                pos.y,
+                pos.z,
+                *entity.yaw.lock().unwrap(),
+                *entity.pitch.lock().unwrap(),
+                *entity.head_yaw.lock().unwrap(),
                 0.into(),
                 0.0,
                 0.0,
@@ -204,33 +198,27 @@ impl World {
         }
         // entity meta data
         // set skin parts
-        if let Some(config) = player.client.config.as_ref() {
+        if let Some(config) = player.client.config.lock().unwrap().as_ref() {
             let packet = CSetEntityMetadata::new(
                 entity_id.into(),
                 Metadata::new(17, VarInt(0), config.skin_parts),
             );
-            player.client.send_packet(&packet);
-            self.broadcast_packet(&[player.client.token], &packet)
+            self.broadcast_packet_all(&packet)
         }
 
         // Start waiting for level chunks
         player.client.send_packet(&CGameEvent::new(13, 0.0));
 
         // Spawn in inital chunks
-        player_chunker::player_join(self, player).await;
+        player_chunker::player_join(self, player.clone()).await;
     }
 
-    async fn spawn_world_chunks(
-        &self,
-        client: &mut Client,
-        chunks: Vec<Vector2<i32>>,
-        distance: i32,
-    ) {
+    async fn spawn_world_chunks(&self, client: &Client, chunks: Vec<Vector2<i32>>, distance: i32) {
         let inst = std::time::Instant::now();
         let (sender, mut chunk_receiver) = mpsc::channel(distance as usize);
 
         let level = self.level.clone();
-        let closed = client.closed;
+        let closed = client.closed.load(std::sync::atomic::Ordering::Relaxed);
         let chunks = Arc::new(chunks);
         tokio::task::spawn_blocking(move || {
             level.lock().unwrap().fetch_chunks(&chunks, sender, closed)
@@ -255,42 +243,47 @@ impl World {
                     len / (1024 * 1024)
                 );
             }
-            if !client.closed {
+            if !client.closed.load(std::sync::atomic::Ordering::Relaxed) {
                 client.send_packet(&CChunkData(&chunk_data));
             }
         }
         dbg!("DONE CHUNKS", inst.elapsed());
     }
 
-    /// TODO: This definitly should be in world
-    pub fn get_by_entityid(&self, from: &Player, id: EntityId) -> Option<MutexGuard<Player>> {
+    pub fn get_by_entityid(&self, from: &Player, id: EntityId) -> Option<Arc<Player>> {
         for (_, player) in self
             .current_players
+            .lock()
+            .unwrap()
             .iter()
             .filter(|c| c.0 != &from.client.token)
         {
-            let player = player.lock().unwrap();
             if player.entity_id() == id {
-                return Some(player);
+                return Some(player.clone());
             }
         }
         None
     }
 
-    pub fn add_player(&mut self, token: Token, player: Arc<Mutex<Player>>) {
-        self.current_players.insert(token, player);
+    pub fn add_player(&self, token: Token, player: Arc<Player>) {
+        self.current_players.lock().unwrap().insert(token, player);
     }
 
-    pub fn remove_player(&mut self, player: &Player) {
-        self.current_players.remove(&player.client.token).unwrap();
-        // despawn the player
-        // todo: put this into the entitiy struct
-        let id = player.entity_id();
+    pub fn remove_player(&self, player: &Player) {
+        self.current_players
+            .lock()
+            .unwrap()
+            .remove(&player.client.token)
+            .unwrap();
         let uuid = player.gameprofile.id;
-        self.broadcast_packet(
+        self.broadcast_packet_expect(
             &[player.client.token],
             &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]),
         );
-        self.broadcast_packet(&[player.client.token], &CRemoveEntities::new(&[id.into()]))
+        self.remove_entity(&player.entity);
+    }
+
+    pub fn remove_entity(&self, entity: &Entity) {
+        self.broadcast_packet_all(&CRemoveEntities::new(&[entity.entity_id.into()]))
     }
 }

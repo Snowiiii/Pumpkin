@@ -7,7 +7,7 @@ use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
 
 use std::collections::HashMap;
-use std::io::{self};
+use std::io::{self, Read};
 
 use client::{interrupted, Client};
 use server::Server;
@@ -24,7 +24,7 @@ pub mod util;
 pub mod world;
 
 fn main() -> io::Result<()> {
-    use std::sync::{Arc, Mutex};
+    use std::sync::Arc;
 
     use entity::player::Player;
     use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
@@ -79,7 +79,7 @@ fn main() -> io::Result<()> {
         let rcon = ADVANCED_CONFIG.rcon.clone();
 
         let mut clients: HashMap<Token, Client> = HashMap::new();
-        let mut players: HashMap<Token, Arc<Mutex<Player>>> = HashMap::new();
+        let mut players: HashMap<Token, Arc<Player>> = HashMap::new();
 
         let server = Arc::new(Server::new());
         log::info!("Started Server took {}ms", time.elapsed().as_millis());
@@ -159,17 +159,23 @@ fn main() -> io::Result<()> {
                     token => {
                         // Poll Players
                         if let Some(player) = players.get_mut(&token) {
-                            let mut player = player.lock().unwrap();
                             player.client.poll(event).await;
-                            if !player.client.closed {
+                            let closed = player
+                                .client
+                                .closed
+                                .load(std::sync::atomic::Ordering::Relaxed);
+                            if !closed {
                                 player.process_packets(&server).await;
                             }
-                            if player.client.closed {
-                                drop(player);
+                            if closed {
                                 if let Some(player) = players.remove(&token) {
-                                    let mut player = player.lock().unwrap();
+                                    dbg!("a");
                                     player.remove().await;
-                                    poll.registry().deregister(&mut player.client.connection)?;
+                                    dbg!("b");
+                                    let connection = &mut player.client.connection.lock().unwrap();
+                                    dbg!("c");
+
+                                    poll.registry().deregister(connection.by_ref())?;
                                 }
                             }
                         };
@@ -178,23 +184,29 @@ fn main() -> io::Result<()> {
                         // Maybe received an event for a TCP connection.
                         let (done, make_player) = if let Some(client) = clients.get_mut(&token) {
                             client.poll(event).await;
-                            if !client.closed {
+                            let closed = client.closed.load(std::sync::atomic::Ordering::Relaxed);
+                            if !closed {
                                 client.process_packets(&server).await;
                             }
-                            (client.closed, client.make_player)
+                            (
+                                closed,
+                                client
+                                    .make_player
+                                    .load(std::sync::atomic::Ordering::Relaxed),
+                            )
                         } else {
                             // Sporadic events happen, we can safely ignore them.
                             (false, false)
                         };
                         if done || make_player {
-                            if let Some(mut client) = clients.remove(&token) {
+                            if let Some(client) = clients.remove(&token) {
                                 if done {
-                                    poll.registry().deregister(&mut client.connection)?;
+                                    let connection = &mut client.connection.lock().unwrap();
+                                    poll.registry().deregister(connection.by_ref())?;
                                 } else if make_player {
                                     let token = client.token;
                                     let (player, world) = server.add_player(token, client).await;
                                     players.insert(token, player.clone());
-                                    let mut world = world.lock().await;
                                     world.spawn_player(&BASIC_CONFIG, player).await;
                                 }
                             }

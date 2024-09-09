@@ -31,7 +31,7 @@ pub fn parse_arg_player<'a>(
     src: &'a mut CommandSender,
     arg_name: &str,
     consumed_args: &ConsumedArgs,
-) -> Result<&'a mut crate::entity::player::Player, InvalidTreeError> {
+) -> Result<&'a crate::entity::player::Player, InvalidTreeError> {
     let s = consumed_args
         .get(arg_name)
         .ok_or(InvalidConsumptionError(None))?

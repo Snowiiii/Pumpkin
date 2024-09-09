@@ -85,7 +85,6 @@ impl PacketEncoder {
 
                 let mut front = &mut self.buf[start_len..];
 
-                #[allow(clippy::needless_borrows_for_generic_args)]
                 VarInt(packet_len as i32)
                     .encode(&mut front)
                     .map_err(|_| PacketError::EncodeLength)?;
