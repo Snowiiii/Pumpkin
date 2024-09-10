@@ -91,7 +91,7 @@ impl Player {
         let entity_id = entity.entity_id;
         let (x, y, z) = (*pos).into();
         let (lastx, lasty, lastz) = (last_position.x, last_position.y, last_position.z);
-        let world = entity.world.clone();
+        let world = &entity.world;
 
         // let delta = Vector3::new(x - lastx, y - lasty, z - lastz);
         // let velocity = self.velocity;
@@ -378,7 +378,7 @@ impl Player {
                     // TODO: do validation and stuff
                     let config = &ADVANCED_CONFIG.pvp;
                     if config.enabled {
-                        let world = entity.world.clone();
+                        let world = &entity.world;
                         let attacked_player = world.get_by_entityid(self, entity_id.0 as EntityId);
                         if let Some(player) = attacked_player {
                             let victem_entity = &player.entity;

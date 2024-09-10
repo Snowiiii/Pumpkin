@@ -27,8 +27,7 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                     }
                 }
             }
-            // TODO
-            // player.open_container(server, "minecraft:generic_9x3");
+            player.open_container(server, "minecraft:generic_9x3");
         }
 
         Ok(())

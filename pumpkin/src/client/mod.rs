@@ -34,7 +34,7 @@ use thiserror::Error;
 
 pub mod authentication;
 mod client_packet;
-// mod container;
+mod container;
 pub mod player_packet;
 
 #[derive(Clone)]
