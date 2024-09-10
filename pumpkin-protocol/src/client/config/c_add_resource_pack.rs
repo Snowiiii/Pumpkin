@@ -16,14 +16,14 @@ pub struct CConfigAddResourcePack<'a> {
 
 impl<'a> CConfigAddResourcePack<'a> {
     pub fn new(
-        uuid: UUID,
+        uuid: uuid::Uuid,
         url: &'a str,
         hash: &'a str,
         forced: bool,
         prompt_message: Option<TextComponent<'a>>,
     ) -> Self {
         Self {
-            uuid,
+            uuid: UUID(uuid),
             url,
             hash,
             forced,

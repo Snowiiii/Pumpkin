@@ -92,7 +92,8 @@ pub fn unpack_textures(property: Property, config: &TextureConfig) -> Result<(),
     for texture in textures.textures {
         let url =
             Url::parse(&texture.1.url).map_err(|e| TextureError::InvalidURL(e.to_string()))?;
-        is_texture_url_valid(url, config)?    }
+        is_texture_url_valid(url, config)?
+    }
     Ok(())
 }
 

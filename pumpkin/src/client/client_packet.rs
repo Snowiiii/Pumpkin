@@ -7,7 +7,7 @@ use pumpkin_protocol::{
     client::{
         config::{CConfigAddResourcePack, CFinishConfig, CKnownPacks, CRegistryData},
         login::{CLoginSuccess, CSetCompression},
-        status::{CPingResponse, CStatusResponse},
+        status::CPingResponse,
     },
     server::{
         config::{SAcknowledgeFinishConfig, SClientInformationConfig, SKnownPacks, SPluginMessage},
@@ -17,6 +17,7 @@ use pumpkin_protocol::{
     },
     ConnectionState, KnownPack, CURRENT_MC_PROTOCOL,
 };
+use uuid::Uuid;
 
 use crate::{
     client::authentication::{self, GameProfile},
@@ -54,7 +55,7 @@ impl Client {
     }
 
     pub fn handle_status_request(&self, server: &Arc<Server>, _status_request: SStatusRequest) {
-        self.send_packet(&CStatusResponse::new(&server.status_response_json));
+        self.send_packet(&server.get_status());
     }
 
     pub fn handle_ping_request(&self, _server: &Arc<Server>, ping_request: SStatusPingRequest) {
@@ -185,25 +186,26 @@ impl Client {
         _login_acknowledged: SLoginAcknowledged,
     ) {
         self.connection_state.store(ConnectionState::Config);
-        server.send_brand(self);
+        self.send_packet(&server.get_branding());
 
         let resource_config = &ADVANCED_CONFIG.resource_pack;
         if resource_config.enabled {
-            let prompt_message = if resource_config.prompt_message.is_empty() {
-                None
-            } else {
-                Some(TextComponent::text(&resource_config.prompt_message))
-            };
-            self.send_packet(&CConfigAddResourcePack::new(
-                pumpkin_protocol::uuid::UUID(uuid::Uuid::new_v3(
+            let resource_pack = CConfigAddResourcePack::new(
+                Uuid::new_v3(
                     &uuid::Uuid::NAMESPACE_DNS,
                     resource_config.resource_pack_url.as_bytes(),
-                )),
+                ),
                 &resource_config.resource_pack_url,
                 &resource_config.resource_pack_sha1,
                 resource_config.force,
-                prompt_message,
-            ));
+                if !resource_config.prompt_message.is_empty() {
+                    Some(TextComponent::text(&resource_config.prompt_message))
+                } else {
+                    None
+                },
+            );
+
+            self.send_packet(&resource_pack);
         }
 
         // known data packs

@@ -13,3 +13,9 @@ impl Serialize for UUID {
         serializer.serialize_bytes(self.0.as_bytes())
     }
 }
+
+impl UUID {
+    pub fn new(data: &[u8]) -> Self {
+        Self(uuid::Uuid::new_v3(&uuid::Uuid::NAMESPACE_DNS, data))
+    }
+}
