@@ -6,7 +6,7 @@ use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
     client::{
         config::{CConfigAddResourcePack, CFinishConfig, CKnownPacks, CRegistryData},
-        login::{CEncryptionRequest, CLoginSuccess, CSetCompression},
+        login::{CLoginSuccess, CSetCompression},
         status::{CPingResponse, CStatusResponse},
     },
     server::{
@@ -17,8 +17,6 @@ use pumpkin_protocol::{
     },
     ConnectionState, KnownPack, CURRENT_MC_PROTOCOL,
 };
-use rsa::Pkcs1v15Encrypt;
-use sha1::{Digest, Sha1};
 
 use crate::{
     client::authentication::{self, GameProfile},
@@ -27,10 +25,7 @@ use crate::{
     server::{Server, CURRENT_MC_VERSION},
 };
 
-use super::{
-    authentication::{auth_digest, unpack_textures},
-    Client, EncryptionError, PlayerConfig,
-};
+use super::{authentication::unpack_textures, Client, PlayerConfig};
 
 /// Processes incoming Packets from the Client to the Server
 /// Implements the `Client` Packets
@@ -101,14 +96,7 @@ impl Client {
 
         // TODO: check config for encryption
         let verify_token: [u8; 4] = rand::random();
-        let public_key_der = &server.public_key_der;
-        let packet = CEncryptionRequest::new(
-            "",
-            public_key_der,
-            &verify_token,
-            BASIC_CONFIG.online_mode, // TODO
-        );
-        self.send_packet(&packet);
+        self.send_packet(&server.encryption_request(&verify_token, BASIC_CONFIG.online_mode));
     }
 
     pub async fn handle_encryption_response(
@@ -116,22 +104,15 @@ impl Client {
         server: &Arc<Server>,
         encryption_response: SEncryptionResponse,
     ) {
-        let shared_secret = server
-            .private_key
-            .decrypt(Pkcs1v15Encrypt, &encryption_response.shared_secret)
-            .map_err(|_| EncryptionError::FailedDecrypt)
-            .unwrap();
+        let shared_secret = server.decrypt(&encryption_response.shared_secret).unwrap();
+
         self.enable_encryption(&shared_secret)
             .unwrap_or_else(|e| self.kick(&e.to_string()));
 
         let mut gameprofile = self.gameprofile.lock();
 
         if BASIC_CONFIG.online_mode {
-            let hash = Sha1::new()
-                .chain_update(&shared_secret)
-                .chain_update(&server.public_key_der)
-                .finalize();
-            let hash = auth_digest(&hash);
+            let hash = server.digest_secret(&shared_secret);
             let ip = self.address.lock().ip();
             match authentication::authenticate(
                 &gameprofile.as_ref().unwrap().name,
@@ -231,7 +212,7 @@ impl Client {
             id: "core",
             version: "1.21",
         }]));
-        dbg!("login achnowlaged");
+        dbg!("login acknowledged");
     }
     pub fn handle_client_information_config(
         &self,

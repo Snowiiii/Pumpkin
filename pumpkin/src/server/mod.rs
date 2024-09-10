@@ -1,4 +1,5 @@
 use base64::{engine::general_purpose, Engine};
+use bikeshed_key_store::BikeShedKeyStore;
 use image::GenericImageView;
 use mio::Token;
 use parking_lot::{Mutex, RwLock};
@@ -6,6 +7,7 @@ use pumpkin_config::{BasicConfiguration, BASIC_CONFIG};
 use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
 use pumpkin_plugin::PluginLoader;
+use pumpkin_protocol::client::login::CEncryptionRequest;
 use pumpkin_protocol::{
     client::config::CPluginMessage, ClientPacket, Players, Sample, StatusResponse, VarInt, Version,
     CURRENT_MC_PROTOCOL,
@@ -25,8 +27,8 @@ use std::{
 use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::{Container, OpenContainer};
 use pumpkin_registry::Registry;
-use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 
+use crate::client::EncryptionError;
 use crate::{
     client::Client,
     commands::{default_dispatcher, dispatcher::CommandDispatcher},
@@ -34,13 +36,11 @@ use crate::{
     world::World,
 };
 
+mod bikeshed_key_store;
 pub const CURRENT_MC_VERSION: &str = "1.21.1";
 
 pub struct Server {
-    pub public_key: RsaPublicKey,
-    pub private_key: RsaPrivateKey,
-    pub public_key_der: Box<[u8]>,
-
+    key_store: BikeShedKeyStore,
     pub plugin_loader: PluginLoader,
 
     pub command_dispatcher: Arc<CommandDispatcher<'static>>,
@@ -74,14 +74,7 @@ impl Server {
         let cached_server_brand = Self::build_brand();
 
         // TODO: only create when needed
-        log::debug!("Creating encryption keys...");
-        let (public_key, private_key) = Self::generate_keys();
-
-        let public_key_der = rsa_der::public_key_to_der(
-            &private_key.n().to_bytes_be(),
-            &private_key.e().to_bytes_be(),
-        )
-        .into_boxed_slice();
+        let key_store = BikeShedKeyStore::new();
         let auth_client = if BASIC_CONFIG.online_mode {
             Some(
                 reqwest::Client::builder()
@@ -110,14 +103,12 @@ impl Server {
             // 0 is invalid
             entity_id: 2.into(),
             worlds: vec![Arc::new(world)],
-            public_key,
-            cached_server_brand,
-            private_key,
             command_dispatcher: Arc::new(command_dispatcher),
+            auth_client,
+            key_store,
             status_response,
             status_response_json,
-            public_key_der,
-            auth_client,
+            cached_server_brand,
         }
     }
 
@@ -172,6 +163,23 @@ impl Server {
     /// This should be global
     pub fn new_entity_id(&self) -> EntityId {
         self.entity_id.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn encryption_request<'a>(
+        &'a self,
+        verification_token: &'a [u8; 4],
+        should_authenticate: bool,
+    ) -> CEncryptionRequest<'_> {
+        self.key_store
+            .encryption_request("", verification_token, should_authenticate)
+    }
+
+    pub fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, EncryptionError> {
+        self.key_store.decrypt(data)
+    }
+
+    pub fn digest_secret(&self, secret: &[u8]) -> String {
+        self.key_store.get_digest(secret)
     }
 
     pub fn build_brand() -> Vec<u8> {
@@ -232,13 +240,5 @@ impl Server {
         let mut result = "data:image/png;base64,".to_owned();
         general_purpose::STANDARD.encode_string(image, &mut result);
         result
-    }
-
-    pub fn generate_keys() -> (RsaPublicKey, RsaPrivateKey) {
-        let mut rng = rand::thread_rng();
-
-        let priv_key = RsaPrivateKey::new(&mut rng, 1024).expect("failed to generate a key");
-        let pub_key = RsaPublicKey::from(&priv_key);
-        (pub_key, priv_key)
     }
 }

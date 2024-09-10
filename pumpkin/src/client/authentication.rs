@@ -1,7 +1,6 @@
 use std::{collections::HashMap, net::IpAddr, sync::Arc};
 
 use base64::{engine::general_purpose, Engine};
-use num_bigint::BigInt;
 use pumpkin_config::{auth::TextureConfig, ADVANCED_CONFIG};
 use pumpkin_core::ProfileAction;
 use pumpkin_protocol::Property;
@@ -93,13 +92,8 @@ pub fn unpack_textures(property: Property, config: &TextureConfig) -> Result<(),
     for texture in textures.textures {
         let url =
             Url::parse(&texture.1.url).map_err(|e| TextureError::InvalidURL(e.to_string()))?;
-        is_texture_url_valid(url, config)?
-    }
+        is_texture_url_valid(url, config)?    }
     Ok(())
-}
-
-pub fn auth_digest(bytes: &[u8]) -> String {
-    BigInt::from_signed_bytes_be(bytes).to_str_radix(16)
 }
 
 pub fn is_texture_url_valid(url: Url, config: &TextureConfig) -> Result<(), TextureError> {
