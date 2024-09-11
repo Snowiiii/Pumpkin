@@ -13,7 +13,6 @@ use pumpkin_protocol::{
         CChunkData, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate, CRemoveEntities,
         CRemovePlayerInfo, CSetEntityMetadata, CSpawnEntity, GameEvent, Metadata, PlayerAction,
     },
-    uuid::UUID,
     ClientPacket, VarInt,
 };
 use pumpkin_world::level::Level;
@@ -170,7 +169,7 @@ impl World {
             // TODO: add velo
             &CSpawnEntity::new(
                 entity_id.into(),
-                UUID(gameprofile.id),
+                gameprofile.id,
                 (EntityType::Player as i32).into(),
                 x,
                 y,
@@ -192,7 +191,7 @@ impl World {
             let gameprofile = &existing_player.gameprofile;
             player.client.send_packet(&CSpawnEntity::new(
                 existing_player.entity_id().into(),
-                UUID(gameprofile.id),
+                gameprofile.id,
                 (EntityType::Player as i32).into(),
                 pos.x,
                 pos.y,
@@ -292,7 +291,7 @@ impl World {
         let uuid = player.gameprofile.id;
         self.broadcast_packet_expect(
             &[player.client.token],
-            &CRemovePlayerInfo::new(1.into(), &[UUID(uuid)]),
+            &CRemovePlayerInfo::new(1.into(), &[uuid]),
         );
         self.remove_entity(&player.entity);
     }

@@ -316,7 +316,7 @@ impl Player {
         let entity = &self.entity;
         let world = &entity.world;
         world.broadcast_packet_all(&CPlayerChatMessage::new(
-            pumpkin_protocol::uuid::UUID(gameprofile.id),
+            gameprofile.id,
             1.into(),
             chat_message.signature.as_deref(),
             &message,

@@ -2,12 +2,10 @@ use pumpkin_core::text::TextComponent;
 use pumpkin_macros::packet;
 use serde::Serialize;
 
-use crate::uuid::UUID;
-
 #[derive(Serialize)]
 #[packet(0x09)]
 pub struct CConfigAddResourcePack<'a> {
-    uuid: UUID,
+    uuid: uuid::Uuid,
     url: &'a str,
     hash: &'a str, // max 40
     forced: bool,
@@ -23,7 +21,7 @@ impl<'a> CConfigAddResourcePack<'a> {
         prompt_message: Option<TextComponent<'a>>,
     ) -> Self {
         Self {
-            uuid: UUID(uuid),
+            uuid,
             url,
             hash,
             forced,

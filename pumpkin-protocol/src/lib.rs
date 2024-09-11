@@ -10,7 +10,6 @@ pub mod packet_decoder;
 pub mod packet_encoder;
 pub mod server;
 pub mod slot;
-pub mod uuid;
 
 /// To current Minecraft protocol
 /// Don't forget to change this when porting
