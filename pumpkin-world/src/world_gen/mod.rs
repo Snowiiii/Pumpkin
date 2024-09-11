@@ -14,7 +14,3 @@ pub fn get_world_gen(seed: Seed) -> Box<dyn WorldGenerator> {
     // TODO decide which WorldGenerator to pick based on config.
     Box::new(PlainsGenerator::new(seed))
 }
-
-pub struct ChunkRandom {
-    sample_count: i32,
-}
