@@ -6,7 +6,6 @@ mod seed;
 
 pub use generator::WorldGenerator;
 use implementation::overworld::biome::plains::PlainsGenerator;
-use pumpkin_core::random::Random;
 pub use seed::Seed;
 
 use generator::GeneratorInit;

@@ -1,4 +1,5 @@
-use pumpkin_core::random::Random;
+use num_traits::Pow;
+use pumpkin_core::random::{legacy_rand::LegacyRand, Random};
 
 pub fn lerp(delta: f64, start: f64, end: f64) -> f64 {
     start + delta * (end - start)
@@ -65,7 +66,7 @@ impl SimplexNoiseSampler {
         Gradient { x: 0, y: -1, z: -1 },
     ];
 
-    const SQRT_3: f64 = 1.732050807568877293527446341505872367f64;
+    const SQRT_3: f64 = 1.7320508075688772f64;
     const SKEW_FACTOR_2D: f64 = 0.5f64 * (Self::SQRT_3 - 1f64);
     const UNSKEW_FACTOR_2D: f64 = (3f64 - Self::SQRT_3) / 6f64;
 
@@ -82,8 +83,8 @@ impl SimplexNoiseSampler {
             .for_each(|(i, x)| *x = i as u8);
 
         for i in 0..256 {
-            let j = random.next_bounded_i32((256 - i) as i32) as usize;
-            permutation.swap(i, i + j);
+            let j = random.next_bounded_i32(256 - i) as usize;
+            permutation.swap(i as usize, i as usize + j);
         }
 
         Self {
@@ -134,7 +135,7 @@ impl SimplexNoiseSampler {
         let r = i & 0xFF;
         let s = j & 0xFF;
 
-        let t = self.map(r + self.map(s)) % 12;
+        let t = self.map(r.wrapping_add(self.map(s))) % 12;
         let u = self.map(r.wrapping_add(l).wrapping_add(self.map(s.wrapping_add(m)))) % 12;
         let v = self.map(r.wrapping_add(1).wrapping_add(self.map(s.wrapping_add(1)))) % 12;
 
@@ -380,7 +381,7 @@ impl PerlinNoiseSampler {
 }
 
 struct OctavePerlinNoiseSampler {
-    octave_samplers: Box<[SimplexNoiseSampler]>,
+    octave_samplers: Vec<Option<SimplexNoiseSampler>>,
     persistence: f64,
     lacunarity: f64,
 }
@@ -396,23 +397,199 @@ impl OctavePerlinNoiseSampler {
 
         let sampler = SimplexNoiseSampler::new(random);
         let l = j;
-        let mut samplers: Vec<SimplexNoiseSampler> = vec![];
-
-        if j >= 0 && j < k && octaves.contains(&&0) {
-            samplers[0] = sampler;
+        let mut samplers: Vec<Option<SimplexNoiseSampler>> = Vec::with_capacity(k as usize);
+        for _ in 0..k {
+            samplers.push(None);
         }
 
         for m in (j + 1)..k {
             if m >= 0 && octaves.contains(&&(l - m)) {
-                samplers[m as usize] = SimplexNoiseSampler::new(random);
+                let sampler = SimplexNoiseSampler::new(random);
+                samplers[m as usize] = Some(sampler);
             } else {
                 random.skip(262);
             }
         }
 
         if j > 0 {
-            let n = (sampler.sample_3d(sampler.x_origin, sampler.y_origin, sampler.z_origin)
-                * 9.223372E18f32 as f64) as i64;
+            let sample = sampler.sample_3d(sampler.x_origin, sampler.y_origin, sampler.z_origin);
+            let n = (sample * 9.223372E18f32 as f64) as i64;
+            let mut random = LegacyRand::from_seed(n as u64);
+
+            for o in (0..=(l - 1)).rev() {
+                if o < k && octaves.contains(&&(l - o)) {
+                    let sampler = SimplexNoiseSampler::new(&mut random);
+                    samplers[o as usize] = Some(sampler);
+                } else {
+                    random.skip(262);
+                }
+            }
+        }
+
+        if j >= 0 && j < k && octaves.contains(&&0) {
+            samplers[j as usize] = Some(sampler);
+        }
+
+        Self {
+            octave_samplers: samplers,
+            persistence: 1f64 / (2f64.pow(k) - 1f64),
+            lacunarity: 2f64.pow(j),
+        }
+    }
+
+    pub fn sample(&self, x: f64, y: f64, use_origin: bool) -> f64 {
+        let mut d = 0f64;
+        let mut e = self.lacunarity;
+        let mut f = self.persistence;
+
+        for sampler in self.octave_samplers.iter() {
+            if let Some(sampler) = sampler {
+                d += sampler.sample_2d(
+                    x * e + if use_origin { sampler.x_origin } else { 0f64 },
+                    y * e + if use_origin { sampler.y_origin } else { 0f64 },
+                ) * f;
+            }
+
+            e /= 2f64;
+            f *= 2f64;
+        }
+
+        d
+    }
+}
+
+#[cfg(test)]
+mod octave_perlin_noise_sampler_test {
+    use pumpkin_core::random::{xoroshiro128::Xoroshiro, Random};
+
+    use crate::world_gen::noise::OctavePerlinNoiseSampler;
+
+    #[test]
+    fn test_new() {
+        let mut rand = Xoroshiro::from_seed(450);
+        assert_eq!(rand.next_i32(), 1394613419);
+        let sampler = OctavePerlinNoiseSampler::new(&mut rand, &[-1, 1, 0]);
+
+        assert_eq!(sampler.lacunarity, 2f64);
+        assert_eq!(sampler.persistence, 0.14285714285714285);
+
+        let values = [
+            (33.48154133535127, 200.15584029786743, 239.82697852863149),
+            (115.65071632913913, 5.88805286077266, 184.4887403898897),
+            (64.69791492580848, 19.256055216755044, 97.01795462351956),
+        ];
+
+        assert_eq!(values.len(), sampler.octave_samplers.len());
+        for (sampler, (x, y, z)) in sampler.octave_samplers.iter().zip(values) {
+            match sampler {
+                Some(sampler) => {
+                    assert_eq!(sampler.x_origin, x);
+                    assert_eq!(sampler.y_origin, y);
+                    assert_eq!(sampler.z_origin, z);
+                }
+                None => panic!(),
+            }
+        }
+    }
+
+    #[test]
+    fn test_sample() {
+        let mut rand = Xoroshiro::from_seed(450);
+        assert_eq!(rand.next_i32(), 1394613419);
+        let sampler = OctavePerlinNoiseSampler::new(&mut rand, &[-1, 1, 0]);
+
+        let values_1 = [
+            (
+                (-1.3127900550351206E7, 792897.4979227383),
+                -0.4321152413690901,
+            ),
+            (
+                (-1.6920637874404985E7, -2.7155569346339065E8),
+                -0.5262902093081003,
+            ),
+            (
+                (4.3144247722741723E8, 5.681942883881191E8),
+                0.11591369897395602,
+            ),
+            (
+                (1.4302738270336467E8, -1.4548998886244193E8),
+                -0.3879951077548365,
+            ),
+            (
+                (-3.9028350711219925E8, -5.213995559811158E7),
+                -0.7540785159288218,
+            ),
+            (
+                (-1.3442750163759476E8, -6.725465365393716E8),
+                0.31442035977402105,
+            ),
+            (
+                (-1.1937282161424601E8, 3.2134650034986335E8),
+                0.28218849676360336,
+            ),
+            (
+                (-3.128475507865152E8, -3.014112871163455E8),
+                0.593770404657594,
+            ),
+            (
+                (1.2027011883589141E8, -5.045175636913682E8),
+                -0.2893240282016911,
+            ),
+            (
+                (-9.065155753781198E7, 6106991.342893547),
+                -0.3402301205344082,
+            ),
+        ];
+
+        for ((x, y), sample) in values_1 {
+            assert_eq!(sampler.sample(x, y, false), sample);
+        }
+
+        let values_2 = [
+            (
+                (-1.3127900550351206E7, 792897.4979227383),
+                0.21834818545873672,
+            ),
+            (
+                (-1.6920637874404985E7, -2.7155569346339065E8),
+                0.025042742676442978,
+            ),
+            (
+                (4.3144247722741723E8, 5.681942883881191E8),
+                0.3738693783591451,
+            ),
+            (
+                (1.4302738270336467E8, -1.4548998886244193E8),
+                -0.023113657524218345,
+            ),
+            (
+                (-3.9028350711219925E8, -5.213995559811158E7),
+                0.5195582376240916,
+            ),
+            (
+                (-1.3442750163759476E8, -6.725465365393716E8),
+                0.020366186088347903,
+            ),
+            (
+                (-1.1937282161424601E8, 3.2134650034986335E8),
+                -0.10921072611129382,
+            ),
+            (
+                (-3.128475507865152E8, -3.014112871163455E8),
+                0.18066933648141983,
+            ),
+            (
+                (1.2027011883589141E8, -5.045175636913682E8),
+                -0.36788084946294336,
+            ),
+            (
+                (-9.065155753781198E7, 6106991.342893547),
+                -0.5677921377363926,
+            ),
+        ];
+
+        for ((x, y), sample) in values_2 {
+            assert_eq!(sampler.sample(x, y, true), sample);
         }
     }
 }

@@ -2,7 +2,7 @@ use super::{
     gaussian::GaussianGenerator, hash_block_pos, java_string_hash, Random, RandomSplitter,
 };
 
-struct LegacyRand {
+pub struct LegacyRand {
     seed: u64,
     internal_next_gaussian: f64,
     internal_has_next_gaussian: bool,
@@ -86,13 +86,13 @@ impl Random for LegacyRand {
     }
 
     fn next_bounded_i32(&mut self, bound: i32) -> i32 {
-        if bound & (bound - 1) == 0 {
-            (bound as u64).wrapping_mul(self.next(31) >> 31) as i32
+        if (bound & bound.wrapping_sub(1)) == 0 {
+            ((bound as u64).wrapping_mul(self.next(31)) >> 31) as i32
         } else {
             loop {
                 let i = self.next(31) as i32;
                 let j = i % bound;
-                if (i - j + (bound - 1)) > 0 {
+                if (i.wrapping_sub(j).wrapping_add(bound.wrapping_sub(1))) >= 0 {
                     return j;
                 }
             }
@@ -162,6 +162,17 @@ mod test {
 
         for value in values {
             assert_eq!(rand.next_bounded_i32(0xf), value);
+        }
+
+        let mut rand = LegacyRand::from_seed(0);
+        for _ in 0..10 {
+            assert_eq!(rand.next_bounded_i32(1), 0);
+        }
+
+        let mut rand = LegacyRand::from_seed(0);
+        let values = [1, 1, 0, 1, 1, 0, 1, 0, 1, 1];
+        for value in values {
+            assert_eq!(rand.next_bounded_i32(2), value);
         }
     }
 
