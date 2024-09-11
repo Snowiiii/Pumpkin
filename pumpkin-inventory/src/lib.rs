@@ -1,6 +1,5 @@
 use crate::container_click::MouseClick;
 use crate::player::PlayerInventory;
-use crossbeam::atomic::AtomicCell;
 use num_derive::{FromPrimitive, ToPrimitive};
 use pumpkin_world::item::ItemStack;
 

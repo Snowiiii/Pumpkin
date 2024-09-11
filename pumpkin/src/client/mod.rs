@@ -179,10 +179,7 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         // TODO: handle each packet's Error instead of calling .unwrap()
         let bytebuf = &mut packet.bytebuf;
-        let locked_state = self.connection_state.load();
-        let state = locked_state.clone();
-        drop(locked_state);
-        match state {
+        match self.connection_state.load() {
             pumpkin_protocol::ConnectionState::HandShake => match packet.id.0 {
                 SHandShake::PACKET_ID => {
                     self.handle_handshake(server, SHandShake::read(bytebuf)?);
