@@ -2,6 +2,7 @@ use std::sync::atomic::AtomicU32;
 
 use crate::container_click::MouseClick;
 use crate::{handle_item_change, Container, InventoryError, WindowType};
+use crossbeam::atomic::AtomicCell;
 use pumpkin_world::item::ItemStack;
 
 pub struct PlayerInventory {

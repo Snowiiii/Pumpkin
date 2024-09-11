@@ -1,10 +1,12 @@
 use std::sync::{
     atomic::{AtomicI32, AtomicU8},
-    Arc, Mutex,
+    Arc,
 };
 
+use crossbeam::atomic::AtomicCell;
 use num_derive::FromPrimitive;
 use num_traits::ToPrimitive;
+use parking_lot::Mutex;
 use pumpkin_core::{
     math::{boundingbox::BoundingBox, position::WorldPosition, vector3::Vector3},
     text::TextComponent,
@@ -67,18 +69,18 @@ pub struct Player {
     pub client: Client,
     pub config: Mutex<PlayerConfig>,
     /// Current gamemode
-    pub gamemode: Mutex<GameMode>,
+    pub gamemode: AtomicCell<GameMode>,
     // TODO: prbly should put this into an Living Entitiy or something
-    pub health: Mutex<f32>,
+    pub health: AtomicCell<f32>,
     pub food: AtomicI32,
-    pub food_saturation: Mutex<f32>,
+    pub food_saturation: AtomicCell<f32>,
     pub inventory: Mutex<PlayerInventory>,
-    pub open_container: Mutex<Option<u64>>,
-    pub carried_item: Mutex<Option<ItemStack>>,
+    pub open_container: AtomicCell<Option<u64>>,
+    pub carried_item: AtomicCell<Option<ItemStack>>,
 
     /// send `send_abilties_update` when changed
     pub abilities: PlayerAbilities,
-    pub last_position: Mutex<Vector3<f64>>,
+    pub last_position: AtomicCell<Vector3<f64>>,
 
     // TODO: This is currently unused, We have to calculate the block breaking speed our own and then break the block our own if its done
     pub current_block_destroy_stage: AtomicU8,
@@ -87,12 +89,12 @@ pub struct Player {
     // Current awaiting teleport id and location, None if did not teleport
     pub awaiting_teleport: Mutex<Option<(VarInt, Vector3<f64>)>>,
 
-    pub watched_section: Mutex<Vector3<i32>>,
+    pub watched_section: AtomicCell<Vector3<i32>>,
 }
 
 impl Player {
     pub fn new(client: Client, world: Arc<World>, entity_id: EntityId, gamemode: GameMode) -> Self {
-        let gameprofile = match client.gameprofile.lock().unwrap().clone() {
+        let gameprofile = match client.gameprofile.lock().clone() {
             Some(profile) => profile,
             None => {
                 log::error!("No gameprofile?. Impossible");
@@ -104,7 +106,7 @@ impl Player {
                 }
             }
         };
-        let config = client.config.lock().unwrap().clone().unwrap_or_default();
+        let config = client.config.lock().clone().unwrap_or_default();
         Self {
             entity: Entity::new(entity_id, world, EntityType::Player, 1.62),
             config: Mutex::new(config),
@@ -112,18 +114,18 @@ impl Player {
             client,
             awaiting_teleport: Mutex::new(None),
             // TODO: Load this from previous instance
-            health: Mutex::new(20.0),
+            health: AtomicCell::new(20.0),
             food: AtomicI32::new(20),
-            food_saturation: Mutex::new(20.0),
+            food_saturation: AtomicCell::new(20.0),
             current_block_destroy_stage: AtomicU8::new(0),
             inventory: Mutex::new(PlayerInventory::new()),
-            open_container: Mutex::new(None),
-            carried_item: Mutex::new(None),
+            open_container: AtomicCell::new(None),
+            carried_item: AtomicCell::new(None),
             teleport_id_count: AtomicI32::new(0),
             abilities: PlayerAbilities::default(),
-            gamemode: Mutex::new(gamemode),
-            watched_section: Mutex::new(Vector3::new(0, 0, 0)),
-            last_position: Mutex::new(Vector3::new(0.0, 0.0, 0.0)),
+            gamemode: AtomicCell::new(gamemode),
+            watched_section: AtomicCell::new(Vector3::new(0, 0, 0)),
+            last_position: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
         }
     }
 
@@ -173,7 +175,7 @@ impl Player {
         let entity = &self.entity;
         entity.set_pos(x, y, z);
         entity.set_rotation(yaw, pitch);
-        *self.awaiting_teleport.lock().unwrap() = Some((teleport_id.into(), Vector3::new(x, y, z)));
+        *self.awaiting_teleport.lock() = Some((teleport_id.into(), Vector3::new(x, y, z)));
         self.client.send_packet(&CSyncPlayerPosition::new(
             x,
             y,
@@ -186,7 +188,7 @@ impl Player {
     }
 
     pub fn block_interaction_range(&self) -> f64 {
-        if *self.gamemode.lock().unwrap() == GameMode::Creative {
+        if self.gamemode.load() == GameMode::Creative {
             5.0
         } else {
             4.5
@@ -196,7 +198,7 @@ impl Player {
     pub fn can_interact_with_block_at(&self, pos: &WorldPosition, additional_range: f64) -> bool {
         let d = self.block_interaction_range() + additional_range;
         let box_pos = BoundingBox::from_block(pos);
-        let entity_pos = self.entity.pos.lock().unwrap();
+        let entity_pos = self.entity.pos.load();
         let standing_eye_height = self.entity.standing_eye_height;
         box_pos.squared_magnitude(Vector3 {
             x: entity_pos.x,
@@ -207,7 +209,7 @@ impl Player {
 
     /// Kicks the Client with a reason depending on the connection state
     pub fn kick(&self, reason: TextComponent) {
-        assert!(*self.client.connection_state.lock().unwrap() == ConnectionState::Play);
+        assert!(self.client.connection_state.load() == ConnectionState::Play);
         assert!(!self
             .client
             .closed
@@ -225,19 +227,19 @@ impl Player {
     }
 
     pub fn update_health(&self, health: f32, food: i32, food_saturation: f32) {
-        *self.health.lock().unwrap() = health;
+        self.health.store(health);
         self.food.store(food, std::sync::atomic::Ordering::Relaxed);
-        *self.food_saturation.lock().unwrap() = food_saturation;
+        self.food_saturation.store(food_saturation);
     }
 
     pub fn set_gamemode(&self, gamemode: GameMode) {
         // We could send the same gamemode without problems. But why waste bandwidth ?
-        let mut current_gamemode = self.gamemode.lock().unwrap();
+        let current_gamemode = self.gamemode.load();
         assert!(
-            *current_gamemode != gamemode,
+            current_gamemode != gamemode,
             "Setting the same gamemode as already is"
         );
-        *current_gamemode = gamemode;
+        self.gamemode.store(gamemode);
         // So a little story time. I actually made an abitlties_from_gamemode function. I looked at vanilla and they always send the abilties from the gamemode. But the funny thing actually is. That the client
         // does actually use the same method and set the abilties when receiving the CGameEvent gamemode packet. Just Mojang nonsense
         self.entity
@@ -261,7 +263,7 @@ impl Player {
 
 impl Player {
     pub async fn process_packets(&self, server: &Arc<Server>) {
-        let mut packets = self.client.client_packets_queue.lock().unwrap();
+        let mut packets = self.client.client_packets_queue.lock();
         while let Some(mut packet) = packets.pop() {
             match self.handle_play_packet(server, &mut packet).await {
                 Ok(_) => {}

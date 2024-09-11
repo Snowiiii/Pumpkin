@@ -15,16 +15,15 @@ fn get_view_distance(player: &Player) -> i8 {
     player
         .config
         .lock()
-        .unwrap()
         .view_distance
         .clamp(2, BASIC_CONFIG.view_distance as i8)
 }
 
 pub async fn player_join(world: &World, player: Arc<Player>) {
-    let new_watched = chunk_section_from_pos(&player.entity.block_pos.lock().unwrap());
-    let mut watched_section = player.watched_section.lock().unwrap();
-    *watched_section = new_watched;
-    let chunk_pos = player.entity.chunk_pos.lock().unwrap();
+    let new_watched = chunk_section_from_pos(&player.entity.block_pos.load());
+    player.watched_section.store(new_watched);
+    let watched_section = new_watched;
+    let chunk_pos = player.entity.chunk_pos.load();
     player.client.send_packet(&CCenterChunk {
         chunk_x: chunk_pos.x.into(),
         chunk_z: chunk_pos.z.into(),
@@ -58,10 +57,10 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
 }
 
 pub async fn update_position(entity: &Entity, player: &Player) {
-    let mut current_watched = player.watched_section.lock().unwrap();
-    let new_watched = chunk_section_from_pos(&entity.block_pos.lock().unwrap());
-    if *current_watched != new_watched {
-        let chunk_pos = entity.chunk_pos.lock().unwrap();
+    let current_watched = player.watched_section.load();
+    let new_watched = chunk_section_from_pos(&entity.block_pos.load());
+    if current_watched != new_watched {
+        let chunk_pos = entity.chunk_pos.load();
         player.client.send_packet(&CCenterChunk {
             chunk_x: chunk_pos.x.into(),
             chunk_z: chunk_pos.z.into(),
@@ -74,7 +73,7 @@ pub async fn update_position(entity: &Entity, player: &Player) {
         );
         let new_cylindrical =
             Cylindrical::new(Vector2::new(chunk_pos.x, chunk_pos.z), view_distance);
-        *current_watched = new_watched;
+        player.watched_section.store(new_watched);
         let mut loading_chunks = Vec::new();
         Cylindrical::for_each_changed_chunk(
             old_cylindrical,

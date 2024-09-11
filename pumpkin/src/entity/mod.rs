@@ -1,5 +1,6 @@
-use std::sync::{atomic::AtomicBool, Arc, Mutex};
+use std::sync::{atomic::AtomicBool, Arc};
 
+use crossbeam::atomic::AtomicCell;
 use pumpkin_core::math::{
     get_section_cord, position::WorldPosition, vector2::Vector2, vector3::Vector3,
 };
@@ -18,24 +19,24 @@ pub struct Entity {
     pub entity_type: EntityType,
     pub world: Arc<World>,
 
-    pub pos: Mutex<Vector3<f64>>,
-    pub block_pos: Mutex<WorldPosition>,
-    pub chunk_pos: Mutex<Vector2<i32>>,
+    pub pos: AtomicCell<Vector3<f64>>,
+    pub block_pos: AtomicCell<WorldPosition>,
+    pub chunk_pos: AtomicCell<Vector2<i32>>,
 
     pub sneaking: AtomicBool,
     pub sprinting: AtomicBool,
     pub fall_flying: AtomicBool,
-    pub velocity: Mutex<Vector3<f64>>,
+    pub velocity: AtomicCell<Vector3<f64>>,
 
     // Should be not trusted
     pub on_ground: AtomicBool,
 
-    pub yaw: Mutex<f32>,
-    pub head_yaw: Mutex<f32>,
-    pub pitch: Mutex<f32>,
+    pub yaw: AtomicCell<f32>,
+    pub head_yaw: AtomicCell<f32>,
+    pub pitch: AtomicCell<f32>,
     // TODO: Change this in diffrent poses
     pub standing_eye_height: f32,
-    pub pose: Mutex<EntityPose>,
+    pub pose: AtomicCell<EntityPose>,
 }
 
 impl Entity {
@@ -49,41 +50,41 @@ impl Entity {
             entity_id,
             entity_type,
             on_ground: AtomicBool::new(false),
-            pos: Mutex::new(Vector3::new(0.0, 0.0, 0.0)),
-            block_pos: Mutex::new(WorldPosition(Vector3::new(0, 0, 0))),
-            chunk_pos: Mutex::new(Vector2::new(0, 0)),
+            pos: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
+            block_pos: AtomicCell::new(WorldPosition(Vector3::new(0, 0, 0))),
+            chunk_pos: AtomicCell::new(Vector2::new(0, 0)),
             sneaking: AtomicBool::new(false),
             world,
             sprinting: AtomicBool::new(false),
             fall_flying: AtomicBool::new(false),
-            yaw: Mutex::new(0.0),
-            head_yaw: Mutex::new(0.0),
-            pitch: Mutex::new(0.0),
-            velocity: Mutex::new(Vector3::new(0.0, 0.0, 0.0)),
+            yaw: AtomicCell::new(0.0),
+            head_yaw: AtomicCell::new(0.0),
+            pitch: AtomicCell::new(0.0),
+            velocity: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
             standing_eye_height,
-            pose: Mutex::new(EntityPose::Standing),
+            pose: AtomicCell::new(EntityPose::Standing),
         }
     }
 
     pub fn set_pos(&self, x: f64, y: f64, z: f64) {
-        let mut pos = self.pos.lock().unwrap();
+        let pos = self.pos.load();
         if pos.x != x || pos.y != y || pos.z != z {
-            *pos = Vector3::new(x, y, z);
+            self.pos.store(Vector3::new(x, y, z));
             let i = x.floor() as i32;
             let j = y.floor() as i32;
             let k = z.floor() as i32;
 
-            let mut block_pos = self.block_pos.lock().unwrap();
+            let block_pos = self.block_pos.load();
             let block_pos_vec = block_pos.0;
             if i != block_pos_vec.x || j != block_pos_vec.y || k != block_pos_vec.z {
-                *block_pos = WorldPosition(Vector3::new(i, j, k));
+                self.block_pos.store(WorldPosition(Vector3::new(i, j, k)));
 
-                let mut chunk_pos = self.chunk_pos.lock().unwrap();
+                let chunk_pos = self.chunk_pos.load();
                 if get_section_cord(i) != chunk_pos.x || get_section_cord(k) != chunk_pos.z {
-                    *chunk_pos = Vector2::new(
+                    self.chunk_pos.store(Vector2::new(
                         get_section_cord(block_pos_vec.x),
                         get_section_cord(block_pos_vec.z),
-                    );
+                    ));
                 }
             }
         }
@@ -91,8 +92,8 @@ impl Entity {
 
     pub fn set_rotation(&self, yaw: f32, pitch: f32) {
         // TODO
-        *self.yaw.lock().unwrap() = yaw;
-        *self.pitch.lock().unwrap() = pitch
+        self.yaw.store(yaw);
+        self.pitch.store(pitch);
     }
 
     pub async fn remove(&mut self) {
@@ -109,8 +110,8 @@ impl Entity {
         }
 
         let var8 = Vector3::new(x, 0.0, z).normalize() * strength;
-        let mut velocity = self.velocity.lock().unwrap();
-        *velocity = Vector3::new(
+        let velocity = self.velocity.load();
+        self.velocity.store(Vector3::new(
             velocity.x / 2.0 - var8.x,
             if self.on_ground.load(std::sync::atomic::Ordering::Relaxed) {
                 (velocity.y / 2.0 + strength).min(0.4)
@@ -118,7 +119,7 @@ impl Entity {
                 velocity.y
             },
             velocity.z / 2.0 - var8.z,
-        );
+        ));
     }
 
     pub async fn set_sneaking(&self, sneaking: bool) {
@@ -171,7 +172,7 @@ impl Entity {
     }
 
     pub async fn set_pose(&self, pose: EntityPose) {
-        *self.pose.lock().unwrap() = pose;
+        self.pose.store(pose);
         let pose = pose as i32;
         let packet = CSetEntityMetadata::<VarInt>::new(
             self.entity_id.into(),

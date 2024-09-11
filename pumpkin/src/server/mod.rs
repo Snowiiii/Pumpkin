@@ -1,6 +1,7 @@
 use base64::{engine::general_purpose, Engine};
 use image::GenericImageView;
 use mio::Token;
+use parking_lot::{Mutex, RwLock};
 use pumpkin_config::{BasicConfiguration, BASIC_CONFIG};
 use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
@@ -11,13 +12,11 @@ use pumpkin_protocol::{
 };
 use pumpkin_world::dimension::Dimension;
 use std::collections::HashMap;
-use std::sync::RwLock;
 use std::{
     io::Cursor,
     path::Path,
     sync::{
-        atomic::{AtomicI32, Ordering},
-        Arc, Mutex,
+        atomic::{AtomicI32, Ordering}, Arc,
     },
     time::Duration,
 };
@@ -143,8 +142,7 @@ impl Server {
     ) -> Option<Arc<Mutex<Box<dyn Container>>>> {
         let open_containers = self
             .open_containers
-            .read()
-            .expect("open_containers is poisoned");
+            .read();
         open_containers
             .get(&container_id)?
             .try_open(player_id)

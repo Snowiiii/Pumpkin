@@ -2,8 +2,7 @@ use std::{
     io::{self, Write},
     net::SocketAddr,
     sync::{
-        atomic::{AtomicBool, AtomicI32},
-        Arc, Mutex,
+        atomic::{AtomicBool, AtomicI32}, Arc,
     },
 };
 
@@ -13,7 +12,9 @@ use crate::{
 };
 
 use authentication::GameProfile;
+use crossbeam::atomic::AtomicCell;
 use mio::{event::Event, net::TcpStream, Token};
+use parking_lot::Mutex;
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
     bytebuf::{packet_id::Packet, DeserializerError},
@@ -71,7 +72,7 @@ pub struct Client {
     pub brand: Mutex<Option<String>>,
 
     pub protocol_version: AtomicI32,
-    pub connection_state: Mutex<ConnectionState>,
+    pub connection_state: AtomicCell<ConnectionState>,
     pub encryption: AtomicBool,
     pub closed: AtomicBool,
     pub token: Token,
@@ -93,7 +94,7 @@ impl Client {
             brand: Mutex::new(None),
             token,
             address: Mutex::new(address),
-            connection_state: Mutex::new(ConnectionState::HandShake),
+            connection_state: AtomicCell::new(ConnectionState::HandShake),
             connection: Arc::new(Mutex::new(connection)),
             enc: Arc::new(Mutex::new(PacketEncoder::default())),
             dec: Arc::new(Mutex::new(PacketDecoder::default())),
@@ -106,7 +107,7 @@ impl Client {
 
     /// adds a Incoming packet to the queue
     pub fn add_packet(&self, packet: RawPacket) {
-        let mut client_packets_queue = self.client_packets_queue.lock().unwrap();
+        let mut client_packets_queue = self.client_packets_queue.lock();
         client_packets_queue.push(packet);
     }
 
@@ -120,8 +121,8 @@ impl Client {
         let crypt_key: [u8; 16] = shared_secret
             .try_into()
             .map_err(|_| EncryptionError::SharedWrongLength)?;
-        self.dec.lock().unwrap().enable_encryption(&crypt_key);
-        self.enc.lock().unwrap().enable_encryption(&crypt_key);
+        self.dec.lock().enable_encryption(&crypt_key);
+        self.enc.lock().enable_encryption(&crypt_key);
         Ok(())
     }
 
@@ -129,20 +130,18 @@ impl Client {
     pub fn set_compression(&self, compression: Option<(u32, u32)>) {
         self.dec
             .lock()
-            .unwrap()
             .set_compression(compression.map(|v| v.0));
-        self.enc.lock().unwrap().set_compression(compression);
+        self.enc.lock().set_compression(compression);
     }
 
     /// Send a Clientbound Packet to the Client
     pub fn send_packet<P: ClientPacket>(&self, packet: &P) {
         // assert!(!self.closed);
-        let mut enc = self.enc.lock().unwrap();
+        let mut enc = self.enc.lock();
         enc.append_packet(packet)
             .unwrap_or_else(|e| self.kick(&e.to_string()));
         self.connection
             .lock()
-            .unwrap()
             .write_all(&enc.take())
             .map_err(|_| PacketError::ConnectionWrite)
             .unwrap_or_else(|e| self.kick(&e.to_string()));
@@ -151,18 +150,17 @@ impl Client {
     pub fn try_send_packet<P: ClientPacket>(&self, packet: &P) -> Result<(), PacketError> {
         // assert!(!self.closed);
 
-        let mut enc = self.enc.lock().unwrap();
+        let mut enc = self.enc.lock();
         enc.append_packet(packet)?;
         self.connection
             .lock()
-            .unwrap()
             .write_all(&enc.take())
             .map_err(|_| PacketError::ConnectionWrite)?;
         Ok(())
     }
 
     pub async fn process_packets(&self, server: &Arc<Server>) {
-        while let Some(mut packet) = self.client_packets_queue.lock().unwrap().pop() {
+        while let Some(mut packet) = self.client_packets_queue.lock().pop() {
             match self.handle_packet(server, &mut packet).await {
                 Ok(_) => {}
                 Err(e) => {
@@ -182,7 +180,7 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         // TODO: handle each packet's Error instead of calling .unwrap()
         let bytebuf = &mut packet.bytebuf;
-        let locked_state = self.connection_state.lock().unwrap();
+        let locked_state = self.connection_state.load();
         let state = locked_state.clone();
         drop(locked_state);
         match state {
@@ -291,7 +289,7 @@ impl Client {
             let mut bytes_read = 0;
             loop {
                 let connection = self.connection.clone();
-                let mut connection = connection.lock().unwrap();
+                let mut connection = connection.lock();
                 match connection.read(&mut received_data[bytes_read..]) {
                     Ok(0) => {
                         // Reading 0 bytes means the other side has closed the
@@ -313,7 +311,7 @@ impl Client {
             }
 
             if bytes_read != 0 {
-                let mut dec = self.dec.lock().unwrap();
+                let mut dec = self.dec.lock();
                 dec.queue_slice(&received_data[..bytes_read]);
                 match dec.decode() {
                     Ok(packet) => {
@@ -331,7 +329,7 @@ impl Client {
     /// Kicks the Client with a reason depending on the connection state
     pub fn kick(&self, reason: &str) {
         dbg!(reason);
-        match *self.connection_state.lock().unwrap() {
+        match self.connection_state.load() {
             ConnectionState::Login => {
                 self.try_send_packet(&CLoginDisconnect::new(
                     &serde_json::to_string_pretty(&reason).unwrap_or("".into()),

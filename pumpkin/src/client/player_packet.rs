@@ -9,7 +9,7 @@ use crate::{
 use num_traits::FromPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::{
-    math::{position::WorldPosition, wrap_degrees},
+    math::{position::WorldPosition, vector3::Vector3, wrap_degrees},
     text::TextComponent,
     GameMode,
 };
@@ -46,7 +46,7 @@ impl Player {
         _server: &Arc<Server>,
         confirm_teleport: SConfirmTeleport,
     ) {
-        let mut awaiting_teleport = self.awaiting_teleport.lock().unwrap();
+        let mut awaiting_teleport = self.awaiting_teleport.lock();
         if let Some((id, position)) = awaiting_teleport.as_ref() {
             if id == &confirm_teleport.teleport_id {
                 // we should set the pos now to that we requested in the teleport packet, Is may fixed issues when the client sended position packets while being teleported
@@ -82,14 +82,14 @@ impl Player {
             Self::clamp_vertical(position.feet_y),
             Self::clamp_horizontal(position.z),
         );
-        let mut last_position = self.last_position.lock().unwrap();
-        let pos = entity.pos.lock().unwrap();
-        *last_position = *pos;
+        let pos = entity.pos.load();
+        self.last_position.store(pos);
+        let last_position = self.last_position.load();
         entity
             .on_ground
             .store(position.ground, std::sync::atomic::Ordering::Relaxed);
         let entity_id = entity.entity_id;
-        let (x, y, z) = (*pos).into();
+        let Vector3 { x, y, z } = pos;
         let (lastx, lasty, lastz) = (last_position.x, last_position.y, last_position.z);
         let world = &entity.world;
 
@@ -142,9 +142,9 @@ impl Player {
             Self::clamp_vertical(position_rotation.feet_y),
             Self::clamp_horizontal(position_rotation.z),
         );
-        let mut last_position = self.last_position.lock().unwrap();
-        let pos = entity.pos.lock().unwrap();
-        *last_position = *pos;
+        let pos = entity.pos.load();
+        self.last_position.store(pos);
+        let last_position = self.last_position.load();
         entity.on_ground.store(
             position_rotation.ground,
             std::sync::atomic::Ordering::Relaxed,
@@ -155,10 +155,10 @@ impl Player {
         );
 
         let entity_id = entity.entity_id;
-        let (x, y, z) = (*pos).into();
+        let Vector3 {x, y, z } = pos;
         let (lastx, lasty, lastz) = (last_position.x, last_position.y, last_position.z);
-        let yaw = modulus(*entity.yaw.lock().unwrap() * 256.0 / 360.0, 256.0);
-        let pitch = modulus(*entity.pitch.lock().unwrap() * 256.0 / 360.0, 256.0);
+        let yaw = modulus(entity.yaw.load() * 256.0 / 360.0, 256.0);
+        let pitch = modulus(entity.pitch.load() * 256.0 / 360.0, 256.0);
         // let head_yaw = (entity.head_yaw * 256.0 / 360.0).floor();
         let world = &entity.world;
 
@@ -210,8 +210,8 @@ impl Player {
         );
         // send new position to all other players
         let entity_id = entity.entity_id;
-        let yaw = modulus(*entity.yaw.lock().unwrap() * 256.0 / 360.0, 256.0);
-        let pitch = modulus(*entity.pitch.lock().unwrap() * 256.0 / 360.0, 256.0);
+        let yaw = modulus(entity.yaw.load() * 256.0 / 360.0, 256.0);
+        let pitch = modulus(entity.pitch.load() * 256.0 / 360.0, 256.0);
         // let head_yaw = modulus(entity.head_yaw * 256.0 / 360.0, 256.0);
 
         let world = &entity.world;
@@ -350,7 +350,7 @@ impl Player {
             Hand::from_i32(client_information.main_hand.into()),
             ChatMode::from_i32(client_information.chat_mode.into()),
         ) {
-            *self.config.lock().unwrap() = PlayerConfig {
+            *self.config.lock() = PlayerConfig {
                 locale: client_information.locale,
                 view_distance: client_information.view_distance,
                 chat_mode,
@@ -383,19 +383,19 @@ impl Player {
                         if let Some(player) = attacked_player {
                             let victem_entity = &player.entity;
                             if config.protect_creative
-                                && *player.gamemode.lock().unwrap() == GameMode::Creative
+                                && player.gamemode.load() == GameMode::Creative
                             {
                                 return;
                             }
                             if config.knockback {
-                                let yaw = entity.yaw.lock().unwrap();
+                                let yaw = entity.yaw.load();
                                 let strength = 1.0;
-                                let mut victem_velocity = victem_entity.velocity.lock().unwrap();
-                                let saved_velo = *victem_velocity;
+                                let victem_velocity = victem_entity.velocity.load();
+                                let saved_velo = victem_velocity;
                                 victem_entity.knockback(
                                     strength * 0.5,
-                                    (*yaw * (PI / 180.0)).sin() as f64,
-                                    -(*yaw * (PI / 180.0)).cos() as f64,
+                                    (yaw * (PI / 180.0)).sin() as f64,
+                                    -(yaw * (PI / 180.0)).cos() as f64,
                                 );
                                 let packet = &CEntityVelocity::new(
                                     &entity_id,
@@ -403,16 +403,16 @@ impl Player {
                                     victem_velocity.y as f32,
                                     victem_velocity.z as f32,
                                 );
-                                let mut velocity = entity.velocity.lock().unwrap();
-                                *velocity = velocity.multiply(0.6, 1.0, 0.6);
+                                let velocity = entity.velocity.load();
+                                victem_entity.velocity.store(velocity.multiply(0.6, 1.0, 0.6));
 
-                                *victem_velocity = saved_velo;
+                                victem_entity.velocity.store(saved_velo);
                                 player.client.send_packet(packet);
                             }
                             if config.hurt_animation {
                                 world.broadcast_packet_all(&CHurtAnimation::new(
                                     &entity_id,
-                                    *entity.yaw.lock().unwrap(),
+                                    entity.yaw.load(),
                                 ))
                             }
                             if config.swing {}
@@ -441,7 +441,7 @@ impl Player {
                     }
                     // TODO: do validation
                     // TODO: Config
-                    if *self.gamemode.lock().unwrap() == GameMode::Creative {
+                    if self.gamemode.load() == GameMode::Creative {
                         let location = player_action.location;
                         // Block break & block break sound
                         // TODO: currently this is always dirt replace it
@@ -509,7 +509,7 @@ impl Player {
         }
 
         if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
-            if let Some(item) = self.inventory.lock().unwrap().held_item() {
+            if let Some(item) = self.inventory.lock().held_item() {
                 let minecraft_id = global_registry::find_minecraft_id(
                     global_registry::ITEM_REGISTRY,
                     item.item_id,
@@ -545,7 +545,7 @@ impl Player {
         if !(0..=8).contains(&slot) {
             self.kick(TextComponent::text("Invalid held slot"))
         }
-        self.inventory.lock().unwrap().set_selected(slot as usize);
+        self.inventory.lock().set_selected(slot as usize);
     }
 
     pub fn handle_set_creative_slot(
@@ -553,10 +553,10 @@ impl Player {
         _server: &Arc<Server>,
         packet: SSetCreativeSlot,
     ) -> Result<(), InventoryError> {
-        if *self.gamemode.lock().unwrap() != GameMode::Creative {
+        if self.gamemode.load() != GameMode::Creative {
             return Err(InventoryError::PermissionError);
         }
-        self.inventory.lock().unwrap().set_slot(
+        self.inventory.lock().set_slot(
             packet.slot as usize,
             packet.clicked_item.to_item(),
             false,
@@ -570,19 +570,17 @@ impl Player {
         // window_id 0 represents both 9x1 Generic AND inventory here
         self.inventory
             .lock()
-            .unwrap()
             .state_id
             .store(0, std::sync::atomic::Ordering::Relaxed);
-        let mut open_container = self.open_container.lock().unwrap();
-        if let Some(id) = *open_container {
+        let open_container = self.open_container.load();
+        if let Some(id) = open_container {
             let mut open_containers = server
                 .open_containers
-                .write()
-                .expect("open_containers got poisoned");
+                .write();
             if let Some(container) = open_containers.get_mut(&id) {
                 container.remove_player(self.entity_id())
             }
-            *open_container = None;
+            self.open_container.store(None);
         }
         let Some(_window_type) = WindowType::from_u8(packet.window_id) else {
             self.kick(TextComponent::text("Invalid window ID"));

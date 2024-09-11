@@ -2,9 +2,10 @@ use crate::container_click::MouseDragType;
 use crate::{Container, InventoryError};
 use itertools::Itertools;
 use num_traits::Euclid;
+use parking_lot::{Mutex, RwLock};
 use pumpkin_world::item::ItemStack;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::Arc;
 #[derive(Debug, Default)]
 pub struct DragHandler(RwLock<HashMap<u64, Arc<Mutex<Drag>>>>);
 
@@ -23,10 +24,7 @@ impl DragHandler {
             drag_type,
             slots: vec![],
         };
-        let mut drags = match self.0.write() {
-            Ok(drags) => drags,
-            Err(_) => Err(InventoryError::LockError)?,
-        };
+        let mut drags = self.0.write();
         drags.insert(container_id, Arc::new(Mutex::new(drag)));
         Ok(())
     }
@@ -37,13 +35,10 @@ impl DragHandler {
         player: i32,
         slot: usize,
     ) -> Result<(), InventoryError> {
-        let drags = match self.0.read() {
-            Ok(drags) => drags,
-            Err(_) => Err(InventoryError::LockError)?,
-        };
+        let drags = self.0.read();
         match drags.get(&container_id) {
             Some(drag) => {
-                let mut drag = drag.lock().unwrap();
+                let mut drag = drag.lock();
                 if drag.player != player {
                     Err(InventoryError::MultiplePlayersDragging)?
                 }
@@ -68,13 +63,11 @@ impl DragHandler {
             return Ok(());
         }
 
-        let Ok(mut drags) = self.0.write() else {
-            Err(InventoryError::LockError)?
-        };
+        let mut drags = self.0.write();
         let Some((_, drag)) = drags.remove_entry(container_id) else {
             Err(InventoryError::OutOfOrderDragging)?
         };
-        let drag = drag.lock().unwrap();
+        let drag = drag.lock();
 
         if player != drag.player {
             Err(InventoryError::MultiplePlayersDragging)?

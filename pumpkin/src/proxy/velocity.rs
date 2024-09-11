@@ -62,7 +62,7 @@ pub fn receive_plugin_response(
         }
         // TODO: no unwrap
         let addr: SocketAddr = buf.get_string().unwrap().parse().unwrap();
-        *client.address.lock().unwrap() = addr;
+        *client.address.lock() = addr;
         todo!()
     } else {
         client.kick("This server requires you to connect with Velocity.")
