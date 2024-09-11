@@ -16,7 +16,8 @@ use std::{
     io::Cursor,
     path::Path,
     sync::{
-        atomic::{AtomicI32, Ordering}, Arc,
+        atomic::{AtomicI32, Ordering},
+        Arc,
     },
     time::Duration,
 };
@@ -140,9 +141,7 @@ impl Server {
         player_id: EntityId,
         container_id: u64,
     ) -> Option<Arc<Mutex<Box<dyn Container>>>> {
-        let open_containers = self
-            .open_containers
-            .read();
+        let open_containers = self.open_containers.read();
         open_containers
             .get(&container_id)?
             .try_open(player_id)

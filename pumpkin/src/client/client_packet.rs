@@ -238,7 +238,7 @@ impl Client {
         _server: &Arc<Server>,
         client_information: SClientInformationConfig,
     ) {
-        dbg!("got client settings"); 
+        dbg!("got client settings");
         *self.config.lock() = Some(PlayerConfig {
             locale: client_information.locale,
             view_distance: client_information.view_distance,

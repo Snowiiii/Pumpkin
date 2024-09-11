@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
 pub mod player_chunker;
 
@@ -170,12 +167,7 @@ impl World {
         );
         // spawn players for our client
         let token = player.client.token;
-        for (_, existing_player) in self
-            .current_players
-            .lock()
-            .iter()
-            .filter(|c| c.0 != &token)
-        {
+        for (_, existing_player) in self.current_players.lock().iter().filter(|c| c.0 != &token) {
             let entity = &existing_player.entity;
             let pos = entity.pos.load();
             let gameprofile = &existing_player.gameprofile;
@@ -219,9 +211,7 @@ impl World {
         let level = self.level.clone();
         let closed = client.closed.load(std::sync::atomic::Ordering::Relaxed);
         let chunks = Arc::new(chunks);
-        tokio::task::spawn_blocking(move || {
-            level.lock().fetch_chunks(&chunks, sender, closed)
-        });
+        tokio::task::spawn_blocking(move || level.lock().fetch_chunks(&chunks, sender, closed));
 
         while let Some(chunk_data) = chunk_receiver.recv().await {
             // dbg!(chunk_pos);

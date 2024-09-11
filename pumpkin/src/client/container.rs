@@ -27,9 +27,7 @@ impl Player {
             .store(0, std::sync::atomic::Ordering::Relaxed);
         let total_opened_containers = inventory.total_opened_containers;
         let container = self.get_open_container(server);
-        let mut container = container
-            .as_ref()
-            .map(|container| container.lock());
+        let mut container = container.as_ref().map(|container| container.lock());
         let menu_protocol_id = (*pumpkin_world::global_registry::REGISTRY
             .get("minecraft:menu")
             .unwrap()
@@ -112,9 +110,7 @@ impl Player {
         packet: SClickContainer,
     ) -> Result<(), InventoryError> {
         let opened_container = self.get_open_container(server);
-        let mut opened_container = opened_container
-            .as_ref()
-            .map(|container| container.lock());
+        let mut opened_container = opened_container.as_ref().map(|container| container.lock());
         let drag_handler = &server.drag_handler;
 
         let state_id = self
@@ -217,14 +213,10 @@ impl Player {
         match slot {
             container_click::Slot::Normal(slot) => {
                 let mut carried_item = self.carried_item.load();
-                let res = container.handle_item_change(
-                    &mut carried_item,
-                    slot,
-                    mouse_click,
-                );
+                let res = container.handle_item_change(&mut carried_item, slot, mouse_click);
                 self.carried_item.store(carried_item);
                 res
-            },
+            }
             container_click::Slot::OutsideInventory => Ok(()),
         }
     }
@@ -362,8 +354,7 @@ impl Player {
             .unwrap_or(player_id as u64);
         match mouse_drag_state {
             MouseDragState::Start(drag_type) => {
-                if drag_type == MouseDragType::Middle
-                    && self.gamemode.load() != GameMode::Creative
+                if drag_type == MouseDragType::Middle && self.gamemode.load() != GameMode::Creative
                 {
                     Err(InventoryError::PermissionError)?
                 }
@@ -389,9 +380,7 @@ impl Player {
 
     async fn get_current_players_in_container(&self, server: &Server) -> Vec<Arc<Player>> {
         let player_ids = {
-            let open_containers = server
-                .open_containers
-                .read();
+            let open_containers = server.open_containers.read();
             open_containers
                 .get(&self.open_container.load().unwrap())
                 .unwrap()

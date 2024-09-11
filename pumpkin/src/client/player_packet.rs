@@ -155,7 +155,7 @@ impl Player {
         );
 
         let entity_id = entity.entity_id;
-        let Vector3 {x, y, z } = pos;
+        let Vector3 { x, y, z } = pos;
         let (lastx, lasty, lastz) = (last_position.x, last_position.y, last_position.z);
         let yaw = modulus(entity.yaw.load() * 256.0 / 360.0, 256.0);
         let pitch = modulus(entity.pitch.load() * 256.0 / 360.0, 256.0);
@@ -404,7 +404,9 @@ impl Player {
                                     victem_velocity.z as f32,
                                 );
                                 let velocity = entity.velocity.load();
-                                victem_entity.velocity.store(velocity.multiply(0.6, 1.0, 0.6));
+                                victem_entity
+                                    .velocity
+                                    .store(velocity.multiply(0.6, 1.0, 0.6));
 
                                 victem_entity.velocity.store(saved_velo);
                                 player.client.send_packet(packet);
@@ -556,11 +558,9 @@ impl Player {
         if self.gamemode.load() != GameMode::Creative {
             return Err(InventoryError::PermissionError);
         }
-        self.inventory.lock().set_slot(
-            packet.slot as usize,
-            packet.clicked_item.to_item(),
-            false,
-        )
+        self.inventory
+            .lock()
+            .set_slot(packet.slot as usize, packet.clicked_item.to_item(), false)
     }
 
     // TODO:
@@ -574,9 +574,7 @@ impl Player {
             .store(0, std::sync::atomic::Ordering::Relaxed);
         let open_container = self.open_container.load();
         if let Some(id) = open_container {
-            let mut open_containers = server
-                .open_containers
-                .write();
+            let mut open_containers = server.open_containers.write();
             if let Some(container) = open_containers.get_mut(&id) {
                 container.remove_player(self.entity_id())
             }

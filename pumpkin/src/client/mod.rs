@@ -2,7 +2,8 @@ use std::{
     io::{self, Write},
     net::SocketAddr,
     sync::{
-        atomic::{AtomicBool, AtomicI32}, Arc,
+        atomic::{AtomicBool, AtomicI32},
+        Arc,
     },
 };
 
@@ -128,9 +129,7 @@ impl Client {
 
     // Compression threshold, Compression level
     pub fn set_compression(&self, compression: Option<(u32, u32)>) {
-        self.dec
-            .lock()
-            .set_compression(compression.map(|v| v.0));
+        self.dec.lock().set_compression(compression.map(|v| v.0));
         self.enc.lock().set_compression(compression);
     }
 
