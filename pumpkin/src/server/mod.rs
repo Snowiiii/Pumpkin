@@ -1,5 +1,5 @@
+use connection_cache::{CachedBranding, CachedStatus};
 use key_store::KeyStore;
-use bikeshed_server_listing::BikeShedServerListing;
 use mio::Token;
 use parking_lot::{Mutex, RwLock};
 use pumpkin_config::BASIC_CONFIG;
@@ -31,11 +31,14 @@ use crate::{
     world::World,
 };
 
+mod connection_cache;
 mod key_store;
 pub const CURRENT_MC_VERSION: &str = "1.21.1";
 
 pub struct Server {
     key_store: KeyStore,
+    server_listing: CachedStatus,
+    server_branding: CachedBranding,
     pub plugin_loader: PluginLoader,
 
     pub command_dispatcher: Arc<CommandDispatcher<'static>>,
@@ -57,7 +60,6 @@ impl Server {
     pub fn new() -> Self {
         // TODO: only create when needed
 
-        let server_listing = BikeShedServerListing::new();
         let auth_client = if BASIC_CONFIG.online_mode {
             Some(
                 reqwest::Client::builder()
@@ -89,7 +91,8 @@ impl Server {
             command_dispatcher: Arc::new(command_dispatcher),
             auth_client,
             key_store: KeyStore::new(),
-            server_listing,
+            server_listing: CachedStatus::new(),
+            server_branding: CachedBranding::new(),
         }
     }
 
@@ -147,7 +150,7 @@ impl Server {
     }
 
     pub fn get_branding(&self) -> CPluginMessage<'_> {
-        self.server_listing.get_branding()
+        self.server_branding.get_branding()
     }
 
     pub fn get_status(&self) -> CStatusResponse<'_> {

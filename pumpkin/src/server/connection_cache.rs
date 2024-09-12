@@ -10,31 +10,47 @@ use pumpkin_protocol::{
 
 use super::CURRENT_MC_VERSION;
 
-pub struct BikeShedServerListing {
+pub struct CachedStatus {
     _status_response: StatusResponse,
     // We cache the json response here so we don't parse it every time someone makes a Status request.
     // Keep in mind that we must parse this again, when the StatusResponse changes which usually happen when a player joins or leaves
     status_response_json: String,
+}
+
+pub struct CachedBranding {
     /// Cached Server brand buffer so we don't have to rebuild them every time a player joins
     cached_server_brand: Vec<u8>,
 }
 
-impl BikeShedServerListing {
+impl CachedBranding {
+    pub fn new() -> CachedBranding {
+        let cached_server_brand = Self::build_brand();
+        CachedBranding {
+            cached_server_brand,
+        }
+    }
+    pub fn get_branding(&self) -> CPluginMessage {
+        CPluginMessage::new("minecraft:brand", &self.cached_server_brand)
+    }
+    fn build_brand() -> Vec<u8> {
+        let brand = "Pumpkin";
+        let mut buf = vec![];
+        let _ = VarInt(brand.len() as i32).encode(&mut buf);
+        buf.extend_from_slice(brand.as_bytes());
+        buf
+    }
+}
+
+impl CachedStatus {
     pub fn new() -> Self {
         let status_response = Self::build_response(&BASIC_CONFIG);
         let status_response_json = serde_json::to_string(&status_response)
             .expect("Failed to parse Status response into JSON");
-        let cached_server_brand = Self::build_brand();
 
-        BikeShedServerListing {
+        CachedStatus {
             _status_response: status_response,
             status_response_json,
-            cached_server_brand,
         }
-    }
-
-    pub fn get_branding(&self) -> CPluginMessage {
-        CPluginMessage::new("minecraft:brand", &self.cached_server_brand)
     }
 
     pub fn get_status(&self) -> CStatusResponse<'_> {
@@ -82,13 +98,5 @@ impl BikeShedServerListing {
         let mut result = "data:image/png;base64,".to_owned();
         general_purpose::STANDARD.encode_string(image, &mut result);
         result
-    }
-
-    fn build_brand() -> Vec<u8> {
-        let brand = "Pumpkin";
-        let mut buf = vec![];
-        let _ = VarInt(brand.len() as i32).encode(&mut buf);
-        buf.extend_from_slice(brand.as_bytes());
-        buf
     }
 }
