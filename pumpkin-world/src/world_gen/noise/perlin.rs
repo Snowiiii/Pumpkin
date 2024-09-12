@@ -1,4 +1,5 @@
-use pumpkin_core::random::Random;
+use num_traits::{Pow, WrappingSub};
+use pumpkin_core::random::{Random, RandomSplitter};
 
 use super::{dot, lerp3, GRADIENTS};
 
@@ -145,6 +146,249 @@ impl PerlinNoiseSampler {
         let t = Self::perlin_fade(local_z);
 
         lerp3(r, s, t, d, e, f, g, h, o, p, q)
+    }
+}
+
+pub struct OctavePerlinNoiseSampler {
+    octave_samplers: Vec<Option<PerlinNoiseSampler>>,
+    amplitudes: Vec<f64>,
+    first_octave: i32,
+    persistence: f64,
+    lacunarity: f64,
+    max_value: f64,
+}
+
+impl OctavePerlinNoiseSampler {
+    fn get_total_amplitude(scale: f64, persistence: f64, amplitudes: &Vec<f64>) -> f64 {
+        let mut d = 0f64;
+        let mut e = persistence;
+
+        for amplitude in amplitudes.iter() {
+            if *amplitude != 0f64 {
+                d += amplitude * scale * e;
+            }
+
+            e /= 2f64;
+        }
+
+        d
+    }
+
+    fn maintain_precision(value: f64) -> f64 {
+        value - (value / 3.3554432E7f64 + 0.5f64).floor() * 3.3554432E7f64
+    }
+
+    pub fn calculate_amplitudes(octaves: &[i32]) -> (i32, Vec<f64>) {
+        let mut octaves = Vec::from_iter(octaves);
+        octaves.sort();
+
+        let i = -**octaves.first().expect("we should have some octaves");
+        let j = **octaves.last().expect("we should have some octaves");
+        let k = i + j + 1;
+
+        let mut double_list: Vec<f64> = Vec::with_capacity(k as usize);
+        for _ in 0..k {
+            double_list.push(0f64)
+        }
+
+        for l in octaves {
+            double_list[(l + i) as usize] = 1f64;
+        }
+
+        (-i, double_list)
+    }
+
+    pub fn new(random: &mut impl Random, first_octave: i32, amplitudes: Vec<f64>) -> Self {
+        let i = amplitudes.len();
+        let j = -first_octave;
+
+        let mut samplers: Vec<Option<PerlinNoiseSampler>> = Vec::with_capacity(i);
+        for _ in 0..i {
+            samplers.push(None);
+        }
+
+        let splitter = random.next_splitter();
+        for k in 0..i {
+            if amplitudes[k] != 0f64 {
+                let l = first_octave + k as i32;
+                samplers[k] = Some(PerlinNoiseSampler::new(
+                    &mut splitter.split_string(&format!("octave_{}", l)),
+                ));
+            }
+        }
+
+        let persistence = 2f64.pow((i as i32).wrapping_sub(1) as f64) / (2f64.pow(i as f64) - 1f64);
+        let max_value = Self::get_total_amplitude(2f64, persistence, &amplitudes);
+        Self {
+            octave_samplers: samplers,
+            amplitudes,
+            first_octave,
+            persistence,
+            lacunarity: 2f64.pow((-j) as f64),
+            max_value,
+        }
+    }
+
+    pub fn sample(&self, x: f64, y: f64, z: f64) -> f64 {
+        let mut d = 0f64;
+        let mut e = self.lacunarity;
+        let mut f = self.persistence;
+
+        for (sampler, amplitude) in self.octave_samplers.iter().zip(self.amplitudes.iter()) {
+            if let Some(sampler) = sampler {
+                let g = sampler.sample_no_fade(
+                    Self::maintain_precision(x * e),
+                    Self::maintain_precision(y * e),
+                    Self::maintain_precision(z * e),
+                    0f64,
+                    0f64,
+                );
+
+                d += amplitude * g * f;
+            }
+
+            e *= 2f64;
+            f /= 2f64;
+        }
+
+        d
+    }
+}
+
+#[cfg(test)]
+mod octave_perline_noise_sampler_test {
+    use pumpkin_core::random::{xoroshiro128::Xoroshiro, Random};
+
+    use super::OctavePerlinNoiseSampler;
+
+    #[test]
+    fn test_create_xoroshiro() {
+        let mut rand = Xoroshiro::from_seed(513513513);
+        assert_eq!(rand.next_i32(), 404174895);
+
+        let (start, amplitudes) = OctavePerlinNoiseSampler::calculate_amplitudes(&[1, 2, 3]);
+        assert_eq!(start, 1);
+        assert_eq!(amplitudes, [1f64, 1f64, 1f64]);
+
+        let sampler = OctavePerlinNoiseSampler::new(&mut rand, start, amplitudes);
+
+        assert_eq!(sampler.first_octave, 1);
+        assert_eq!(sampler.persistence, 0.5714285714285714f64);
+        assert_eq!(sampler.lacunarity, 2f64);
+        assert_eq!(sampler.max_value, 2f64);
+
+        let coords = [
+            (210.19539348148294, 203.08258445596215, 45.29925114984684),
+            (24.841250686920773, 181.62678157390076, 69.49871248131629),
+            (21.65886467061867, 97.80131502331685, 225.9273676334467),
+        ];
+
+        for (sampler, (x, y, z)) in sampler.octave_samplers.iter().zip(coords) {
+            match sampler {
+                Some(sampler) => {
+                    assert_eq!(sampler.x_origin, x);
+                    assert_eq!(sampler.y_origin, y);
+                    assert_eq!(sampler.z_origin, z);
+                }
+                None => panic!(),
+            }
+        }
+    }
+
+    #[test]
+    fn test_sample() {
+        let mut rand = Xoroshiro::from_seed(513513513);
+        assert_eq!(rand.next_i32(), 404174895);
+
+        let (start, amplitudes) = OctavePerlinNoiseSampler::calculate_amplitudes(&[1, 2, 3]);
+        let sampler = OctavePerlinNoiseSampler::new(&mut rand, start, amplitudes);
+
+        let values = [
+            (
+                (
+                    1.4633897801218182E8,
+                    3.360929121402108E8,
+                    -1.7376184515043163E8,
+                ),
+                -0.16510137639683028,
+            ),
+            (
+                (
+                    -3.952093942501234E8,
+                    -8.149682915016855E7,
+                    2.0761709535397574E8,
+                ),
+                -0.19865227457826365,
+            ),
+            (
+                (
+                    1.0603518812861493E8,
+                    -1.6028050039630303E8,
+                    9.621510690305333E7,
+                ),
+                -0.16157548492944798,
+            ),
+            (
+                (
+                    -2.2789281609860754E8,
+                    1.2416505757723756E8,
+                    -3.047619296454517E8,
+                ),
+                -0.05762575118540847,
+            ),
+            (
+                (
+                    -1.6361322604690066E8,
+                    -1.862652364900794E8,
+                    9.03458926538596E7,
+                ),
+                0.21589404036742288,
+            ),
+            (
+                (
+                    -1.6074718857061076E8,
+                    -4.816551924254624E8,
+                    -9.930236785759543E7,
+                ),
+                0.1888188057014473,
+            ),
+            (
+                (
+                    -1.6848478115907547E8,
+                    1.9495247771890038E8,
+                    1.3780564333313772E8,
+                ),
+                0.23114508298896774,
+            ),
+            (
+                (
+                    2.5355640846261957E8,
+                    -2.5973376726076955E8,
+                    3.7834594620459855E7,
+                ),
+                -0.23703473310230702,
+            ),
+            (
+                (
+                    -8.636649828254433E7,
+                    1.7017680431584623E8,
+                    2.941033134334743E8,
+                ),
+                -0.14050102207739693,
+            ),
+            (
+                (
+                    -4.573784466442647E8,
+                    1.789046617664721E8,
+                    -5.515223967099891E8,
+                ),
+                -0.1422470544720957,
+            ),
+        ];
+
+        for ((x, y, z), sample) in values {
+            assert_eq!(sampler.sample(x, y, z), sample);
+        }
     }
 }
 
