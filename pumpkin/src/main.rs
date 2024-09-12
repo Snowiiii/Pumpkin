@@ -169,7 +169,6 @@ fn main() -> io::Result<()> {
                             }
                             if closed {
                                 if let Some(player) = players.remove(&token) {
-                                    dbg!("a");
                                     player.remove().await;
                                     dbg!("b");
                                     let connection = &mut player.client.connection.lock();

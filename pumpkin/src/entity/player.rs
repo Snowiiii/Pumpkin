@@ -40,55 +40,52 @@ use crate::{
 
 use super::Entity;
 
-pub struct PlayerAbilities {
-    pub invulnerable: bool,
-    pub flying: bool,
-    pub allow_flying: bool,
-    pub creative: bool,
-    pub fly_speed: f32,
-    pub walk_speed_fov: f32,
-}
-
-impl Default for PlayerAbilities {
-    fn default() -> Self {
-        Self {
-            invulnerable: false,
-            flying: false,
-            allow_flying: false,
-            creative: false,
-            fly_speed: 0.5,
-            walk_speed_fov: 0.1,
-        }
-    }
-}
-
+/// Represents a Minecraft player entity.
+///
+/// A `Player` is a special type of entity that represents a human player connected to the server.
 pub struct Player {
+    /// The underlying entity object that represents the player.
     pub entity: Entity,
 
+    /// The player's game profile information, including their username and UUID.
     pub gameprofile: GameProfile,
+    /// The client connection associated with the player.
     pub client: Client,
+    /// The player's configuration settings. Changes when the Player changes their settings.
     pub config: Mutex<PlayerConfig>,
-    /// Current gamemode
+    /// The player's current gamemode (e.g., Survival, Creative, Adventure).
     pub gamemode: AtomicCell<GameMode>,
-    // TODO: prbly should put this into an Living Entitiy or something
-    pub health: AtomicCell<f32>,
+    /// The player's hunger level.
     pub food: AtomicI32,
+    /// The player's food saturation level.
     pub food_saturation: AtomicCell<f32>,
+    /// The player's inventory, containing items and equipment.
     pub inventory: Mutex<PlayerInventory>,
+    /// The ID of the currently open container (if any).
     pub open_container: AtomicCell<Option<u64>>,
+    /// The item currently being held by the player.
     pub carried_item: AtomicCell<Option<ItemStack>>,
 
     /// send `send_abilties_update` when changed
+    /// The player's abilities and special powers.
+    ///
+    /// This field represents the various abilities that the player possesses, such as flight, invulnerability, and other special effects.
+    ///
+    /// **Note:** When the `abilities` field is updated, the server should send a `send_abilities_update` packet to the client to notify them of the changes.
     pub abilities: PlayerAbilities,
+    /// The player's last known position.
+    ///
+    /// This field is used to calculate the player's movement delta for network synchronization and other purposes.
     pub last_position: AtomicCell<Vector3<f64>>,
 
-    // TODO: This is currently unused, We have to calculate the block breaking speed our own and then break the block our own if its done
+    /// The current stage of the block the player is breaking.
     pub current_block_destroy_stage: AtomicU8,
-
+    /// A counter for teleport IDs used to track pending teleports.
     pub teleport_id_count: AtomicI32,
-    // Current awaiting teleport id and location, None if did not teleport
+    /// The pending teleport information, including the teleport ID and target location.
     pub awaiting_teleport: Mutex<Option<(VarInt, Vector3<f64>)>>,
 
+    /// The coordinates of the chunk section the player is currently watching.
     pub watched_section: AtomicCell<Vector3<i32>>,
 }
 
@@ -114,7 +111,6 @@ impl Player {
             client,
             awaiting_teleport: Mutex::new(None),
             // TODO: Load this from previous instance
-            health: AtomicCell::new(20.0),
             food: AtomicI32::new(20),
             food_saturation: AtomicCell::new(20.0),
             current_block_destroy_stage: AtomicU8::new(0),
@@ -138,6 +134,7 @@ impl Player {
         self.entity.entity_id
     }
 
+    /// Updates the current abilities the Player has
     pub fn send_abilties_update(&mut self) {
         let mut b = 0i8;
         let abilities = &self.abilities;
@@ -227,7 +224,7 @@ impl Player {
     }
 
     pub fn update_health(&self, health: f32, food: i32, food_saturation: f32) {
-        self.health.store(health);
+        self.entity.health.store(health);
         self.food.store(food, std::sync::atomic::Ordering::Relaxed);
         self.food_saturation.store(food_saturation);
     }
@@ -380,15 +377,53 @@ impl Player {
     }
 }
 
+/// Represents a player's abilities and special powers.
+///
+/// This struct contains information about the player's current abilities, such as flight, invulnerability, and creative mode.
+pub struct PlayerAbilities {
+    /// Indicates whether the player is invulnerable to damage.
+    pub invulnerable: bool,
+    /// Indicates whether the player is currently flying.
+    pub flying: bool,
+    /// Indicates whether the player is allowed to fly (if enabled).
+    pub allow_flying: bool,
+    /// Indicates whether the player is in creative mode.
+    pub creative: bool,
+    /// The player's flying speed.
+    pub fly_speed: f32,
+    /// The field of view adjustment when the player is walking or sprinting.
+    pub walk_speed_fov: f32,
+}
+
+impl Default for PlayerAbilities {
+    fn default() -> Self {
+        Self {
+            invulnerable: false,
+            flying: false,
+            allow_flying: false,
+            creative: false,
+            fly_speed: 0.5,
+            walk_speed_fov: 0.1,
+        }
+    }
+}
+
+/// Represents the player's dominant hand.
 #[derive(FromPrimitive, Clone)]
 pub enum Hand {
+    /// The player's primary hand (usually the right hand).
     Main,
+    /// The player's off-hand (usually the left hand).
     Off,
 }
 
+/// Represents the player's chat mode settings.
 #[derive(FromPrimitive, Clone)]
 pub enum ChatMode {
+    /// Chat is enabled for the player.
     Enabled,
+    /// The player should only see chat messages from commands
     CommandsOnly,
+    /// All messages should be hidden
     Hidden,
 }

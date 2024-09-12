@@ -1,6 +1,8 @@
 use serde::Serialize;
 
 #[derive(Clone)]
+/// Wrapper around uuid::UUID, Please use this in every Packet containing a UUID
+/// We use this to we can do own Serializing
 pub struct UUID(pub uuid::Uuid);
 
 impl Serialize for UUID {

@@ -39,15 +39,30 @@ mod client_packet;
 mod container;
 pub mod player_packet;
 
+/// Represents a player's configuration settings.
+///
+/// This struct contains various options that can be customized by the player, affecting their gameplay experience.
+///
+/// **Usage:**
+///
+/// This struct is typically used to store and manage a player's preferences. It can be sent to the server when a player joins or when they change their settings.
 #[derive(Clone)]
 pub struct PlayerConfig {
+    /// The player's preferred language.
     pub locale: String, // 16
+    /// The maximum distance at which chunks are rendered.
     pub view_distance: i8,
+    /// The player's chat mode settings
     pub chat_mode: ChatMode,
+    /// Whether chat colors are enabled.
     pub chat_colors: bool,
+    /// The player's skin configuration options.
     pub skin_parts: u8,
+    /// The player's dominant hand (left or right).
     pub main_hand: Hand,
+    /// Whether text filtering is enabled.
     pub text_filtering: bool,
+    /// Whether the player wants to appear in the server list.
     pub server_listing: bool,
 }
 
@@ -66,23 +81,37 @@ impl Default for PlayerConfig {
     }
 }
 
+/// Everything which makes a Conection with our Server is a `Client`.
+/// Client will become Players when they reach the `Play` state
 pub struct Client {
+    /// The client's game profile information.
     pub gameprofile: Mutex<Option<GameProfile>>,
-
+    /// The client's configuration settings, Optional
     pub config: Mutex<Option<PlayerConfig>>,
+    /// The client's brand or modpack information, Optional.
     pub brand: Mutex<Option<String>>,
-
+    /// The minecraft protocol version used by the client.
     pub protocol_version: AtomicI32,
+    /// The current connection state of the client (e.g., Handshaking, Status, Play).
     pub connection_state: AtomicCell<ConnectionState>,
+    /// Whether encryption is enabled for the connection.
     pub encryption: AtomicBool,
+    /// Indicates if the client connection is closed.
     pub closed: AtomicBool,
+    /// A unique token identifying the client.
     pub token: Token,
+    /// The underlying TCP connection to the client.
     pub connection: Arc<Mutex<TcpStream>>,
+    /// The client's IP address.
     pub address: Mutex<SocketAddr>,
+    /// The packet encoder for outgoing packets.
     enc: Arc<Mutex<PacketEncoder>>,
+    /// The packet decoder for incoming packets.
     dec: Arc<Mutex<PacketDecoder>>,
+    /// A queue of raw packets received from the client, waiting to be processed.
     pub client_packets_queue: Arc<Mutex<Vec<RawPacket>>>,
 
+    /// Indicates whether the client should be converted into a player.
     pub make_player: AtomicBool,
 }
 
@@ -106,13 +135,13 @@ impl Client {
         }
     }
 
-    /// adds a Incoming packet to the queue
+    /// Adds a Incoming packet to the queue
     pub fn add_packet(&self, packet: RawPacket) {
         let mut client_packets_queue = self.client_packets_queue.lock();
         client_packets_queue.push(packet);
     }
 
-    /// enables encryption
+    /// Enables encryption
     pub fn enable_encryption(
         &self,
         shared_secret: &[u8], // decrypted
@@ -127,7 +156,7 @@ impl Client {
         Ok(())
     }
 
-    // Compression threshold, Compression level
+    /// Compression threshold, Compression level
     pub fn set_compression(&self, compression: Option<(u32, u32)>) {
         self.dec.lock().set_compression(compression.map(|v| v.0));
         self.enc.lock().set_compression(compression);
@@ -158,6 +187,7 @@ impl Client {
         Ok(())
     }
 
+    /// Processes all packets send by the client
     pub async fn process_packets(&self, server: &Arc<Server>) {
         while let Some(mut packet) = self.client_packets_queue.lock().pop() {
             match self.handle_packet(server, &mut packet).await {
