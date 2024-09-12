@@ -11,7 +11,7 @@ use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_protocol::{
     client::play::{
         CChunkData, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate, CRemoveEntities,
-        CRemovePlayerInfo, CSetEntityMetadata, CSpawnEntity, Metadata, PlayerAction,
+        CRemovePlayerInfo, CSetEntityMetadata, CSpawnEntity, GameEvent, Metadata, PlayerAction,
     },
     uuid::UUID,
     ClientPacket, VarInt,
@@ -216,8 +216,10 @@ impl World {
             self.broadcast_packet_all(&packet)
         }
 
-        // Start waiting for level chunks
-        player.client.send_packet(&CGameEvent::new(13, 0.0));
+        // Start waiting for level chunks, Sets the "Loading Terrain" screen
+        player
+            .client
+            .send_packet(&CGameEvent::new(GameEvent::StartWaitingChunks, 0.0));
 
         // Spawn in inital chunks
         player_chunker::player_join(self, player.clone()).await;
@@ -258,14 +260,20 @@ impl World {
         dbg!("DONE CHUNKS", inst.elapsed());
     }
 
-    pub fn get_by_entityid(&self, from: &Player, id: EntityId) -> Option<Arc<Player>> {
-        for (_, player) in self
-            .current_players
-            .lock()
-            .iter()
-            .filter(|c| c.0 != &from.client.token)
-        {
+    /// Gets a Player by entity id
+    pub fn get_player_by_entityid(&self, id: EntityId) -> Option<Arc<Player>> {
+        for (_, player) in self.current_players.lock().iter() {
             if player.entity_id() == id {
+                return Some(player.clone());
+            }
+        }
+        None
+    }
+
+    /// Gets a Player by name
+    pub fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
+        for (_, player) in self.current_players.lock().iter() {
+            if player.gameprofile.name == name {
                 return Some(player.clone());
             }
         }

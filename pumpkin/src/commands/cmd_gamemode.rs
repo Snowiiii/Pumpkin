@@ -85,9 +85,9 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                     }),
                 )
                 .with_child(argument(ARG_TARGET, consume_arg_player).execute(
-                    &|sender, _, args| {
+                    &|sender, server, args| {
                         let gamemode = parse_arg_gamemode(args)?;
-                        let target = parse_arg_player(sender, ARG_TARGET, args)?;
+                        let target = parse_arg_player(sender, server, ARG_TARGET, args)?;
 
                         if target.gamemode.load() == gamemode {
                             target.send_system_message(TextComponent::text(&format!(

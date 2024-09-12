@@ -1,8 +1,11 @@
+use std::sync::Arc;
+
 use crate::commands::dispatcher::InvalidTreeError;
 use crate::commands::dispatcher::InvalidTreeError::InvalidConsumptionError;
 use crate::commands::tree::{ConsumedArgs, RawArgs};
 use crate::commands::CommandSender;
 use crate::commands::CommandSender::Player;
+use crate::server::Server;
 
 /// todo: implement (so far only own name + @s/@p is implemented)
 pub fn consume_arg_player(src: &CommandSender, args: &mut RawArgs) -> Option<String> {
@@ -29,6 +32,7 @@ pub fn consume_arg_player(src: &CommandSender, args: &mut RawArgs) -> Option<Str
 /// todo: implement (so far only own name + @s/@p is implemented)
 pub fn parse_arg_player<'a>(
     src: &'a mut CommandSender,
+    _server: &Arc<Server>,
     arg_name: &str,
     consumed_args: &ConsumedArgs,
 ) -> Result<&'a crate::entity::player::Player, InvalidTreeError> {

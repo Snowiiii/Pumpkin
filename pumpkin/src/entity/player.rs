@@ -18,7 +18,7 @@ use pumpkin_protocol::{
     bytebuf::{packet_id::Packet, DeserializerError},
     client::play::{
         CGameEvent, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSyncPlayerPosition,
-        CSystemChatMessage, PlayerAction,
+        CSystemChatMessage, GameEvent, PlayerAction,
     },
     server::play::{
         SChatCommand, SChatMessage, SClickContainer, SClientInformationPlay, SConfirmTeleport,
@@ -248,8 +248,10 @@ impl Player {
                     actions: vec![PlayerAction::UpdateGameMode((gamemode as i32).into())],
                 }],
             ));
-        self.client
-            .send_packet(&CGameEvent::new(3, gamemode.to_f32().unwrap()));
+        self.client.send_packet(&CGameEvent::new(
+            GameEvent::ChangeGameMode,
+            gamemode.to_f32().unwrap(),
+        ));
     }
 
     pub fn send_system_message(&self, text: TextComponent) {

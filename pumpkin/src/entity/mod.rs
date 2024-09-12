@@ -8,7 +8,7 @@ use pumpkin_core::math::{
 };
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
 use pumpkin_protocol::{
-    client::play::{CSetEntityMetadata, Metadata},
+    client::play::{CEntityStatus, CSetEntityMetadata, Metadata},
     VarInt,
 };
 
@@ -121,8 +121,21 @@ impl Entity {
         self.pitch.store(pitch);
     }
 
+    /// Kills the Entity
+    ///
+    /// This is simliar to `kill` but Spawn Particles, Animation and plays death sound
+    pub fn kill(&self) {
+        // Spawns death smoke particles
+        self.world
+            .broadcast_packet_all(&CEntityStatus::new(self.entity_id, 60));
+        // Plays the death sound and death animation
+        self.world
+            .broadcast_packet_all(&CEntityStatus::new(self.entity_id, 3));
+        self.remove();
+    }
+
     /// Removes the Entity from their current World
-    pub async fn remove(&mut self) {
+    pub fn remove(&self) {
         self.world.remove_entity(self);
     }
 

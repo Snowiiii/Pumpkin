@@ -158,6 +158,16 @@ impl Server {
         }
     }
 
+    /// Searches every world for a player by name
+    pub fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
+        for world in self.worlds.iter() {
+            if let Some(player) = world.get_player_by_name(name) {
+                return Some(player);
+            }
+        }
+        None
+    }
+
     /// Generates a new entity id
     /// This should be global
     pub fn new_entity_id(&self) -> EntityId {

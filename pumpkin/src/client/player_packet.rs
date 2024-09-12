@@ -379,7 +379,7 @@ impl Player {
                     let config = &ADVANCED_CONFIG.pvp;
                     if config.enabled {
                         let world = &entity.world;
-                        let attacked_player = world.get_by_entityid(self, entity_id.0 as EntityId);
+                        let attacked_player = world.get_player_by_entityid(entity_id.0 as EntityId);
                         if let Some(player) = attacked_player {
                             let victem_entity = &player.entity;
                             if config.protect_creative
