@@ -1,12 +1,10 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, sync::Arc};
 
 pub mod player_chunker;
 
 use mio::Token;
 use num_traits::ToPrimitive;
+use parking_lot::Mutex;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_entity::{entity_type::EntityType, EntityId};
@@ -60,7 +58,7 @@ impl World {
     where
         P: ClientPacket,
     {
-        let current_players = self.current_players.lock().unwrap();
+        let current_players = self.current_players.lock();
         for (_, player) in current_players.iter() {
             player.client.send_packet(packet);
         }
@@ -75,7 +73,7 @@ impl World {
     where
         P: ClientPacket,
     {
-        let current_players = self.current_players.lock().unwrap();
+        let current_players = self.current_players.lock();
         for (_, player) in current_players.iter().filter(|c| !except.contains(c.0)) {
             player.client.send_packet(packet);
         }
@@ -84,7 +82,7 @@ impl World {
     pub async fn spawn_player(&self, base_config: &BasicConfiguration, player: Arc<Player>) {
         // This code follows the vanilla packet order
         let entity_id = player.entity_id();
-        let gamemode = player.gamemode.lock().unwrap();
+        let gamemode = player.gamemode.load();
         log::debug!("spawning player, entity id {}", entity_id);
 
         // login packet for our new player
@@ -145,7 +143,6 @@ impl World {
         for (_, playerr) in self
             .current_players
             .lock()
-            .unwrap()
             .iter()
             .filter(|(c, _)| **c != player.client.token)
         {
@@ -189,15 +186,9 @@ impl World {
         );
         // spawn players for our client
         let token = player.client.token;
-        for (_, existing_player) in self
-            .current_players
-            .lock()
-            .unwrap()
-            .iter()
-            .filter(|c| c.0 != &token)
-        {
+        for (_, existing_player) in self.current_players.lock().iter().filter(|c| c.0 != &token) {
             let entity = &existing_player.entity;
-            let pos = entity.pos.lock().unwrap();
+            let pos = entity.pos.load();
             let gameprofile = &existing_player.gameprofile;
             player.client.send_packet(&CSpawnEntity::new(
                 existing_player.entity_id().into(),
@@ -206,9 +197,9 @@ impl World {
                 pos.x,
                 pos.y,
                 pos.z,
-                *entity.yaw.lock().unwrap(),
-                *entity.pitch.lock().unwrap(),
-                *entity.head_yaw.lock().unwrap(),
+                entity.yaw.load(),
+                entity.pitch.load(),
+                entity.head_yaw.load(),
                 0.into(),
                 0.0,
                 0.0,
@@ -217,7 +208,7 @@ impl World {
         }
         // entity meta data
         // set skin parts
-        if let Some(config) = player.client.config.lock().unwrap().as_ref() {
+        if let Some(config) = player.client.config.lock().as_ref() {
             let packet = CSetEntityMetadata::new(
                 entity_id.into(),
                 Metadata::new(17, VarInt(0), config.skin_parts),
@@ -239,9 +230,7 @@ impl World {
         let level = self.level.clone();
         let closed = client.closed.load(std::sync::atomic::Ordering::Relaxed);
         let chunks = Arc::new(chunks);
-        tokio::task::spawn_blocking(move || {
-            level.lock().unwrap().fetch_chunks(&chunks, sender, closed)
-        });
+        tokio::task::spawn_blocking(move || level.lock().fetch_chunks(&chunks, sender, closed));
 
         while let Some(chunk_data) = chunk_receiver.recv().await {
             // dbg!(chunk_pos);
@@ -273,7 +262,6 @@ impl World {
         for (_, player) in self
             .current_players
             .lock()
-            .unwrap()
             .iter()
             .filter(|c| c.0 != &from.client.token)
         {
@@ -285,13 +273,12 @@ impl World {
     }
 
     pub fn add_player(&self, token: Token, player: Arc<Player>) {
-        self.current_players.lock().unwrap().insert(token, player);
+        self.current_players.lock().insert(token, player);
     }
 
     pub fn remove_player(&self, player: &Player) {
         self.current_players
             .lock()
-            .unwrap()
             .remove(&player.client.token)
             .unwrap();
         let uuid = player.gameprofile.id;

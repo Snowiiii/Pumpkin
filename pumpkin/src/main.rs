@@ -170,7 +170,9 @@ fn main() -> io::Result<()> {
                             if closed {
                                 if let Some(player) = players.remove(&token) {
                                     player.remove().await;
-                                    let connection = &mut player.client.connection.lock().unwrap();
+                                    dbg!("b");
+                                    let connection = &mut player.client.connection.lock();
+                                    dbg!("c");
 
                                     poll.registry().deregister(connection.by_ref())?;
                                 }
@@ -198,7 +200,7 @@ fn main() -> io::Result<()> {
                         if done || make_player {
                             if let Some(client) = clients.remove(&token) {
                                 if done {
-                                    let connection = &mut client.connection.lock().unwrap();
+                                    let connection = &mut client.connection.lock();
                                     poll.registry().deregister(connection.by_ref())?;
                                 } else if make_player {
                                     let token = client.token;

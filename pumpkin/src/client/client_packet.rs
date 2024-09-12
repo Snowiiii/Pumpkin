@@ -42,10 +42,9 @@ impl Client {
         let version = handshake.protocol_version.0;
         self.protocol_version
             .store(version, std::sync::atomic::Ordering::Relaxed);
-        let mut connection_state = self.connection_state.lock().unwrap();
 
-        *connection_state = handshake.next_state;
-        if *connection_state != ConnectionState::Status {
+        self.connection_state.store(handshake.next_state);
+        if self.connection_state.load() != ConnectionState::Status {
             let protocol = version;
             match protocol.cmp(&(CURRENT_MC_PROTOCOL as i32)) {
                 std::cmp::Ordering::Less => {
@@ -85,7 +84,7 @@ impl Client {
         }
         // default game profile, when no online mode
         // TODO: make offline uuid
-        let mut gameprofile = self.gameprofile.lock().unwrap();
+        let mut gameprofile = self.gameprofile.lock();
         *gameprofile = Some(GameProfile {
             id: login_start.uuid,
             name: login_start.name,
@@ -125,7 +124,7 @@ impl Client {
         self.enable_encryption(&shared_secret)
             .unwrap_or_else(|e| self.kick(&e.to_string()));
 
-        let mut gameprofile = self.gameprofile.lock().unwrap();
+        let mut gameprofile = self.gameprofile.lock();
 
         if BASIC_CONFIG.online_mode {
             let hash = Sha1::new()
@@ -133,7 +132,7 @@ impl Client {
                 .chain_update(&server.public_key_der)
                 .finalize();
             let hash = auth_digest(&hash);
-            let ip = self.address.lock().unwrap().ip();
+            let ip = self.address.lock().ip();
             match authentication::authenticate(
                 &gameprofile.as_ref().unwrap().name,
                 &hash,
@@ -204,7 +203,7 @@ impl Client {
         server: &Arc<Server>,
         _login_acknowledged: SLoginAcknowledged,
     ) {
-        *self.connection_state.lock().unwrap() = ConnectionState::Config;
+        self.connection_state.store(ConnectionState::Config);
         server.send_brand(self);
 
         let resource_config = &ADVANCED_CONFIG.resource_pack;
@@ -240,7 +239,7 @@ impl Client {
         client_information: SClientInformationConfig,
     ) {
         dbg!("got client settings");
-        *self.config.lock().unwrap() = Some(PlayerConfig {
+        *self.config.lock() = Some(PlayerConfig {
             locale: client_information.locale,
             view_distance: client_information.view_distance,
             chat_mode: ChatMode::from_i32(client_information.chat_mode.into()).unwrap(),
@@ -258,7 +257,7 @@ impl Client {
         {
             dbg!("got a client brand");
             match String::from_utf8(plugin_message.data) {
-                Ok(brand) => *self.brand.lock().unwrap() = Some(brand),
+                Ok(brand) => *self.brand.lock() = Some(brand),
                 Err(e) => self.kick(&e.to_string()),
             }
         }
@@ -283,7 +282,7 @@ impl Client {
         _config_acknowledged: SAcknowledgeFinishConfig,
     ) {
         dbg!("config acknowledged");
-        *self.connection_state.lock().unwrap() = ConnectionState::Play;
+        self.connection_state.store(ConnectionState::Play);
         self.make_player
             .store(true, std::sync::atomic::Ordering::Relaxed);
     }

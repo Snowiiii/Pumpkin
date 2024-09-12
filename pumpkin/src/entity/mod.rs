@@ -1,5 +1,6 @@
-use std::sync::{atomic::AtomicBool, Arc, Mutex};
+use std::sync::{atomic::AtomicBool, Arc};
 
+use crossbeam::atomic::AtomicCell;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::ToPrimitive;
 use pumpkin_core::math::{
@@ -23,14 +24,14 @@ pub struct Entity {
     /// The world in which the entity exists.
     pub world: Arc<World>,
     /// The entity's current health level.
-    pub health: Mutex<f32>,
+    pub health: AtomicCell<f32>,
 
     /// The entity's current position in the world
-    pub pos: Mutex<Vector3<f64>>,
+    pub pos: AtomicCell<Vector3<f64>>,
     /// The entity's position rounded to the nearest block coordinates
-    pub block_pos: Mutex<WorldPosition>,
+    pub block_pos: AtomicCell<WorldPosition>,
     /// The chunk coordinates of the entity's current position
-    pub chunk_pos: Mutex<Vector2<i32>>,
+    pub chunk_pos: AtomicCell<Vector2<i32>>,
 
     /// Indicates whether the entity is sneaking
     pub sneaking: AtomicBool,
@@ -38,23 +39,23 @@ pub struct Entity {
     pub sprinting: AtomicBool,
     /// Indicates whether the entity is flying due to a fall
     pub fall_flying: AtomicBool,
+
     /// The entity's current velocity vector, aka Knockback
-    pub velocity: Mutex<Vector3<f64>>,
+    pub velocity: AtomicCell<Vector3<f64>>,
 
     /// Indicates whether the entity is on the ground (may not always be accurate).
     pub on_ground: AtomicBool,
 
     /// The entity's yaw rotation (horizontal rotation) ← →
-    pub yaw: Mutex<f32>,
+    pub yaw: AtomicCell<f32>,
     /// The entity's head yaw rotation (horizontal rotation of the head)
-    pub head_yaw: Mutex<f32>,
+    pub head_yaw: AtomicCell<f32>,
     /// The entity's pitch rotation (vertical rotation) ↑ ↓
-    pub pitch: Mutex<f32>,
+    pub pitch: AtomicCell<f32>,
     /// The height of the entity's eyes from the ground.
-    // TODO: Change this in diffrent poses
     pub standing_eye_height: f32,
     /// The entity's current pose (e.g., standing, sitting, swimming).
-    pub pose: Mutex<EntityPose>,
+    pub pose: AtomicCell<EntityPose>,
 }
 
 impl Entity {
@@ -68,21 +69,21 @@ impl Entity {
             entity_id,
             entity_type,
             on_ground: AtomicBool::new(false),
-            pos: Mutex::new(Vector3::new(0.0, 0.0, 0.0)),
-            block_pos: Mutex::new(WorldPosition(Vector3::new(0, 0, 0))),
-            chunk_pos: Mutex::new(Vector2::new(0, 0)),
+            pos: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
+            block_pos: AtomicCell::new(WorldPosition(Vector3::new(0, 0, 0))),
+            chunk_pos: AtomicCell::new(Vector2::new(0, 0)),
             sneaking: AtomicBool::new(false),
             world,
             // TODO: Load this from previous instance
-            health: Mutex::new(20.0),
+            health: AtomicCell::new(20.0),
             sprinting: AtomicBool::new(false),
             fall_flying: AtomicBool::new(false),
-            yaw: Mutex::new(0.0),
-            head_yaw: Mutex::new(0.0),
-            pitch: Mutex::new(0.0),
-            velocity: Mutex::new(Vector3::new(0.0, 0.0, 0.0)),
+            yaw: AtomicCell::new(0.0),
+            head_yaw: AtomicCell::new(0.0),
+            pitch: AtomicCell::new(0.0),
+            velocity: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
             standing_eye_height,
-            pose: Mutex::new(EntityPose::Standing),
+            pose: AtomicCell::new(EntityPose::Standing),
         }
     }
 
@@ -90,24 +91,24 @@ impl Entity {
     ///
     /// This function calculates the new position, block position, and chunk position based on the provided coordinates. If any of these values change, the corresponding fields are updated.
     pub fn set_pos(&self, x: f64, y: f64, z: f64) {
-        let mut pos = self.pos.lock().unwrap();
+        let pos = self.pos.load();
         if pos.x != x || pos.y != y || pos.z != z {
-            *pos = Vector3::new(x, y, z);
+            self.pos.store(Vector3::new(x, y, z));
             let i = x.floor() as i32;
             let j = y.floor() as i32;
             let k = z.floor() as i32;
 
-            let mut block_pos = self.block_pos.lock().unwrap();
+            let block_pos = self.block_pos.load();
             let block_pos_vec = block_pos.0;
             if i != block_pos_vec.x || j != block_pos_vec.y || k != block_pos_vec.z {
-                *block_pos = WorldPosition(Vector3::new(i, j, k));
+                self.block_pos.store(WorldPosition(Vector3::new(i, j, k)));
 
-                let mut chunk_pos = self.chunk_pos.lock().unwrap();
+                let chunk_pos = self.chunk_pos.load();
                 if get_section_cord(i) != chunk_pos.x || get_section_cord(k) != chunk_pos.z {
-                    *chunk_pos = Vector2::new(
+                    self.chunk_pos.store(Vector2::new(
                         get_section_cord(block_pos_vec.x),
                         get_section_cord(block_pos_vec.z),
-                    );
+                    ));
                 }
             }
         }
@@ -116,8 +117,8 @@ impl Entity {
     /// Sets the Entity yaw & pitch Rotation
     pub fn set_rotation(&self, yaw: f32, pitch: f32) {
         // TODO
-        *self.yaw.lock().unwrap() = yaw;
-        *self.pitch.lock().unwrap() = pitch
+        self.yaw.store(yaw);
+        self.pitch.store(pitch);
     }
 
     /// Removes the Entity from their current World
@@ -138,8 +139,8 @@ impl Entity {
         }
 
         let var8 = Vector3::new(x, 0.0, z).normalize() * strength;
-        let mut velocity = self.velocity.lock().unwrap();
-        *velocity = Vector3::new(
+        let velocity = self.velocity.load();
+        self.velocity.store(Vector3::new(
             velocity.x / 2.0 - var8.x,
             if self.on_ground.load(std::sync::atomic::Ordering::Relaxed) {
                 (velocity.y / 2.0 + strength).min(0.4)
@@ -147,7 +148,7 @@ impl Entity {
                 velocity.y
             },
             velocity.z / 2.0 - var8.z,
-        );
+        ));
     }
 
     pub async fn set_sneaking(&self, sneaking: bool) {
@@ -193,7 +194,7 @@ impl Entity {
     }
 
     pub async fn set_pose(&self, pose: EntityPose) {
-        *self.pose.lock().unwrap() = pose;
+        self.pose.store(pose);
         let pose = pose as i32;
         let packet = CSetEntityMetadata::<VarInt>::new(
             self.entity_id.into(),

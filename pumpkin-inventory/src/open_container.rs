@@ -1,6 +1,7 @@
 use crate::{Container, WindowType};
+use parking_lot::Mutex;
 use pumpkin_world::item::ItemStack;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 pub struct OpenContainer {
     players: Vec<i32>,
