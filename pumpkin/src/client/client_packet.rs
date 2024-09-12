@@ -6,8 +6,8 @@ use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
     client::{
         config::{CConfigAddResourcePack, CFinishConfig, CKnownPacks, CRegistryData},
-        login::{CEncryptionRequest, CLoginSuccess, CSetCompression},
-        status::{CPingResponse, CStatusResponse},
+        login::{CLoginSuccess, CSetCompression},
+        status::CPingResponse,
     },
     server::{
         config::{SAcknowledgeFinishConfig, SClientInformationConfig, SKnownPacks, SPluginMessage},
@@ -17,8 +17,7 @@ use pumpkin_protocol::{
     },
     ConnectionState, KnownPack, CURRENT_MC_PROTOCOL,
 };
-use rsa::Pkcs1v15Encrypt;
-use sha1::{Digest, Sha1};
+use uuid::Uuid;
 
 use crate::{
     client::authentication::{self, GameProfile},
@@ -27,10 +26,7 @@ use crate::{
     server::{Server, CURRENT_MC_VERSION},
 };
 
-use super::{
-    authentication::{auth_digest, unpack_textures},
-    Client, EncryptionError, PlayerConfig,
-};
+use super::{authentication::unpack_textures, Client, PlayerConfig};
 
 /// Processes incoming Packets from the Client to the Server
 /// Implements the `Client` Packets
@@ -59,7 +55,7 @@ impl Client {
     }
 
     pub fn handle_status_request(&self, server: &Arc<Server>, _status_request: SStatusRequest) {
-        self.send_packet(&CStatusResponse::new(&server.status_response_json));
+        self.send_packet(&server.get_status());
     }
 
     pub fn handle_ping_request(&self, _server: &Arc<Server>, ping_request: SStatusPingRequest) {
@@ -101,14 +97,7 @@ impl Client {
 
         // TODO: check config for encryption
         let verify_token: [u8; 4] = rand::random();
-        let public_key_der = &server.public_key_der;
-        let packet = CEncryptionRequest::new(
-            "",
-            public_key_der,
-            &verify_token,
-            BASIC_CONFIG.online_mode, // TODO
-        );
-        self.send_packet(&packet);
+        self.send_packet(&server.encryption_request(&verify_token, BASIC_CONFIG.online_mode));
     }
 
     pub async fn handle_encryption_response(
@@ -116,22 +105,15 @@ impl Client {
         server: &Arc<Server>,
         encryption_response: SEncryptionResponse,
     ) {
-        let shared_secret = server
-            .private_key
-            .decrypt(Pkcs1v15Encrypt, &encryption_response.shared_secret)
-            .map_err(|_| EncryptionError::FailedDecrypt)
-            .unwrap();
+        let shared_secret = server.decrypt(&encryption_response.shared_secret).unwrap();
+
         self.enable_encryption(&shared_secret)
             .unwrap_or_else(|e| self.kick(&e.to_string()));
 
         let mut gameprofile = self.gameprofile.lock();
 
         if BASIC_CONFIG.online_mode {
-            let hash = Sha1::new()
-                .chain_update(&shared_secret)
-                .chain_update(&server.public_key_der)
-                .finalize();
-            let hash = auth_digest(&hash);
+            let hash = server.digest_secret(&shared_secret);
             let ip = self.address.lock().ip();
             match authentication::authenticate(
                 &gameprofile.as_ref().unwrap().name,
@@ -204,25 +186,26 @@ impl Client {
         _login_acknowledged: SLoginAcknowledged,
     ) {
         self.connection_state.store(ConnectionState::Config);
-        server.send_brand(self);
+        self.send_packet(&server.get_branding());
 
         let resource_config = &ADVANCED_CONFIG.resource_pack;
         if resource_config.enabled {
-            let prompt_message = if resource_config.prompt_message.is_empty() {
-                None
-            } else {
-                Some(TextComponent::text(&resource_config.prompt_message))
-            };
-            self.send_packet(&CConfigAddResourcePack::new(
-                pumpkin_protocol::uuid::UUID(uuid::Uuid::new_v3(
+            let resource_pack = CConfigAddResourcePack::new(
+                Uuid::new_v3(
                     &uuid::Uuid::NAMESPACE_DNS,
                     resource_config.resource_pack_url.as_bytes(),
-                )),
+                ),
                 &resource_config.resource_pack_url,
                 &resource_config.resource_pack_sha1,
                 resource_config.force,
-                prompt_message,
-            ));
+                if !resource_config.prompt_message.is_empty() {
+                    Some(TextComponent::text(&resource_config.prompt_message))
+                } else {
+                    None
+                },
+            );
+
+            self.send_packet(&resource_pack);
         }
 
         // known data packs
@@ -231,7 +214,7 @@ impl Client {
             id: "core",
             version: "1.21",
         }]));
-        dbg!("login achnowlaged");
+        dbg!("login acknowledged");
     }
     pub fn handle_client_information_config(
         &self,

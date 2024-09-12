@@ -1,20 +1,17 @@
-use base64::{engine::general_purpose, Engine};
-use image::GenericImageView;
+use connection_cache::{CachedBranding, CachedStatus};
+use key_store::KeyStore;
 use mio::Token;
 use parking_lot::{Mutex, RwLock};
-use pumpkin_config::{BasicConfiguration, BASIC_CONFIG};
+use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
 use pumpkin_plugin::PluginLoader;
-use pumpkin_protocol::{
-    client::config::CPluginMessage, ClientPacket, Players, Sample, StatusResponse, VarInt, Version,
-    CURRENT_MC_PROTOCOL,
-};
+use pumpkin_protocol::client::login::CEncryptionRequest;
+use pumpkin_protocol::client::status::CStatusResponse;
+use pumpkin_protocol::{client::config::CPluginMessage, ClientPacket};
 use pumpkin_world::dimension::Dimension;
 use std::collections::HashMap;
 use std::{
-    io::Cursor,
-    path::Path,
     sync::{
         atomic::{AtomicI32, Ordering},
         Arc,
@@ -25,8 +22,8 @@ use std::{
 use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::{Container, OpenContainer};
 use pumpkin_registry::Registry;
-use rsa::{traits::PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 
+use crate::client::EncryptionError;
 use crate::{
     client::Client,
     commands::{default_dispatcher, dispatcher::CommandDispatcher},
@@ -34,25 +31,18 @@ use crate::{
     world::World,
 };
 
+mod connection_cache;
+mod key_store;
 pub const CURRENT_MC_VERSION: &str = "1.21.1";
 
 pub struct Server {
-    pub public_key: RsaPublicKey,
-    pub private_key: RsaPrivateKey,
-    pub public_key_der: Box<[u8]>,
-
+    key_store: KeyStore,
+    server_listing: CachedStatus,
+    server_branding: CachedBranding,
     pub plugin_loader: PluginLoader,
 
     pub command_dispatcher: Arc<CommandDispatcher<'static>>,
-
     pub worlds: Vec<Arc<World>>,
-    pub status_response: StatusResponse,
-    // We cache the json response here so we don't parse it every time someone makes a Status request.
-    // Keep in mind that we must parse this again, when the StatusResponse changes which usally happen when a player joins or leaves
-    pub status_response_json: String,
-
-    /// Cache the Server brand buffer so we don't have to rebuild them every time a player joins
-    pub cached_server_brand: Vec<u8>,
 
     /// Cache the registry so we don't have to parse it every time a player joins
     pub cached_registry: Vec<Registry>,
@@ -68,20 +58,8 @@ pub struct Server {
 impl Server {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        let status_response = Self::build_response(&BASIC_CONFIG);
-        let status_response_json = serde_json::to_string(&status_response)
-            .expect("Failed to parse Status response into JSON");
-        let cached_server_brand = Self::build_brand();
-
         // TODO: only create when needed
-        log::debug!("Creating encryption keys...");
-        let (public_key, private_key) = Self::generate_keys();
 
-        let public_key_der = rsa_der::public_key_to_der(
-            &private_key.n().to_bytes_be(),
-            &private_key.e().to_bytes_be(),
-        )
-        .into_boxed_slice();
         let auth_client = if BASIC_CONFIG.online_mode {
             Some(
                 reqwest::Client::builder()
@@ -110,14 +88,11 @@ impl Server {
             // 0 is invalid
             entity_id: 2.into(),
             worlds: vec![Arc::new(world)],
-            public_key,
-            cached_server_brand,
-            private_key,
             command_dispatcher: Arc::new(command_dispatcher),
-            status_response,
-            status_response_json,
-            public_key_der,
             auth_client,
+            key_store: KeyStore::new(),
+            server_listing: CachedStatus::new(),
+            server_branding: CachedBranding::new(),
         }
     }
 
@@ -127,7 +102,7 @@ impl Server {
             GameMode::Undefined => GameMode::Survival,
             game_mode => game_mode,
         };
-        // Basicly the default world
+        // Basically the default world
         // TODO: select default from config
         let world = self.worlds[0].clone();
 
@@ -174,71 +149,28 @@ impl Server {
         self.entity_id.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn build_brand() -> Vec<u8> {
-        let brand = "Pumpkin";
-        let mut buf = vec![];
-        let _ = VarInt(brand.len() as i32).encode(&mut buf);
-        buf.extend_from_slice(brand.as_bytes());
-        buf
+    pub fn get_branding(&self) -> CPluginMessage<'_> {
+        self.server_branding.get_branding()
     }
 
-    pub fn send_brand(&self, client: &Client) {
-        // send server brand
-        client.send_packet(&CPluginMessage::new(
-            "minecraft:brand",
-            &self.cached_server_brand,
-        ));
+    pub fn get_status(&self) -> CStatusResponse<'_> {
+        self.server_listing.get_status()
     }
 
-    pub fn build_response(config: &BasicConfiguration) -> StatusResponse {
-        let icon_path = concat!(env!("CARGO_MANIFEST_DIR"), "/icon.png");
-        let icon = if Path::new(icon_path).exists() {
-            Some(Self::load_icon(icon_path))
-        } else {
-            None
-        };
-
-        StatusResponse {
-            version: Some(Version {
-                name: CURRENT_MC_VERSION.into(),
-                protocol: CURRENT_MC_PROTOCOL,
-            }),
-            players: Some(Players {
-                max: config.max_players,
-                online: 0,
-                sample: vec![Sample {
-                    name: "".into(),
-                    id: "".into(),
-                }],
-            }),
-            description: config.motd.clone(),
-            favicon: icon,
-            // TODO
-            enforece_secure_chat: false,
-        }
+    pub fn encryption_request<'a>(
+        &'a self,
+        verification_token: &'a [u8; 4],
+        should_authenticate: bool,
+    ) -> CEncryptionRequest<'_> {
+        self.key_store
+            .encryption_request("", verification_token, should_authenticate)
     }
 
-    pub fn load_icon(path: &str) -> String {
-        let icon = match image::open(path).map_err(|e| panic!("error loading icon: {}", e)) {
-            Ok(icon) => icon,
-            Err(_) => return "".into(),
-        };
-        let dimension = icon.dimensions();
-        assert!(dimension.0 == 64, "Icon width must be 64");
-        assert!(dimension.1 == 64, "Icon height must be 64");
-        let mut image = Vec::with_capacity(64 * 64 * 4);
-        icon.write_to(&mut Cursor::new(&mut image), image::ImageFormat::Png)
-            .unwrap();
-        let mut result = "data:image/png;base64,".to_owned();
-        general_purpose::STANDARD.encode_string(image, &mut result);
-        result
+    pub fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, EncryptionError> {
+        self.key_store.decrypt(data)
     }
 
-    pub fn generate_keys() -> (RsaPublicKey, RsaPrivateKey) {
-        let mut rng = rand::thread_rng();
-
-        let priv_key = RsaPrivateKey::new(&mut rng, 1024).expect("failed to generate a key");
-        let pub_key = RsaPublicKey::from(&priv_key);
-        (pub_key, priv_key)
+    pub fn digest_secret(&self, secret: &[u8]) -> String {
+        self.key_store.get_digest(secret)
     }
 }
