@@ -161,7 +161,8 @@ impl Server {
         }
     }
 
-    // move to world
+    /// Generates a new entity id
+    /// This should be global
     pub fn new_entity_id(&self) -> EntityId {
         self.entity_id.fetch_add(1, Ordering::SeqCst)
     }
@@ -191,20 +192,22 @@ impl Server {
         };
 
         StatusResponse {
-            version: Version {
+            version: Some(Version {
                 name: CURRENT_MC_VERSION.into(),
                 protocol: CURRENT_MC_PROTOCOL,
-            },
-            players: Players {
+            }),
+            players: Some(Players {
                 max: config.max_players,
                 online: 0,
                 sample: vec![Sample {
                     name: "".into(),
                     id: "".into(),
                 }],
-            },
+            }),
             description: config.motd.clone(),
             favicon: icon,
+            // TODO
+            enforece_secure_chat: false,
         }
     }
 

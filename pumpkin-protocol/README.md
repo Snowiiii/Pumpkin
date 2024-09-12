@@ -69,4 +69,8 @@ Thats a Serverbound packet
 pub struct CPlayDisconnect {
     reason: TextComponent,
 }
-``
+```
+
+### Porting
+You can compare difference in Protocol on wiki.vg https://wiki.vg/index.php?title=Protocol&action=history
+Also change the `CURRENT_MC_PROTOCOL` in `src/lib.rs`

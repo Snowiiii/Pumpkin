@@ -18,7 +18,15 @@ use crate::{
     world_gen::{get_world_gen, Seed, WorldGenerator},
 };
 
-/// The Level represents a single Dimension.
+/// The `Level` module provides functionality for working with chunks within or outside a Minecraft world.
+///
+/// Key features include:
+///
+/// - **Chunk Loading:** Efficiently loads chunks from disk (Anvil format).
+/// - **Chunk Caching:** Stores accessed chunks in memory for faster access.
+/// - **Chunk Generation:** Generates new chunks on-demand using a specified `WorldGenerator`.
+///
+/// For more details on world generation, refer to the `WorldGenerator` module.
 pub struct Level {
     save_file: Option<SaveFile>,
     loaded_chunks: Arc<Mutex<HashMap<Vector2<i32>, Arc<ChunkData>>>>,
@@ -125,17 +133,6 @@ impl Level {
             }
         }
     }
-
-    // /// Read one chunk in the world
-    // ///
-    // /// Do not use this function if reading many chunks is required, since in case those two chunks which are read separately using `.read_chunk` are in the same region file, it will need to be opened and closed separately for both of them, leading to a performance loss.
-    // pub async fn read_chunk(&self, chunk: (i32, i32)) -> Result<ChunkData, WorldError> {
-    //     self.read_chunks(vec![chunk])
-    //         .await
-    //         .pop()
-    //         .expect("Read chunks must return a chunk")
-    //         .1
-    // }
 
     /// Reads/Generates many chunks in a world
     /// MUST be called from a tokio runtime thread

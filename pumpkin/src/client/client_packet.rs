@@ -171,9 +171,9 @@ impl Client {
                 Err(e) => self.kick(&e.to_string()),
             }
         }
-        for ele in gameprofile.as_ref().unwrap().properties.clone() {
-            // todo, use this
-            unpack_textures(ele, &ADVANCED_CONFIG.authentication.textures);
+        for property in gameprofile.as_ref().unwrap().properties.clone() {
+            unpack_textures(property, &ADVANCED_CONFIG.authentication.textures)
+                .unwrap_or_else(|e| self.kick(&e.to_string()));
         }
 
         // enable compression

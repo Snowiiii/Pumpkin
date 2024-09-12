@@ -26,10 +26,21 @@ use crate::{
     entity::{player::Player, Entity},
 };
 
+/// Represents a Minecraft world, containing entities, players, and the underlying level data.
+///
+/// Each dimension (Overworld, Nether, End) typically has its own `World`.
+///
+/// **Key Responsibilities:**
+///
+/// - Manages the `Level` instance for handling chunk-related operations.
+/// - Stores and tracks active `Player` entities within the world.
+/// - Provides a central hub for interacting with the world's entities and environment.
 pub struct World {
+    /// The underlying level, responsible for chunk management and terrain generation.
     pub level: Arc<Mutex<Level>>,
+    /// A map of active players within the world, keyed by their unique token.
     pub current_players: Arc<Mutex<HashMap<Token, Arc<Player>>>>,
-    // entities, players...
+    // TODO: entities
 }
 
 impl World {
@@ -40,7 +51,11 @@ impl World {
         }
     }
 
-    /// Sends a Packet to all Players in the World
+    /// Broadcasts a packet to all connected players within the world.
+    ///
+    /// Sends the specified packet to every player currently logged in to the server.
+    ///
+    /// **Note:** This function acquires a lock on the `current_players` map, ensuring thread safety.
     pub fn broadcast_packet_all<P>(&self, packet: &P)
     where
         P: ClientPacket,
@@ -51,7 +66,11 @@ impl World {
         }
     }
 
-    /// Sends a Packet to all Players in the World, Expect the Players given the the expect parameter
+    /// Broadcasts a packet to all connected players within the world, excluding the specified players.
+    ///
+    /// Sends the specified packet to every player currently logged in to the server, excluding the players listed in the `except` parameter.
+    ///
+    /// **Note:** This function acquires a lock on the `current_players` map, ensuring thread safety.
     pub fn broadcast_packet_expect<P>(&self, except: &[Token], packet: &P)
     where
         P: ClientPacket,

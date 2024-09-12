@@ -13,6 +13,8 @@ use crate::{
 type Cipher = cfb8::Decryptor<aes::Aes128>;
 
 // Decoder: Client -> Server
+// Supports ZLib decoding/decompression
+// Supports Aes128 Encyption
 #[derive(Default)]
 pub struct PacketDecoder {
     buf: BytesMut,
@@ -105,6 +107,7 @@ impl PacketDecoder {
         self.cipher = Some(cipher);
     }
 
+    /// Enables ZLib Deompression
     pub fn set_compression(&mut self, compression: Option<u32>) {
         self.compression = compression;
     }
