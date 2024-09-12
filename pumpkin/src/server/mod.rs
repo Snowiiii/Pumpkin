@@ -1,4 +1,4 @@
-use bikeshed_key_store::BikeShedKeyStore;
+use key_store::KeyStore;
 use bikeshed_server_listing::BikeShedServerListing;
 use mio::Token;
 use parking_lot::{Mutex, RwLock};
@@ -31,13 +31,11 @@ use crate::{
     world::World,
 };
 
-mod bikeshed_key_store;
-mod bikeshed_server_listing;
+mod key_store;
 pub const CURRENT_MC_VERSION: &str = "1.21.1";
 
 pub struct Server {
-    key_store: BikeShedKeyStore,
-    server_listing: BikeShedServerListing,
+    key_store: KeyStore,
     pub plugin_loader: PluginLoader,
 
     pub command_dispatcher: Arc<CommandDispatcher<'static>>,
@@ -58,7 +56,7 @@ impl Server {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         // TODO: only create when needed
-        let key_store = BikeShedKeyStore::new();
+
         let server_listing = BikeShedServerListing::new();
         let auth_client = if BASIC_CONFIG.online_mode {
             Some(
@@ -90,7 +88,7 @@ impl Server {
             worlds: vec![Arc::new(world)],
             command_dispatcher: Arc::new(command_dispatcher),
             auth_client,
-            key_store,
+            key_store: KeyStore::new(),
             server_listing,
         }
     }

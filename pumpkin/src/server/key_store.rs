@@ -6,13 +6,13 @@ use sha2::Digest;
 
 use crate::client::EncryptionError;
 
-pub struct BikeShedKeyStore {
+pub struct KeyStore {
     pub _public_key: RsaPublicKey,
     pub private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,
 }
 
-impl BikeShedKeyStore {
+impl KeyStore {
     pub fn new() -> Self {
         log::debug!("Creating encryption keys...");
         let (public_key, private_key) = Self::generate_keys();
@@ -22,7 +22,7 @@ impl BikeShedKeyStore {
             &private_key.e().to_bytes_be(),
         )
         .into_boxed_slice();
-        BikeShedKeyStore {
+        KeyStore {
             _public_key: public_key,
             private_key,
             public_key_der,
