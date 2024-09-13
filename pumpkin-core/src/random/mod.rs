@@ -11,7 +11,7 @@ pub enum RandomGenerator {
 }
 
 impl RandomGenerator {
-    #[inline(always)]
+    #[inline]
     pub fn split(&mut self) -> Self {
         match self {
             Self::Xoroshiro(rand) => Self::Xoroshiro(rand.split()),
@@ -19,7 +19,7 @@ impl RandomGenerator {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn next_splitter(&mut self) -> RandomDeriver {
         match self {
             Self::Xoroshiro(rand) => RandomDeriver::Xoroshiro(rand.next_splitter()),
@@ -27,7 +27,7 @@ impl RandomGenerator {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn next(&mut self, bits: u64) -> u64 {
         match self {
             Self::Xoroshiro(rand) => rand.next(bits),
@@ -35,7 +35,7 @@ impl RandomGenerator {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn next_i32(&mut self) -> i32 {
         match self {
             Self::Xoroshiro(rand) => rand.next_i32(),
@@ -43,7 +43,7 @@ impl RandomGenerator {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn next_bounded_i32(&mut self, bound: i32) -> i32 {
         match self {
             Self::Xoroshiro(rand) => rand.next_bounded_i32(bound),
@@ -51,12 +51,12 @@ impl RandomGenerator {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn next_inbetween_i32(&mut self, min: i32, max: i32) -> i32 {
         self.next_bounded_i32(max - min + 1) + min
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn next_i64(&mut self) -> i64 {
         match self {
             Self::Xoroshiro(rand) => rand.next_i64(),
@@ -64,7 +64,7 @@ impl RandomGenerator {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn next_bool(&mut self) -> bool {
         match self {
             Self::Xoroshiro(rand) => rand.next_bool(),
@@ -72,7 +72,7 @@ impl RandomGenerator {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn next_f32(&mut self) -> f32 {
         match self {
             Self::Xoroshiro(rand) => rand.next_f32(),
@@ -80,7 +80,7 @@ impl RandomGenerator {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn next_f64(&mut self) -> f64 {
         match self {
             Self::Xoroshiro(rand) => rand.next_f64(),
@@ -88,7 +88,7 @@ impl RandomGenerator {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn next_gaussian(&mut self) -> f64 {
         match self {
             Self::Xoroshiro(rand) => rand.next_gaussian(),
@@ -96,19 +96,19 @@ impl RandomGenerator {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn next_triangular(&mut self, mode: f64, deviation: f64) -> f64 {
         mode + deviation * (self.next_f64() - self.next_f64())
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn skip(&mut self, count: i32) {
         for _ in 0..count {
             self.next_i64();
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn next_inbetween_i32_exclusive(&mut self, min: i32, max: i32) -> i32 {
         min + self.next_bounded_i32(max - min)
     }
@@ -120,7 +120,7 @@ pub enum RandomDeriver {
 }
 
 impl RandomDeriver {
-    #[inline(always)]
+    #[inline]
     pub fn split_string(&self, seed: &str) -> RandomGenerator {
         match self {
             Self::Xoroshiro(deriver) => RandomGenerator::Xoroshiro(deriver.split_string(seed)),
@@ -128,7 +128,7 @@ impl RandomDeriver {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn split_u64(&self, seed: u64) -> RandomGenerator {
         match self {
             Self::Xoroshiro(deriver) => RandomGenerator::Xoroshiro(deriver.split_u64(seed)),
@@ -136,7 +136,7 @@ impl RandomDeriver {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn split_pos(&self, x: i32, y: i32, z: i32) -> RandomGenerator {
         match self {
             Self::Xoroshiro(deriver) => RandomGenerator::Xoroshiro(deriver.split_pos(x, y, z)),

@@ -167,10 +167,7 @@ impl OctavePerlinNoiseSampler {
         let mut e = persistence;
 
         for amplitude in amplitudes.iter() {
-            if *amplitude != 0f64 {
-                d += amplitude * scale * e;
-            }
-
+            d += amplitude * scale * e;
             e /= 2f64;
         }
 
