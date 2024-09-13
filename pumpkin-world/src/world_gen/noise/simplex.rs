@@ -1,5 +1,5 @@
 use num_traits::Pow;
-use pumpkin_core::random::{legacy_rand::LegacyRand, Random};
+use pumpkin_core::random::{legacy_rand::LegacyRand, RandomImpl};
 
 use super::{dot, GRADIENTS};
 
@@ -16,7 +16,7 @@ impl SimplexNoiseSampler {
     const UNSKEW_FACTOR_2D: f64 = (3f64 - Self::SQRT_3) / 6f64;
 
     #[allow(dead_code)]
-    pub fn new(random: &mut impl Random) -> Self {
+    pub fn new(random: &mut impl RandomImpl) -> Self {
         let x_origin = random.next_f64() * 256f64;
         let y_origin = random.next_f64() * 256f64;
         let z_origin = random.next_f64() * 256f64;
@@ -179,7 +179,7 @@ pub struct OctaveSimplexNoiseSampler {
 
 impl OctaveSimplexNoiseSampler {
     #[allow(dead_code)]
-    pub fn new(random: &mut impl Random, octaves: &[i32]) -> Self {
+    pub fn new(random: &mut impl RandomImpl, octaves: &[i32]) -> Self {
         let mut octaves = Vec::from_iter(octaves);
         octaves.sort();
 
@@ -253,7 +253,7 @@ impl OctaveSimplexNoiseSampler {
 
 #[cfg(test)]
 mod octave_simplex_noise_sampler_test {
-    use pumpkin_core::random::{xoroshiro128::Xoroshiro, Random};
+    use pumpkin_core::random::{xoroshiro128::Xoroshiro, RandomImpl};
 
     use crate::world_gen::noise::simplex::OctaveSimplexNoiseSampler;
 
@@ -390,7 +390,7 @@ mod octave_simplex_noise_sampler_test {
 mod simplex_noise_sampler_test {
     use std::ops::Deref;
 
-    use pumpkin_core::random::{xoroshiro128::Xoroshiro, Random};
+    use pumpkin_core::random::{xoroshiro128::Xoroshiro, RandomImpl};
 
     use crate::world_gen::noise::simplex::SimplexNoiseSampler;
 
