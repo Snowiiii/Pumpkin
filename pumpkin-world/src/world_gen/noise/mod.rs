@@ -13,6 +13,8 @@ pub fn lerp2(delta_x: f64, delta_y: f64, x0y0: f64, x1y0: f64, x0y1: f64, x1y1: 
     )
 }
 
+#[allow(dead_code)]
+#[allow(clippy::too_many_arguments)]
 pub fn lerp3(
     delta_x: f64,
     delta_y: f64,

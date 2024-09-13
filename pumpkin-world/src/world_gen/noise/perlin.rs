@@ -1,5 +1,8 @@
-use num_traits::{Pow, WrappingSub};
-use pumpkin_core::random::{Random, RandomSplitter};
+use itertools::Itertools;
+use num_traits::{Pow, Zero};
+use pumpkin_core::random::{
+    legacy_rand::LegacyRand, xoroshiro128::Xoroshiro, Random, RandomSplitter,
+};
 
 use super::{dot, lerp3, GRADIENTS};
 
@@ -36,6 +39,7 @@ impl PerlinNoiseSampler {
         }
     }
 
+    #[allow(dead_code)]
     pub fn sample_flat_y(&self, x: f64, y: f64, z: f64) -> f64 {
         self.sample_no_fade(x, y, z, 0f64, 0f64)
     }
@@ -76,7 +80,7 @@ impl PerlinNoiseSampler {
     }
 
     fn map(&self, input: i32) -> i32 {
-        (self.permutation[(input & 0xFF) as usize] & 0xFF) as i32
+        self.permutation[(input & 0xFF) as usize] as i32
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -149,9 +153,16 @@ impl PerlinNoiseSampler {
     }
 }
 
+#[allow(dead_code)]
+pub enum RandomGenerator<'a> {
+    Xoroshiro(&'a mut Xoroshiro),
+    Legacy(&'a mut LegacyRand),
+}
+
 pub struct OctavePerlinNoiseSampler {
     octave_samplers: Vec<Option<PerlinNoiseSampler>>,
     amplitudes: Vec<f64>,
+    #[allow(dead_code)]
     first_octave: i32,
     persistence: f64,
     lacunarity: f64,
@@ -159,7 +170,7 @@ pub struct OctavePerlinNoiseSampler {
 }
 
 impl OctavePerlinNoiseSampler {
-    fn get_total_amplitude(scale: f64, persistence: f64, amplitudes: &Vec<f64>) -> f64 {
+    fn get_total_amplitude(scale: f64, persistence: f64, amplitudes: &[f64]) -> f64 {
         let mut d = 0f64;
         let mut e = persistence;
 
@@ -178,6 +189,7 @@ impl OctavePerlinNoiseSampler {
         value - (value / 3.3554432E7f64 + 0.5f64).floor() * 3.3554432E7f64
     }
 
+    #[allow(dead_code)]
     pub fn calculate_amplitudes(octaves: &[i32]) -> (i32, Vec<f64>) {
         let mut octaves = Vec::from_iter(octaves);
         octaves.sort();
@@ -198,7 +210,7 @@ impl OctavePerlinNoiseSampler {
         (-i, double_list)
     }
 
-    pub fn new(random: &mut impl Random, first_octave: i32, amplitudes: Vec<f64>) -> Self {
+    pub fn new(random: &mut RandomGenerator, first_octave: i32, amplitudes: &[f64]) -> Self {
         let i = amplitudes.len();
         let j = -first_octave;
 
@@ -207,21 +219,54 @@ impl OctavePerlinNoiseSampler {
             samplers.push(None);
         }
 
-        let splitter = random.next_splitter();
-        for k in 0..i {
-            if amplitudes[k] != 0f64 {
-                let l = first_octave + k as i32;
-                samplers[k] = Some(PerlinNoiseSampler::new(
-                    &mut splitter.split_string(&format!("octave_{}", l)),
-                ));
+        match random {
+            RandomGenerator::Xoroshiro(random) => {
+                let splitter = random.next_splitter();
+                for k in 0..i {
+                    if amplitudes[k] != 0f64 {
+                        let l = first_octave + k as i32;
+                        samplers[k] = Some(PerlinNoiseSampler::new(
+                            &mut splitter.split_string(&format!("octave_{}", l)),
+                        ));
+                    }
+                }
+            }
+            RandomGenerator::Legacy(random) => {
+                let sampler = PerlinNoiseSampler::new(*random);
+                if j >= 0 && j < i as i32 {
+                    let d = amplitudes[j as usize];
+                    if d != 0f64 {
+                        samplers[j as usize] = Some(sampler);
+                    }
+                }
+
+                for kx in (0..j as usize).rev() {
+                    if kx < i {
+                        let e = amplitudes[kx];
+                        if e != 0f64 {
+                            samplers[kx] = Some(PerlinNoiseSampler::new(*random));
+                        } else {
+                            random.skip(262);
+                        }
+                    } else {
+                        random.skip(262);
+                    }
+                }
+
+                if let Ok(length1) = samplers.iter().filter(|x| x.is_some()).try_len() {
+                    if let Ok(length2) = amplitudes.iter().filter(|x| !x.is_zero()).try_len() {
+                        assert_eq!(length1, length2);
+                    }
+                }
+                assert!(j >= i as i32 - 1);
             }
         }
 
         let persistence = 2f64.pow((i as i32).wrapping_sub(1) as f64) / (2f64.pow(i as f64) - 1f64);
-        let max_value = Self::get_total_amplitude(2f64, persistence, &amplitudes);
+        let max_value = Self::get_total_amplitude(2f64, persistence, amplitudes);
         Self {
             octave_samplers: samplers,
-            amplitudes,
+            amplitudes: amplitudes.to_vec(),
             first_octave,
             persistence,
             lacunarity: 2f64.pow((-j) as f64),
@@ -255,9 +300,259 @@ impl OctavePerlinNoiseSampler {
     }
 }
 
+pub struct DoublePerlinNoiseSampler {
+    first_sampler: OctavePerlinNoiseSampler,
+    second_sampler: OctavePerlinNoiseSampler,
+    amplitude: f64,
+    #[allow(dead_code)]
+    max_value: f64,
+}
+
+impl DoublePerlinNoiseSampler {
+    fn create_amplitude(octaves: i32) -> f64 {
+        0.1f64 * (1f64 + 1f64 / (octaves + 1) as f64)
+    }
+
+    #[allow(dead_code)]
+    pub fn new(rand: &mut RandomGenerator, first_octave: i32, amplitudes: &[f64]) -> Self {
+        let first_sampler = OctavePerlinNoiseSampler::new(rand, first_octave, amplitudes);
+        let second_sampler = OctavePerlinNoiseSampler::new(rand, first_octave, amplitudes);
+
+        let mut j = i32::MAX;
+        let mut k = i32::MIN;
+
+        for (index, amplitude) in amplitudes.iter().enumerate() {
+            if *amplitude != 0f64 {
+                j = i32::min(j, index as i32);
+                k = i32::max(k, index as i32);
+            }
+        }
+
+        let amplitude = 0.16666666666666666f64 / Self::create_amplitude(k - j);
+        let max_value = (first_sampler.max_value + second_sampler.max_value) * amplitude;
+
+        Self {
+            first_sampler,
+            second_sampler,
+            amplitude,
+            max_value,
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn sample(&self, x: f64, y: f64, z: f64) -> f64 {
+        let d = x * 1.0181268882175227f64;
+        let e = y * 1.0181268882175227f64;
+        let f = z * 1.0181268882175227f64;
+
+        (self.first_sampler.sample(x, y, z) + self.second_sampler.sample(d, e, f)) * self.amplitude
+    }
+}
+
+#[cfg(test)]
+mod double_perlin_noise_sampler_test {
+    use pumpkin_core::random::{legacy_rand::LegacyRand, xoroshiro128::Xoroshiro, Random};
+
+    use crate::world_gen::noise::perlin::{DoublePerlinNoiseSampler, RandomGenerator};
+
+    #[test]
+    fn sample_legacy() {
+        let mut rand = LegacyRand::from_seed(513513513);
+        assert_eq!(rand.next_i32(), -1302745855);
+
+        let mut rand_gen = RandomGenerator::Legacy(&mut rand);
+        let sampler = DoublePerlinNoiseSampler::new(&mut rand_gen, 0, &[4f64]);
+
+        let values = [
+            (
+                (
+                    3.7329617139221236E7,
+                    2.847228022372606E8,
+                    -1.8244299064688918E8,
+                ),
+                -0.5044027150385925,
+            ),
+            (
+                (
+                    8.936597679535551E7,
+                    1.491954533221004E8,
+                    3.457494216166344E8,
+                ),
+                -1.0004671438756043,
+            ),
+            (
+                (
+                    -2.2479845046034336E8,
+                    -4.085449163378981E7,
+                    1.343082907470065E8,
+                ),
+                2.1781128778536973,
+            ),
+            (
+                (
+                    -1.9094944979652843E8,
+                    3.695081561625232E8,
+                    2.1566424798360935E8,
+                ),
+                -1.2571847948126453,
+            ),
+            (
+                (
+                    1.8486356004931596E8,
+                    -4.148713734284534E8,
+                    4.8687219454012525E8,
+                ),
+                -0.550285244015363,
+            ),
+            (
+                (
+                    1.7115351141710258E8,
+                    -1.8835885697652313E8,
+                    1.7031060329927653E8,
+                ),
+                -0.6953327750604766,
+            ),
+            (
+                (
+                    8.952317194270046E7,
+                    -5.420942524023042E7,
+                    -2.5987559023045145E7,
+                ),
+                2.7361630914824393,
+            ),
+            (
+                (
+                    -8.36195975247282E8,
+                    -1.2167090318484206E8,
+                    2.1237199673286602E8,
+                ),
+                -1.5518675789351004,
+            ),
+            (
+                (
+                    3.333103540906928E8,
+                    5.088236187007203E8,
+                    -3.521137809477999E8,
+                ),
+                0.6928720433082317,
+            ),
+            (
+                (
+                    7.82760234776598E7,
+                    -2.5204361464037597E7,
+                    -1.6615974590937865E8,
+                ),
+                -0.5102124930620466,
+            ),
+        ];
+
+        for ((x, y, z), sample) in values {
+            assert_eq!(sampler.sample(x, y, z), sample)
+        }
+    }
+
+    #[test]
+    fn sample_xoroshiro() {
+        let mut rand = Xoroshiro::from_seed(5);
+        assert_eq!(rand.next_i32(), -1678727252);
+
+        let mut rand_gen = RandomGenerator::Xoroshiro(&mut rand);
+        let sampler = DoublePerlinNoiseSampler::new(&mut rand_gen, 1, &[2f64, 4f64]);
+
+        let values = [
+            (
+                (
+                    -2.4823401687190732E8,
+                    1.6909869132832196E8,
+                    1.0510057123823991E8,
+                ),
+                -0.09627881756376819,
+            ),
+            (
+                (
+                    1.2971355215791291E8,
+                    -3.614855223614046E8,
+                    1.9997149869463342E8,
+                ),
+                0.4412466810560897,
+            ),
+            (
+                (
+                    -1.9858224577678584E7,
+                    2.5103843334053648E8,
+                    2.253841390457064E8,
+                ),
+                -1.3086196098510068,
+            ),
+            (
+                (
+                    1.4243878295159304E8,
+                    -1.9185612600051942E8,
+                    4.7736284830701286E8,
+                ),
+                1.727683424808049,
+            ),
+            (
+                (
+                    -9.411241394159131E7,
+                    4.4052130232611096E8,
+                    5.1042225596740514E8,
+                ),
+                -0.4651812519989636,
+            ),
+            (
+                (
+                    3.007670445405074E8,
+                    1.4630490674448165E8,
+                    -1.681994537227527E8,
+                ),
+                -0.8607587886441551,
+            ),
+            (
+                (
+                    -2.290369962944646E8,
+                    -4.9627750061129004E8,
+                    9.751744069476394E7,
+                ),
+                -0.3592693708849225,
+            ),
+            (
+                (
+                    -5.380825223911383E7,
+                    6.317706682942032E7,
+                    -3.0105795661690116E8,
+                ),
+                0.7372424991843702,
+            ),
+            (
+                (
+                    -1.4261684559190175E8,
+                    9.987839104129419E7,
+                    3.3290027416415906E8,
+                ),
+                0.27706980571082485,
+            ),
+            (
+                (
+                    -8.881637146904664E7,
+                    1.1033687270820947E8,
+                    -1.0014482192140123E8,
+                ),
+                -0.4602443245357103,
+            ),
+        ];
+
+        for ((x, y, z), sample) in values {
+            assert_eq!(sampler.sample(x, y, z), sample)
+        }
+    }
+}
+
 #[cfg(test)]
 mod octave_perline_noise_sampler_test {
-    use pumpkin_core::random::{xoroshiro128::Xoroshiro, Random};
+    use pumpkin_core::random::{legacy_rand::LegacyRand, xoroshiro128::Xoroshiro, Random};
+
+    use crate::world_gen::noise::perlin::RandomGenerator;
 
     use super::OctavePerlinNoiseSampler;
 
@@ -270,7 +565,8 @@ mod octave_perline_noise_sampler_test {
         assert_eq!(start, 1);
         assert_eq!(amplitudes, [1f64, 1f64, 1f64]);
 
-        let sampler = OctavePerlinNoiseSampler::new(&mut rand, start, amplitudes);
+        let mut rand_gen = RandomGenerator::Xoroshiro(&mut rand);
+        let sampler = OctavePerlinNoiseSampler::new(&mut rand_gen, start, &amplitudes);
 
         assert_eq!(sampler.first_octave, 1);
         assert_eq!(sampler.persistence, 0.5714285714285714f64);
@@ -296,12 +592,43 @@ mod octave_perline_noise_sampler_test {
     }
 
     #[test]
+    fn test_create_legacy() {
+        let mut rand = LegacyRand::from_seed(513513513);
+        assert_eq!(rand.next_i32(), -1302745855);
+
+        let (start, amplitudes) = OctavePerlinNoiseSampler::calculate_amplitudes(&[0]);
+        assert_eq!(start, 0);
+        assert_eq!(amplitudes, [1f64]);
+
+        let mut rand_gen = RandomGenerator::Legacy(&mut rand);
+        let sampler = OctavePerlinNoiseSampler::new(&mut rand_gen, start, &amplitudes);
+        assert_eq!(sampler.first_octave, 0);
+        assert_eq!(sampler.persistence, 1f64);
+        assert_eq!(sampler.lacunarity, 1f64);
+        assert_eq!(sampler.max_value, 2f64);
+
+        let coords = [(226.220117499588, 32.67924779023767, 202.84067325597647)];
+
+        for (sampler, (x, y, z)) in sampler.octave_samplers.iter().zip(coords) {
+            match sampler {
+                Some(sampler) => {
+                    assert_eq!(sampler.x_origin, x);
+                    assert_eq!(sampler.y_origin, y);
+                    assert_eq!(sampler.z_origin, z);
+                }
+                None => panic!(),
+            }
+        }
+    }
+
+    #[test]
     fn test_sample() {
         let mut rand = Xoroshiro::from_seed(513513513);
         assert_eq!(rand.next_i32(), 404174895);
 
         let (start, amplitudes) = OctavePerlinNoiseSampler::calculate_amplitudes(&[1, 2, 3]);
-        let sampler = OctavePerlinNoiseSampler::new(&mut rand, start, amplitudes);
+        let mut rand_gen = RandomGenerator::Xoroshiro(&mut rand);
+        let sampler = OctavePerlinNoiseSampler::new(&mut rand_gen, start, &amplitudes);
 
         let values = [
             (
