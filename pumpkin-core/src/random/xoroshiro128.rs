@@ -1,10 +1,9 @@
-use super::{gaussian::GaussianGenerator, hash_block_pos, Random, RandomSplitter};
+use super::{gaussian::GaussianGenerator, hash_block_pos, RandomDeriverImpl, RandomImpl};
 
 pub struct Xoroshiro {
     lo: u64,
     hi: u64,
-    internal_next_gaussian: f64,
-    internal_has_next_gaussian: bool,
+    internal_next_gaussian: Option<f64>,
 }
 
 impl Xoroshiro {
@@ -17,8 +16,7 @@ impl Xoroshiro {
         Self {
             lo,
             hi,
-            internal_next_gaussian: 0f64,
-            internal_has_next_gaussian: false,
+            internal_next_gaussian: None,
         }
     }
 
@@ -45,20 +43,12 @@ impl Xoroshiro {
 }
 
 impl GaussianGenerator for Xoroshiro {
-    fn stored_next_gaussian(&self) -> f64 {
+    fn stored_next_gaussian(&self) -> Option<f64> {
         self.internal_next_gaussian
     }
 
-    fn has_next_gaussian(&self) -> bool {
-        self.internal_has_next_gaussian
-    }
-
-    fn set_stored_next_gaussian(&mut self, value: f64) {
+    fn set_stored_next_gaussian(&mut self, value: Option<f64>) {
         self.internal_next_gaussian = value;
-    }
-
-    fn set_has_next_gaussian(&mut self, value: bool) {
-        self.internal_has_next_gaussian = value;
     }
 }
 
@@ -68,7 +58,7 @@ fn mix_stafford_13(z: u64) -> u64 {
     z ^ (z >> 31)
 }
 
-impl Random for Xoroshiro {
+impl RandomImpl for Xoroshiro {
     fn from_seed(seed: u64) -> Self {
         let (lo, hi) = Self::mix_u64(seed);
         let lo = mix_stafford_13(lo);
@@ -84,7 +74,8 @@ impl Random for Xoroshiro {
         self.next_random() >> (64 - bits)
     }
 
-    fn next_splitter(&mut self) -> impl RandomSplitter {
+    #[allow(refining_impl_trait)]
+    fn next_splitter(&mut self) -> XoroshiroSplitter {
         XoroshiroSplitter {
             lo: self.next_random(),
             hi: self.next_random(),
@@ -137,18 +128,19 @@ pub struct XoroshiroSplitter {
     hi: u64,
 }
 
-impl RandomSplitter for XoroshiroSplitter {
-    fn split_pos(&self, x: i32, y: i32, z: i32) -> impl Random {
+#[allow(refining_impl_trait)]
+impl RandomDeriverImpl for XoroshiroSplitter {
+    fn split_pos(&self, x: i32, y: i32, z: i32) -> Xoroshiro {
         let l = hash_block_pos(x, y, z) as u64;
         let m = l ^ self.lo;
         Xoroshiro::new(m, self.hi)
     }
 
-    fn split_u64(&self, seed: u64) -> impl Random {
+    fn split_u64(&self, seed: u64) -> Xoroshiro {
         Xoroshiro::new(seed ^ self.lo, seed ^ self.hi)
     }
 
-    fn split_string(&self, seed: &str) -> impl Random {
+    fn split_string(&self, seed: &str) -> Xoroshiro {
         let bytes = md5::compute(seed.as_bytes());
         let l = u64::from_be_bytes(bytes[0..8].try_into().expect("incorrect length"));
         let m = u64::from_be_bytes(bytes[8..16].try_into().expect("incorrect length"));
@@ -159,7 +151,7 @@ impl RandomSplitter for XoroshiroSplitter {
 
 #[cfg(test)]
 mod tests {
-    use crate::random::{Random, RandomSplitter};
+    use crate::random::{RandomDeriverImpl, RandomImpl};
 
     use super::{mix_stafford_13, Xoroshiro};
 

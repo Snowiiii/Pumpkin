@@ -1,11 +1,10 @@
 use super::{
-    gaussian::GaussianGenerator, hash_block_pos, java_string_hash, Random, RandomSplitter,
+    gaussian::GaussianGenerator, hash_block_pos, java_string_hash, RandomDeriverImpl, RandomImpl,
 };
 
-struct LegacyRand {
+pub struct LegacyRand {
     seed: u64,
-    internal_next_gaussian: f64,
-    internal_has_next_gaussian: bool,
+    internal_next_gaussian: Option<f64>,
 }
 
 impl LegacyRand {
@@ -18,29 +17,20 @@ impl LegacyRand {
 }
 
 impl GaussianGenerator for LegacyRand {
-    fn has_next_gaussian(&self) -> bool {
-        self.internal_has_next_gaussian
-    }
-
-    fn stored_next_gaussian(&self) -> f64 {
+    fn stored_next_gaussian(&self) -> Option<f64> {
         self.internal_next_gaussian
     }
 
-    fn set_has_next_gaussian(&mut self, value: bool) {
-        self.internal_has_next_gaussian = value;
-    }
-
-    fn set_stored_next_gaussian(&mut self, value: f64) {
+    fn set_stored_next_gaussian(&mut self, value: Option<f64>) {
         self.internal_next_gaussian = value;
     }
 }
 
-impl Random for LegacyRand {
+impl RandomImpl for LegacyRand {
     fn from_seed(seed: u64) -> Self {
         LegacyRand {
             seed: (seed ^ 0x5DEECE66D) & 0xFFFFFFFFFFFF,
-            internal_has_next_gaussian: false,
-            internal_next_gaussian: 0f64,
+            internal_next_gaussian: None,
         }
     }
 
@@ -77,7 +67,8 @@ impl Random for LegacyRand {
         self.next(1) != 0
     }
 
-    fn next_splitter(&mut self) -> impl RandomSplitter {
+    #[allow(refining_impl_trait)]
+    fn next_splitter(&mut self) -> LegacySplitter {
         LegacySplitter::new(self.next_i64() as u64)
     }
 
@@ -86,13 +77,13 @@ impl Random for LegacyRand {
     }
 
     fn next_bounded_i32(&mut self, bound: i32) -> i32 {
-        if bound & (bound - 1) == 0 {
-            (bound as u64).wrapping_mul(self.next(31) >> 31) as i32
+        if (bound & bound.wrapping_sub(1)) == 0 {
+            ((bound as u64).wrapping_mul(self.next(31)) >> 31) as i32
         } else {
             loop {
                 let i = self.next(31) as i32;
                 let j = i % bound;
-                if (i - j + (bound - 1)) > 0 {
+                if (i.wrapping_sub(j).wrapping_add(bound.wrapping_sub(1))) >= 0 {
                     return j;
                 }
             }
@@ -100,7 +91,7 @@ impl Random for LegacyRand {
     }
 }
 
-struct LegacySplitter {
+pub struct LegacySplitter {
     seed: u64,
 }
 
@@ -110,17 +101,18 @@ impl LegacySplitter {
     }
 }
 
-impl RandomSplitter for LegacySplitter {
-    fn split_u64(&self, seed: u64) -> impl Random {
+#[allow(refining_impl_trait)]
+impl RandomDeriverImpl for LegacySplitter {
+    fn split_u64(&self, seed: u64) -> LegacyRand {
         LegacyRand::from_seed(seed)
     }
 
-    fn split_string(&self, seed: &str) -> impl Random {
+    fn split_string(&self, seed: &str) -> LegacyRand {
         let string_hash = java_string_hash(seed);
         LegacyRand::from_seed((string_hash as u64) ^ self.seed)
     }
 
-    fn split_pos(&self, x: i32, y: i32, z: i32) -> impl Random {
+    fn split_pos(&self, x: i32, y: i32, z: i32) -> LegacyRand {
         let pos_hash = hash_block_pos(x, y, z);
         LegacyRand::from_seed((pos_hash as u64) ^ self.seed)
     }
@@ -128,7 +120,7 @@ impl RandomSplitter for LegacySplitter {
 
 #[cfg(test)]
 mod test {
-    use crate::random::{Random, RandomSplitter};
+    use crate::random::{RandomDeriverImpl, RandomImpl};
 
     use super::LegacyRand;
 
@@ -162,6 +154,17 @@ mod test {
 
         for value in values {
             assert_eq!(rand.next_bounded_i32(0xf), value);
+        }
+
+        let mut rand = LegacyRand::from_seed(0);
+        for _ in 0..10 {
+            assert_eq!(rand.next_bounded_i32(1), 0);
+        }
+
+        let mut rand = LegacyRand::from_seed(0);
+        let values = [1, 1, 0, 1, 1, 0, 1, 0, 1, 1];
+        for value in values {
+            assert_eq!(rand.next_bounded_i32(2), value);
         }
     }
 
