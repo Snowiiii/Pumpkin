@@ -15,7 +15,6 @@ impl SimplexNoiseSampler {
     const SKEW_FACTOR_2D: f64 = 0.5f64 * (Self::SQRT_3 - 1f64);
     const UNSKEW_FACTOR_2D: f64 = (3f64 - Self::SQRT_3) / 6f64;
 
-    #[allow(dead_code)]
     pub fn new(random: &mut impl RandomImpl) -> Self {
         let x_origin = random.next_f64() * 256f64;
         let y_origin = random.next_f64() * 256f64;
@@ -178,7 +177,6 @@ pub struct OctaveSimplexNoiseSampler {
 }
 
 impl OctaveSimplexNoiseSampler {
-    #[allow(dead_code)]
     pub fn new(random: &mut impl RandomImpl, octaves: &[i32]) -> Self {
         let mut octaves = Vec::from_iter(octaves);
         octaves.sort();
@@ -229,7 +227,6 @@ impl OctaveSimplexNoiseSampler {
         }
     }
 
-    #[allow(dead_code)]
     pub fn sample(&self, x: f64, y: f64, use_origin: bool) -> f64 {
         let mut d = 0f64;
         let mut e = self.lacunarity;

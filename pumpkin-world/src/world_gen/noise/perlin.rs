@@ -37,7 +37,6 @@ impl PerlinNoiseSampler {
         }
     }
 
-    #[allow(dead_code)]
     pub fn sample_flat_y(&self, x: f64, y: f64, z: f64) -> f64 {
         self.sample_no_fade(x, y, z, 0f64, 0f64)
     }
@@ -154,7 +153,6 @@ impl PerlinNoiseSampler {
 pub struct OctavePerlinNoiseSampler {
     octave_samplers: Vec<Option<PerlinNoiseSampler>>,
     amplitudes: Vec<f64>,
-    #[allow(dead_code)]
     first_octave: i32,
     persistence: f64,
     lacunarity: f64,
@@ -178,7 +176,6 @@ impl OctavePerlinNoiseSampler {
         value - (value / 3.3554432E7f64 + 0.5f64).floor() * 3.3554432E7f64
     }
 
-    #[allow(dead_code)]
     pub fn calculate_amplitudes(octaves: &[i32]) -> (i32, Vec<f64>) {
         let mut octaves = Vec::from_iter(octaves);
         octaves.sort();
@@ -293,7 +290,6 @@ pub struct DoublePerlinNoiseSampler {
     first_sampler: OctavePerlinNoiseSampler,
     second_sampler: OctavePerlinNoiseSampler,
     amplitude: f64,
-    #[allow(dead_code)]
     max_value: f64,
 }
 
@@ -302,7 +298,6 @@ impl DoublePerlinNoiseSampler {
         0.1f64 * (1f64 + 1f64 / (octaves + 1) as f64)
     }
 
-    #[allow(dead_code)]
     pub fn new(rand: &mut RandomGenerator, first_octave: i32, amplitudes: &[f64]) -> Self {
         let first_sampler = OctavePerlinNoiseSampler::new(rand, first_octave, amplitudes);
         let second_sampler = OctavePerlinNoiseSampler::new(rand, first_octave, amplitudes);
@@ -328,7 +323,6 @@ impl DoublePerlinNoiseSampler {
         }
     }
 
-    #[allow(dead_code)]
     pub fn sample(&self, x: f64, y: f64, z: f64) -> f64 {
         let d = x * 1.0181268882175227f64;
         let e = y * 1.0181268882175227f64;
