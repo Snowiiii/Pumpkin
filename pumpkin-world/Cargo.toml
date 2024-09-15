@@ -9,6 +9,7 @@ pumpkin-core = { path = "../pumpkin-core"}
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 tokio.workspace = true
 rayon.workspace = true
+speedy.workspace = true
 derive_more.workspace = true
 itertools = "0.13.0"
 thiserror = "1.0"

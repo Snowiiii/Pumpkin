@@ -1,0 +1,15 @@
+[package]
+name = "pumpkin-storage"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+heed = "0.20.5"
+xxhash-rust = { version = "0.8.12", features = ["xxh3"] }
+futures = "*"
+speedy.workspace = true
+parking_lot.workspace = true
+rayon.workspace = true
+crossbeam.workspace = true
+
+pumpkin-world = { path = "../pumpkin-world"}

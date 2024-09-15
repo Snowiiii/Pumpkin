@@ -272,3 +272,78 @@ impl ChunkData {
         })
     }
 }
+
+mod serialization {
+    use fastnbt::LongArray;
+    use pumpkin_core::math::vector2::Vector2;
+    use speedy::{LittleEndian, Readable, Writable};
+
+    use crate::{block::BlockId, chunk::CHUNK_VOLUME};
+
+    use super::{ChunkBlocks, ChunkData, ChunkHeightmaps};
+
+    impl Writable<LittleEndian> for ChunkData {
+        fn write_to< T: ?Sized + speedy::Writer< LittleEndian > >( &self, writer: &mut T ) -> Result< (), <LittleEndian as speedy::Context>::Error > {
+            
+            // Write X and Z chunk coordinate
+            writer.write_i32(self.position.x)?;
+            writer.write_i32(self.position.z)?;
+            
+            // BlocksId
+            for block in self.blocks.blocks.iter() {
+                writer.write_u16(block.get_id())?
+            }
+            
+            // Heightmap (motion then world surface)
+            writer.write_u64(self.blocks.heightmap.motion_blocking.len() as _)?;
+            for motion in self.blocks.heightmap.motion_blocking.iter() {
+                writer.write_i64(*motion)?
+            }
+            writer.write_u64(self.blocks.heightmap.world_surface.len() as _)?;
+            for surface in self.blocks.heightmap.world_surface.iter() {
+                writer.write_i64(*surface)?
+            }
+            
+            Ok(())
+        }
+    }
+    
+    impl<'t> Readable<'t, LittleEndian> for ChunkData {
+        fn read_from< R: speedy::Reader< 't, LittleEndian > >( reader: &mut R ) -> Result< Self, <LittleEndian as speedy::Context>::Error > {
+            
+            // Read X and Z chunk coordinate
+            let position = Vector2 { x: reader.read_i32()?, z: reader.read_i32()? };
+            
+            // BlocksId
+            let mut blocks = Vec::with_capacity(CHUNK_VOLUME);
+            for _ in 0..CHUNK_VOLUME {
+                blocks.push(BlockId::from_id(reader.read_u16()?));
+            }
+            
+            // Heightmap (motion then world surface) 
+            let len = reader.read_u64()? as usize;
+            let mut motion = Vec::with_capacity(len);
+            for _ in 0..CHUNK_VOLUME {
+                motion.push(reader.read_i64()?);
+            }
+            let len = reader.read_u64()? as usize;
+            let mut surface = Vec::with_capacity(len);
+            for _ in 0..CHUNK_VOLUME {
+                surface.push(reader.read_i64()?);
+            }
+            
+            Ok(
+                ChunkData { 
+                    blocks: ChunkBlocks {
+                        blocks: blocks.into_boxed_slice().try_into().map_err(|_| speedy::Error::custom("Block count isn't the volume of a chunk!"))?,
+                        heightmap: ChunkHeightmaps {
+                            motion_blocking: LongArray::new(motion), 
+                            world_surface: LongArray::new(surface)
+                        }
+                    }, 
+                    position 
+                }
+            )
+        }
+    }
+}
