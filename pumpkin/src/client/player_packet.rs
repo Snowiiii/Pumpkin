@@ -107,7 +107,7 @@ impl Player {
         // }
         // send new position to all other players
         world.broadcast_packet_expect(
-            &[self.client.token],
+            &[self.gameprofile.id],
             &CUpdateEntityPos::new(
                 entity_id.into(),
                 (x * 4096.0 - lastx * 4096.0) as i16,
@@ -177,7 +177,7 @@ impl Player {
         // send new position to all other players
 
         world.broadcast_packet_expect(
-            &[self.client.token],
+            &[self.gameprofile.id],
             &CUpdateEntityPosRot::new(
                 entity_id.into(),
                 (x * 4096.0 - lastx * 4096.0) as i16,
@@ -189,7 +189,7 @@ impl Player {
             ),
         );
         world.broadcast_packet_expect(
-            &[self.client.token],
+            &[self.gameprofile.id],
             &CHeadRot::new(entity_id.into(), yaw as u8),
         );
         player_chunker::update_position(entity, self).await;
@@ -217,9 +217,9 @@ impl Player {
         let world = &entity.world;
         let packet =
             CUpdateEntityRot::new(entity_id.into(), yaw as u8, pitch as u8, rotation.ground);
-        world.broadcast_packet_expect(&[self.client.token], &packet);
+        world.broadcast_packet_expect(&[self.gameprofile.id], &packet);
         let packet = CHeadRot::new(entity_id.into(), yaw as u8);
-        world.broadcast_packet_expect(&[self.client.token], &packet);
+        world.broadcast_packet_expect(&[self.gameprofile.id], &packet);
     }
 
     pub fn handle_chat_command(&self, server: &Arc<Server>, command: SChatCommand) {
@@ -291,7 +291,7 @@ impl Player {
                 let id = self.entity_id();
                 let world = &self.entity.world;
                 world.broadcast_packet_expect(
-                    &[self.client.token],
+                    &[self.gameprofile.id],
                     &CEntityAnimation::new(id.into(), animation as u8),
                 )
             }

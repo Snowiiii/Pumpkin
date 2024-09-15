@@ -1567,7 +1567,6 @@ checksum = "80e04d1dcff3aae0704555fe5fee3bcfaf3d1fdf8a7e521d5b9d2b42acb52cec"
 dependencies = [
  "hermit-abi",
  "libc",
- "log",
  "wasi",
  "windows-sys 0.52.0",
 ]
@@ -1929,7 +1928,6 @@ dependencies = [
  "image",
  "itertools 0.13.0",
  "log",
- "mio",
  "num-bigint",
  "num-derive",
  "num-traits",
@@ -2028,11 +2026,13 @@ dependencies = [
  "log",
  "num-derive",
  "num-traits",
+ "parking_lot",
  "pumpkin-core",
  "pumpkin-macros",
  "pumpkin-world",
  "serde",
  "thiserror",
+ "tokio",
  "uuid",
 ]
 

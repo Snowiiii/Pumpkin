@@ -2,7 +2,6 @@ use std::{collections::HashMap, sync::Arc};
 
 pub mod player_chunker;
 
-use mio::Token;
 use num_traits::ToPrimitive;
 use parking_lot::Mutex;
 use pumpkin_config::BasicConfiguration;
@@ -17,6 +16,7 @@ use pumpkin_protocol::{
 };
 use pumpkin_world::level::Level;
 use tokio::sync::mpsc;
+use uuid::Uuid;
 
 use crate::{
     client::Client,
@@ -36,7 +36,7 @@ pub struct World {
     /// The underlying level, responsible for chunk management and terrain generation.
     pub level: Arc<Mutex<Level>>,
     /// A map of active players within the world, keyed by their unique token.
-    pub current_players: Arc<Mutex<HashMap<Token, Arc<Player>>>>,
+    pub current_players: Arc<Mutex<HashMap<Uuid, Arc<Player>>>>,
     // TODO: entities
 }
 
@@ -68,7 +68,7 @@ impl World {
     /// Sends the specified packet to every player currently logged in to the server, excluding the players listed in the `except` parameter.
     ///
     /// **Note:** This function acquires a lock on the `current_players` map, ensuring thread safety.
-    pub fn broadcast_packet_expect<P>(&self, except: &[Token], packet: &P)
+    pub fn broadcast_packet_expect<P>(&self, except: &[Uuid], packet: &P)
     where
         P: ClientPacket,
     {
@@ -143,7 +143,7 @@ impl World {
             .current_players
             .lock()
             .iter()
-            .filter(|(c, _)| **c != player.client.token)
+            .filter(|(c, _)| **c != player.gameprofile.id)
         {
             let gameprofile = &playerr.gameprofile;
             entries.push(pumpkin_protocol::client::play::Player {
@@ -165,7 +165,7 @@ impl World {
 
         // spawn player for every client
         self.broadcast_packet_expect(
-            &[player.client.token],
+            &[player.gameprofile.id],
             // TODO: add velo
             &CSpawnEntity::new(
                 entity_id.into(),
@@ -184,8 +184,8 @@ impl World {
             ),
         );
         // spawn players for our client
-        let token = player.client.token;
-        for (_, existing_player) in self.current_players.lock().iter().filter(|c| c.0 != &token) {
+        let uuid = player.gameprofile.id;
+        for (_, existing_player) in self.current_players.lock().iter().filter(|c| c.0 != &uuid) {
             let entity = &existing_player.entity;
             let pos = entity.pos.load();
             let gameprofile = &existing_player.gameprofile;
@@ -279,18 +279,18 @@ impl World {
         None
     }
 
-    pub fn add_player(&self, token: Token, player: Arc<Player>) {
+    pub fn add_player(&self, token: Uuid, player: Arc<Player>) {
         self.current_players.lock().insert(token, player);
     }
 
     pub fn remove_player(&self, player: &Player) {
         self.current_players
             .lock()
-            .remove(&player.client.token)
+            .remove(&player.gameprofile.id)
             .unwrap();
         let uuid = player.gameprofile.id;
         self.broadcast_packet_expect(
-            &[player.client.token],
+            &[player.gameprofile.id],
             &CRemovePlayerInfo::new(1.into(), &[uuid]),
         );
         self.remove_entity(&player.entity);

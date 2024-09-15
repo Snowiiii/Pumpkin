@@ -389,7 +389,6 @@ impl Player {
                 .filter(|player_id| *player_id != self.entity_id())
                 .collect_vec()
         };
-        let player_token = self.client.token;
 
         // TODO: Figure out better way to get only the players from player_ids
         // Also refactor out a better method to get individual advanced state ids
@@ -401,7 +400,7 @@ impl Player {
             .lock()
             .iter()
             .filter_map(|(token, player)| {
-                if *token != player_token {
+                if *token != self.gameprofile.id {
                     let entity_id = player.entity_id();
                     if player_ids.contains(&entity_id) {
                         Some(player.clone())

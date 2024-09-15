@@ -1,5 +1,5 @@
 use std::{
-    io::{self, Write},
+    io::{self},
     net::SocketAddr,
     sync::{
         atomic::{AtomicBool, AtomicI32},
@@ -14,7 +14,6 @@ use crate::{
 
 use authentication::GameProfile;
 use crossbeam::atomic::AtomicCell;
-use mio::{event::Event, net::TcpStream, Token};
 use parking_lot::Mutex;
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
@@ -31,8 +30,8 @@ use pumpkin_protocol::{
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
 
-use std::io::Read;
 use thiserror::Error;
+use tokio::sync::mpsc::UnboundedSender;
 
 pub mod authentication;
 mod client_packet;
@@ -98,16 +97,14 @@ pub struct Client {
     pub encryption: AtomicBool,
     /// Indicates if the client connection is closed.
     pub closed: AtomicBool,
-    /// A unique token identifying the client.
-    pub token: Token,
-    /// The underlying TCP connection to the client.
-    pub connection: Arc<Mutex<TcpStream>>,
+    /// Packets to be sent to the client from the TCP connection
+    pub packet_sender: UnboundedSender<Vec<u8>>,
     /// The client's IP address.
     pub address: Mutex<SocketAddr>,
     /// The packet encoder for outgoing packets.
-    enc: Arc<Mutex<PacketEncoder>>,
+    pub enc: Arc<Mutex<PacketEncoder>>,
     /// The packet decoder for incoming packets.
-    dec: Arc<Mutex<PacketDecoder>>,
+    pub dec: PacketDecoder,
     /// A queue of raw packets received from the client, waiting to be processed.
     pub client_packets_queue: Arc<Mutex<Vec<RawPacket>>>,
 
@@ -116,18 +113,17 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(token: Token, connection: TcpStream, address: SocketAddr) -> Self {
+    pub fn new(packet_sender: UnboundedSender<Vec<u8>>, address: SocketAddr) -> Self {
         Self {
             protocol_version: AtomicI32::new(0),
             gameprofile: Mutex::new(None),
             config: Mutex::new(None),
             brand: Mutex::new(None),
-            token,
             address: Mutex::new(address),
             connection_state: AtomicCell::new(ConnectionState::HandShake),
-            connection: Arc::new(Mutex::new(connection)),
+            packet_sender,
             enc: Arc::new(Mutex::new(PacketEncoder::default())),
-            dec: Arc::new(Mutex::new(PacketDecoder::default())),
+            dec: PacketDecoder::default(),
             encryption: AtomicBool::new(false),
             closed: AtomicBool::new(false),
             client_packets_queue: Arc::new(Mutex::new(Vec::new())),
@@ -151,14 +147,14 @@ impl Client {
         let crypt_key: [u8; 16] = shared_secret
             .try_into()
             .map_err(|_| EncryptionError::SharedWrongLength)?;
-        self.dec.lock().enable_encryption(&crypt_key);
+        self.dec.enable_encryption(&crypt_key);
         self.enc.lock().enable_encryption(&crypt_key);
         Ok(())
     }
 
     /// Compression threshold, Compression level
     pub fn set_compression(&self, compression: Option<(u32, u32)>) {
-        self.dec.lock().set_compression(compression.map(|v| v.0));
+        self.dec.set_compression(compression.map(|v| v.0).is_some());
         self.enc.lock().set_compression(compression);
     }
 
@@ -168,49 +164,32 @@ impl Client {
         let mut enc = self.enc.lock();
         enc.append_packet(packet)
             .unwrap_or_else(|e| self.kick(&e.to_string()));
-        self.connection
-            .lock()
-            .write_all(&enc.take())
+        self.packet_sender
+            .send((&enc.take()).to_vec())
             .map_err(|_| PacketError::ConnectionWrite)
             .unwrap_or_else(|e| self.kick(&e.to_string()));
     }
 
     pub fn try_send_packet<P: ClientPacket>(&self, packet: &P) -> Result<(), PacketError> {
-        // assert!(!self.closed);
-
         let mut enc = self.enc.lock();
         enc.append_packet(packet)?;
-        self.connection
-            .lock()
-            .write_all(&enc.take())
+        self.packet_sender
+            .send((&enc.take()).to_vec())
             .map_err(|_| PacketError::ConnectionWrite)?;
         Ok(())
-    }
-
-    /// Processes all packets send by the client
-    pub async fn process_packets(&self, server: &Arc<Server>) {
-        while let Some(mut packet) = self.client_packets_queue.lock().pop() {
-            match self.handle_packet(server, &mut packet).await {
-                Ok(_) => {}
-                Err(e) => {
-                    let text = format!("Error while reading incoming packet {}", e);
-                    log::error!("{}", text);
-                    self.kick(&text)
-                }
-            };
-        }
     }
 
     /// Handles an incoming decoded not Play state Packet
     pub async fn handle_packet(
         &self,
         server: &Arc<Server>,
-        packet: &mut RawPacket,
+        packet_bytes: &mut Vec<u8>,
     ) -> Result<(), DeserializerError> {
+        let mut packet = self.dec.decode(packet_bytes).await.unwrap();
         // TODO: handle each packet's Error instead of calling .unwrap()
         let bytebuf = &mut packet.bytebuf;
         match self.connection_state.load() {
-            pumpkin_protocol::ConnectionState::HandShake => match packet.id.0 {
+            ConnectionState::HandShake => match packet.id.0 {
                 SHandShake::PACKET_ID => {
                     self.handle_handshake(server, SHandShake::read(bytebuf)?);
                     Ok(())
@@ -223,7 +202,7 @@ impl Client {
                     Ok(())
                 }
             },
-            pumpkin_protocol::ConnectionState::Status => match packet.id.0 {
+            ConnectionState::Status => match packet.id.0 {
                 SStatusRequest::PACKET_ID => {
                     self.handle_status_request(server, SStatusRequest::read(bytebuf)?);
                     Ok(())
@@ -241,7 +220,7 @@ impl Client {
                 }
             },
             // TODO: Check config if transfer is enabled
-            pumpkin_protocol::ConnectionState::Login
+            ConnectionState::Login
             | pumpkin_protocol::ConnectionState::Transfer => match packet.id.0 {
                 SLoginStart::PACKET_ID => {
                     self.handle_login_start(server, SLoginStart::read(bytebuf)?);
@@ -268,7 +247,7 @@ impl Client {
                     Ok(())
                 }
             },
-            pumpkin_protocol::ConnectionState::Config => match packet.id.0 {
+            ConnectionState::Config => match packet.id.0 {
                 SClientInformationConfig::PACKET_ID => {
                     self.handle_client_information_config(
                         server,
@@ -303,51 +282,6 @@ impl Client {
             _ => {
                 log::error!("Invalid Connection state {:?}", self.connection_state);
                 Ok(())
-            }
-        }
-    }
-
-    /// Reads the connection until our buffer of len 4096 is full, then decode
-    /// Close connection when an error occurs or when the Client closed the connection
-    pub async fn poll(&self, event: &Event) {
-        if event.is_readable() {
-            let mut received_data = vec![0; 4096];
-            let mut bytes_read = 0;
-            loop {
-                let connection = self.connection.clone();
-                let mut connection = connection.lock();
-                match connection.read(&mut received_data[bytes_read..]) {
-                    Ok(0) => {
-                        // Reading 0 bytes means the other side has closed the
-                        // connection or is done writing, then so are we.
-                        self.close();
-                        break;
-                    }
-                    Ok(n) => {
-                        bytes_read += n;
-                        received_data.extend(&vec![0; n]);
-                    }
-                    // Would block "errors" are the OS's way of saying that the
-                    // connection is not actually ready to perform this I/O operation.
-                    Err(ref err) if would_block(err) => break,
-                    Err(ref err) if interrupted(err) => continue,
-                    // Other errors we'll consider fatal.
-                    Err(_) => self.close(),
-                }
-            }
-
-            if bytes_read != 0 {
-                let mut dec = self.dec.lock();
-                dec.queue_slice(&received_data[..bytes_read]);
-                match dec.decode() {
-                    Ok(packet) => {
-                        if let Some(packet) = packet {
-                            self.add_packet(packet);
-                        }
-                    }
-                    Err(err) => self.kick(&err.to_string()),
-                }
-                dec.clear();
             }
         }
     }

@@ -1,9 +1,8 @@
 use std::io::{self, BufRead, Cursor, Write};
 
 use bytes::{BufMut, BytesMut};
-use mio::net::TcpStream;
 use thiserror::Error;
-use tokio::io::AsyncReadExt;
+use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PacketType {
@@ -65,7 +64,7 @@ impl Packet {
         buf.put_slice(bytes);
         buf.put_u8(0);
         buf.put_u8(0);
-        let _ = connection.write(&buf).unwrap();
+        let _ = connection.write(&buf).await.unwrap();
         Ok(())
     }
 

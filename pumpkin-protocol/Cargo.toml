@@ -14,6 +14,8 @@ uuid.workspace = true
 
 serde.workspace = true
 
+tokio.workspace = true
+
 flate2 = "1.0.33"
 
 thiserror = "1.0"
@@ -27,3 +29,4 @@ cfb8 = "0.8.1"
 
 itertools = "0.13.0"
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
+parking_lot.workspace = true

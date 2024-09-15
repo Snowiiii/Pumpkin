@@ -59,9 +59,6 @@ image = { version = "0.25", default-features = false, features = ["png"]}
 simple_logger = "5.0.0"
 log.workspace = true
 
-# networking
-mio = { version = "1.0.2", features = ["os-poll", "net"]}
-
 parking_lot.workspace = true
 crossbeam.workspace = true
 uuid.workspace = true

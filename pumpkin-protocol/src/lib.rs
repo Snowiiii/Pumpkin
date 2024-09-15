@@ -1,7 +1,8 @@
 use bytebuf::{packet_id::Packet, ByteBuffer, DeserializerError};
 use bytes::Buf;
 use serde::{Deserialize, Serialize};
-use std::io::{self, Write};
+use tokio::io::AsyncReadExt;
+use std::{io::{self, Write}, sync::OnceLock};
 use thiserror::Error;
 
 pub mod bytebuf;
@@ -79,6 +80,21 @@ impl VarInt {
                 return Err(VarIntDecodeError::Incomplete);
             }
             let byte = r.get_u8();
+            val |= (i32::from(byte) & 0b01111111) << (i * 7);
+            if byte & 0b10000000 == 0 {
+                return Ok(VarInt(val));
+            }
+        }
+        Err(VarIntDecodeError::TooLarge)
+    }
+
+    pub async fn decode_with_reader<R>(reader: &mut R) -> Result<Self, VarIntDecodeError>
+    where
+        R: AsyncReadExt + Unpin,
+    {
+        let mut val = 0;
+        for i in 0..Self::MAX_SIZE {
+            let byte = reader.read_u8().await.unwrap(); // TODO: error handling
             val |= (i32::from(byte) & 0b01111111) << (i * 7);
             if byte & 0b10000000 == 0 {
                 return Ok(VarInt(val));
