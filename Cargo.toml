@@ -32,6 +32,7 @@ tokio = { version = "1.40", features = [
     "io-util",
     "sync",
 ] }
+speedy = "0.8.7"
 rayon = "1.10.0"
 uuid = { version = "1.10.0", features = ["serde", "v3", "v4"] }
 derive_more = { version = "1.0.0", features = ["full"] }
