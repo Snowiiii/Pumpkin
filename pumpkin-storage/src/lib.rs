@@ -12,9 +12,10 @@ pub mod mca;
 /// A trait implementing the API for fetching and inserting chunks to storage
 pub trait ChunkStorage: Sized + Send + Sync {
     
-    type Error: Debug;
+    /// Error returned by the database
+    type Error: Debug; // In the future: + Into<PumpkinError>
 
-    type OpenOptions;
+    type OpenOptions: Clone; 
     
     /// Open storage
     async fn start(options: Self::OpenOptions) -> Result<Self, Self::Error>;

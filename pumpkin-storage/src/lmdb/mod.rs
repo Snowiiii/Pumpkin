@@ -28,6 +28,7 @@ pub struct LMDBStorage {
     env: Env,
 }
 
+#[derive(Clone)]
 /// Configurable options for LMDB.
 pub struct LMDBOpenOptions {
     /// Path towards world folder
