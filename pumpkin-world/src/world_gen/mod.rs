@@ -1,3 +1,5 @@
+mod blender;
+mod chunk;
 mod generator;
 mod generic_generator;
 mod implementation;
