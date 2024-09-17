@@ -153,8 +153,8 @@ impl Client {
             }
         }
         for property in gameprofile.as_ref().unwrap().properties.clone() {
-            unpack_textures(property, &ADVANCED_CONFIG.authentication.textures)
-                .unwrap_or_else(|e| self.kick(&e.to_string()));
+            // TODO: use this (this was the todo here before, ill add it again cuz its prob here for a reason)
+            let _ = unpack_textures(property, &ADVANCED_CONFIG.authentication.textures);
         }
 
         // enable compression
