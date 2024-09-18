@@ -1,10 +1,16 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use super::{noise::InternalNoise, DensityFunction, DensityFunctionImpl, OffsetDensityFunction};
 
 #[derive(Clone)]
 pub struct ShiftAFunction<'a> {
-    offset: Rc<InternalNoise<'a>>,
+    offset: Arc<InternalNoise<'a>>,
+}
+
+impl<'a> ShiftAFunction<'a> {
+    pub fn new(offset: Arc<InternalNoise<'a>>) -> Self {
+        Self { offset }
+    }
 }
 
 impl<'a> OffsetDensityFunction<'a> for ShiftAFunction<'a> {
@@ -39,7 +45,13 @@ impl<'a> DensityFunctionImpl<'a> for ShiftAFunction<'a> {
 
 #[derive(Clone)]
 pub struct ShiftBFunction<'a> {
-    offset: Rc<InternalNoise<'a>>,
+    offset: Arc<InternalNoise<'a>>,
+}
+
+impl<'a> ShiftBFunction<'a> {
+    pub fn new(offset: Arc<InternalNoise<'a>>) -> Self {
+        Self { offset }
+    }
 }
 
 impl<'a> OffsetDensityFunction<'a> for ShiftBFunction<'a> {

@@ -31,9 +31,10 @@ pub struct GenerationShapeConfig {
 }
 
 //Bits avaliable to encode y-pos
-const SIZE_BITS_Y: i32 = 12;
-const MAX_HEIGHT: i32 = (1 << SIZE_BITS_Y) - 32;
-const MAX_COLUMN_HEIGHT: i32 = (MAX_HEIGHT >> 1) - 1;
+pub const SIZE_BITS_Y: i32 = 12;
+pub const MAX_HEIGHT: i32 = (1 << SIZE_BITS_Y) - 32;
+pub const MAX_COLUMN_HEIGHT: i32 = (MAX_HEIGHT >> 1) - 1;
+pub const MIN_HEIGHT: i32 = MAX_COLUMN_HEIGHT - MAX_HEIGHT + 1;
 
 impl GenerationShapeConfig {
     fn new(y_min: i32, height: i32, horizontal: i32, vertical: i32) -> Self {
