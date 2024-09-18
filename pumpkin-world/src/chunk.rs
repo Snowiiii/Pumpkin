@@ -175,31 +175,31 @@ struct ChunkSection {
 #[repr(u32)]
 enum ChunkStatus {
     #[serde(rename = "minecraft:empty")]
-    Empty = 0,
+    Empty,
     #[serde(rename = "minecraft:structure_starts")]
-    StructureStarts = 1,
+    StructureStarts,
     #[serde(rename = "minecraft:structure_references")]
-    StructureReferences = 2,
+    StructureReferences,
     #[serde(rename = "minecraft:biomes")]
-    Biomes = 3,
+    Biomes,
     #[serde(rename = "minecraft:noise")]
-    Noise = 4,
+    Noise,
     #[serde(rename = "minecraft:surface")]
-    Surface = 5,
+    Surface,
     #[serde(rename = "minecraft:carvers")]
-    Carvers = 6,
+    Carvers,
     #[serde(rename = "minecraft:liquid_carvers")]
-    LiquidCarvers = 7,
+    LiquidCarvers,
     #[serde(rename = "minecraft:features")]
-    Features = 8,
+    Features,
     #[serde(rename = "minecraft:initialize_light")]
-    Light = 9,
+    Light,
     #[serde(rename = "minecraft:spawn")]
-    Spawn = 10,
+    Spawn,
     #[serde(rename = "minecraft:heightmaps")]
-    Heightmaps = 11,
+    Heightmaps,
     #[serde(rename = "minecraft:full")]
-    Full = 12,
+    Full,
 }
 
 /// The Heightmap for a completely empty chunk
