@@ -1,146 +1,144 @@
 #![allow(dead_code)]
-mod density;
+pub mod density;
 mod perlin;
 mod simplex;
 
 pub mod builtin_noise_params {
-    use lazy_static::lazy_static;
+    use std::sync::LazyLock;
 
     use super::perlin::DoublePerlinNoiseParameters;
-    lazy_static! {
-        pub static ref temperature: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-10, &[1.5f64, 0f64, 1f64, 0f64, 0f64, 0f64,],);
-        pub static ref vegetation: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-8, &[1f64, 1f64, 0f64, 0f64, 0f64, 0f64,],);
-        pub static ref continentalness: DoublePerlinNoiseParameters<'static> =
+
+    pub static TEMPERATURE: LazyLock<DoublePerlinNoiseParameters<'static>> = LazyLock::new(|| {
+        DoublePerlinNoiseParameters::new(-10, &[1.5f64, 0f64, 1f64, 0f64, 0f64, 0f64])
+    });
+    pub static VEGETATION: LazyLock<DoublePerlinNoiseParameters<'static>> = LazyLock::new(|| {
+        DoublePerlinNoiseParameters::new(-8, &[1f64, 1f64, 0f64, 0f64, 0f64, 0f64])
+    });
+    pub static CONTINENTALNESS: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| {
             DoublePerlinNoiseParameters::new(
                 -9,
-                &[1f64, 1f64, 2f64, 2f64, 2f64, 1f64, 1f64, 1f64, 1f64,],
-            );
-        pub static ref erosion: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-9, &[1f64, 1f64, 0f64, 1f64, 1f64,],);
-        pub static ref temperature_large: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-12, &[1.5f64, 0f64, 1f64, 0f64, 0f64, 0f64,],);
-        pub static ref vegetation_large: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-10, &[1f64, 1f64, 0f64, 0f64, 0f64, 0f64,],);
-        pub static ref continentalness_large: DoublePerlinNoiseParameters<'static> =
+                &[1f64, 1f64, 2f64, 2f64, 2f64, 1f64, 1f64, 1f64, 1f64],
+            )
+        });
+    pub static EROSION: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-9, &[1f64, 1f64, 0f64, 1f64, 1f64]));
+    pub static TEMPERATURE_LARGE: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| {
+            DoublePerlinNoiseParameters::new(-12, &[1.5f64, 0f64, 1f64, 0f64, 0f64, 0f64])
+        });
+    pub static VEGETATION_LARGE: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| {
+            DoublePerlinNoiseParameters::new(-10, &[1f64, 1f64, 0f64, 0f64, 0f64, 0f64])
+        });
+    pub static CONTINENTALNESS_LARGE: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| {
             DoublePerlinNoiseParameters::new(
                 -11,
-                &[1f64, 1f64, 2f64, 2f64, 2f64, 1f64, 1f64, 1f64, 1f64,],
-            );
-        pub static ref erosion_large: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-11, &[1f64, 1f64, 0f64, 1f64, 1f64,],);
-        pub static ref ridge: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-7, &[1f64, 2f64, 1f64, 0f64, 0f64, 0f64],);
-        pub static ref offset: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-3, &[1f64; 4],);
-        pub static ref aquifer_barrier: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-3, &[1f64,],);
-        pub static ref aquifer_barrier_floodedness: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-7, &[1f64,],);
-        pub static ref aquifer_lava: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-1, &[1f64,],);
-        pub static ref aquifer_fluid_level_spread: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-5, &[1f64,],);
-        pub static ref pillar: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-7, &[1f64; 2],);
-        pub static ref pillar_rareness: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-8, &[1f64,],);
-        pub static ref pillar_thickness: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-8, &[1f64,],);
-        pub static ref spaghetti_2d: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-7, &[1f64,],);
-        pub static ref spaghetti_2d_elevation: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-8, &[1f64,],);
-        pub static ref spaghetti_2d_modulator: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-11, &[1f64,],);
-        pub static ref spaghetti_2d_thickness: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-11, &[1f64,],);
-        pub static ref spaghetti_3d_1: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-7, &[1f64,],);
-        pub static ref spaghetti_3d_2: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-7, &[1f64,],);
-        pub static ref spaghetti_3d_rarity: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-11, &[1f64,],);
-        pub static ref spaghetti_3d_thickness: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-8, &[1f64,],);
-        pub static ref spaghetti_roughness: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-5, &[1f64,],);
-        pub static ref spaghetti_roughness_modulator: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-8, &[1f64,],);
-        pub static ref cave_entrance: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-7, &[0.4f64, 0.5f64, 1f64],);
-        pub static ref cave_layer: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-8, &[1f64,],);
-        pub static ref cave_cheese: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(
-                -8,
-                &[0.5f64, 1f64, 2f64, 1f64, 2f64, 1f64, 0f64, 2f64, 0f64,],
-            );
-        pub static ref ore_veininess: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-8, &[1f64,],);
-        pub static ref ore_vein_a: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-7, &[1f64,],);
-        pub static ref ore_vein_b: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-7, &[1f64,],);
-        pub static ref ore_gap: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-5, &[1f64,],);
-        pub static ref noodle: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-8, &[1f64,],);
-        pub static ref noodle_thickness: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-8, &[1f64,],);
-        pub static ref noodle_ridge_a: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-7, &[1f64,],);
-        pub static ref noodle_ridge_b: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-7, &[1f64,],);
-        pub static ref jagged: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-16, &[1f64; 16],);
-        pub static ref surface: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-6, &[1f64; 3],);
-        pub static ref surface_secondary: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-6, &[1f64, 1f64, 0f64, 1f64,],);
-        pub static ref clay_bands_offset: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-8, &[1f64,],);
-        pub static ref badlands_pillar: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-2, &[1f64; 4],);
-        pub static ref badlands_pillar_roof: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-8, &[1f64,],);
-        pub static ref badlands_surface: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-6, &[1f64; 3],);
-        pub static ref iceberg_pillar: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-6, &[1f64; 4],);
-        pub static ref iceberg_pillar_roof: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-3, &[1f64,],);
-        pub static ref iceberg_surface: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-6, &[1f64; 3],);
-        pub static ref surface_swamp: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-2, &[1f64,],);
-        pub static ref calcite: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-9, &[1f64; 4],);
-        pub static ref gravel: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-8, &[1f64; 4],);
-        pub static ref powder_snow: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-6, &[1f64; 4],);
-        pub static ref packed_ice: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-7, &[1f64; 4],);
-        pub static ref ice: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-4, &[1f64; 4],);
-        pub static ref soul_sand_layer: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(
-                -8,
-                &[
-                    1f64,
-                    1f64,
-                    1f64,
-                    1f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.013333333333333334f64,
-                ],
-            );
-        pub static ref gravel_layer: DoublePerlinNoiseParameters<'static> =
+                &[1f64, 1f64, 2f64, 2f64, 2f64, 1f64, 1f64, 1f64, 1f64],
+            )
+        });
+    pub static EROSION_LARGE: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-11, &[1f64, 1f64, 0f64, 1f64, 1f64]));
+    pub static RIDGE: LazyLock<DoublePerlinNoiseParameters<'static>> = LazyLock::new(|| {
+        DoublePerlinNoiseParameters::new(-7, &[1f64, 2f64, 1f64, 0f64, 0f64, 0f64])
+    });
+    pub static OFFSET: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-3, &[1f64; 4]));
+    pub static AQUIFER_BARRIER: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-3, &[1f64]));
+    pub static AQUIFER_BARRIER_FLOODEDNESS: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-7, &[1f64]));
+    pub static AQUIFER_LAVA: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-1, &[1f64]));
+    pub static AQUIFER_FLUID_LEVEL_SPREAD: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-5, &[1f64]));
+    pub static PILLAR: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-7, &[1f64; 2]));
+    pub static PILLAR_RARENESS: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-8, &[1f64]));
+    pub static PILLAR_THICKNESS: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-8, &[1f64]));
+    pub static SPAGHETTI_2D: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-7, &[1f64]));
+    pub static SPAGHETTI_2D_ELEVATION: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-8, &[1f64]));
+    pub static SPAGHETTI_2D_MODULATOR: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-11, &[1f64]));
+    pub static SPAGHETTI_2D_THICKNESS: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-11, &[1f64]));
+    pub static SPAGHETTI_3D_1: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-7, &[1f64]));
+    pub static SPAGHETTI_3D_2: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-7, &[1f64]));
+    pub static SPAGHETTI_3D_RARITY: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-11, &[1f64]));
+    pub static SPAGHETTI_3D_THICKNESS: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-8, &[1f64]));
+    pub static SPAGHETTI_ROUGHNESS: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-5, &[1f64]));
+    pub static SPAGHETTI_ROUGHNESS_MODULATOR: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-8, &[1f64]));
+    pub static CAVE_ENTRANCE: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-7, &[0.4f64, 0.5f64, 1f64]));
+    pub static CAVE_LAYER: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-8, &[1f64]));
+    pub static CAVE_CHEESE: LazyLock<DoublePerlinNoiseParameters<'static>> = LazyLock::new(|| {
+        DoublePerlinNoiseParameters::new(
+            -8,
+            &[0.5f64, 1f64, 2f64, 1f64, 2f64, 1f64, 0f64, 2f64, 0f64],
+        )
+    });
+    pub static ORE_VEININESS: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-8, &[1f64]));
+    pub static ORE_VEIN_A: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-7, &[1f64]));
+    pub static ORE_VEIN_B: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-7, &[1f64]));
+    pub static ORE_GAP: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-5, &[1f64]));
+    pub static NOODLE: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-8, &[1f64]));
+    pub static NOODLE_THICKNESS: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-8, &[1f64]));
+    pub static NOODLE_RIDGE_A: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-7, &[1f64]));
+    pub static NOODLE_RIDGE_B: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-7, &[1f64]));
+    pub static JAGGED: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-16, &[1f64; 16]));
+    pub static SURFACE: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-6, &[1f64; 3]));
+    pub static SURFACE_SECONDARY: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-6, &[1f64, 1f64, 0f64, 1f64]));
+    pub static CLAY_BANDS_OFFSET: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-8, &[1f64]));
+    pub static BADLANDS_PILLAR: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-2, &[1f64; 4]));
+    pub static BADLANDS_PILLAR_ROOF: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-8, &[1f64]));
+    pub static BADLANDS_SURFACE: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-6, &[1f64; 3]));
+    pub static ICEBERG_PILLAR: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-6, &[1f64; 4]));
+    pub static ICEBERG_PILLAR_ROOF: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-3, &[1f64]));
+    pub static ICEBERG_SURFACE: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-6, &[1f64; 3]));
+    pub static SURFACE_SWAMP: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-2, &[1f64]));
+    pub static CALCITE: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-9, &[1f64; 4]));
+    pub static GRAVEL: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-8, &[1f64; 4]));
+    pub static POWDER_SNOW: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-6, &[1f64; 4]));
+    pub static PACKED_ICE: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-7, &[1f64; 4]));
+    pub static ICE: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-4, &[1f64; 4]));
+    pub static SOUL_SAND_LAYER: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| {
             DoublePerlinNoiseParameters::new(
                 -8,
                 &[
@@ -154,23 +152,62 @@ pub mod builtin_noise_params {
                     0f64,
                     0.013333333333333334f64,
                 ],
-            );
-        pub static ref patch: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(
-                -5,
-                &[1f64, 0f64, 0f64, 0f64, 0f64, 0.013333333333333334f64,],
-            );
-        pub static ref netherrack: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-3, &[1f64, 0f64, 0f64, 0.35f64,],);
-        pub static ref nether_wart: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-3, &[1f64, 0f64, 0f64, 0.9f64,],);
-        pub static ref nether_state_selector: DoublePerlinNoiseParameters<'static> =
-            DoublePerlinNoiseParameters::new(-4, &[1f64,],);
-    }
+            )
+        });
+    pub static GRAVEL_LAYER: LazyLock<DoublePerlinNoiseParameters<'static>> = LazyLock::new(|| {
+        DoublePerlinNoiseParameters::new(
+            -8,
+            &[
+                1f64,
+                1f64,
+                1f64,
+                1f64,
+                0f64,
+                0f64,
+                0f64,
+                0f64,
+                0.013333333333333334f64,
+            ],
+        )
+    });
+    pub static PATCH: LazyLock<DoublePerlinNoiseParameters<'static>> = LazyLock::new(|| {
+        DoublePerlinNoiseParameters::new(
+            -5,
+            &[1f64, 0f64, 0f64, 0f64, 0f64, 0.013333333333333334f64],
+        )
+    });
+    pub static NETHERRACK: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-3, &[1f64, 0f64, 0f64, 0.35f64]));
+    pub static NETHER_WART: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-3, &[1f64, 0f64, 0f64, 0.9f64]));
+    pub static NETHER_STATE_SELECTOR: LazyLock<DoublePerlinNoiseParameters<'static>> =
+        LazyLock::new(|| DoublePerlinNoiseParameters::new(-4, &[1f64]));
+}
+
+pub fn lerp_32(delta: f32, start: f32, end: f32) -> f32 {
+    start + delta * (end - start)
 }
 
 pub fn lerp(delta: f64, start: f64, end: f64) -> f64 {
     start + delta * (end - start)
+}
+
+pub fn lerp_progress(value: f64, start: f64, end: f64) -> f64 {
+    (value - start) / (end - start)
+}
+
+pub fn clamped_lerp(start: f64, end: f64, delta: f64) -> f64 {
+    if delta < 0f64 {
+        start
+    } else if delta > 1f64 {
+        end
+    } else {
+        lerp(delta, start, end)
+    }
+}
+
+pub fn clamped_map(value: f64, old_start: f64, old_end: f64, new_start: f64, new_end: f64) -> f64 {
+    clamped_lerp(new_start, new_end, lerp_progress(value, old_start, old_end))
 }
 
 pub fn lerp2(delta_x: f64, delta_y: f64, x0y0: f64, x1y0: f64, x0y1: f64, x1y1: f64) -> f64 {

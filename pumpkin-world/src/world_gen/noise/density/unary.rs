@@ -1,10 +1,10 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use super::{DensityFunction, DensityFunctionImpl, UnaryDensityFunction};
 
 #[derive(Clone)]
 pub struct ClampFunction<'a> {
-    pub(crate) input: Rc<DensityFunction<'a>>,
+    pub(crate) input: Arc<DensityFunction<'a>>,
     pub(crate) min: f64,
     pub(crate) max: f64,
 }
@@ -22,7 +22,7 @@ impl<'a> UnaryDensityFunction<'a> for ClampFunction<'a> {
 impl<'a> DensityFunctionImpl<'a> for ClampFunction<'a> {
     fn apply(&'a self, visitor: &'a impl super::Visitor) -> DensityFunction<'a> {
         DensityFunction::Clamp(ClampFunction {
-            input: Rc::new(self.input().apply(visitor)),
+            input: Arc::new(self.input().apply(visitor)),
             min: self.min,
             max: self.max,
         })
@@ -59,13 +59,13 @@ pub(crate) enum UnaryType {
 #[derive(Clone)]
 pub struct UnaryFunction<'a> {
     action: UnaryType,
-    input: Rc<DensityFunction<'a>>,
+    input: Arc<DensityFunction<'a>>,
     min: f64,
     max: f64,
 }
 
 impl<'a> UnaryFunction<'a> {
-    pub(crate) fn create(action: UnaryType, input: Rc<DensityFunction<'a>>) -> UnaryFunction {
+    pub(crate) fn create(action: UnaryType, input: Arc<DensityFunction<'a>>) -> UnaryFunction {
         let base_min = input.min();
         let new_min = Self::internal_apply(&action, base_min);
         let new_max = Self::internal_apply(&action, input.max());
@@ -133,7 +133,7 @@ impl<'a> DensityFunctionImpl<'a> for UnaryFunction<'a> {
     }
 
     fn apply(&'a self, visitor: &'a impl super::Visitor) -> DensityFunction<'a> {
-        let raw = Self::create(self.action.clone(), Rc::new(self.input().apply(visitor)));
+        let raw = Self::create(self.action.clone(), Arc::new(self.input().apply(visitor)));
         DensityFunction::Unary(raw)
     }
 

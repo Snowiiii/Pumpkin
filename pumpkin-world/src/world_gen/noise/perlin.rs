@@ -152,15 +152,25 @@ impl PerlinNoiseSampler {
 
 pub struct OctavePerlinNoiseSampler {
     octave_samplers: Vec<Option<PerlinNoiseSampler>>,
-    amplitudes: Vec<f64>,
+    pub(crate) amplitudes: Vec<f64>,
     first_octave: i32,
-    persistence: f64,
+    pub(crate) persistence: f64,
     lacunarity: f64,
     max_value: f64,
 }
 
 impl OctavePerlinNoiseSampler {
-    fn get_total_amplitude(scale: f64, persistence: f64, amplitudes: &[f64]) -> f64 {
+    pub(crate) fn get_octave(&self, octave: i32) -> Option<&PerlinNoiseSampler> {
+        match self
+            .octave_samplers
+            .get(self.octave_samplers.len() - 1 - octave as usize)
+        {
+            Some(octave) => octave.as_ref(),
+            None => None,
+        }
+    }
+
+    pub(crate) fn get_total_amplitude(scale: f64, persistence: f64, amplitudes: &[f64]) -> f64 {
         let mut d = 0f64;
         let mut e = persistence;
 
@@ -172,7 +182,7 @@ impl OctavePerlinNoiseSampler {
         d
     }
 
-    fn maintain_precision(value: f64) -> f64 {
+    pub fn maintain_precision(value: f64) -> f64 {
         value - (value / 3.3554432E7f64 + 0.5f64).floor() * 3.3554432E7f64
     }
 
@@ -217,6 +227,37 @@ impl OctavePerlinNoiseSampler {
                     }
                 }
             }
+            RandomGenerator::LegacyXoroshiro(random) => {
+                let sampler = PerlinNoiseSampler::new(random);
+                if j >= 0 && j < i as i32 {
+                    let d = amplitudes[j as usize];
+                    if d != 0f64 {
+                        samplers[j as usize] = Some(sampler);
+                    }
+                }
+
+                for kx in (0..j as usize).rev() {
+                    if kx < i {
+                        let e = amplitudes[kx];
+                        if e != 0f64 {
+                            samplers[kx] = Some(PerlinNoiseSampler::new(random));
+                        } else {
+                            random.skip(262);
+                        }
+                    } else {
+                        random.skip(262);
+                    }
+                }
+
+                if let Ok(length1) = samplers.iter().filter(|x| x.is_some()).try_len() {
+                    if let Ok(length2) = amplitudes.iter().filter(|x| !x.is_zero()).try_len() {
+                        assert_eq!(length1, length2);
+                    }
+                }
+                assert!(j >= i as i32 - 1);
+            }
+            // TODO: This is exactly the same code as LegacyXoroshiro path
+            // Is there a way to combine somehow?
             RandomGenerator::Legacy(random) => {
                 let sampler = PerlinNoiseSampler::new(random);
                 if j >= 0 && j < i as i32 {
@@ -286,6 +327,7 @@ impl OctavePerlinNoiseSampler {
     }
 }
 
+#[derive(Clone)]
 pub struct DoublePerlinNoiseParameters<'a> {
     first_octave: i32,
     amplitudes: &'a [f64],
