@@ -109,7 +109,9 @@ pub fn block_id_impl(item: TokenStream) -> TokenStream {
             .states
             .iter()
             .find(|state| state.is_default)
-            .expect("Error inside blocks.json file: Every Block should have at least 1 default state")
+            .expect(
+                "Error inside blocks.json file: Every Block should have at least 1 default state",
+            )
             .id
     } else {
         match block_info
