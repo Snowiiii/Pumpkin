@@ -8,6 +8,5 @@ pumpkin-protocol = { path = "../pumpkin-protocol"}
 pumpkin-core = { path = "../pumpkin-core"}
 
 # nbt
-fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 
 serde.workspace = true

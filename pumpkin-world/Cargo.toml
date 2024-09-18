@@ -6,7 +6,6 @@ edition.workspace = true
 [dependencies]
 pumpkin-core = { path = "../pumpkin-core"}
 
-fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 tokio.workspace = true
 rayon.workspace = true
 derive_more.workspace = true
