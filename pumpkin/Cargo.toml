@@ -19,7 +19,7 @@ pumpkin-entity = { path = "../pumpkin-entity"}
 pumpkin-protocol = { path = "../pumpkin-protocol"}
 pumpkin-registry = { path = "../pumpkin-registry"}
 
-itertools = "0.13.0"
+itertools.workspace = true
 
 # config
 serde.workspace = true
