@@ -17,7 +17,7 @@ impl Click {
                 click_type: ClickType::CreativePickItem,
                 slot: Slot::Normal(slot.try_into().or(Err(InventoryError::InvalidSlot))?),
             }),
-            4 => Self::new_drop_item(button),
+            4 => Self::new_drop_item(button, slot),
             5 => Self::new_drag_item(button, slot),
             6 => Ok(Self {
                 click_type: ClickType::DoubleClick,
@@ -66,15 +66,18 @@ impl Click {
         })
     }
 
-    fn new_drop_item(button: i8) -> Result<Self, InventoryError> {
+    fn new_drop_item(button: i8, slot: i16) -> Result<Self, InventoryError> {
         let drop_type = match button {
             0 => DropType::SingleItem,
             1 => DropType::FullStack,
             _ => Err(InventoryError::InvalidPacket)?,
         };
+        if slot == -999 {
+            return Err(InventoryError::InvalidPacket);
+        }
         Ok(Self {
             click_type: ClickType::DropType(drop_type),
-            slot: Slot::OutsideInventory,
+            slot: Slot::Normal(slot.try_into().or(Err(InventoryError::InvalidPacket))?),
         })
     }
 

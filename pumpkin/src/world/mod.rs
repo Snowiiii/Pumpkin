@@ -2,6 +2,8 @@ use std::{collections::HashMap, sync::Arc};
 
 pub mod player_chunker;
 
+use crate::entity::item::ItemEntity;
+use crate::server::Server;
 use crate::{
     client::Client,
     entity::{player::Player, Entity},
@@ -10,7 +12,7 @@ use num_traits::ToPrimitive;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
-use pumpkin_entity::{entity_type::EntityType, EntityId};
+use pumpkin_entity::EntityId;
 use pumpkin_protocol::client::play::{CBlockUpdate, CWorldEvent};
 use pumpkin_protocol::{
     client::play::{
@@ -22,6 +24,7 @@ use pumpkin_protocol::{
 use pumpkin_world::block::BlockId;
 use pumpkin_world::chunk::ChunkData;
 use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
+use pumpkin_world::item::ItemStack;
 use pumpkin_world::level::Level;
 use scoreboard::Scoreboard;
 use tokio::sync::{mpsc, RwLock};
@@ -44,7 +47,7 @@ pub struct World {
     /// A map of active players within the world, keyed by their unique token.
     pub current_players: Arc<Mutex<HashMap<uuid::Uuid, Arc<Player>>>>,
     pub scoreboard: Mutex<Scoreboard>,
-    // TODO: entities
+    pub items: Arc<Mutex<HashMap<i32, Arc<ItemEntity>>>>, // TODO: entities
 }
 
 impl World {
@@ -53,6 +56,7 @@ impl World {
         Self {
             level: Arc::new(Mutex::new(level)),
             current_players: Arc::new(Mutex::new(HashMap::new())),
+            items: Arc::new(Mutex::new(HashMap::new())),
             scoreboard: Mutex::new(Scoreboard::new()),
         }
     }
@@ -196,28 +200,12 @@ impl World {
                 .await;
         }
 
-        let gameprofile = &player.gameprofile;
-
         log::debug!("Broadcasting player spawn for {}", player.gameprofile.name);
         // spawn player for every client
         self.broadcast_packet_expect(
             &[player.gameprofile.id],
             // TODO: add velo
-            &CSpawnEntity::new(
-                entity_id.into(),
-                gameprofile.id,
-                (EntityType::Player as i32).into(),
-                position.x,
-                position.y,
-                position.z,
-                pitch,
-                yaw,
-                yaw,
-                0.into(),
-                0.0,
-                0.0,
-                0.0,
-            ),
+            &player.living_entity.entity.get_spawn_entity_packet(None),
         )
         .await;
         // spawn players for our client
@@ -230,26 +218,9 @@ impl World {
             .filter(|c| c.0 != &id)
         {
             let entity = &existing_player.living_entity.entity;
-            let pos = entity.pos.load();
-            let gameprofile = &existing_player.gameprofile;
-            log::debug!("Sending player entities to {}", player.gameprofile.name);
             player
                 .client
-                .send_packet(&CSpawnEntity::new(
-                    existing_player.entity_id().into(),
-                    gameprofile.id,
-                    (EntityType::Player as i32).into(),
-                    pos.x,
-                    pos.y,
-                    pos.z,
-                    entity.yaw.load(),
-                    entity.pitch.load(),
-                    entity.head_yaw.load(),
-                    0.into(),
-                    0.0,
-                    0.0,
-                    0.0,
-                ))
+                .send_packet(&entity.get_spawn_entity_packet(None))
                 .await;
         }
         // entity meta data
@@ -407,14 +378,27 @@ impl World {
             .expect("Channel closed for unknown reason")
     }
 
-    pub async fn break_block(&self, position: WorldPosition) {
+    pub async fn break_block(self: &Arc<Self>, position: WorldPosition, server: Arc<Server>) {
+        let block_id = self.get_block_id(position).await;
         self.set_block(position, BlockId { data: 0 }).await;
-
+        let item_id = block_id.get_as_item_id();
+        let fake_item_stack = ItemStack {
+            item_id,
+            item_count: 1,
+        };
+        ItemEntity::spawn(
+            Vector3::default(),
+            Vector3::default(),
+            self.clone(),
+            fake_item_stack,
+            server,
+        )
+        .await;
         self.broadcast_packet_all(&CWorldEvent::new(2001, &position, 11, false))
             .await;
     }
 
-    pub async fn get_block(&self, position: WorldPosition) -> BlockId {
+    pub async fn get_block_id(&self, position: WorldPosition) -> BlockId {
         let (chunk, relative) = position.chunk_and_chunk_relative_position();
         let relative = ChunkRelativeBlockCoordinates::from(relative);
         let chunk = self.receive_chunk(chunk).await;

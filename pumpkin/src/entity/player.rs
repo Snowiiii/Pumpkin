@@ -120,6 +120,7 @@ impl Player {
         Self {
             living_entity: LivingEntity::new(Entity::new(
                 entity_id,
+                gameprofile.id,
                 world,
                 EntityType::Player,
                 1.62,
@@ -432,7 +433,7 @@ impl Player {
                         .await;
                 }
                 ServerboundPlayPackets::PlayerDigging => {
-                    self.handle_player_action(SPlayerAction::read(bytebuf)?)
+                    self.handle_player_action(server,SPlayerAction::read(bytebuf)?)
                         .await;
                 }
                 ServerboundPlayPackets::EntityAction => {}

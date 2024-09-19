@@ -1,5 +1,5 @@
 // TODO
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 #[repr(i32)]
 pub enum EntityType {
     AcaciaBoat = 0,
@@ -152,4 +152,14 @@ pub enum EntityType {
     ZombifiedPiglin = 147,
     Player = 148,
     FishingBobber = 149,
+}
+
+impl EntityType {
+    pub const fn gravity(&self) -> f64 {
+        use EntityType::*;
+        match self {
+            Item => 0.04,
+            _ => todo!(),
+        }
+    }
 }

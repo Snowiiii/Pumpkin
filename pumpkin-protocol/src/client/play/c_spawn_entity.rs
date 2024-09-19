@@ -37,9 +37,9 @@ impl CSpawnEntity {
         yaw: f32,      // angle
         head_yaw: f32, // angle
         data: VarInt,
-        velocity_x: f32,
-        velocity_y: f32,
-        velocity_z: f32,
+        velocity_x: f64,
+        velocity_y: f64,
+        velocity_z: f64,
     ) -> Self {
         Self {
             entity_id,
