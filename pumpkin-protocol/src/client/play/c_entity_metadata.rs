@@ -7,13 +7,13 @@ use super::ClientboundPlayPackets;
 
 #[derive(Serialize)]
 #[client_packet(ClientboundPlayPackets::EntityMetadata as i32)]
-pub struct CSetEntityMetadata<T> {
+pub struct CSetEntityMetadata<T: Serialize> {
     entity_id: VarInt,
     metadata: Metadata<T>,
     end: u8,
 }
 
-impl<T> CSetEntityMetadata<T> {
+impl<T: Serialize> CSetEntityMetadata<T> {
     pub fn new(entity_id: VarInt, metadata: Metadata<T>) -> Self {
         Self {
             entity_id,
@@ -24,14 +24,18 @@ impl<T> CSetEntityMetadata<T> {
 }
 
 #[derive(Serialize)]
-pub struct Metadata<T> {
+pub struct Metadata<T: Serialize> {
     index: u8,
-    typ: VarInt,
+    r#type: VarInt,
     value: T,
 }
 
-impl<T> Metadata<T> {
-    pub fn new(index: u8, typ: VarInt, value: T) -> Self {
-        Self { index, typ, value }
+impl<T: Serialize> Metadata<T> {
+    pub fn new(index: u8, r#type: VarInt, value: T) -> Self {
+        Self {
+            index,
+            r#type,
+            value,
+        }
     }
 }

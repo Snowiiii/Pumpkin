@@ -10,7 +10,7 @@ use num_traits::ToPrimitive;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
-use pumpkin_entity::{entity_type::EntityType, EntityId};
+use pumpkin_entity::EntityId;
 use pumpkin_protocol::client::play::{CBlockUpdate, CWorldEvent};
 use pumpkin_protocol::{
     client::play::{
@@ -27,6 +27,11 @@ use scoreboard::Scoreboard;
 use tokio::sync::{mpsc, RwLock};
 use tokio::sync::{mpsc::Receiver, Mutex};
 
+use crate::entity::item::ItemEntity;
+use crate::{
+    client::Client,
+    entity::{player::Player, Entity},
+};
 pub mod scoreboard;
 
 /// Represents a Minecraft world, containing entities, players, and the underlying level data.
@@ -44,6 +49,7 @@ pub struct World {
     /// A map of active players within the world, keyed by their unique token.
     pub current_players: Arc<Mutex<HashMap<uuid::Uuid, Arc<Player>>>>,
     pub scoreboard: Mutex<Scoreboard>,
+    pub items: Arc<Mutex<HashMap<i32, Arc<ItemEntity>>>>
     // TODO: entities
 }
 
@@ -53,6 +59,7 @@ impl World {
         Self {
             level: Arc::new(Mutex::new(level)),
             current_players: Arc::new(Mutex::new(HashMap::new())),
+            items: Arc::new(Mutex::new(HashMap::new())),
             scoreboard: Mutex::new(Scoreboard::new()),
         }
     }
@@ -203,54 +210,13 @@ impl World {
         self.broadcast_packet_expect(
             &[player.gameprofile.id],
             // TODO: add velo
-            &CSpawnEntity::new(
-                entity_id.into(),
-                gameprofile.id,
-                (EntityType::Player as i32).into(),
-                position.x,
-                position.y,
-                position.z,
-                pitch,
-                yaw,
-                yaw,
-                0.into(),
-                0.0,
-                0.0,
-                0.0,
-            ),
-        )
-        .await;
+            &CSpawnEntity::from(&player.entity),
+        ).await;
         // spawn players for our client
         let id = player.gameprofile.id;
-        for (_, existing_player) in self
-            .current_players
-            .lock()
-            .await
-            .iter()
-            .filter(|c| c.0 != &id)
-        {
+        for (_, existing_player) in self.current_players.lock().await.iter().filter(|c| c.0 != &id) {
             let entity = &existing_player.living_entity.entity;
-            let pos = entity.pos.load();
-            let gameprofile = &existing_player.gameprofile;
-            log::debug!("Sending player entities to {}", player.gameprofile.name);
-            player
-                .client
-                .send_packet(&CSpawnEntity::new(
-                    existing_player.entity_id().into(),
-                    gameprofile.id,
-                    (EntityType::Player as i32).into(),
-                    pos.x,
-                    pos.y,
-                    pos.z,
-                    entity.yaw.load(),
-                    entity.pitch.load(),
-                    entity.head_yaw.load(),
-                    0.into(),
-                    0.0,
-                    0.0,
-                    0.0,
-                ))
-                .await;
+            player.client.send_packet(&CSpawnEntity::from(entity)).await
         }
         // entity meta data
         // set skin parts

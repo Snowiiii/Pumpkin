@@ -11,16 +11,20 @@ use pumpkin_protocol::{
     client::play::{CSetEntityMetadata, Metadata},
     VarInt,
 };
+use uuid::Uuid;
 
 use crate::world::World;
 
+pub mod item;
 pub mod living;
 pub mod player;
+mod to_packet;
 
 /// Represents a not living Entity (e.g. Item, Egg, Snowball...)
 pub struct Entity {
     /// A unique identifier for the entity
     pub entity_id: EntityId,
+    pub uuid: Uuid,
     /// The type of entity (e.g., player, zombie, item)
     pub entity_type: EntityType,
     /// The world in which the entity exists.
@@ -62,12 +66,14 @@ pub struct Entity {
 impl Entity {
     pub fn new(
         entity_id: EntityId,
+        uuid: Uuid,
         world: Arc<World>,
         entity_type: EntityType,
         standing_eye_height: f32,
     ) -> Self {
         Self {
             entity_id,
+            uuid,
             entity_type,
             on_ground: AtomicBool::new(false),
             pos: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
@@ -125,6 +131,12 @@ impl Entity {
     /// Removes the Entity from their current World
     pub async fn remove(&self) {
         self.world.remove_entity(self).await;
+    }
+
+    pub fn advance_with_velocity(&self) {
+        let pos = self.pos.load();
+        let velocity = self.velocity.load();
+        self.set_pos(pos.x + velocity.x, pos.y + velocity.y, pos.z + velocity.z)
     }
 
     /// Applies knockback to the entity, following vanilla Minecraft's mechanics.
@@ -202,6 +214,13 @@ impl Entity {
             Metadata::new(6, 20.into(), (pose).into()),
         );
         self.world.broadcast_packet_all(&packet).await;
+    }
+
+    // This gets run once per "tick" (tokio task sleeping to imitate tick)
+    pub fn apply_gravity(&self) {
+        let mut velocity = self.velocity.load();
+        velocity.y -= self.entity_type.gravity();
+        self.velocity.store(velocity);
     }
 }
 

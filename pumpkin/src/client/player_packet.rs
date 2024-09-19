@@ -1,5 +1,7 @@
 use std::{f32::consts::PI, sync::Arc};
 
+use super::PlayerConfig;
+use crate::entity::item::ItemEntity;
 use crate::{
     commands::CommandSender,
     entity::player::{ChatMode, Hand, Player},
@@ -32,8 +34,6 @@ use pumpkin_protocol::{
 };
 use pumpkin_world::block::{BlockFace, BlockId, BlockState};
 use pumpkin_world::global_registry;
-
-use super::PlayerConfig;
 
 fn modulus(a: f32, b: f32) -> f32 {
     ((a % b) + b) % b
@@ -466,8 +466,7 @@ impl Player {
             None => self.kick(TextComponent::text("Invalid action type")).await,
         }
     }
-
-    pub async fn handle_player_action(&self, player_action: SPlayerAction) {
+    pub async fn handle_player_action(&self, server: &Arc<Server>, player_action: SPlayerAction) {
         match Status::from_i32(player_action.status.0) {
             Some(status) => match status {
                 Status::StartedDigging => {
@@ -523,14 +522,37 @@ impl Player {
                         .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence))
                         .await;
                 }
-                Status::DropItemStack
-                | Status::DropItem
-                | Status::ShootArrowOrFinishEating
-                | Status::SwapItem => {
-                    log::debug!("todo");
+                Status::DropItemStack => {
+                    let mut inventory = self.inventory.lock();
+                    let slot = inventory.held_item_mut();
+                    if let Some(item) = slot {
+                        ItemEntity::new(&self.entity, *item, server.clone());
+                        *slot = None;
+                    }
+                }
+                Status::DropItem => {
+                    let mut inventory = self.inventory.lock();
+                    let slot = inventory.held_item_mut();
+                    if let Some(held_item) = slot {
+                        if held_item.item_count > 1 {
+                            held_item.item_count -= 1;
+                            let mut item = *held_item;
+                            item.item_count = 1;
+                            ItemEntity::new(&self.entity, item, server.clone());
+                        } else {
+                            ItemEntity::new(&self.entity, *held_item, server.clone());
+                            *slot = None;
+                        }
+                    }
+                }
+                Status::ShootArrowOrFinishEating => {
+                    dbg!("todo");
+                }
+                Status::SwapItem => {
+                    dbg!("todo");
                 }
             },
-            None => self.kick(TextComponent::text("Invalid status")).await,
+            None => self.kick(TextComponent::text("Invalid status")),
         }
     }
 
@@ -539,9 +561,9 @@ impl Player {
             .wait_for_keep_alive
             .load(std::sync::atomic::Ordering::Relaxed)
             && keep_alive.keep_alive_id
-                == self
-                    .keep_alive_id
-                    .load(std::sync::atomic::Ordering::Relaxed)
+            == self
+            .keep_alive_id
+            .load(std::sync::atomic::Ordering::Relaxed)
         {
             self.wait_for_keep_alive
                 .store(false, std::sync::atomic::Ordering::Relaxed);
@@ -616,16 +638,28 @@ impl Player {
 
     pub async fn handle_set_creative_slot(
         &self,
+        server: &Arc<Server>,
         packet: SSetCreativeSlot,
     ) -> Result<(), InventoryError> {
         if self.gamemode.load() != GameMode::Creative {
             return Err(InventoryError::PermissionError);
         }
-        self.inventory.lock().await.set_slot(
-            packet.slot as usize,
-            packet.clicked_item.to_item(),
-            false,
-        )
+        let slot = packet.slot;
+        match slot {
+            -1 => {
+                let item = None;
+                self.carried_item.swap(item);
+                if let Some(item) = item {
+                    ItemEntity::new(&self.entity, item, server.clone());
+                }
+                Ok(())
+            }
+            _ => {
+                self.inventory
+                    .lock().await
+                    .set_slot(slot as usize, packet.clicked_item.to_item(), false)
+            }
+        }
     }
 
     // TODO:
