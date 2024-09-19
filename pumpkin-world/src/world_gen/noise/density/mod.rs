@@ -1,22 +1,26 @@
 use std::sync::Arc;
 
 use blend::{BlendAlphaFunction, BlendDensityFunction, BlendOffsetFunction};
+use end::EndIslandFunction;
 use math::{BinaryFunction, BinaryType, LinearFunction};
 use noise::{InternalNoise, InterpolatedNoiseSampler, NoiseFunction, ShiftedNoiseFunction};
 use offset::{ShiftAFunction, ShiftBFunction};
 use spline::SplineFunction;
 use unary::{ClampFunction, UnaryFunction, UnaryType};
+use weird::WierdScaledFunction;
 
 use crate::world_gen::blender::Blender;
 
-use super::clamped_map;
+use super::{clamped_map, perlin::DoublePerlinNoiseParameters};
 
 mod blend;
+mod end;
 mod math;
 mod noise;
 mod offset;
 pub mod spline;
 mod unary;
+mod weird;
 
 pub mod built_in_noises {
     use std::sync::{Arc, LazyLock};
@@ -30,12 +34,17 @@ pub mod built_in_noises {
     };
 
     use super::{
-        blend::{BlendAlphaFunction, BlendOffsetFunction},
-        lerp_density,
+        apply_blending,
+        blend::BlendOffsetFunction,
+        end::EndIslandFunction,
         noise::{InternalNoise, InterpolatedNoiseSampler, NoiseFunction, ShiftedNoiseFunction},
+        noise_in_range,
         offset::{ShiftAFunction, ShiftBFunction},
         spline::SplineFunction,
-        ConstantFunction, DensityFunction, YClampedFunction,
+        veritcal_range_choice,
+        weird::{RarityMapper, WierdScaledFunction},
+        ConstantFunction, DensityFunction, RangeFunction, WrapperFunction, WrapperType,
+        YClampedFunction,
     };
 
     pub struct SlopedCheeseResult<'a> {
@@ -65,17 +74,27 @@ pub mod built_in_noises {
     });
 
     pub static SHIFT_X: BuiltInNoise = LazyLock::new(|| {
-        DensityFunction::ShiftA(ShiftAFunction::new(Arc::new(InternalNoise::new(
-            builtin_noise_params::OFFSET.clone(),
-            None,
-        ))))
+        DensityFunction::Wrapper(WrapperFunction::new(
+            Arc::new(DensityFunction::Wrapper(WrapperFunction::new(
+                Arc::new(DensityFunction::ShiftA(ShiftAFunction::new(Arc::new(
+                    InternalNoise::new(builtin_noise_params::OFFSET.clone(), None),
+                )))),
+                WrapperType::Cache2D,
+            ))),
+            WrapperType::CacheFlat,
+        ))
     });
 
     pub static SHIFT_Z: BuiltInNoise = LazyLock::new(|| {
-        DensityFunction::ShiftB(ShiftBFunction::new(Arc::new(InternalNoise::new(
-            builtin_noise_params::OFFSET.clone(),
-            None,
-        ))))
+        DensityFunction::Wrapper(WrapperFunction::new(
+            Arc::new(DensityFunction::Wrapper(WrapperFunction::new(
+                Arc::new(DensityFunction::ShiftB(ShiftBFunction::new(Arc::new(
+                    InternalNoise::new(builtin_noise_params::OFFSET.clone(), None),
+                )))),
+                WrapperType::Cache2D,
+            ))),
+            WrapperType::CacheFlat,
+        ))
     });
 
     pub static BASE_3D_NOISE_OVERWORLD: BuiltInNoise = LazyLock::new(|| {
@@ -97,44 +116,53 @@ pub mod built_in_noises {
     });
 
     pub static CONTINENTS_OVERWORLD: BuiltInNoise = LazyLock::new(|| {
-        DensityFunction::ShiftedNoise(ShiftedNoiseFunction::new(
-            Arc::new(SHIFT_X.clone()),
-            Arc::new(ZERO.clone()),
-            Arc::new(SHIFT_Z.clone()),
-            0.25f64,
-            0f64,
-            Arc::new(InternalNoise::new(
-                builtin_noise_params::CONTINENTALNESS.clone(),
-                None,
-            )),
+        DensityFunction::Wrapper(WrapperFunction::new(
+            Arc::new(DensityFunction::ShiftedNoise(ShiftedNoiseFunction::new(
+                Arc::new(SHIFT_X.clone()),
+                Arc::new(ZERO.clone()),
+                Arc::new(SHIFT_Z.clone()),
+                0.25f64,
+                0f64,
+                Arc::new(InternalNoise::new(
+                    builtin_noise_params::CONTINENTALNESS.clone(),
+                    None,
+                )),
+            ))),
+            WrapperType::CacheFlat,
         ))
     });
 
     pub static EROSION_OVERWORLD: BuiltInNoise = LazyLock::new(|| {
-        DensityFunction::ShiftedNoise(ShiftedNoiseFunction::new(
-            Arc::new(SHIFT_X.clone()),
-            Arc::new(ZERO.clone()),
-            Arc::new(SHIFT_Z.clone()),
-            0.25f64,
-            0f64,
-            Arc::new(InternalNoise::new(
-                builtin_noise_params::EROSION.clone(),
-                None,
-            )),
+        DensityFunction::Wrapper(WrapperFunction::new(
+            Arc::new(DensityFunction::ShiftedNoise(ShiftedNoiseFunction::new(
+                Arc::new(SHIFT_X.clone()),
+                Arc::new(ZERO.clone()),
+                Arc::new(SHIFT_Z.clone()),
+                0.25f64,
+                0f64,
+                Arc::new(InternalNoise::new(
+                    builtin_noise_params::EROSION.clone(),
+                    None,
+                )),
+            ))),
+            WrapperType::CacheFlat,
         ))
     });
 
     pub static RIDGES_OVERWORLD: BuiltInNoise = LazyLock::new(|| {
-        DensityFunction::ShiftedNoise(ShiftedNoiseFunction::new(
-            Arc::new(SHIFT_X.clone()),
-            Arc::new(ZERO.clone()),
-            Arc::new(SHIFT_Z.clone()),
-            0.25f64,
-            0f64,
-            Arc::new(InternalNoise::new(
-                builtin_noise_params::RIDGE.clone(),
-                None,
-            )),
+        DensityFunction::Wrapper(WrapperFunction::new(
+            Arc::new(DensityFunction::ShiftedNoise(ShiftedNoiseFunction::new(
+                Arc::new(SHIFT_X.clone()),
+                Arc::new(ZERO.clone()),
+                Arc::new(SHIFT_Z.clone()),
+                0.25f64,
+                0f64,
+                Arc::new(InternalNoise::new(
+                    builtin_noise_params::RIDGE.clone(),
+                    None,
+                )),
+            ))),
+            WrapperType::CacheFlat,
         ))
     });
 
@@ -165,6 +193,344 @@ pub mod built_in_noises {
         )
     });
 
+    pub static CONTINENTS_OVERWORLD_LARGE_BIOME: BuiltInNoise = LazyLock::new(|| {
+        DensityFunction::Wrapper(WrapperFunction::new(
+            Arc::new(DensityFunction::ShiftedNoise(ShiftedNoiseFunction::new(
+                Arc::new(SHIFT_X.clone()),
+                Arc::new(ZERO.clone()),
+                Arc::new(SHIFT_Z.clone()),
+                0.25f64,
+                0f64,
+                Arc::new(InternalNoise::new(
+                    builtin_noise_params::CONTINENTALNESS_LARGE.clone(),
+                    None,
+                )),
+            ))),
+            WrapperType::CacheFlat,
+        ))
+    });
+
+    pub static EROSION_OVERWORLD_LARGE_BIOME: BuiltInNoise = LazyLock::new(|| {
+        DensityFunction::Wrapper(WrapperFunction::new(
+            Arc::new(DensityFunction::ShiftedNoise(ShiftedNoiseFunction::new(
+                Arc::new(SHIFT_X.clone()),
+                Arc::new(ZERO.clone()),
+                Arc::new(SHIFT_Z.clone()),
+                0.25f64,
+                0f64,
+                Arc::new(InternalNoise::new(
+                    builtin_noise_params::EROSION_LARGE.clone(),
+                    None,
+                )),
+            ))),
+            WrapperType::CacheFlat,
+        ))
+    });
+
+    pub static OVERWORLD_LARGE_SLOPED_CHEESE: BuiltInSlopedCheese = LazyLock::new(|| {
+        sloped_cheese_function(
+            DensityFunction::Noise(NoiseFunction::new(
+                Arc::new(InternalNoise::new(
+                    builtin_noise_params::JAGGED.clone(),
+                    None,
+                )),
+                1500f64,
+                0f64,
+            )),
+            CONTINENTS_OVERWORLD_LARGE_BIOME.clone(),
+            EROSION_OVERWORLD_LARGE_BIOME.clone(),
+            RIDGES_OVERWORLD.clone(),
+            RIDGES_FOLDED_OVERWORLD.clone(),
+            false,
+        )
+    });
+
+    pub static OVERWORLD_AMPLIFIED_SLOPED_CHEESE: BuiltInSlopedCheese = LazyLock::new(|| {
+        sloped_cheese_function(
+            DensityFunction::Noise(NoiseFunction::new(
+                Arc::new(InternalNoise::new(
+                    builtin_noise_params::JAGGED.clone(),
+                    None,
+                )),
+                1500f64,
+                0f64,
+            )),
+            CONTINENTS_OVERWORLD.clone(),
+            EROSION_OVERWORLD.clone(),
+            RIDGES_OVERWORLD.clone(),
+            RIDGES_FOLDED_OVERWORLD.clone(),
+            true,
+        )
+    });
+
+    pub static SLOPED_CHEESE_END: BuiltInNoise = LazyLock::new(|| {
+        DensityFunction::EndIsland(EndIslandFunction::new(0)).add(BASE_3D_NOISE_END.clone())
+    });
+
+    pub static CAVES_SPAGHETTI_ROUGHNESS_FUNCTION_OVERWORLD: BuiltInNoise = LazyLock::new(|| {
+        DensityFunction::Wrapper(WrapperFunction::new(
+            Arc::new(
+                noise_in_range(
+                    builtin_noise_params::SPAGHETTI_ROUGHNESS_MODULATOR.clone(),
+                    1f64,
+                    1f64,
+                    0f64,
+                    -0.1f64,
+                )
+                .mul(
+                    DensityFunction::Noise(NoiseFunction::new(
+                        Arc::new(InternalNoise::new(
+                            builtin_noise_params::SPAGHETTI_ROUGHNESS.clone(),
+                            None,
+                        )),
+                        1f64,
+                        1f64,
+                    ))
+                    .abs()
+                    .add_const(-0.4f64),
+                ),
+            ),
+            WrapperType::CacheOnce,
+        ))
+    });
+
+    pub static CAVES_SPAGHETTI_2D_THICKNESS_MODULAR_OVERWORLD: BuiltInNoise = LazyLock::new(|| {
+        DensityFunction::Wrapper(WrapperFunction::new(
+            Arc::new(noise_in_range(
+                builtin_noise_params::SPAGHETTI_2D_THICKNESS.clone(),
+                2f64,
+                1f64,
+                -0.6f64,
+                -1.3f64,
+            )),
+            WrapperType::CacheOnce,
+        ))
+    });
+
+    pub static CAVES_SPAGHETTI_2D_OVERWORLD: BuiltInNoise = LazyLock::new(|| {
+        let function1 = DensityFunction::Noise(NoiseFunction::new(
+            Arc::new(InternalNoise::new(
+                builtin_noise_params::SPAGHETTI_2D_MODULATOR.clone(),
+                None,
+            )),
+            2f64,
+            1f64,
+        ));
+
+        let function2 = DensityFunction::Wierd(WierdScaledFunction::new(
+            Arc::new(function1),
+            Arc::new(InternalNoise::new(
+                builtin_noise_params::SPAGHETTI_2D.clone(),
+                None,
+            )),
+            RarityMapper::Caves,
+        ));
+
+        let function3 = noise_in_range(
+            builtin_noise_params::SPAGHETTI_2D_ELEVATION.clone(),
+            1f64,
+            0f64,
+            ((-64i32) / 8i32) as f64,
+            8f64,
+        );
+
+        let function4 = CAVES_SPAGHETTI_2D_THICKNESS_MODULAR_OVERWORLD.clone();
+
+        let function5 = function3.add(
+            DensityFunction::ClampedY(YClampedFunction {
+                from: -64,
+                to: 320,
+                from_val: 8f64,
+                to_val: -40f64,
+            })
+            .abs(),
+        );
+
+        let function6 = function5.add(function4.clone()).cube();
+
+        let function7 = function2.add(function4.mul_const(0.083f64));
+
+        function7.binary_max(function6).clamp(-1f64, 1f64)
+    });
+
+    pub static CAVES_ENTRANCES_OVERWORLD: BuiltInNoise = LazyLock::new(|| {
+        let function = DensityFunction::Noise(NoiseFunction::new(
+            Arc::new(InternalNoise::new(
+                builtin_noise_params::SPAGHETTI_3D_RARITY.clone(),
+                None,
+            )),
+            2f64,
+            1f64,
+        ));
+
+        let function2 = noise_in_range(
+            builtin_noise_params::SPAGHETTI_3D_THICKNESS.clone(),
+            1f64,
+            1f64,
+            -0.065f64,
+            -0.088f64,
+        );
+
+        let function3 = DensityFunction::Wierd(WierdScaledFunction::new(
+            Arc::new(function.clone()),
+            Arc::new(InternalNoise::new(
+                builtin_noise_params::SPAGHETTI_3D_1.clone(),
+                None,
+            )),
+            RarityMapper::Tunnels,
+        ));
+
+        let function4 = DensityFunction::Wierd(WierdScaledFunction::new(
+            Arc::new(function),
+            Arc::new(InternalNoise::new(
+                builtin_noise_params::SPAGHETTI_3D_2.clone(),
+                None,
+            )),
+            RarityMapper::Tunnels,
+        ));
+
+        let function5 = function3
+            .binary_max(function4)
+            .add(function2)
+            .clamp(-1f64, 1f64);
+
+        let function6 = CAVES_SPAGHETTI_ROUGHNESS_FUNCTION_OVERWORLD.clone();
+
+        let function7 = DensityFunction::Noise(NoiseFunction::new(
+            Arc::new(InternalNoise::new(
+                builtin_noise_params::CAVE_ENTRANCE.clone(),
+                None,
+            )),
+            0.75f64,
+            0.5f64,
+        ));
+
+        let function8 =
+            function7
+                .add_const(0.37f64)
+                .add(DensityFunction::ClampedY(YClampedFunction {
+                    from: -10,
+                    to: 30,
+                    from_val: 0.3f64,
+                    to_val: 0f64,
+                }));
+
+        DensityFunction::Wrapper(WrapperFunction::new(
+            Arc::new(function8.binary_min(function6.add(function5))),
+            WrapperType::CacheOnce,
+        ))
+    });
+
+    pub static CAVES_NOODLE_OVERWORLD: BuiltInNoise = LazyLock::new(|| {
+        let function = Y.clone();
+
+        let function2 = veritcal_range_choice(
+            function.clone(),
+            DensityFunction::Noise(NoiseFunction::new(
+                Arc::new(InternalNoise::new(
+                    builtin_noise_params::NOODLE.clone(),
+                    None,
+                )),
+                1f64,
+                1f64,
+            )),
+            -60,
+            320,
+            -1,
+        );
+
+        let function3 = veritcal_range_choice(
+            function.clone(),
+            noise_in_range(
+                builtin_noise_params::NOODLE_THICKNESS.clone(),
+                1f64,
+                1f64,
+                -0.05f64,
+                -0.1f64,
+            ),
+            -60,
+            320,
+            0,
+        );
+
+        let function4 = veritcal_range_choice(
+            function.clone(),
+            DensityFunction::Noise(NoiseFunction::new(
+                Arc::new(InternalNoise::new(
+                    builtin_noise_params::NOODLE_RIDGE_A.clone(),
+                    None,
+                )),
+                2.6666666666666665f64,
+                2.6666666666666665f64,
+            )),
+            -60,
+            320,
+            0,
+        );
+
+        let function5 = veritcal_range_choice(
+            function.clone(),
+            DensityFunction::Noise(NoiseFunction::new(
+                Arc::new(InternalNoise::new(
+                    builtin_noise_params::NOODLE_RIDGE_B.clone(),
+                    None,
+                )),
+                2.6666666666666665f64,
+                2.6666666666666665f64,
+            )),
+            -60,
+            320,
+            0,
+        );
+
+        let function6 = function4
+            .abs()
+            .binary_max(function5.abs())
+            .mul_const(1.5f64);
+
+        DensityFunction::Range(RangeFunction {
+            input: Arc::new(function2),
+            min: -1000000f64,
+            max: 0f64,
+            in_range: Arc::new(DensityFunction::Constant(ConstantFunction::new(64f64))),
+            out_range: Arc::new(function3.add(function6)),
+        })
+    });
+
+    pub static CAVES_PILLARS_OVERWORLD: BuiltInNoise = LazyLock::new(|| {
+        let function = DensityFunction::Noise(NoiseFunction::new(
+            Arc::new(InternalNoise::new(
+                builtin_noise_params::PILLAR.clone(),
+                None,
+            )),
+            25f64,
+            0.3f64,
+        ));
+
+        let function2 = noise_in_range(
+            builtin_noise_params::PILLAR_RARENESS.clone(),
+            1f64,
+            1f64,
+            0f64,
+            -2f64,
+        );
+
+        let function3 = noise_in_range(
+            builtin_noise_params::PILLAR_THICKNESS.clone(),
+            1f64,
+            1f64,
+            0f64,
+            1.1f64,
+        );
+
+        let function4 = function.mul_const(2f64).add(function2);
+
+        DensityFunction::Wrapper(WrapperFunction::new(
+            Arc::new(function4.mul(function3.cube())),
+            WrapperType::CacheOnce,
+        ))
+    });
+
     fn sloped_cheese_function<'a>(
         jagged_noise: DensityFunction<'a>,
         continents: DensityFunction<'a>,
@@ -173,8 +539,7 @@ pub mod built_in_noises {
         ridges_folded: DensityFunction<'a>,
         amplified: bool,
     ) -> SlopedCheeseResult<'a> {
-        let offset = lerp_density(
-            DensityFunction::BlendAlpha(BlendAlphaFunction {}),
+        let offset = apply_blending(
             DensityFunction::Spline(SplineFunction::new(Arc::new(create_offset_spline(
                 continents.clone(),
                 erosion.clone(),
@@ -185,8 +550,7 @@ pub mod built_in_noises {
             DensityFunction::BlendOffset(BlendOffsetFunction {}),
         );
 
-        let factor = lerp_density(
-            DensityFunction::BlendAlpha(BlendAlphaFunction {}),
+        let factor = apply_blending(
             DensityFunction::Spline(SplineFunction::new(Arc::new(create_factor_spline(
                 continents.clone(),
                 erosion.clone(),
@@ -205,8 +569,7 @@ pub mod built_in_noises {
         })
         .add(offset.clone());
 
-        let jaggedness = lerp_density(
-            DensityFunction::BlendAlpha(BlendAlphaFunction {}),
+        let jaggedness = apply_blending(
             DensityFunction::Spline(SplineFunction::new(Arc::new(create_jaggedness_spline(
                 continents,
                 erosion,
@@ -237,6 +600,70 @@ pub fn peaks_valleys_noise(variance: f32) -> f32 {
     -((variance.abs() - 0.6666667f32).abs() - 0.33333334f32) * 3f32
 }
 
+fn veritcal_range_choice<'a>(
+    input: DensityFunction<'a>,
+    in_range: DensityFunction<'a>,
+    min: i32,
+    max: i32,
+    out: i32,
+) -> DensityFunction<'a> {
+    DensityFunction::Wrapper(WrapperFunction::new(
+        Arc::new(DensityFunction::Range(RangeFunction {
+            input: Arc::new(input),
+            min: min as f64,
+            max: (max + 1) as f64,
+            in_range: Arc::new(in_range),
+            out_range: Arc::new(DensityFunction::Constant(ConstantFunction::new(out as f64))),
+        })),
+        WrapperType::Interpolated,
+    ))
+}
+
+fn apply_blending<'a>(
+    function: DensityFunction<'a>,
+    blend: DensityFunction<'a>,
+) -> DensityFunction<'a> {
+    let function = lerp_density(
+        DensityFunction::BlendAlpha(BlendAlphaFunction {}),
+        blend,
+        function,
+    );
+
+    DensityFunction::Wrapper(WrapperFunction::new(
+        Arc::new(DensityFunction::Wrapper(WrapperFunction::new(
+            Arc::new(function),
+            WrapperType::Cache2D,
+        ))),
+        WrapperType::CacheFlat,
+    ))
+}
+
+fn noise_in_range(
+    noise: DoublePerlinNoiseParameters,
+    xz_scale: f64,
+    y_scale: f64,
+    min: f64,
+    max: f64,
+) -> DensityFunction {
+    map_range(
+        DensityFunction::Noise(NoiseFunction::new(
+            Arc::new(InternalNoise::new(noise, None)),
+            xz_scale,
+            y_scale,
+        )),
+        min,
+        max,
+    )
+}
+
+fn map_range(function: DensityFunction, min: f64, max: f64) -> DensityFunction {
+    let d = (min + max) * 0.5f64;
+    let e = (max - min) * 0.5f64;
+
+    DensityFunction::Constant(ConstantFunction::new(d))
+        .add(DensityFunction::Constant(ConstantFunction::new(e)).mul(function))
+}
+
 #[derive(Clone)]
 pub enum DensityFunction<'a> {
     Clamp(ClampFunction<'a>),
@@ -254,6 +681,10 @@ pub enum DensityFunction<'a> {
     BlendDensity(BlendDensityFunction<'a>),
     ClampedY(YClampedFunction),
     InterpolatedNoise(InterpolatedNoiseSampler),
+    EndIsland(EndIslandFunction),
+    Wierd(WierdScaledFunction<'a>),
+    Range(RangeFunction<'a>),
+    Wrapper(WrapperFunction<'a>),
 }
 
 impl<'a> DensityFunction<'a> {
@@ -275,6 +706,10 @@ impl<'a> DensityFunction<'a> {
             Self::BlendDensity(func) => func.sample(pos),
             Self::ClampedY(func) => func.sample(pos),
             Self::InterpolatedNoise(func) => func.sample(pos),
+            Self::EndIsland(func) => func.sample(pos),
+            Self::Wierd(func) => func.sample(pos),
+            Self::Range(func) => func.sample(pos),
+            Self::Wrapper(func) => func.sample(pos),
         }
     }
 
@@ -296,6 +731,10 @@ impl<'a> DensityFunction<'a> {
             Self::BlendDensity(func) => func.apply(visitor),
             Self::ClampedY(func) => func.apply(visitor),
             Self::InterpolatedNoise(func) => func.apply(visitor),
+            Self::EndIsland(func) => func.apply(visitor),
+            Self::Wierd(func) => func.apply(visitor),
+            Self::Range(func) => func.apply(visitor),
+            Self::Wrapper(func) => func.apply(visitor),
         }
     }
 
@@ -317,6 +756,10 @@ impl<'a> DensityFunction<'a> {
             Self::BlendDensity(func) => func.fill(densities, applier),
             Self::ClampedY(func) => func.fill(densities, applier),
             Self::InterpolatedNoise(func) => func.fill(densities, applier),
+            Self::EndIsland(func) => func.fill(densities, applier),
+            Self::Wierd(func) => func.fill(densities, applier),
+            Self::Range(func) => func.fill(densities, applier),
+            Self::Wrapper(func) => func.fill(densities, applier),
         }
     }
 
@@ -338,6 +781,10 @@ impl<'a> DensityFunction<'a> {
             Self::BlendDensity(func) => func.max(),
             Self::ClampedY(func) => func.max(),
             Self::InterpolatedNoise(func) => func.max(),
+            Self::EndIsland(func) => func.max(),
+            Self::Wierd(func) => func.max(),
+            Self::Range(func) => func.max(),
+            Self::Wrapper(func) => func.max(),
         }
     }
 
@@ -359,6 +806,10 @@ impl<'a> DensityFunction<'a> {
             Self::BlendDensity(func) => func.min(),
             Self::ClampedY(func) => func.min(),
             Self::InterpolatedNoise(func) => func.min(),
+            Self::EndIsland(func) => func.min(),
+            Self::Wierd(func) => func.min(),
+            Self::Range(func) => func.min(),
+            Self::Wrapper(func) => func.min(),
         }
     }
 
@@ -503,6 +954,104 @@ impl<'a> DensityFunctionImpl<'a> for ConstantFunction {
 
     fn max(&self) -> f64 {
         self.value
+    }
+}
+
+#[derive(Clone)]
+pub enum WrapperType {
+    Cache2D,
+    CacheFlat,
+    CacheOnce,
+    Interpolated,
+}
+
+#[derive(Clone)]
+pub struct WrapperFunction<'a> {
+    input: Arc<DensityFunction<'a>>,
+    wrapper: WrapperType,
+}
+
+impl<'a> WrapperFunction<'a> {
+    pub fn new(input: Arc<DensityFunction<'a>>, wrapper: WrapperType) -> Self {
+        Self { input, wrapper }
+    }
+}
+
+impl<'a> DensityFunctionImpl<'a> for WrapperFunction<'a> {
+    fn max(&self) -> f64 {
+        self.input.max()
+    }
+
+    fn min(&self) -> f64 {
+        self.input.min()
+    }
+
+    fn sample(&self, pos: &impl NoisePos) -> f64 {
+        self.input.sample(pos)
+    }
+
+    fn apply(&'a self, visitor: &'a impl Visitor) -> DensityFunction<'a> {
+        visitor.apply(&DensityFunction::Wrapper(WrapperFunction {
+            input: Arc::new(self.input.apply(visitor)),
+            wrapper: self.wrapper.clone(),
+        }))
+    }
+
+    fn fill(&self, densities: &[f64], applier: &impl Applier) -> Vec<f64> {
+        self.input.fill(densities, applier)
+    }
+}
+
+#[derive(Clone)]
+pub struct RangeFunction<'a> {
+    input: Arc<DensityFunction<'a>>,
+    min: f64,
+    max: f64,
+    in_range: Arc<DensityFunction<'a>>,
+    out_range: Arc<DensityFunction<'a>>,
+}
+
+impl<'a> DensityFunctionImpl<'a> for RangeFunction<'a> {
+    fn sample(&self, pos: &impl NoisePos) -> f64 {
+        let d = self.input.sample(pos);
+        if d >= self.min && d < self.max {
+            self.in_range.sample(pos)
+        } else {
+            self.out_range.sample(pos)
+        }
+    }
+
+    fn fill(&self, densities: &[f64], applier: &impl Applier) -> Vec<f64> {
+        let densities = self.input.fill(densities, applier);
+        densities
+            .iter()
+            .enumerate()
+            .map(|(i, x)| {
+                if *x >= self.min && *x < self.max {
+                    self.in_range.sample(&applier.at(i as i32))
+                } else {
+                    self.out_range.sample(&applier.at(i as i32))
+                }
+            })
+            .collect()
+    }
+
+    fn apply(&'a self, visitor: &'a impl Visitor) -> DensityFunction<'a> {
+        visitor.apply(&DensityFunction::Range(RangeFunction {
+            input: Arc::new(self.input.apply(visitor)),
+            min: self.min,
+            max: self.max,
+            in_range: Arc::new(self.in_range.apply(visitor)),
+            out_range: Arc::new(self.out_range.apply(visitor)),
+        }))
+    }
+
+    fn min(&self) -> f64 {
+        self.in_range.min().min(self.out_range.min())
+    }
+
+    fn max(&self) -> f64 {
+        self.in_range.max().max(self.out_range.max())
     }
 }
 

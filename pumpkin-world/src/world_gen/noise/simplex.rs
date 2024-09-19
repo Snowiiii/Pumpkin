@@ -3,6 +3,7 @@ use pumpkin_core::random::{legacy_rand::LegacyRand, RandomImpl};
 
 use super::{dot, GRADIENTS};
 
+#[derive(Clone)]
 pub struct SimplexNoiseSampler {
     permutation: Box<[u8]>,
     x_origin: f64,
