@@ -1,3 +1,4 @@
+use crate::entity::item::ItemEntity;
 use crate::entity::player::Player;
 use crate::server::Server;
 use itertools::Itertools;
@@ -5,7 +6,7 @@ use parking_lot::Mutex;
 use pumpkin_core::text::TextComponent;
 use pumpkin_core::GameMode;
 use pumpkin_inventory::container_click::{
-    Click, ClickType, KeyClick, MouseClick, MouseDragState, MouseDragType,
+    Click, ClickType, DropType, KeyClick, MouseClick, MouseDragState, MouseDragType,
 };
 use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
@@ -177,8 +178,17 @@ impl Player {
                 }
                 self.mouse_drag(drag_handler, opened_container.as_deref_mut(), drag_state)
             }
-            ClickType::DropType(_drop_type) => {
-                dbg!("todo");
+            ClickType::DropType(drop_type) => {
+                let slot = match click.slot {
+                    container_click::Slot::Normal(slot) => slot,
+                    container_click::Slot::OutsideInventory => Err(InventoryError::InvalidPacket)?,
+                };
+                self.drop_items(
+                    opened_container.as_deref_mut(),
+                    slot,
+                    drop_type,
+                    server.clone(),
+                )?;
                 Ok(())
             }
         }?;
@@ -376,6 +386,46 @@ impl Player {
                 res
             }
         }
+    }
+
+    pub fn drop_items(
+        &self,
+        opened_container: Option<&mut Box<dyn Container>>,
+        slot: usize,
+        drop_type: DropType,
+        server: Arc<Server>,
+    ) -> Result<(), InventoryError> {
+        let mut inventory = self.inventory.lock();
+        let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
+        let mut all_slots = container.all_slots();
+        let Some(slot) = all_slots.get_mut(slot) else {
+            return Ok(());
+        };
+        let Some(item) = slot else {
+            return Ok(());
+        };
+        let dropped_item = match drop_type {
+            DropType::FullStack => {
+                let dropped_item = *item;
+                **slot = None;
+                dropped_item
+            }
+            DropType::SingleItem => {
+                if item.item_count == 1 {
+                    let dropped_item = *item;
+                    **slot = None;
+                    dropped_item
+                } else {
+                    item.item_count -= 1;
+                    let mut dropped_item = *item;
+                    dropped_item.item_count = 1;
+                    dropped_item
+                }
+            }
+        };
+
+        dbg!(ItemEntity::new(&self.entity, dropped_item, server).item_stack);
+        Ok(())
     }
 
     async fn get_current_players_in_container(&self, server: &Server) -> Vec<Arc<Player>> {

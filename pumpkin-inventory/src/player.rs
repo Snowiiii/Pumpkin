@@ -12,7 +12,7 @@ pub struct PlayerInventory {
     armor: [Option<ItemStack>; 4],
     offhand: Option<ItemStack>,
     // current selected slot in hotbar
-    selected: usize,
+    pub selected: usize,
     pub state_id: AtomicU32,
     // Notchian server wraps this value at 100, we can just keep it as a u8 that automatically wraps
     pub total_opened_containers: u8,
@@ -109,6 +109,11 @@ impl PlayerInventory {
     pub fn held_item(&self) -> Option<&ItemStack> {
         debug_assert!((0..9).contains(&self.selected));
         self.items[self.selected + 36 - 9].as_ref()
+    }
+
+    pub fn held_item_mut(&mut self) -> &mut Option<ItemStack> {
+        debug_assert!((0..9).contains(&self.selected));
+        &mut self.items[self.selected + 36 - 9]
     }
 
     pub fn slots(&self) -> Vec<Option<&ItemStack>> {

@@ -105,7 +105,7 @@ impl Player {
         };
         let config = client.config.lock().clone().unwrap_or_default();
         Self {
-            entity: Entity::new(entity_id, world, EntityType::Player, 1.62),
+            entity: Entity::new(entity_id, gameprofile.id, world, EntityType::Player, 1.62),
             config: Mutex::new(config),
             gameprofile,
             client,
@@ -361,10 +361,9 @@ impl Player {
                 Ok(())
             }
             SClickContainer::PACKET_ID => {
-                // TODO
-                // self.handle_click_container(server, SClickContainer::read(bytebuf)?)
-                //     .await
-                //     .unwrap();
+                let _ = self
+                    .handle_click_container(server, SClickContainer::read(bytebuf)?)
+                    .await;
                 Ok(())
             }
             SCloseContainer::PACKET_ID => {

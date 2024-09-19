@@ -7,7 +7,7 @@ use num_traits::ToPrimitive;
 use parking_lot::Mutex;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
-use pumpkin_entity::{entity_type::EntityType, EntityId};
+use pumpkin_entity::EntityId;
 use pumpkin_protocol::{
     client::play::{
         CChunkData, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate, CRemoveEntities,
@@ -18,6 +18,7 @@ use pumpkin_protocol::{
 use pumpkin_world::level::Level;
 use tokio::sync::mpsc;
 
+use crate::entity::item::ItemEntity;
 use crate::{
     client::Client,
     entity::{player::Player, Entity},
@@ -37,7 +38,7 @@ pub struct World {
     pub level: Arc<Mutex<Level>>,
     /// A map of active players within the world, keyed by their unique token.
     pub current_players: Arc<Mutex<HashMap<Token, Arc<Player>>>>,
-    // TODO: entities
+    pub items: Arc<Mutex<HashMap<i32, Arc<ItemEntity>>>>, // TODO: entities
 }
 
 impl World {
@@ -45,6 +46,7 @@ impl World {
         Self {
             level: Arc::new(Mutex::new(level)),
             current_players: Arc::new(Mutex::new(HashMap::new())),
+            items: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -117,8 +119,6 @@ impl World {
         let x = 10.0;
         let y = 120.0;
         let z = 10.0;
-        let yaw = 10.0;
-        let pitch = 10.0;
         player.teleport(x, y, z, 10.0, 10.0);
         let gameprofile = &player.gameprofile;
         // first send info update to our new player, So he can see his Skin
@@ -161,49 +161,17 @@ impl World {
             .client
             .send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries));
 
-        let gameprofile = &player.gameprofile;
-
         // spawn player for every client
         self.broadcast_packet_expect(
             &[player.client.token],
             // TODO: add velo
-            &CSpawnEntity::new(
-                entity_id.into(),
-                gameprofile.id,
-                (EntityType::Player as i32).into(),
-                x,
-                y,
-                z,
-                pitch,
-                yaw,
-                yaw,
-                0.into(),
-                0.0,
-                0.0,
-                0.0,
-            ),
+            &CSpawnEntity::from(&player.entity),
         );
         // spawn players for our client
         let token = player.client.token;
         for (_, existing_player) in self.current_players.lock().iter().filter(|c| c.0 != &token) {
             let entity = &existing_player.entity;
-            let pos = entity.pos.load();
-            let gameprofile = &existing_player.gameprofile;
-            player.client.send_packet(&CSpawnEntity::new(
-                existing_player.entity_id().into(),
-                gameprofile.id,
-                (EntityType::Player as i32).into(),
-                pos.x,
-                pos.y,
-                pos.z,
-                entity.yaw.load(),
-                entity.pitch.load(),
-                entity.head_yaw.load(),
-                0.into(),
-                0.0,
-                0.0,
-                0.0,
-            ))
+            player.client.send_packet(&CSpawnEntity::from(entity))
         }
         // entity meta data
         // set skin parts
