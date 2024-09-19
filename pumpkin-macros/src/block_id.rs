@@ -131,8 +131,14 @@ pub fn block_id_impl(item: TokenStream) -> TokenStream {
         }
     };
 
-    quote! {
-      pumpkin_world::block::block_id::BlockId::from_id(#id as u16)
+    if std::env::var("CARGO_PKG_NAME").unwrap() == "pumpkin-world" {
+        quote! {
+          crate::block::block_id::BlockId::from_id(#id as u16)
+        }
+    } else {
+        quote! {
+          pumpkin_world::block::block_id::BlockId::from_id(#id as u16)
+        }
     }
     .into()
 }
