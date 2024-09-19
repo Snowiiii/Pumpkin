@@ -25,5 +25,5 @@ num-derive = "0.4"
 aes = "0.8.4"
 cfb8 = "0.8.1"
 
-itertools = "0.13.0"
+itertools.workspace = true
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }

@@ -22,3 +22,9 @@ pub fn packet(input: TokenStream, item: TokenStream) -> TokenStream {
 
     gen.into()
 }
+
+mod block_id;
+#[proc_macro]
+pub fn block_id(item: TokenStream) -> TokenStream {
+    block_id::block_id_impl(item)
+}

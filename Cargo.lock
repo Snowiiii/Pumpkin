@@ -2001,8 +2001,11 @@ dependencies = [
 name = "pumpkin-macros"
 version = "0.1.0"
 dependencies = [
+ "itertools 0.13.0",
  "proc-macro2",
  "quote",
+ "serde",
+ "serde_json",
  "syn",
 ]
 

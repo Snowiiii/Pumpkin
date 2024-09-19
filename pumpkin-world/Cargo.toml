@@ -10,7 +10,7 @@ fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 tokio.workspace = true
 rayon.workspace = true
 derive_more.workspace = true
-itertools = "0.13.0"
+itertools.workspace = true
 thiserror = "1.0"
 futures = "0.3"
 flate2 = "1.0"

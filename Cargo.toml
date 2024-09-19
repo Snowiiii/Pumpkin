@@ -41,3 +41,5 @@ crossbeam = "0.8.4"
 uuid = { version = "1.10.0", features = ["serde", "v3", "v4"] }
 derive_more = { version = "1.0.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
+
+itertools = "0.13.0"
