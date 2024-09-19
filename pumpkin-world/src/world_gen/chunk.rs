@@ -54,7 +54,13 @@ impl GenerationShapeConfig {
     }
 }
 
-lazy_static! {
-    pub static ref surface_config: GenerationShapeConfig =
-        GenerationShapeConfig::new(-64, 384, 1, 2);
+pub mod shape_configs {
+    use super::GenerationShapeConfig;
+
+    pub const surface_config: GenerationShapeConfig = GenerationShapeConfig {
+        y_min: -64,
+        height: 384,
+        horizontal: 1,
+        vertical: 2,
+    };
 }
