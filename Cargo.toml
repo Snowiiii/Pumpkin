@@ -25,11 +25,11 @@ codegen-units = 1
 [workspace.dependencies]
 log = "0.4"
 tokio = { version = "1.40", features = [
-    "net",
-    "macros",
-    "rt-multi-thread",
     "fs",
     "io-util",
+    "macros",
+    "net",
+    "rt-multi-thread",
     "sync",
 ] }
 
