@@ -42,7 +42,7 @@ impl<'a> InternalNoise<'a> {
 
 #[derive(Clone)]
 pub struct NoiseFunction<'a> {
-    noise: Arc<InternalNoise<'a>>,
+    pub(crate) noise: Arc<InternalNoise<'a>>,
     xz_scale: f64,
     y_scale: f64,
 }
