@@ -5,7 +5,7 @@ members = [
     "pumpkin-core",
     "pumpkin-entity",
     "pumpkin-inventory",
-    "pumpkin-macros/",
+    "pumpkin-macros/", "pumpkin-nbt",
     "pumpkin-plugin",
     "pumpkin-protocol/",
     "pumpkin-registry/",
