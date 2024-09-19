@@ -7,12 +7,12 @@ use super::PlayerAction;
 #[packet(0x3E)]
 pub struct CPlayerInfoUpdate<'a> {
     pub actions: i8,
-    pub players: &'a [Player],
+    pub players: &'a [Player<'a>],
 }
 
-pub struct Player {
+pub struct Player<'a> {
     pub uuid: uuid::Uuid,
-    pub actions: Vec<PlayerAction>,
+    pub actions: Vec<PlayerAction<'a>>,
 }
 
 impl<'a> CPlayerInfoUpdate<'a> {

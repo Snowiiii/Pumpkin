@@ -85,10 +85,7 @@ impl CachedStatus {
     }
 
     fn load_icon(path: &str) -> String {
-        let icon = match image::open(path).map_err(|e| panic!("error loading icon: {}", e)) {
-            Ok(icon) => icon,
-            Err(_) => return "".into(),
-        };
+        let icon = image::open(path).expect("Failed to load icon");
         let dimension = icon.dimensions();
         assert!(dimension.0 == 64, "Icon width must be 64");
         assert!(dimension.1 == 64, "Icon height must be 64");

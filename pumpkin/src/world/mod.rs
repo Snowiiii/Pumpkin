@@ -129,8 +129,8 @@ impl World {
                 uuid: gameprofile.id,
                 actions: vec![
                     PlayerAction::AddPlayer {
-                        name: gameprofile.name.clone(),
-                        properties: gameprofile.properties.clone(),
+                        name: &gameprofile.name,
+                        properties: &gameprofile.properties,
                     },
                     PlayerAction::UpdateListed(true),
                 ],
@@ -139,27 +139,28 @@ impl World {
 
         // here we send all the infos of already joined players
         let mut entries = Vec::new();
-        for (_, playerr) in self
-            .current_players
-            .lock()
-            .iter()
-            .filter(|(c, _)| **c != player.client.token)
         {
-            let gameprofile = &playerr.gameprofile;
-            entries.push(pumpkin_protocol::client::play::Player {
-                uuid: gameprofile.id,
-                actions: vec![
-                    PlayerAction::AddPlayer {
-                        name: gameprofile.name.clone(),
-                        properties: gameprofile.properties.clone(),
-                    },
-                    PlayerAction::UpdateListed(true),
-                ],
-            })
+            let current_players = self.current_players.lock();
+            for (_, playerr) in current_players
+                .iter()
+                .filter(|(c, _)| **c != player.client.token)
+            {
+                let gameprofile = &playerr.gameprofile;
+                entries.push(pumpkin_protocol::client::play::Player {
+                    uuid: gameprofile.id,
+                    actions: vec![
+                        PlayerAction::AddPlayer {
+                            name: &gameprofile.name,
+                            properties: &gameprofile.properties,
+                        },
+                        PlayerAction::UpdateListed(true),
+                    ],
+                })
+            }
+            player
+                .client
+                .send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries));
         }
-        player
-            .client
-            .send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries));
 
         let gameprofile = &player.gameprofile;
 

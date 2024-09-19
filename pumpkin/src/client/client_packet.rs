@@ -135,13 +135,12 @@ impl Client {
                                 self.kick("Your account can't join");
                             }
                         } else {
-                            for allowed in ADVANCED_CONFIG
+                            for allowed in &ADVANCED_CONFIG
                                 .authentication
                                 .player_profile
                                 .allowed_actions
-                                .clone()
                             {
-                                if !p.contains(&allowed) {
+                                if !p.contains(allowed) {
                                     self.kick("Your account can't join");
                                 }
                             }
@@ -152,7 +151,7 @@ impl Client {
                 Err(e) => self.kick(&e.to_string()),
             }
         }
-        for property in gameprofile.as_ref().unwrap().properties.clone() {
+        for property in &gameprofile.as_ref().unwrap().properties {
             // TODO: use this (this was the todo here before, ill add it again cuz its prob here for a reason)
             let _ = unpack_textures(property, &ADVANCED_CONFIG.authentication.textures);
         }
@@ -165,7 +164,7 @@ impl Client {
             self.set_compression(Some((threshold, level)));
         }
 
-        if let Some(profile) = gameprofile.as_ref().cloned() {
+        if let Some(profile) = gameprofile.as_ref() {
             let packet = CLoginSuccess::new(&profile.id, &profile.name, &profile.properties, false);
             self.send_packet(&packet);
         } else {
@@ -222,16 +221,23 @@ impl Client {
         client_information: SClientInformationConfig,
     ) {
         dbg!("got client settings");
-        *self.config.lock() = Some(PlayerConfig {
-            locale: client_information.locale,
-            view_distance: client_information.view_distance,
-            chat_mode: ChatMode::from_i32(client_information.chat_mode.into()).unwrap(),
-            chat_colors: client_information.chat_colors,
-            skin_parts: client_information.skin_parts,
-            main_hand: Hand::from_i32(client_information.main_hand.into()).unwrap(),
-            text_filtering: client_information.text_filtering,
-            server_listing: client_information.server_listing,
-        });
+        if let (Some(main_hand), Some(chat_mode)) = (
+            Hand::from_i32(client_information.main_hand.into()),
+            ChatMode::from_i32(client_information.chat_mode.into()),
+        ) {
+            *self.config.lock() = Some(PlayerConfig {
+                locale: client_information.locale,
+                view_distance: client_information.view_distance,
+                chat_mode,
+                chat_colors: client_information.chat_colors,
+                skin_parts: client_information.skin_parts,
+                main_hand,
+                text_filtering: client_information.text_filtering,
+                server_listing: client_information.server_listing,
+            });
+        } else {
+            self.kick("Invalid hand or chat type")
+        }
     }
 
     pub fn handle_plugin_message(&self, _server: &Arc<Server>, plugin_message: SPluginMessage) {
