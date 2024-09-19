@@ -81,7 +81,7 @@ impl Default for PlayerConfig {
     }
 }
 
-/// Everything which makes a Conection with our Server is a `Client`.
+/// Everything which makes a Connection with our Server is a `Client`.
 /// Client will become Players when they reach the `Play` state
 pub struct Client {
     /// The client's game profile information.

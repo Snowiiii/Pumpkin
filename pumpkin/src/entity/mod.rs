@@ -123,7 +123,7 @@ impl Entity {
 
     /// Kills the Entity
     ///
-    /// This is simliar to `kill` but Spawn Particles, Animation and plays death sound
+    /// This is similar to `kill` but Spawn Particles, Animation and plays death sound
     pub fn kill(&self) {
         // Spawns death smoke particles
         self.world

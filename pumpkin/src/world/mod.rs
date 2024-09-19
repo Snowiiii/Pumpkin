@@ -220,7 +220,7 @@ impl World {
             .client
             .send_packet(&CGameEvent::new(GameEvent::StartWaitingChunks, 0.0));
 
-        // Spawn in inital chunks
+        // Spawn in initial chunks
         player_chunker::player_join(self, player.clone()).await;
     }
 

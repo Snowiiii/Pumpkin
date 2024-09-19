@@ -237,7 +237,7 @@ impl Player {
             "Setting the same gamemode as already is"
         );
         self.gamemode.store(gamemode);
-        // So a little story time. I actually made an abitlties_from_gamemode function. I looked at vanilla and they always send the abilties from the gamemode. But the funny thing actually is. That the client
+        // So a little story time. I actually made an abilties_from_gamemode function. I looked at vanilla and they always send the abilties from the gamemode. But the funny thing actually is. That the client
         // does actually use the same method and set the abilties when receiving the CGameEvent gamemode packet. Just Mojang nonsense
         self.entity
             .world
