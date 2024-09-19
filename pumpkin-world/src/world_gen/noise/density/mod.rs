@@ -16,7 +16,7 @@ use super::{clamped_map, perlin::DoublePerlinNoiseParameters};
 mod blend;
 mod end;
 mod math;
-mod noise;
+pub mod noise;
 mod offset;
 pub mod spline;
 mod unary;
@@ -48,11 +48,11 @@ pub mod built_in_noises {
     };
 
     pub struct SlopedCheeseResult<'a> {
-        offset: DensityFunction<'a>,
-        factor: DensityFunction<'a>,
-        depth: DensityFunction<'a>,
-        jaggedness: DensityFunction<'a>,
-        sloped_cheese: DensityFunction<'a>,
+        pub(crate) offset: DensityFunction<'a>,
+        pub(crate) factor: DensityFunction<'a>,
+        pub(crate) depth: DensityFunction<'a>,
+        pub(crate) jaggedness: DensityFunction<'a>,
+        pub(crate) sloped_cheese: DensityFunction<'a>,
     }
 
     type BuiltInNoise = LazyLock<DensityFunction<'static>>;
@@ -600,7 +600,7 @@ pub fn peaks_valleys_noise(variance: f32) -> f32 {
     -((variance.abs() - 0.6666667f32).abs() - 0.33333334f32) * 3f32
 }
 
-fn veritcal_range_choice<'a>(
+pub fn veritcal_range_choice<'a>(
     input: DensityFunction<'a>,
     in_range: DensityFunction<'a>,
     min: i32,
@@ -617,6 +617,16 @@ fn veritcal_range_choice<'a>(
         })),
         WrapperType::Interpolated,
     ))
+}
+
+pub fn apply_blend_density(density: DensityFunction) -> DensityFunction {
+    let function = DensityFunction::BlendDensity(BlendDensityFunction::new(Arc::new(density)));
+    DensityFunction::Wrapper(WrapperFunction::new(
+        Arc::new(function),
+        WrapperType::Interpolated,
+    ))
+    .mul_const(0.64f64)
+    .squeeze()
 }
 
 fn apply_blending<'a>(
@@ -1011,6 +1021,24 @@ pub struct RangeFunction<'a> {
     out_range: Arc<DensityFunction<'a>>,
 }
 
+impl<'a> RangeFunction<'a> {
+    pub fn new(
+        input: Arc<DensityFunction<'a>>,
+        min: f64,
+        max: f64,
+        in_range: Arc<DensityFunction<'a>>,
+        out_range: Arc<DensityFunction<'a>>,
+    ) -> Self {
+        Self {
+            input,
+            min,
+            max,
+            in_range,
+            out_range,
+        }
+    }
+}
+
 impl<'a> DensityFunctionImpl<'a> for RangeFunction<'a> {
     fn sample(&self, pos: &impl NoisePos) -> f64 {
         let d = self.input.sample(pos);
@@ -1063,6 +1091,17 @@ pub struct YClampedFunction {
     to_val: f64,
 }
 
+impl YClampedFunction {
+    pub fn new(from: i32, to: i32, from_val: f64, to_val: f64) -> Self {
+        Self {
+            from,
+            to,
+            from_val,
+            to_val,
+        }
+    }
+}
+
 impl<'a> DensityFunctionImpl<'a> for YClampedFunction {
     fn sample(&self, pos: &impl NoisePos) -> f64 {
         clamped_map(
@@ -1112,6 +1151,22 @@ pub fn lerp_density<'a>(
     start: DensityFunction<'a>,
     end: DensityFunction<'a>,
 ) -> DensityFunction<'a> {
-    let func_2 = delta.mul_const(-1f64).add_const(1f64);
-    start.mul(func_2.clone()).add(end.mul(func_2))
+    if let DensityFunction::Constant(function) = start {
+        lerp_density_static_start(delta, function.value, end)
+    } else {
+        let function = DensityFunction::Wrapper(WrapperFunction::new(
+            Arc::new(delta),
+            WrapperType::CacheOnce,
+        ));
+        let function2 = function.mul_const(-1f64).add_const(1f64);
+        start.mul(function2).add(end.mul(function))
+    }
+}
+
+pub fn lerp_density_static_start<'a>(
+    delta: DensityFunction<'a>,
+    start: f64,
+    end: DensityFunction<'a>,
+) -> DensityFunction<'a> {
+    delta.mul(end.add_const(-start)).add_const(start)
 }

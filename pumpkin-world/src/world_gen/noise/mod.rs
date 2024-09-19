@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 pub mod density;
 mod perlin;
+mod router;
 mod simplex;
 
 pub mod builtin_noise_params {

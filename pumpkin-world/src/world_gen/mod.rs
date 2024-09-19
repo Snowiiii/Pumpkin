@@ -4,6 +4,7 @@ mod generator;
 mod generic_generator;
 mod implementation;
 mod noise;
+mod sampler;
 mod seed;
 
 pub use generator::WorldGenerator;

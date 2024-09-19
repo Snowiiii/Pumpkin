@@ -58,6 +58,12 @@ pub struct BlendDensityFunction<'a> {
 }
 
 impl<'a> BlendDensityFunction<'a> {
+    pub fn new(density: Arc<DensityFunction<'a>>) -> Self {
+        Self { function: density }
+    }
+}
+
+impl<'a> BlendDensityFunction<'a> {
     fn apply_density(&self, pos: &impl NoisePos, density: f64) -> f64 {
         pos.get_blender().apply_blend_density(pos, density)
     }
