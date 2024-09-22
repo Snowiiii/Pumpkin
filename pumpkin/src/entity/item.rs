@@ -2,9 +2,6 @@ use crate::entity::player::Player;
 use crate::entity::{random_float, Entity};
 use crate::server::Server;
 use crossbeam::atomic::AtomicCell;
-use itertools::Itertools;
-use num_traits::float::FloatCore;
-use num_traits::real::Real;
 use pumpkin_core::math::vector3::Vector3;
 use pumpkin_entity::entity_type::EntityType;
 use pumpkin_entity::pose::EntityPose;
@@ -15,7 +12,6 @@ use pumpkin_protocol::client::play::{
 };
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
-use rand::Rng;
 use rayon::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -29,7 +25,7 @@ pub struct ItemEntity {
 }
 
 impl ItemEntity {
-    pub fn new(player_entity: &Entity, item_stack: ItemStack, server: Arc<Server>) {
+    pub fn spawn(player_entity: &Entity, item_stack: ItemStack, server: Arc<Server>) {
         let is_able_to_be_picked_up = Arc::new(AtomicBool::new(false));
         {
             let is_able_to_be_picked_up = is_able_to_be_picked_up.clone();
@@ -84,7 +80,7 @@ impl ItemEntity {
         });
     }
 
-    pub fn check_pickup(self) -> PickupEvent {
+    pub(self) fn check_pickup(self) -> PickupEvent {
         if !self.is_able_to_be_picked_up.load(Ordering::Relaxed) {
             return PickupEvent::NotPickedUp(self);
         }
@@ -193,7 +189,6 @@ async fn drop_loop(item_entity: ItemEntity, server: Arc<Server>) {
                 }
                 drop(inventory);
                 player.send_single_slot_inventory_change(
-                    &server,
                     index.expect("It needs to have a valid slot for this path to get loaded"),
                 );
                 break;
