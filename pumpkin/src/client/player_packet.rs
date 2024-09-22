@@ -526,7 +526,7 @@ impl Player {
                     let mut inventory = self.inventory.lock();
                     let slot = inventory.held_item_mut();
                     if let Some(item) = slot {
-                        ItemEntity::new(&self.entity, *item, server.clone());
+                        ItemEntity::spawn(&self.entity, *item, server.clone());
                         *slot = None;
                     }
                 }
@@ -538,9 +538,9 @@ impl Player {
                             held_item.item_count -= 1;
                             let mut item = *held_item;
                             item.item_count = 1;
-                            ItemEntity::new(&self.entity, item, server.clone());
+                            ItemEntity::spawn(&self.entity, item, server.clone());
                         } else {
-                            ItemEntity::new(&self.entity, *held_item, server.clone());
+                            ItemEntity::spawn(&self.entity, *held_item, server.clone());
                             *slot = None;
                         }
                     }
@@ -650,7 +650,7 @@ impl Player {
                 let item = None;
                 self.carried_item.swap(item);
                 if let Some(item) = item {
-                    ItemEntity::new(&self.entity, item, server.clone());
+                    ItemEntity::spawn(&self.entity, item, server.clone());
                 }
                 Ok(())
             }

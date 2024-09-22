@@ -1,4 +1,3 @@
-use crate::entity::item::ItemEntity;
 use crate::entity::player::Player;
 use crate::server::Server;
 use itertools::Itertools;
@@ -197,12 +196,7 @@ impl Player {
                     container_click::Slot::Normal(slot) => slot,
                     container_click::Slot::OutsideInventory => Err(InventoryError::InvalidPacket)?,
                 };
-                self.drop_items(
-                    opened_container.as_deref_mut(),
-                    slot,
-                    drop_type,
-                    server.clone(),
-                )?;
+                self.drop_items(opened_container.as_deref_mut(), slot, drop_type)?;
                 Ok(())
             }
         }?;
@@ -226,8 +220,8 @@ impl Player {
         Ok(())
     }
 
-    pub fn send_single_slot_inventory_change(&self, server: &Arc<Server>, slot_index: usize) {
-        let mut inventory = self.inventory.lock();
+    pub fn send_single_slot_inventory_change(&self, slot_index: usize) {
+        let inventory = self.inventory.lock();
         let state_id = inventory
             .state_id
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -425,7 +419,6 @@ impl Player {
         opened_container: Option<&mut Box<dyn Container>>,
         slot: usize,
         drop_type: DropType,
-        server: Arc<Server>,
     ) -> Result<(), InventoryError> {
         let mut inventory = self.inventory.lock();
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
@@ -436,7 +429,7 @@ impl Player {
         let Some(item) = slot else {
             return Ok(());
         };
-        let dropped_item = match drop_type {
+        match drop_type {
             DropType::FullStack => {
                 let dropped_item = *item;
                 **slot = None;

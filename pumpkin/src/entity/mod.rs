@@ -13,15 +13,12 @@ use pumpkin_protocol::{
 };
 use pumpkin_world::chunk::ChunkData;
 use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
-use pumpkin_world::level::WorldError;
 use rand::Rng;
 use std::ops::Mul;
 use std::sync::atomic::Ordering;
 use std::sync::{atomic::AtomicBool, Arc};
-use tokio::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
 
-mod direction;
 pub mod item;
 pub mod living;
 pub mod player;
@@ -158,7 +155,7 @@ impl Entity {
             return;
         }
         let mut old_pos = self.pos.load();
-        let mut pos = old_pos.add(&velocity);
+        let pos = old_pos.add(&velocity);
         let chunk_pos = Vector2::new(
             get_section_cord(pos.x as i32),
             get_section_cord(pos.z as i32),
@@ -176,14 +173,13 @@ impl Entity {
             // TODO: Add check for other blocks that affect collision, like water
             if block_id.is_air() {
                 return;
-            } else {
-                old_pos.y = pos.y.ceil();
-                self.pos.store(old_pos);
-                let mut velocity = self.velocity.load();
-                velocity.y = velocity.y.min(0.);
-
-                self.on_ground.store(true, Ordering::Relaxed);
             }
+            old_pos.y = pos.y.ceil();
+            self.pos.store(old_pos);
+            let mut velocity = self.velocity.load();
+            velocity.y = velocity.y.min(0.);
+
+            self.on_ground.store(true, Ordering::Relaxed);
         }
     }
 
@@ -253,6 +249,7 @@ impl Entity {
         self.velocity.store(velocity);
     }
 
+    #[allow(clippy::type_complexity)]
     fn get_all_collisions(
         &self,
         neighbours: Vec<((i32, i32), Vector3<f64>)>,
