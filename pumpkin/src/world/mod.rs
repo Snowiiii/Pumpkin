@@ -2,6 +2,10 @@ use std::{collections::HashMap, sync::Arc};
 
 pub mod player_chunker;
 
+use crate::{
+    client::Client,
+    entity::{player::Player, Entity},
+};
 use mio::Token;
 use num_traits::ToPrimitive;
 use parking_lot::Mutex;
@@ -17,11 +21,6 @@ use pumpkin_protocol::{
 };
 use pumpkin_world::level::Level;
 use tokio::sync::mpsc;
-
-use crate::{
-    client::Client,
-    entity::{player::Player, Entity},
-};
 
 /// Represents a Minecraft world, containing entities, players, and the underlying level data.
 ///

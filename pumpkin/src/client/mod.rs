@@ -113,10 +113,19 @@ pub struct Client {
 
     /// Indicates whether the client should be converted into a player.
     pub make_player: AtomicBool,
+    /// Sends each keep alive packet that the server receives for a player to here, which gets picked up in a tokio task
+    pub keep_alive_sender: Arc<tokio::sync::mpsc::Sender<i64>>,
+    /// Stores the last time it was confirmed that the client is alive
+    pub last_alive_received: AtomicCell<std::time::Instant>,
 }
 
 impl Client {
-    pub fn new(token: Token, connection: TcpStream, address: SocketAddr) -> Self {
+    pub fn new(
+        token: Token,
+        connection: TcpStream,
+        address: SocketAddr,
+        keep_alive_sender: Arc<tokio::sync::mpsc::Sender<i64>>,
+    ) -> Self {
         Self {
             protocol_version: AtomicI32::new(0),
             gameprofile: Mutex::new(None),
@@ -132,6 +141,8 @@ impl Client {
             closed: AtomicBool::new(false),
             client_packets_queue: Arc::new(Mutex::new(Vec::new())),
             make_player: AtomicBool::new(false),
+            keep_alive_sender,
+            last_alive_received: AtomicCell::new(std::time::Instant::now()),
         }
     }
 
