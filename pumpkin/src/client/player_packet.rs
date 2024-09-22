@@ -326,7 +326,7 @@ impl Player {
             Some(TextComponent::text(&message)),
             FilterType::PassThrough,
             1.into(),
-            TextComponent::text(&gameprofile.name.clone()),
+            TextComponent::text(&gameprofile.name),
             None,
         ))
 

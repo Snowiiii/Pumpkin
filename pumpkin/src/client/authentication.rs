@@ -77,15 +77,15 @@ pub async fn authenticate(
     match response.status() {
         StatusCode::OK => {}
         StatusCode::NO_CONTENT => Err(AuthError::UnverifiedUsername)?,
-        other => Err(AuthError::UnknownStatusCode(other.as_str().to_string()))?,
+        other => Err(AuthError::UnknownStatusCode(other))?,
     }
     let profile: GameProfile = response.json().await.map_err(|_| AuthError::FailedParse)?;
     Ok(profile)
 }
 
-pub fn unpack_textures(property: Property, config: &TextureConfig) -> Result<(), TextureError> {
+pub fn unpack_textures(property: &Property, config: &TextureConfig) -> Result<(), TextureError> {
     let from64 = general_purpose::STANDARD
-        .decode(property.value)
+        .decode(&property.value)
         .map_err(|e| TextureError::DecodeError(e.to_string()))?;
     let textures: ProfileTextures =
         serde_json::from_slice(&from64).map_err(|e| TextureError::JSONError(e.to_string()))?;
@@ -120,7 +120,7 @@ pub enum AuthError {
     #[error("Failed to parse JSON into Game Profile")]
     FailedParse,
     #[error("Unknown Status Code")]
-    UnknownStatusCode(String),
+    UnknownStatusCode(StatusCode),
 }
 
 #[derive(Error, Debug)]

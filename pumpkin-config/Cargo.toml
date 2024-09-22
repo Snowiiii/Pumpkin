@@ -9,4 +9,3 @@ serde.workspace = true
 log.workspace = true
 
 toml = "0.8"
-

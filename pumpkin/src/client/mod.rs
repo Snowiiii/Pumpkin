@@ -16,10 +16,9 @@ use authentication::GameProfile;
 use crossbeam::atomic::AtomicCell;
 use mio::{event::Event, net::TcpStream, Token};
 use parking_lot::Mutex;
-use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
     bytebuf::{packet_id::Packet, DeserializerError},
-    client::{config::CConfigDisconnect, login::CLoginDisconnect, play::CPlayDisconnect},
+    client::{config::CConfigDisconnect, login::CLoginDisconnect},
     packet_decoder::PacketDecoder,
     packet_encoder::PacketEncoder,
     server::{
@@ -81,7 +80,7 @@ impl Default for PlayerConfig {
     }
 }
 
-/// Everything which makes a Conection with our Server is a `Client`.
+/// Everything which makes a Connection with our Server is a `Client`.
 /// Client will become Players when they reach the `Play` state
 pub struct Client {
     /// The client's game profile information.
@@ -364,11 +363,6 @@ impl Client {
             }
             ConnectionState::Config => {
                 self.try_send_packet(&CConfigDisconnect::new(reason))
-                    .unwrap_or_else(|_| self.close());
-            }
-            // So we can also kick on errors, but generally should use Player::kick
-            ConnectionState::Play => {
-                self.try_send_packet(&CPlayDisconnect::new(&TextComponent::text(reason)))
                     .unwrap_or_else(|_| self.close());
             }
             _ => {

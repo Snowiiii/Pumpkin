@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::LazyLock};
 
 pub const ITEM_REGISTRY: &str = "minecraft:item";
 
-const REGISTRY_JSON: &str = include_str!("../assets/registries.json");
+const REGISTRY_JSON: &str = include_str!("../../assets/registries.json");
 
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct RegistryElement {

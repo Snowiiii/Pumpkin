@@ -5,7 +5,7 @@ use serde::Deserialize;
 use super::block_id::BlockId;
 
 pub static BLOCKS: LazyLock<HashMap<String, RegistryBlockType>> = LazyLock::new(|| {
-    serde_json::from_str(include_str!("../../assets/blocks.json"))
+    serde_json::from_str(include_str!("../../../assets/blocks.json"))
         .expect("Could not parse block.json registry.")
 });
 

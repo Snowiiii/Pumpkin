@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::LazyLock};
 use super::Rarity;
 use crate::global_registry::{self, ITEM_REGISTRY};
 
-const ITEMS_JSON: &str = include_str!("../../assets/items.json");
+const ITEMS_JSON: &str = include_str!("../../../assets/items.json");
 
 pub static ITEMS: LazyLock<HashMap<String, ItemElement>> = LazyLock::new(|| {
     serde_json::from_str(ITEMS_JSON).expect("Could not parse items.json registry.")
