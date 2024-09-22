@@ -1,5 +1,7 @@
 // From da java
 
+use std::sync::Arc;
+
 use crate::world_gen::noise::density::spline::{
     FloatAmplifier, Spline, SplineBuilder, SplineValue,
 };
@@ -34,7 +36,12 @@ fn meth_42047(f: f32, g: f32, h: f32, i: f32) -> f32 {
     (g - f) / (i - h)
 }
 
-fn meth_42050(function: DensityFunction, f: f32, bl: bool, amplifier: FloatAmplifier) -> Spline {
+fn meth_42050(
+    function: Arc<DensityFunction>,
+    f: f32,
+    bl: bool,
+    amplifier: FloatAmplifier,
+) -> Spline {
     let mut builder = SplineBuilder::new(function, amplifier);
 
     let i = get_offset_value(-1f32, f, -0.7f32);
@@ -75,7 +82,7 @@ fn meth_42050(function: DensityFunction, f: f32, bl: bool, amplifier: FloatAmpli
 
 #[allow(clippy::too_many_arguments)]
 fn meth_42048(
-    ridges: DensityFunction,
+    ridges: Arc<DensityFunction>,
     continental: f32,
     f: f32,
     g: f32,
@@ -96,9 +103,9 @@ fn meth_42048(
 }
 
 fn method_42054<'a>(
-    erosion: DensityFunction<'a>,
-    ridges: DensityFunction<'a>,
-    ridges_folded: DensityFunction<'a>,
+    erosion: Arc<DensityFunction<'a>>,
+    ridges: Arc<DensityFunction<'a>>,
+    ridges_folded: Arc<DensityFunction<'a>>,
     f: f32,
     bl: bool,
     amplifier: FloatAmplifier,
@@ -173,8 +180,8 @@ fn method_42054<'a>(
 }
 
 fn method_42052<'a>(
-    ridges: DensityFunction<'a>,
-    ridges_folded: DensityFunction<'a>,
+    ridges: Arc<DensityFunction<'a>>,
+    ridges_folded: Arc<DensityFunction<'a>>,
     f: f32,
     g: f32,
     amplifier: FloatAmplifier,
@@ -209,7 +216,11 @@ fn method_42052<'a>(
     builder.build()
 }
 
-fn method_42049<'a>(ridges: DensityFunction<'a>, f: f32, amplifier: FloatAmplifier) -> Spline<'a> {
+fn method_42049<'a>(
+    ridges: Arc<DensityFunction<'a>>,
+    f: f32,
+    amplifier: FloatAmplifier,
+) -> Spline<'a> {
     let g = 0.63f32 * f;
     let h = 0.3f32 * f;
     SplineBuilder::new(ridges, amplifier)
@@ -219,9 +230,9 @@ fn method_42049<'a>(ridges: DensityFunction<'a>, f: f32, amplifier: FloatAmplifi
 }
 
 fn method_42053<'a>(
-    erosion: DensityFunction<'a>,
-    ridges: DensityFunction<'a>,
-    ridges_folded: DensityFunction<'a>,
+    erosion: Arc<DensityFunction<'a>>,
+    ridges: Arc<DensityFunction<'a>>,
+    ridges_folded: Arc<DensityFunction<'a>>,
     f: f32,
     g: f32,
     h: f32,
@@ -253,8 +264,8 @@ fn method_42053<'a>(
 
 #[allow(clippy::too_many_arguments)]
 fn create_continental_offset_spline<'a>(
-    erosion: DensityFunction<'a>,
-    ridges: DensityFunction<'a>,
+    erosion: Arc<DensityFunction<'a>>,
+    ridges: Arc<DensityFunction<'a>>,
     continental: f32,
     f: f32,
     g: f32,
@@ -361,9 +372,9 @@ fn create_continental_offset_spline<'a>(
 }
 
 pub fn create_offset_spline<'a>(
-    contentents: DensityFunction<'a>,
-    erosion: DensityFunction<'a>,
-    ridges: DensityFunction<'a>,
+    contentents: Arc<DensityFunction<'a>>,
+    erosion: Arc<DensityFunction<'a>>,
+    ridges: Arc<DensityFunction<'a>>,
     amplified: bool,
 ) -> Spline<'a> {
     let amplification = if amplified {
@@ -440,10 +451,10 @@ pub fn create_offset_spline<'a>(
 }
 
 pub fn create_factor_spline<'a>(
-    continents: DensityFunction<'a>,
-    erosion: DensityFunction<'a>,
-    ridges: DensityFunction<'a>,
-    ridges_folded: DensityFunction<'a>,
+    continents: Arc<DensityFunction<'a>>,
+    erosion: Arc<DensityFunction<'a>>,
+    ridges: Arc<DensityFunction<'a>>,
+    ridges_folded: Arc<DensityFunction<'a>>,
     amplified: bool,
 ) -> Spline<'a> {
     let amplification = if amplified {
@@ -506,10 +517,10 @@ pub fn create_factor_spline<'a>(
 }
 
 pub fn create_jaggedness_spline<'a>(
-    continents: DensityFunction<'a>,
-    erosion: DensityFunction<'a>,
-    ridges: DensityFunction<'a>,
-    ridges_folded: DensityFunction<'a>,
+    continents: Arc<DensityFunction<'a>>,
+    erosion: Arc<DensityFunction<'a>>,
+    ridges: Arc<DensityFunction<'a>>,
+    ridges_folded: Arc<DensityFunction<'a>>,
     amplified: bool,
 ) -> Spline<'a> {
     let amplification = if amplified {

@@ -1,8 +1,12 @@
-use lazy_static::lazy_static;
+use std::ops::Add;
 
-use crate::chunk::ChunkData;
+use num_traits::PrimInt;
 
-#[derive(Clone)]
+use crate::{biome::Biome, block::BlockId, chunk::ChunkData, height::HeightLimitViewImpl};
+
+use super::{biome_coords, blender::data::BlendingData};
+
+#[derive(Clone, PartialEq, PartialOrd)]
 pub enum GenerationState {
     Empty,
     StructureStart,
@@ -18,9 +22,202 @@ pub enum GenerationState {
     Full,
 }
 
+pub struct BlockPos {
+    x: i32,
+    y: i32,
+    z: i32,
+}
+
+impl BlockPos {
+    pub fn new(x: i32, y: i32, z: i32) -> Self {
+        Self { x, y, z }
+    }
+
+    pub fn x(&self) -> i32 {
+        self.x
+    }
+
+    pub fn y(&self) -> i32 {
+        self.y
+    }
+
+    pub fn z(&self) -> i32 {
+        self.z
+    }
+
+    pub fn down(&self) -> Self {
+        self.down_by(1)
+    }
+
+    pub fn down_by(&self, count: i32) -> Self {
+        Self {
+            x: self.x,
+            y: self.y - count,
+            z: self.z,
+        }
+    }
+
+    pub fn up(&self) -> Self {
+        self.up_by(1)
+    }
+
+    pub fn up_by(&self, count: i32) -> Self {
+        Self {
+            x: self.x,
+            y: self.y + count,
+            z: self.z,
+        }
+    }
+
+    pub fn north(&self) -> Self {
+        self.north_by(1)
+    }
+
+    pub fn north_by(&self, count: i32) -> Self {
+        Self {
+            x: self.x,
+            y: self.y,
+            z: self.z - count,
+        }
+    }
+
+    pub fn south(&self) -> Self {
+        self.south_by(1)
+    }
+
+    pub fn south_by(&self, count: i32) -> Self {
+        Self {
+            x: self.x,
+            y: self.y,
+            z: self.z + count,
+        }
+    }
+
+    pub fn west(&self) -> Self {
+        self.west_by(1)
+    }
+
+    pub fn west_by(&self, count: i32) -> Self {
+        Self {
+            x: self.x - count,
+            y: self.y,
+            z: self.z,
+        }
+    }
+
+    pub fn east(&self) -> Self {
+        self.east_by(1)
+    }
+
+    pub fn east_by(&self, count: i32) -> Self {
+        Self {
+            x: self.x + count,
+            y: self.y,
+            z: self.z,
+        }
+    }
+}
+
+impl Add for BlockPos {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+        }
+    }
+}
+
+pub enum HeightMapType {
+    WorldGenSurface,
+    WorldSurface,
+    WorldGenOceanFloor,
+    OceanFloor,
+    MotionBlocking,
+    MotionBlockingNoLeaves,
+}
+
+pub struct VoxelShape {}
+
+impl VoxelShape {
+    pub fn is_empty(&self) -> bool {
+        unimplemented!()
+    }
+}
+
+pub struct BlockState {}
+
+impl BlockState {
+    pub fn block(&self) -> BlockId {
+        unimplemented!()
+    }
+
+    pub fn is_air(&self) -> bool {
+        unimplemented!()
+    }
+
+    pub fn has_tag(&self, tag: &str) -> bool {
+        unimplemented!()
+    }
+
+    pub fn is_block(&self, id: BlockId) -> bool {
+        unimplemented!()
+    }
+
+    pub fn collision_shape(&self, chunk: &Chunk, pos: &BlockPos) -> VoxelShape {
+        unimplemented!()
+    }
+}
+
 pub struct Chunk {
     data: ChunkData,
     state: GenerationState,
+}
+
+impl Chunk {
+    pub fn hash(chunk_x: i32, chunk_z: i32) -> u64 {
+        (chunk_x as u64 & 4294967295u64) | ((chunk_z as u64 & 4294967295u64) << 32)
+    }
+
+    pub fn packed_x(pos: u64) -> i32 {
+        (pos & 4294967295u64) as i32
+    }
+
+    pub fn packed_z(pos: u64) -> i32 {
+        (pos.unsigned_shr(32) & 4294967295u64) as i32
+    }
+
+    pub fn get_block_state(&self, pos: &BlockPos) -> BlockState {
+        unimplemented!()
+    }
+
+    pub fn sample_height_map(&self, map: HeightMapType, x: i32, y: i32) -> Option<i32> {
+        unimplemented!()
+    }
+
+    pub fn biome_for_noise_gen(&self, biome_x: i32, biome_y: i32, biome_z: i32) -> Biome {
+        unimplemented!()
+    }
+
+    pub fn blending_data(&self) -> Option<BlendingData> {
+        unimplemented!()
+    }
+
+    pub fn status(&self) -> GenerationState {
+        self.state.clone()
+    }
+}
+
+impl HeightLimitViewImpl for Chunk {
+    fn bottom_y(&self) -> i32 {
+        unimplemented!()
+    }
+
+    fn height(&self) -> i32 {
+        unimplemented!()
+    }
 }
 
 pub struct GenerationShapeConfig {
@@ -51,6 +248,29 @@ impl GenerationShapeConfig {
             horizontal,
             vertical,
         }
+    }
+
+    pub fn trim_height(&self, view: &impl HeightLimitViewImpl) -> Self {
+        let i = self.y_min.max(view.bottom_y());
+        let j = (self.y_min + self.height).min(view.top_y()) - i;
+        Self {
+            y_min: i,
+            height: j,
+            horizontal: self.horizontal,
+            vertical: self.vertical,
+        }
+    }
+
+    pub fn min_y(&self) -> i32 {
+        self.y_min
+    }
+
+    pub fn height(&self) -> i32 {
+        self.height
+    }
+
+    pub fn vertical_cell_block_count(&self) -> i32 {
+        biome_coords::to_block(self.vertical)
     }
 }
 
