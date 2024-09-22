@@ -1,33 +1,43 @@
-use crate::entity::Entity;
+use crate::entity::player::Player;
+use crate::entity::{random_float, Entity};
 use crate::server::Server;
 use crossbeam::atomic::AtomicCell;
+use itertools::Itertools;
+use num_traits::float::FloatCore;
+use num_traits::real::Real;
 use pumpkin_core::math::vector3::Vector3;
 use pumpkin_entity::entity_type::EntityType;
 use pumpkin_entity::pose::EntityPose;
+use pumpkin_entity::EntityId;
+use pumpkin_inventory::Container;
 use pumpkin_protocol::client::play::{
-    CSetEntityMetadata, CSpawnEntity, CUpdateEntityPos, Metadata,
+    CPickupItem, CSetEntityMetadata, CSpawnEntity, CUpdateEntityPos, Metadata,
 };
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
 use rand::Rng;
+use rayon::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use uuid::Uuid;
+
 pub struct ItemEntity {
     pub item_stack: ItemStack,
-    _is_able_to_be_picked_up: Arc<AtomicBool>,
+    is_able_to_be_picked_up: Arc<AtomicBool>,
     pub entity: Arc<Entity>,
 }
 
 impl ItemEntity {
-    pub fn new(player_entity: &Entity, item_stack: ItemStack, server: Arc<Server>) -> Self {
-        let _is_able_to_be_picked_up = Arc::new(AtomicBool::new(false));
-        let countdown = _is_able_to_be_picked_up.clone();
-        tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_secs(2)).await;
-            countdown.store(true, std::sync::atomic::Ordering::Relaxed);
-        });
+    pub fn new(player_entity: &Entity, item_stack: ItemStack, server: Arc<Server>) {
+        let is_able_to_be_picked_up = Arc::new(AtomicBool::new(false));
+        {
+            let is_able_to_be_picked_up = is_able_to_be_picked_up.clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_secs(2)).await;
+                is_able_to_be_picked_up.store(true, std::sync::atomic::Ordering::Relaxed);
+            });
+        }
 
         let player_pos = player_entity.pos.load();
         let pos = Vector3 {
@@ -56,32 +66,145 @@ impl ItemEntity {
             standing_eye_height: 0.0,
             pose: EntityPose::Standing.into(),
         });
+        let item_entity = Self {
+            item_stack,
+            is_able_to_be_picked_up,
+            entity: entity.clone(),
+        };
+
         server.broadcast_packet_all(&CSpawnEntity::from(entity.as_ref()));
         {
-            let entity = entity.clone();
             let server = server.clone();
-            tokio::spawn(async move { drop_loop(entity, server).await });
+            tokio::spawn(async move { drop_loop(item_entity, server).await });
         }
         server.broadcast_packet_all(&CSetEntityMetadata {
             entity_id: entity.entity_id.into(),
             metadata: Metadata::new(8, 7.into(), Slot::from(&item_stack)),
             end: 255,
         });
-        Self {
-            item_stack,
-            _is_able_to_be_picked_up,
-            entity,
+    }
+
+    pub fn check_pickup(self) -> PickupEvent {
+        if !self.is_able_to_be_picked_up.load(Ordering::Relaxed) {
+            return PickupEvent::NotPickedUp(self);
         }
+
+        let pos = self.entity.pos.load();
+        for player in self.entity.world.current_players.lock().values() {
+            let player_pos = player.entity.pos.load();
+            if (pos.x - player_pos.x).abs() <= 1.
+                && (pos.z - player_pos.z).abs() <= 1.
+                && (pos.y - player_pos.y).abs() <= 1.
+            {
+                let inventory = player.inventory.lock();
+                if inventory.all_combinable_slots().par_iter().any(|slot| {
+                    match slot {
+                        None => true,
+                        // TODO: Add check for max stack size here
+                        Some(slot) => {
+                            slot.item_id == self.item_stack.item_id
+                                && slot.item_count + self.item_stack.item_count <= 64
+                        }
+                    }
+                }) {
+                    drop(inventory);
+                    return PickupEvent::PickedUp {
+                        entity_id: self.entity.entity_id,
+                        item: self.item_stack,
+                        player: player.clone(),
+                    };
+                }
+            }
+        }
+        PickupEvent::NotPickedUp(self)
     }
 }
 
-async fn drop_loop(entity: Arc<Entity>, server: Arc<Server>) {
+enum PickupEvent {
+    PickedUp {
+        entity_id: EntityId,
+        item: ItemStack,
+        player: Arc<Player>,
+    },
+    NotPickedUp(ItemEntity),
+}
+
+async fn drop_loop(item_entity: ItemEntity, server: Arc<Server>) {
+    let mut item_entity = item_entity;
     let mut interval = tokio::time::interval(Duration::from_millis(1000 / 20));
+    let entity = item_entity.entity.clone();
     loop {
         interval.tick().await;
+        match item_entity.check_pickup() {
+            PickupEvent::PickedUp {
+                entity_id,
+                player,
+                item: dropped_item,
+            } => {
+                let mut inventory = player.inventory.lock();
+
+                server.broadcast_packet_all(&CPickupItem::new_item(
+                    entity_id.into(),
+                    player.entity.entity_id.into(),
+                    dropped_item.item_count,
+                ));
+                let mut index = None;
+
+                for (slot_index, slot) in inventory.hotbar_mut().into_iter().enumerate() {
+                    match slot {
+                        None => {
+                            *slot = Some(dropped_item);
+                            index = Some(slot_index + 27);
+                            break;
+                        }
+                        Some(item_stack) => {
+                            // TODO: Add max stack size check here
+                            if item_stack.item_id == dropped_item.item_id
+                                && item_stack.item_count + dropped_item.item_count <= 64
+                            {
+                                item_stack.item_count += dropped_item.item_count;
+                                index = Some(slot_index + 27);
+                                break;
+                            }
+                        }
+                    }
+                }
+                if index.is_none() {
+                    for (slot_index, slot) in inventory.main_inventory_mut().into_iter().enumerate()
+                    {
+                        match slot {
+                            None => {
+                                *slot = Some(dropped_item);
+                                index = Some(slot_index);
+                                break;
+                            }
+                            Some(item_stack) => {
+                                // TODO: Add max stack size check here
+                                if item_stack.item_id == dropped_item.item_id
+                                    && item_stack.item_count + dropped_item.item_count <= 64
+                                {
+                                    item_stack.item_count += dropped_item.item_count;
+                                    index = Some(slot_index);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                drop(inventory);
+                player.send_single_slot_inventory_change(
+                    &server,
+                    index.expect("It needs to have a valid slot for this path to get loaded"),
+                );
+                break;
+            }
+            PickupEvent::NotPickedUp(s) => {
+                item_entity = s;
+            }
+        }
         entity.apply_gravity();
         let pos_before = entity.pos.load();
-        entity.advance_with_velocity();
+        entity.advance_with_velocity().await;
         let mut velocity = entity.velocity.load();
         let slipperiness = 0.98;
         velocity.y *= 0.98;

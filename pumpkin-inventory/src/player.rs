@@ -1,8 +1,8 @@
-use std::sync::atomic::AtomicU32;
-
 use crate::container_click::MouseClick;
 use crate::{handle_item_change, Container, InventoryError, WindowType};
+use itertools::Itertools;
 use pumpkin_world::item::ItemStack;
+use std::sync::atomic::AtomicU32;
 
 pub struct PlayerInventory {
     // Main Inventory + Hotbar
@@ -123,6 +123,14 @@ impl PlayerInventory {
         slots.extend(self.items.iter().map(|c| c.as_ref()));
         slots.push(self.offhand.as_ref());
         slots
+    }
+
+    pub fn hotbar_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
+        self.items.iter_mut().skip(27).collect_vec()
+    }
+
+    pub fn main_inventory_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
+        self.items.iter_mut().take(27).collect_vec()
     }
 
     pub fn slots_mut(&mut self) -> Vec<&mut Option<ItemStack>> {

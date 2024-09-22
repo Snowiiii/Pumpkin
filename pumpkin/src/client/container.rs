@@ -211,6 +211,21 @@ impl Player {
         Ok(())
     }
 
+    pub fn send_single_slot_inventory_change(&self, server: &Arc<Server>, slot_index: usize) {
+        let mut inventory = self.inventory.lock();
+        let state_id = inventory
+            .state_id
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+
+        let slot = Slot::from(inventory.all_combinable_slots()[slot_index]);
+        self.client.send_packet(&CSetContainerSlot::new(
+            0,
+            (state_id + 1) as i32,
+            slot_index + 9,
+            &slot,
+        ));
+    }
+
     fn mouse_click(
         &self,
         opened_container: Option<&mut Box<dyn Container>>,
@@ -424,7 +439,6 @@ impl Player {
             }
         };
 
-        dbg!(ItemEntity::new(&self.entity, dropped_item, server).item_stack);
         Ok(())
     }
 
