@@ -147,7 +147,6 @@ impl Level {
     ) {
         chunks.into_par_iter().for_each(|at| {
             if is_alive {
-                dbg!("a");
                 return;
             }
             let mut loaded_chunks = self.loaded_chunks.lock();
