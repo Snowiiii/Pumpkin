@@ -104,10 +104,6 @@ async fn drop_loop(entity: Arc<Entity>, server: Arc<Server>) {
     }
 }
 
-fn random_float() -> f64 {
-    rand::thread_rng().gen_range(0.0..=1.0)
-}
-
 fn toss_velocity(player: &Entity) -> Vector3<f64> {
     use std::f64::consts::PI;
     let pitch_sin = f64::sin(player.pitch.load() as f64 * (PI / 180.0));
