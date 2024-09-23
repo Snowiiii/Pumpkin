@@ -5,10 +5,13 @@ use parking_lot::{Mutex, RwLock};
 use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
+use pumpkin_inventory::drag_handler::DragHandler;
+use pumpkin_inventory::{Container, OpenContainer};
 use pumpkin_plugin::PluginLoader;
 use pumpkin_protocol::client::login::CEncryptionRequest;
 use pumpkin_protocol::client::status::CStatusResponse;
 use pumpkin_protocol::{client::config::CPluginMessage, ClientPacket};
+use pumpkin_registry::Registry;
 use pumpkin_world::dimension::Dimension;
 use std::collections::HashMap;
 use std::{
@@ -18,10 +21,6 @@ use std::{
     },
     time::Duration,
 };
-
-use pumpkin_inventory::drag_handler::DragHandler;
-use pumpkin_inventory::{Container, OpenContainer};
-use pumpkin_registry::Registry;
 
 use crate::client::EncryptionError;
 use crate::{
@@ -96,7 +95,7 @@ impl Server {
         }
     }
 
-    pub async fn add_player(&self, token: Token, client: Client) -> (Arc<Player>, Arc<World>) {
+    pub async fn add_player(&self, token: Token, client: Arc<Client>) -> (Arc<Player>, Arc<World>) {
         let entity_id = self.new_entity_id();
         let gamemode = match BASIC_CONFIG.default_gamemode {
             GameMode::Undefined => GameMode::Survival,
