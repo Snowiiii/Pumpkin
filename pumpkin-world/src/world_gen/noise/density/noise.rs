@@ -69,11 +69,11 @@ impl<'a> DensityFunctionImpl<'a> for NoiseFunction<'a> {
         )
     }
 
-    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
+    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
         applier.fill(densities, &DensityFunction::Noise(self.clone()))
     }
 
-    fn apply(&self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
         visitor.apply(Arc::new(DensityFunction::Noise(self.clone())))
     }
 
@@ -125,11 +125,11 @@ impl<'a> DensityFunctionImpl<'a> for ShiftedNoiseFunction<'a> {
         self.noise.sample(d, e, f)
     }
 
-    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
+    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
         applier.fill(densities, &DensityFunction::ShiftedNoise(self.clone()))
     }
 
-    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
         let new_x = self.shift_x.apply(visitor);
         let new_y = self.shift_y.apply(visitor);
         let new_z = self.shift_z.apply(visitor);
@@ -330,11 +330,11 @@ impl<'a> DensityFunctionImpl<'a> for InterpolatedNoiseSampler {
         -self.max()
     }
 
-    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
+    fn fill(&self, densities: &mut [f64], applier: &Applier) {
         applier.fill(densities, &DensityFunction::InterpolatedNoise(self.clone()))
     }
 
-    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
         visitor.apply(Arc::new(DensityFunction::InterpolatedNoise(self.clone())))
     }
 }

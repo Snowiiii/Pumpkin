@@ -3,15 +3,17 @@ use std::sync::Arc;
 use crate::world_gen::sampler::VeinType;
 
 use super::{
-    builtin_noise_params,
     density::{
-        apply_blend_density, built_in_noises, lerp_density_static_start,
+        apply_blend_density, lerp_density_static_start,
         noise::{InternalNoise, NoiseFunction, ShiftedNoiseFunction},
-        veritcal_range_choice, ConstantFunction, DensityFunction, DensityFunctionImpl,
-        RangeFunction, Visitor, WrapperFunction, WrapperType, YClampedFunction,
+        veritcal_range_choice, BuiltInNoiseFunctions, ConstantFunction, DensityFunction,
+        DensityFunctionImpl, RangeFunction, Visitor, WrapperFunction, WrapperType,
+        YClampedFunction,
     },
+    BuiltInNoiseParams,
 };
 
+#[derive(Clone)]
 pub struct NoiseRouter<'a> {
     barrier: Arc<DensityFunction<'a>>,
     fluid_level_floodedness: Arc<DensityFunction<'a>>,
@@ -23,15 +25,15 @@ pub struct NoiseRouter<'a> {
     erosion: Arc<DensityFunction<'a>>,
     depth: Arc<DensityFunction<'a>>,
     ridges: Arc<DensityFunction<'a>>,
-    internal_density: Arc<DensityFunction<'a>>,
-    final_densitiy: Arc<DensityFunction<'a>>,
+    pub(crate) internal_density: Arc<DensityFunction<'a>>,
+    pub(crate) final_densitiy: Arc<DensityFunction<'a>>,
     vein_toggle: Arc<DensityFunction<'a>>,
     vein_ridged: Arc<DensityFunction<'a>>,
     vein_gap: Arc<DensityFunction<'a>>,
 }
 
 impl<'a> NoiseRouter<'a> {
-    pub fn apply(&'a self, visitor: &'a Visitor) -> Self {
+    pub fn apply(&self, visitor: &Visitor<'a>) -> Self {
         Self {
             barrier: self.barrier.apply(visitor),
             fluid_level_floodedness: self.fluid_level_floodedness.apply(visitor),
@@ -51,10 +53,15 @@ impl<'a> NoiseRouter<'a> {
         }
     }
 
-    pub fn create_surface_noise_router(large_biomes: bool, amplified: bool) -> Self {
+    pub fn create_surface_noise_router(
+        noise_params: &'a BuiltInNoiseParams<'a>,
+        noise_funcs: &'a BuiltInNoiseFunctions<'a>,
+        large_biomes: bool,
+        amplified: bool,
+    ) -> Self {
         let function = Arc::new(DensityFunction::Noise(NoiseFunction::new(
             Arc::new(InternalNoise::new(
-                builtin_noise_params::AQUIFER_BARRIER.clone(),
+                noise_params.aquifer_barrier().clone(),
                 None,
             )),
             1f64,
@@ -63,7 +70,7 @@ impl<'a> NoiseRouter<'a> {
 
         let function2 = Arc::new(DensityFunction::Noise(NoiseFunction::new(
             Arc::new(InternalNoise::new(
-                builtin_noise_params::AQUIFER_BARRIER_FLOODEDNESS.clone(),
+                noise_params.aquifer_fluid_level_floodedness().clone(),
                 None,
             )),
             1f64,
@@ -72,7 +79,7 @@ impl<'a> NoiseRouter<'a> {
 
         let function3 = Arc::new(DensityFunction::Noise(NoiseFunction::new(
             Arc::new(InternalNoise::new(
-                builtin_noise_params::AQUIFER_FLUID_LEVEL_SPREAD.clone(),
+                noise_params.aquifer_fluid_level_spread().clone(),
                 None,
             )),
             1f64,
@@ -81,27 +88,27 @@ impl<'a> NoiseRouter<'a> {
 
         let function4 = Arc::new(DensityFunction::Noise(NoiseFunction::new(
             Arc::new(InternalNoise::new(
-                builtin_noise_params::AQUIFER_LAVA.clone(),
+                noise_params.aquifer_lava().clone(),
                 None,
             )),
             1f64,
             1f64,
         )));
 
-        let function5 = built_in_noises::SHIFT_X.clone();
-        let function6 = built_in_noises::SHIFT_Z.clone();
+        let function5 = noise_funcs.shift_x().clone();
+        let function6 = noise_funcs.shift_z().clone();
 
         let function7 = Arc::new(DensityFunction::ShiftedNoise(ShiftedNoiseFunction::new(
             function5.clone(),
-            built_in_noises::ZERO.clone(),
+            noise_funcs.zero().clone(),
             function6.clone(),
             0.25f64,
             0f64,
             Arc::new(InternalNoise::new(
                 if large_biomes {
-                    builtin_noise_params::TEMPERATURE_LARGE.clone()
+                    noise_params.temperature_large().clone()
                 } else {
-                    builtin_noise_params::TEMPERATURE.clone()
+                    noise_params.temperature().clone()
                 },
                 None,
             )),
@@ -109,40 +116,34 @@ impl<'a> NoiseRouter<'a> {
 
         let function8 = Arc::new(DensityFunction::ShiftedNoise(ShiftedNoiseFunction::new(
             function5.clone(),
-            built_in_noises::ZERO.clone(),
+            noise_funcs.zero().clone(),
             function6.clone(),
             0.25f64,
             0f64,
             Arc::new(InternalNoise::new(
                 if large_biomes {
-                    builtin_noise_params::VEGETATION_LARGE.clone()
+                    noise_params.vegetation_large().clone()
                 } else {
-                    builtin_noise_params::VEGETATION.clone()
+                    noise_params.vegetation().clone()
                 },
                 None,
             )),
         )));
 
         let function9 = if large_biomes {
-            built_in_noises::OVERWORLD_LARGE_SLOPED_CHEESE
-                .factor
-                .clone()
+            noise_funcs.factor_overworld_large_biome().clone()
         } else if amplified {
-            built_in_noises::OVERWORLD_AMPLIFIED_SLOPED_CHEESE
-                .factor
-                .clone()
+            noise_funcs.factor_overworld_amplified().clone()
         } else {
-            built_in_noises::OVERWORLD_SLOPED_CHEESE.factor.clone()
+            noise_funcs.factor_overworld().clone()
         };
 
         let function10 = if large_biomes {
-            built_in_noises::OVERWORLD_LARGE_SLOPED_CHEESE.depth.clone()
+            noise_funcs.depth_overworld_large_biome().clone()
         } else if amplified {
-            built_in_noises::OVERWORLD_AMPLIFIED_SLOPED_CHEESE
-                .depth
-                .clone()
+            noise_funcs.depth_overworld_amplified().clone()
         } else {
-            built_in_noises::OVERWORLD_SLOPED_CHEESE.depth.clone()
+            noise_funcs.depth_overworld().clone()
         };
 
         let function11 = Arc::new(
@@ -157,23 +158,17 @@ impl<'a> NoiseRouter<'a> {
         );
 
         let function12 = if large_biomes {
-            built_in_noises::OVERWORLD_LARGE_SLOPED_CHEESE
-                .sloped_cheese
-                .clone()
+            noise_funcs.sloped_cheese_overworld_large_biome().clone()
         } else if amplified {
-            built_in_noises::OVERWORLD_AMPLIFIED_SLOPED_CHEESE
-                .sloped_cheese
-                .clone()
+            noise_funcs.sloped_cheese_overworld_amplified().clone()
         } else {
-            built_in_noises::OVERWORLD_SLOPED_CHEESE
-                .sloped_cheese
-                .clone()
+            noise_funcs.sloped_cheese_overworld().clone()
         };
 
         let function13 = Arc::new(
             function12.binary_min(Arc::new(
                 DensityFunction::Constant(ConstantFunction::new(5f64))
-                    .mul(built_in_noises::CAVES_ENTRANCES_OVERWORLD.clone()),
+                    .mul(noise_funcs.caves_entrances_overworld().clone()),
             )),
         );
 
@@ -182,14 +177,14 @@ impl<'a> NoiseRouter<'a> {
             -1000000f64,
             1.5625f64,
             function13,
-            Arc::new(create_caves(function12)),
+            Arc::new(create_caves(noise_funcs, noise_params, function12)),
         )));
 
         let function15 = Arc::new(
             apply_blend_density(apply_surface_slides(amplified, function14))
-                .binary_min(built_in_noises::CAVES_NOODLE_OVERWORLD.clone()),
+                .binary_min(noise_funcs.caves_noodle_overworld().clone()),
         );
-        let function16 = built_in_noises::Y.clone();
+        let function16 = noise_funcs.y().clone();
 
         let i = VeinType::overall_min_y();
         let j = VeinType::overall_max_y();
@@ -197,7 +192,7 @@ impl<'a> NoiseRouter<'a> {
             function16.clone(),
             Arc::new(DensityFunction::Noise(NoiseFunction::new(
                 Arc::new(InternalNoise::new(
-                    builtin_noise_params::ORE_VEININESS.clone(),
+                    noise_params.ore_veininess().clone(),
                     None,
                 )),
                 1.5f64,
@@ -212,10 +207,7 @@ impl<'a> NoiseRouter<'a> {
             veritcal_range_choice(
                 function16.clone(),
                 Arc::new(DensityFunction::Noise(NoiseFunction::new(
-                    Arc::new(InternalNoise::new(
-                        builtin_noise_params::ORE_VEIN_A.clone(),
-                        None,
-                    )),
+                    Arc::new(InternalNoise::new(noise_params.ore_vein_a().clone(), None)),
                     4f64,
                     4f64,
                 ))),
@@ -230,10 +222,7 @@ impl<'a> NoiseRouter<'a> {
             veritcal_range_choice(
                 function16,
                 Arc::new(DensityFunction::Noise(NoiseFunction::new(
-                    Arc::new(InternalNoise::new(
-                        builtin_noise_params::ORE_VEIN_B.clone(),
-                        None,
-                    )),
+                    Arc::new(InternalNoise::new(noise_params.ore_vein_b().clone(), None)),
                     4f64,
                     4f64,
                 ))),
@@ -250,10 +239,7 @@ impl<'a> NoiseRouter<'a> {
         );
 
         let function21 = Arc::new(DensityFunction::Noise(NoiseFunction::new(
-            Arc::new(InternalNoise::new(
-                builtin_noise_params::ORE_GAP.clone(),
-                None,
-            )),
+            Arc::new(InternalNoise::new(noise_params.ore_gap().clone(), None)),
             1f64,
             1f64,
         )));
@@ -266,17 +252,17 @@ impl<'a> NoiseRouter<'a> {
             temperature: function7,
             vegetation: function8,
             continents: if large_biomes {
-                built_in_noises::CONTINENTS_OVERWORLD_LARGE_BIOME.clone()
+                noise_funcs.continents_overworld_large_biome().clone()
             } else {
-                built_in_noises::CONTINENTS_OVERWORLD.clone()
+                noise_funcs.continents_overworld().clone()
             },
             erosion: if large_biomes {
-                built_in_noises::EROSION_OVERWORLD_LARGE_BIOME.clone()
+                noise_funcs.erosion_overworld_large_biome().clone()
             } else {
-                built_in_noises::CONTINENTS_OVERWORLD.clone()
+                noise_funcs.erosion_overworld().clone()
             },
             depth: function10,
-            ridges: built_in_noises::RIDGES_OVERWORLD.clone(),
+            ridges: noise_funcs.ridges_overworld().clone(),
             internal_density: Arc::new(apply_surface_slides(
                 amplified,
                 Arc::new(function11.add_const(-0.703125).clamp(-64f64, 64f64)),
@@ -331,14 +317,17 @@ fn apply_slides(
     lerp_density_static_start(function3, bottom_density, function)
 }
 
-fn create_caves(sloped_cheese: Arc<DensityFunction>) -> DensityFunction {
-    let function = built_in_noises::CAVES_SPAGHETTI_2D_OVERWORLD.clone();
-    let function2 = built_in_noises::CAVES_SPAGHETTI_ROUGHNESS_FUNCTION_OVERWORLD.clone();
+fn create_caves<'a>(
+    noise_funcs: &BuiltInNoiseFunctions<'a>,
+    noise_params: &BuiltInNoiseParams<'a>,
+    sloped_cheese: Arc<DensityFunction<'a>>,
+) -> DensityFunction<'a> {
+    let function = noise_funcs.caves_spaghetti_2d_overworld().clone();
+    let function2 = noise_funcs
+        .caves_spaghetti_roughness_function_overworld()
+        .clone();
     let function3 = Arc::new(DensityFunction::Noise(NoiseFunction::new(
-        Arc::new(InternalNoise::new(
-            builtin_noise_params::CAVE_LAYER.clone(),
-            None,
-        )),
+        Arc::new(InternalNoise::new(noise_params.cave_layer().clone(), None)),
         1f64,
         8f64,
     )));
@@ -346,10 +335,7 @@ fn create_caves(sloped_cheese: Arc<DensityFunction>) -> DensityFunction {
         DensityFunction::Constant(ConstantFunction::new(4f64)).mul(Arc::new(function3.square())),
     );
     let function5 = Arc::new(DensityFunction::Noise(NoiseFunction::new(
-        Arc::new(InternalNoise::new(
-            builtin_noise_params::CAVE_CHEESE.clone(),
-            None,
-        )),
+        Arc::new(InternalNoise::new(noise_params.cave_cheese().clone(), None)),
         1f64,
         0.6666666666666666f64,
     )));
@@ -368,9 +354,9 @@ fn create_caves(sloped_cheese: Arc<DensityFunction>) -> DensityFunction {
     );
     let function7 = Arc::new(function4.add(function6));
     let function8 = function7
-        .binary_min(built_in_noises::CAVES_ENTRANCES_OVERWORLD.clone())
+        .binary_min(noise_funcs.caves_entrances_overworld().clone())
         .binary_min(Arc::new(function.add(function2)));
-    let function9 = built_in_noises::CAVES_PILLARS_OVERWORLD.clone();
+    let function9 = noise_funcs.caves_pillars_overworld().clone();
     let function10 = Arc::new(DensityFunction::Range(RangeFunction::new(
         function9.clone(),
         -1000000f64,

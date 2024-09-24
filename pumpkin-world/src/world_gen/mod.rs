@@ -2,6 +2,7 @@ mod blender;
 pub mod chunk;
 mod generator;
 mod generic_generator;
+mod heightmap;
 mod implementation;
 mod noise;
 pub mod sampler;

@@ -15,8 +15,8 @@ impl<'a> DensityFunctionImpl<'a> for BlendOffsetFunction {
         0f64
     }
 
-    fn fill(&self, densities: &[f64], _applier: &Applier) -> Vec<f64> {
-        densities.iter().map(|_| 0f64).collect()
+    fn fill(&self, densities: &mut [f64], _applier: &Applier) {
+        densities.fill(0f64)
     }
 
     fn min(&self) -> f64 {
@@ -27,7 +27,7 @@ impl<'a> DensityFunctionImpl<'a> for BlendOffsetFunction {
         0f64
     }
 
-    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
         visitor.apply(Arc::new(DensityFunction::BlendOffset(self.clone())))
     }
 }
@@ -40,8 +40,8 @@ impl<'a> DensityFunctionImpl<'a> for BlendAlphaFunction {
         1f64
     }
 
-    fn fill(&self, densities: &[f64], _applier: &Applier) -> Vec<f64> {
-        densities.iter().map(|_| 1f64).collect()
+    fn fill(&self, densities: &mut [f64], _applier: &Applier) {
+        densities.fill(1f64);
     }
 
     fn max(&self) -> f64 {
@@ -52,7 +52,7 @@ impl<'a> DensityFunctionImpl<'a> for BlendAlphaFunction {
         1f64
     }
 
-    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
         visitor.apply(Arc::new(DensityFunction::BlendAlpha(self.clone())))
     }
 }
@@ -79,16 +79,14 @@ impl<'a> DensityFunctionImpl<'a> for BlendDensityFunction<'a> {
         self.apply_density(pos, self.function.sample(pos))
     }
 
-    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
-        let densities = self.function.fill(densities, applier);
-        densities
-            .iter()
-            .enumerate()
-            .map(|(i, x)| self.apply_density(&applier.at(i as i32), *x))
-            .collect()
+    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
+        self.function.fill(densities, applier);
+        densities.iter_mut().enumerate().for_each(|(i, x)| {
+            *x = self.apply_density(&applier.at(i), *x);
+        });
     }
 
-    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
         let new_function = BlendDensityFunction {
             function: self.function.apply(visitor),
         };

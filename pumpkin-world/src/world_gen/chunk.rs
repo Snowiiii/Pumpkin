@@ -1,10 +1,14 @@
-use std::ops::Add;
+use std::{ops::Add, sync::Arc};
 
 use num_traits::PrimInt;
+use parking_lot::Mutex;
 
-use crate::{biome::Biome, block::BlockId, chunk::ChunkData, height::HeightLimitViewImpl};
+use crate::{
+    biome::Biome, block::BlockId, chunk::ChunkData, height::HeightLimitViewImpl,
+    world_gen::noise::chunk_sampler::ChunkNoiseSampler,
+};
 
-use super::{biome_coords, blender::data::BlendingData};
+use super::{biome_coords, blender::data::BlendingData, heightmap::HeightMap};
 
 #[derive(Clone, PartialEq, PartialOrd)]
 pub enum GenerationState {
@@ -171,14 +175,24 @@ impl BlockState {
     }
 }
 
-pub struct Chunk {
-    data: ChunkData,
-    state: GenerationState,
+pub const CHUNK_MARKER: u64 = ChunkPos {
+    x: 1875066,
+    z: 1875066,
+}
+.to_long();
+
+pub struct ChunkPos {
+    x: i32,
+    z: i32,
 }
 
-impl Chunk {
-    pub fn hash(chunk_x: i32, chunk_z: i32) -> u64 {
-        (chunk_x as u64 & 4294967295u64) | ((chunk_z as u64 & 4294967295u64) << 32)
+impl ChunkPos {
+    pub const fn new(x: i32, z: i32) -> Self {
+        Self { x, z }
+    }
+
+    pub const fn to_long(&self) -> u64 {
+        (self.x as u64 & 4294967295u64) | ((self.z as u64 & 4294967295u64) << 32)
     }
 
     pub fn packed_x(pos: u64) -> i32 {
@@ -189,6 +203,22 @@ impl Chunk {
         (pos.unsigned_shr(32) & 4294967295u64) as i32
     }
 
+    pub fn get_start_x(&self) -> i32 {
+        self.x << 4
+    }
+
+    pub fn get_start_z(&self) -> i32 {
+        self.z << 4
+    }
+}
+
+pub struct Chunk {
+    pos: ChunkPos,
+    data: ChunkData,
+    state: GenerationState,
+}
+
+impl Chunk {
     pub fn get_block_state(&self, pos: &BlockPos) -> BlockState {
         unimplemented!()
     }
@@ -208,6 +238,18 @@ impl Chunk {
     pub fn status(&self) -> GenerationState {
         self.state.clone()
     }
+
+    pub fn get_or_create_noise_sampler(&self) -> Arc<Mutex<ChunkNoiseSampler>> {
+        unimplemented!()
+    }
+
+    pub fn get_height_map(&self, map: HeightMapType) -> &HeightMap {
+        unimplemented!()
+    }
+
+    pub fn pos(&self) -> &ChunkPos {
+        &self.pos
+    }
 }
 
 impl HeightLimitViewImpl for Chunk {
@@ -220,6 +262,7 @@ impl HeightLimitViewImpl for Chunk {
     }
 }
 
+#[derive(Clone)]
 pub struct GenerationShapeConfig {
     y_min: i32,
     height: i32,
@@ -271,6 +314,10 @@ impl GenerationShapeConfig {
 
     pub fn vertical_cell_block_count(&self) -> i32 {
         biome_coords::to_block(self.vertical)
+    }
+
+    pub fn horizontal_cell_block_count(&self) -> i32 {
+        biome_coords::to_block(self.horizontal)
     }
 }
 

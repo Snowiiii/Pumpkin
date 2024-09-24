@@ -56,7 +56,7 @@ impl EndIslandFunction {
 }
 
 impl<'a> DensityFunctionImpl<'a> for EndIslandFunction {
-    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
+    fn fill(&self, densities: &mut [f64], applier: &Applier) {
         applier.fill(densities, &DensityFunction::EndIsland(self.clone()))
     }
 
@@ -72,7 +72,7 @@ impl<'a> DensityFunctionImpl<'a> for EndIslandFunction {
         0.5625f64
     }
 
-    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
         visitor.apply(Arc::new(DensityFunction::EndIsland(self.clone())))
     }
 }

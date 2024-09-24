@@ -8,3 +8,9 @@ pub struct NoiseConfig<'a> {
     random_deriver: RandomDeriver,
     router: NoiseRouter<'a>,
 }
+
+impl<'a> NoiseConfig<'a> {
+    pub fn noise_router(&self) -> NoiseRouter<'a> {
+        self.router.clone()
+    }
+}

@@ -3,8 +3,8 @@ use std::sync::Arc;
 use log::warn;
 
 use super::{
-    Applier, DensityFunction, DensityFunctionImpl, NoisePos, UnaryDensityFunction, Visitor,
-    VisitorImpl,
+    Applier, ApplierImpl, DensityFunction, DensityFunctionImpl, NoisePos, UnaryDensityFunction,
+    Visitor, VisitorImpl,
 };
 
 #[derive(Clone)]
@@ -23,7 +23,7 @@ pub struct LinearFunction<'a> {
 }
 
 impl<'a> DensityFunctionImpl<'a> for LinearFunction<'a> {
-    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
         let new_function = self.input.apply(visitor);
         let d = new_function.min();
         let e = new_function.max();
@@ -52,12 +52,11 @@ impl<'a> DensityFunctionImpl<'a> for LinearFunction<'a> {
         self.apply_density(self.input.sample(pos))
     }
 
-    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
-        let densities = self.input.fill(densities, applier);
+    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
+        self.input.fill(densities, applier);
         densities
-            .iter()
-            .map(|val| self.apply_density(*val))
-            .collect()
+            .iter_mut()
+            .for_each(|val| *val = self.apply_density(*val))
     }
 
     fn min(&self) -> f64 {
@@ -211,35 +210,47 @@ impl<'a> DensityFunctionImpl<'a> for BinaryFunction<'a> {
         }
     }
 
-    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
-        let densities1 = self.arg1.fill(densities, applier);
-        let densities2 = self.arg2.fill(densities, applier);
-
+    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
+        self.arg1.fill(densities, applier);
         match self.action {
-            BinaryType::Add => densities1
-                .iter()
-                .zip(densities2)
-                .map(|(x, y)| x + y)
-                .collect(),
-            BinaryType::Mul => densities1
-                .iter()
-                .zip(densities2)
-                .map(|(x, y)| x * y)
-                .collect(),
-            BinaryType::Min => densities1
-                .iter()
-                .zip(densities2)
-                .map(|(x, y)| x.min(y))
-                .collect(),
-            BinaryType::Max => densities1
-                .iter()
-                .zip(densities2)
-                .map(|(x, y)| x.max(y))
-                .collect(),
+            BinaryType::Add => {
+                let mut ds = Vec::with_capacity(densities.len());
+                densities.iter().for_each(|_| ds.push(0f64));
+                self.arg2.fill(&mut ds, applier);
+                densities
+                    .iter_mut()
+                    .zip(ds)
+                    .for_each(|(real, temp)| *real += temp);
+            }
+            BinaryType::Mul => {
+                densities.iter_mut().enumerate().for_each(|(i, val)| {
+                    if *val != 0f64 {
+                        *val *= self.arg2.sample(&applier.at(i));
+                    };
+                });
+            }
+            BinaryType::Min => {
+                let e = self.arg2.min();
+
+                densities.iter_mut().enumerate().for_each(|(i, val)| {
+                    if *val >= e {
+                        *val = val.min(self.arg2.sample(&applier.at(i)));
+                    }
+                });
+            }
+            BinaryType::Max => {
+                let e = self.arg2.max();
+
+                densities.iter_mut().enumerate().for_each(|(i, val)| {
+                    if *val <= e {
+                        *val = val.max(self.arg2.sample(&applier.at(i)))
+                    }
+                });
+            }
         }
     }
 
-    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
         visitor.apply(Arc::new(BinaryFunction::create(
             self.action.clone(),
             self.arg1.apply(visitor),
