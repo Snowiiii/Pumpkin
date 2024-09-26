@@ -28,3 +28,9 @@ cfb8 = "0.8.1"
 
 itertools.workspace = true
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
+
+futures = "0.3.30"
+pin-project-lite = "0.2.14"
+tokio.workspace = true
+tokio-util.workspace = true
+tokio-stream.workspace = true

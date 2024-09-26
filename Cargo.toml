@@ -41,3 +41,7 @@ derive_more = { version = "1.0.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 
 itertools = "0.13.0"
+# Networking Protocol
+tokio-serde = "0.9.0"
+tokio-stream = "0.1.16"
+tokio-util = "0.7.12"
