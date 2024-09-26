@@ -57,7 +57,7 @@ impl World {
         P: ClientPacket,
     {
         let current_players = self.current_players.lock();
-        for (_, player) in current_players.iter() {
+        for player in current_players.values() {
             player.client.send_packet(packet);
         }
     }
@@ -261,7 +261,7 @@ impl World {
 
     /// Gets a Player by entity id
     pub fn get_player_by_entityid(&self, id: EntityId) -> Option<Arc<Player>> {
-        for (_, player) in self.current_players.lock().iter() {
+        for player in self.current_players.lock().values() {
             if player.entity_id() == id {
                 return Some(player.clone());
             }
@@ -271,7 +271,7 @@ impl World {
 
     /// Gets a Player by name
     pub fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
-        for (_, player) in self.current_players.lock().iter() {
+        for player in self.current_players.lock().values() {
             if player.gameprofile.name == name {
                 return Some(player.clone());
             }
