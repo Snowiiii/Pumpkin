@@ -2027,15 +2027,20 @@ dependencies = [
  "cfb8",
  "fastnbt",
  "flate2",
+ "futures",
  "itertools 0.13.0",
  "log",
  "num-derive",
  "num-traits",
+ "pin-project-lite",
  "pumpkin-core",
  "pumpkin-macros",
  "pumpkin-world",
  "serde",
  "thiserror",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
  "uuid",
 ]
 
@@ -2892,6 +2897,17 @@ checksum = "0c7bc40d0e5a97695bb96e27995cd3a08538541b0a846f65bba7a359f36700d4"
 dependencies = [
  "rustls",
  "rustls-pki-types",
+ "tokio",
+]
+
+[[package]]
+name = "tokio-stream"
+version = "0.1.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4f4e6ce100d0eb49a2734f8c0812bcd324cf357d21810932c5df6b96ef2b86f1"
+dependencies = [
+ "futures-core",
+ "pin-project-lite",
  "tokio",
 ]
 
