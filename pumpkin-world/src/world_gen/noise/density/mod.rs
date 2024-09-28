@@ -1577,15 +1577,42 @@ mod test {
         assert_eq!(noise_functions.caves_noodle_overworld.min(), -0.125f64);
         assert_eq!(noise_functions.caves_noodle_overworld.max(), 64f64);
 
-        assert_eq!(noise_functions.caves_pillars_overworld.sample(&pos), -0.16637500000000005f64);
-        assert_eq!(noise_functions.caves_pillars_overworld.min(), -31.44487500000001f64);
-        assert_eq!(noise_functions.caves_pillars_overworld.max(), 22.460625000000007f64);
+        assert_eq!(
+            noise_functions.caves_pillars_overworld.sample(&pos),
+            -0.16637500000000005f64
+        );
+        assert_eq!(
+            noise_functions.caves_pillars_overworld.min(),
+            -31.44487500000001f64
+        );
+        assert_eq!(
+            noise_functions.caves_pillars_overworld.max(),
+            22.460625000000007f64
+        );
 
-        assert_eq!(noise_functions.caves_spaghetti_2d_thickness_modular_overworld.sample(&pos), -0.95f64);
-        assert_eq!(noise_functions.caves_spaghetti_2d_thickness_modular_overworld.min(), -1.65f64);
-        assert_eq!(noise_functions.caves_spaghetti_2d_thickness_modular_overworld.max(), -0.2499999999999999f64);
+        assert_eq!(
+            noise_functions
+                .caves_spaghetti_2d_thickness_modular_overworld
+                .sample(&pos),
+            -0.95f64
+        );
+        assert_eq!(
+            noise_functions
+                .caves_spaghetti_2d_thickness_modular_overworld
+                .min(),
+            -1.65f64
+        );
+        assert_eq!(
+            noise_functions
+                .caves_spaghetti_2d_thickness_modular_overworld
+                .max(),
+            -0.2499999999999999f64
+        );
 
-        assert_eq!(noise_functions.caves_spaghetti_2d_overworld.sample(&pos), -0.07885f64);
+        assert_eq!(
+            noise_functions.caves_spaghetti_2d_overworld.sample(&pos),
+            -0.07885f64
+        );
         assert_eq!(noise_functions.caves_spaghetti_2d_overworld.min(), -1f64);
         assert_eq!(noise_functions.caves_spaghetti_2d_overworld.max(), 1f64);
     }
