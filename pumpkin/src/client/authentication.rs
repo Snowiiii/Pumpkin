@@ -99,11 +99,20 @@ pub fn unpack_textures(property: &Property, config: &TextureConfig) -> Result<()
 
 pub fn is_texture_url_valid(url: Url, config: &TextureConfig) -> Result<(), TextureError> {
     let scheme = url.scheme();
-    if !config.allowed_url_schemes.contains(&scheme.to_string()) {
+    if !config
+        .allowed_url_schemes
+        .iter()
+        .any(|allowed_scheme| scheme.ends_with(allowed_scheme))
+    {
         return Err(TextureError::DisallowedUrlScheme(scheme.to_string()));
     }
     let domain = url.domain().unwrap_or("");
-    if !config.allowed_url_domains.contains(&domain.to_string()) {
+    dbg!(domain);
+    if !config
+        .allowed_url_domains
+        .iter()
+        .any(|allowed_domain| domain.ends_with(allowed_domain))
+    {
         return Err(TextureError::DisallowedUrlDomain(domain.to_string()));
     }
     Ok(())

@@ -27,9 +27,6 @@ mod rcon;
 use proxy::ProxyConfig;
 use resource_pack::ResourcePackConfig;
 
-/// Current Config version of the Base Config
-const CURRENT_BASE_VERSION: &str = "1.0.0";
-
 pub static ADVANCED_CONFIG: LazyLock<AdvancedConfiguration> =
     LazyLock::new(AdvancedConfiguration::load);
 
@@ -53,8 +50,6 @@ pub struct AdvancedConfiguration {
 
 #[derive(Serialize, Deserialize)]
 pub struct BasicConfiguration {
-    /// A version identifier for the configuration format.
-    pub config_version: String,
     /// The address to bind the server to.
     pub server_address: SocketAddr,
     /// The seed for world generation.
@@ -84,7 +79,6 @@ pub struct BasicConfiguration {
 impl Default for BasicConfiguration {
     fn default() -> Self {
         Self {
-            config_version: CURRENT_BASE_VERSION.to_string(),
             server_address: SocketAddr::new(Ipv4Addr::new(0, 0, 0, 0).into(), 25565),
             seed: "".to_string(),
             max_players: 100000,
@@ -114,7 +108,7 @@ trait LoadConfiguration {
 
             toml::from_str(&file_content).unwrap_or_else(|err| {
                 panic!(
-                    "Couldn't parse config at {:?}. Reason: {}",
+                    "Couldn't parse config at {:?}. Reason: {}. This is is proberbly caused by an Config update, Just delete the old Config and start Pumpkin again",
                     path,
                     err.message()
                 )
@@ -124,7 +118,7 @@ trait LoadConfiguration {
 
             if let Err(err) = fs::write(path, toml::to_string(&content).unwrap()) {
                 warn!(
-                    "Couldn't write default config to {:?}. Reason: {}",
+                    "Couldn't write default config to {:?}. Reason: {}. This is is proberbly caused by an Config update, Just delete the old Config and start Pumpkin again",
                     path, err
                 );
             }
@@ -157,10 +151,6 @@ impl LoadConfiguration for BasicConfiguration {
     }
 
     fn validate(&self) {
-        assert_eq!(
-            self.config_version, CURRENT_BASE_VERSION,
-            "Config version does not match used Config version. Please update your config"
-        );
         assert!(self.view_distance >= 2, "View distance must be at least 2");
         assert!(
             self.view_distance <= 32,
