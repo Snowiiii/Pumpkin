@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 pumpkin-core = { path = "../pumpkin-core" }
+pumpkin-macros = { path = "../pumpkin-macros" }
 
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 tokio.workspace = true
