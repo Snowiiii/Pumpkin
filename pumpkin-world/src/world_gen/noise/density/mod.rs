@@ -662,7 +662,7 @@ fn sloped_cheese_function<'a>(
         DensityFunction::ClampedY(YClampedFunction {
             from: -64,
             to: 320,
-            from_val: 1.564,
+            from_val: 1.5f64,
             to_val: -1.5f64,
         })
         .add(offset.clone()),
@@ -795,7 +795,8 @@ pub enum DensityFunction<'a> {
 }
 
 impl<'a> DensityFunction<'a> {
-    pub fn clamp(&self, max: f64, min: f64) -> Self {
+    pub fn clamp(&self, min: f64, max: f64) -> Self {
+        assert!(min <= max);
         Self::Clamp(ClampFunction {
             input: Arc::new(self.clone()),
             min,
@@ -1346,20 +1347,246 @@ mod test {
             0.9962499737739563f64
         );
 
-        assert_eq!(noise_functions.y.sample(&pos), 0f64);
-        assert_eq!(noise_functions.y.min(), -4064f64);
-        assert_eq!(noise_functions.y.max(), 4062f64);
+        assert_eq!(
+            noise_functions.factor_overworld.sample(&pos),
+            5.549900531768799f64
+        );
+        assert_eq!(noise_functions.factor_overworld.min(), 0.625f64);
+        assert_eq!(noise_functions.factor_overworld.max(), 6.300000190734863f64);
 
-        assert_eq!(noise_functions.y.sample(&pos), 0f64);
-        assert_eq!(noise_functions.y.min(), -4064f64);
-        assert_eq!(noise_functions.y.max(), 4062f64);
+        assert_eq!(noise_functions.jaggedness_overworld.sample(&pos), 0f64);
+        assert_eq!(noise_functions.jaggedness_overworld.min(), 0f64);
+        assert_eq!(
+            noise_functions.jaggedness_overworld.max(),
+            0.6299999952316284f64
+        );
 
-        assert_eq!(noise_functions.y.sample(&pos), 0f64);
-        assert_eq!(noise_functions.y.min(), -4064f64);
-        assert_eq!(noise_functions.y.max(), 4062f64);
+        assert_eq!(
+            noise_functions.depth_overworld.sample(&pos),
+            0.3962499722838402f64
+        );
+        assert_eq!(
+            noise_functions.depth_overworld.min(),
+            -2.8752707839012146f64
+        );
+        assert_eq!(noise_functions.depth_overworld.max(), 2.4962499737739563f64);
 
-        assert_eq!(noise_functions.y.sample(&pos), 0f64);
-        assert_eq!(noise_functions.y.min(), -4064f64);
-        assert_eq!(noise_functions.y.max(), 4062f64);
+        assert_eq!(
+            noise_functions.sloped_cheese_overworld.sample(&pos),
+            8.849428998431454f64
+        );
+        assert_eq!(
+            noise_functions.sloped_cheese_overworld.min(),
+            -109.63470657711427f64
+        );
+        assert_eq!(
+            noise_functions.sloped_cheese_overworld.max(),
+            182.2090019645691f64
+        );
+
+        assert_eq!(
+            noise_functions
+                .continents_overworld_large_biome
+                .sample(&pos),
+            0f64
+        );
+        assert_eq!(
+            noise_functions.continents_overworld_large_biome.min(),
+            -2f64
+        );
+        assert_eq!(noise_functions.continents_overworld_large_biome.max(), 2f64);
+
+        assert_eq!(
+            noise_functions.erosion_overworld_large_biome.sample(&pos),
+            0f64
+        );
+        assert_eq!(noise_functions.erosion_overworld_large_biome.min(), -2f64);
+        assert_eq!(noise_functions.erosion_overworld_large_biome.max(), 2f64);
+
+        assert_eq!(
+            noise_functions.offset_overworld_large_biome.sample(&pos),
+            -0.6037500277161598f64
+        );
+        assert_eq!(
+            noise_functions.offset_overworld_large_biome.min(),
+            -1.3752707839012146f64
+        );
+        assert_eq!(
+            noise_functions.offset_overworld_large_biome.max(),
+            0.9962499737739563f64
+        );
+
+        assert_eq!(
+            noise_functions.factor_overworld_large_biome.sample(&pos),
+            5.549900531768799f64
+        );
+        assert_eq!(noise_functions.factor_overworld_large_biome.min(), 0.625f64);
+        assert_eq!(
+            noise_functions.factor_overworld_large_biome.max(),
+            6.300000190734863f64
+        );
+
+        assert_eq!(
+            noise_functions
+                .jaggedness_overworld_large_biome
+                .sample(&pos),
+            0f64
+        );
+        assert_eq!(noise_functions.jaggedness_overworld_large_biome.min(), 0f64);
+        assert_eq!(
+            noise_functions.jaggedness_overworld_large_biome.max(),
+            0.6299999952316284f64
+        );
+
+        assert_eq!(
+            noise_functions.depth_overworld_large_biome.sample(&pos),
+            0.3962499722838402f64
+        );
+        assert_eq!(
+            noise_functions.depth_overworld_large_biome.min(),
+            -2.8752707839012146f64
+        );
+        assert_eq!(
+            noise_functions.depth_overworld_large_biome.max(),
+            2.4962499737739563f64
+        );
+
+        assert_eq!(
+            noise_functions
+                .sloped_cheese_overworld_large_biome
+                .sample(&pos),
+            8.849428998431454f64
+        );
+        assert_eq!(
+            noise_functions.sloped_cheese_overworld_large_biome.min(),
+            -109.63470657711427f64
+        );
+        assert_eq!(
+            noise_functions.sloped_cheese_overworld_large_biome.max(),
+            182.2090019645691f64
+        );
+
+        assert_eq!(
+            noise_functions.offset_overworld_amplified.sample(&pos),
+            -0.6037500277161598f64
+        );
+        assert_eq!(
+            noise_functions.offset_overworld_amplified.min(),
+            -1.3752707839012146f64
+        );
+        assert_eq!(
+            noise_functions.offset_overworld_amplified.max(),
+            2.640259087085724f64
+        );
+
+        assert_eq!(
+            noise_functions.factor_overworld_amplified.sample(&pos),
+            0.6516130566596985f64
+        );
+        assert_eq!(
+            noise_functions.factor_overworld_amplified.min(),
+            0.13888883590698242f64
+        );
+        assert_eq!(
+            noise_functions.factor_overworld_amplified.max(),
+            6.300000190734863f64
+        );
+
+        assert_eq!(
+            noise_functions.jaggedness_overworld_amplified.sample(&pos),
+            0f64
+        );
+        assert_eq!(noise_functions.jaggedness_overworld_amplified.min(), 0f64);
+        assert_eq!(
+            noise_functions.jaggedness_overworld_amplified.max(),
+            1.2599999904632568f64
+        );
+
+        assert_eq!(
+            noise_functions.depth_overworld_amplified.sample(&pos),
+            0.3962499722838402f64
+        );
+        assert_eq!(
+            noise_functions.depth_overworld_amplified.min(),
+            -2.8752707839012146f64
+        );
+        assert_eq!(
+            noise_functions.depth_overworld_amplified.max(),
+            4.140259087085724f64
+        );
+
+        assert_eq!(
+            noise_functions
+                .sloped_cheese_overworld_amplified
+                .sample(&pos),
+            1.085643893430405f64
+        );
+        assert_eq!(
+            noise_functions.sloped_cheese_overworld_amplified.min(),
+            -113.6037066672365f64
+        );
+        assert_eq!(
+            noise_functions.sloped_cheese_overworld_amplified.max(),
+            255.39003359528283f64
+        );
+
+        assert_eq!(
+            noise_functions.sloped_cheese_end.sample(&pos),
+            0.6153372708656294f64
+        );
+        assert_eq!(
+            noise_functions.sloped_cheese_end.min(),
+            -173.94674999999998f64
+        );
+        assert_eq!(
+            noise_functions.sloped_cheese_end.max(),
+            173.66549999999998f64
+        );
+
+        assert_eq!(
+            noise_functions
+                .caves_spaghetti_roughness_function_overworld
+                .sample(&pos),
+            0.020000000000000004f64
+        );
+        assert_eq!(
+            noise_functions
+                .caves_spaghetti_roughness_function_overworld
+                .min(),
+            -0.24000000000000005f64
+        );
+        assert_eq!(
+            noise_functions
+                .caves_spaghetti_roughness_function_overworld
+                .max(),
+            0.08000000000000002f64
+        );
+
+        assert_eq!(
+            noise_functions.caves_entrances_overworld.sample(&pos),
+            -0.056499999999999995f64
+        );
+        assert_eq!(noise_functions.caves_entrances_overworld.min(), -1.63f64);
+        // NOTE: this doesn't match java but max/min is never used anywhere so
+        assert_eq!(noise_functions.caves_entrances_overworld.max(), 1.08f64);
+
+        assert_eq!(
+            noise_functions.caves_noodle_overworld.sample(&pos),
+            -0.07500000000000001f64
+        );
+        assert_eq!(noise_functions.caves_noodle_overworld.min(), -0.125f64);
+        assert_eq!(noise_functions.caves_noodle_overworld.max(), 64f64);
+
+        assert_eq!(noise_functions.caves_pillars_overworld.sample(&pos), -0.16637500000000005f64);
+        assert_eq!(noise_functions.caves_pillars_overworld.min(), -31.44487500000001f64);
+        assert_eq!(noise_functions.caves_pillars_overworld.max(), 22.460625000000007f64);
+
+        assert_eq!(noise_functions.caves_spaghetti_2d_thickness_modular_overworld.sample(&pos), -0.95f64);
+        assert_eq!(noise_functions.caves_spaghetti_2d_thickness_modular_overworld.min(), -1.65f64);
+        assert_eq!(noise_functions.caves_spaghetti_2d_thickness_modular_overworld.max(), -0.2499999999999999f64);
+
+        assert_eq!(noise_functions.caves_spaghetti_2d_overworld.sample(&pos), -0.07885f64);
+        assert_eq!(noise_functions.caves_spaghetti_2d_overworld.min(), -1f64);
+        assert_eq!(noise_functions.caves_spaghetti_2d_overworld.max(), 1f64);
     }
 }
