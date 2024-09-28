@@ -103,11 +103,11 @@ impl Server {
         };
         // Basically the default world
         // TODO: select default from config
-        let world = self.worlds[0].clone();
+        let world = &self.worlds[0];
 
         let player = Arc::new(Player::new(client, world.clone(), entity_id, gamemode));
         world.add_player(token, player.clone());
-        (player, world)
+        (player, world.clone())
     }
 
     pub fn try_get_container(

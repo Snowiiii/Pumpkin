@@ -58,7 +58,7 @@ impl CachedStatus {
     }
 
     pub fn build_response(config: &BasicConfiguration) -> StatusResponse {
-        let icon_path = concat!(env!("CARGO_MANIFEST_DIR"), "/icon.png");
+        let icon_path = "/icon.png";
         let icon = if Path::new(icon_path).exists() {
             Some(Self::load_icon(icon_path))
         } else {

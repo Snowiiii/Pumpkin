@@ -131,7 +131,7 @@ impl Player {
             self.kick(TextComponent::text("Invalid movement"));
             return;
         }
-        if !position_rotation.yaw.is_finite() || !position_rotation.pitch.is_finite() {
+        if position_rotation.yaw.is_infinite() || position_rotation.pitch.is_infinite() {
             self.kick(TextComponent::text("Invalid rotation"));
             return;
         }

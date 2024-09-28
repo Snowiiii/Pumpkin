@@ -135,6 +135,8 @@ impl Level {
         }
     }
 
+    pub fn get_block() {}
+
     /// Reads/Generates many chunks in a world
     /// MUST be called from a tokio runtime thread
     ///
@@ -147,7 +149,6 @@ impl Level {
     ) {
         chunks.into_par_iter().for_each(|at| {
             if is_alive {
-                dbg!("a");
                 return;
             }
             let mut loaded_chunks = self.loaded_chunks.lock();
@@ -235,29 +236,21 @@ impl Level {
 
         // Read the file using the offset and size
         let mut file_buf = {
-            let seek_result = region_file.seek(std::io::SeekFrom::Start(offset));
-            if seek_result.is_err() {
-                return Err(WorldError::RegionIsInvalid);
-            }
+            region_file
+                .seek(std::io::SeekFrom::Start(offset))
+                .map_err(|_| WorldError::RegionIsInvalid)?;
             let mut out = vec![0; size];
-            let read_result = region_file.read_exact(&mut out);
-            if read_result.is_err() {
-                return Err(WorldError::RegionIsInvalid);
-            }
+            region_file
+                .read_exact(&mut out)
+                .map_err(|_| WorldError::RegionIsInvalid)?;
             out
         };
 
         // TODO: check checksum to make sure chunk is not corrupted
         let header = file_buf.drain(0..5).collect_vec();
 
-        let compression = match Compression::from_byte(header[4]) {
-            Some(c) => c,
-            None => {
-                return Err(WorldError::Compression(
-                    CompressionError::UnknownCompression,
-                ))
-            }
-        };
+        let compression = Compression::from_byte(header[4])
+            .ok_or_else(|| WorldError::Compression(CompressionError::UnknownCompression))?;
 
         let size = u32::from_be_bytes(header[..4].try_into().unwrap());
 
@@ -277,23 +270,15 @@ impl Level {
             Compression::Gzip => {
                 let mut z = GzDecoder::new(&compressed_data[..]);
                 let mut chunk_data = Vec::with_capacity(compressed_data.len());
-                match z.read_to_end(&mut chunk_data) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        return Err(CompressionError::GZipError(e));
-                    }
-                }
+                z.read_to_end(&mut chunk_data)
+                    .map_err(CompressionError::GZipError)?;
                 Ok(chunk_data)
             }
             Compression::Zlib => {
                 let mut z = ZlibDecoder::new(&compressed_data[..]);
                 let mut chunk_data = Vec::with_capacity(compressed_data.len());
-                match z.read_to_end(&mut chunk_data) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        return Err(CompressionError::ZlibError(e));
-                    }
-                }
+                z.read_to_end(&mut chunk_data)
+                    .map_err(CompressionError::ZlibError)?;
                 Ok(chunk_data)
             }
             Compression::None => Ok(compressed_data),

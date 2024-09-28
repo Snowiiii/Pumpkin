@@ -107,7 +107,7 @@ impl Client {
     ) {
         let shared_secret = server.decrypt(&encryption_response.shared_secret).unwrap();
 
-        self.enable_encryption(&shared_secret)
+        self.set_encryption(Some(&shared_secret))
             .unwrap_or_else(|e| self.kick(&e.to_string()));
 
         let mut gameprofile = self.gameprofile.lock();
@@ -115,6 +115,7 @@ impl Client {
         if BASIC_CONFIG.online_mode {
             let hash = server.digest_secret(&shared_secret);
             let ip = self.address.lock().ip();
+
             match authentication::authenticate(
                 &gameprofile.as_ref().unwrap().name,
                 &hash,
@@ -123,15 +124,15 @@ impl Client {
             )
             .await
             {
-                Ok(p) => {
+                Ok(profile) => {
                     // Check if player should join
-                    if let Some(p) = &p.profile_actions {
+                    if let Some(actions) = &profile.profile_actions {
                         if !ADVANCED_CONFIG
                             .authentication
                             .player_profile
                             .allow_banned_players
                         {
-                            if !p.is_empty() {
+                            if !actions.is_empty() {
                                 self.kick("Your account can't join");
                             }
                         } else {
@@ -140,28 +141,27 @@ impl Client {
                                 .player_profile
                                 .allowed_actions
                             {
-                                if !p.contains(allowed) {
+                                if !actions.contains(allowed) {
                                     self.kick("Your account can't join");
                                 }
                             }
                         }
                     }
-                    *gameprofile = Some(p);
+                    *gameprofile = Some(profile);
                 }
                 Err(e) => self.kick(&e.to_string()),
             }
         }
         for property in &gameprofile.as_ref().unwrap().properties {
-            // TODO: use this (this was the todo here before, ill add it again cuz its prob here for a reason)
-            let _ = unpack_textures(property, &ADVANCED_CONFIG.authentication.textures);
+            unpack_textures(property, &ADVANCED_CONFIG.authentication.textures)
+                .unwrap_or_else(|e| self.kick(&e.to_string()));
         }
 
         // enable compression
         if ADVANCED_CONFIG.packet_compression.enabled {
-            let threshold = ADVANCED_CONFIG.packet_compression.compression_threshold;
-            let level = ADVANCED_CONFIG.packet_compression.compression_level;
-            self.send_packet(&CSetCompression::new(threshold.into()));
-            self.set_compression(Some((threshold, level)));
+            let compression = ADVANCED_CONFIG.packet_compression.compression_info.clone();
+            self.send_packet(&CSetCompression::new(compression.threshold.into()));
+            self.set_compression(Some(compression));
         }
 
         if let Some(profile) = gameprofile.as_ref() {

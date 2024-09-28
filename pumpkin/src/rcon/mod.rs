@@ -140,13 +140,10 @@ impl RCONClient {
                 }
             }
             // If we get a close here, we might have a reply, which we still want to write.
-            match self.poll(server, password).await {
-                Ok(()) => {}
-                Err(e) => {
-                    log::error!("rcon error: {e}");
-                    self.closed = true;
-                }
-            }
+            let _ = self.poll(server, password).await.map_err(|e| {
+                log::error!("rcon error: {e}");
+                self.closed = true;
+            });
         }
         self.closed
     }

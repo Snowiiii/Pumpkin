@@ -20,7 +20,7 @@ pub use pvp::PVPConfig;
 pub use rcon::RCONConfig;
 
 mod commands;
-mod compression;
+pub mod compression;
 mod pvp;
 mod rcon;
 

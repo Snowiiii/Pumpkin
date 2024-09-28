@@ -26,10 +26,9 @@ impl BlockId {
             .iter();
 
         let block_state = match properties {
-            Some(properties) => match block_states.find(|state| &state.properties == properties) {
-                Some(state) => state,
-                None => return Err(WorldError::BlockStateIdNotFound),
-            },
+            Some(properties) => block_states
+                .find(|state| &state.properties == properties)
+                .ok_or_else(|| WorldError::BlockStateIdNotFound)?,
             None => block_states
                 .find(|state| state.is_default)
                 .expect("Every Block should have at least 1 default state"),

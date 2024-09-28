@@ -2031,6 +2031,7 @@ dependencies = [
  "log",
  "num-derive",
  "num-traits",
+ "pumpkin-config",
  "pumpkin-core",
  "pumpkin-macros",
  "pumpkin-world",

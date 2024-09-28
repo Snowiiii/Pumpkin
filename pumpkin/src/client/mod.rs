@@ -16,6 +16,7 @@ use authentication::GameProfile;
 use crossbeam::atomic::AtomicCell;
 use mio::{event::Event, net::TcpStream, Token};
 use parking_lot::Mutex;
+use pumpkin_config::compression::CompressionInfo;
 use pumpkin_protocol::{
     bytebuf::{packet_id::Packet, DeserializerError},
     client::{config::CConfigDisconnect, login::CLoginDisconnect},
@@ -151,24 +152,29 @@ impl Client {
         client_packets_queue.push(packet);
     }
 
-    /// Enables encryption
-    pub fn enable_encryption(
+    /// Sets the Packet encryption
+    pub fn set_encryption(
         &self,
-        shared_secret: &[u8], // decrypted
+        shared_secret: Option<&[u8]>, // decrypted
     ) -> Result<(), EncryptionError> {
-        self.encryption
-            .store(true, std::sync::atomic::Ordering::Relaxed);
-        let crypt_key: [u8; 16] = shared_secret
-            .try_into()
-            .map_err(|_| EncryptionError::SharedWrongLength)?;
-        self.dec.lock().enable_encryption(&crypt_key);
-        self.enc.lock().enable_encryption(&crypt_key);
+        if let Some(shared_secret) = shared_secret {
+            self.encryption
+                .store(true, std::sync::atomic::Ordering::Relaxed);
+            let crypt_key: [u8; 16] = shared_secret
+                .try_into()
+                .map_err(|_| EncryptionError::SharedWrongLength)?;
+            self.dec.lock().set_encryption(Some(&crypt_key));
+            self.enc.lock().set_encryption(Some(&crypt_key));
+        } else {
+            self.dec.lock().set_encryption(None);
+            self.enc.lock().set_encryption(None);
+        }
         Ok(())
     }
 
-    /// Compression threshold, Compression level
-    pub fn set_compression(&self, compression: Option<(u32, u32)>) {
-        self.dec.lock().set_compression(compression.map(|v| v.0));
+    /// Sets the Packet compression
+    pub fn set_compression(&self, compression: Option<CompressionInfo>) {
+        self.dec.lock().set_compression(compression.is_some());
         self.enc.lock().set_compression(compression);
     }
 
@@ -200,14 +206,11 @@ impl Client {
     /// Processes all packets send by the client
     pub async fn process_packets(&self, server: &Arc<Server>) {
         while let Some(mut packet) = self.client_packets_queue.lock().pop() {
-            match self.handle_packet(server, &mut packet).await {
-                Ok(_) => {}
-                Err(e) => {
-                    let text = format!("Error while reading incoming packet {}", e);
-                    log::error!("{}", text);
-                    self.kick(&text)
-                }
-            };
+            let _ = self.handle_packet(server, &mut packet).await.map_err(|e| {
+                let text = format!("Error while reading incoming packet {}", e);
+                log::error!("{}", text);
+                self.kick(&text)
+            });
         }
     }
 
