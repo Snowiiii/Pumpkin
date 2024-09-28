@@ -1,18 +1,10 @@
-//! ## Chunk
-//!
-//! This module defines a minecraft chunk data strcture.
-//!
-
-// ========================= Imports =========================
-
 use std::cmp::max;
 use std::collections::HashMap;
 use std::ops::Index;
 
 use fastnbt::LongArray;
-use serde::{Deserialize, Serialize};
-
 use pumpkin_core::math::vector2::Vector2;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     block::BlockId,
@@ -21,111 +13,9 @@ use crate::{
     WORLD_HEIGHT,
 };
 
-// ======================== Constants ========================
-
 const CHUNK_AREA: usize = 16 * 16;
 const SUBCHUNK_VOLUME: usize = CHUNK_AREA * 16;
 const CHUNK_VOLUME: usize = CHUNK_AREA * WORLD_HEIGHT;
-
-// ======================== NBT Structure ========================
-// This section defines some data structure designed and used by Minecraft
-// java implementation. They might not be used as defined by Pumpkin for
-// its core working.
-//
-
-#[derive(Serialize, Deserialize, Debug)]
-#[allow(dead_code)]
-#[serde(rename_all = "PascalCase")]
-/// `ChunkNbt`
-///
-/// This data structure stores a chunk information as described by a regional
-/// Minecraft Anvil file. They are stored in NBT format and have been updated
-/// for Minecraft 1.18.
-pub struct ChunkNbt {
-    /// Version of the chunk NBT structure.
-    data_version: i32,
-    /// X position of the chunk (in chunks, from the origin, not relative to region).
-    #[serde(rename = "xPos")]
-    x_pos: i32,
-    /// Z position of the chunk (in chunks, from the origin, not relative to region).
-    #[serde(rename = "zPos")]
-    z_pos: i32,
-    /// Lowest Y section position in the chunk (e.g. -4 in 1.18).
-    #[serde(rename = "yPos")]
-    y_pos: i32,
-    /// Defines the world generation status of this chunk.
-    status: ChunkStatus,
-    /// Tick when the chunk was last saved.
-    last_update: i64,
-    /// List of compound tags, each tag is a section (also known as sub-chunk). All
-    /// ections in the world's height are present in this list, even those who are
-    /// empty (filled with air).
-    #[serde(rename = "sections")]
-    sections: Vec<ChunkSection>,
-    /// Each TAG_Compound in this list defines a block entity in the chunk. If this list is empty, it becomes a list of End tags.
-    #[serde(rename = "block_entities")]
-    #[serde(skip)]
-    block_entities: Vec<BlockNbtEntity>,
-    /// Several different heightmaps corresponding to 256 values compacted at 9 bits per value
-    heightmaps: ChunkHeightmaps,
-    /// A List of 16 lists that store positions of light sources per chunk section as shorts, only for proto-chunks
-    #[serde(skip)]
-    lights: Vec<ChunkNbtLight>,
-    /// A list of entities in the proto-chunks, used when generating. As of 1.17, this list is not present for fully generated chunks and entities are moved to a separated region files once the chunk is generated.
-    #[serde(skip)]
-    entities: Vec<ChunkNbtEntity>,
-    /// TODO
-    #[serde(rename = "fluid_ticks")]
-    #[serde(skip)]
-    fluid_ticks: (),
-    /// TODO
-    #[serde(rename = "block_ticks")]
-    #[serde(skip)]
-    block_ticks: (),
-    /// TODO
-    #[serde(skip)]
-    inhabited_time: i64,
-    /// TODO
-    #[serde(rename = "blending_data")]
-    #[serde(skip)]
-    blending_data: ChunkNbtBlendingData,
-    /// TODO
-    #[serde(skip)]
-    post_processing: (),
-    /// TODO
-    #[serde(skip)]
-    structures: (),
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-/// A block entity (not related to entity) is used by Minecraft to store information
-/// about a block that can't be stored in the block's block states. Also known as
-/// *"tile entities"* in prior versions of the game.
-pub enum BlockNbtEntity {
-    // TODO
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ChunkNbtLight {
-    // TODO
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ChunkNbtEntity {
-    // TODO
-}
-
-#[derive(Serialize, Deserialize, Default, Debug)]
-/// Biome blending data
-pub struct ChunkNbtBlendingData {
-    min_section: i32,
-    max_section: i32,
-}
-
-// ======================== Pumpkin Structure ========================
-// This section defines structures that are used by
-//
-//
 
 pub struct ChunkData {
     pub blocks: ChunkBlocks,
@@ -143,36 +33,48 @@ pub struct ChunkBlocks {
     pub heightmap: ChunkHeightmaps,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct PaletteEntry {
     name: String,
     properties: Option<HashMap<String, String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 struct ChunkSectionBlockStates {
     data: Option<LongArray>,
     palette: Vec<PaletteEntry>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct ChunkHeightmaps {
     motion_blocking: LongArray,
     world_surface: LongArray,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
+#[expect(dead_code)]
 struct ChunkSection {
     #[serde(rename = "Y")]
     y: i32,
     block_states: Option<ChunkSectionBlockStates>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+struct ChunkNbt {
+    #[expect(dead_code)]
+    data_version: usize,
+
+    #[serde(rename = "sections")]
+    sections: Vec<ChunkSection>,
+
+    heightmaps: ChunkHeightmaps,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 #[serde(tag = "Status")]
-#[repr(u32)]
 enum ChunkStatus {
     #[serde(rename = "minecraft:empty")]
     Empty,
