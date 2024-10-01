@@ -182,6 +182,7 @@ impl Level {
                 .blocking_send(Ok(data.clone()))
                 .expect("Failed sending ChunkData.");
             loaded_chunks.insert(at, data);
+            drop(loaded_chunks);
         })
     }
 

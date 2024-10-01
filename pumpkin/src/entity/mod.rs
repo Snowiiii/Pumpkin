@@ -1,12 +1,16 @@
+use crate::server::Server;
 use crate::world::World;
 use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
 use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::ToPrimitive;
+use num_traits::float::FloatCore;
+use num_traits::real::Real;
+use num_traits::{Float, Signed, ToPrimitive};
 use pumpkin_core::math::{
     get_section_cord, position::WorldPosition, vector2::Vector2, vector3::Vector3,
 };
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
+use pumpkin_protocol::client::play::{CEntityVelocity, CUpdateEntityPos};
 use pumpkin_protocol::{
     client::play::{CEntityStatus, CSetEntityMetadata, Metadata},
     VarInt,
@@ -14,7 +18,7 @@ use pumpkin_protocol::{
 use pumpkin_world::chunk::ChunkData;
 use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
 use rand::Rng;
-use std::ops::Mul;
+use std::ops::{Mul, Neg};
 use std::sync::atomic::Ordering;
 use std::sync::{atomic::AtomicBool, Arc};
 use uuid::Uuid;
@@ -54,6 +58,9 @@ pub struct Entity {
     /// Indicates whether the entity is on the ground (may not always be accurate).
     pub on_ground: AtomicBool,
 
+    /// Indicates whether the entity is inside of ground, and needs to be pushed out.
+    pub in_ground: AtomicBool,
+
     /// The entity's yaw rotation (horizontal rotation) ← →
     pub yaw: AtomicCell<f32>,
     /// The entity's head yaw rotation (horizontal rotation of the head)
@@ -78,6 +85,7 @@ impl Entity {
             entity_id,
             uuid,
             entity_type,
+            in_ground: AtomicBool::new(false),
             on_ground: AtomicBool::new(false),
             pos: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
             block_pos: AtomicCell::new(WorldPosition(Vector3::new(0, 0, 0))),
@@ -149,183 +157,309 @@ impl Entity {
         self.world.remove_entity(self);
     }
 
-    pub async fn advance_with_velocity(&self) {
-        let pos = self.pos.load();
-        self.collision_check().await;
-        let velocity = self.velocity.load();
-        self.bounds_check(velocity).await;
-        if self.on_ground.load(Ordering::Relaxed) {
-            return;
+    pub async fn advance_position(&self) {
+        let mut velocity = self.velocity.load();
+        if self.on_ground.load(Ordering::Relaxed)
+            && (self.pos.load().y + velocity.y).ceil() < self.pos.load().y.ceil()
+        {
+            velocity.y = self.pos.load().y.floor() - (self.pos.load().y + velocity.y)
         }
-        self.set_pos(pos.x + velocity.x, pos.y + velocity.y, pos.z + velocity.z);
+        let pos = self.pos.load().add(&velocity);
+        self.set_pos(pos.x, pos.y, pos.z);
     }
 
-    async fn collision_check(&self) {
+    async fn collision_check(&self, server: &Arc<Server>) {
         // TODO: Collision check with other entities.
-        let velocity = self.velocity.load();
-        if velocity.length_squared() == 0. {
-            return;
+
+        let pos = self.pos.load();
+        let future_positions = self.add_velocity_block_by_block();
+
+        let mut chunks = vec![];
+        for future_position in &future_positions {
+            // TODO Change rounding based on velocity direction
+            let x_section = get_section_cord(future_position.x.round() as i32);
+            let z_section = get_section_cord(future_position.z.round() as i32);
+            let chunk_pos = Vector2::new(x_section, z_section);
+            if !chunks.contains(&chunk_pos) {
+                chunks.push(chunk_pos)
+            }
         }
-        let mut old_pos = self.pos.load();
-        let pos = old_pos.add(&velocity);
-        let chunk_pos = Vector2::new(
-            get_section_cord(pos.x as i32),
-            get_section_cord(pos.z as i32),
-        );
 
         let (sender, mut receiver) = tokio::sync::mpsc::channel(1024);
 
-        let level = self.world.level.clone();
-        tokio::task::spawn_blocking(move || level.lock().fetch_chunks(&[chunk_pos], sender, false));
-
-        if let Some(Ok(result)) = receiver.recv().await {
-            let block_id = result
-                .blocks
-                .get_block(ChunkRelativeBlockCoordinates::from(pos));
-            // TODO: Add check for other blocks that affect collision, like water
-            if block_id.is_air() {
-                return;
-            }
-            old_pos.y = pos.y.ceil();
-            self.pos.store(old_pos);
-            let mut velocity = self.velocity.load();
-            velocity.y = velocity.y.min(0.);
-
-            self.on_ground.store(true, Ordering::Relaxed);
+        {
+            let level = self.world.level.clone();
+            tokio::task::spawn_blocking(move || level.lock().fetch_chunks(&chunks, sender, false));
         }
+        let mut chunks = vec![];
+        while let Some(Ok(response)) = receiver.recv().await {
+            chunks.push(response);
+        }
+
+        for future_position in future_positions {
+            // TODO: Add check for other blocks that affect collision, like water
+            let block_id = chunks
+                .iter()
+                .find(|chunk| {
+                    chunk.position.x == get_section_cord(future_position.x.round() as i32)
+                        && chunk.position.z == get_section_cord(future_position.z.round() as i32)
+                })
+                .expect("This should be received")
+                .blocks
+                .get_block(ChunkRelativeBlockCoordinates::from(Vector3 {
+                    x: future_position.x,
+                    z: future_position.z,
+                    y: future_position.y.ceil(),
+                }));
+
+            if !block_id.is_air() {
+                let on_ground = self.on_ground.load(Ordering::Relaxed);
+                let mut new_pos = pos;
+                let mut velocity = self.velocity.load();
+                if (pos.x.floor() - future_position.x.floor()).abs() > 1. && !on_ground {
+                    velocity = velocity.multiply(0., 1., 1.);
+                }
+                if (pos.z.floor() - future_position.z.floor()).abs() > 1. && !on_ground {
+                    velocity = velocity.multiply(1., 1., 0.);
+                }
+                if pos.y.abs().floor() > future_position.y.abs().floor() {
+                    velocity = velocity.multiply(1., 0., 1.);
+                    if !on_ground {
+                        new_pos = pos.multiply(1., 0., 1.).add(&Vector3::new(
+                            0.,
+                            future_position.y + 1.,
+                            0.,
+                        ));
+                    }
+                    self.on_ground.store(true, Ordering::Relaxed);
+                }
+                self.pos.store(new_pos);
+                self.velocity.store(velocity);
+            } else {
+                self.on_ground.store(false, Ordering::Relaxed);
+            }
+        }
+    }
+    fn add_velocity_block_by_block(&self) -> Vec<Vector3<f64>> {
+        let velocity = self.velocity.load();
+        let pos = self.pos.load();
+        let blocks = |velocity: f64, out: &mut Vec<f64>, pos: f64| {
+            if velocity > 0. {
+                if velocity > 1. {
+                    for i in (1..=(velocity.ceil() as i32)).rev() {
+                        out.push(i as f64);
+                    }
+                } else {
+                    out.push(1.)
+                }
+            } else if velocity < 0. {
+                if velocity < -1. {
+                    for i in ((velocity.floor() as i32)..0).rev() {
+                        out.push(i as f64);
+                    }
+                } else {
+                    out.push(-1.)
+                }
+            }
+            out.iter_mut().for_each(|velocity| *velocity += pos.round());
+        };
+
+        let mut x = vec![];
+        let mut y = vec![];
+        let mut z = vec![];
+        blocks(velocity.x, &mut x, pos.x);
+        blocks(velocity.y, &mut y, pos.y);
+        blocks(velocity.z, &mut z, pos.z);
+
+        let fix_length = |length: usize, other: &mut Vec<f64>| {
+            if other.len() < length {
+                let last = other.last().unwrap_or(&0.);
+                let first = other.first().unwrap_or(&0.);
+                let increment = (last - first) / length as f64;
+                *other = (0..length)
+                    .map(|i| first + increment * i as f64)
+                    .collect_vec()
+            }
+        };
+        let (x_len, y_len, z_len) = (x.len(), y.len(), z.len());
+        if x_len >= y_len && x_len >= z_len {
+            fix_length(x_len, &mut y);
+            fix_length(x_len, &mut z);
+        } else if y_len >= x_len && y_len >= z_len {
+            fix_length(y_len, &mut x);
+            fix_length(y_len, &mut z);
+        } else if z_len >= x_len && z_len >= y_len {
+            fix_length(z_len, &mut x);
+            fix_length(z_len, &mut y);
+        }
+
+        x.into_iter()
+            .zip(y.into_iter())
+            .zip(z.into_iter())
+            .map(|((x, y), z)| Vector3 { x, y, z })
+            .collect_vec()
     }
 
     /// This function is used to check if an ItemEntity or an EXP orb is inside a block, and if so, get it out.
-    async fn bounds_check(&self, velocity: Vector3<f64>) {
+    async fn bounds_check(&self) {
         // TODO: use velocity to determine if collision *could* happen.
         // Using velocity means that we only have to look up the block below in case we will actually pass from one block_height to another.
         // Theoretically, this should decrease chunk-locking.
         // Might lead to increased lag when *many* items are on the ground. Might not. Need to benchmark.
         let pos = self.pos.load();
-        let chunk_pos = self.chunk_pos.load();
-        let block_pos = self.block_pos.load();
 
-        let (sender, mut receiver) = tokio::sync::mpsc::channel(1024);
-        {
-            let level = self.world.level.clone();
-            tokio::task::spawn_blocking(move || {
-                level.lock().fetch_chunks(&[chunk_pos], sender, false)
-            });
-        }
-        let mut chunks = vec![];
-        if let Some(Ok(result)) = receiver.recv().await {
-            let block_id = result
-                .blocks
-                .get_block(ChunkRelativeBlockCoordinates::from(block_pos));
-            // TODO: Add check for other blocks that affect collision, like water
-            if block_id.is_air() {
-                return;
-            }
-            chunks.push(result);
-        }
         // Ordered in North, South, West, East, Up
-        let neighbours = [(0., -1.), (0., -1.), (-1., 0.), (1., 0.)]
-            .into_iter()
-            .map(|block_pos_change| {
-                (
-                    (block_pos_change.0 as i32, block_pos_change.1 as i32),
-                    Vector3 {
-                        x: pos.x + block_pos_change.1,
-                        y: 0.,
-                        z: pos.z + block_pos_change.0,
-                    },
-                )
-            })
-            .collect_vec();
+        let mut neighbours = vec![];
+        let velocity = self.velocity.load();
 
-        let chunks = self
-            .get_chunks(chunks, neighbours.iter().map(|(_, pos)| *pos).collect_vec())
-            .await;
-        let mut new_direction = Vector3 {
+        let x_vec = Vector3 {
+            x: 1.,
+            y: 0.,
+            z: 0.,
+        };
+        let y_vec = Vector3 {
             x: 0.,
             y: 1.,
             z: 0.,
         };
-        if let Some(collisions) = self.get_all_collisions(neighbours, chunks) {
-            let collision = collisions
-                .first()
-                .expect("If no collisions happen, function returns None");
-            new_direction = Vector3 {
-                x: collision.0 .1 as f64,
-                y: 0.,
-                z: collision.0 .0 as f64,
-            };
+        let z_vec = Vector3 {
+            x: 0.,
+            y: 0.,
+            z: 1.,
+        };
+        let x_floor = (velocity.x + pos.x).floor();
+        let y = (velocity.y + pos.y).floor();
+        let z_floor = (velocity.z + pos.z).floor();
+        if x_floor >= pos.x.floor() {
+            neighbours.push(x_vec)
+        } else if x_floor <= pos.x.floor() {
+            neighbours.push(x_vec.neg())
         }
-        let new_velocity = new_direction.mul(random_float() * 0.02);
-        let velocity = velocity.mul(0.75).add(&new_velocity);
-        self.velocity.store(velocity);
+
+        if !self.on_ground.load(Ordering::Relaxed) && y < pos.y.ceil() {
+            neighbours.push(Vector3 {
+                x: 0.,
+                y: pos.y - y,
+                z: 0.,
+            })
+        }
+        if z_floor >= pos.z.floor() {
+            neighbours.push(z_vec)
+        } else if z_floor <= pos.z.floor() {
+            neighbours.push(z_vec.neg())
+        }
+
+        let chunks = self
+            .get_chunks(
+                &neighbours
+                    .iter()
+                    .map(|neighbour| pos.add(neighbour))
+                    .collect_vec(),
+            )
+            .await;
+
+        if let Some(collisions) = self.get_all_collisions(pos, neighbours, chunks) {
+            for collision in collisions {
+                if collision.y > 0. {
+                    let mut pos = self.pos.load();
+                    dbg!(pos.y);
+                    pos.y += collision.y;
+                    self.on_ground.store(true, Ordering::Relaxed);
+                    dbg!(pos.y);
+                    dbg!(velocity.y);
+                    self.pos.store(pos);
+                }
+            }
+        }
     }
 
-    #[allow(clippy::type_complexity)]
     fn get_all_collisions(
         &self,
-        neighbours: Vec<((i32, i32), Vector3<f64>)>,
+        pos: Vector3<f64>,
+        neighbours: Vec<Vector3<f64>>,
         chunks: Vec<Arc<ChunkData>>,
-    ) -> Option<Vec<((i32, i32), Vector3<f64>)>> {
-        let mut collisions = vec![];
-        for (block_pos_change, pos) in neighbours {
-            let block = chunks
-                .iter()
-                .find_map(|chunk| {
-                    if chunk.position.x == get_section_cord(pos.x as i32)
-                        && chunk.position.z == get_section_cord(pos.z as i32)
-                    {
-                        Some(chunk.blocks.get_block(pos.into()))
-                    } else {
-                        None
-                    }
-                })
-                .expect("All chunks should get loaded above");
-            if !block.is_air() {
-                continue;
-            }
-            collisions.push((block_pos_change, pos))
-        }
-        if collisions.is_empty() {
+    ) -> Option<Vec<Vector3<f64>>> {
+        let result = neighbours
+            .into_iter()
+            .filter_map(|neighbour| {
+                let mut pos = pos.add(&neighbour);
+
+                let block = chunks
+                    .iter()
+                    .find_map(|chunk| {
+                        if chunk.position.x == get_section_cord(pos.x.round() as i32)
+                            && chunk.position.z == get_section_cord(pos.z.round() as i32)
+                        {
+                            Some(chunk.blocks.get_block(pos.into()))
+                        } else {
+                            None
+                        }
+                    })
+                    .expect("All chunks should get loaded above");
+                if block.is_air() {
+                    None
+                } else {
+                    Some(neighbour)
+                }
+            })
+            .collect_vec();
+        if result.is_empty() {
             None
         } else {
-            Some(collisions)
+            Some(result)
         }
     }
 
-    async fn get_chunks(
-        &self,
-        pre_existing_chunks: Vec<Arc<ChunkData>>,
-        positions: Vec<Vector3<f64>>,
-    ) -> Vec<Arc<ChunkData>> {
+    async fn get_chunks(&self, positions: &[Vector3<f64>]) -> Vec<Arc<ChunkData>> {
         let mut chunk_positions = vec![];
         for pos in positions {
             let chunk_pos = Vector2::new(
-                get_section_cord(pos.x as i32),
-                get_section_cord(pos.z as i32),
+                get_section_cord(pos.x.round() as i32),
+                get_section_cord(pos.z.round() as i32),
             );
-            if !chunk_positions.contains(&chunk_pos)
-                && !pre_existing_chunks
-                    .iter()
-                    .any(|chunk| chunk.position == chunk_pos)
-            {
+            if !chunk_positions.contains(&chunk_pos) {
                 chunk_positions.push(chunk_pos);
             }
         }
-        let (sender, mut receiver) = tokio::sync::mpsc::channel(8096);
+        let (sender, mut receiver) = tokio::sync::mpsc::channel(1024);
         {
+            let chunk_positions = chunk_positions.clone();
             let level = self.world.level.clone();
             tokio::task::spawn_blocking(move || {
-                level.lock().fetch_chunks(&chunk_positions, sender, true)
-            });
+                level.lock().fetch_chunks(&chunk_positions, sender, false);
+            })
+            .await
+            .unwrap();
         }
-        let mut chunks = pre_existing_chunks;
+        let mut chunks = vec![];
         while let Some(Ok(chunk)) = receiver.recv().await {
-            chunks.push(chunk)
+            chunks.push(chunk);
         }
         chunks
     }
 
+    pub fn send_position(&self, old_position: Vector3<f64>, server: &Arc<Server>) {
+        let pos = self.pos.load();
+        let (dx, dy, dz) = (
+            pos.x * 4096. - old_position.x * 4096.,
+            pos.y * 4096. - old_position.y * 4096.,
+            pos.z * 4096. - old_position.z * 4096.,
+        );
+        server.broadcast_packet_all(&CUpdateEntityPos::new(
+            self.entity_id.into(),
+            dx as i16,
+            dy as i16,
+            dz as i16,
+            self.on_ground.load(Ordering::Relaxed),
+        ));
+    }
+
+    pub fn send_velocity(&self, server: &Arc<Server>) {
+        self.velocity.load();
+        let entity_id = self.entity_id.into();
+        let packet = CEntityVelocity::new(&entity_id, self.velocity.load());
+        server.broadcast_packet_all(&packet)
+    }
     /// Applies knockback to the entity, following vanilla Minecraft's mechanics.
     ///
     /// This function calculates the entity's new velocity based on the specified knockback strength and direction.
@@ -405,9 +539,6 @@ impl Entity {
 
     // This gets run once per "tick" (tokio task sleeping to imitate tick)
     pub fn apply_gravity(&self) {
-        if self.on_ground.load(Ordering::Relaxed) {
-            return;
-        }
         let mut velocity = self.velocity.load();
         velocity.y -= self.entity_type.gravity();
         self.velocity.store(velocity);

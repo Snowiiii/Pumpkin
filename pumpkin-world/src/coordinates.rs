@@ -123,7 +123,7 @@ impl From<Vector3<f64>> for ChunkRelativeBlockCoordinates {
     fn from(pos: Vector3<f64>) -> Self {
         Self {
             x: ChunkRelativeOffset((pos.x / 16.) as u8),
-            y: Height(pos.y as i16),
+            y: Height(pos.y.ceil() as i16),
             z: ChunkRelativeOffset((pos.z / 16.) as u8),
         }
     }

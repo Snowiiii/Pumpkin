@@ -397,12 +397,7 @@ impl Player {
                                     (yaw * (PI / 180.0)).sin() as f64,
                                     -(yaw * (PI / 180.0)).cos() as f64,
                                 );
-                                let packet = &CEntityVelocity::new(
-                                    &entity_id,
-                                    victem_velocity.x as f32,
-                                    victem_velocity.y as f32,
-                                    victem_velocity.z as f32,
-                                );
+                                let packet = &CEntityVelocity::new(&entity_id, victem_velocity);
                                 let velocity = entity.velocity.load();
                                 victem_entity
                                     .velocity
