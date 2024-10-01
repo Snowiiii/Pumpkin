@@ -7,9 +7,7 @@ use pumpkin_entity::entity_type::EntityType;
 use pumpkin_entity::pose::EntityPose;
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::Container;
-use pumpkin_protocol::client::play::{
-    CPickupItem, CSetEntityMetadata, CSpawnEntity, CUpdateEntityPos, Metadata,
-};
+use pumpkin_protocol::client::play::{CPickupItem, CSetEntityMetadata, CSpawnEntity, Metadata};
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
 use rayon::prelude::*;
@@ -56,6 +54,7 @@ impl ItemEntity {
             fall_flying: false.into(),
             velocity: toss_velocity(player_entity).into(),
             on_ground: false.into(),
+            in_ground: false.into(),
             yaw: 0.0.into(),
             head_yaw: 0.0.into(),
             pitch: 0.0.into(),
@@ -71,7 +70,7 @@ impl ItemEntity {
         server.broadcast_packet_all(&CSpawnEntity::from(entity.as_ref()));
         {
             let server = server.clone();
-            tokio::spawn(async move { drop_loop(item_entity, server).await });
+            tokio::spawn(async move { item_entity.drop_loop(server).await });
         }
         server.broadcast_packet_all(&CSetEntityMetadata {
             entity_id: entity.entity_id.into(),
@@ -114,6 +113,131 @@ impl ItemEntity {
         }
         PickupEvent::NotPickedUp(self)
     }
+
+    fn handle_pickup(
+        entity_id: EntityId,
+        player: Arc<Player>,
+        dropped_item: ItemStack,
+        server: Arc<Server>,
+    ) {
+        let mut inventory = player.inventory.lock();
+
+        server.broadcast_packet_all(&CPickupItem::new_item(
+            entity_id.into(),
+            player.entity.entity_id.into(),
+            dropped_item.item_count,
+        ));
+        let mut index = None;
+
+        for (slot_index, slot) in inventory.hotbar_mut().into_iter().enumerate() {
+            match slot {
+                None => {
+                    *slot = Some(dropped_item);
+                    index = Some(slot_index + 27);
+                    break;
+                }
+                Some(item_stack) => {
+                    // TODO: Add max stack size check here
+                    if item_stack.item_id == dropped_item.item_id
+                        && item_stack.item_count + dropped_item.item_count <= 64
+                    {
+                        item_stack.item_count += dropped_item.item_count;
+                        index = Some(slot_index + 27);
+                        break;
+                    }
+                }
+            }
+        }
+        if index.is_none() {
+            for (slot_index, slot) in inventory.main_inventory_mut().into_iter().enumerate() {
+                match slot {
+                    None => {
+                        *slot = Some(dropped_item);
+                        index = Some(slot_index);
+                        break;
+                    }
+                    Some(item_stack) => {
+                        // TODO: Add max stack size check here
+                        if item_stack.item_id == dropped_item.item_id
+                            && item_stack.item_count + dropped_item.item_count <= 64
+                        {
+                            item_stack.item_count += dropped_item.item_count;
+                            index = Some(slot_index);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        drop(inventory);
+        player.send_single_slot_inventory_change(
+            index.expect("It needs to have a valid slot for this path to get loaded"),
+        );
+    }
+
+    async fn drop_loop(mut self, server: Arc<Server>) {
+        let mut interval = tokio::time::interval(Duration::from_millis(1000 / 20));
+        let mut ticks = 0;
+        loop {
+            interval.tick().await;
+            {
+                match self.check_pickup() {
+                    PickupEvent::PickedUp {
+                        entity_id,
+                        player,
+                        item: dropped_item,
+                    } => {
+                        Self::handle_pickup(entity_id, player, dropped_item, server);
+                        break;
+                    }
+                    PickupEvent::NotPickedUp(s) => {
+                        self = s;
+                    }
+                }
+            }
+            let old_position = self.entity.pos.load();
+            self.entity.apply_gravity();
+            /*if self.entity.on_ground.load(Ordering::Relaxed) {
+                let mut pos = self.entity.pos.load();
+                pos.y = pos.y.ceil();
+                let velocity = self.entity.velocity.load().multiply(1.,0.,1.);
+                self.entity.velocity.store(velocity);
+                self.entity.set_pos(pos.x,pos.y,pos.z);
+                dbg!(self.entity.pos.load().y);
+            }*/
+            //self.entity.bounds_check().await;
+            self.entity.collision_check(&server).await;
+            let on_ground = self.entity.on_ground.load(Ordering::Relaxed);
+            if !on_ground
+                || self.entity.velocity.load().horizontal_length_squared() > 1.0e-5
+                || ticks % 4 == 0
+            {
+                self.entity.advance_position().await;
+                let slipperiness = 0.98;
+                let mut velocity =
+                    self.entity
+                        .velocity
+                        .load()
+                        .multiply(slipperiness, 0.98, slipperiness);
+                if velocity.length_squared() < 1.0e-10 {
+                    velocity.z = 0.;
+                    velocity.y = 0.;
+                    velocity.x = 0.;
+                }
+                if self.entity.on_ground.load(Ordering::Relaxed) {
+                    if velocity.y < 0. {
+                        velocity = velocity.multiply(1., -0.5, 1.);
+                    }
+                }
+
+                self.entity.velocity.store(velocity);
+                self.entity.send_velocity(&server);
+            }
+
+            self.entity.send_position(old_position, &server);
+            ticks += 1;
+        }
+    }
 }
 
 enum PickupEvent {
@@ -123,103 +247,6 @@ enum PickupEvent {
         player: Arc<Player>,
     },
     NotPickedUp(ItemEntity),
-}
-
-async fn drop_loop(item_entity: ItemEntity, server: Arc<Server>) {
-    let mut item_entity = item_entity;
-    let mut interval = tokio::time::interval(Duration::from_millis(1000 / 20));
-    let entity = item_entity.entity.clone();
-    loop {
-        interval.tick().await;
-        match item_entity.check_pickup() {
-            PickupEvent::PickedUp {
-                entity_id,
-                player,
-                item: dropped_item,
-            } => {
-                let mut inventory = player.inventory.lock();
-
-                server.broadcast_packet_all(&CPickupItem::new_item(
-                    entity_id.into(),
-                    player.entity.entity_id.into(),
-                    dropped_item.item_count,
-                ));
-                let mut index = None;
-
-                for (slot_index, slot) in inventory.hotbar_mut().into_iter().enumerate() {
-                    match slot {
-                        None => {
-                            *slot = Some(dropped_item);
-                            index = Some(slot_index + 27);
-                            break;
-                        }
-                        Some(item_stack) => {
-                            // TODO: Add max stack size check here
-                            if item_stack.item_id == dropped_item.item_id
-                                && item_stack.item_count + dropped_item.item_count <= 64
-                            {
-                                item_stack.item_count += dropped_item.item_count;
-                                index = Some(slot_index + 27);
-                                break;
-                            }
-                        }
-                    }
-                }
-                if index.is_none() {
-                    for (slot_index, slot) in inventory.main_inventory_mut().into_iter().enumerate()
-                    {
-                        match slot {
-                            None => {
-                                *slot = Some(dropped_item);
-                                index = Some(slot_index);
-                                break;
-                            }
-                            Some(item_stack) => {
-                                // TODO: Add max stack size check here
-                                if item_stack.item_id == dropped_item.item_id
-                                    && item_stack.item_count + dropped_item.item_count <= 64
-                                {
-                                    item_stack.item_count += dropped_item.item_count;
-                                    index = Some(slot_index);
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                drop(inventory);
-                player.send_single_slot_inventory_change(
-                    index.expect("It needs to have a valid slot for this path to get loaded"),
-                );
-                break;
-            }
-            PickupEvent::NotPickedUp(s) => {
-                item_entity = s;
-            }
-        }
-        entity.apply_gravity();
-        let pos_before = entity.pos.load();
-        entity.advance_with_velocity().await;
-        let mut velocity = entity.velocity.load();
-        let slipperiness = 0.98;
-        velocity.y *= 0.98;
-        velocity.z *= slipperiness;
-        velocity.x *= slipperiness;
-        entity.velocity.store(velocity);
-        let pos = entity.pos.load();
-        let (dx, dy, dz) = (
-            pos.x * 4096. - pos_before.x * 4096.,
-            pos.y * 4096. - pos_before.y * 4096.,
-            pos.z * 4096. - pos_before.z * 4096.,
-        );
-        server.broadcast_packet_all(&CUpdateEntityPos::new(
-            entity.entity_id.into(),
-            dx as i16,
-            dy as i16,
-            dz as i16,
-            entity.on_ground.load(Ordering::Relaxed),
-        ));
-    }
 }
 
 fn toss_velocity(player: &Entity) -> Vector3<f64> {
