@@ -19,9 +19,6 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
         argument(ARG_TARGET, consume_arg_target).execute(&|sender, server, args| {
             let target = parse_arg_player(sender, server, ARG_TARGET, args)?;
             target.entity.kill();
-            target.send_system_message(
-                TextComponent::text("You have been killed.").color_named(NamedColor::Red),
-            );
 
             sender.send_message(
                 TextComponent::text("Player has been killed.").color_named(NamedColor::Blue),
