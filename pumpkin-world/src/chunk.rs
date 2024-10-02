@@ -7,7 +7,7 @@ use pumpkin_core::math::vector2::Vector2;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::BlockId,
+    block::{BlockId, BlockState},
     coordinates::{ChunkRelativeBlockCoordinates, Height},
     level::{ChunkNotGeneratedError, WorldError},
     WORLD_HEIGHT,
@@ -215,7 +215,12 @@ impl ChunkData {
             let palette = block_states
                 .palette
                 .iter()
-                .map(|entry| BlockId::new(&entry.name, entry.properties.as_ref()))
+                .map(
+                    |entry| match BlockState::new(&entry.name, entry.properties.as_ref()) {
+                        Err(e) => Err(e),
+                        Ok(state) => Ok(state.into()),
+                    },
+                )
                 .collect::<Result<Vec<_>, _>>()?;
 
             let block_data = match block_states.data {

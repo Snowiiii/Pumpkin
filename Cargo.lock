@@ -2065,6 +2065,7 @@ dependencies = [
  "num-traits",
  "parking_lot",
  "pumpkin-core",
+ "pumpkin-macros",
  "rand",
  "rayon",
  "serde",

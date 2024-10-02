@@ -29,7 +29,7 @@ use pumpkin_protocol::{
         SUseItemOn, Status,
     },
 };
-use pumpkin_world::block::{BlockFace, BlockId};
+use pumpkin_world::block::{BlockFace, BlockState};
 use pumpkin_world::global_registry;
 
 use super::PlayerConfig;
@@ -517,7 +517,7 @@ impl Player {
                     item.item_id,
                 )
                 .expect("All item ids are in the global registry");
-                if let Ok(block_state_id) = BlockId::new(minecraft_id, None) {
+                if let Ok(block_state_id) = BlockState::new(minecraft_id, None) {
                     let entity = &self.entity;
                     let world = &entity.world;
                     world.broadcast_packet_all(&CBlockUpdate::new(
