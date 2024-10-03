@@ -8,28 +8,13 @@ use math::{BinaryFunction, BinaryType, LinearFunction};
 use noise::{InternalNoise, InterpolatedNoiseSampler, NoiseFunction, ShiftedNoiseFunction};
 use offset::{ShiftAFunction, ShiftBFunction};
 use spline::SplineFunction;
+use terrain_helpers::{create_factor_spline, create_jaggedness_spline, create_offset_spline};
 use unary::{ClampFunction, UnaryFunction, UnaryType};
 use weird::{RarityMapper, WierdScaledFunction};
 
-use crate::world_gen::{
-    blender::{Blender, NoBlendBlender},
-    chunk::{MAX_COLUMN_HEIGHT, MIN_HEIGHT},
-    implementation::overworld::terrain_params::{
-        create_factor_spline, create_jaggedness_spline, create_offset_spline,
-    },
-};
+use crate::world_gen::blender::Blender;
 
-use super::{
-    chunk_sampler::{
-        BlendAlphaDensityFunction, BlendOffsetDensityFunction, Cache2DDensityFunction,
-        CacheOnceDensityFunction, CellCacheDensityFunctionWrapper, ChunkNoiseSamplerWrapper,
-        ChunkSamplerDensityFunctionConverter, FlatCacheDensityFunction, InterpolationApplier,
-        InterpolatorDensityFunctionWrapper,
-    },
-    clamped_map,
-    perlin::DoublePerlinNoiseParameters,
-    BuiltInNoiseParams,
-};
+use super::{clamped_map, perlin::DoublePerlinNoiseParameters, BuiltInNoiseParams};
 
 pub mod blend;
 mod end;
@@ -37,6 +22,7 @@ mod math;
 pub mod noise;
 mod offset;
 pub mod spline;
+mod terrain_helpers;
 mod unary;
 mod weird;
 
@@ -89,6 +75,12 @@ pub struct BuiltInNoiseFunctions<'a> {
     caves_noodle_overworld: Arc<DensityFunction<'a>>,
     caves_pillars_overworld: Arc<DensityFunction<'a>>,
 }
+
+//Bits avaliable to encode y-pos
+pub const SIZE_BITS_Y: i32 = 12;
+pub const MAX_HEIGHT: i32 = (1 << SIZE_BITS_Y) - 32;
+pub const MAX_COLUMN_HEIGHT: i32 = (MAX_HEIGHT >> 1) - 1;
+pub const MIN_HEIGHT: i32 = MAX_COLUMN_HEIGHT - MAX_HEIGHT + 1;
 
 impl<'a> BuiltInNoiseFunctions<'a> {
     pub fn new(built_in_noise_params: &BuiltInNoiseParams<'a>) -> Self {
@@ -626,6 +618,7 @@ impl<'a> BuiltInNoiseFunctions<'a> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn sloped_cheese_function<'a>(
     jagged_noise: Arc<DensityFunction<'a>>,
     continents: Arc<DensityFunction<'a>>,
@@ -640,13 +633,14 @@ fn sloped_cheese_function<'a>(
 ) -> SlopedCheeseResult<'a> {
     let offset = Arc::new(apply_blending(
         Arc::new(
-            DensityFunction::Spline(SplineFunction::new(Arc::new(create_offset_spline(
-                continents.clone(),
-                erosion.clone(),
-                ridges.clone(),
-                amplified,
-            ))))
-            .add_const(-0.50375f32 as f64),
+            DensityFunction::Constant(ConstantFunction::new(-0.50375f32 as f64)).add(Arc::new(
+                DensityFunction::Spline(SplineFunction::new(Arc::new(create_offset_spline(
+                    continents.clone(),
+                    erosion.clone(),
+                    ridges_folded.clone(),
+                    amplified,
+                )))),
+            )),
         ),
         blend_offset,
     ));
@@ -734,7 +728,6 @@ fn apply_blending<'a>(
     function: Arc<DensityFunction<'a>>,
     blend: Arc<DensityFunction<'a>>,
 ) -> DensityFunction<'a> {
-    //let function = lerp_density(built_in_noises::BLEND_ALPHA.clone(), blend, function);
     let function = lerp_density(
         Arc::new(DensityFunction::BlendAlpha(BlendAlphaFunction {})),
         blend,
@@ -799,14 +792,6 @@ pub enum DensityFunction<'a> {
     Wierd(WierdScaledFunction<'a>),
     Range(RangeFunction<'a>),
     Wrapper(WrapperFunction<'a>),
-    ChunkCacheFlatCache(FlatCacheDensityFunction<'a>),
-    ChunkCacheInterpolator(InterpolatorDensityFunctionWrapper<'a>),
-    ChunkCacheBlendAlpha(BlendAlphaDensityFunction<'a>),
-    ChunkCacheBlendOffset(BlendOffsetDensityFunction<'a>),
-    ChunkCacheCellCache(CellCacheDensityFunctionWrapper<'a>),
-    ChunkCache2DCache(Cache2DDensityFunction<'a>),
-    ChunkCacheOnceCache(CacheOnceDensityFunction<'a>),
-    Beardifyer(BeardifyerFunction),
 }
 
 impl<'a> DensityFunction<'a> {
@@ -885,10 +870,44 @@ impl<'a> DensityFunction<'a> {
     }
 }
 
+pub struct Unused<'a> {
+    _x: &'a str,
+}
+
+impl<'a> NoisePosImpl for Unused<'a> {
+    fn x(&self) -> i32 {
+        todo!()
+    }
+
+    fn y(&self) -> i32 {
+        todo!()
+    }
+
+    fn z(&self) -> i32 {
+        todo!()
+    }
+}
+
+impl<'a> ApplierImpl<'a> for Unused<'a> {
+    fn at(&self, _index: usize) -> NoisePos<'a> {
+        todo!()
+    }
+
+    fn fill(&self, _densities: &mut [f64], _function: &DensityFunction<'a>) {
+        todo!()
+    }
+}
+
+impl<'a> VisitorImpl<'a> for Unused<'a> {
+    fn apply(&self, _function: Arc<DensityFunction<'a>>) -> Arc<DensityFunction<'a>> {
+        todo!()
+    }
+}
+
 #[enum_dispatch(NoisePosImpl)]
 pub enum NoisePos<'a> {
     Unblended(UnblendedNoisePos),
-    ChunkNoise(ChunkNoiseSamplerWrapper<'a>),
+    Todo(Unused<'a>),
 }
 
 pub struct UnblendedNoisePos {
@@ -924,14 +943,13 @@ pub trait NoisePosImpl {
     fn z(&self) -> i32;
 
     fn get_blender(&self) -> Blender {
-        Blender::None(NoBlendBlender {})
+        unimplemented!()
     }
 }
 
 #[enum_dispatch(ApplierImpl)]
 pub enum Applier<'a> {
-    ChunkNoise(ChunkNoiseSamplerWrapper<'a>),
-    Interpolation(InterpolationApplier<'a>),
+    Todo(Unused<'a>),
 }
 
 #[enum_dispatch]
@@ -944,7 +962,7 @@ pub trait ApplierImpl<'a> {
 #[enum_dispatch(VisitorImpl)]
 pub enum Visitor<'a> {
     Unwrap(UnwrapVisitor),
-    ChunkSampler(ChunkSamplerDensityFunctionConverter<'a>),
+    Todo(Unused<'a>),
 }
 
 pub struct UnwrapVisitor {}
@@ -1135,31 +1153,6 @@ impl<'a> DensityFunctionImpl<'a> for RangeFunction<'a> {
 }
 
 #[derive(Clone)]
-pub struct BeardifyerFunction {}
-
-impl<'a> DensityFunctionImpl<'a> for BeardifyerFunction {
-    fn sample(&self, _pos: &NoisePos) -> f64 {
-        0f64
-    }
-
-    fn fill(&self, densities: &mut [f64], _applier: &Applier<'a>) {
-        densities.fill(0f64)
-    }
-
-    fn min(&self) -> f64 {
-        0f64
-    }
-
-    fn max(&self) -> f64 {
-        0f64
-    }
-
-    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
-        visitor.apply(Arc::new(DensityFunction::Beardifyer(BeardifyerFunction {})))
-    }
-}
-
-#[derive(Clone)]
 pub struct YClampedFunction {
     from: i32,
     to: i32,
@@ -1243,4 +1236,130 @@ pub fn lerp_density_static_start<'a>(
     end: Arc<DensityFunction<'a>>,
 ) -> DensityFunction<'a> {
     delta.mul(Arc::new(end.add_const(-start))).add_const(start)
+}
+
+#[cfg(test)]
+mod test {
+    use crate::world_gen::noise::{density::DensityFunctionImpl, BuiltInNoiseParams};
+
+    use super::{BuiltInNoiseFunctions, NoisePos, UnblendedNoisePos};
+
+    #[test]
+    fn test_density_function_correctness() {
+        let noise_params = BuiltInNoiseParams::new();
+        let noise_functions = BuiltInNoiseFunctions::new(&noise_params);
+
+        let pos = NoisePos::Unblended(UnblendedNoisePos { x: 0, y: 0, z: 0 });
+
+        assert_eq!(noise_functions.blend_alpha.sample(&pos), 1f64);
+        assert_eq!(noise_functions.blend_alpha.min(), 1f64);
+        assert_eq!(noise_functions.blend_alpha.max(), 1f64);
+
+        assert_eq!(noise_functions.blend_offset.sample(&pos), 0f64);
+        assert_eq!(noise_functions.blend_offset.min(), 0f64);
+        assert_eq!(noise_functions.blend_offset.max(), 0f64);
+
+        assert_eq!(noise_functions.zero.sample(&pos), 0f64);
+        assert_eq!(noise_functions.zero.min(), 0f64);
+        assert_eq!(noise_functions.zero.max(), 0f64);
+
+        assert_eq!(noise_functions.y.sample(&pos), 0f64);
+        assert_eq!(noise_functions.y.min(), -4064f64);
+        assert_eq!(noise_functions.y.max(), 4062f64);
+
+        assert_eq!(noise_functions.shift_x.sample(&pos), 0f64);
+        assert_eq!(noise_functions.shift_x.min(), -8f64);
+        assert_eq!(noise_functions.shift_x.max(), 8f64);
+
+        assert_eq!(noise_functions.shift_z.sample(&pos), 0f64);
+        assert_eq!(noise_functions.shift_z.min(), -8f64);
+        assert_eq!(noise_functions.shift_z.max(), 8f64);
+
+        assert_eq!(
+            noise_functions.base_3d_noise_overworld.sample(&pos),
+            0.05283727086562935f64
+        );
+        assert_eq!(
+            noise_functions.base_3d_noise_overworld.min(),
+            -87.55150000000002f64
+        );
+        assert_eq!(
+            noise_functions.base_3d_noise_overworld.max(),
+            87.55150000000002f64
+        );
+
+        assert_eq!(
+            noise_functions.base_3d_noise_nether.sample(&pos),
+            0.05283727086562935f64
+        );
+        assert_eq!(
+            noise_functions.base_3d_noise_nether.min(),
+            -258.65450000000004f64
+        );
+        assert_eq!(
+            noise_functions.base_3d_noise_nether.max(),
+            258.65450000000004f64
+        );
+
+        assert_eq!(
+            noise_functions.base_3d_noise_end.sample(&pos),
+            0.05283727086562935f64
+        );
+        assert_eq!(
+            noise_functions.base_3d_noise_end.min(),
+            -173.10299999999998f64
+        );
+        assert_eq!(
+            noise_functions.base_3d_noise_end.max(),
+            173.10299999999998f64
+        );
+
+        assert_eq!(noise_functions.continents_overworld.sample(&pos), 0f64);
+        assert_eq!(noise_functions.continents_overworld.min(), -2f64);
+        assert_eq!(noise_functions.continents_overworld.max(), 2f64);
+
+        assert_eq!(noise_functions.erosion_overworld.sample(&pos), 0f64);
+        assert_eq!(noise_functions.erosion_overworld.min(), -2f64);
+        assert_eq!(noise_functions.erosion_overworld.max(), 2f64);
+
+        assert_eq!(noise_functions.ridges_overworld.sample(&pos), 0f64);
+        assert_eq!(noise_functions.ridges_overworld.min(), -2f64);
+        assert_eq!(noise_functions.ridges_overworld.max(), 2f64);
+
+        assert_eq!(noise_functions.ridges_folded_overworld.sample(&pos), -1f64);
+        assert_eq!(
+            noise_functions.ridges_folded_overworld.min(),
+            -3.000000000000001f64
+        );
+        assert_eq!(noise_functions.ridges_folded_overworld.max(), 1f64);
+
+        assert_eq!(
+            noise_functions.offset_overworld.sample(&pos),
+            -0.6037500277161598f64
+        );
+        assert_eq!(
+            noise_functions.offset_overworld.min(),
+            -1.3752707839012146f64
+        );
+        assert_eq!(
+            noise_functions.offset_overworld.max(),
+            0.9962499737739563f64
+        );
+
+        assert_eq!(noise_functions.y.sample(&pos), 0f64);
+        assert_eq!(noise_functions.y.min(), -4064f64);
+        assert_eq!(noise_functions.y.max(), 4062f64);
+
+        assert_eq!(noise_functions.y.sample(&pos), 0f64);
+        assert_eq!(noise_functions.y.min(), -4064f64);
+        assert_eq!(noise_functions.y.max(), 4062f64);
+
+        assert_eq!(noise_functions.y.sample(&pos), 0f64);
+        assert_eq!(noise_functions.y.min(), -4064f64);
+        assert_eq!(noise_functions.y.max(), 4062f64);
+
+        assert_eq!(noise_functions.y.sample(&pos), 0f64);
+        assert_eq!(noise_functions.y.min(), -4064f64);
+        assert_eq!(noise_functions.y.max(), 4062f64);
+    }
 }

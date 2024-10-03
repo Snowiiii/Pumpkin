@@ -1,13 +1,15 @@
+#![allow(dead_code)]
+
 mod blender;
-pub mod chunk;
 mod generator;
 mod generic_generator;
-mod heightmap;
+pub mod height_limit;
 mod implementation;
 mod noise;
-pub mod sampler;
+mod positions;
+mod proto_chunk;
+mod sampler;
 mod seed;
-mod supplier;
 
 pub use generator::WorldGenerator;
 use implementation::overworld::biome::plains::PlainsGenerator;

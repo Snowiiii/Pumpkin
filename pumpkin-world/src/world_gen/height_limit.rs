@@ -1,11 +1,8 @@
 use enum_dispatch::enum_dispatch;
 
-use crate::world_gen::chunk::Chunk;
-
 #[enum_dispatch]
 pub enum HeightLimitView {
     Standard(StandardHeightLimitView),
-    Chunk(Chunk),
 }
 
 #[enum_dispatch(HeightLimitView)]

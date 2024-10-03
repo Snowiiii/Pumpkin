@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::world_gen::noise::lerp_32;
+use crate::world_gen::noise::lerp;
 
 use super::{
     Applier, ApplierImpl, DensityFunction, DensityFunctionImpl, NoisePos, Visitor, VisitorImpl,
@@ -56,6 +56,11 @@ pub struct Spline<'a> {
     max: f32,
 }
 
+enum Range {
+    In(usize),
+    Below,
+}
+
 impl<'a> Spline<'a> {
     fn sample_outside_range(point: f32, value: f32, points: &[SplinePoint], i: usize) -> f32 {
         let f = points[i].derivative;
@@ -66,8 +71,29 @@ impl<'a> Spline<'a> {
         }
     }
 
-    fn find_range_for_location(locations: &[f32], x: f32) -> i32 {
-        locations.partition_point(|val| x < *val) as i32 - 1
+    fn binary_walk(min: usize, max: usize, pred: impl Fn(usize) -> bool) -> usize {
+        let mut i = max - min;
+        let mut min = min;
+        while i > 0 {
+            let j = i / 2;
+            let k = min + j;
+            if pred(k) {
+                i = j;
+            } else {
+                min = k + 1;
+                i -= j + 1;
+            }
+        }
+        min
+    }
+
+    fn find_range_for_location(points: &[SplinePoint], x: f32) -> Range {
+        let index_greater_than_x = Self::binary_walk(0, points.len(), |i| x < points[i].location);
+        if index_greater_than_x == 0 {
+            Range::Below
+        } else {
+            Range::In(index_greater_than_x - 1)
+        }
     }
 
     pub fn new(function: Arc<DensityFunction<'a>>, points: &[SplinePoint<'a>]) -> Self {
@@ -143,31 +169,34 @@ impl<'a> Spline<'a> {
 
     pub fn apply(&self, pos: &NoisePos) -> f32 {
         let f = self.function.sample(pos) as f32;
-        let i = Self::find_range_for_location(
-            self.points
-                .iter()
-                .map(|p| p.location)
-                .collect::<Vec<f32>>()
-                .as_ref(),
-            f,
-        );
-        let j = self.points.len() - 1;
+        let i = Self::find_range_for_location(&self.points, f);
 
-        if i < 0 {
-            Self::sample_outside_range(f, self.points[0].value.apply(pos), &self.points, 0)
-        } else if i == j as i32 {
-            Self::sample_outside_range(f, self.points[j].value.apply(pos), &self.points, j)
-        } else {
-            let point_1 = &self.points[i as usize];
-            let point_2 = &self.points[i as usize + 1];
-            let k = (f - point_1.location) / (point_2.location - point_1.location);
+        match i {
+            Range::In(index) => {
+                let last_index = self.points.len() - 1;
+                if index == last_index {
+                    Self::sample_outside_range(
+                        f,
+                        self.points[last_index].value.apply(pos),
+                        &self.points,
+                        last_index,
+                    )
+                } else {
+                    let point_1 = &self.points[index];
+                    let point_2 = &self.points[index + 1];
+                    let k = (f - point_1.location) / (point_2.location - point_1.location);
 
-            let n = point_1.value.apply(pos);
-            let o = point_2.value.apply(pos);
+                    let n = point_1.value.apply(pos);
+                    let o = point_2.value.apply(pos);
 
-            let p = point_1.derivative * (point_2.location - point_1.location) - (o - n);
-            let q = -point_2.derivative * (point_2.location - point_1.location) + (o - n);
-            lerp_32(k, n, o) + k * (1f32 - k) * lerp_32(k, p, q)
+                    let p = point_1.derivative * (point_2.location - point_1.location) - (o - n);
+                    let q = -point_2.derivative * (point_2.location - point_1.location) + (o - n);
+                    lerp(k, n, o) + k * (1f32 - k) * lerp(k, p, q)
+                }
+            }
+            Range::Below => {
+                Self::sample_outside_range(f, self.points[0].value.apply(pos), &self.points, 0)
+            }
         }
     }
 
@@ -225,7 +254,9 @@ impl<'a> DensityFunctionImpl<'a> for SplineFunction<'a> {
 #[derive(Clone)]
 pub enum FloatAmplifier {
     Identity,
-    Amplifier,
+    OffsetAmplifier,
+    FactorAmplifier,
+    JaggednessAmplifier,
 }
 
 impl FloatAmplifier {
@@ -233,13 +264,15 @@ impl FloatAmplifier {
     pub fn apply(&self, f: f32) -> f32 {
         match self {
             Self::Identity => f,
-            Self::Amplifier => {
+            Self::OffsetAmplifier => {
                 if f < 0f32 {
                     f
                 } else {
                     f * 2f32
                 }
             }
+            Self::FactorAmplifier => 1.25f32 - 6.25f32 / (f + 5f32),
+            Self::JaggednessAmplifier => f * 2f32,
         }
     }
 }
@@ -291,5 +324,36 @@ impl<'a> SplineBuilder<'a> {
 
     pub fn build(&self) -> Spline<'a> {
         Spline::new(self.function.clone(), &self.points)
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use crate::world_gen::noise::{
+        density::{BuiltInNoiseFunctions, NoisePos, UnblendedNoisePos},
+        BuiltInNoiseParams,
+    };
+
+    use super::{FloatAmplifier, SplineBuilder};
+
+    #[test]
+    fn test_correctness() {
+        let noise_params = BuiltInNoiseParams::new();
+        let noise_functions = BuiltInNoiseFunctions::new(&noise_params);
+        let pos = NoisePos::Unblended(UnblendedNoisePos { x: 0, y: 0, z: 0 });
+
+        let spline = SplineBuilder::new(
+            noise_functions.continents_overworld,
+            FloatAmplifier::Identity,
+        )
+        .add_value(-1.1f32, 0.044f32, 0f32)
+        .add_value(-1.02f32, -0.2222f32, 0f32)
+        .add_value(-0.51f32, -0.2222f32, 0f32)
+        .add_value(-0.44f32, -0.12f32, 0f32)
+        .add_value(-0.18f32, -0.12f32, 0f32)
+        .build();
+
+        assert_eq!(spline.apply(&pos), -0.12f32);
     }
 }

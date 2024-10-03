@@ -6,7 +6,7 @@ use crate::world_gen::noise::density::spline::{
     FloatAmplifier, Spline, SplineBuilder, SplineValue,
 };
 use crate::world_gen::noise::density::{peaks_valleys_noise, DensityFunction};
-use crate::world_gen::noise::lerp_32;
+use crate::world_gen::noise::lerp;
 
 #[inline]
 fn get_offset_value(f: f32, g: f32, h: f32) -> f32 {
@@ -69,7 +69,7 @@ fn meth_42050(
         let builder = if bl {
             builder
                 .add_value(-1f32, 0.2f32.max(i), 0f32)
-                .add_value(0f32, lerp_32(0.5f32, i, k), n)
+                .add_value(0f32, lerp(0.5f32, i, k), n)
         } else {
             builder.add_value(-1f32, i, n)
         };
@@ -216,11 +216,8 @@ fn method_42052<'a>(
     builder.build()
 }
 
-fn method_42049<'a>(
-    ridges: Arc<DensityFunction<'a>>,
-    f: f32,
-    amplifier: FloatAmplifier,
-) -> Spline<'a> {
+#[inline]
+fn method_42049(ridges: Arc<DensityFunction>, f: f32, amplifier: FloatAmplifier) -> Spline {
     let g = 0.63f32 * f;
     let h = 0.3f32 * f;
     SplineBuilder::new(ridges, amplifier)
@@ -229,6 +226,8 @@ fn method_42049<'a>(
         .build()
 }
 
+#[allow(clippy::too_many_arguments)]
+#[inline]
 fn method_42053<'a>(
     erosion: Arc<DensityFunction<'a>>,
     ridges: Arc<DensityFunction<'a>>,
@@ -257,7 +256,7 @@ fn method_42053<'a>(
     SplineBuilder::new(erosion, amplifier)
         .add_spline(-1f32, SplineValue::Spline(spline), 0f32)
         .add_spline(-0.78, SplineValue::Spline(spline2.clone()), 0f32)
-        .add_spline(-05775f32, SplineValue::Spline(spline2), 0f32)
+        .add_spline(-0.5775f32, SplineValue::Spline(spline2), 0f32)
         .add_value(-0.375f32, 0f32, 0f32)
         .build()
 }
@@ -278,13 +277,13 @@ fn create_continental_offset_spline<'a>(
 ) -> Spline<'a> {
     let spline = meth_42050(
         ridges.clone(),
-        lerp_32(h, 0.6f32, 1.5f32),
+        lerp(h, 0.6f32, 1.5f32),
         bl2,
         amplifier.clone(),
     );
     let spline2 = meth_42050(
         ridges.clone(),
-        lerp_32(h, 0.6f32, 1f32),
+        lerp(h, 0.6f32, 1f32),
         bl2,
         amplifier.clone(),
     );
@@ -293,7 +292,7 @@ fn create_continental_offset_spline<'a>(
         ridges.clone(),
         continental - 0.15f32,
         0.5f32 * h,
-        lerp_32(0.5f32, 0.5f32, 0.5f32) * h,
+        lerp(0.5f32, 0.5f32, 0.5f32) * h,
         0.5f32 * h,
         0.6f32 * h,
         0.5f32,
@@ -378,7 +377,7 @@ pub fn create_offset_spline<'a>(
     amplified: bool,
 ) -> Spline<'a> {
     let amplification = if amplified {
-        FloatAmplifier::Amplifier
+        FloatAmplifier::OffsetAmplifier
     } else {
         FloatAmplifier::Identity
     };
@@ -458,7 +457,7 @@ pub fn create_factor_spline<'a>(
     amplified: bool,
 ) -> Spline<'a> {
     let amplification = if amplified {
-        FloatAmplifier::Amplifier
+        FloatAmplifier::FactorAmplifier
     } else {
         FloatAmplifier::Identity
     };
@@ -524,7 +523,7 @@ pub fn create_jaggedness_spline<'a>(
     amplified: bool,
 ) -> Spline<'a> {
     let amplification = if amplified {
-        FloatAmplifier::Amplifier
+        FloatAmplifier::JaggednessAmplifier
     } else {
         FloatAmplifier::Identity
     };
@@ -560,4 +559,83 @@ pub fn create_jaggedness_spline<'a>(
             0f32,
         )
         .build()
+}
+
+#[cfg(test)]
+mod test {
+    use crate::world_gen::noise::{
+        density::{
+            spline::FloatAmplifier, terrain_helpers::create_offset_spline, BuiltInNoiseFunctions,
+            NoisePos, UnblendedNoisePos,
+        },
+        BuiltInNoiseParams,
+    };
+
+    use super::create_continental_offset_spline;
+
+    #[test]
+    fn test_offset_correctness() {
+        let noise_params = BuiltInNoiseParams::new();
+        let noise_functions = BuiltInNoiseFunctions::new(&noise_params);
+
+        let pos = NoisePos::Unblended(UnblendedNoisePos { x: 0, y: 0, z: 0 });
+
+        let spline = create_continental_offset_spline(
+            noise_functions.erosion_overworld.clone(),
+            noise_functions.ridges_folded_overworld.clone(),
+            1f32,
+            1f32,
+            1f32,
+            1f32,
+            1f32,
+            1f32,
+            true,
+            true,
+            FloatAmplifier::Identity,
+        );
+
+        assert_eq!(spline.apply(&pos), 1f32);
+
+        let pos = NoisePos::Unblended(UnblendedNoisePos {
+            x: 10,
+            y: 10,
+            z: 10,
+        });
+
+        let spline = create_continental_offset_spline(
+            noise_functions.erosion_overworld.clone(),
+            noise_functions.ridges_folded_overworld.clone(),
+            2f32,
+            2f32,
+            2f32,
+            2f32,
+            2f32,
+            2f32,
+            true,
+            true,
+            FloatAmplifier::Identity,
+        );
+
+        assert_eq!(spline.apply(&pos), 2f32);
+
+        let pos = NoisePos::Unblended(UnblendedNoisePos { x: 0, y: 0, z: 0 });
+
+        let spline = create_offset_spline(
+            noise_functions.continents_overworld.clone(),
+            noise_functions.erosion_overworld.clone(),
+            noise_functions.ridges_folded_overworld.clone(),
+            true,
+        );
+
+        assert_eq!(spline.apply(&pos), -0.1f32);
+
+        let spline = create_offset_spline(
+            noise_functions.continents_overworld,
+            noise_functions.erosion_overworld.clone(),
+            noise_functions.ridges_folded_overworld.clone(),
+            false,
+        );
+
+        assert_eq!(spline.apply(&pos), -0.1f32);
+    }
 }

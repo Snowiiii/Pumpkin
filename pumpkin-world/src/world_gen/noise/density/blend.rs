@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use crate::world_gen::blender::BlenderImpl;
-
 use super::{
     Applier, ApplierImpl, DensityFunction, DensityFunctionImpl, NoisePos, NoisePosImpl, Visitor,
     VisitorImpl,
