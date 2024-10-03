@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 use std::collections::HashMap;
 
 use crate::level::WorldError;
