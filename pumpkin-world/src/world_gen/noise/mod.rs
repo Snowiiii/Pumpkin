@@ -1,9 +1,6 @@
-#![allow(dead_code)]
-
 use derive_getters::Getters;
+use num_traits::Float;
 use perlin::DoublePerlinNoiseParameters;
-pub mod chunk_sampler;
-pub mod config;
 pub mod density;
 pub mod perlin;
 mod router;
@@ -188,11 +185,10 @@ impl<'a> BuiltInNoiseParams<'a> {
     }
 }
 
-pub fn lerp_32(delta: f32, start: f32, end: f32) -> f32 {
-    start + delta * (end - start)
-}
-
-pub fn lerp(delta: f64, start: f64, end: f64) -> f64 {
+pub fn lerp<T>(delta: T, start: T, end: T) -> T
+where
+    T: Float,
+{
     start + delta * (end - start)
 }
 
