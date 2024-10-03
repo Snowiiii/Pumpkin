@@ -30,11 +30,3 @@ pub fn magnitude(a: f64, b: f64, c: f64) -> f64 {
 pub const fn get_section_cord(coord: i32) -> i32 {
     coord >> 4
 }
-
-pub fn squared_hypot(a: f64, b: f64) -> f64 {
-    a * a + b * b
-}
-
-pub fn hypot(a: f64, b: f64) -> f64 {
-    squared_hypot(a, b).sqrt()
-}
