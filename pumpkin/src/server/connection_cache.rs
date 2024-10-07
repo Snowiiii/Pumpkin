@@ -1,7 +1,6 @@
-use std::{io::Cursor, path::Path};
+use std::{fs::File, path::Path};
 
 use base64::{engine::general_purpose, Engine as _};
-use image::GenericImageView as _;
 use pumpkin_config::{BasicConfiguration, BASIC_CONFIG};
 use pumpkin_protocol::{
     client::{config::CPluginMessage, status::CStatusResponse},
@@ -85,15 +84,19 @@ impl CachedStatus {
     }
 
     fn load_icon(path: &str) -> String {
-        let icon = image::open(path).expect("Failed to load icon");
-        let dimension = icon.dimensions();
-        assert!(dimension.0 == 64, "Icon width must be 64");
-        assert!(dimension.1 == 64, "Icon height must be 64");
-        let mut image = Vec::with_capacity(64 * 64 * 4);
-        icon.write_to(&mut Cursor::new(&mut image), image::ImageFormat::Png)
-            .unwrap();
+        let icon = png::Decoder::new(File::open(path).expect("Failed to load icon"));
+        let mut reader = icon.read_info().unwrap();
+        let info = reader.info();
+        assert!(info.width == 64, "Icon width must be 64");
+        assert!(info.height == 64, "Icon height must be 64");
+        // Allocate the output buffer.
+        let mut buf = vec![0; reader.output_buffer_size()];
+        // Read the next frame. An APNG might contain multiple frames.
+        let info = reader.next_frame(&mut buf).unwrap();
+        // Grab the bytes of the image.
+        let bytes = &buf[..info.buffer_size()];
         let mut result = "data:image/png;base64,".to_owned();
-        general_purpose::STANDARD.encode_string(image, &mut result);
+        general_purpose::STANDARD.encode_string(bytes, &mut result);
         result
     }
 }

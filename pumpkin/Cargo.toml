@@ -58,7 +58,7 @@ thiserror = "1.0"
 
 # icon loading
 base64 = "0.22.1"
-image = { version = "0.25", default-features = false, features = ["png"] }
+png = "0.17.14" 
 
 # logging
 simple_logger = "5.0.0"

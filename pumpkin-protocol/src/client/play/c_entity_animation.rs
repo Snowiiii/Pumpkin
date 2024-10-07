@@ -1,4 +1,3 @@
-use num_derive::ToPrimitive;
 use pumpkin_macros::packet;
 use serde::Serialize;
 
@@ -21,7 +20,7 @@ impl CEntityAnimation {
     }
 }
 
-#[derive(ToPrimitive)]
+#[repr(u8)]
 pub enum Animation {
     SwingMainArm,
     LeaveBed,
