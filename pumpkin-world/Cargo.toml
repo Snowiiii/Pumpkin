@@ -10,6 +10,7 @@ pumpkin-macros = { path = "../pumpkin-macros" }
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 tokio.workspace = true
 rayon.workspace = true
+speedy.workspace = true
 derive_more.workspace = true
 itertools.workspace = true
 thiserror = "1.0"
