@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    io::{self, Read},
+    io::{self, Read, Write},
     sync::Arc,
 };
 
@@ -8,7 +8,7 @@ use mio::{
     net::{TcpListener, TcpStream},
     Events, Interest, Poll, Token,
 };
-use packet::{Packet, PacketError, PacketType};
+use packet::{ClientboundPacket, Packet, PacketError, ServerboundPacket};
 use pumpkin_config::RCONConfig;
 use thiserror::Error;
 
@@ -72,6 +72,12 @@ impl RCONServer {
                             }
                         };
                         log::info!("Accepted connection from: {}", address);
+                        if config.max_connections != 0
+                            && connections.len() >= config.max_connections as usize
+                        {
+                            log::warn!("Max RCON connections reached");
+                            break;
+                        }
 
                         let token = Self::next(&mut unique_token);
                         poll.registry()
@@ -156,27 +162,21 @@ impl RCONClient {
             };
 
             match packet.get_type() {
-                PacketType::Auth => {
+                ServerboundPacket::Auth => {
                     let body = packet.get_body();
                     if !body.is_empty() && packet.get_body() == password {
-                        self.send(&mut Packet::new(
-                            packet.get_id(),
-                            PacketType::AuthResponse,
-                            "".into(),
-                        ))
-                        .await
-                        .unwrap();
+                        self.send(ClientboundPacket::AuthResponse, packet.get_id(), "".into())
+                            .await?;
                         log::info!("RCON Client logged in successfully");
                         self.logged_in = true;
                     } else {
                         log::warn!("RCON Client has tried wrong password");
-                        self.send(&mut Packet::new(-1, PacketType::AuthResponse, "".into()))
-                            .await
-                            .unwrap();
-                        return Err(PacketError::WrongPassword);
+                        self.send(ClientboundPacket::AuthResponse, -1, "".into())
+                            .await?;
+                        self.closed = true;
                     }
                 }
-                PacketType::ExecCommand => {
+                ServerboundPacket::ExecCommand => {
                     if self.logged_in {
                         let mut output = Vec::new();
                         let dispatcher = server.command_dispatcher.clone();
@@ -186,14 +186,11 @@ impl RCONClient {
                             packet.get_body(),
                         );
                         for line in output {
-                            self.send(&mut Packet::new(packet.get_id(), PacketType::Output, line))
-                                .await
-                                .unwrap();
+                            self.send(ClientboundPacket::Output, packet.get_id(), line)
+                                .await?;
                         }
                     }
                 }
-                PacketType::Output => todo!(),
-                PacketType::AuthResponse => unreachable!(),
             }
         }
     }
@@ -208,8 +205,17 @@ impl RCONClient {
         Ok(false)
     }
 
-    async fn send(&mut self, packet: &mut Packet) -> io::Result<()> {
-        packet.send_packet(&mut self.connection).await
+    async fn send(
+        &mut self,
+        packet: ClientboundPacket,
+        id: i32,
+        body: String,
+    ) -> Result<(), PacketError> {
+        let buf = packet.write_buf(id, body);
+        self.connection
+            .write(&buf)
+            .map_err(PacketError::FailedSend)?;
+        Ok(())
     }
 
     async fn receive_packet(&mut self) -> Result<Option<Packet>, PacketError> {

@@ -15,7 +15,7 @@ uuid.workspace = true
 
 serde.workspace = true
 
-flate2 = "1.0.33"
+flate2 = "1.0"
 
 thiserror = "1.0"
 log.workspace = true
