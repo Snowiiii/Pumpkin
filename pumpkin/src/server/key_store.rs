@@ -22,7 +22,7 @@ impl KeyStore {
             &private_key.e().to_bytes_be(),
         )
         .into_boxed_slice();
-        KeyStore {
+        Self {
             _public_key: public_key,
             private_key,
             public_key_der,

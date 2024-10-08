@@ -8,7 +8,7 @@ const NAMES: [&str; 1] = ["pumpkin"];
 
 const DESCRIPTION: &str = "Display information about Pumpkin.";
 
-pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).execute(&|sender, _, _| {
         let version = env!("CARGO_PKG_VERSION");
         let description = env!("CARGO_PKG_DESCRIPTION");

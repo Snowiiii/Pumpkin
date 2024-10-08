@@ -146,7 +146,7 @@ impl Entity {
         // This has some vanilla magic
         let mut x = x;
         let mut z = z;
-        while x * x + z * z < 1.0E-5 {
+        while x.mul_add(x, z * z) < 1.0E-5 {
             x = (rand::random::<f64>() - rand::random::<f64>()) * 0.01;
             z = (rand::random::<f64>() - rand::random::<f64>()) * 0.01;
         }

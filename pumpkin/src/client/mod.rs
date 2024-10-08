@@ -371,7 +371,7 @@ impl Client {
         match self.connection_state.load() {
             ConnectionState::Login => {
                 self.try_send_packet(&CLoginDisconnect::new(
-                    &serde_json::to_string_pretty(&reason).unwrap_or("".into()),
+                    &serde_json::to_string_pretty(&reason).unwrap_or_else(|_| "".into()),
                 ))
                 .unwrap_or_else(|_| self.close());
             }

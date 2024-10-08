@@ -1,3 +1,16 @@
+#![deny(clippy::all)]
+// #![warn(clippy::pedantic)]
+// #![warn(clippy::restriction)]
+#![warn(clippy::nursery)]
+#![warn(clippy::cargo)]
+// expect
+#![expect(clippy::cargo_common_metadata)]
+#![expect(clippy::multiple_crate_versions)]
+#![expect(clippy::while_float)]
+#![expect(clippy::significant_drop_in_scrutinee)]
+#![expect(clippy::significant_drop_tightening)]
+#![expect(clippy::future_not_send)]
+#![expect(clippy::single_call_fn)]
 #![expect(clippy::await_holding_lock)]
 
 #[cfg(target_os = "wasi")]

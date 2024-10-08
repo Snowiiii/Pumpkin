@@ -40,7 +40,7 @@ impl Player {
         let window_title = container
             .as_ref()
             .map(|container| container.window_name())
-            .unwrap_or(inventory.window_name());
+            .unwrap_or_else(|| inventory.window_name());
         let title = TextComponent::text(window_title);
 
         self.client.send_packet(&COpenScreen::new(
@@ -64,13 +64,12 @@ impl Player {
             .map(Slot::from)
             .collect_vec();
 
-        let carried_item = {
-            if let Some(item) = self.carried_item.load().as_ref() {
-                item.into()
-            } else {
-                Slot::empty()
-            }
-        };
+        let carried_item = self
+            .carried_item
+            .load()
+            .as_ref()
+            .map_or_else(Slot::empty, |item| item.into());
+
         // Gets the previous value
         let i = inventory
             .state_id
@@ -378,7 +377,7 @@ impl Player {
         }
     }
 
-    async fn get_current_players_in_container(&self, server: &Server) -> Vec<Arc<Player>> {
+    async fn get_current_players_in_container(&self, server: &Server) -> Vec<Arc<Self>> {
         let player_ids = {
             let open_containers = server.open_containers.read();
             open_containers
@@ -453,10 +452,8 @@ impl Player {
     }
 
     pub fn get_open_container(&self, server: &Server) -> Option<Arc<Mutex<Box<dyn Container>>>> {
-        if let Some(id) = self.open_container.load() {
-            server.try_get_container(self.entity_id(), id)
-        } else {
-            None
-        }
+        self.open_container
+            .load()
+            .map_or_else(|| None, |id| server.try_get_container(self.entity_id(), id))
     }
 }

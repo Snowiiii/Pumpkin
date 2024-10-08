@@ -22,9 +22,9 @@ pub struct CachedBranding {
 }
 
 impl CachedBranding {
-    pub fn new() -> CachedBranding {
+    pub fn new() -> Self {
         let cached_server_brand = Self::build_brand();
-        CachedBranding {
+        Self {
             cached_server_brand,
         }
     }
@@ -46,7 +46,7 @@ impl CachedStatus {
         let status_response_json = serde_json::to_string(&status_response)
             .expect("Failed to parse Status response into JSON");
 
-        CachedStatus {
+        Self {
             _status_response: status_response,
             status_response_json,
         }

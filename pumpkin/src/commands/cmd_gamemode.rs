@@ -56,7 +56,7 @@ pub fn parse_arg_gamemode(consumed_args: &ConsumedArgs) -> Result<GameMode, Inva
     }
 }
 
-pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
         require(&|sender| sender.permission_lvl() >= 2).with_child(
             argument(ARG_GAMEMODE, consume_arg_gamemode)

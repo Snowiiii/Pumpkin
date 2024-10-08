@@ -14,7 +14,7 @@ pub fn consume_arg_target(_src: &CommandSender, args: &mut RawArgs) -> Option<St
     consume_arg_player(_src, args)
 }
 
-pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
         argument(ARG_TARGET, consume_arg_target).execute(&|sender, server, args| {
             let target = parse_arg_player(sender, server, ARG_TARGET, args)?;

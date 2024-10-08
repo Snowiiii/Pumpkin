@@ -110,9 +110,9 @@ impl Player {
             &[self.client.token],
             &CUpdateEntityPos::new(
                 entity_id.into(),
-                (x * 4096.0 - lastx * 4096.0) as i16,
-                (y * 4096.0 - lasty * 4096.0) as i16,
-                (z * 4096.0 - lastz * 4096.0) as i16,
+                x.mul_add(4096.0, -(lastx * 4096.0)) as i16,
+                y.mul_add(4096.0, -(lasty * 4096.0)) as i16,
+                z.mul_add(4096.0, -(lastz * 4096.0)) as i16,
                 position.ground,
             ),
         );
@@ -180,9 +180,9 @@ impl Player {
             &[self.client.token],
             &CUpdateEntityPosRot::new(
                 entity_id.into(),
-                (x * 4096.0 - lastx * 4096.0) as i16,
-                (y * 4096.0 - lasty * 4096.0) as i16,
-                (z * 4096.0 - lastz * 4096.0) as i16,
+                x.mul_add(4096.0, -(lastx * 4096.0)) as i16,
+                y.mul_add(4096.0, -(lasty * 4096.0)) as i16,
+                z.mul_add(4096.0, -(lastz * 4096.0)) as i16,
                 yaw as u8,
                 pitch as u8,
                 position_rotation.ground,

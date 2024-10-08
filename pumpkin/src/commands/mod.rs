@@ -35,7 +35,7 @@ impl<'a> CommandSender<'a> {
         }
     }
 
-    pub fn is_player(&self) -> bool {
+    pub const fn is_player(&self) -> bool {
         match self {
             CommandSender::Console => false,
             CommandSender::Player(_) => true,
@@ -43,7 +43,7 @@ impl<'a> CommandSender<'a> {
         }
     }
 
-    pub fn is_console(&self) -> bool {
+    pub const fn is_console(&self) -> bool {
         match self {
             CommandSender::Console => true,
             CommandSender::Player(_) => false,
@@ -59,7 +59,7 @@ impl<'a> CommandSender<'a> {
     }
 
     /// todo: implement
-    pub fn permission_lvl(&self) -> i32 {
+    pub const fn permission_lvl(&self) -> i32 {
         match self {
             CommandSender::Rcon(_) => 4,
             CommandSender::Console => 4,

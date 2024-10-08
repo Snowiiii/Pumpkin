@@ -101,7 +101,7 @@ impl<'a> NodeBuilder<'a> for NonLeafNodeBuilder<'a> {
 
 impl<'a> NonLeafNodeBuilder<'a> {
     /// Add a child [Node] to this one.
-    pub fn with_child(mut self, child: NonLeafNodeBuilder<'a>) -> Self {
+    pub fn with_child(mut self, child: Self) -> Self {
         self.child_nodes.push(child);
         self
     }
@@ -124,7 +124,7 @@ impl<'a> NonLeafNodeBuilder<'a> {
 
 /// Matches a sting literal.
 #[expect(dead_code)] // todo: remove (so far no commands requiring this are implemented)
-pub fn literal(string: &str) -> NonLeafNodeBuilder {
+pub const fn literal(string: &str) -> NonLeafNodeBuilder {
     NonLeafNodeBuilder {
         node_type: NodeType::Literal { string },
         child_nodes: Vec::new(),

@@ -8,7 +8,7 @@ use thiserror::Error;
 use tokio::io::AsyncReadExt;
 
 /// Client -> Server
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
 pub enum ServerboundPacket {
     /// Typically, the first packet sent by the client, which is used to authenticate the connection with the server.
@@ -19,7 +19,7 @@ pub enum ServerboundPacket {
 }
 
 impl ServerboundPacket {
-    pub fn from_i32(n: i32) -> Self {
+    pub const fn from_i32(n: i32) -> Self {
         match n {
             3 => Self::Auth,
             2 => Self::ExecCommand,
@@ -28,7 +28,7 @@ impl ServerboundPacket {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
 /// Server -> Client
 pub enum ClientboundPacket {
@@ -76,7 +76,7 @@ pub struct Packet {
 }
 
 impl Packet {
-    pub async fn deserialize(incoming: &mut Vec<u8>) -> Result<Option<Packet>, PacketError> {
+    pub async fn deserialize(incoming: &mut Vec<u8>) -> Result<Option<Self>, PacketError> {
         if incoming.len() < 4 {
             return Ok(None);
         }
@@ -98,7 +98,7 @@ impl Packet {
         }
         incoming.drain(0..len as usize);
 
-        let packet = Packet {
+        let packet = Self {
             id,
             ptype: ServerboundPacket::from_i32(ty),
             body: String::from_utf8(payload).map_err(PacketError::InvalidBody)?,
@@ -110,11 +110,11 @@ impl Packet {
         &self.body
     }
 
-    pub fn get_type(&self) -> ServerboundPacket {
+    pub const fn get_type(&self) -> ServerboundPacket {
         self.ptype
     }
 
-    pub fn get_id(&self) -> i32 {
+    pub const fn get_id(&self) -> i32 {
         self.id
     }
 }

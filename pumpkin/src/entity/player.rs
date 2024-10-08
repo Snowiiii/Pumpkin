@@ -96,9 +96,8 @@ impl Player {
         entity_id: EntityId,
         gamemode: GameMode,
     ) -> Self {
-        let gameprofile = match client.gameprofile.lock().clone() {
-            Some(profile) => profile,
-            None => {
+        let gameprofile = client.gameprofile.lock().clone().map_or_else(
+            || {
                 log::error!("No gameprofile?. Impossible");
                 GameProfile {
                     id: uuid::Uuid::new_v4(),
@@ -106,8 +105,9 @@ impl Player {
                     properties: vec![],
                     profile_actions: None,
                 }
-            }
-        };
+            },
+            |profile| profile,
+        );
         let config = client.config.lock().clone().unwrap_or_default();
         Self {
             entity: Entity::new(entity_id, world, EntityType::Player, 1.62),
@@ -135,7 +135,7 @@ impl Player {
         self.entity.world.remove_player(self);
     }
 
-    pub fn entity_id(&self) -> EntityId {
+    pub const fn entity_id(&self) -> EntityId {
         self.entity.entity_id
     }
 
