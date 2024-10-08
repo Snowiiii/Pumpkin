@@ -111,7 +111,7 @@ docker build . -t pumpkin
 To run it use the following command:
 
 ```shell
-docker run --rm -v "./world:/pumpkin/world" pumpkin
+docker run --rm -p 25565:25565 -v "./world:/pumpkin/world" pumpkin
 ```
 
 ## Contributions
