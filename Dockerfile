@@ -10,4 +10,5 @@ FROM alpine:3.20
 WORKDIR /pumpkin
 RUN apk add --no-cache libgcc
 COPY --from=builder /pumpkin/target/release/pumpkin /pumpkin/pumpkin
+EXPOSE 25565
 ENTRYPOINT ["/pumpkin/pumpkin"]
