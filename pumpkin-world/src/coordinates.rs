@@ -2,6 +2,7 @@ use std::ops::Deref;
 
 use crate::{WORLD_LOWEST_Y, WORLD_MAX_Y};
 use derive_more::derive::{AsMut, AsRef, Display, Into};
+use num_traits::real::Real;
 use num_traits::{PrimInt, Signed, Unsigned};
 use pumpkin_core::math::position::WorldPosition;
 use pumpkin_core::math::vector2::Vector2;
@@ -122,9 +123,9 @@ impl From<WorldPosition> for ChunkRelativeBlockCoordinates {
 impl From<Vector3<f64>> for ChunkRelativeBlockCoordinates {
     fn from(pos: Vector3<f64>) -> Self {
         Self {
-            x: ChunkRelativeOffset((pos.x / 16.) as u8),
+            x: ChunkRelativeOffset((pos.x / 16.).round() as u8),
             y: Height(pos.y.ceil() as i16),
-            z: ChunkRelativeOffset((pos.z / 16.) as u8),
+            z: ChunkRelativeOffset((pos.z / 16.).round() as u8),
         }
     }
 }
