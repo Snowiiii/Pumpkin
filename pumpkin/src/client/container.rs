@@ -394,6 +394,7 @@ impl Player {
         // Also refactor out a better method to get individual advanced state ids
 
         let players = self
+            .living_entity
             .entity
             .world
             .current_players

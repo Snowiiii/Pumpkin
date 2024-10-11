@@ -186,7 +186,7 @@ impl World {
         // spawn players for our client
         let token = player.client.token;
         for (_, existing_player) in self.current_players.lock().iter().filter(|c| c.0 != &token) {
-            let entity = &existing_player.entity;
+            let entity = &existing_player.living_entity.entity;
             let pos = entity.pos.load();
             let gameprofile = &existing_player.gameprofile;
             player.client.send_packet(&CSpawnEntity::new(
@@ -293,7 +293,7 @@ impl World {
             &[player.client.token],
             &CRemovePlayerInfo::new(1.into(), &[uuid]),
         );
-        self.remove_entity(&player.entity);
+        self.remove_entity(&player.living_entity.entity);
     }
 
     pub fn remove_entity(&self, entity: &Entity) {

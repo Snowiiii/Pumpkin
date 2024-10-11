@@ -38,15 +38,14 @@ use crate::{
     world::World,
 };
 
-use super::Entity;
+use super::{living::LivingEntity, Entity};
 
 /// Represents a Minecraft player entity.
 ///
 /// A `Player` is a special type of entity that represents a human player connected to the server.
 pub struct Player {
-    /// The underlying entity object that represents the player.
-    pub entity: Entity,
-
+    /// The underlying living entity object that represents the player.
+    pub living_entity: LivingEntity,
     /// The player's game profile information, including their username and UUID.
     pub gameprofile: GameProfile,
     /// The client connection associated with the player.
@@ -110,7 +109,12 @@ impl Player {
         );
         let config = client.config.lock().clone().unwrap_or_default();
         Self {
-            entity: Entity::new(entity_id, world, EntityType::Player, 1.62),
+            living_entity: LivingEntity::new(Entity::new(
+                entity_id,
+                world,
+                EntityType::Player,
+                1.62,
+            )),
             config: Mutex::new(config),
             gameprofile,
             client,
@@ -132,11 +136,11 @@ impl Player {
 
     /// Removes the Player out of the current World
     pub async fn remove(&self) {
-        self.entity.world.remove_player(self);
+        self.living_entity.entity.world.remove_player(self);
     }
 
     pub const fn entity_id(&self) -> EntityId {
-        self.entity.entity_id
+        self.living_entity.entity.entity_id
     }
 
     /// Updates the current abilities the Player has
@@ -174,7 +178,7 @@ impl Player {
                 .store(0, std::sync::atomic::Ordering::Relaxed);
         }
         let teleport_id = i + 1;
-        let entity = &self.entity;
+        let entity = &self.living_entity.entity;
         entity.set_pos(x, y, z);
         entity.set_rotation(yaw, pitch);
         *self.awaiting_teleport.lock() = Some((teleport_id.into(), Vector3::new(x, y, z)));
@@ -200,8 +204,8 @@ impl Player {
     pub fn can_interact_with_block_at(&self, pos: &WorldPosition, additional_range: f64) -> bool {
         let d = self.block_interaction_range() + additional_range;
         let box_pos = BoundingBox::from_block(pos);
-        let entity_pos = self.entity.pos.load();
-        let standing_eye_height = self.entity.standing_eye_height;
+        let entity_pos = self.living_entity.entity.pos.load();
+        let standing_eye_height = self.living_entity.entity.standing_eye_height;
         box_pos.squared_magnitude(Vector3 {
             x: entity_pos.x,
             y: entity_pos.y + standing_eye_height as f64,
@@ -228,8 +232,8 @@ impl Player {
         self.client.close()
     }
 
-    pub fn update_health(&self, health: f32, food: i32, food_saturation: f32) {
-        self.entity.health.store(health);
+    pub fn set_health(&self, health: f32, food: i32, food_saturation: f32) {
+        self.living_entity.set_health(health);
         self.food.store(food, std::sync::atomic::Ordering::Relaxed);
         self.food_saturation.store(food_saturation);
         self.client
@@ -246,7 +250,8 @@ impl Player {
         self.gamemode.store(gamemode);
         // So a little story time. I actually made an abilties_from_gamemode function. I looked at vanilla and they always send the abilties from the gamemode. But the funny thing actually is. That the client
         // does actually use the same method and set the abilties when receiving the CGameEvent gamemode packet. Just Mojang nonsense
-        self.entity
+        self.living_entity
+            .entity
             .world
             .broadcast_packet_all(&CPlayerInfoUpdate::new(
                 0x04,

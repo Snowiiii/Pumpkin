@@ -8,14 +8,16 @@ use pumpkin_core::math::{
 };
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
 use pumpkin_protocol::{
-    client::play::{CEntityStatus, CSetEntityMetadata, Metadata},
+    client::play::{CSetEntityMetadata, Metadata},
     VarInt,
 };
 
 use crate::world::World;
 
+pub mod living;
 pub mod player;
 
+/// Represents a not living Entity (e.g. Item, Egg, Snowball...)
 pub struct Entity {
     /// A unique identifier for the entity
     pub entity_id: EntityId,
@@ -24,7 +26,6 @@ pub struct Entity {
     /// The world in which the entity exists.
     pub world: Arc<World>,
     /// The entity's current health level.
-    pub health: AtomicCell<f32>,
 
     /// The entity's current position in the world
     pub pos: AtomicCell<Vector3<f64>>,
@@ -75,7 +76,6 @@ impl Entity {
             sneaking: AtomicBool::new(false),
             world,
             // TODO: Load this from previous instance
-            health: AtomicCell::new(20.0),
             sprinting: AtomicBool::new(false),
             fall_flying: AtomicBool::new(false),
             yaw: AtomicCell::new(0.0),
@@ -119,19 +119,6 @@ impl Entity {
         // TODO
         self.yaw.store(yaw);
         self.pitch.store(pitch);
-    }
-
-    /// Kills the Entity
-    ///
-    /// This is similar to `kill` but Spawn Particles, Animation and plays death sound
-    pub fn kill(&self) {
-        // Spawns death smoke particles
-        self.world
-            .broadcast_packet_all(&CEntityStatus::new(self.entity_id, 60));
-        // Plays the death sound and death animation
-        self.world
-            .broadcast_packet_all(&CEntityStatus::new(self.entity_id, 3));
-        self.remove();
     }
 
     /// Removes the Entity from their current World

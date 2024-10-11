@@ -50,7 +50,9 @@ impl Player {
         if let Some((id, position)) = awaiting_teleport.as_ref() {
             if id == &confirm_teleport.teleport_id {
                 // we should set the pos now to that we requested in the teleport packet, Is may fixed issues when the client sended position packets while being teleported
-                self.entity.set_pos(position.x, position.y, position.z);
+                self.living_entity
+                    .entity
+                    .set_pos(position.x, position.y, position.z);
 
                 *awaiting_teleport = None;
             } else {
@@ -76,7 +78,7 @@ impl Player {
             self.kick(TextComponent::text("Invalid movement"));
             return;
         }
-        let entity = &self.entity;
+        let entity = &self.living_entity.entity;
         entity.set_pos(
             Self::clamp_horizontal(position.x),
             Self::clamp_vertical(position.feet_y),
@@ -135,7 +137,7 @@ impl Player {
             self.kick(TextComponent::text("Invalid rotation"));
             return;
         }
-        let entity = &self.entity;
+        let entity = &self.living_entity.entity;
 
         entity.set_pos(
             Self::clamp_horizontal(position_rotation.x),
@@ -200,7 +202,7 @@ impl Player {
             self.kick(TextComponent::text("Invalid rotation"));
             return;
         }
-        let entity = &self.entity;
+        let entity = &self.living_entity.entity;
         entity
             .on_ground
             .store(rotation.ground, std::sync::atomic::Ordering::Relaxed);
@@ -228,7 +230,8 @@ impl Player {
     }
 
     pub fn handle_player_ground(&self, _server: &Arc<Server>, ground: SSetPlayerGround) {
-        self.entity
+        self.living_entity
+            .entity
             .on_ground
             .store(ground.on_ground, std::sync::atomic::Ordering::Relaxed);
     }
@@ -239,7 +242,7 @@ impl Player {
         }
 
         if let Some(action) = Action::from_i32(command.action.0) {
-            let entity = &self.entity;
+            let entity = &self.living_entity.entity;
             match action {
                 pumpkin_protocol::server::play::Action::StartSneaking => {
                     if !entity.sneaking.load(std::sync::atomic::Ordering::Relaxed) {
@@ -289,7 +292,7 @@ impl Player {
                     Hand::Off => Animation::SwingOffhand,
                 };
                 let id = self.entity_id();
-                let world = &self.entity.world;
+                let world = &self.living_entity.entity.world;
                 world.broadcast_packet_expect(
                     &[self.client.token],
                     &CEntityAnimation::new(id.into(), animation as u8),
@@ -313,7 +316,7 @@ impl Player {
         // TODO: filter message & validation
         let gameprofile = &self.gameprofile;
 
-        let entity = &self.entity;
+        let entity = &self.living_entity.entity;
         let world = &entity.world;
         world.broadcast_packet_all(&CPlayerChatMessage::new(
             gameprofile.id,
@@ -367,7 +370,7 @@ impl Player {
 
     pub async fn handle_interact(&self, _: &Arc<Server>, interact: SInteract) {
         let sneaking = interact.sneaking;
-        let entity = &self.entity;
+        let entity = &self.living_entity.entity;
         if entity.sneaking.load(std::sync::atomic::Ordering::Relaxed) != sneaking {
             entity.set_sneaking(sneaking).await;
         }
@@ -381,7 +384,7 @@ impl Player {
                         let world = &entity.world;
                         let attacked_player = world.get_player_by_entityid(entity_id.0 as EntityId);
                         if let Some(player) = attacked_player {
-                            let victem_entity = &player.entity;
+                            let victem_entity = &player.living_entity.entity;
                             if config.protect_creative
                                 && player.gamemode.load() == GameMode::Creative
                             {
@@ -447,7 +450,7 @@ impl Player {
                         let location = player_action.location;
                         // Block break & block break sound
                         // TODO: currently this is always dirt replace it
-                        let entity = &self.entity;
+                        let entity = &self.living_entity.entity;
                         let world = &entity.world;
                         world.broadcast_packet_all(&CWorldEvent::new(2001, &location, 11, false));
                         // AIR
@@ -471,7 +474,7 @@ impl Player {
                     }
                     // Block break & block break sound
                     // TODO: currently this is always dirt replace it
-                    let entity = &self.entity;
+                    let entity = &self.living_entity.entity;
                     let world = &entity.world;
                     world.broadcast_packet_all(&CWorldEvent::new(2001, &location, 11, false));
                     // AIR
@@ -518,7 +521,7 @@ impl Player {
                 )
                 .expect("All item ids are in the global registry");
                 if let Ok(block_state_id) = BlockState::new(minecraft_id, None) {
-                    let entity = &self.entity;
+                    let entity = &self.living_entity.entity;
                     let world = &entity.world;
                     world.broadcast_packet_all(&CBlockUpdate::new(
                         &location,
