@@ -227,6 +227,13 @@ impl Player {
     pub fn handle_chat_command(&self, server: &Arc<Server>, command: SChatCommand) {
         let dispatcher = server.command_dispatcher.clone();
         dispatcher.handle_command(&mut CommandSender::Player(self), server, &command.command);
+        if ADVANCED_CONFIG.commands.log_console {
+            log::info!(
+                "Player ({}): executed command /{}",
+                self.gameprofile.name,
+                command.command
+            );
+        }
     }
 
     pub fn handle_player_ground(&self, _server: &Arc<Server>, ground: SSetPlayerGround) {

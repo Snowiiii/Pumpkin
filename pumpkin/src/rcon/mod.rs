@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     io::{self, Read, Write},
+    net::SocketAddr,
     sync::Arc,
 };
 
@@ -9,7 +10,7 @@ use mio::{
     Events, Interest, Poll, Token,
 };
 use packet::{ClientboundPacket, Packet, PacketError, ServerboundPacket};
-use pumpkin_config::RCONConfig;
+use pumpkin_config::{RCONConfig, ADVANCED_CONFIG};
 use thiserror::Error;
 
 use crate::server::Server;
@@ -71,11 +72,9 @@ impl RCONServer {
                                 return Err(e);
                             }
                         };
-                        log::info!("Accepted connection from: {}", address);
                         if config.max_connections != 0
                             && connections.len() >= config.max_connections as usize
                         {
-                            log::warn!("Max RCON connections reached");
                             break;
                         }
 
@@ -87,7 +86,7 @@ impl RCONServer {
                                 Interest::READABLE.add(Interest::WRITABLE),
                             )
                             .unwrap();
-                        connections.insert(token, RCONClient::new(connection));
+                        connections.insert(token, RCONClient::new(connection, address));
                     },
 
                     token => {
@@ -98,6 +97,13 @@ impl RCONServer {
                         };
                         if done {
                             if let Some(mut client) = connections.remove(&token) {
+                                let config = &ADVANCED_CONFIG.rcon;
+                                if config.logging.log_quit {
+                                    log::info!(
+                                        "RCON ({}): Client closed connection",
+                                        client.address
+                                    );
+                                }
                                 poll.registry().deregister(&mut client.connection)?;
                             }
                         }
@@ -116,15 +122,17 @@ impl RCONServer {
 
 pub struct RCONClient {
     connection: TcpStream,
+    address: SocketAddr,
     logged_in: bool,
     incoming: Vec<u8>,
     closed: bool,
 }
 
 impl RCONClient {
-    pub const fn new(connection: TcpStream) -> Self {
+    pub const fn new(connection: TcpStream, address: SocketAddr) -> Self {
         Self {
             connection,
+            address,
             logged_in: false,
             incoming: Vec::new(),
             closed: false,
@@ -147,7 +155,7 @@ impl RCONClient {
             }
             // If we get a close here, we might have a reply, which we still want to write.
             let _ = self.poll(server, password).await.map_err(|e| {
-                log::error!("rcon error: {e}");
+                log::error!("RCON error: {e}");
                 self.closed = true;
             });
         }
@@ -161,16 +169,21 @@ impl RCONClient {
                 None => return Ok(()),
             };
 
+            let config = &ADVANCED_CONFIG.rcon;
             match packet.get_type() {
                 ServerboundPacket::Auth => {
                     let body = packet.get_body();
                     if !body.is_empty() && packet.get_body() == password {
                         self.send(ClientboundPacket::AuthResponse, packet.get_id(), "".into())
                             .await?;
-                        log::info!("RCON Client logged in successfully");
+                        if config.logging.log_logged_successfully {
+                            log::info!("RCON ({}): Client logged in successfully", self.address);
+                        }
                         self.logged_in = true;
                     } else {
-                        log::warn!("RCON Client has tried wrong password");
+                        if config.logging.log_wrong_password {
+                            log::info!("RCON ({}): Client has tried wrong password", self.address);
+                        }
                         self.send(ClientboundPacket::AuthResponse, -1, "".into())
                             .await?;
                         self.closed = true;
@@ -186,6 +199,9 @@ impl RCONClient {
                             packet.get_body(),
                         );
                         for line in output {
+                            if config.logging.log_commands {
+                                log::info!("RCON ({}): {}", self.address, line);
+                            }
                             self.send(ClientboundPacket::Output, packet.get_id(), line)
                                 .await?;
                         }

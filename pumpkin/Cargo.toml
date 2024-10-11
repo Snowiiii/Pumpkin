@@ -61,7 +61,7 @@ base64 = "0.22.1"
 png = "0.17.14" 
 
 # logging
-simple_logger = "5.0.0"
+simple_logger = { version = "5.0.0", features = ["threads"] }
 log.workspace = true
 
 # networking

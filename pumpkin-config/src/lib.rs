@@ -1,4 +1,5 @@
 use log::warn;
+use logging::LoggingConfig;
 use pumpkin_core::{Difficulty, GameMode};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -10,6 +11,7 @@ use std::{
 };
 
 pub mod auth;
+pub mod logging;
 pub mod proxy;
 pub mod resource_pack;
 
@@ -46,6 +48,7 @@ pub struct AdvancedConfiguration {
     pub commands: CommandsConfig,
     pub rcon: RCONConfig,
     pub pvp: PVPConfig,
+    pub logging: LoggingConfig,
 }
 
 #[derive(Serialize, Deserialize)]
