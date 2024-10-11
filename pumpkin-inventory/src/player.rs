@@ -58,9 +58,6 @@ impl PlayerInventory {
         item_allowed_override: bool,
     ) -> Result<(), InventoryError> {
         if item_allowed_override {
-            if !(0..=45).contains(&slot) {
-                Err(InventoryError::InvalidSlot)?
-            }
             let Some(slot) = self.get_slot_mut(slot) else {
                 return Err(InventoryError::InvalidSlot);
             };
@@ -107,28 +104,22 @@ impl PlayerInventory {
         self.items[self.selected + 36 - 9].as_ref()
     }
 
-    pub fn slots(&self) -> Vec<&Option<ItemStack>> {
-        let mut slots = vec![&self.crafting_output];
-        slots.extend(self.crafting.iter());
-        slots.extend(self.armor.iter());
-        slots.extend(self.items.iter());
-        slots.push(&self.offhand);
-        slots
+    pub fn slots(&self) -> Box<dyn Iterator<Item = &Option<ItemStack>> + '_> {
+        let crafting_output = [&self.crafting_output].into_iter();
+        let crafting = self.crafting.iter();
+        let armor = self.armor.iter();
+        let items = self.items.iter();
+        let offhand = [&self.offhand].into_iter();
+        Box::new(crafting_output.chain(crafting.chain(armor.chain(items.chain(offhand)))))
     }
 
     pub fn slots_mut<'s>(&'s mut self) -> Box<dyn Iterator<Item = &mut Option<ItemStack>> + 's> {
-        let crafting_output = iter::once(&mut self.crafting_output);
+        let crafting_output = [&mut self.crafting_output].into_iter();
         let crafting = self.crafting.iter_mut();
         let armor = self.armor.iter_mut();
         let items = self.items.iter_mut();
-        let offhand = iter::once(&mut self.offhand);
-        Box::new(
-            crafting_output
-                .chain(crafting)
-                .chain(armor)
-                .chain(items)
-                .chain(offhand),
-        )
+        let offhand = [&mut self.offhand].into_iter();
+        Box::new(crafting_output.chain(crafting.chain(armor.chain(items.chain(offhand)))))
     }
 }
 
@@ -170,12 +161,14 @@ impl Container for PlayerInventory {
         Box::new(self.slots().into_iter())
     }
 
-    fn all_combinable_slots(&self) -> Vec<&Option<ItemStack>> {
-        self.items.iter().collect()
+    fn iter_combinable_slots<'s>(&'s self) -> Box<dyn Iterator<Item = &'s Option<ItemStack>> + 's> {
+        Box::new(self.items.iter())
     }
 
-    fn all_combinable_slots_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
-        self.items.iter_mut().collect()
+    fn iter_combinable_slots_mut<'s>(
+        &'s mut self,
+    ) -> Box<(dyn Iterator<Item = &'s mut Option<ItemStack>> + 's)> {
+        Box::new(self.items.iter_mut())
     }
 
     fn get_slot(&self, slot: usize) -> Option<&Option<ItemStack>> {

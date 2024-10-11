@@ -79,19 +79,44 @@ pub trait Container: Sync + Send {
 
     fn iter_slots<'s>(&'s self) -> Box<dyn Iterator<Item = &Option<ItemStack>> + 's>;
 
-    fn all_combinable_slots(&self) -> Vec<&Option<ItemStack>> {
-        self.iter_slots().collect_vec()
+    fn iter_combinable_slots<'s>(&'s self) -> Box<dyn Iterator<Item = &Option<ItemStack>> + 's> {
+        self.iter_slots()
     }
 
-    fn all_combinable_slots_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
-        self.iter_slots_mut().collect_vec()
+    fn iter_combinable_slots_mut<'s>(
+        &'s mut self,
+    ) -> Box<dyn Iterator<Item = &mut Option<ItemStack>> + 's> {
+        self.iter_slots_mut()
     }
 
     fn internal_pumpkin_id(&self) -> u64 {
         0
     }
 
+    /// Returns a reference to the item stack in the specified slot.
+    ///
+    /// # Arguments
+    ///
+    /// * `slot` - The index of the slot to check
+    ///
+    /// # Returns
+    ///
+    /// * `Some(Some(ItemStack))` - If the slot exists and contains an item
+    /// * `Some(None)` - If the slot exists but is empty
+    /// * `None` - If the slot does not exist
     fn get_slot(&self, slot: usize) -> Option<&Option<ItemStack>>;
+
+    /// Returns a mutable reference to the item stack in the specified slot.
+    ///
+    /// # Arguments
+    ///
+    /// * `slot` - The index of the slot to check
+    ///
+    /// # Returns
+    ///
+    /// * `Some(Some(ItemStack))` - If the slot exists and contains an item
+    /// * `Some(None)` - If the slot exists but is empty
+    /// * `None` - If the slot does not exist
     fn get_slot_mut(&mut self, slot: usize) -> Option<&mut Option<ItemStack>>;
 
     fn size(&self) -> usize;
@@ -226,7 +251,7 @@ impl<'a> Container for OptionallyCombinedContainer<'a, 'a> {
             Some(container) => Box::new(
                 container
                     .iter_slots_mut()
-                    .chain(self.inventory.iter_slots_mut()),
+                    .chain(self.inventory.iter_combinable_slots_mut()),
             ),
             None => self.inventory.iter_slots_mut(),
         }
@@ -234,29 +259,43 @@ impl<'a> Container for OptionallyCombinedContainer<'a, 'a> {
 
     fn iter_slots<'s>(&'s self) -> Box<(dyn Iterator<Item = &Option<ItemStack>> + 's)> {
         match &self.container {
-            Some(container) => Box::new(container.iter_slots().chain(self.inventory.iter_slots())),
+            Some(container) => Box::new(
+                container
+                    .iter_slots()
+                    .chain(self.inventory.iter_combinable_slots()),
+            ),
             None => self.inventory.iter_slots(),
         }
     }
 
     fn get_slot(&self, slot: usize) -> Option<&Option<ItemStack>> {
-        if (0..self.inventory.size()).contains(&slot) {
-            return self.inventory.get_slot(slot);
+        match &self.container {
+            Some(container) => {
+                if (0..container.size()).contains(&slot) {
+                    container.get_slot(slot)
+                } else if (container.size()..(container.size() + 27)).contains(&slot) {
+                    self.inventory.get_slot(slot - container.size())
+                } else {
+                    None
+                }
+            }
+            None => self.inventory.get_slot(slot),
         }
-        if let Some(container) = &self.container {
-            return container.get_slot(slot);
-        }
-        None
     }
 
     fn get_slot_mut(&mut self, slot: usize) -> Option<&mut Option<ItemStack>> {
-        if (0..self.inventory.size()).contains(&slot) {
-            return self.inventory.get_slot_mut(slot);
+        match &mut self.container {
+            Some(container) => {
+                if (0..container.size()).contains(&slot) {
+                    container.get_slot_mut(slot)
+                } else if (container.size()..(container.size() + 27)).contains(&slot) {
+                    self.inventory.get_slot_mut(slot - container.size())
+                } else {
+                    None
+                }
+            }
+            None => self.inventory.get_slot_mut(slot),
         }
-        if let Some(container) = &mut self.container {
-            return container.get_slot_mut(slot);
-        }
-        None
     }
 
     fn size(&self) -> usize {
