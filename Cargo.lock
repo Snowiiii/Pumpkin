@@ -1925,6 +1925,7 @@ dependencies = [
  "log",
  "pumpkin-core",
  "serde",
+ "serde-inline-default",
  "toml",
 ]
 
@@ -2441,6 +2442,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8e3592472072e6e22e0a54d5904d9febf8508f65fb8552499a1abc7d1078c3a"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-inline-default"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "484b43bb1114a28d1a574f5682d6079fa4c20e76faaff0cfd048216650e57101"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

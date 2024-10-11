@@ -1,12 +1,20 @@
 use serde::{Deserialize, Serialize};
+use serde_inline_default::serde_inline_default;
 
+#[serde_inline_default]
 #[derive(Deserialize, Serialize)]
 pub struct LoggingConfig {
+    #[serde_inline_default(true)]
     pub enabled: bool,
+    #[serde_inline_default(LevelFilter::Info)]
     pub level: LevelFilter,
+    #[serde_inline_default(false)]
     pub env: bool,
+    #[serde_inline_default(true)]
     pub threads: bool,
+    #[serde_inline_default(true)]
     pub color: bool,
+    #[serde_inline_default(true)]
     pub timestamp: bool,
 }
 

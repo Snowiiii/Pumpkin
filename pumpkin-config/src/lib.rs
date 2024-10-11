@@ -3,6 +3,9 @@ use logging::LoggingConfig;
 use pumpkin_core::{Difficulty, GameMode};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+// TODO: when https://github.com/rust-lang/rfcs/pull/3681 gets merged, replace serde-inline-default with native syntax
+use serde_inline_default::serde_inline_default;
+
 use std::{
     fs,
     net::{Ipv4Addr, SocketAddr},
@@ -40,6 +43,7 @@ pub static BASIC_CONFIG: LazyLock<BasicConfiguration> = LazyLock::new(BasicConfi
 /// This also allows you get some Performance or Resource boosts.
 /// Important: The Configuration should match Vanilla by default
 #[derive(Deserialize, Serialize, Default)]
+#[serde(default)]
 pub struct AdvancedConfiguration {
     pub proxy: ProxyConfig,
     pub authentication: AuthenticationConfig,
@@ -51,38 +55,55 @@ pub struct AdvancedConfiguration {
     pub logging: LoggingConfig,
 }
 
+#[serde_inline_default]
 #[derive(Serialize, Deserialize)]
 pub struct BasicConfiguration {
     /// The address to bind the server to.
+    #[serde(default = "default_server_address")]
     pub server_address: SocketAddr,
     /// The seed for world generation.
+    #[serde(default = "String::new")]
     pub seed: String,
     /// The maximum number of players allowed on the server.
+    #[serde_inline_default(10000)]
     pub max_players: u32,
     /// The maximum view distance for players.
+    #[serde_inline_default(10)]
     pub view_distance: u8,
     /// The maximum simulated view distance.
+    #[serde_inline_default(10)]
     pub simulation_distance: u8,
     /// The default game difficulty.
+    #[serde_inline_default(Difficulty::Normal)]
     pub default_difficulty: Difficulty,
     /// Whether the Nether dimension is enabled.
+    #[serde_inline_default(true)]
     pub allow_nether: bool,
     /// Whether the server is in hardcore mode.
+    #[serde_inline_default(false)]
     pub hardcore: bool,
     /// Whether online mode is enabled. Requires valid Minecraft accounts.
+    #[serde_inline_default(true)]
     pub online_mode: bool,
     /// Whether packet encryption is enabled. Required when online mode is enabled.
+    #[serde_inline_default(true)]
     pub encryption: bool,
     /// The server's description displayed on the status screen.
+    #[serde_inline_default("A Blazing fast Pumpkin Server!".to_string())]
     pub motd: String,
     /// The default game mode for players.
+    #[serde_inline_default(GameMode::Survival)]
     pub default_gamemode: GameMode,
+}
+
+fn default_server_address() -> SocketAddr {
+    SocketAddr::new(Ipv4Addr::new(0, 0, 0, 0).into(), 25565)
 }
 
 impl Default for BasicConfiguration {
     fn default() -> Self {
         Self {
-            server_address: SocketAddr::new(Ipv4Addr::new(0, 0, 0, 0).into(), 25565),
+            server_address: default_server_address(),
             seed: "".to_string(),
             max_players: 100000,
             view_distance: 10,
