@@ -60,7 +60,7 @@ fn init_logger() {
     }
 }
 
-fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> LevelFilter {
+const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> LevelFilter {
     match level {
         pumpkin_config::logging::LevelFilter::Off => LevelFilter::Off,
         pumpkin_config::logging::LevelFilter::Error => LevelFilter::Error,
