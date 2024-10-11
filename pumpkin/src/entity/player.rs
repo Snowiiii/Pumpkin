@@ -17,8 +17,8 @@ use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_protocol::{
     bytebuf::{packet_id::Packet, DeserializerError},
     client::play::{
-        CGameEvent, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSyncPlayerPosition,
-        CSystemChatMessage, GameEvent, PlayerAction,
+        CGameEvent, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSetHealth,
+        CSyncPlayerPosition, CSystemChatMessage, GameEvent, PlayerAction,
     },
     server::play::{
         SChatCommand, SChatMessage, SClickContainer, SClientInformationPlay, SConfirmTeleport,
@@ -232,6 +232,8 @@ impl Player {
         self.entity.health.store(health);
         self.food.store(food, std::sync::atomic::Ordering::Relaxed);
         self.food_saturation.store(food_saturation);
+        self.client
+            .send_packet(&CSetHealth::new(health, food.into(), food_saturation));
     }
 
     pub fn set_gamemode(&self, gamemode: GameMode) {
