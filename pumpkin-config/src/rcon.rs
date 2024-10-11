@@ -23,15 +23,20 @@ pub struct RCONConfig {
     pub logging: RCONLogging,
 }
 
+#[serde_inline_default]
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct RCONLogging {
     /// Whether successful RCON logins should be logged.
+    #[serde_inline_default(true)]
     pub log_logged_successfully: bool,
     /// Whether failed RCON login attempts with incorrect passwords should be logged.
+    #[serde_inline_default(true)]
     pub log_wrong_password: bool,
     /// Whether all RCON commands, regardless of success or failure, should be logged.
+    #[serde_inline_default(true)]
     pub log_commands: bool,
     /// Whether RCON quit commands should be logged.
+    #[serde_inline_default(true)]
     pub log_quit: bool,
 }
 

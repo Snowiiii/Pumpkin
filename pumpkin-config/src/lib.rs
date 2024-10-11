@@ -43,20 +43,14 @@ pub static BASIC_CONFIG: LazyLock<BasicConfiguration> = LazyLock::new(BasicConfi
 /// This also allows you get some Performance or Resource boosts.
 /// Important: The Configuration should match Vanilla by default
 #[derive(Deserialize, Serialize, Default)]
+#[serde(default)]
 pub struct AdvancedConfiguration {
-    #[serde(default)]
     pub proxy: ProxyConfig,
-    #[serde(default)]
     pub authentication: AuthenticationConfig,
-    #[serde(default)]
     pub packet_compression: CompressionConfig,
-    #[serde(default)]
     pub resource_pack: ResourcePackConfig,
-    #[serde(default)]
     pub commands: CommandsConfig,
-    #[serde(default)]
     pub rcon: RCONConfig,
-    #[serde(default)]
     pub pvp: PVPConfig,
     pub logging: LoggingConfig,
 }
