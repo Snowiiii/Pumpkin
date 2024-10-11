@@ -16,6 +16,7 @@
 #[cfg(target_os = "wasi")]
 compile_error!("Compiling for WASI targets is not supported!");
 
+use log::LevelFilter;
 use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
 
@@ -38,6 +39,38 @@ pub mod server;
 pub mod util;
 pub mod world;
 
+fn init_logger() {
+    use pumpkin_config::ADVANCED_CONFIG;
+    if ADVANCED_CONFIG.logging.enabled {
+        let mut logger = simple_logger::SimpleLogger::new();
+
+        if !ADVANCED_CONFIG.logging.timestamp {
+            logger = logger.without_timestamps();
+        }
+
+        if ADVANCED_CONFIG.logging.env {
+            logger = logger.env();
+        }
+
+        logger = logger.with_level(convert_logger_filter(ADVANCED_CONFIG.logging.level));
+
+        logger = logger.with_colors(ADVANCED_CONFIG.logging.color);
+        logger = logger.with_threads(ADVANCED_CONFIG.logging.threads);
+        logger.init().unwrap()
+    }
+}
+
+const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> LevelFilter {
+    match level {
+        pumpkin_config::logging::LevelFilter::Off => LevelFilter::Off,
+        pumpkin_config::logging::LevelFilter::Error => LevelFilter::Error,
+        pumpkin_config::logging::LevelFilter::Warn => LevelFilter::Warn,
+        pumpkin_config::logging::LevelFilter::Info => LevelFilter::Info,
+        pumpkin_config::logging::LevelFilter::Debug => LevelFilter::Debug,
+        pumpkin_config::logging::LevelFilter::Trace => LevelFilter::Trace,
+    }
+}
+
 fn main() -> io::Result<()> {
     use std::sync::Arc;
 
@@ -46,10 +79,7 @@ fn main() -> io::Result<()> {
     use pumpkin_core::text::{color::NamedColor, TextComponent};
     use rcon::RCONServer;
 
-    simple_logger::SimpleLogger::new()
-        .with_level(log::LevelFilter::Info)
-        .init()
-        .unwrap();
+    init_logger();
 
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()

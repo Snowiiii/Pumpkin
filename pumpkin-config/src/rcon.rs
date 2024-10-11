@@ -19,6 +19,31 @@ pub struct RCONConfig {
     /// If 0 there is no limit
     #[serde(default)]
     pub max_connections: u32,
+    /// RCON Logging
+    pub logging: RCONLogging,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct RCONLogging {
+    /// Whether successful RCON logins should be logged.
+    pub log_logged_successfully: bool,
+    /// Whether failed RCON login attempts with incorrect passwords should be logged.
+    pub log_wrong_password: bool,
+    /// Whether all RCON commands, regardless of success or failure, should be logged.
+    pub log_commands: bool,
+    /// Whether RCON quit commands should be logged.
+    pub log_quit: bool,
+}
+
+impl Default for RCONLogging {
+    fn default() -> Self {
+        Self {
+            log_logged_successfully: true,
+            log_wrong_password: true,
+            log_commands: true,
+            log_quit: true,
+        }
+    }
 }
 
 fn default_rcon_address() -> SocketAddr {
@@ -32,6 +57,7 @@ impl Default for RCONConfig {
             address: default_rcon_address(),
             password: "".to_string(),
             max_connections: 0,
+            logging: Default::default(),
         }
     }
 }
