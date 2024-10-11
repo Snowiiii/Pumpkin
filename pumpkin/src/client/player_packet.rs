@@ -298,7 +298,7 @@ impl Player {
             None => {
                 self.kick(TextComponent::text("Invalid hand"));
             }
-        };
+        }
     }
 
     pub async fn handle_chat_message(&self, _server: &Arc<Server>, chat_message: SChatMessage) {

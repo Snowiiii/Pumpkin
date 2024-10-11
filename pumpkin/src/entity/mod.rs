@@ -5,7 +5,7 @@ use itertools::Itertools;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::float::FloatCore;
 use num_traits::real::Real;
-use num_traits::{Float, Signed, ToPrimitive};
+use num_traits::{Float, ToPrimitive};
 use pumpkin_core::math::{
     get_section_cord, position::WorldPosition, vector2::Vector2, vector3::Vector3,
 };
@@ -159,16 +159,15 @@ impl Entity {
 
     pub async fn advance_position(&self) {
         let mut velocity = self.velocity.load();
-        if self.on_ground.load(Ordering::Relaxed)
-            && (self.pos.load().y + velocity.y).ceil() < self.pos.load().y.ceil()
-        {
-            velocity.y = self.pos.load().y.floor() - (self.pos.load().y + velocity.y)
+        let on_ground = self.on_ground.load(Ordering::Relaxed);
+        if on_ground && velocity.y.is_sign_negative() {
+            velocity = velocity.multiply(1., 0., 1.);
         }
         let pos = self.pos.load().add(&velocity);
         self.set_pos(pos.x, pos.y, pos.z);
     }
 
-    async fn collision_check(&self, server: &Arc<Server>) {
+    async fn collision_check(&self, snap: bool) {
         // TODO: Collision check with other entities.
 
         let pos = self.pos.load();
@@ -177,8 +176,8 @@ impl Entity {
         let mut chunks = vec![];
         for future_position in &future_positions {
             // TODO Change rounding based on velocity direction
-            let x_section = get_section_cord(future_position.x.round() as i32);
-            let z_section = get_section_cord(future_position.z.round() as i32);
+            let x_section = get_section_cord(future_position.x.floor() as i32);
+            let z_section = get_section_cord(future_position.z.floor() as i32);
             let chunk_pos = Vector2::new(x_section, z_section);
             if !chunks.contains(&chunk_pos) {
                 chunks.push(chunk_pos)
@@ -207,34 +206,24 @@ impl Entity {
                 .expect("This should be received")
                 .blocks
                 .get_block(ChunkRelativeBlockCoordinates::from(Vector3 {
-                    x: future_position.x,
-                    z: future_position.z,
-                    y: future_position.y.ceil(),
+                    x: future_position.x.floor(),
+                    z: future_position.z.floor(),
+                    y: future_position.y.floor(),
                 }));
 
             if !block_id.is_air() {
-                let on_ground = self.on_ground.load(Ordering::Relaxed);
-                let mut new_pos = pos;
-                let mut velocity = self.velocity.load();
-                if (pos.x.floor() - future_position.x.floor()).abs() > 1. && !on_ground {
-                    velocity = velocity.multiply(0., 1., 1.);
-                }
-                if (pos.z.floor() - future_position.z.floor()).abs() > 1. && !on_ground {
-                    velocity = velocity.multiply(1., 1., 0.);
-                }
-                if pos.y.abs().floor() > future_position.y.abs().floor() {
-                    velocity = velocity.multiply(1., 0., 1.);
-                    if !on_ground {
-                        new_pos = pos.multiply(1., 0., 1.).add(&Vector3::new(
-                            0.,
-                            future_position.y + 1.,
-                            0.,
-                        ));
+                if pos.y > future_position.y && !self.on_ground.load(Ordering::Relaxed) {
+                    let mut new_pos = pos;
+                    new_pos.y = pos.y.floor();
+                    if self.on_ground.load(Ordering::Relaxed) {
+                        let velocity = self.velocity.load();
+                        self.velocity.store(velocity.multiply(1., 0., 1.));
                     }
                     self.on_ground.store(true, Ordering::Relaxed);
+                    if snap {
+                        self.set_pos(new_pos.x, new_pos.y, new_pos.z);
+                    }
                 }
-                self.pos.store(new_pos);
-                self.velocity.store(velocity);
             } else {
                 self.on_ground.store(false, Ordering::Relaxed);
             }
@@ -387,8 +376,8 @@ impl Entity {
                 let block = chunks
                     .iter()
                     .find_map(|chunk| {
-                        if chunk.position.x == get_section_cord(pos.x.round() as i32)
-                            && chunk.position.z == get_section_cord(pos.z.round() as i32)
+                        if chunk.position.x == get_section_cord(pos.x.ceil() as i32)
+                            && chunk.position.z == get_section_cord(pos.z.ceil() as i32)
                         {
                             Some(chunk.blocks.get_block(pos.into()))
                         } else {
@@ -527,7 +516,7 @@ impl Entity {
         self.world.broadcast_packet_all(&packet);
     }
 
-    pub async fn set_pose(&self, pose: EntityPose) {
+    pub fn set_pose(&self, pose: EntityPose) {
         self.pose.store(pose);
         let pose = pose as i32;
         let packet = CSetEntityMetadata::<VarInt>::new(

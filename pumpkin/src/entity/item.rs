@@ -206,14 +206,17 @@ impl ItemEntity {
                 dbg!(self.entity.pos.load().y);
             }*/
             //self.entity.bounds_check().await;
-            self.entity.collision_check(&server).await;
+            self.entity.collision_check(false).await;
             let on_ground = self.entity.on_ground.load(Ordering::Relaxed);
             if !on_ground
                 || self.entity.velocity.load().horizontal_length_squared() > 1.0e-5
                 || ticks % 4 == 0
             {
                 self.entity.advance_position().await;
-                let slipperiness = 0.98;
+                self.entity.collision_check(true).await;
+                let on_ground = self.entity.on_ground.load(Ordering::Relaxed);
+                let slipperiness = 0.98 * if on_ground { 0.6 } else { 1. };
+
                 let mut velocity =
                     self.entity
                         .velocity
@@ -224,7 +227,7 @@ impl ItemEntity {
                     velocity.y = 0.;
                     velocity.x = 0.;
                 }
-                if self.entity.on_ground.load(Ordering::Relaxed) {
+                if on_ground {
                     if velocity.y < 0. {
                         velocity = velocity.multiply(1., -0.5, 1.);
                     }
