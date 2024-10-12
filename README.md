@@ -9,7 +9,7 @@
 
 </div>
 
-Pumpkin is a Minecraft server built entirely in Rust, offering a fast, efficient,
+[Pumpkin](https://snowiiii.github.io/Pumpkin/) is a Minecraft server built entirely in Rust, offering a fast, efficient,
 and customizable experience. It prioritizes performance and player enjoyment while adhering to the core mechanics of the game.
 
 ![image](https://github.com/user-attachments/assets/7e2e865e-b150-4675-a2d5-b52f9900378e)
@@ -73,54 +73,21 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 Check out our [Github Project](https://github.com/users/Snowiiii/projects/12/views/3) to see current progress
 
 ## How to run
-
-There are currently no release builds, because there was no release :D.
-
-To get Pumpkin running you first have to clone it:
-
-```shell
-git clone https://github.com/Snowiiii/Pumpkin.git
-cd Pumpkin
-```
-
-You also may have to [install rust](https://www.rust-lang.org/tools/install) when you don't already have.
-
-You can place a vanilla world into the Pumpkin/ directory when you want. Just name the World to `world`
-
-Then run:
-
-> [!NOTE]
-> This can take a while. Because we enabled heavy optimizations for release builds
->
-> To apply further optimizations specfic to your CPU and use your CPU features. You should set the target-cpu=native
-> Rust flag.
-
-```shell
-cargo run --release
-```
-
-### Docker
-
-Experimental Docker support is available.
-The image is currently not published anywhere, but you can use the following command to build it:
-
-```shell
-docker build . -t pumpkin
-```
-
-To run it use the following command:
-
-```shell
-docker run --rm -p 25565:25565 -v "./world:/pumpkin/world" pumpkin
-```
+See https://snowiiii.github.io/Pumpkin/about/quick-start.html
 
 ## Contributions
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md)
 
+## Docs
+The Documentation of Pumpkin can be found at https://snowiiii.github.io/Pumpkin/
+
 ## Communication
 
 Consider joining our [discord](https://discord.gg/wT8XjrjKkf) to stay up-to-date on events, updates, and connect with other members.
+
+## Funding
+If you want to fund my and help the project, Check out my [GitHub sponsors](https://github.com/sponsors/Snowiiii)
 
 ## Thanks
 

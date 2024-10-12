@@ -5,7 +5,7 @@ use serde_inline_default::serde_inline_default;
 #[derive(Deserialize, Serialize)]
 /// Packet compression
 pub struct CompressionConfig {
-    /// Is compression enabled ?
+    /// Wether compression is enabled
     #[serde_inline_default(true)]
     pub enabled: bool,
     #[serde(flatten)]
