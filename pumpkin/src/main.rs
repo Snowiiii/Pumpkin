@@ -39,6 +39,12 @@ pub mod server;
 pub mod util;
 pub mod world;
 
+fn scrub_address(ip: &str) -> String {
+    ip.chars()
+        .map(|ch| if ch == '.' || ch == ':' { ch } else { 'x' })
+        .collect()
+}
+
 fn init_logger() {
     use pumpkin_config::ADVANCED_CONFIG;
     if ADVANCED_CONFIG.logging.enabled {
@@ -128,7 +134,10 @@ fn main() -> io::Result<()> {
 
         let server = Arc::new(Server::new());
         log::info!("Started Server took {}ms", time.elapsed().as_millis());
-        log::info!("You now can connect to the server, Listening on {}", addr);
+        log::info!(
+            "You now can connect to the server, Listening on {}",
+            scrub_address(&format!("{}", addr))
+        );
 
         if use_console {
             let server = server.clone();
@@ -189,7 +198,10 @@ fn main() -> io::Result<()> {
                             log::warn!("failed to set TCP_NODELAY {e}");
                         }
 
-                        log::info!("Accepted connection from: {}", address);
+                        log::info!(
+                            "Accepted connection from: {}",
+                            scrub_address(&format!("{}", address))
+                        );
 
                         let token = next(&mut unique_token);
                         poll.registry().register(

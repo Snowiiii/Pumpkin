@@ -94,6 +94,9 @@ pub struct BasicConfiguration {
     /// The default game mode for players.
     #[serde_inline_default(GameMode::Survival)]
     pub default_gamemode: GameMode,
+    /// Whether to remove IPs from logs or not
+    #[serde_inline_default(true)]
+    pub scrub_ips: bool,
 }
 
 fn default_server_address() -> SocketAddr {
@@ -115,6 +118,7 @@ impl Default for BasicConfiguration {
             encryption: true,
             motd: "A Blazing fast Pumpkin Server!".to_string(),
             default_gamemode: GameMode::Survival,
+            scrub_ips: true,
         }
     }
 }
