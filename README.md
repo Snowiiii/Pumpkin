@@ -87,7 +87,7 @@ The Documentation of Pumpkin can be found at https://snowiiii.github.io/Pumpkin/
 Consider joining our [discord](https://discord.gg/wT8XjrjKkf) to stay up-to-date on events, updates, and connect with other members.
 
 ## Funding
-If you want to fund my and help the project, Check out my [GitHub sponsors](https://github.com/sponsors/Snowiiii)
+If you want to fund me and help the project, Check out my [GitHub sponsors](https://github.com/sponsors/Snowiiii)
 
 ## Thanks
 
