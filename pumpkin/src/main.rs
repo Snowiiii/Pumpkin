@@ -40,9 +40,14 @@ pub mod util;
 pub mod world;
 
 fn scrub_address(ip: &str) -> String {
-    ip.chars()
-        .map(|ch| if ch == '.' || ch == ':' { ch } else { 'x' })
-        .collect()
+    use pumpkin_config::BASIC_CONFIG;
+    if BASIC_CONFIG.scrub_ips {
+        ip.chars()
+            .map(|ch| if ch == '.' || ch == ':' { ch } else { 'x' })
+            .collect()
+    } else {
+        ip.to_string()
+    }
 }
 
 fn init_logger() {
