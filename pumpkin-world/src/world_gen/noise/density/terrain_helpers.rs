@@ -24,7 +24,7 @@ fn get_offset_value(f: f32, g: f32, h: f32) -> f32 {
 }
 
 #[inline]
-fn meth_42045(f: f32) -> f32 {
+fn skew_map(f: f32) -> f32 {
     let k = 1f32 - (1f32 - f) * 0.5f32;
     let l = 0.5f32 * (1f32 - f);
 
@@ -32,11 +32,11 @@ fn meth_42045(f: f32) -> f32 {
 }
 
 #[inline]
-fn meth_42047(f: f32, g: f32, h: f32, i: f32) -> f32 {
+fn diff_quot(f: f32, g: f32, h: f32, i: f32) -> f32 {
     (g - f) / (i - h)
 }
 
-fn meth_42050(
+fn create_ridges_spline(
     function: Arc<DensityFunction>,
     f: f32,
     bl: bool,
@@ -47,25 +47,25 @@ fn meth_42050(
     let i = get_offset_value(-1f32, f, -0.7f32);
     let k = get_offset_value(1f32, f, -0.7f32);
 
-    let l = meth_42045(f);
+    let l = skew_map(f);
 
     let builder = if -0.65f32 < l && l < 1f32 {
         let n = get_offset_value(-0.65f32, f, -0.7f32);
         let p = get_offset_value(-0.75f32, f, -0.7f32);
-        let q = meth_42047(i, p, -1f32, -0.75f32);
+        let q = diff_quot(i, p, -1f32, -0.75f32);
         let builder = builder
             .add_value(-1f32, i, q)
             .add_value(-0.75f32, p, 0f32)
             .add_value(-0.65f32, n, 0f32);
 
         let r = get_offset_value(l, f, -0.7f32);
-        let s = meth_42047(r, k, l, 1f32);
+        let s = diff_quot(r, k, l, 1f32);
         builder
             .add_value(l - 0.01f32, r, 0f32)
             .add_value(l, r, s)
             .add_value(1f32, k, s)
     } else {
-        let n = meth_42047(i, k, -1f32, 1f32);
+        let n = diff_quot(i, k, -1f32, 1f32);
         let builder = if bl {
             builder
                 .add_value(-1f32, 0.2f32.max(i), 0f32)
@@ -81,7 +81,7 @@ fn meth_42050(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn meth_42048(
+fn create_standard_spline(
     ridges: Arc<DensityFunction>,
     continental: f32,
     f: f32,
@@ -102,7 +102,7 @@ fn meth_42048(
         .build()
 }
 
-fn method_42054<'a>(
+fn create_total_spline<'a>(
     erosion: Arc<DensityFunction<'a>>,
     ridges: Arc<DensityFunction<'a>>,
     ridges_folded: Arc<DensityFunction<'a>>,
@@ -179,7 +179,7 @@ fn method_42054<'a>(
     builder.build()
 }
 
-fn method_42052<'a>(
+fn create_folded_ridges_spline<'a>(
     ridges: Arc<DensityFunction<'a>>,
     ridges_folded: Arc<DensityFunction<'a>>,
     f: f32,
@@ -196,7 +196,11 @@ fn method_42052<'a>(
     let builder = if g > 0f32 {
         builder.add_spline(
             j,
-            SplineValue::Spline(method_42049(ridges.clone(), f, amplifier.clone())),
+            SplineValue::Spline(create_ridges_part_spline(
+                ridges.clone(),
+                f,
+                amplifier.clone(),
+            )),
             0f32,
         )
     } else {
@@ -206,7 +210,11 @@ fn method_42052<'a>(
     let builder = if f > 0f32 {
         builder.add_spline(
             1f32,
-            SplineValue::Spline(method_42049(ridges.clone(), f, amplifier.clone())),
+            SplineValue::Spline(create_ridges_part_spline(
+                ridges.clone(),
+                f,
+                amplifier.clone(),
+            )),
             0f32,
         )
     } else {
@@ -217,7 +225,11 @@ fn method_42052<'a>(
 }
 
 #[inline]
-fn method_42049(ridges: Arc<DensityFunction>, f: f32, amplifier: FloatAmplifier) -> Spline {
+fn create_ridges_part_spline(
+    ridges: Arc<DensityFunction>,
+    f: f32,
+    amplifier: FloatAmplifier,
+) -> Spline {
     let g = 0.63f32 * f;
     let h = 0.3f32 * f;
     SplineBuilder::new(ridges, amplifier)
@@ -228,7 +240,7 @@ fn method_42049(ridges: Arc<DensityFunction>, f: f32, amplifier: FloatAmplifier)
 
 #[allow(clippy::too_many_arguments)]
 #[inline]
-fn method_42053<'a>(
+fn create_eroded_ridges_spline<'a>(
     erosion: Arc<DensityFunction<'a>>,
     ridges: Arc<DensityFunction<'a>>,
     ridges_folded: Arc<DensityFunction<'a>>,
@@ -238,14 +250,14 @@ fn method_42053<'a>(
     i: f32,
     amplifier: FloatAmplifier,
 ) -> Spline<'a> {
-    let spline = method_42052(
+    let spline = create_folded_ridges_spline(
         ridges.clone(),
         ridges_folded.clone(),
         f,
         h,
         amplifier.clone(),
     );
-    let spline2 = method_42052(
+    let spline2 = create_folded_ridges_spline(
         ridges.clone(),
         ridges_folded.clone(),
         g,
@@ -275,20 +287,20 @@ fn create_continental_offset_spline<'a>(
     bl2: bool,
     amplifier: FloatAmplifier,
 ) -> Spline<'a> {
-    let spline = meth_42050(
+    let spline = create_ridges_spline(
         ridges.clone(),
         lerp(h, 0.6f32, 1.5f32),
         bl2,
         amplifier.clone(),
     );
-    let spline2 = meth_42050(
+    let spline2 = create_ridges_spline(
         ridges.clone(),
         lerp(h, 0.6f32, 1f32),
         bl2,
         amplifier.clone(),
     );
-    let spline3 = meth_42050(ridges.clone(), h, bl2, amplifier.clone());
-    let spline4 = meth_42048(
+    let spline3 = create_ridges_spline(ridges.clone(), h, bl2, amplifier.clone());
+    let spline4 = create_standard_spline(
         ridges.clone(),
         continental - 0.15f32,
         0.5f32 * h,
@@ -299,7 +311,7 @@ fn create_continental_offset_spline<'a>(
         amplifier.clone(),
     );
 
-    let spline5 = meth_42048(
+    let spline5 = create_standard_spline(
         ridges.clone(),
         continental,
         i * h,
@@ -309,7 +321,7 @@ fn create_continental_offset_spline<'a>(
         0.5f32,
         amplifier.clone(),
     );
-    let spline6 = meth_42048(
+    let spline6 = create_standard_spline(
         ridges.clone(),
         continental,
         i,
@@ -319,7 +331,7 @@ fn create_continental_offset_spline<'a>(
         0.5f32,
         amplifier.clone(),
     );
-    let spline7 = meth_42048(
+    let spline7 = create_standard_spline(
         ridges.clone(),
         continental,
         i,
@@ -335,7 +347,7 @@ fn create_continental_offset_spline<'a>(
         .add_spline(-0.4f32, SplineValue::Spline(spline6.clone()), 0f32)
         .add_value(0f32, g + 0.07f32, 0f32)
         .build();
-    let spline9 = meth_42048(
+    let spline9 = create_standard_spline(
         ridges.clone(),
         -0.02f32,
         j,
@@ -466,7 +478,7 @@ pub fn create_factor_spline<'a>(
         .add_value(-0.19f32, 3.95f32, 0f32)
         .add_spline(
             -0.15f32,
-            SplineValue::Spline(method_42054(
+            SplineValue::Spline(create_total_spline(
                 erosion.clone(),
                 ridges.clone(),
                 ridges_folded.clone(),
@@ -478,7 +490,7 @@ pub fn create_factor_spline<'a>(
         )
         .add_spline(
             -0.1f32,
-            SplineValue::Spline(method_42054(
+            SplineValue::Spline(create_total_spline(
                 erosion.clone(),
                 ridges.clone(),
                 ridges_folded.clone(),
@@ -490,7 +502,7 @@ pub fn create_factor_spline<'a>(
         )
         .add_spline(
             0.03f32,
-            SplineValue::Spline(method_42054(
+            SplineValue::Spline(create_total_spline(
                 erosion.clone(),
                 ridges.clone(),
                 ridges_folded.clone(),
@@ -502,7 +514,7 @@ pub fn create_factor_spline<'a>(
         )
         .add_spline(
             0.06f32,
-            SplineValue::Spline(method_42054(
+            SplineValue::Spline(create_total_spline(
                 erosion,
                 ridges,
                 ridges_folded,
@@ -532,7 +544,7 @@ pub fn create_jaggedness_spline<'a>(
         .add_value(-0.11f32, 0f32, 0f32)
         .add_spline(
             0.03f32,
-            SplineValue::Spline(method_42053(
+            SplineValue::Spline(create_eroded_ridges_spline(
                 erosion.clone(),
                 ridges.clone(),
                 ridges_folded.clone(),
@@ -546,7 +558,7 @@ pub fn create_jaggedness_spline<'a>(
         )
         .add_spline(
             0.65f32,
-            SplineValue::Spline(method_42053(
+            SplineValue::Spline(create_eroded_ridges_spline(
                 erosion,
                 ridges,
                 ridges_folded,
