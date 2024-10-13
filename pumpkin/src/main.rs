@@ -234,7 +234,7 @@ fn main() -> io::Result<()> {
                         }
                         clients.insert(token, client);
                     },
-
+                    // Maybe received an event for a TCP connection.
                     token => {
                         // Poll Players
                         if let Some(player) = players.get_mut(&token) {
@@ -256,7 +256,6 @@ fn main() -> io::Result<()> {
                         };
 
                         // Poll current Clients (non players)
-                        // Maybe received an event for a TCP connection.
                         let (done, make_player) = if let Some(client) = clients.get_mut(&token) {
                             client.poll(event).await;
                             let closed = client.closed.load(std::sync::atomic::Ordering::Relaxed);

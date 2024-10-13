@@ -17,9 +17,10 @@ use crossbeam::atomic::AtomicCell;
 use mio::{event::Event, net::TcpStream, Token};
 use parking_lot::Mutex;
 use pumpkin_config::compression::CompressionInfo;
+use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
     bytebuf::{packet_id::Packet, DeserializerError},
-    client::{config::CConfigDisconnect, login::CLoginDisconnect},
+    client::{config::CConfigDisconnect, login::CLoginDisconnect, play::CPlayDisconnect},
     packet_decoder::PacketDecoder,
     packet_encoder::PacketEncoder,
     server::{
@@ -414,6 +415,11 @@ impl Client {
             }
             ConnectionState::Config => {
                 self.try_send_packet(&CConfigDisconnect::new(reason))
+                    .unwrap_or_else(|_| self.close());
+            }
+            // This way players get kicked when players using client functions (e.g. poll, send_packet)
+            ConnectionState::Play => {
+                self.try_send_packet(&CPlayDisconnect::new(&TextComponent::text(reason)))
                     .unwrap_or_else(|_| self.close());
             }
             _ => {

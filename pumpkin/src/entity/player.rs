@@ -26,7 +26,7 @@ use pumpkin_protocol::{
         SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround,
         SSwingArm, SUseItem, SUseItemOn,
     },
-    ConnectionState, RawPacket, ServerPacket, VarInt,
+    RawPacket, ServerPacket, VarInt,
 };
 
 use pumpkin_protocol::server::play::{SCloseContainer, SKeepAlive};
@@ -215,7 +215,6 @@ impl Player {
 
     /// Kicks the Client with a reason depending on the connection state
     pub fn kick(&self, reason: TextComponent) {
-        assert!(self.client.connection_state.load() == ConnectionState::Play);
         assert!(!self
             .client
             .closed
