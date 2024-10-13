@@ -384,7 +384,7 @@ impl Client {
                 }
             }
 
-            if received_data.len() != 0 {
+            if !received_data.is_empty() {
                 let mut dec = self.dec.lock();
                 dec.queue_slice(&received_data);
                 match dec.decode() {
