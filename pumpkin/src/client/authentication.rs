@@ -50,7 +50,7 @@ pub struct GameProfile {
 /// 2. Mojang's servers verify the client's credentials and add the player to the their Servers
 /// 3. Now our server will send a Request to the Session servers and check if the Player has joined the Session Server .
 ///
-/// **Note:** This process helps prevent unauthorized access to the server and ensures that only legitimate Minecraft accounts can connect.
+/// See <https://snowiiii.github.io/Pumpkin/developer/authentication.html>
 pub async fn authenticate(
     username: &str,
     server_hash: &str,

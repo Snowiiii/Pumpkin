@@ -362,22 +362,19 @@ impl Client {
     /// Close connection when an error occurs or when the Client closed the connection
     pub async fn poll(&self, event: &Event) {
         if event.is_readable() {
-            let mut received_data = vec![0; 4096];
-            let mut bytes_read = 0;
+            let mut received_data = vec![];
+            let mut buf = [0; 4096];
             loop {
                 let connection = self.connection.clone();
                 let mut connection = connection.lock();
-                match connection.read(&mut received_data[bytes_read..]) {
+                match connection.read(&mut buf) {
                     Ok(0) => {
                         // Reading 0 bytes means the other side has closed the
                         // connection or is done writing, then so are we.
                         self.close();
                         break;
                     }
-                    Ok(n) => {
-                        bytes_read += n;
-                        received_data.extend(&vec![0; n]);
-                    }
+                    Ok(n) => received_data.extend(&buf[..n]),
                     // Would block "errors" are the OS's way of saying that the
                     // connection is not actually ready to perform this I/O operation.
                     Err(ref err) if would_block(err) => break,
@@ -387,9 +384,9 @@ impl Client {
                 }
             }
 
-            if bytes_read != 0 {
+            if received_data.len() != 0 {
                 let mut dec = self.dec.lock();
-                dec.queue_slice(&received_data[..bytes_read]);
+                dec.queue_slice(&received_data);
                 match dec.decode() {
                     Ok(packet) => {
                         if let Some(packet) = packet {
