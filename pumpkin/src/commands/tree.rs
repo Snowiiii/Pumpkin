@@ -3,20 +3,20 @@ use crate::commands::CommandSender;
 use std::collections::{HashMap, VecDeque};
 
 /// see [crate::commands::tree_builder::argument]
-pub(crate) type RawArgs<'a> = Vec<&'a str>;
+pub type RawArgs<'a> = Vec<&'a str>;
 
 /// see [crate::commands::tree_builder::argument] and [CommandTree::execute]/[crate::commands::tree_builder::NonLeafNodeBuilder::execute]
-pub(crate) type ConsumedArgs<'a> = HashMap<&'a str, String>;
+pub type ConsumedArgs<'a> = HashMap<&'a str, String>;
 
 /// see [crate::commands::tree_builder::argument]
-pub(crate) type ArgumentConsumer<'a> = fn(&CommandSender, &mut RawArgs) -> Option<String>;
+pub type ArgumentConsumer<'a> = fn(&CommandSender, &mut RawArgs) -> Option<String>;
 
-pub(crate) struct Node<'a> {
+pub struct Node<'a> {
     pub(crate) children: Vec<usize>,
     pub(crate) node_type: NodeType<'a>,
 }
 
-pub(crate) enum NodeType<'a> {
+pub enum NodeType<'a> {
     ExecuteLeaf {
         run: &'a RunFunctionType,
     },
@@ -32,12 +32,12 @@ pub(crate) enum NodeType<'a> {
     },
 }
 
-pub(crate) enum Command<'a> {
+pub enum Command<'a> {
     Tree(CommandTree<'a>),
     Alias(&'a str),
 }
 
-pub(crate) struct CommandTree<'a> {
+pub struct CommandTree<'a> {
     pub(crate) nodes: Vec<Node<'a>>,
     pub(crate) children: Vec<usize>,
     pub(crate) names: Vec<&'a str>,

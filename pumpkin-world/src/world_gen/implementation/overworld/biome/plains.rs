@@ -3,7 +3,7 @@ use pumpkin_core::math::vector2::Vector2;
 
 use crate::{
     biome::Biome,
-    block::BlockId,
+    block::block_state::BlockState,
     coordinates::{BlockCoordinates, XZBlockCoordinates},
     world_gen::{
         generator::{BiomeGenerator, GeneratorInit, PerlinTerrainGenerator},
@@ -40,21 +40,21 @@ impl GeneratorInit for PlainsTerrainGenerator {
 impl PerlinTerrainGenerator for PlainsTerrainGenerator {
     fn prepare_chunk(&self, _at: &Vector2<i32>, _perlin: &Perlin) {}
     // TODO allow specifying which blocks should be at which height in the config.
-    fn generate_block(&self, at: BlockCoordinates, chunk_height: i16, _: Biome) -> BlockId {
+    fn generate_block(&self, at: BlockCoordinates, chunk_height: i16, _: Biome) -> BlockState {
         let begin_stone_height = chunk_height - 5;
         let begin_dirt_height = chunk_height - 1;
 
         let y = *at.y;
         if y == -64 {
-            BlockId::from_id(79) // BEDROCK
+            pumpkin_macros::block!("minecraft:bedrock")
         } else if y >= -63 && y <= begin_stone_height {
-            return BlockId::from_id(1); // STONE
+            pumpkin_macros::block!("minecraft:stone")
         } else if y >= begin_stone_height && y < begin_dirt_height {
-            return BlockId::from_id(10); // DIRT;
+            pumpkin_macros::block!("minecraft:dirt")
         } else if y == chunk_height - 1 {
-            return BlockId::from_id(9); // GRASS BLOCK
+            pumpkin_macros::block!("minecraft:grass_block")
         } else {
-            BlockId::AIR
+            BlockState::AIR
         }
     }
 }

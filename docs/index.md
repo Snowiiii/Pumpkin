@@ -11,11 +11,11 @@ hero:
       text: Quick Start
       link: /about/quick-start
     - theme: alt
-      text: Documentation
-      link: /about/introduction
+      text: Configuration
+      link: /config/introduction
     - theme: alt
       text: For developers
-      link: /plugins/about
+      link: /developer/introduction
 
 features:
   - title: Written in Rust

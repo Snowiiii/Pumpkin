@@ -4,8 +4,9 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+pumpkin-config = { path = "../pumpkin-config" }
 pumpkin-macros = { path = "../pumpkin-macros" }
-pumpkin-world =  { path = "../pumpkin-world" }
+pumpkin-world = { path = "../pumpkin-world" }
 pumpkin-core = { path = "../pumpkin-core" }
 
 bytes = "1.7"
@@ -14,7 +15,7 @@ uuid.workspace = true
 
 serde.workspace = true
 
-flate2 = "1.0.33"
+flate2 = "1.0"
 
 thiserror = "1.0"
 log.workspace = true
@@ -25,5 +26,5 @@ num-derive = "0.4"
 aes = "0.8.4"
 cfb8 = "0.8.1"
 
-itertools = "0.13.0"
+itertools.workspace = true
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }

@@ -1,13 +1,156 @@
+use legacy_rand::{LegacyRand, LegacySplitter};
+use xoroshiro128::{Xoroshiro, XoroshiroSplitter};
+
 mod gaussian;
 pub mod legacy_rand;
 pub mod xoroshiro128;
 
-pub trait Random {
+pub enum RandomGenerator {
+    Xoroshiro(Xoroshiro),
+    Legacy(LegacyRand),
+}
+
+impl RandomGenerator {
+    #[inline]
+    pub fn split(&mut self) -> Self {
+        match self {
+            Self::Xoroshiro(rand) => Self::Xoroshiro(rand.split()),
+            Self::Legacy(rand) => Self::Legacy(rand.split()),
+        }
+    }
+
+    #[inline]
+    pub fn next_splitter(&mut self) -> RandomDeriver {
+        match self {
+            Self::Xoroshiro(rand) => RandomDeriver::Xoroshiro(rand.next_splitter()),
+            Self::Legacy(rand) => RandomDeriver::Legacy(rand.next_splitter()),
+        }
+    }
+
+    #[inline]
+    pub fn next(&mut self, bits: u64) -> u64 {
+        match self {
+            Self::Xoroshiro(rand) => rand.next(bits),
+            Self::Legacy(rand) => rand.next(bits),
+        }
+    }
+
+    #[inline]
+    pub fn next_i32(&mut self) -> i32 {
+        match self {
+            Self::Xoroshiro(rand) => rand.next_i32(),
+            Self::Legacy(rand) => rand.next_i32(),
+        }
+    }
+
+    #[inline]
+    pub fn next_bounded_i32(&mut self, bound: i32) -> i32 {
+        match self {
+            Self::Xoroshiro(rand) => rand.next_bounded_i32(bound),
+            Self::Legacy(rand) => rand.next_bounded_i32(bound),
+        }
+    }
+
+    #[inline]
+    pub fn next_inbetween_i32(&mut self, min: i32, max: i32) -> i32 {
+        self.next_bounded_i32(max - min + 1) + min
+    }
+
+    #[inline]
+    pub fn next_i64(&mut self) -> i64 {
+        match self {
+            Self::Xoroshiro(rand) => rand.next_i64(),
+            Self::Legacy(rand) => rand.next_i64(),
+        }
+    }
+
+    #[inline]
+    pub fn next_bool(&mut self) -> bool {
+        match self {
+            Self::Xoroshiro(rand) => rand.next_bool(),
+            Self::Legacy(rand) => rand.next_bool(),
+        }
+    }
+
+    #[inline]
+    pub fn next_f32(&mut self) -> f32 {
+        match self {
+            Self::Xoroshiro(rand) => rand.next_f32(),
+            Self::Legacy(rand) => rand.next_f32(),
+        }
+    }
+
+    #[inline]
+    pub fn next_f64(&mut self) -> f64 {
+        match self {
+            Self::Xoroshiro(rand) => rand.next_f64(),
+            Self::Legacy(rand) => rand.next_f64(),
+        }
+    }
+
+    #[inline]
+    pub fn next_gaussian(&mut self) -> f64 {
+        match self {
+            Self::Xoroshiro(rand) => rand.next_gaussian(),
+            Self::Legacy(rand) => rand.next_gaussian(),
+        }
+    }
+
+    #[inline]
+    pub fn next_triangular(&mut self, mode: f64, deviation: f64) -> f64 {
+        mode + deviation * (self.next_f64() - self.next_f64())
+    }
+
+    #[inline]
+    pub fn skip(&mut self, count: i32) {
+        for _ in 0..count {
+            self.next_i64();
+        }
+    }
+
+    #[inline]
+    pub fn next_inbetween_i32_exclusive(&mut self, min: i32, max: i32) -> i32 {
+        min + self.next_bounded_i32(max - min)
+    }
+}
+
+pub enum RandomDeriver {
+    Xoroshiro(XoroshiroSplitter),
+    Legacy(LegacySplitter),
+}
+
+impl RandomDeriver {
+    #[inline]
+    pub fn split_string(&self, seed: &str) -> RandomGenerator {
+        match self {
+            Self::Xoroshiro(deriver) => RandomGenerator::Xoroshiro(deriver.split_string(seed)),
+            Self::Legacy(deriver) => RandomGenerator::Legacy(deriver.split_string(seed)),
+        }
+    }
+
+    #[inline]
+    pub fn split_u64(&self, seed: u64) -> RandomGenerator {
+        match self {
+            Self::Xoroshiro(deriver) => RandomGenerator::Xoroshiro(deriver.split_u64(seed)),
+            Self::Legacy(deriver) => RandomGenerator::Legacy(deriver.split_u64(seed)),
+        }
+    }
+
+    #[inline]
+    pub fn split_pos(&self, x: i32, y: i32, z: i32) -> RandomGenerator {
+        match self {
+            Self::Xoroshiro(deriver) => RandomGenerator::Xoroshiro(deriver.split_pos(x, y, z)),
+            Self::Legacy(deriver) => RandomGenerator::Legacy(deriver.split_pos(x, y, z)),
+        }
+    }
+}
+
+pub trait RandomImpl {
     fn from_seed(seed: u64) -> Self;
 
     fn split(&mut self) -> Self;
 
-    fn next_splitter(&mut self) -> impl RandomSplitter;
+    fn next_splitter(&mut self) -> impl RandomDeriverImpl;
 
     fn next(&mut self, bits: u64) -> u64;
 
@@ -44,12 +187,12 @@ pub trait Random {
     }
 }
 
-pub trait RandomSplitter {
-    fn split_string(&self, seed: &str) -> impl Random;
+pub trait RandomDeriverImpl {
+    fn split_string(&self, seed: &str) -> impl RandomImpl;
 
-    fn split_u64(&self, seed: u64) -> impl Random;
+    fn split_u64(&self, seed: u64) -> impl RandomImpl;
 
-    fn split_pos(&self, x: i32, y: i32, z: i32) -> impl Random;
+    fn split_pos(&self, x: i32, y: i32, z: i32) -> impl RandomImpl;
 }
 
 fn hash_block_pos(x: i32, y: i32, z: i32) -> i64 {

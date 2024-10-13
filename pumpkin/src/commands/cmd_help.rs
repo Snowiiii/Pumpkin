@@ -32,7 +32,7 @@ fn parse_arg_command<'a>(
         .map_err(|_| InvalidConsumptionError(Some(command_name.into())))
 }
 
-pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION)
         .with_child(
             argument(ARG_COMMAND, consume_arg_command).execute(&|sender, server, args| {

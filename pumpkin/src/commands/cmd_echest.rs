@@ -7,16 +7,13 @@ const NAMES: [&str; 2] = ["echest", "enderchest"];
 const DESCRIPTION: &str =
     "Show your personal enderchest (this command is used for testing container behaviour)";
 
-pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).execute(&|sender, server, _| {
         if let Some(player) = sender.as_mut_player() {
             let entity_id = player.entity_id();
-            player.open_container = Some(0);
+            player.open_container.store(Some(0));
             {
-                let mut open_containers = server
-                    .open_containers
-                    .write()
-                    .expect("open_containers got poisoned");
+                let mut open_containers = server.open_containers.write();
                 match open_containers.get_mut(&0) {
                     Some(ender_chest) => {
                         ender_chest.add_player(entity_id);

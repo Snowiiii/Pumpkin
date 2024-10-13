@@ -32,7 +32,7 @@ jobs:
           node-version: 20
           cache: npm
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
       - name: Install dependencies
         run: npm ci
       - name: Build with VitePress

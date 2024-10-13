@@ -56,7 +56,7 @@ pub fn parse_arg_gamemode(consumed_args: &ConsumedArgs) -> Result<GameMode, Inva
     }
 }
 
-pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
         require(&|sender| sender.permission_lvl() >= 2).with_child(
             argument(ARG_GAMEMODE, consume_arg_gamemode)
@@ -65,15 +65,14 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                         let gamemode = parse_arg_gamemode(args)?;
 
                         return if let Player(target) = sender {
-                            if target.gamemode == gamemode {
+                            if target.gamemode.load() == gamemode {
                                 target.send_system_message(TextComponent::text(&format!(
                                     "You already in {:?} gamemode",
                                     gamemode
                                 )));
                             } else {
                                 // TODO
-                                #[expect(clippy::let_underscore_future)]
-                                let _ = target.set_gamemode(gamemode);
+                                target.set_gamemode(gamemode);
                                 target.send_system_message(TextComponent::text(&format!(
                                     "Game mode was set to {:?}",
                                     gamemode
@@ -86,19 +85,18 @@ pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
                     }),
                 )
                 .with_child(argument(ARG_TARGET, consume_arg_player).execute(
-                    &|sender, _, args| {
+                    &|sender, server, args| {
                         let gamemode = parse_arg_gamemode(args)?;
-                        let target = parse_arg_player(sender, ARG_TARGET, args)?;
+                        let target = parse_arg_player(sender, server, ARG_TARGET, args)?;
 
-                        if target.gamemode == gamemode {
+                        if target.gamemode.load() == gamemode {
                             target.send_system_message(TextComponent::text(&format!(
                                 "You already in {:?} gamemode",
                                 gamemode
                             )));
                         } else {
                             // TODO
-                            #[expect(clippy::let_underscore_future)]
-                            let _ = target.set_gamemode(gamemode);
+                            target.set_gamemode(gamemode);
                             target.send_system_message(TextComponent::text(&format!(
                                 "Game mode was set to {:?}",
                                 gamemode

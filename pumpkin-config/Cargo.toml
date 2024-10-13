@@ -9,4 +9,4 @@ serde.workspace = true
 log.workspace = true
 
 toml = "0.8"
-
+serde-inline-default = "0.2.1"

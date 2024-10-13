@@ -1,13 +1,14 @@
 use pumpkin_macros::packet;
 use serde::Serialize;
 
-use crate::{uuid::UUID, VarInt};
+use crate::VarInt;
 
 #[derive(Serialize)]
 #[packet(0x01)]
 pub struct CSpawnEntity {
     entity_id: VarInt,
-    entity_uuid: UUID,
+    #[serde(with = "uuid::serde::compact")]
+    entity_uuid: uuid::Uuid,
     typ: VarInt,
     x: f64,
     y: f64,
@@ -25,7 +26,7 @@ impl CSpawnEntity {
     #[expect(clippy::too_many_arguments)]
     pub fn new(
         entity_id: VarInt,
-        entity_uuid: UUID,
+        entity_uuid: uuid::Uuid,
         typ: VarInt,
         x: f64,
         y: f64,

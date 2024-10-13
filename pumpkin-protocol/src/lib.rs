@@ -10,8 +10,9 @@ pub mod packet_decoder;
 pub mod packet_encoder;
 pub mod server;
 pub mod slot;
-pub mod uuid;
 
+/// To current Minecraft protocol
+/// Don't forget to change this when porting
 pub const CURRENT_MC_PROTOCOL: u32 = 767;
 
 pub const MAX_PACKET_SIZE: i32 = 2097152;
@@ -151,7 +152,7 @@ pub enum PacketError {
     MalformedLength,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ConnectionState {
     HandShake,
     Status,
@@ -175,7 +176,6 @@ impl From<VarInt> for ConnectionState {
         }
     }
 }
-
 pub struct RawPacket {
     pub id: VarInt,
     pub bytebuf: ByteBuffer,
@@ -191,32 +191,45 @@ pub trait ServerPacket: Packet + Sized {
 
 #[derive(Serialize)]
 pub struct StatusResponse {
-    pub version: Version,
-    pub players: Players,
+    /// The version on which the Server is running. Optional
+    pub version: Option<Version>,
+    /// Information about currently connected Players. Optional
+    pub players: Option<Players>,
+    /// The description displayed also called MOTD (Message of the day). Optional
     pub description: String,
-    pub favicon: Option<String>, // data:image/png;base64,<data>
-                                 // Players, favicon ...
+    /// The icon displayed, Optional
+    pub favicon: Option<String>,
+    /// Players are forced to use Secure chat
+    pub enforce_secure_chat: bool,
 }
 #[derive(Serialize)]
 pub struct Version {
+    /// The current name of the Version (e.g. 1.21.1)
     pub name: String,
+    /// The current Protocol Version (e.g. 767)
     pub protocol: u32,
 }
 
 #[derive(Serialize)]
 pub struct Players {
+    /// The maximum Player count the server allows
     pub max: u32,
+    /// The current online player count
     pub online: u32,
+    /// Information about currently connected players.
+    /// Note player can disable listing here.
     pub sample: Vec<Sample>,
 }
 
 #[derive(Serialize)]
 pub struct Sample {
+    /// Players Name
     pub name: String,
-    pub id: String, // uuid
+    /// Players UUID
+    pub id: String,
 }
 
-// basicly game profile
+// basically game profile
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Property {
     pub name: String,

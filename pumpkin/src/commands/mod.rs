@@ -11,6 +11,7 @@ mod arg_player;
 mod cmd_echest;
 mod cmd_gamemode;
 mod cmd_help;
+mod cmd_kill;
 mod cmd_pumpkin;
 mod cmd_stop;
 pub mod dispatcher;
@@ -21,7 +22,7 @@ mod tree_format;
 pub enum CommandSender<'a> {
     Rcon(&'a mut Vec<String>),
     Console,
-    Player(&'a mut Player),
+    Player(&'a Player),
 }
 
 impl<'a> CommandSender<'a> {
@@ -34,7 +35,7 @@ impl<'a> CommandSender<'a> {
         }
     }
 
-    pub fn is_player(&self) -> bool {
+    pub const fn is_player(&self) -> bool {
         match self {
             CommandSender::Console => false,
             CommandSender::Player(_) => true,
@@ -42,14 +43,14 @@ impl<'a> CommandSender<'a> {
         }
     }
 
-    pub fn is_console(&self) -> bool {
+    pub const fn is_console(&self) -> bool {
         match self {
             CommandSender::Console => true,
             CommandSender::Player(_) => false,
             CommandSender::Rcon(_) => true,
         }
     }
-    pub fn as_mut_player(&mut self) -> Option<&mut Player> {
+    pub fn as_mut_player(&mut self) -> Option<&Player> {
         match self {
             CommandSender::Player(player) => Some(player),
             CommandSender::Console => None,
@@ -58,7 +59,7 @@ impl<'a> CommandSender<'a> {
     }
 
     /// todo: implement
-    pub fn permission_lvl(&self) -> i32 {
+    pub const fn permission_lvl(&self) -> i32 {
         match self {
             CommandSender::Rcon(_) => 4,
             CommandSender::Console => 4,
@@ -75,6 +76,7 @@ pub fn default_dispatcher<'a>() -> CommandDispatcher<'a> {
     dispatcher.register(cmd_stop::init_command_tree());
     dispatcher.register(cmd_help::init_command_tree());
     dispatcher.register(cmd_echest::init_command_tree());
+    dispatcher.register(cmd_kill::init_command_tree());
 
     dispatcher
 }

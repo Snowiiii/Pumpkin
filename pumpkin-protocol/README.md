@@ -1,6 +1,10 @@
 ### Pumpkin Protocol
 Contains all Serverbound(Client->Server) and Clientbound(Server->Client) Packets.
 
+### Features
+- [x] ZLib Compression
+- [x] AES/CFB8 Encryiption
+
 Packets in the Pumpkin protocol are organized by functionality and state.
 
 `server`: Contains definitions for serverbound packets.
@@ -69,4 +73,8 @@ Thats a Serverbound packet
 pub struct CPlayDisconnect {
     reason: TextComponent,
 }
-``
+```
+
+### Porting
+You can compare difference in Protocol on wiki.vg https://wiki.vg/index.php?title=Protocol&action=history
+Also change the `CURRENT_MC_PROTOCOL` in `src/lib.rs`

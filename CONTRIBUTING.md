@@ -39,9 +39,8 @@ And in release:
 cargo run --no-default-features --release
 ```
 
-### Project Structure
-
-Before contributing, it would be helpful to get to know the project structure, for further information, visit [STRUCTURE.md](STRUCTURE.md)
+### Docs
+The Documentation of Pumpkin can be found at https://snowiiii.github.io/Pumpkin/
 
 ### Additional Information
 

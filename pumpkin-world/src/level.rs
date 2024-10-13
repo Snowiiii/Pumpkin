@@ -3,11 +3,12 @@ use std::{
     fs::OpenOptions,
     io::{Read, Seek},
     path::PathBuf,
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 
 use flate2::{bufread::ZlibDecoder, read::GzDecoder};
 use itertools::Itertools;
+use parking_lot::Mutex;
 use pumpkin_core::math::vector2::Vector2;
 use rayon::prelude::*;
 use thiserror::Error;
@@ -18,7 +19,15 @@ use crate::{
     world_gen::{get_world_gen, Seed, WorldGenerator},
 };
 
-/// The Level represents a single Dimension.
+/// The `Level` module provides functionality for working with chunks within or outside a Minecraft world.
+///
+/// Key features include:
+///
+/// - **Chunk Loading:** Efficiently loads chunks from disk (Anvil format).
+/// - **Chunk Caching:** Stores accessed chunks in memory for faster access.
+/// - **Chunk Generation:** Generates new chunks on-demand using a specified `WorldGenerator`.
+///
+/// For more details on world generation, refer to the `WorldGenerator` module.
 pub struct Level {
     save_file: Option<SaveFile>,
     loaded_chunks: Arc<Mutex<HashMap<Vector2<i32>, Arc<ChunkData>>>>,
@@ -126,16 +135,7 @@ impl Level {
         }
     }
 
-    // /// Read one chunk in the world
-    // ///
-    // /// Do not use this function if reading many chunks is required, since in case those two chunks which are read separately using `.read_chunk` are in the same region file, it will need to be opened and closed separately for both of them, leading to a performance loss.
-    // pub async fn read_chunk(&self, chunk: (i32, i32)) -> Result<ChunkData, WorldError> {
-    //     self.read_chunks(vec![chunk])
-    //         .await
-    //         .pop()
-    //         .expect("Read chunks must return a chunk")
-    //         .1
-    // }
+    pub fn get_block() {}
 
     /// Reads/Generates many chunks in a world
     /// MUST be called from a tokio runtime thread
@@ -149,43 +149,41 @@ impl Level {
     ) {
         chunks.into_par_iter().for_each(|at| {
             if is_alive {
-                dbg!("a");
                 return;
             }
-            if let Ok(mut loaded_chunks) = self.loaded_chunks.lock() {
-                let channel = channel.clone();
+            let mut loaded_chunks = self.loaded_chunks.lock();
+            let channel = channel.clone();
 
-                // Check if chunks is already loaded
-                if loaded_chunks.contains_key(at) {
-                    channel
-                        .blocking_send(Ok(loaded_chunks.get(at).unwrap().clone()))
-                        .expect("Failed sending ChunkData.");
-                    return;
-                }
-                let at = *at;
-                let data = match &self.save_file {
-                    Some(save_file) => {
-                        match Self::read_chunk(save_file, at) {
-                            Err(WorldError::ChunkNotGenerated(_)) => {
-                                // This chunk was not generated yet.
-                                Ok(self.world_gen.generate_chunk(at))
-                            }
-                            // TODO this doesn't warn the user about the error. fix.
-                            result => result,
-                        }
-                    }
-                    None => {
-                        // There is no savefile yet -> generate the chunks
-                        Ok(self.world_gen.generate_chunk(at))
-                    }
-                }
-                .unwrap();
-                let data = Arc::new(data);
+            // Check if chunks is already loaded
+            if loaded_chunks.contains_key(at) {
                 channel
-                    .blocking_send(Ok(data.clone()))
+                    .blocking_send(Ok(loaded_chunks.get(at).unwrap().clone()))
                     .expect("Failed sending ChunkData.");
-                loaded_chunks.insert(at, data);
+                return;
             }
+            let at = *at;
+            let data = match &self.save_file {
+                Some(save_file) => {
+                    match Self::read_chunk(save_file, at) {
+                        Err(WorldError::ChunkNotGenerated(_)) => {
+                            // This chunk was not generated yet.
+                            Ok(self.world_gen.generate_chunk(at))
+                        }
+                        // TODO this doesn't warn the user about the error. fix.
+                        result => result,
+                    }
+                }
+                None => {
+                    // There is no savefile yet -> generate the chunks
+                    Ok(self.world_gen.generate_chunk(at))
+                }
+            }
+            .unwrap();
+            let data = Arc::new(data);
+            channel
+                .blocking_send(Ok(data.clone()))
+                .expect("Failed sending ChunkData.");
+            loaded_chunks.insert(at, data);
         })
     }
 
@@ -238,29 +236,21 @@ impl Level {
 
         // Read the file using the offset and size
         let mut file_buf = {
-            let seek_result = region_file.seek(std::io::SeekFrom::Start(offset));
-            if seek_result.is_err() {
-                return Err(WorldError::RegionIsInvalid);
-            }
+            region_file
+                .seek(std::io::SeekFrom::Start(offset))
+                .map_err(|_| WorldError::RegionIsInvalid)?;
             let mut out = vec![0; size];
-            let read_result = region_file.read_exact(&mut out);
-            if read_result.is_err() {
-                return Err(WorldError::RegionIsInvalid);
-            }
+            region_file
+                .read_exact(&mut out)
+                .map_err(|_| WorldError::RegionIsInvalid)?;
             out
         };
 
         // TODO: check checksum to make sure chunk is not corrupted
         let header = file_buf.drain(0..5).collect_vec();
 
-        let compression = match Compression::from_byte(header[4]) {
-            Some(c) => c,
-            None => {
-                return Err(WorldError::Compression(
-                    CompressionError::UnknownCompression,
-                ))
-            }
-        };
+        let compression = Compression::from_byte(header[4])
+            .ok_or_else(|| WorldError::Compression(CompressionError::UnknownCompression))?;
 
         let size = u32::from_be_bytes(header[..4].try_into().unwrap());
 
@@ -280,23 +270,15 @@ impl Level {
             Compression::Gzip => {
                 let mut z = GzDecoder::new(&compressed_data[..]);
                 let mut chunk_data = Vec::with_capacity(compressed_data.len());
-                match z.read_to_end(&mut chunk_data) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        return Err(CompressionError::GZipError(e));
-                    }
-                }
+                z.read_to_end(&mut chunk_data)
+                    .map_err(CompressionError::GZipError)?;
                 Ok(chunk_data)
             }
             Compression::Zlib => {
                 let mut z = ZlibDecoder::new(&compressed_data[..]);
                 let mut chunk_data = Vec::with_capacity(compressed_data.len());
-                match z.read_to_end(&mut chunk_data) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        return Err(CompressionError::ZlibError(e));
-                    }
-                }
+                z.read_to_end(&mut chunk_data)
+                    .map_err(CompressionError::ZlibError)?;
                 Ok(chunk_data)
             }
             Compression::None => Ok(compressed_data),

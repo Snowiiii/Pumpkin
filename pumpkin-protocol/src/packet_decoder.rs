@@ -13,11 +13,13 @@ use crate::{
 type Cipher = cfb8::Decryptor<aes::Aes128>;
 
 // Decoder: Client -> Server
+// Supports ZLib decoding/decompression
+// Supports Aes128 Encyption
 #[derive(Default)]
 pub struct PacketDecoder {
     buf: BytesMut,
     decompress_buf: BytesMut,
-    compression: Option<u32>,
+    compression: bool,
     cipher: Option<Cipher>,
 }
 
@@ -43,7 +45,7 @@ impl PacketDecoder {
         let packet_len_len = VarInt(packet_len).written_size();
 
         let mut data;
-        if self.compression.is_some() {
+        if self.compression {
             r = &r[..packet_len as usize];
 
             let data_len = VarInt::decode(&mut r).map_err(|_| PacketError::TooLong)?.0;
@@ -94,18 +96,26 @@ impl PacketDecoder {
         }))
     }
 
-    pub fn enable_encryption(&mut self, key: &[u8; 16]) {
-        assert!(self.cipher.is_none(), "encryption is already enabled");
+    pub fn set_encryption(&mut self, key: Option<&[u8; 16]>) {
+        if let Some(key) = key {
+            assert!(self.cipher.is_none(), "encryption is already enabled");
 
-        let mut cipher = Cipher::new_from_slices(key, key).expect("invalid key");
+            let mut cipher = Cipher::new_from_slices(key, key).expect("invalid key");
 
-        // Don't forget to decrypt the data we already have.
-        Self::decrypt_bytes(&mut cipher, &mut self.buf);
+            // Don't forget to decrypt the data we already have.
 
-        self.cipher = Some(cipher);
+            Self::decrypt_bytes(&mut cipher, &mut self.buf);
+
+            self.cipher = Some(cipher);
+        } else {
+            assert!(self.cipher.is_some(), "encryption is already disabled");
+
+            self.cipher = None;
+        }
     }
 
-    pub fn set_compression(&mut self, compression: Option<u32>) {
+    /// Sets ZLib Deompression
+    pub fn set_compression(&mut self, compression: bool) {
         self.compression = compression;
     }
 

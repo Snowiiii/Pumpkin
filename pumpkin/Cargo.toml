@@ -10,16 +10,16 @@ plugins = ["pumpkin-plugin/plugins"]
 
 [dependencies]
 # pumpkin
-pumpkin-core = { path = "../pumpkin-core"}
+pumpkin-core = { path = "../pumpkin-core" }
 pumpkin-config = { path = "../pumpkin-config" }
-pumpkin-plugin = { path = "../pumpkin-plugin"}
-pumpkin-inventory = { path = "../pumpkin-inventory"}
-pumpkin-world = { path = "../pumpkin-world"}
-pumpkin-entity = { path = "../pumpkin-entity"}
-pumpkin-protocol = { path = "../pumpkin-protocol"}
-pumpkin-registry = { path = "../pumpkin-registry"}
+pumpkin-plugin = { path = "../pumpkin-plugin" }
+pumpkin-inventory = { path = "../pumpkin-inventory" }
+pumpkin-world = { path = "../pumpkin-world" }
+pumpkin-entity = { path = "../pumpkin-entity" }
+pumpkin-protocol = { path = "../pumpkin-protocol" }
+pumpkin-registry = { path = "../pumpkin-registry" }
 
-itertools = "0.13.0"
+itertools.workspace = true
 
 # config
 serde.workspace = true
@@ -40,7 +40,12 @@ rsa = "0.9.6"
 rsa-der = "0.3.0"
 
 # authentication
-reqwest = { version = "0.12.7", default-features= false, features = ["json", "rustls-tls", "http2", "macos-system-configuration"]}
+reqwest = { version = "0.12.7", default-features = false, features = [
+    "http2",
+    "json",
+    "macos-system-configuration",
+    "rustls-tls",
+] }
 
 sha1 = "0.10.6"
 digest = "=0.11.0-pre.9"
@@ -53,15 +58,17 @@ thiserror = "1.0"
 
 # icon loading
 base64 = "0.22.1"
-image = { version = "0.25", default-features = false, features = ["png"]}
+png = "0.17.14" 
 
 # logging
-simple_logger = "5.0.0"
+simple_logger = { version = "5.0.0", features = ["threads"] }
 log.workspace = true
 
 # networking
-mio = { version = "1.0.2", features = ["os-poll", "net"]}
+mio = { version = "1.0.2", features = ["net", "os-poll"] }
 
+parking_lot.workspace = true
+crossbeam.workspace = true
 uuid.workspace = true
 tokio.workspace = true
 rayon.workspace = true
