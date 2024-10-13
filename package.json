@@ -5,7 +5,7 @@
     "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
-    "vitepress": "^1.4.0",
+    "vitepress": "^1.4.1",
     "vue": "^3.5.12"
   }
 }

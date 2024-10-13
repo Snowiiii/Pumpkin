@@ -41,6 +41,12 @@ export default defineConfig({
           { text: "Advanced", link: "/config/advanced" },
         ],
       },
+      {
+        text: "Troubleshooting",
+        items: [
+          { text: "Common Issues", link: "/troubleshooting/common_issues.md" },
+        ],
+      },
     ],
 
     socialLinks: [

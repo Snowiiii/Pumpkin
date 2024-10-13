@@ -34,58 +34,40 @@ To ensure a player has a premium accounts:
 
 Pumpkin does support custom Authentication servers, You can replace the Authentication URL in `features.toml`.
 
-Pumpkin Authentication works like this (Mojang/Custom):
+#### How Pumpkin Authentication Works
 
-1. GET Request > Authentication
+1. **GET Request:** Pumpkin sends a GET request to the specified authentication URL.
 
-2. Status Code 200 > Successfull
+2. **Status Code 200:** If the authentication is successful, the server responds with a status code of 200.
 
-3. Successfull > Parse JSON Game Profile
+3. **Parse JSON Game Profile:** Pumpkin parses the JSON game profile returned in the response.
 
 #### Game Profile
 
 ```rust
-id: UUID
-```
-
-```rust
-name: String
-```
-
-```rust
-properties: Array<Property>
-```
-
-> [!IMPORTANT]
-> Optional, Only present when actions are taken
-
-```rust
-profile_actions: Array<ProfileAction>
+struct GameProfile {
+    id: UUID,
+    name: String,
+    properties: Vec<Property>,
+    profile_actions: Option<Vec<ProfileAction>>, // Optional, Only present when actions are applied
+}
 ```
 
 ##### Property
 
 ```rust
-name: String
-```
-
-> [!IMPORTANT]
-> base 64
-
-```rust
-- value: String
-```
-
-> [!IMPORTANT]
-> Optional, base 64
-
-```rust
-- signature: String
+struct Property {
+    name: String,
+    value: String, // Base64 encoded
+    signature: Option<String>, // Optional, Base64 encoded
+}
 ```
 
 ##### Profile Action
 
 ```rust
-FORCED_NAME_CHANGE
-USING_BANNED_SKIN
+enum ProfileAction {
+    FORCED_NAME_CHANGE,
+    USING_BANNED_SKIN,
+}
 ```
