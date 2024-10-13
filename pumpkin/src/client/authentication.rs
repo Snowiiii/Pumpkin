@@ -60,9 +60,18 @@ pub async fn authenticate(
     assert!(ADVANCED_CONFIG.authentication.enabled);
     assert!(server.auth_client.is_some());
     let address = if ADVANCED_CONFIG.authentication.prevent_proxy_connections {
-        format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}")
+        ADVANCED_CONFIG
+            .authentication
+            .auth_url
+            .replace("{username}", username)
+            .replace("{server_hash}", server_hash)
+            .replace("{}", &ip.to_string())
     } else {
-        format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}")
+        ADVANCED_CONFIG
+            .authentication
+            .auth_url
+            .replace("{username}", username)
+            .replace("{server_hash}", server_hash)
     };
     let auth_client = server
         .auth_client
@@ -107,7 +116,6 @@ pub fn is_texture_url_valid(url: Url, config: &TextureConfig) -> Result<(), Text
         return Err(TextureError::DisallowedUrlScheme(scheme.to_string()));
     }
     let domain = url.domain().unwrap_or("");
-    dbg!(domain);
     if !config
         .allowed_url_domains
         .iter()

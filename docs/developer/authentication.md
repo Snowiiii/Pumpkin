@@ -21,9 +21,71 @@ Cracked accounts are also often used for Botting and [Denial of Service](https:/
 By default the `online_mode` is enabled in the configuration, This enables Authentication disallowing [Cracked Accounts](#cracked-accounts). When you are willing to allow Cracked Accounts, you can dissable `online_mode`
 in the `configuration.toml`
 
-### How Authentication works
+### How Mojang Authentication works
+
 To ensure a player has a premium accounts:
 
 1. A client with a premium account sends a login request to the Mojang session server.
-2. Mojang's servers verify the client's credentials and add the player to the their Servers
-3. Now our server will send a Request to the Session servers and check if the Player has joined the Session Server .
+2. **Mojang's servers** verify the client's credentials and add the player to the their Servers
+3. Now our server will send a Request to the Session servers and check if the Player has joined the Session Server.
+4. If the request was successfull, It will give use more information about the Player (e.g. UUID, Name, Skin/Cape...)
+
+### Custom Authentication Server
+
+Pumpkin does support custom Authentication servers, You can replace the Authentication URL in `features.toml`.
+
+Pumpkin Authentication works like this (Mojang/Custom):
+
+1. GET Request > Authentication
+
+2. Status Code 200 > Successfull
+
+3. Successfull > Parse JSON Game Profile
+
+#### Game Profile
+
+```rust
+id: UUID
+```
+
+```rust
+name: String
+```
+
+```rust
+properties: Array<Property>
+```
+
+> [!IMPORTANT]
+> Optional, Only present when actions are taken
+
+```rust
+profile_actions: Array<ProfileAction>
+```
+
+##### Property
+
+```rust
+name: String
+```
+
+> [!IMPORTANT]
+> base 64
+
+```rust
+- value: String
+```
+
+> [!IMPORTANT]
+> Optional, base 64
+
+```rust
+- signature: String
+```
+
+##### Profile Action
+
+```rust
+FORCED_NAME_CHANGE
+USING_BANNED_SKIN
+```

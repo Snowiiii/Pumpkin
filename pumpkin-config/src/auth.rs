@@ -9,9 +9,13 @@ pub struct AuthenticationConfig {
     #[serde_inline_default(true)]
     pub enabled: bool,
 
+    pub auth_url: String,
+
     /// Prevent proxy connections.
     #[serde_inline_default(false)]
     pub prevent_proxy_connections: bool,
+
+    pub prevent_proxy_connection_auth_url: String,
 
     /// Player profile handling.
     #[serde(default)]
@@ -29,6 +33,8 @@ impl Default for AuthenticationConfig {
             prevent_proxy_connections: false,
             player_profile: Default::default(),
             textures: Default::default(),
+            auth_url: "https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}".to_string(),
+            prevent_proxy_connection_auth_url: "https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}".to_string(),
         }
     }
 }

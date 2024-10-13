@@ -41,12 +41,40 @@ Wether Authentication is enabled
 enabled=false
 ```
 
+#### Authentication URL
+
+The Authentication URL being used
+
+> [!IMPORTANT]
+> {username} | The Username from the requested player
+>
+> {server_hash} | The SHA1 Encrypted hash
+
+```toml
+auth_url="https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}"
+```
+
 #### Prevent Proxy Connections
 
 Prevent proxy connections
 
 ```toml
 prevent_proxy_connections=false
+```
+
+#### Prevent Proxy Connections URL
+
+The Authentication URL being used
+
+> [!IMPORTANT]
+> {username} | The Username from the requested player
+>
+> {server_hash} | The SHA1 Encrypted hash
+>
+> {ip} | The IP of the requested Player
+
+```toml
+prevent_proxy_connection_auth_url = "https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}"
 ```
 
 #### Player Profile
@@ -341,6 +369,7 @@ swing=true
 ```
 
 ### Logging
+
 `logging`
 Whether Logging is enabled
 
@@ -349,10 +378,13 @@ enable=true
 ```
 
 #### Level
+
 At which level should be logged
+
 ```toml
 level=Info
 ```
+
 ```toml
 Off
 Error
@@ -363,24 +395,31 @@ Trace
 ```
 
 #### Env
+
 Enables the user to choose log level by setting `RUST_LOG=<level>` environment variable
+
 ```toml
 env=false
 ```
 
 #### Threads
+
 Should threads be printed in the message
+
 ```toml
 threads=true
 ```
 
 #### Color
+
 Should color be enabled for logging messages
+
 ```toml
 color=true
 ```
 
 #### Timestamp
+
 Should the timestamp be printed in the message
 
 ```toml
