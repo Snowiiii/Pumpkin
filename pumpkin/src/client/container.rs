@@ -56,11 +56,7 @@ impl Player {
         let total_opened_containers = inventory.total_opened_containers;
         let container = OptionallyCombinedContainer::new(&mut inventory, container);
 
-        let slots = container
-            .iter_slots()
-            .into_iter()
-            .map(Slot::from)
-            .collect_vec();
+        let slots = container.iter_slots().map(Slot::from).collect_vec();
 
         let carried_item = {
             if let Some(item) = *self.carried_item.lock() {
@@ -112,13 +108,11 @@ impl Player {
         let state_id = self.inventory.lock().state_id;
         // This is just checking for regular desync, client hasn't done anything malicious
         if state_id != packet.state_id.0 as u32 {
-            dbg!("here");
             self.set_container_content(opened_container.as_deref_mut());
             return Ok(());
         }
 
         if opened_container.is_some() {
-            dbg!("the container is opened");
             if packet.window_id != self.inventory.lock().total_opened_containers {
                 return Err(InventoryError::ClosedContainerInteract(self.entity_id()));
             }
@@ -206,9 +200,8 @@ impl Player {
 
         match slot {
             container_click::Slot::Normal(slot) => {
-                dbg!(*self.carried_item.lock());
-                container.handle_item_change(&mut self.carried_item.lock(), slot, mouse_click)?;
-                dbg!(*self.carried_item.lock());
+                let mut carried_item = self.carried_item.lock();
+                container.handle_item_change(&mut carried_item, slot, mouse_click)?;
             }
             container_click::Slot::OutsideInventory => (),
         }
@@ -227,9 +220,9 @@ impl Player {
             // TODO: this is definitely not working as intended
             container_click::Slot::Normal(slot) => {
                 let Some(Some(item_in_pressed_slot)) = container.get_slot(slot) else {
-                    todo!()
+                    return Ok(());
                 };
-                let item_in_pressed_slot = item_in_pressed_slot.clone();
+                let item_in_pressed_slot = *item_in_pressed_slot;
                 // Hotbar
                 let find_condition = |(slot_number, slot): (usize, &mut Option<ItemStack>)| {
                     // TODO: Check for max item count here

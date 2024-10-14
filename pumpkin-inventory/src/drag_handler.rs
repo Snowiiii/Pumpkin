@@ -108,10 +108,8 @@ impl DragHandler {
                             } else {
                                 carried_item.item_count += 1;
                             }
-                        } else {
-                            if let Some(slot) = container.get_slot_mut(slot) {
-                                *slot = Some(single_item);
-                            }
+                        } else if let Some(slot) = container.get_slot_mut(slot) {
+                            *slot = Some(single_item);
                         }
                     }
                 });

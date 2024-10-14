@@ -58,15 +58,15 @@ impl PlayerInventory {
                 return Err(InventoryError::InvalidSlot);
             };
             *slot = item;
-            return Ok(());
-        }
-        let slot_condition = self.slot_condition(slot)?;
-        if let Some(item) = item {
-            if slot_condition(&item) {
-                let Some(slot) = self.get_slot_mut(slot) else {
-                    return Err(InventoryError::InvalidSlot);
-                };
-                *slot = Some(item);
+        } else {
+            let slot_condition = self.slot_condition(slot)?;
+            if let Some(item) = item {
+                if slot_condition(&item) {
+                    let Some(slot) = self.get_slot_mut(slot) else {
+                        return Err(InventoryError::InvalidSlot);
+                    };
+                    *slot = Some(item);
+                }
             }
         }
         Ok(())
@@ -154,7 +154,7 @@ impl Container for PlayerInventory {
     }
 
     fn iter_slots<'s>(&'s self) -> Box<(dyn Iterator<Item = &'s Option<ItemStack>> + 's)> {
-        Box::new(self.slots().into_iter())
+        Box::new(self.slots())
     }
 
     fn iter_combinable_slots<'s>(&'s self) -> Box<dyn Iterator<Item = &'s Option<ItemStack>> + 's> {

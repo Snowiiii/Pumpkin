@@ -66,11 +66,8 @@ pub trait Container: Sync + Send {
         slot: usize,
         mouse_click: MouseClick,
     ) -> Result<(), InventoryError> {
-        handle_item_change(
-            carried_item,
-            self.get_slot_mut(slot).ok_or(InventoryError::InvalidSlot)?,
-            mouse_click,
-        );
+        let slot = self.get_slot_mut(slot).ok_or(InventoryError::InvalidSlot)?;
+        handle_item_change(carried_item, slot, mouse_click);
         Ok(())
     }
 
@@ -287,8 +284,9 @@ impl<'a> Container for OptionallyCombinedContainer<'a, 'a> {
             Some(container) => {
                 if (0..container.size()).contains(&slot) {
                     container.get_slot_mut(slot)
-                } else if (container.size()..(container.size() + 27)).contains(&slot) {
-                    self.inventory.get_slot_mut(slot - container.size())
+                } else if (container.size()..(container.size() + 4 * 9)).contains(&slot) {
+                    // 9 slots before main inventory slots
+                    self.inventory.get_slot_mut(slot - container.size() + 9)
                 } else {
                     None
                 }
