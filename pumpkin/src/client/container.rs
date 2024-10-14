@@ -20,7 +20,7 @@ use pumpkin_world::item::ItemStack;
 use std::sync::Arc;
 
 impl Player {
-    pub fn open_container(&self, server: &Arc<Server>, minecraft_menu_id: &str) {
+    pub fn open_container(&self, server: &Server, minecraft_menu_id: &str) {
         let mut inventory = self.inventory.lock();
         inventory.state_id = 0;
         let total_opened_containers = inventory.total_opened_containers;
@@ -58,13 +58,10 @@ impl Player {
 
         let slots = container.iter_slots().map(Slot::from).collect_vec();
 
-        let carried_item = {
-            if let Some(item) = *self.carried_item.lock() {
-                (item).into()
-            } else {
-                Slot::empty()
-            }
-        };
+        let carried_item = self
+            .carried_item
+            .lock()
+            .map_or_else(Slot::empty, Slot::from);
 
         // Gets the previous value
         inventory.state_id += 1;
