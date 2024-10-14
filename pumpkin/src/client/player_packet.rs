@@ -568,10 +568,7 @@ impl Player {
     // But this is not possible yet
     pub fn handle_close_container(&self, server: &Arc<Server>, packet: SCloseContainer) {
         // window_id 0 represents both 9x1 Generic AND inventory here
-        self.inventory
-            .lock()
-            .state_id
-            .store(0, std::sync::atomic::Ordering::Relaxed);
+        self.inventory.lock().state_id = 0;
         let open_container = self.open_container.load();
         if let Some(id) = open_container {
             let mut open_containers = server.open_containers.write();

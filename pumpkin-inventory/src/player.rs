@@ -1,7 +1,3 @@
-use std::iter;
-
-use std::sync::atomic::AtomicU32;
-
 use crate::container_click::MouseClick;
 use crate::{handle_item_change, Container, InventoryError, WindowType};
 use pumpkin_world::item::ItemStack;
@@ -15,7 +11,7 @@ pub struct PlayerInventory {
     offhand: Option<ItemStack>,
     // current selected slot in hotbar
     selected: usize,
-    pub state_id: AtomicU32,
+    pub state_id: u32,
     // Notchian server wraps this value at 100, we can just keep it as a u8 that automatically wraps
     pub total_opened_containers: u8,
 }
@@ -36,7 +32,7 @@ impl PlayerInventory {
             offhand: None,
             // TODO: What when player spawns in with an different index ?
             selected: 0,
-            state_id: AtomicU32::new(0),
+            state_id: 0,
             total_opened_containers: 2,
         }
     }
