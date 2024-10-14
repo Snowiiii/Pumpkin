@@ -1,4 +1,4 @@
-use std::{collections::HashMap, net::IpAddr, sync::Arc};
+use std::{collections::HashMap, net::IpAddr};
 
 use base64::{engine::general_purpose, Engine};
 use pumpkin_config::{auth::TextureConfig, ADVANCED_CONFIG};
@@ -8,8 +8,6 @@ use reqwest::{StatusCode, Url};
 use serde::Deserialize;
 use thiserror::Error;
 use uuid::Uuid;
-
-use crate::server::Server;
 
 #[derive(Deserialize, Clone, Debug)]
 #[expect(dead_code)]
@@ -55,10 +53,9 @@ pub async fn authenticate(
     username: &str,
     server_hash: &str,
     ip: &IpAddr,
-    server: &Arc<Server>,
+    auth_client: &reqwest::Client,
 ) -> Result<GameProfile, AuthError> {
     assert!(ADVANCED_CONFIG.authentication.enabled);
-    assert!(server.auth_client.is_some());
     let address = if ADVANCED_CONFIG.authentication.prevent_proxy_connections {
         ADVANCED_CONFIG
             .authentication
@@ -73,10 +70,6 @@ pub async fn authenticate(
             .replace("{username}", username)
             .replace("{server_hash}", server_hash)
     };
-    let auth_client = server
-        .auth_client
-        .as_ref()
-        .ok_or(AuthError::MissingAuthClient)?;
 
     let response = auth_client
         .get(address)
@@ -92,7 +85,7 @@ pub async fn authenticate(
     Ok(profile)
 }
 
-pub fn unpack_textures(property: &Property, config: &TextureConfig) -> Result<(), TextureError> {
+pub fn validate_textures(property: &Property, config: &TextureConfig) -> Result<(), TextureError> {
     let from64 = general_purpose::STANDARD
         .decode(&property.value)
         .map_err(|e| TextureError::DecodeError(e.to_string()))?;
@@ -134,6 +127,12 @@ pub enum AuthError {
     FailedResponse,
     #[error("Failed to verify username")]
     UnverifiedUsername,
+    #[error("You are banned from Authentication servers")]
+    Banned,
+    #[error("Texture Error {0}")]
+    TextureError(TextureError),
+    #[error("You have disallowed actions from Authentication servers")]
+    DisallowedAction,
     #[error("Failed to parse JSON into Game Profile")]
     FailedParse,
     #[error("Unknown Status Code")]

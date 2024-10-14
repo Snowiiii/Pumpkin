@@ -266,6 +266,9 @@ For Players:
 }
 ```
 
+### Compression
+Minecraft Packets **can** use the ZLib compression for decoding/encoding there is usally a threshold set when compression is applied, This most often affects Chunk Packets.
+
 ### Porting
 
 To port to a new Minecraft version, You can compare difference in Protocol on wiki.vg https://wiki.vg/index.php?title=Protocol&action=history

@@ -83,7 +83,7 @@ impl CachedStatus {
         }
     }
 
-    fn load_icon(path: &str) -> String {
+    fn load_icon<P: AsRef<Path>>(path: P) -> String {
         let icon = png::Decoder::new(File::open(path).expect("Failed to load icon"));
         let mut reader = icon.read_info().unwrap();
         let info = reader.info();

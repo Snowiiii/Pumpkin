@@ -222,9 +222,7 @@ impl Client {
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
         match self.connection_state.load() {
-            pumpkin_protocol::ConnectionState::HandShake => {
-                self.handle_handshake_packet(server, packet)
-            }
+            pumpkin_protocol::ConnectionState::HandShake => self.handle_handshake_packet(packet),
             pumpkin_protocol::ConnectionState::Status => self.handle_status_packet(server, packet),
             // TODO: Check config if transfer is enabled
             pumpkin_protocol::ConnectionState::Login
@@ -241,15 +239,11 @@ impl Client {
         }
     }
 
-    fn handle_handshake_packet(
-        &self,
-        server: &Arc<Server>,
-        packet: &mut RawPacket,
-    ) -> Result<(), DeserializerError> {
+    fn handle_handshake_packet(&self, packet: &mut RawPacket) -> Result<(), DeserializerError> {
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SHandShake::PACKET_ID => {
-                self.handle_handshake(server, SHandShake::read(bytebuf)?);
+                self.handle_handshake(SHandShake::read(bytebuf)?);
                 Ok(())
             }
             _ => {
@@ -274,7 +268,7 @@ impl Client {
                 Ok(())
             }
             SStatusPingRequest::PACKET_ID => {
-                self.handle_ping_request(server, SStatusPingRequest::read(bytebuf)?);
+                self.handle_ping_request(SStatusPingRequest::read(bytebuf)?);
                 Ok(())
             }
             _ => {
@@ -304,7 +298,7 @@ impl Client {
                 Ok(())
             }
             SLoginPluginResponse::PACKET_ID => {
-                self.handle_plugin_response(server, SLoginPluginResponse::read(bytebuf)?);
+                self.handle_plugin_response(SLoginPluginResponse::read(bytebuf)?);
                 Ok(())
             }
             SLoginAcknowledged::PACKET_ID => {
@@ -329,18 +323,15 @@ impl Client {
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SClientInformationConfig::PACKET_ID => {
-                self.handle_client_information_config(
-                    server,
-                    SClientInformationConfig::read(bytebuf)?,
-                );
+                self.handle_client_information_config(SClientInformationConfig::read(bytebuf)?);
                 Ok(())
             }
             SPluginMessage::PACKET_ID => {
-                self.handle_plugin_message(server, SPluginMessage::read(bytebuf)?);
+                self.handle_plugin_message(SPluginMessage::read(bytebuf)?);
                 Ok(())
             }
             SAcknowledgeFinishConfig::PACKET_ID => {
-                self.handle_config_acknowledged(server, SAcknowledgeFinishConfig::read(bytebuf)?)
+                self.handle_config_acknowledged(SAcknowledgeFinishConfig::read(bytebuf)?)
                     .await;
                 Ok(())
             }

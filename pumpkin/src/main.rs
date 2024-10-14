@@ -36,7 +36,6 @@ pub mod entity;
 pub mod proxy;
 pub mod rcon;
 pub mod server;
-pub mod util;
 pub mod world;
 
 fn init_logger() {
@@ -154,7 +153,7 @@ fn main() -> io::Result<()> {
         if rcon.enabled {
             let server = server.clone();
             tokio::spawn(async move {
-                RCONServer::new(&rcon, server).await.unwrap();
+                RCONServer::new(&rcon, &server).await.unwrap();
             });
         }
         loop {
@@ -167,7 +166,7 @@ fn main() -> io::Result<()> {
 
             for event in events.iter() {
                 match event.token() {
-                    SERVER => loop {
+                    s if s == SERVER => loop {
                         // Received an event for the TCP server socket, which
                         // indicates we can accept an connection.
                         let (mut connection, address) = match listener.accept() {
@@ -236,7 +235,7 @@ fn main() -> io::Result<()> {
                     },
                     // Maybe received an event for a TCP connection.
                     token => {
-                        // Poll Players
+                        // poll Player
                         if let Some(player) = players.get_mut(&token) {
                             player.client.poll(event).await;
                             let closed = player
@@ -269,7 +268,6 @@ fn main() -> io::Result<()> {
                                     .load(std::sync::atomic::Ordering::Relaxed),
                             )
                         } else {
-                            // Sporadic events happen, we can safely ignore them.
                             (false, false)
                         };
                         if done || make_player {

@@ -70,6 +70,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pumpkin-${{ matrix.os }}
+          compression-level: 9
           path: target/${{ matrix.target }}/release/pumpkin*
   clippy_release:
     name: Run lints in release mode

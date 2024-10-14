@@ -294,7 +294,7 @@ impl Player {
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SConfirmTeleport::PACKET_ID => {
-                self.handle_confirm_teleport(server, SConfirmTeleport::read(bytebuf)?);
+                self.handle_confirm_teleport(SConfirmTeleport::read(bytebuf)?);
                 Ok(())
             }
             SChatCommand::PACKET_ID => {
@@ -302,41 +302,37 @@ impl Player {
                 Ok(())
             }
             SPlayerPosition::PACKET_ID => {
-                self.handle_position(server, SPlayerPosition::read(bytebuf)?)
-                    .await;
+                self.handle_position(SPlayerPosition::read(bytebuf)?).await;
                 Ok(())
             }
             SPlayerPositionRotation::PACKET_ID => {
-                self.handle_position_rotation(server, SPlayerPositionRotation::read(bytebuf)?)
+                self.handle_position_rotation(SPlayerPositionRotation::read(bytebuf)?)
                     .await;
                 Ok(())
             }
             SPlayerRotation::PACKET_ID => {
-                self.handle_rotation(server, SPlayerRotation::read(bytebuf)?)
-                    .await;
+                self.handle_rotation(SPlayerRotation::read(bytebuf)?).await;
                 Ok(())
             }
             SSetPlayerGround::PACKET_ID => {
-                self.handle_player_ground(server, SSetPlayerGround::read(bytebuf)?);
+                self.handle_player_ground(SSetPlayerGround::read(bytebuf)?);
                 Ok(())
             }
             SPlayerCommand::PACKET_ID => {
-                self.handle_player_command(server, SPlayerCommand::read(bytebuf)?)
+                self.handle_player_command(SPlayerCommand::read(bytebuf)?)
                     .await;
                 Ok(())
             }
             SSwingArm::PACKET_ID => {
-                self.handle_swing_arm(server, SSwingArm::read(bytebuf)?)
-                    .await;
+                self.handle_swing_arm(SSwingArm::read(bytebuf)?).await;
                 Ok(())
             }
             SChatMessage::PACKET_ID => {
-                self.handle_chat_message(server, SChatMessage::read(bytebuf)?)
-                    .await;
+                self.handle_chat_message(SChatMessage::read(bytebuf)?).await;
                 Ok(())
             }
             SClientInformationPlay::PACKET_ID => {
-                self.handle_client_information_play(server, SClientInformationPlay::read(bytebuf)?);
+                self.handle_client_information_play(SClientInformationPlay::read(bytebuf)?);
                 Ok(())
             }
             SInteract::PACKET_ID => {
@@ -345,30 +341,29 @@ impl Player {
                 Ok(())
             }
             SPlayerAction::PACKET_ID => {
-                self.handle_player_action(server, SPlayerAction::read(bytebuf)?)
+                self.handle_player_action(SPlayerAction::read(bytebuf)?)
                     .await;
                 Ok(())
             }
             SUseItemOn::PACKET_ID => {
-                self.handle_use_item_on(server, SUseItemOn::read(bytebuf)?)
-                    .await;
+                self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await;
                 Ok(())
             }
             SUseItem::PACKET_ID => {
-                self.handle_use_item(server, SUseItem::read(bytebuf)?);
+                self.handle_use_item(SUseItem::read(bytebuf)?);
                 Ok(())
             }
             SSetHeldItem::PACKET_ID => {
-                self.handle_set_held_item(server, SSetHeldItem::read(bytebuf)?);
+                self.handle_set_held_item(SSetHeldItem::read(bytebuf)?);
                 Ok(())
             }
             SSetCreativeSlot::PACKET_ID => {
-                self.handle_set_creative_slot(server, SSetCreativeSlot::read(bytebuf)?)
+                self.handle_set_creative_slot(SSetCreativeSlot::read(bytebuf)?)
                     .unwrap();
                 Ok(())
             }
             SPlayPingRequest::PACKET_ID => {
-                self.handle_play_ping_request(server, SPlayPingRequest::read(bytebuf)?);
+                self.handle_play_ping_request(SPlayPingRequest::read(bytebuf)?);
                 Ok(())
             }
             SClickContainer::PACKET_ID => {

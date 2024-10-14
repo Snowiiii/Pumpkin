@@ -2,7 +2,6 @@ use std::{
     collections::HashMap,
     io::{self, Read, Write},
     net::SocketAddr,
-    sync::Arc,
 };
 
 use mio::{
@@ -32,7 +31,7 @@ const SERVER: Token = Token(0);
 pub struct RCONServer;
 
 impl RCONServer {
-    pub async fn new(config: &RCONConfig, server: Arc<Server>) -> Result<Self, io::Error> {
+    pub async fn new(config: &RCONConfig, server: &Server) -> Result<Self, io::Error> {
         assert!(config.enabled, "RCON is not enabled");
         let mut poll = Poll::new().unwrap();
         let mut listener = TcpListener::bind(config.address).unwrap();
@@ -91,7 +90,7 @@ impl RCONServer {
 
                     token => {
                         let done = if let Some(client) = connections.get_mut(&token) {
-                            client.handle(&server, &password).await
+                            client.handle(server, &password).await
                         } else {
                             false
                         };
@@ -139,7 +138,7 @@ impl RCONClient {
         }
     }
 
-    pub async fn handle(&mut self, server: &Arc<Server>, password: &str) -> bool {
+    pub async fn handle(&mut self, server: &Server, password: &str) -> bool {
         if !self.closed {
             loop {
                 match self.read_bytes() {
@@ -162,7 +161,7 @@ impl RCONClient {
         self.closed
     }
 
-    async fn poll(&mut self, server: &Arc<Server>, password: &str) -> Result<(), PacketError> {
+    async fn poll(&mut self, server: &Server, password: &str) -> Result<(), PacketError> {
         loop {
             let packet = match self.receive_packet().await? {
                 Some(p) => p,

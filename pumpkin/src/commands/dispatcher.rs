@@ -7,7 +7,6 @@ use crate::commands::tree::{Command, CommandTree, ConsumedArgs, NodeType, RawArg
 use crate::commands::CommandSender;
 use crate::server::Server;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 #[derive(Debug)]
 pub(crate) enum InvalidTreeError {
@@ -27,7 +26,7 @@ pub struct CommandDispatcher<'a> {
 
 /// Stores registered [CommandTree]s and dispatches commands to them.
 impl<'a> CommandDispatcher<'a> {
-    pub fn handle_command(&self, sender: &mut CommandSender, server: &Arc<Server>, cmd: &str) {
+    pub fn handle_command(&self, sender: &mut CommandSender, server: &Server, cmd: &str) {
         if let Err(err) = self.dispatch(sender, server, cmd) {
             sender.send_message(
                 TextComponent::text(&err).color_named(pumpkin_core::text::color::NamedColor::Red),
@@ -39,7 +38,7 @@ impl<'a> CommandDispatcher<'a> {
     pub(crate) fn dispatch(
         &'a self,
         src: &mut CommandSender,
-        server: &Arc<Server>,
+        server: &Server,
         cmd: &str,
     ) -> Result<(), String> {
         let mut parts = cmd.split_ascii_whitespace();
@@ -87,7 +86,7 @@ impl<'a> CommandDispatcher<'a> {
 
     fn try_is_fitting_path(
         src: &mut CommandSender,
-        server: &Arc<Server>,
+        server: &Server,
         path: Vec<usize>,
         tree: &CommandTree,
         mut raw_args: RawArgs,
