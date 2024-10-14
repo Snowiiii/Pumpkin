@@ -89,7 +89,7 @@ impl<'a> DensityFunctionImpl<'a> for WierdScaledFunction<'a> {
         0f64
     }
 
-    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
         visitor.apply(Arc::new(DensityFunction::Wierd(WierdScaledFunction {
             input: self.input.apply(visitor),
             noise: visitor.apply_internal_noise(self.noise.clone()),
@@ -101,12 +101,10 @@ impl<'a> DensityFunctionImpl<'a> for WierdScaledFunction<'a> {
         self.apply_loc(pos, self.input.sample(pos))
     }
 
-    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
-        let densities = self.input.fill(densities, applier);
-        densities
-            .iter()
-            .enumerate()
-            .map(|(i, x)| self.apply_loc(&applier.at(i as i32), *x))
-            .collect()
+    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
+        self.input.fill(densities, applier);
+        densities.iter_mut().enumerate().for_each(|(i, val)| {
+            *val = self.apply_loc(&applier.at(i), *val);
+        });
     }
 }

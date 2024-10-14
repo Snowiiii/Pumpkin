@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::LazyLock};
+use std::{
+    collections::HashMap,
+    sync::{Arc, LazyLock},
+};
 
 use data::BlendingData;
 use enum_dispatch::enum_dispatch;
@@ -11,8 +14,12 @@ use crate::{biome::Biome, height::HeightLimitViewImpl};
 
 use super::{
     biome_coords,
-    chunk::Chunk,
-    noise::{builtin_noise_params, density::NoisePosImpl, lerp, perlin::DoublePerlinNoiseSampler},
+    chunk::{Chunk, ChunkPos},
+    noise::{
+        density::NoisePosImpl,
+        lerp,
+        perlin::{DoublePerlinNoiseParameters, DoublePerlinNoiseSampler},
+    },
     supplier::{BiomeSupplier, StaticBiomeSupplier},
 };
 
@@ -21,21 +28,38 @@ pub mod data;
 static OFFSET_NOISE: LazyLock<DoublePerlinNoiseSampler> = LazyLock::new(|| {
     DoublePerlinNoiseSampler::new(
         &mut RandomGenerator::Xoroshiro(Xoroshiro::from_seed(42)),
-        &builtin_noise_params::OFFSET,
+        &DoublePerlinNoiseParameters::new(-3, &[1f64; 4]),
     )
 });
 const BLENDING_BIOME_DISTANCE_THRESHOLD: i32 = (7 << 2) - 1;
 const BLENDING_CHUNK_DISTANCE_THRESHOLD: i32 = (BLENDING_BIOME_DISTANCE_THRESHOLD + 3) >> 2;
 const CLOSE_BLENDING_DISTANCE_THRESHOLD: i32 = 5 >> 2;
 
+#[derive(Clone)]
 pub struct BlendResult {
     alpha: f64,
     offset: f64,
 }
 
+impl BlendResult {
+    pub fn new(alpha: f64, offset: f64) -> Self {
+        Self { alpha, offset }
+    }
+
+    pub fn alpha(&self) -> f64 {
+        self.alpha
+    }
+
+    pub fn offset(&self) -> f64 {
+        self.offset
+    }
+}
+
 #[enum_dispatch(BlenderImpl)]
+#[derive(Clone)]
 pub enum Blender {
-    NoBlendBlender,
+    None(NoBlendBlender),
+    Standard(StandardBlender),
 }
 
 #[enum_dispatch]
@@ -45,6 +69,7 @@ pub trait BlenderImpl {
     fn biome_supplier(&self, supplier: &BiomeSupplier) -> BiomeSupplier;
 }
 
+#[derive(Clone)]
 pub struct NoBlendBlender {}
 impl BlenderImpl for NoBlendBlender {
     fn calculate(&self, _block_x: i32, _block_z: i32) -> BlendResult {
@@ -63,9 +88,10 @@ impl BlenderImpl for NoBlendBlender {
     }
 }
 
+#[derive(Clone)]
 struct StandardBlender {
-    blend_data: HashMap<u64, BlendingData>,
-    close_blend_data: HashMap<u64, BlendingData>,
+    blend_data: Arc<HashMap<u64, BlendingData>>,
+    close_blend_data: Arc<HashMap<u64, BlendingData>>,
 }
 
 #[derive(Clone)]
@@ -75,13 +101,13 @@ enum BlendingSampleType {
 }
 
 impl StandardBlender {
-    pub fn new(
+    fn new(
         blend_data: HashMap<u64, BlendingData>,
         close_blend_data: HashMap<u64, BlendingData>,
     ) -> Self {
         Self {
-            blend_data,
-            close_blend_data,
+            blend_data: Arc::new(blend_data),
+            close_blend_data: Arc::new(close_blend_data),
         }
     }
 
@@ -133,7 +159,10 @@ impl StandardBlender {
         biome_y: i32,
         biome_z: i32,
     ) -> f64 {
-        if let Some(blending_data) = self.blend_data.get(&Chunk::hash(chunk_x, chunk_z)) {
+        if let Some(blending_data) = self
+            .blend_data
+            .get(&ChunkPos::new(chunk_x, chunk_z).to_long())
+        {
             match sample_type {
                 BlendingSampleType::Height => blending_data.height(
                     (biome_x - biome_coords::from_chunk(chunk_x)) as usize,
@@ -153,8 +182,8 @@ impl StandardBlender {
 
     fn blend_biome(&self, x: i32, y: i32, z: i32) -> Option<Biome> {
         for (k, v) in self.blend_data.iter() {
-            let biome_x = biome_coords::from_chunk(Chunk::packed_x(*k));
-            let biome_z = biome_coords::from_chunk(Chunk::packed_z(*k));
+            let biome_x = biome_coords::from_chunk(ChunkPos::packed_x(*k));
+            let biome_z = biome_coords::from_chunk(ChunkPos::packed_z(*k));
 
             if y >= biome_coords::from_block(v.height_limit.bottom_y())
                 && y < biome_coords::from_block(v.height_limit.top_y())
@@ -211,8 +240,8 @@ impl BlenderImpl for StandardBlender {
             let mut val3 = f64::INFINITY;
 
             for (chunk_pos, data) in self.blend_data.iter() {
-                let biome_x = biome_coords::from_chunk(Chunk::packed_x(*chunk_pos));
-                let biome_z = biome_coords::from_chunk(Chunk::packed_z(*chunk_pos));
+                let biome_x = biome_coords::from_chunk(ChunkPos::packed_x(*chunk_pos));
+                let biome_z = biome_coords::from_chunk(ChunkPos::packed_z(*chunk_pos));
 
                 for (index, height) in data.surface_heights.iter().enumerate() {
                     if *height != f64::MAX {
@@ -264,8 +293,8 @@ impl BlenderImpl for StandardBlender {
             let mut val3 = f64::INFINITY;
 
             for (chunk_pos, data) in self.close_blend_data.iter() {
-                let biome_x = biome_coords::from_chunk(Chunk::packed_z(*chunk_pos));
-                let biome_y = biome_coords::from_chunk(Chunk::packed_z(*chunk_pos));
+                let biome_x = biome_coords::from_chunk(ChunkPos::packed_z(*chunk_pos));
+                let biome_y = biome_coords::from_chunk(ChunkPos::packed_z(*chunk_pos));
                 let min_half_section_y = j - 1;
                 let max_half_section_y = j + 1;
 

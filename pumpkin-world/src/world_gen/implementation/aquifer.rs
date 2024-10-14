@@ -1,4 +1,5 @@
 use crate::{self as pumpkin_world, world_gen::noise::density::NoisePosImpl};
+use enum_dispatch::enum_dispatch;
 use pumpkin_macros::block_id;
 
 use crate::block::BlockId;
@@ -19,6 +20,7 @@ impl FluidLevel {
     }
 }
 
+#[derive(Clone)]
 pub struct FluidLevelSampler {
     sea_level: i32,
     fluid_level_1: FluidLevel,
@@ -35,12 +37,24 @@ impl FluidLevelSampler {
     }
 }
 
+#[enum_dispatch(AquiferSamplerImpl)]
+pub enum AquifierSampler {
+    SeaLevel(AquiferSeaLevel),
+}
+
+#[enum_dispatch]
 pub trait AquiferSamplerImpl {
     fn apply(&self, pos: &impl NoisePosImpl, density: f64) -> Option<BlockId>;
 }
 
 pub struct AquiferSeaLevel {
     level_sampler: FluidLevelSampler,
+}
+
+impl AquiferSeaLevel {
+    pub fn new(level_sampler: FluidLevelSampler) -> Self {
+        Self { level_sampler }
+    }
 }
 
 impl AquiferSamplerImpl for AquiferSeaLevel {
@@ -56,5 +70,3 @@ impl AquiferSamplerImpl for AquiferSeaLevel {
         }
     }
 }
-
-pub struct Aquifier {}

@@ -33,7 +33,7 @@ impl<'a> SplineValue<'a> {
         }
     }
 
-    fn visit(&'a self, visitor: &'a Visitor) -> SplineValue<'a> {
+    fn visit(&self, visitor: &Visitor<'a>) -> SplineValue<'a> {
         match self {
             Self::Fixed(val) => Self::Fixed(*val),
             Self::Spline(spline) => Self::Spline(spline.visit(visitor)),
@@ -171,7 +171,7 @@ impl<'a> Spline<'a> {
         }
     }
 
-    pub fn visit(&'a self, visitor: &'a Visitor) -> Spline<'a> {
+    pub fn visit(&self, visitor: &Visitor<'a>) -> Spline<'a> {
         let new_function = visitor.apply(self.function.clone());
         let new_points = self
             .points
@@ -202,11 +202,11 @@ impl<'a> DensityFunctionImpl<'a> for SplineFunction<'a> {
         self.spline.apply(pos) as f64
     }
 
-    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
+    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
         applier.fill(densities, &DensityFunction::Spline(self.clone()))
     }
 
-    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
         let new_spline = self.spline.visit(visitor);
         Arc::new(DensityFunction::Spline(SplineFunction {
             spline: Arc::new(new_spline),

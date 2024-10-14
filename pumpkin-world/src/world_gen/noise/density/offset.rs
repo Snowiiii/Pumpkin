@@ -27,13 +27,13 @@ impl<'a> DensityFunctionImpl<'a> for ShiftAFunction<'a> {
         self.sample_3d(pos.x() as f64, 0f64, pos.z() as f64)
     }
 
-    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
         visitor.apply(Arc::new(DensityFunction::ShiftA(ShiftAFunction {
             offset: visitor.apply_internal_noise(self.offset.clone()),
         })))
     }
 
-    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
+    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
         applier.fill(densities, &DensityFunction::ShiftA(self.clone()))
     }
 
@@ -68,13 +68,13 @@ impl<'a> DensityFunctionImpl<'a> for ShiftBFunction<'a> {
         self.sample_3d(pos.z() as f64, pos.x() as f64, 0f64)
     }
 
-    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
         visitor.apply(Arc::new(DensityFunction::ShiftB(ShiftBFunction {
             offset: visitor.apply_internal_noise(self.offset.clone()),
         })))
     }
 
-    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
+    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
         applier.fill(densities, &DensityFunction::ShiftB(self.clone()))
     }
 

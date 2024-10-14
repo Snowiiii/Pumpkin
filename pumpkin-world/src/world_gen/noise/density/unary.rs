@@ -18,7 +18,7 @@ impl<'a> UnaryDensityFunction<'a> for ClampFunction<'a> {
 }
 
 impl<'a> DensityFunctionImpl<'a> for ClampFunction<'a> {
-    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
         Arc::new(DensityFunction::Clamp(ClampFunction {
             input: self.input.apply(visitor),
             min: self.min,
@@ -30,9 +30,11 @@ impl<'a> DensityFunctionImpl<'a> for ClampFunction<'a> {
         self.apply_density(self.input.sample(pos))
     }
 
-    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
-        let densities = self.input.fill(densities, applier);
-        densities.iter().map(|x| self.apply_density(*x)).collect()
+    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
+        self.input.fill(densities, applier);
+        densities.iter_mut().for_each(|val| {
+            *val = self.apply_density(*val);
+        });
     }
 
     fn min(&self) -> f64 {
@@ -121,12 +123,14 @@ impl<'a> DensityFunctionImpl<'a> for UnaryFunction<'a> {
         self.apply_density(self.input.sample(pos))
     }
 
-    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
-        let densities = self.input.fill(densities, applier);
-        densities.iter().map(|x| self.apply_density(*x)).collect()
+    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
+        self.input.fill(densities, applier);
+        densities.iter_mut().for_each(|val| {
+            *val = self.apply_density(*val);
+        });
     }
 
-    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
         let raw = Self::create(self.action.clone(), self.input.apply(visitor));
         Arc::new(DensityFunction::Unary(raw))
     }
