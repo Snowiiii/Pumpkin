@@ -3,7 +3,6 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use parking_lot::Mutex;
 use pumpkin_core::math::vector2::Vector2;
 use rayon::prelude::*;
-use thiserror::Error;
 use tokio::sync::mpsc;
 
 use crate::{
@@ -32,9 +31,6 @@ pub struct SaveFile {
     root_folder: PathBuf,
     pub region_folder: PathBuf,
 }
-
-#[derive(Error, Debug)]
-pub enum WorldError {}
 
 impl Level {
     pub fn from_root_folder(root_folder: PathBuf) -> Self {
@@ -79,7 +75,7 @@ impl Level {
     pub fn fetch_chunks(
         &self,
         chunks: &[Vector2<i32>],
-        channel: mpsc::Sender<Result<Arc<ChunkData>, WorldError>>,
+        channel: mpsc::Sender<Arc<ChunkData>>,
         is_alive: bool,
     ) {
         chunks.into_par_iter().for_each(|at| {
@@ -92,7 +88,7 @@ impl Level {
             // Check if chunks is already loaded
             if loaded_chunks.contains_key(at) {
                 channel
-                    .blocking_send(Ok(loaded_chunks.get(at).unwrap().clone()))
+                    .blocking_send(loaded_chunks.get(at).unwrap().clone())
                     .expect("Failed sending ChunkData.");
                 return;
             }
@@ -116,7 +112,7 @@ impl Level {
             .unwrap();
             let data = Arc::new(data);
             channel
-                .blocking_send(Ok(data.clone()))
+                .blocking_send(data.clone())
                 .expect("Failed sending ChunkData.");
             loaded_chunks.insert(at, data);
         })

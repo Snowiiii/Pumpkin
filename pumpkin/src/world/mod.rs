@@ -235,10 +235,6 @@ impl World {
 
         while let Some(chunk_data) = chunk_receiver.recv().await {
             // dbg!(chunk_pos);
-            let chunk_data = match chunk_data {
-                Ok(d) => d,
-                Err(_) => continue,
-            };
             #[cfg(debug_assertions)]
             if chunk_data.position == (0, 0).into() {
                 use pumpkin_protocol::bytebuf::ByteBuffer;

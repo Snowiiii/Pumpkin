@@ -26,41 +26,60 @@ impl AnvilChunkReader {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Compression {
-    Gzip,
-    Zlib,
+    /// GZip Compression
+    GZip,
+    /// ZLib Compression
+    ZLib,
+    /// Uncompressed (since a version before 1.15.1)
     None,
+    /// LZ4 Compression (since 24w04a)
     LZ4,
+    /// Custom compression algorithm (since 24w05a)
+    Custom,
 }
 
 impl Compression {
     pub fn from_byte(byte: u8) -> Option<Self> {
         match byte {
-            1 => Some(Self::Gzip),
-            2 => Some(Self::Zlib),
+            1 => Some(Self::GZip),
+            2 => Some(Self::ZLib),
             3 => Some(Self::None),
             4 => Some(Self::LZ4),
+            // Creative i guess?
+            127 => Some(Self::Custom),
             _ => None,
         }
     }
 
     fn decompress_data(&self, compressed_data: Vec<u8>) -> Result<Vec<u8>, CompressionError> {
         match self {
-            Compression::Gzip => {
-                let mut z = GzDecoder::new(&compressed_data[..]);
-                let mut chunk_data = Vec::with_capacity(compressed_data.len());
-                z.read_to_end(&mut chunk_data)
+            Compression::GZip => {
+                let mut decoder = GzDecoder::new(&compressed_data[..]);
+                let mut chunk_data = Vec::new();
+                decoder
+                    .read_to_end(&mut chunk_data)
                     .map_err(CompressionError::GZipError)?;
                 Ok(chunk_data)
             }
-            Compression::Zlib => {
-                let mut z = ZlibDecoder::new(&compressed_data[..]);
-                let mut chunk_data = Vec::with_capacity(compressed_data.len());
-                z.read_to_end(&mut chunk_data)
+            Compression::ZLib => {
+                let mut decoder = ZlibDecoder::new(&compressed_data[..]);
+                let mut chunk_data = Vec::new();
+                decoder
+                    .read_to_end(&mut chunk_data)
                     .map_err(CompressionError::ZlibError)?;
                 Ok(chunk_data)
             }
             Compression::None => Ok(compressed_data),
-            Compression::LZ4 => todo!(),
+            Compression::LZ4 => {
+                let mut decoder = lz4::Decoder::new(compressed_data.as_slice())
+                    .map_err(CompressionError::LZ4Error)?;
+                let mut decompressed_data = Vec::new();
+                decoder
+                    .read_to_end(&mut decompressed_data)
+                    .map_err(CompressionError::LZ4Error)?;
+                Ok(decompressed_data)
+            }
+            Compression::Custom => todo!(),
         }
     }
 }

@@ -50,6 +50,8 @@ pub enum CompressionError {
     ZlibError(std::io::Error),
     #[error("Error while working with Gzip compression: {0}")]
     GZipError(std::io::Error),
+    #[error("Error while working with LZ4 compression: {0}")]
+    LZ4Error(std::io::Error),
 }
 
 pub struct ChunkData {
