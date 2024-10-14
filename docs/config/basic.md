@@ -115,3 +115,11 @@ Creative
 Adventure
 Spectator
 ```
+
+### IP Scrubbing
+
+Whether to scrub player IPs from logs
+
+```toml
+scrub_ips=true
+```

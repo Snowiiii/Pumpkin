@@ -39,6 +39,17 @@ pub mod rcon;
 pub mod server;
 pub mod world;
 
+fn scrub_address(ip: &str) -> String {
+    use pumpkin_config::BASIC_CONFIG;
+    if BASIC_CONFIG.scrub_ips {
+        ip.chars()
+            .map(|ch| if ch == '.' || ch == ':' { ch } else { 'x' })
+            .collect()
+    } else {
+        ip.to_string()
+    }
+}
+
 fn init_logger() {
     use pumpkin_config::ADVANCED_CONFIG;
     if ADVANCED_CONFIG.logging.enabled {
@@ -196,7 +207,10 @@ fn main() -> io::Result<()> {
                             log::warn!("failed to set TCP_NODELAY {e}");
                         }
 
-                        log::info!("Accepted connection from: {}", address);
+                        log::info!(
+                            "Accepted connection from: {}",
+                            scrub_address(&format!("{}", address))
+                        );
 
                         let token = next(&mut unique_token);
                         poll.registry().register(
