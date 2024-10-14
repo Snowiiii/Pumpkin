@@ -4,15 +4,10 @@ version = "0.1.0-dev"
 description = "Empowering everyone to host fast and efficient Minecraft servers."
 edition = "2021"
 
-[features]
-default = ["plugins"]
-plugins = ["pumpkin-plugin/plugins"]
-
 [dependencies]
 # pumpkin
 pumpkin-core = { path = "../pumpkin-core" }
 pumpkin-config = { path = "../pumpkin-config" }
-pumpkin-plugin = { path = "../pumpkin-plugin" }
 pumpkin-inventory = { path = "../pumpkin-inventory" }
 pumpkin-world = { path = "../pumpkin-world" }
 pumpkin-entity = { path = "../pumpkin-entity" }

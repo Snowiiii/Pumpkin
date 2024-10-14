@@ -7,7 +7,6 @@ use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::{Container, OpenContainer};
-use pumpkin_plugin::PluginLoader;
 use pumpkin_protocol::client::login::CEncryptionRequest;
 use pumpkin_protocol::client::status::CStatusResponse;
 use pumpkin_protocol::{client::config::CPluginMessage, ClientPacket};
@@ -38,7 +37,6 @@ pub struct Server {
     key_store: KeyStore,
     server_listing: CachedStatus,
     server_branding: CachedBranding,
-    pub plugin_loader: PluginLoader,
 
     pub command_dispatcher: Arc<CommandDispatcher<'static>>,
     pub worlds: Vec<Arc<World>>,
@@ -73,14 +71,12 @@ impl Server {
         // First register default command, after that plugins can put in their own
         let command_dispatcher = default_dispatcher();
         log::info!("Loading Plugins");
-        let plugin_loader = PluginLoader::load();
 
         let world = World::load(Dimension::OverWorld.into_level(
             // TODO: load form config
             "./world".parse().unwrap(),
         ));
         Self {
-            plugin_loader,
             cached_registry: Registry::get_static(),
             open_containers: RwLock::new(HashMap::new()),
             drag_handler: DragHandler::new(),
