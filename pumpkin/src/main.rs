@@ -99,6 +99,13 @@ fn main() -> io::Result<()> {
     // ensure rayon is built outside of tokio scope
     rayon::ThreadPoolBuilder::new().build_global().unwrap();
     rt.block_on(async {
+        let default_panic = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            default_panic(info);
+            // TODO: Gracefully exit?
+            std::process::exit(1);
+        }));
+
         const SERVER: Token = Token(0);
         use std::time::Instant;
 
