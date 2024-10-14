@@ -15,7 +15,7 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_protocol::{
-    bytebuf::{packet_id::Packet, DeserializerError},
+    bytebuf::packet_id::Packet,
     client::play::{
         CGameEvent, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSetHealth,
         CSyncPlayerPosition, CSystemChatMessage, GameEvent, PlayerAction,
@@ -32,13 +32,15 @@ use pumpkin_protocol::{
 use pumpkin_protocol::server::play::{SCloseContainer, SKeepAlive};
 use pumpkin_world::item::ItemStack;
 
+use super::Entity;
+use crate::error::PumpkinError;
 use crate::{
     client::{authentication::GameProfile, Client, PlayerConfig},
     server::Server,
     world::World,
 };
 
-use super::{living::LivingEntity, Entity};
+use super::living::LivingEntity;
 
 /// Represents a Minecraft player entity.
 ///
@@ -278,9 +280,17 @@ impl Player {
             match self.handle_play_packet(server, &mut packet).await {
                 Ok(_) => {}
                 Err(e) => {
-                    let text = format!("Error while reading incoming packet {}", e);
-                    log::error!("{}", text);
-                    self.kick(TextComponent::text(&text))
+                    if e.is_kick() {
+                        if let Some(kick_reason) = e.client_kick_reason() {
+                            self.kick(TextComponent::text(&kick_reason))
+                        } else {
+                            self.kick(TextComponent::text(&format!(
+                                "Error while reading incoming packet {}",
+                                e
+                            )));
+                        }
+                    }
+                    e.log();
                 }
             };
         }
@@ -290,7 +300,7 @@ impl Player {
         &self,
         server: &Arc<Server>,
         packet: &mut RawPacket,
-    ) -> Result<(), DeserializerError> {
+    ) -> Result<(), Box<dyn PumpkinError>> {
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SConfirmTeleport::PACKET_ID => {
@@ -358,8 +368,7 @@ impl Player {
                 Ok(())
             }
             SSetCreativeSlot::PACKET_ID => {
-                self.handle_set_creative_slot(SSetCreativeSlot::read(bytebuf)?)
-                    .unwrap();
+                self.handle_set_creative_slot(SSetCreativeSlot::read(bytebuf)?)?;
                 Ok(())
             }
             SPlayPingRequest::PACKET_ID => {
@@ -367,10 +376,8 @@ impl Player {
                 Ok(())
             }
             SClickContainer::PACKET_ID => {
-                // TODO
-                // self.handle_click_container(server, SClickContainer::read(bytebuf)?)
-                //     .await
-                //     .unwrap();
+                self.handle_click_container(server, SClickContainer::read(bytebuf)?)
+                    .await?;
                 Ok(())
             }
             SCloseContainer::PACKET_ID => {
