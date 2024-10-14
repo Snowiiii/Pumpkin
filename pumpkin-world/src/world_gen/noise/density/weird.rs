@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use super::{noise::InternalNoise, DensityFunction, DensityFunctionImpl, NoisePos};
+use super::{
+    noise::InternalNoise, Applier, ApplierImpl, DensityFunction, DensityFunctionImpl, NoisePos,
+    NoisePosImpl, Visitor, VisitorImpl,
+};
 
 #[derive(Clone)]
 pub enum RarityMapper {
@@ -68,7 +71,7 @@ impl<'a> WierdScaledFunction<'a> {
         }
     }
 
-    fn apply_loc(&self, pos: &impl NoisePos, density: f64) -> f64 {
+    fn apply_loc(&self, pos: &NoisePos, density: f64) -> f64 {
         let d = self.rarity.scale(density);
         d * self
             .noise
@@ -86,19 +89,19 @@ impl<'a> DensityFunctionImpl<'a> for WierdScaledFunction<'a> {
         0f64
     }
 
-    fn apply(&'a self, visitor: &'a impl super::Visitor) -> DensityFunction<'a> {
-        visitor.apply(&DensityFunction::Wierd(WierdScaledFunction {
-            input: Arc::new(self.input.apply(visitor)),
+    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+        visitor.apply(Arc::new(DensityFunction::Wierd(WierdScaledFunction {
+            input: self.input.apply(visitor),
             noise: visitor.apply_internal_noise(self.noise.clone()),
             rarity: self.rarity.clone(),
-        }))
+        })))
     }
 
-    fn sample(&self, pos: &impl NoisePos) -> f64 {
+    fn sample(&self, pos: &NoisePos) -> f64 {
         self.apply_loc(pos, self.input.sample(pos))
     }
 
-    fn fill(&self, densities: &[f64], applier: &impl super::Applier) -> Vec<f64> {
+    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
         let densities = self.input.fill(densities, applier);
         densities
             .iter()

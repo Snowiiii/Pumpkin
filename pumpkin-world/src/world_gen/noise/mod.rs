@@ -1,6 +1,8 @@
 #![allow(dead_code)]
+pub mod chunk_sampler;
+pub mod config;
 pub mod density;
-mod perlin;
+pub mod perlin;
 mod router;
 mod simplex;
 

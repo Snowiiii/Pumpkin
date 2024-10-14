@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use super::{noise::InternalNoise, DensityFunction, DensityFunctionImpl, OffsetDensityFunction};
+use super::{
+    noise::InternalNoise, Applier, ApplierImpl, DensityFunction, DensityFunctionImpl, NoisePos,
+    NoisePosImpl, OffsetDensityFunction, Visitor, VisitorImpl,
+};
 
 #[derive(Clone)]
 pub struct ShiftAFunction<'a> {
@@ -20,18 +23,18 @@ impl<'a> OffsetDensityFunction<'a> for ShiftAFunction<'a> {
 }
 
 impl<'a> DensityFunctionImpl<'a> for ShiftAFunction<'a> {
-    fn sample(&self, pos: &impl super::NoisePos) -> f64 {
+    fn sample(&self, pos: &NoisePos) -> f64 {
         self.sample_3d(pos.x() as f64, 0f64, pos.z() as f64)
     }
 
-    fn apply(&'a self, visitor: &'a impl super::Visitor) -> super::DensityFunction<'a> {
-        visitor.apply(&DensityFunction::ShiftA(ShiftAFunction {
+    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+        visitor.apply(Arc::new(DensityFunction::ShiftA(ShiftAFunction {
             offset: visitor.apply_internal_noise(self.offset.clone()),
-        }))
+        })))
     }
 
-    fn fill(&self, densities: &[f64], applier: &impl super::Applier) -> Vec<f64> {
-        applier.fill(densities, self)
+    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
+        applier.fill(densities, &DensityFunction::ShiftA(self.clone()))
     }
 
     fn max(&self) -> f64 {
@@ -61,18 +64,18 @@ impl<'a> OffsetDensityFunction<'a> for ShiftBFunction<'a> {
 }
 
 impl<'a> DensityFunctionImpl<'a> for ShiftBFunction<'a> {
-    fn sample(&self, pos: &impl super::NoisePos) -> f64 {
+    fn sample(&self, pos: &NoisePos) -> f64 {
         self.sample_3d(pos.z() as f64, pos.x() as f64, 0f64)
     }
 
-    fn apply(&'a self, visitor: &'a impl super::Visitor) -> super::DensityFunction<'a> {
-        visitor.apply(&DensityFunction::ShiftB(ShiftBFunction {
+    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+        visitor.apply(Arc::new(DensityFunction::ShiftB(ShiftBFunction {
             offset: visitor.apply_internal_noise(self.offset.clone()),
-        }))
+        })))
     }
 
-    fn fill(&self, densities: &[f64], applier: &impl super::Applier) -> Vec<f64> {
-        applier.fill(densities, self)
+    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
+        applier.fill(densities, &DensityFunction::ShiftB(self.clone()))
     }
 
     fn max(&self) -> f64 {

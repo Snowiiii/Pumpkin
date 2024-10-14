@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use log::warn;
 
-use super::{DensityFunction, DensityFunctionImpl, UnaryDensityFunction};
+use super::{
+    Applier, DensityFunction, DensityFunctionImpl, NoisePos, UnaryDensityFunction, Visitor,
+    VisitorImpl,
+};
 
 #[derive(Clone)]
 pub enum LinearType {
@@ -20,8 +23,8 @@ pub struct LinearFunction<'a> {
 }
 
 impl<'a> DensityFunctionImpl<'a> for LinearFunction<'a> {
-    fn apply(&'a self, visitor: &'a impl super::Visitor) -> DensityFunction<'a> {
-        let new_function = self.input().apply(visitor);
+    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+        let new_function = self.input.apply(visitor);
         let d = new_function.min();
         let e = new_function.max();
 
@@ -36,21 +39,21 @@ impl<'a> DensityFunctionImpl<'a> for LinearFunction<'a> {
             }
         };
 
-        DensityFunction::Linear(LinearFunction {
+        Arc::new(DensityFunction::Linear(LinearFunction {
             action: self.action.clone(),
-            input: Arc::new(new_function),
+            input: new_function,
             min: f,
             max: g,
             arg: self.arg,
-        })
+        }))
     }
 
-    fn sample(&self, pos: &impl super::NoisePos) -> f64 {
-        self.apply_density(self.input().sample(pos))
+    fn sample(&self, pos: &NoisePos) -> f64 {
+        self.apply_density(self.input.sample(pos))
     }
 
-    fn fill(&self, densities: &[f64], applier: &impl super::Applier) -> Vec<f64> {
-        let densities = self.input().fill(densities, applier);
+    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
+        let densities = self.input.fill(densities, applier);
         densities
             .iter()
             .map(|val| self.apply_density(*val))
@@ -72,10 +75,6 @@ impl<'a> UnaryDensityFunction<'a> for LinearFunction<'a> {
             LinearType::Mul => density * self.arg,
             LinearType::Add => density + self.arg,
         }
-    }
-
-    fn input(&self) -> &DensityFunction {
-        &self.input
     }
 }
 
@@ -99,8 +98,8 @@ pub struct BinaryFunction<'a> {
 impl<'a> BinaryFunction<'a> {
     pub fn create(
         action: BinaryType,
-        arg1: DensityFunction<'a>,
-        arg2: DensityFunction<'a>,
+        arg1: Arc<DensityFunction<'a>>,
+        arg2: Arc<DensityFunction<'a>>,
     ) -> DensityFunction<'a> {
         let d = arg1.min();
         let e = arg2.min();
@@ -154,20 +153,20 @@ impl<'a> BinaryFunction<'a> {
                     _ => unreachable!(),
                 };
 
-                if let DensityFunction::Constant(func) = arg1 {
+                if let DensityFunction::Constant(func) = arg1.as_ref() {
                     return DensityFunction::Linear(LinearFunction {
                         action,
-                        input: Arc::new(arg2),
+                        input: arg2,
                         min: h,
                         max: i,
                         arg: func.value,
                     });
                 }
 
-                if let DensityFunction::Constant(func) = arg2 {
+                if let DensityFunction::Constant(func) = arg2.as_ref() {
                     return DensityFunction::Linear(LinearFunction {
                         action,
-                        input: Arc::new(arg1),
+                        input: arg1,
                         min: h,
                         max: i,
                         arg: func.value,
@@ -179,8 +178,8 @@ impl<'a> BinaryFunction<'a> {
 
         DensityFunction::Binary(BinaryFunction {
             action,
-            arg1: Arc::new(arg1),
-            arg2: Arc::new(arg2),
+            arg1,
+            arg2,
             min: h,
             max: i,
         })
@@ -188,7 +187,7 @@ impl<'a> BinaryFunction<'a> {
 }
 
 impl<'a> DensityFunctionImpl<'a> for BinaryFunction<'a> {
-    fn sample(&self, pos: &impl super::NoisePos) -> f64 {
+    fn sample(&self, pos: &NoisePos) -> f64 {
         let d = self.arg1.sample(pos);
         let e = self.arg2.sample(pos);
 
@@ -212,7 +211,7 @@ impl<'a> DensityFunctionImpl<'a> for BinaryFunction<'a> {
         }
     }
 
-    fn fill(&self, densities: &[f64], applier: &impl super::Applier) -> Vec<f64> {
+    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
         let densities1 = self.arg1.fill(densities, applier);
         let densities2 = self.arg2.fill(densities, applier);
 
@@ -240,12 +239,12 @@ impl<'a> DensityFunctionImpl<'a> for BinaryFunction<'a> {
         }
     }
 
-    fn apply(&'a self, visitor: &'a impl super::Visitor) -> DensityFunction<'a> {
-        visitor.apply(&BinaryFunction::create(
+    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+        visitor.apply(Arc::new(BinaryFunction::create(
             self.action.clone(),
             self.arg1.apply(visitor),
             self.arg2.apply(visitor),
-        ))
+        )))
     }
 
     fn max(&self) -> f64 {

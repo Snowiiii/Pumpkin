@@ -7,7 +7,10 @@ use crate::world_gen::noise::{
     perlin::{DoublePerlinNoiseParameters, DoublePerlinNoiseSampler, OctavePerlinNoiseSampler},
 };
 
-use super::{DensityFunction, DensityFunctionImpl};
+use super::{
+    Applier, ApplierImpl, DensityFunction, DensityFunctionImpl, NoisePos, NoisePosImpl, Visitor,
+    VisitorImpl,
+};
 
 pub(crate) struct InternalNoise<'a> {
     data: DoublePerlinNoiseParameters<'a>,
@@ -58,7 +61,7 @@ impl<'a> NoiseFunction<'a> {
 }
 
 impl<'a> DensityFunctionImpl<'a> for NoiseFunction<'a> {
-    fn sample(&self, pos: &impl super::NoisePos) -> f64 {
+    fn sample(&self, pos: &NoisePos) -> f64 {
         self.noise.sample(
             pos.x() as f64 * self.xz_scale,
             pos.y() as f64 * self.y_scale,
@@ -66,12 +69,12 @@ impl<'a> DensityFunctionImpl<'a> for NoiseFunction<'a> {
         )
     }
 
-    fn fill(&self, densities: &[f64], applier: &impl super::Applier) -> Vec<f64> {
-        applier.fill(densities, self)
+    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
+        applier.fill(densities, &DensityFunction::Noise(self.clone()))
     }
 
-    fn apply(&self, visitor: &'a impl super::Visitor) -> super::DensityFunction<'a> {
-        visitor.apply(&super::DensityFunction::Noise(self.clone()))
+    fn apply(&self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+        visitor.apply(Arc::new(DensityFunction::Noise(self.clone())))
     }
 
     fn max(&self) -> f64 {
@@ -114,7 +117,7 @@ impl<'a> ShiftedNoiseFunction<'a> {
 }
 
 impl<'a> DensityFunctionImpl<'a> for ShiftedNoiseFunction<'a> {
-    fn sample(&self, pos: &impl super::NoisePos) -> f64 {
+    fn sample(&self, pos: &NoisePos) -> f64 {
         let d = pos.x() as f64 * self.xz_scale + self.shift_x.sample(pos);
         let e = pos.y() as f64 * self.y_scale + self.shift_y.sample(pos);
         let f = pos.z() as f64 * self.xz_scale + self.shift_z.sample(pos);
@@ -122,24 +125,24 @@ impl<'a> DensityFunctionImpl<'a> for ShiftedNoiseFunction<'a> {
         self.noise.sample(d, e, f)
     }
 
-    fn fill(&self, densities: &[f64], applier: &impl super::Applier) -> Vec<f64> {
-        applier.fill(densities, self)
+    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
+        applier.fill(densities, &DensityFunction::ShiftedNoise(self.clone()))
     }
 
-    fn apply(&'a self, visitor: &'a impl super::Visitor) -> DensityFunction<'a> {
+    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
         let new_x = self.shift_x.apply(visitor);
         let new_y = self.shift_y.apply(visitor);
         let new_z = self.shift_z.apply(visitor);
         let new_noise = visitor.apply_internal_noise(self.noise.clone());
 
-        DensityFunction::ShiftedNoise(ShiftedNoiseFunction {
-            shift_x: Arc::new(new_x),
-            shift_y: Arc::new(new_y),
-            shift_z: Arc::new(new_z),
+        Arc::new(DensityFunction::ShiftedNoise(ShiftedNoiseFunction {
+            shift_x: new_x,
+            shift_y: new_y,
+            shift_z: new_z,
             xz_scale: self.xz_scale,
             y_scale: self.y_scale,
             noise: new_noise,
-        })
+        }))
     }
 
     fn max(&self) -> f64 {
@@ -256,7 +259,7 @@ impl InterpolatedNoiseSampler {
 }
 
 impl<'a> DensityFunctionImpl<'a> for InterpolatedNoiseSampler {
-    fn sample(&self, pos: &impl super::NoisePos) -> f64 {
+    fn sample(&self, pos: &NoisePos) -> f64 {
         let d = pos.x() as f64 * self.xz_scale_scaled;
         let e = pos.y() as f64 * self.y_scale_scaled;
         let f = pos.z() as f64 * self.xz_scale_scaled;
@@ -327,11 +330,11 @@ impl<'a> DensityFunctionImpl<'a> for InterpolatedNoiseSampler {
         -self.max()
     }
 
-    fn fill(&self, densities: &[f64], applier: &impl super::Applier) -> Vec<f64> {
-        applier.fill(densities, self)
+    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
+        applier.fill(densities, &DensityFunction::InterpolatedNoise(self.clone()))
     }
 
-    fn apply(&'a self, visitor: &'a impl super::Visitor) -> DensityFunction<'a> {
-        visitor.apply(&DensityFunction::InterpolatedNoise(self.clone()))
+    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+        visitor.apply(Arc::new(DensityFunction::InterpolatedNoise(self.clone())))
     }
 }

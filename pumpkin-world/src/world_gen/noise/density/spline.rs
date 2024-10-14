@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use crate::world_gen::noise::lerp_32;
 
-use super::{DensityFunction, DensityFunctionImpl, NoisePos, Visitor};
+use super::{
+    Applier, ApplierImpl, DensityFunction, DensityFunctionImpl, NoisePos, Visitor, VisitorImpl,
+};
 
 pub enum SplineValue<'a> {
     Spline(Spline<'a>),
@@ -24,14 +26,14 @@ impl<'a> SplineValue<'a> {
         }
     }
 
-    fn apply(&self, pos: &impl NoisePos) -> f32 {
+    fn apply(&self, pos: &NoisePos) -> f32 {
         match self {
             Self::Fixed(value) => *value,
             Self::Spline(spline) => spline.apply(pos),
         }
     }
 
-    fn visit(&'a self, visitor: &'a impl Visitor) -> SplineValue<'a> {
+    fn visit(&'a self, visitor: &'a Visitor) -> SplineValue<'a> {
         match self {
             Self::Fixed(val) => Self::Fixed(*val),
             Self::Spline(spline) => Self::Spline(spline.visit(visitor)),
@@ -48,7 +50,7 @@ pub(crate) struct SplinePoint<'a> {
 
 #[derive(Clone)]
 pub struct Spline<'a> {
-    function: DensityFunction<'a>,
+    function: Arc<DensityFunction<'a>>,
     points: Vec<SplinePoint<'a>>,
     min: f32,
     max: f32,
@@ -68,7 +70,7 @@ impl<'a> Spline<'a> {
         locations.partition_point(|val| x < *val) as i32 - 1
     }
 
-    pub fn new(function: DensityFunction<'a>, points: &[SplinePoint<'a>]) -> Self {
+    pub fn new(function: Arc<DensityFunction<'a>>, points: &[SplinePoint<'a>]) -> Self {
         let i = points.len() - 1;
         let mut f = f32::INFINITY;
         let mut g = f32::NEG_INFINITY;
@@ -139,7 +141,7 @@ impl<'a> Spline<'a> {
         }
     }
 
-    pub fn apply(&self, pos: &impl NoisePos) -> f32 {
+    pub fn apply(&self, pos: &NoisePos) -> f32 {
         let f = self.function.sample(pos) as f32;
         let i = Self::find_range_for_location(
             self.points
@@ -169,8 +171,8 @@ impl<'a> Spline<'a> {
         }
     }
 
-    pub fn visit(&'a self, visitor: &'a impl Visitor) -> Spline<'a> {
-        let new_function = visitor.apply(&self.function);
+    pub fn visit(&'a self, visitor: &'a Visitor) -> Spline<'a> {
+        let new_function = visitor.apply(self.function.clone());
         let new_points = self
             .points
             .iter()
@@ -196,19 +198,19 @@ impl<'a> SplineFunction<'a> {
 }
 
 impl<'a> DensityFunctionImpl<'a> for SplineFunction<'a> {
-    fn sample(&self, pos: &impl NoisePos) -> f64 {
+    fn sample(&self, pos: &NoisePos) -> f64 {
         self.spline.apply(pos) as f64
     }
 
-    fn fill(&self, densities: &[f64], applier: &impl super::Applier) -> Vec<f64> {
-        applier.fill(densities, self)
+    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
+        applier.fill(densities, &DensityFunction::Spline(self.clone()))
     }
 
-    fn apply(&'a self, visitor: &'a impl Visitor) -> DensityFunction<'a> {
+    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
         let new_spline = self.spline.visit(visitor);
-        DensityFunction::Spline(SplineFunction {
+        Arc::new(DensityFunction::Spline(SplineFunction {
             spline: Arc::new(new_spline),
-        })
+        }))
     }
 
     fn max(&self) -> f64 {
@@ -242,13 +244,13 @@ impl FloatAmplifier {
     }
 }
 pub struct SplineBuilder<'a> {
-    function: DensityFunction<'a>,
+    function: Arc<DensityFunction<'a>>,
     amplifier: FloatAmplifier,
     points: Vec<SplinePoint<'a>>,
 }
 
 impl<'a> SplineBuilder<'a> {
-    pub fn new(function: DensityFunction<'a>, amplifier: FloatAmplifier) -> Self {
+    pub fn new(function: Arc<DensityFunction<'a>>, amplifier: FloatAmplifier) -> Self {
         Self {
             function,
             amplifier,

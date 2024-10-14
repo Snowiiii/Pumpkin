@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use super::{DensityFunction, DensityFunctionImpl, UnaryDensityFunction};
+use super::{
+    Applier, DensityFunction, DensityFunctionImpl, NoisePos, UnaryDensityFunction, Visitor,
+};
 
 #[derive(Clone)]
 pub struct ClampFunction<'a> {
@@ -10,30 +12,26 @@ pub struct ClampFunction<'a> {
 }
 
 impl<'a> UnaryDensityFunction<'a> for ClampFunction<'a> {
-    fn input(&self) -> &DensityFunction {
-        &self.input
-    }
-
     fn apply_density(&self, density: f64) -> f64 {
         density.clamp(self.min, self.max)
     }
 }
 
 impl<'a> DensityFunctionImpl<'a> for ClampFunction<'a> {
-    fn apply(&'a self, visitor: &'a impl super::Visitor) -> DensityFunction<'a> {
-        DensityFunction::Clamp(ClampFunction {
-            input: Arc::new(self.input().apply(visitor)),
+    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+        Arc::new(DensityFunction::Clamp(ClampFunction {
+            input: self.input.apply(visitor),
             min: self.min,
             max: self.max,
-        })
+        }))
     }
 
-    fn sample(&self, pos: &impl super::NoisePos) -> f64 {
-        self.apply_density(self.input().sample(pos))
+    fn sample(&self, pos: &NoisePos) -> f64 {
+        self.apply_density(self.input.sample(pos))
     }
 
-    fn fill(&self, densities: &[f64], applier: &impl super::Applier) -> Vec<f64> {
-        let densities = self.input().fill(densities, applier);
+    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
+        let densities = self.input.fill(densities, applier);
         densities.iter().map(|x| self.apply_density(*x)).collect()
     }
 
@@ -116,25 +114,21 @@ impl<'a> UnaryDensityFunction<'a> for UnaryFunction<'a> {
     fn apply_density(&self, density: f64) -> f64 {
         Self::internal_apply(&self.action, density)
     }
-
-    fn input(&self) -> &DensityFunction {
-        &self.input
-    }
 }
 
 impl<'a> DensityFunctionImpl<'a> for UnaryFunction<'a> {
-    fn sample(&self, pos: &impl super::NoisePos) -> f64 {
-        self.apply_density(self.input().sample(pos))
+    fn sample(&self, pos: &NoisePos) -> f64 {
+        self.apply_density(self.input.sample(pos))
     }
 
-    fn fill(&self, densities: &[f64], applier: &impl super::Applier) -> Vec<f64> {
-        let densities = self.input().fill(densities, applier);
+    fn fill(&self, densities: &[f64], applier: &Applier) -> Vec<f64> {
+        let densities = self.input.fill(densities, applier);
         densities.iter().map(|x| self.apply_density(*x)).collect()
     }
 
-    fn apply(&'a self, visitor: &'a impl super::Visitor) -> DensityFunction<'a> {
-        let raw = Self::create(self.action.clone(), Arc::new(self.input().apply(visitor)));
-        DensityFunction::Unary(raw)
+    fn apply(&'a self, visitor: &'a Visitor) -> Arc<DensityFunction<'a>> {
+        let raw = Self::create(self.action.clone(), self.input.apply(visitor));
+        Arc::new(DensityFunction::Unary(raw))
     }
 
     fn max(&self) -> f64 {
