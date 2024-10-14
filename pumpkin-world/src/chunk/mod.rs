@@ -232,10 +232,8 @@ impl ChunkData {
             return Err(ChunkParsingError::ChunkNotGenerated);
         }
 
-        let chunk_data = match fastnbt::from_bytes::<ChunkNbt>(chunk_data.as_slice()) {
-            Ok(v) => v,
-            Err(err) => return Err(ChunkParsingError::ErrorDeserializingChunk(err.to_string())),
-        };
+        let chunk_data = fastnbt::from_bytes::<ChunkNbt>(chunk_data.as_slice())
+            .map_err(|e| ChunkParsingError::ErrorDeserializingChunk(e.to_string()))?;
 
         // this needs to be boxed, otherwise it will cause a stack-overflow
         let mut blocks = ChunkBlocks::empty_with_heightmap(chunk_data.heightmaps);

@@ -22,6 +22,6 @@ pub fn squared_magnitude(a: f64, b: f64, c: f64) -> f64 {
 
 /// Converts a world coordinate to the corresponding chunk-section coordinate.
 // TODO: This proberbly should place not here
-pub fn get_section_cord(coord: i32) -> i32 {
+pub const fn get_section_cord(coord: i32) -> i32 {
     coord >> 4
 }

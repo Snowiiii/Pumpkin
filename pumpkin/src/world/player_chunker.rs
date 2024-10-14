@@ -97,7 +97,7 @@ pub async fn update_position(entity: &Entity, player: &Player) {
     }
 }
 
-fn chunk_section_from_pos(block_pos: &WorldPosition) -> Vector3<i32> {
+const fn chunk_section_from_pos(block_pos: &WorldPosition) -> Vector3<i32> {
     let block_pos = block_pos.0;
     Vector3::new(
         get_section_cord(block_pos.x),

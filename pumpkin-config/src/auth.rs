@@ -4,23 +4,21 @@ use serde_inline_default::serde_inline_default;
 
 #[serde_inline_default]
 #[derive(Deserialize, Serialize)]
+#[serde(default)]
 pub struct AuthenticationConfig {
     /// Whether to use Mojang authentication.
     #[serde_inline_default(true)]
     pub enabled: bool,
-
+    #[serde_inline_default("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}".to_string())]
     pub auth_url: String,
-
     /// Prevent proxy connections.
     #[serde_inline_default(false)]
     pub prevent_proxy_connections: bool,
-
+    #[serde_inline_default("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}".to_string())]
     pub prevent_proxy_connection_auth_url: String,
-
     /// Player profile handling.
     #[serde(default)]
     pub player_profile: PlayerProfileConfig,
-
     /// Texture handling.
     #[serde(default)]
     pub textures: TextureConfig,
