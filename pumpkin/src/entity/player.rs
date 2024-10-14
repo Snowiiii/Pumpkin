@@ -63,7 +63,7 @@ pub struct Player {
     /// The ID of the currently open container (if any).
     pub open_container: AtomicCell<Option<u64>>,
     /// The item currently being held by the player.
-    pub carried_item: AtomicCell<Option<ItemStack>>,
+    pub carried_item: Mutex<Option<ItemStack>>,
 
     /// send `send_abilties_update` when changed
     /// The player's abilities and special powers.
@@ -125,7 +125,7 @@ impl Player {
             current_block_destroy_stage: AtomicU8::new(0),
             inventory: Mutex::new(PlayerInventory::new()),
             open_container: AtomicCell::new(None),
-            carried_item: AtomicCell::new(None),
+            carried_item: Mutex::new(None),
             teleport_id_count: AtomicI32::new(0),
             abilities: PlayerAbilities::default(),
             gamemode: AtomicCell::new(gamemode),
@@ -367,10 +367,9 @@ impl Player {
                 Ok(())
             }
             SClickContainer::PACKET_ID => {
-                // TODO
-                // self.handle_click_container(server, SClickContainer::read(bytebuf)?)
-                //     .await
-                //     .unwrap();
+                self.handle_click_container(server, SClickContainer::read(bytebuf)?)
+                    .await
+                    .unwrap();
                 Ok(())
             }
             SCloseContainer::PACKET_ID => {

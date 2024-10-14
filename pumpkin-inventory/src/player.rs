@@ -1,5 +1,3 @@
-use std::sync::atomic::AtomicU32;
-
 use crate::container_click::MouseClick;
 use crate::{handle_item_change, Container, InventoryError, WindowType};
 use pumpkin_world::item::ItemStack;
@@ -13,7 +11,7 @@ pub struct PlayerInventory {
     offhand: Option<ItemStack>,
     // current selected slot in hotbar
     selected: usize,
-    pub state_id: AtomicU32,
+    pub state_id: u32,
     // Notchian server wraps this value at 100, we can just keep it as a u8 that automatically wraps
     pub total_opened_containers: u8,
 }
@@ -34,7 +32,7 @@ impl PlayerInventory {
             offhand: None,
             // TODO: What when player spawns in with an different index ?
             selected: 0,
-            state_id: AtomicU32::new(0),
+            state_id: 0,
             total_opened_containers: 2,
         }
     }
@@ -56,16 +54,19 @@ impl PlayerInventory {
         item_allowed_override: bool,
     ) -> Result<(), InventoryError> {
         if item_allowed_override {
-            if !(0..=45).contains(&slot) {
-                Err(InventoryError::InvalidSlot)?
-            }
-            *self.all_slots()[slot] = item;
-            return Ok(());
-        }
-        let slot_condition = self.slot_condition(slot)?;
-        if let Some(item) = item {
-            if slot_condition(&item) {
-                *self.all_slots()[slot] = Some(item);
+            let Some(slot) = self.get_slot_mut(slot) else {
+                return Err(InventoryError::InvalidSlot);
+            };
+            *slot = item;
+        } else {
+            let slot_condition = self.slot_condition(slot)?;
+            if let Some(item) = item {
+                if slot_condition(&item) {
+                    let Some(slot) = self.get_slot_mut(slot) else {
+                        return Err(InventoryError::InvalidSlot);
+                    };
+                    *slot = Some(item);
+                }
             }
         }
         Ok(())
@@ -88,19 +89,7 @@ impl PlayerInventory {
             _ => unreachable!(),
         }))
     }
-    pub fn get_slot(&mut self, slot: usize) -> Result<&mut Option<ItemStack>, InventoryError> {
-        match slot {
-            0 => {
-                // TODO: Add crafting check here
-                Ok(&mut self.crafting_output)
-            }
-            1..=4 => Ok(&mut self.crafting[slot - 1]),
-            5..=8 => Ok(&mut self.armor[slot - 5]),
-            9..=44 => Ok(&mut self.items[slot - 9]),
-            45 => Ok(&mut self.offhand),
-            _ => Err(InventoryError::InvalidSlot),
-        }
-    }
+
     pub fn set_selected(&mut self, slot: usize) {
         assert!((0..9).contains(&slot));
         self.selected = slot;
@@ -111,22 +100,22 @@ impl PlayerInventory {
         self.items[self.selected + 36 - 9].as_ref()
     }
 
-    pub fn slots(&self) -> Vec<Option<&ItemStack>> {
-        let mut slots = vec![self.crafting_output.as_ref()];
-        slots.extend(self.crafting.iter().map(|c| c.as_ref()));
-        slots.extend(self.armor.iter().map(|c| c.as_ref()));
-        slots.extend(self.items.iter().map(|c| c.as_ref()));
-        slots.push(self.offhand.as_ref());
-        slots
+    pub fn slots(&self) -> Box<dyn Iterator<Item = &Option<ItemStack>> + '_> {
+        let crafting_output = [&self.crafting_output].into_iter();
+        let crafting = self.crafting.iter();
+        let armor = self.armor.iter();
+        let items = self.items.iter();
+        let offhand = [&self.offhand].into_iter();
+        Box::new(crafting_output.chain(crafting.chain(armor.chain(items.chain(offhand)))))
     }
 
-    pub fn slots_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
-        let mut slots = vec![&mut self.crafting_output];
-        slots.extend(self.crafting.iter_mut());
-        slots.extend(self.armor.iter_mut());
-        slots.extend(self.items.iter_mut());
-        slots.push(&mut self.offhand);
-        slots
+    pub fn slots_mut<'s>(&'s mut self) -> Box<dyn Iterator<Item = &mut Option<ItemStack>> + 's> {
+        let crafting_output = [&mut self.crafting_output].into_iter();
+        let crafting = self.crafting.iter_mut();
+        let armor = self.armor.iter_mut();
+        let items = self.items.iter_mut();
+        let offhand = [&mut self.offhand].into_iter();
+        Box::new(crafting_output.chain(crafting.chain(armor.chain(items.chain(offhand)))))
     }
 }
 
@@ -147,7 +136,7 @@ impl Container for PlayerInventory {
         mouse_click: MouseClick,
     ) -> Result<(), InventoryError> {
         let slot_condition = self.slot_condition(slot)?;
-        let item_slot = self.get_slot(slot)?;
+        let item_slot = self.get_slot_mut(slot).ok_or(InventoryError::InvalidSlot)?;
         if let Some(item) = carried_slot {
             if slot_condition(item) {
                 handle_item_change(carried_slot, item_slot, mouse_click);
@@ -158,19 +147,59 @@ impl Container for PlayerInventory {
         Ok(())
     }
 
-    fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
+    fn iter_slots_mut<'s>(
+        &'s mut self,
+    ) -> Box<(dyn Iterator<Item = &'s mut Option<ItemStack>> + 's)> {
         self.slots_mut()
     }
 
-    fn all_slots_ref(&self) -> Vec<Option<&ItemStack>> {
-        self.slots()
+    fn iter_slots<'s>(&'s self) -> Box<(dyn Iterator<Item = &'s Option<ItemStack>> + 's)> {
+        Box::new(self.slots())
     }
 
-    fn all_combinable_slots(&self) -> Vec<Option<&ItemStack>> {
-        self.items.iter().map(|item| item.as_ref()).collect()
+    fn iter_combinable_slots<'s>(&'s self) -> Box<dyn Iterator<Item = &'s Option<ItemStack>> + 's> {
+        Box::new(self.items.iter())
     }
 
-    fn all_combinable_slots_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
-        self.items.iter_mut().collect()
+    fn iter_combinable_slots_mut<'s>(
+        &'s mut self,
+    ) -> Box<(dyn Iterator<Item = &'s mut Option<ItemStack>> + 's)> {
+        Box::new(self.items.iter_mut())
+    }
+
+    fn get_slot(&self, slot: usize) -> Option<&Option<ItemStack>> {
+        match slot {
+            0 => {
+                // TODO: Add crafting check here
+                Some(&self.crafting_output)
+            }
+            1..=4 => Some(&self.crafting[slot - 1]),
+            5..=8 => Some(&self.armor[slot - 5]),
+            9..=44 => Some(&self.items[slot - 9]),
+            45 => Some(&self.offhand),
+            _ => None,
+        }
+    }
+
+    fn get_slot_mut(&mut self, slot: usize) -> Option<&mut Option<ItemStack>> {
+        match slot {
+            0 => {
+                // TODO: Add crafting check here
+                Some(&mut self.crafting_output)
+            }
+            1..=4 => Some(&mut self.crafting[slot - 1]),
+            5..=8 => Some(&mut self.armor[slot - 5]),
+            9..=44 => Some(&mut self.items[slot - 9]),
+            45 => Some(&mut self.offhand),
+            _ => None,
+        }
+    }
+
+    fn size(&self) -> usize {
+        1 + // Crafting output
+        self.crafting.len() +
+        self.armor.len() +
+        self.items.len() +
+        1 // Offhand
     }
 }
