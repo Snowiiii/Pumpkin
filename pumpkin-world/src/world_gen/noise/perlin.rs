@@ -286,6 +286,20 @@ impl OctavePerlinNoiseSampler {
     }
 }
 
+pub struct DoublePerlinNoiseParameters<'a> {
+    first_octave: i32,
+    amplitudes: &'a [f64],
+}
+
+impl<'a> DoublePerlinNoiseParameters<'a> {
+    pub fn new(first_octave: i32, amplitudes: &'a [f64]) -> Self {
+        Self {
+            first_octave,
+            amplitudes,
+        }
+    }
+}
+
 pub struct DoublePerlinNoiseSampler {
     first_sampler: OctavePerlinNoiseSampler,
     second_sampler: OctavePerlinNoiseSampler,
@@ -298,7 +312,14 @@ impl DoublePerlinNoiseSampler {
         0.1f64 * (1f64 + 1f64 / (octaves + 1) as f64)
     }
 
-    pub fn new(rand: &mut RandomGenerator, first_octave: i32, amplitudes: &[f64]) -> Self {
+    pub fn max_value(&self) -> f64 {
+        self.max_value
+    }
+
+    pub fn new(rand: &mut RandomGenerator, parameters: &DoublePerlinNoiseParameters) -> Self {
+        let first_octave = parameters.first_octave;
+        let amplitudes = parameters.amplitudes;
+
         let first_sampler = OctavePerlinNoiseSampler::new(rand, first_octave, amplitudes);
         let second_sampler = OctavePerlinNoiseSampler::new(rand, first_octave, amplitudes);
 
@@ -336,7 +357,9 @@ impl DoublePerlinNoiseSampler {
 mod double_perlin_noise_sampler_test {
     use pumpkin_core::random::{legacy_rand::LegacyRand, xoroshiro128::Xoroshiro, RandomImpl};
 
-    use crate::world_gen::noise::perlin::{DoublePerlinNoiseSampler, RandomGenerator};
+    use crate::world_gen::noise::perlin::{
+        DoublePerlinNoiseParameters, DoublePerlinNoiseSampler, RandomGenerator,
+    };
 
     #[test]
     fn sample_legacy() {
@@ -344,7 +367,11 @@ mod double_perlin_noise_sampler_test {
         assert_eq!(rand.next_i32(), -1302745855);
 
         let mut rand_gen = RandomGenerator::Legacy(rand);
-        let sampler = DoublePerlinNoiseSampler::new(&mut rand_gen, 0, &[4f64]);
+        let params = DoublePerlinNoiseParameters {
+            first_octave: 0,
+            amplitudes: &[4f64],
+        };
+        let sampler = DoublePerlinNoiseSampler::new(&mut rand_gen, &params);
 
         let values = [
             (
@@ -440,7 +467,13 @@ mod double_perlin_noise_sampler_test {
         assert_eq!(rand.next_i32(), -1678727252);
 
         let mut rand_gen = RandomGenerator::Xoroshiro(rand);
-        let sampler = DoublePerlinNoiseSampler::new(&mut rand_gen, 1, &[2f64, 4f64]);
+
+        let params = DoublePerlinNoiseParameters {
+            first_octave: 1,
+            amplitudes: &[2f64, 4f64],
+        };
+
+        let sampler = DoublePerlinNoiseSampler::new(&mut rand_gen, &params);
 
         let values = [
             (
