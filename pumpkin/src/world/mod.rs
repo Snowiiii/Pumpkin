@@ -2,6 +2,10 @@ use std::{collections::HashMap, sync::Arc};
 
 pub mod player_chunker;
 
+use crate::{
+    client::Client,
+    entity::{player::Player, Entity},
+};
 use mio::Token;
 use num_traits::ToPrimitive;
 use parking_lot::Mutex;
@@ -17,11 +21,6 @@ use pumpkin_protocol::{
 };
 use pumpkin_world::level::Level;
 use tokio::sync::mpsc;
-
-use crate::{
-    client::Client,
-    entity::{player::Player, Entity},
-};
 
 /// Represents a Minecraft world, containing entities, players, and the underlying level data.
 ///
@@ -58,7 +57,7 @@ impl World {
         P: ClientPacket,
     {
         let current_players = self.current_players.lock();
-        for (_, player) in current_players.iter() {
+        for player in current_players.values() {
             player.client.send_packet(packet);
         }
     }
@@ -129,8 +128,8 @@ impl World {
                 uuid: gameprofile.id,
                 actions: vec![
                     PlayerAction::AddPlayer {
-                        name: gameprofile.name.clone(),
-                        properties: gameprofile.properties.clone(),
+                        name: &gameprofile.name,
+                        properties: &gameprofile.properties,
                     },
                     PlayerAction::UpdateListed(true),
                 ],
@@ -139,27 +138,28 @@ impl World {
 
         // here we send all the infos of already joined players
         let mut entries = Vec::new();
-        for (_, playerr) in self
-            .current_players
-            .lock()
-            .iter()
-            .filter(|(c, _)| **c != player.client.token)
         {
-            let gameprofile = &playerr.gameprofile;
-            entries.push(pumpkin_protocol::client::play::Player {
-                uuid: gameprofile.id,
-                actions: vec![
-                    PlayerAction::AddPlayer {
-                        name: gameprofile.name.clone(),
-                        properties: gameprofile.properties.clone(),
-                    },
-                    PlayerAction::UpdateListed(true),
-                ],
-            })
+            let current_players = self.current_players.lock();
+            for (_, playerr) in current_players
+                .iter()
+                .filter(|(c, _)| **c != player.client.token)
+            {
+                let gameprofile = &playerr.gameprofile;
+                entries.push(pumpkin_protocol::client::play::Player {
+                    uuid: gameprofile.id,
+                    actions: vec![
+                        PlayerAction::AddPlayer {
+                            name: &gameprofile.name,
+                            properties: &gameprofile.properties,
+                        },
+                        PlayerAction::UpdateListed(true),
+                    ],
+                })
+            }
+            player
+                .client
+                .send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries));
         }
-        player
-            .client
-            .send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries));
 
         let gameprofile = &player.gameprofile;
 
@@ -186,7 +186,7 @@ impl World {
         // spawn players for our client
         let token = player.client.token;
         for (_, existing_player) in self.current_players.lock().iter().filter(|c| c.0 != &token) {
-            let entity = &existing_player.entity;
+            let entity = &existing_player.living_entity.entity;
             let pos = entity.pos.load();
             let gameprofile = &existing_player.gameprofile;
             player.client.send_packet(&CSpawnEntity::new(
@@ -220,7 +220,7 @@ impl World {
             .client
             .send_packet(&CGameEvent::new(GameEvent::StartWaitingChunks, 0.0));
 
-        // Spawn in inital chunks
+        // Spawn in initial chunks
         player_chunker::player_join(self, player.clone()).await;
     }
 
@@ -261,7 +261,7 @@ impl World {
 
     /// Gets a Player by entity id
     pub fn get_player_by_entityid(&self, id: EntityId) -> Option<Arc<Player>> {
-        for (_, player) in self.current_players.lock().iter() {
+        for player in self.current_players.lock().values() {
             if player.entity_id() == id {
                 return Some(player.clone());
             }
@@ -271,7 +271,7 @@ impl World {
 
     /// Gets a Player by name
     pub fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
-        for (_, player) in self.current_players.lock().iter() {
+        for player in self.current_players.lock().values() {
             if player.gameprofile.name == name {
                 return Some(player.clone());
             }
@@ -293,7 +293,7 @@ impl World {
             &[player.client.token],
             &CRemovePlayerInfo::new(1.into(), &[uuid]),
         );
-        self.remove_entity(&player.entity);
+        self.remove_entity(&player.living_entity.entity);
     }
 
     pub fn remove_entity(&self, entity: &Entity) {

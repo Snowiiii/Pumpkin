@@ -72,19 +72,19 @@ impl ByteBuffer {
     }
 
     pub fn get_string(&mut self) -> Result<String, DeserializerError> {
-        self.get_string_len(32767)
+        self.get_string_len(i16::MAX as i32)
     }
 
-    pub fn get_string_len(&mut self, max_size: usize) -> Result<String, DeserializerError> {
+    pub fn get_string_len(&mut self, max_size: i32) -> Result<String, DeserializerError> {
         let size = self.get_var_int()?.0;
-        if size as usize > max_size {
+        if size > max_size {
             return Err(DeserializerError::Message(
                 "String length is bigger than max size".to_string(),
             ));
         }
 
         let data = self.copy_to_bytes(size as usize)?;
-        if data.len() > max_size {
+        if data.len() as i32 > max_size {
             return Err(DeserializerError::Message(
                 "String is bigger than max size".to_string(),
             ));
@@ -125,6 +125,14 @@ impl ByteBuffer {
     }
 
     pub fn put_string(&mut self, val: &str) {
+        self.put_string_len(val, i16::MAX as i32);
+    }
+
+    pub fn put_string_len(&mut self, val: &str, max_size: i32) {
+        if val.len() as i32 > max_size {
+            // Should be panic?, I mean its our fault
+            panic!("String is too big");
+        }
         self.put_var_int(&val.len().into());
         self.buffer.put(val.as_bytes());
     }

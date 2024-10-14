@@ -62,11 +62,13 @@ impl<B: BiomeGenerator, T: PerlinTerrainGenerator> WorldGenerator for GenericGen
 
                     blocks.set_block(
                         coordinates,
-                        self.terrain_generator.generate_block(
-                            coordinates.with_chunk_coordinates(at),
-                            chunk_height as i16,
-                            biome,
-                        ),
+                        self.terrain_generator
+                            .generate_block(
+                                coordinates.with_chunk_coordinates(at),
+                                chunk_height as i16,
+                                biome,
+                            )
+                            .into(),
                     );
                 }
             }

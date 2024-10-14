@@ -20,10 +20,10 @@ fn get_view_distance(player: &Player) -> i8 {
 }
 
 pub async fn player_join(world: &World, player: Arc<Player>) {
-    let new_watched = chunk_section_from_pos(&player.entity.block_pos.load());
+    let new_watched = chunk_section_from_pos(&player.living_entity.entity.block_pos.load());
     player.watched_section.store(new_watched);
     let watched_section = new_watched;
-    let chunk_pos = player.entity.chunk_pos.load();
+    let chunk_pos = player.living_entity.entity.chunk_pos.load();
     player.client.send_packet(&CCenterChunk {
         chunk_x: chunk_pos.x.into(),
         chunk_z: chunk_pos.z.into(),

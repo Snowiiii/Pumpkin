@@ -22,3 +22,21 @@ pub fn packet(input: TokenStream, item: TokenStream) -> TokenStream {
 
     gen.into()
 }
+
+mod block_state;
+#[proc_macro]
+pub fn block(item: TokenStream) -> TokenStream {
+    block_state::block_state_impl(item)
+}
+
+#[proc_macro]
+/// Creates an enum for all block types. Should only be used once
+pub fn blocks_enum(_item: TokenStream) -> TokenStream {
+    block_state::block_enum_impl()
+}
+
+#[proc_macro]
+/// Creates an enum for all block categories. Should only be used once
+pub fn block_categories_enum(_item: TokenStream) -> TokenStream {
+    block_state::block_type_enum_impl()
+}

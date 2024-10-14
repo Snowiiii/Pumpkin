@@ -1,15 +1,15 @@
 use std::{
     collections::HashMap,
-    io::{self, Read},
-    sync::Arc,
+    io::{self, Read, Write},
+    net::SocketAddr,
 };
 
 use mio::{
     net::{TcpListener, TcpStream},
     Events, Interest, Poll, Token,
 };
-use packet::{Packet, PacketError, PacketType};
-use pumpkin_config::RCONConfig;
+use packet::{ClientboundPacket, Packet, PacketError, ServerboundPacket};
+use pumpkin_config::{RCONConfig, ADVANCED_CONFIG};
 use thiserror::Error;
 
 use crate::server::Server;
@@ -28,10 +28,10 @@ pub enum RCONError {
 
 const SERVER: Token = Token(0);
 
-pub struct RCONServer {}
+pub struct RCONServer;
 
 impl RCONServer {
-    pub async fn new(config: &RCONConfig, server: Arc<Server>) -> Result<Self, io::Error> {
+    pub async fn new(config: &RCONConfig, server: &Server) -> Result<Self, io::Error> {
         assert!(config.enabled, "RCON is not enabled");
         let mut poll = Poll::new().unwrap();
         let mut listener = TcpListener::bind(config.address).unwrap();
@@ -71,7 +71,11 @@ impl RCONServer {
                                 return Err(e);
                             }
                         };
-                        log::info!("Accepted connection from: {}", address);
+                        if config.max_connections != 0
+                            && connections.len() >= config.max_connections as usize
+                        {
+                            break;
+                        }
 
                         let token = Self::next(&mut unique_token);
                         poll.registry()
@@ -81,17 +85,24 @@ impl RCONServer {
                                 Interest::READABLE.add(Interest::WRITABLE),
                             )
                             .unwrap();
-                        connections.insert(token, RCONClient::new(connection));
+                        connections.insert(token, RCONClient::new(connection, address));
                     },
 
                     token => {
                         let done = if let Some(client) = connections.get_mut(&token) {
-                            client.handle(&server, &password).await
+                            client.handle(server, &password).await
                         } else {
                             false
                         };
                         if done {
                             if let Some(mut client) = connections.remove(&token) {
+                                let config = &ADVANCED_CONFIG.rcon;
+                                if config.logging.log_quit {
+                                    log::info!(
+                                        "RCON ({}): Client closed connection",
+                                        client.address
+                                    );
+                                }
                                 poll.registry().deregister(&mut client.connection)?;
                             }
                         }
@@ -110,22 +121,24 @@ impl RCONServer {
 
 pub struct RCONClient {
     connection: TcpStream,
+    address: SocketAddr,
     logged_in: bool,
     incoming: Vec<u8>,
     closed: bool,
 }
 
 impl RCONClient {
-    pub fn new(connection: TcpStream) -> Self {
+    pub const fn new(connection: TcpStream, address: SocketAddr) -> Self {
         Self {
             connection,
+            address,
             logged_in: false,
             incoming: Vec::new(),
             closed: false,
         }
     }
 
-    pub async fn handle(&mut self, server: &Arc<Server>, password: &str) -> bool {
+    pub async fn handle(&mut self, server: &Server, password: &str) -> bool {
         if !self.closed {
             loop {
                 match self.read_bytes() {
@@ -140,46 +153,42 @@ impl RCONClient {
                 }
             }
             // If we get a close here, we might have a reply, which we still want to write.
-            match self.poll(server, password).await {
-                Ok(()) => {}
-                Err(e) => {
-                    log::error!("rcon error: {e}");
-                    self.closed = true;
-                }
-            }
+            let _ = self.poll(server, password).await.map_err(|e| {
+                log::error!("RCON error: {e}");
+                self.closed = true;
+            });
         }
         self.closed
     }
 
-    async fn poll(&mut self, server: &Arc<Server>, password: &str) -> Result<(), PacketError> {
+    async fn poll(&mut self, server: &Server, password: &str) -> Result<(), PacketError> {
         loop {
             let packet = match self.receive_packet().await? {
                 Some(p) => p,
                 None => return Ok(()),
             };
 
+            let config = &ADVANCED_CONFIG.rcon;
             match packet.get_type() {
-                PacketType::Auth => {
+                ServerboundPacket::Auth => {
                     let body = packet.get_body();
                     if !body.is_empty() && packet.get_body() == password {
-                        self.send(&mut Packet::new(
-                            packet.get_id(),
-                            PacketType::AuthResponse,
-                            "".into(),
-                        ))
-                        .await
-                        .unwrap();
-                        log::info!("RCON Client logged in successfully");
+                        self.send(ClientboundPacket::AuthResponse, packet.get_id(), "".into())
+                            .await?;
+                        if config.logging.log_logged_successfully {
+                            log::info!("RCON ({}): Client logged in successfully", self.address);
+                        }
                         self.logged_in = true;
                     } else {
-                        log::warn!("RCON Client has tried wrong password");
-                        self.send(&mut Packet::new(-1, PacketType::AuthResponse, "".into()))
-                            .await
-                            .unwrap();
-                        return Err(PacketError::WrongPassword);
+                        if config.logging.log_wrong_password {
+                            log::info!("RCON ({}): Client has tried wrong password", self.address);
+                        }
+                        self.send(ClientboundPacket::AuthResponse, -1, "".into())
+                            .await?;
+                        self.closed = true;
                     }
                 }
-                PacketType::ExecCommand => {
+                ServerboundPacket::ExecCommand => {
                     if self.logged_in {
                         let mut output = Vec::new();
                         let dispatcher = server.command_dispatcher.clone();
@@ -189,14 +198,14 @@ impl RCONClient {
                             packet.get_body(),
                         );
                         for line in output {
-                            self.send(&mut Packet::new(packet.get_id(), PacketType::Output, line))
-                                .await
-                                .unwrap();
+                            if config.logging.log_commands {
+                                log::info!("RCON ({}): {}", self.address, line);
+                            }
+                            self.send(ClientboundPacket::Output, packet.get_id(), line)
+                                .await?;
                         }
                     }
                 }
-                PacketType::Output => todo!(),
-                PacketType::AuthResponse => unreachable!(),
             }
         }
     }
@@ -211,8 +220,17 @@ impl RCONClient {
         Ok(false)
     }
 
-    async fn send(&mut self, packet: &mut Packet) -> io::Result<()> {
-        packet.send_packet(&mut self.connection).await
+    async fn send(
+        &mut self,
+        packet: ClientboundPacket,
+        id: i32,
+        body: String,
+    ) -> Result<(), PacketError> {
+        let buf = packet.write_buf(id, body);
+        self.connection
+            .write(&buf)
+            .map_err(PacketError::FailedSend)?;
+        Ok(())
     }
 
     async fn receive_packet(&mut self) -> Result<Option<Packet>, PacketError> {

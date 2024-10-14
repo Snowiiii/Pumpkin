@@ -2,6 +2,7 @@ use std::io::Write;
 
 use aes::cipher::{generic_array::GenericArray, BlockEncryptMut, BlockSizeUser, KeyIvInit};
 use bytes::{BufMut, BytesMut};
+use pumpkin_config::compression::CompressionInfo;
 
 use std::io::Read;
 
@@ -19,14 +20,13 @@ type Cipher = cfb8::Encryptor<aes::Aes128>;
 pub struct PacketEncoder {
     buf: BytesMut,
     compress_buf: Vec<u8>,
-    compression: Option<(u32, u32)>,
+    compression: Option<CompressionInfo>,
     cipher: Option<Cipher>,
 }
 
 impl PacketEncoder {
     pub fn append_packet<P: ClientPacket>(&mut self, packet: &P) -> Result<(), PacketError> {
         let start_len = self.buf.len();
-
         let mut writer = (&mut self.buf).writer();
 
         let mut packet_buf = ByteBuffer::empty();
@@ -41,10 +41,10 @@ impl PacketEncoder {
 
         let data_len = self.buf.len() - start_len;
 
-        if let Some((threshold, compression_level)) = self.compression {
-            if data_len > threshold as usize {
+        if let Some(compression) = &self.compression {
+            if data_len > compression.threshold as usize {
                 let mut z =
-                    ZlibEncoder::new(&self.buf[start_len..], Compression::new(compression_level));
+                    ZlibEncoder::new(&self.buf[start_len..], Compression::new(compression.level));
 
                 self.compress_buf.clear();
 
@@ -118,13 +118,20 @@ impl PacketEncoder {
         Ok(())
     }
 
-    pub fn enable_encryption(&mut self, key: &[u8; 16]) {
-        assert!(self.cipher.is_none(), "encryption is already enabled");
-        self.cipher = Some(Cipher::new_from_slices(key, key).expect("invalid key"));
+    pub fn set_encryption(&mut self, key: Option<&[u8; 16]>) {
+        if let Some(key) = key {
+            assert!(self.cipher.is_none(), "encryption is already enabled");
+
+            self.cipher = Some(Cipher::new_from_slices(key, key).expect("invalid key"));
+        } else {
+            assert!(self.cipher.is_some(), "encryption is disabled");
+
+            self.cipher = None;
+        }
     }
 
     /// Enables ZLib Compression
-    pub fn set_compression(&mut self, compression: Option<(u32, u32)>) {
+    pub fn set_compression(&mut self, compression: Option<CompressionInfo>) {
         self.compression = compression;
     }
 

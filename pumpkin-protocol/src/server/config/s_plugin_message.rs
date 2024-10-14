@@ -14,7 +14,7 @@ pub struct SPluginMessage {
 impl ServerPacket for SPluginMessage {
     fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError> {
         Ok(Self {
-            channel: bytebuf.get_string().unwrap(),
+            channel: bytebuf.get_string()?,
             data: bytebuf.get_slice().to_vec(),
         })
     }

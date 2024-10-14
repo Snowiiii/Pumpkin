@@ -22,12 +22,10 @@ impl Cylindrical {
         just_removed: impl FnMut(Vector2<i32>),
         ignore: bool,
     ) {
-        let min_x = old_cylindrical.get_left().min(new_cylindrical.get_left());
-        let max_x = old_cylindrical.get_right().max(new_cylindrical.get_right());
-        let min_z = old_cylindrical
-            .get_bottom()
-            .min(new_cylindrical.get_bottom());
-        let max_z = old_cylindrical.get_top().max(new_cylindrical.get_top());
+        let min_x = old_cylindrical.left().min(new_cylindrical.left());
+        let max_x = old_cylindrical.right().max(new_cylindrical.right());
+        let min_z = old_cylindrical.bottom().min(new_cylindrical.bottom());
+        let max_z = old_cylindrical.top().max(new_cylindrical.top());
 
         for x in min_x..=max_x {
             for z in min_z..=max_z {
@@ -55,19 +53,19 @@ impl Cylindrical {
         }
     }
 
-    fn get_left(&self) -> i32 {
+    fn left(&self) -> i32 {
         self.center.x - self.view_distance - 1
     }
 
-    fn get_bottom(&self) -> i32 {
+    fn bottom(&self) -> i32 {
         self.center.z - self.view_distance - 1
     }
 
-    fn get_right(&self) -> i32 {
+    fn right(&self) -> i32 {
         self.center.x + self.view_distance + 1
     }
 
-    fn get_top(&self) -> i32 {
+    fn top(&self) -> i32 {
         self.center.z + self.view_distance + 1
     }
 

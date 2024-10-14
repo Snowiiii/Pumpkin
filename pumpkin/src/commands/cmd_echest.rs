@@ -7,7 +7,7 @@ const NAMES: [&str; 2] = ["echest", "enderchest"];
 const DESCRIPTION: &str =
     "Show your personal enderchest (this command is used for testing container behaviour)";
 
-pub(crate) fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).execute(&|sender, server, _| {
         if let Some(player) = sender.as_mut_player() {
             let entity_id = player.entity_id();

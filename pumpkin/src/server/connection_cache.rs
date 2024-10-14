@@ -1,7 +1,6 @@
-use std::{io::Cursor, path::Path};
+use std::{fs::File, path::Path};
 
 use base64::{engine::general_purpose, Engine as _};
-use image::GenericImageView as _;
 use pumpkin_config::{BasicConfiguration, BASIC_CONFIG};
 use pumpkin_protocol::{
     client::{config::CPluginMessage, status::CStatusResponse},
@@ -23,9 +22,9 @@ pub struct CachedBranding {
 }
 
 impl CachedBranding {
-    pub fn new() -> CachedBranding {
+    pub fn new() -> Self {
         let cached_server_brand = Self::build_brand();
-        CachedBranding {
+        Self {
             cached_server_brand,
         }
     }
@@ -47,7 +46,7 @@ impl CachedStatus {
         let status_response_json = serde_json::to_string(&status_response)
             .expect("Failed to parse Status response into JSON");
 
-        CachedStatus {
+        Self {
             _status_response: status_response,
             status_response_json,
         }
@@ -58,7 +57,7 @@ impl CachedStatus {
     }
 
     pub fn build_response(config: &BasicConfiguration) -> StatusResponse {
-        let icon_path = concat!(env!("CARGO_MANIFEST_DIR"), "/icon.png");
+        let icon_path = "/icon.png";
         let icon = if Path::new(icon_path).exists() {
             Some(Self::load_icon(icon_path))
         } else {
@@ -80,23 +79,24 @@ impl CachedStatus {
             }),
             description: config.motd.clone(),
             favicon: icon,
-            enforece_secure_chat: false,
+            enforce_secure_chat: false,
         }
     }
 
-    fn load_icon(path: &str) -> String {
-        let icon = match image::open(path).map_err(|e| panic!("error loading icon: {}", e)) {
-            Ok(icon) => icon,
-            Err(_) => return "".into(),
-        };
-        let dimension = icon.dimensions();
-        assert!(dimension.0 == 64, "Icon width must be 64");
-        assert!(dimension.1 == 64, "Icon height must be 64");
-        let mut image = Vec::with_capacity(64 * 64 * 4);
-        icon.write_to(&mut Cursor::new(&mut image), image::ImageFormat::Png)
-            .unwrap();
+    fn load_icon<P: AsRef<Path>>(path: P) -> String {
+        let icon = png::Decoder::new(File::open(path).expect("Failed to load icon"));
+        let mut reader = icon.read_info().unwrap();
+        let info = reader.info();
+        assert!(info.width == 64, "Icon width must be 64");
+        assert!(info.height == 64, "Icon height must be 64");
+        // Allocate the output buffer.
+        let mut buf = vec![0; reader.output_buffer_size()];
+        // Read the next frame. An APNG might contain multiple frames.
+        let info = reader.next_frame(&mut buf).unwrap();
+        // Grab the bytes of the image.
+        let bytes = &buf[..info.buffer_size()];
         let mut result = "data:image/png;base64,".to_owned();
-        general_purpose::STANDARD.encode_string(image, &mut result);
+        general_purpose::STANDARD.encode_string(bytes, &mut result);
         result
     }
 }

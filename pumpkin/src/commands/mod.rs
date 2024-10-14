@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use dispatcher::InvalidTreeError;
 use pumpkin_core::text::TextComponent;
 use tree::ConsumedArgs;
@@ -11,6 +9,7 @@ mod arg_player;
 mod cmd_echest;
 mod cmd_gamemode;
 mod cmd_help;
+mod cmd_kill;
 mod cmd_pumpkin;
 mod cmd_stop;
 pub mod dispatcher;
@@ -34,7 +33,7 @@ impl<'a> CommandSender<'a> {
         }
     }
 
-    pub fn is_player(&self) -> bool {
+    pub const fn is_player(&self) -> bool {
         match self {
             CommandSender::Console => false,
             CommandSender::Player(_) => true,
@@ -42,7 +41,7 @@ impl<'a> CommandSender<'a> {
         }
     }
 
-    pub fn is_console(&self) -> bool {
+    pub const fn is_console(&self) -> bool {
         match self {
             CommandSender::Console => true,
             CommandSender::Player(_) => false,
@@ -58,7 +57,7 @@ impl<'a> CommandSender<'a> {
     }
 
     /// todo: implement
-    pub fn permission_lvl(&self) -> i32 {
+    pub const fn permission_lvl(&self) -> i32 {
         match self {
             CommandSender::Rcon(_) => 4,
             CommandSender::Console => 4,
@@ -75,9 +74,10 @@ pub fn default_dispatcher<'a>() -> CommandDispatcher<'a> {
     dispatcher.register(cmd_stop::init_command_tree());
     dispatcher.register(cmd_help::init_command_tree());
     dispatcher.register(cmd_echest::init_command_tree());
+    dispatcher.register(cmd_kill::init_command_tree());
 
     dispatcher
 }
 
-type RunFunctionType = (dyn Fn(&mut CommandSender, &Arc<Server>, &ConsumedArgs) -> Result<(), InvalidTreeError>
-     + Sync);
+type RunFunctionType =
+    (dyn Fn(&mut CommandSender, &Server, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync);
