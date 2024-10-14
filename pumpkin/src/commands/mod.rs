@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use dispatcher::InvalidTreeError;
 use pumpkin_core::text::TextComponent;
 use tree::ConsumedArgs;
@@ -81,5 +79,5 @@ pub fn default_dispatcher<'a>() -> CommandDispatcher<'a> {
     dispatcher
 }
 
-type RunFunctionType = (dyn Fn(&mut CommandSender, &Arc<Server>, &ConsumedArgs) -> Result<(), InvalidTreeError>
-     + Sync);
+type RunFunctionType =
+    (dyn Fn(&mut CommandSender, &Server, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync);

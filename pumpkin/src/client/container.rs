@@ -20,7 +20,7 @@ use pumpkin_world::item::ItemStack;
 use std::sync::Arc;
 
 impl Player {
-    pub fn open_container(&self, server: &Arc<Server>, minecraft_menu_id: &str) {
+    pub fn open_container(&self, server: &Server, minecraft_menu_id: &str) {
         let inventory = self.inventory.lock();
         inventory
             .state_id

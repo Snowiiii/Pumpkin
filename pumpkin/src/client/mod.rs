@@ -222,9 +222,7 @@ impl Client {
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
         match self.connection_state.load() {
-            pumpkin_protocol::ConnectionState::HandShake => {
-                self.handle_handshake_packet(server, packet)
-            }
+            pumpkin_protocol::ConnectionState::HandShake => self.handle_handshake_packet(packet),
             pumpkin_protocol::ConnectionState::Status => self.handle_status_packet(server, packet),
             // TODO: Check config if transfer is enabled
             pumpkin_protocol::ConnectionState::Login
@@ -241,15 +239,11 @@ impl Client {
         }
     }
 
-    fn handle_handshake_packet(
-        &self,
-        server: &Arc<Server>,
-        packet: &mut RawPacket,
-    ) -> Result<(), DeserializerError> {
+    fn handle_handshake_packet(&self, packet: &mut RawPacket) -> Result<(), DeserializerError> {
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SHandShake::PACKET_ID => {
-                self.handle_handshake(server, SHandShake::read(bytebuf)?);
+                self.handle_handshake(SHandShake::read(bytebuf)?);
                 Ok(())
             }
             _ => {
@@ -274,7 +268,7 @@ impl Client {
                 Ok(())
             }
             SStatusPingRequest::PACKET_ID => {
-                self.handle_ping_request(server, SStatusPingRequest::read(bytebuf)?);
+                self.handle_ping_request(SStatusPingRequest::read(bytebuf)?);
                 Ok(())
             }
             _ => {
@@ -304,7 +298,7 @@ impl Client {
                 Ok(())
             }
             SLoginPluginResponse::PACKET_ID => {
-                self.handle_plugin_response(server, SLoginPluginResponse::read(bytebuf)?);
+                self.handle_plugin_response(SLoginPluginResponse::read(bytebuf)?);
                 Ok(())
             }
             SLoginAcknowledged::PACKET_ID => {
@@ -329,18 +323,15 @@ impl Client {
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SClientInformationConfig::PACKET_ID => {
-                self.handle_client_information_config(
-                    server,
-                    SClientInformationConfig::read(bytebuf)?,
-                );
+                self.handle_client_information_config(SClientInformationConfig::read(bytebuf)?);
                 Ok(())
             }
             SPluginMessage::PACKET_ID => {
-                self.handle_plugin_message(server, SPluginMessage::read(bytebuf)?);
+                self.handle_plugin_message(SPluginMessage::read(bytebuf)?);
                 Ok(())
             }
             SAcknowledgeFinishConfig::PACKET_ID => {
-                self.handle_config_acknowledged(server, SAcknowledgeFinishConfig::read(bytebuf)?)
+                self.handle_config_acknowledged(SAcknowledgeFinishConfig::read(bytebuf)?)
                     .await;
                 Ok(())
             }
@@ -362,22 +353,19 @@ impl Client {
     /// Close connection when an error occurs or when the Client closed the connection
     pub async fn poll(&self, event: &Event) {
         if event.is_readable() {
-            let mut received_data = vec![0; 4096];
-            let mut bytes_read = 0;
+            let mut received_data = vec![];
+            let mut buf = [0; 4096];
             loop {
                 let connection = self.connection.clone();
                 let mut connection = connection.lock();
-                match connection.read(&mut received_data[bytes_read..]) {
+                match connection.read(&mut buf) {
                     Ok(0) => {
                         // Reading 0 bytes means the other side has closed the
                         // connection or is done writing, then so are we.
                         self.close();
                         break;
                     }
-                    Ok(n) => {
-                        bytes_read += n;
-                        received_data.extend(&vec![0; n]);
-                    }
+                    Ok(n) => received_data.extend(&buf[..n]),
                     // Would block "errors" are the OS's way of saying that the
                     // connection is not actually ready to perform this I/O operation.
                     Err(ref err) if would_block(err) => break,
@@ -387,9 +375,9 @@ impl Client {
                 }
             }
 
-            if bytes_read != 0 {
+            if !received_data.is_empty() {
                 let mut dec = self.dec.lock();
-                dec.queue_slice(&received_data[..bytes_read]);
+                dec.queue_slice(&received_data);
                 match dec.decode() {
                     Ok(packet) => {
                         if let Some(packet) = packet {
