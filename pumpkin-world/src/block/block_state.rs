@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::level::WorldError;
+use thiserror::Error;
 
 use super::block_registry::{Block, BlockCategory, BLOCKS};
 
@@ -21,16 +21,16 @@ impl BlockState {
     pub fn new(
         registry_id: &str,
         properties: Option<&HashMap<String, String>>,
-    ) -> Result<Self, WorldError> {
+    ) -> Result<Self, BlockStateError> {
         let block_registry = BLOCKS
             .get(registry_id)
-            .ok_or(WorldError::BlockIdentifierNotFound)?;
+            .ok_or(BlockStateError::BlockIdentifierNotFound)?;
         let mut block_states = block_registry.states.iter();
 
         let block_state = match properties {
             Some(properties) => block_states
                 .find(|state| &state.properties == properties)
-                .ok_or_else(|| WorldError::BlockStateIdNotFound)?,
+                .ok_or(BlockStateError::BlockStateIdNotFound)?,
             None => block_states
                 .find(|state| state.is_default)
                 .expect("Every Block should have at least 1 default state"),
@@ -70,4 +70,12 @@ impl BlockState {
     pub fn of_category(&self, category: BlockCategory) -> bool {
         self.category == category
     }
+}
+
+#[derive(Error, Debug)]
+pub enum BlockStateError {
+    #[error("The requested block identifier does not exist")]
+    BlockIdentifierNotFound,
+    #[error("The requested block state id does not exist")]
+    BlockStateIdNotFound,
 }

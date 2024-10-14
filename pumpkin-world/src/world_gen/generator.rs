@@ -1,6 +1,5 @@
 use noise::Perlin;
 use pumpkin_core::math::vector2::Vector2;
-use static_assertions::assert_obj_safe;
 
 use crate::biome::Biome;
 use crate::block::block_state::BlockState;
@@ -15,7 +14,6 @@ pub trait GeneratorInit {
 pub trait WorldGenerator: Sync + Send {
     fn generate_chunk(&self, at: Vector2<i32>) -> ChunkData;
 }
-assert_obj_safe! {WorldGenerator}
 
 pub(crate) trait BiomeGenerator: Sync + Send {
     fn generate_biome(&self, at: XZBlockCoordinates) -> Biome;

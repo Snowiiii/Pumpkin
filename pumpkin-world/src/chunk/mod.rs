@@ -5,17 +5,52 @@ use std::ops::Index;
 use fastnbt::LongArray;
 use pumpkin_core::math::vector2::Vector2;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::{
-    block::{BlockId, BlockState},
+    block::{block_state::BlockStateError, BlockId, BlockState},
     coordinates::{ChunkRelativeBlockCoordinates, Height},
-    level::{ChunkNotGeneratedError, WorldError},
+    level::SaveFile,
     WORLD_HEIGHT,
 };
+
+pub mod anvil;
 
 const CHUNK_AREA: usize = 16 * 16;
 const SUBCHUNK_VOLUME: usize = CHUNK_AREA * 16;
 const CHUNK_VOLUME: usize = CHUNK_AREA * WORLD_HEIGHT;
+
+pub trait ChunkReader: Sync + Send {
+    fn read_chunk(
+        &self,
+        save_file: &SaveFile,
+        at: Vector2<i32>,
+    ) -> Result<ChunkData, ChunkReadingError>;
+}
+
+#[derive(Error, Debug)]
+pub enum ChunkReadingError {
+    #[error("Io error: {0}")]
+    IoError(std::io::ErrorKind),
+    #[error("Region is invalid")]
+    RegionIsInvalid,
+    #[error("Compression error {0}")]
+    Compression(CompressionError),
+    #[error("Tried to read chunk which does not exist")]
+    ChunkNotExist,
+    #[error("Failed to parse Chunk from bytes: {0}")]
+    ParsingError(ChunkParsingError),
+}
+
+#[derive(Error, Debug)]
+pub enum CompressionError {
+    #[error("Compression scheme not recognised")]
+    UnknownCompression,
+    #[error("Error while working with zlib compression: {0}")]
+    ZlibError(std::io::Error),
+    #[error("Error while working with Gzip compression: {0}")]
+    GZipError(std::io::Error),
+}
 
 pub struct ChunkData {
     pub blocks: ChunkBlocks,
@@ -188,18 +223,16 @@ impl Index<ChunkRelativeBlockCoordinates> for ChunkBlocks {
 }
 
 impl ChunkData {
-    pub fn from_bytes(chunk_data: Vec<u8>, at: Vector2<i32>) -> Result<Self, WorldError> {
+    pub fn from_bytes(chunk_data: Vec<u8>, at: Vector2<i32>) -> Result<Self, ChunkParsingError> {
         if fastnbt::from_bytes::<ChunkStatus>(&chunk_data).expect("Failed reading chunk status.")
             != ChunkStatus::Full
         {
-            return Err(WorldError::ChunkNotGenerated(
-                ChunkNotGeneratedError::IncompleteGeneration,
-            ));
+            return Err(ChunkParsingError::ChunkNotGenerated);
         }
 
         let chunk_data = match fastnbt::from_bytes::<ChunkNbt>(chunk_data.as_slice()) {
             Ok(v) => v,
-            Err(err) => return Err(WorldError::ErrorDeserializingChunk(err.to_string())),
+            Err(err) => return Err(ChunkParsingError::ErrorDeserializingChunk(err.to_string())),
         };
 
         // this needs to be boxed, otherwise it will cause a stack-overflow
@@ -221,7 +254,8 @@ impl ChunkData {
                         Ok(state) => Ok(state.into()),
                     },
                 )
-                .collect::<Result<Vec<_>, _>>()?;
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(ChunkParsingError::BlockStateError)?;
 
             let block_data = match block_states.data {
                 None => {
@@ -276,4 +310,14 @@ impl ChunkData {
             position: at,
         })
     }
+}
+
+#[derive(Error, Debug)]
+pub enum ChunkParsingError {
+    #[error("BlockState error: {0}")]
+    BlockStateError(BlockStateError),
+    #[error("The chunk isn't generated yet")]
+    ChunkNotGenerated,
+    #[error("Error deserializing chunk: {0}")]
+    ErrorDeserializingChunk(String),
 }
