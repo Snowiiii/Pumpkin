@@ -40,7 +40,7 @@ use crate::{
     world::World,
 };
 
-use super::{living::LivingEntity, Entity};
+use super::living::LivingEntity;
 
 /// Represents a Minecraft player entity.
 ///
@@ -382,6 +382,7 @@ impl Player {
             }
             SClickContainer::PACKET_ID => {
                 self.handle_click_container(server, SClickContainer::read(bytebuf)?)
+                    .await?;
                 Ok(())
             }
             SCloseContainer::PACKET_ID => {
