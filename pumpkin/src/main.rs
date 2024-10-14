@@ -33,7 +33,7 @@ use std::time::Duration;
 pub mod client;
 pub mod commands;
 pub mod entity;
-mod error;
+pub mod error;
 pub mod proxy;
 pub mod rcon;
 pub mod server;
