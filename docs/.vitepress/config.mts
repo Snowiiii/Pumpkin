@@ -73,5 +73,5 @@ export default defineConfig({
     },
     outline: "deep"
   },
-  head: [["link", { rel: "icon", href: "/assets/favicon.ico" }]],
+  head: [["link", { rel: "icon", href: "/Pumpkin/assets/favicon.ico" }]],
 });
