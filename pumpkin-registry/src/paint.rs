@@ -1,3 +1,4 @@
+use crate::RegistryType;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,4 +16,8 @@ impl Default for Painting {
             width: 2,
         }
     }
+}
+impl RegistryType for Painting {
+    const REGISTRY_ID: &'static str = "minecraft:painting_variant";
+    const ENTRY_IDS: &'static [&'static str] = &[Self::REGISTRY_ID];
 }
