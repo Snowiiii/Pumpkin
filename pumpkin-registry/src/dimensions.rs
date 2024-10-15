@@ -1,3 +1,4 @@
+use crate::RegistryType;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,6 +60,10 @@ impl Default for Dimension {
     }
 }
 
+impl RegistryType for Dimension {
+    const REGISTRY_ID: &'static str = "minecraft:dimension_type";
+    const ENTRY_IDS: &'static [&'static str] = &["minecraft:overworld"];
+}
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum MonsterSpawnLightLevel {

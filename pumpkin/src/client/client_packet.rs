@@ -254,7 +254,7 @@ impl Client {
     pub fn handle_known_packs(&self, server: &Server, _config_acknowledged: SKnownPacks) {
         for registry in &server.cached_registry {
             self.send_packet(&CRegistryData::new(
-                &registry.registry_id,
+                registry.registry_id,
                 &registry.registry_entries,
             ));
         }
