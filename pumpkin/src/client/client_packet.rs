@@ -346,7 +346,7 @@ impl Client {
         log::debug!("Handling known packs");
         for registry in &server.cached_registry {
             self.send_packet(&CRegistryData::new(
-                &registry.registry_id,
+                registry.registry_id,
                 &registry.registry_entries,
             ))
             .await;
