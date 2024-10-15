@@ -40,11 +40,11 @@ impl RCONServer {
             .register(&mut listener, SERVER, Interest::READABLE)
             .unwrap();
 
-        let mut unique_token = Token(SERVER.0 + 1);
+        let mut unique_id = SERVER.0 + 1;
 
         let mut events = Events::with_capacity(20);
 
-        let mut connections: HashMap<Token, RCONClient> = HashMap::new();
+        let mut connections: HashMap<usize, RCONClient> = HashMap::new();
 
         let password = config.password.clone();
 
@@ -77,11 +77,12 @@ impl RCONServer {
                             break;
                         }
 
-                        let token = Self::next(&mut unique_token);
+                        unique_id += 1;
+                        let token = unique_id;
                         poll.registry()
                             .register(
                                 &mut connection,
-                                token,
+                                Token(token),
                                 Interest::READABLE.add(Interest::WRITABLE),
                             )
                             .unwrap();
@@ -89,13 +90,13 @@ impl RCONServer {
                     },
 
                     token => {
-                        let done = if let Some(client) = connections.get_mut(&token) {
+                        let done = if let Some(client) = connections.get_mut(&token.0) {
                             client.handle(server, &password).await
                         } else {
                             false
                         };
                         if done {
-                            if let Some(mut client) = connections.remove(&token) {
+                            if let Some(mut client) = connections.remove(&token.0) {
                                 let config = &ADVANCED_CONFIG.rcon;
                                 if config.logging.log_quit {
                                     log::info!(
@@ -110,12 +111,6 @@ impl RCONServer {
                 }
             }
         }
-    }
-
-    fn next(current: &mut Token) -> Token {
-        let next = current.0;
-        current.0 += 1;
-        Token(next)
     }
 }
 

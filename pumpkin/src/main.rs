@@ -136,13 +136,13 @@ fn main() -> io::Result<()> {
             .register(&mut listener, SERVER, Interest::READABLE)?;
 
         // Unique token for each incoming connection.
-        let mut unique_token = Token(SERVER.0 + 1);
+        let mut unique_id = SERVER.0 + 1;
 
         let use_console = ADVANCED_CONFIG.commands.use_console;
         let rcon = ADVANCED_CONFIG.rcon.clone();
 
-        let mut clients: HashMap<Token, Arc<Client>> = HashMap::new();
-        let mut players: HashMap<Token, Arc<Player>> = HashMap::new();
+        let mut clients: HashMap<usize, Arc<Client>> = HashMap::new();
+        let mut players: HashMap<usize, Arc<Player>> = HashMap::new();
 
         let server = Arc::new(Server::new());
         log::info!("Started Server took {}ms", time.elapsed().as_millis());
@@ -212,15 +212,16 @@ fn main() -> io::Result<()> {
                             scrub_address(&format!("{}", address))
                         );
 
-                        let token = next(&mut unique_token);
+                        unique_id += 1;
+                        let id = unique_id;
                         poll.registry().register(
                             &mut connection,
-                            token,
+                            Token(id),
                             Interest::READABLE.add(Interest::WRITABLE),
                         )?;
                         let keep_alive = tokio::sync::mpsc::channel(1024);
                         let client =
-                            Arc::new(Client::new(token, connection, addr, keep_alive.0.into()));
+                            Arc::new(Client::new(id, connection, addr, keep_alive.0.into()));
 
                         {
                             let client = client.clone();
@@ -253,12 +254,12 @@ fn main() -> io::Result<()> {
                                 }
                             });
                         }
-                        clients.insert(token, client);
+                        clients.insert(id, client);
                     },
                     // Maybe received an event for a TCP connection.
                     token => {
                         // poll Player
-                        if let Some(player) = players.get_mut(&token) {
+                        if let Some(player) = players.get_mut(&token.0) {
                             player.client.poll(event).await;
                             let closed = player
                                 .client
@@ -268,7 +269,7 @@ fn main() -> io::Result<()> {
                                 player.process_packets(&server).await;
                             }
                             if closed {
-                                if let Some(player) = players.remove(&token) {
+                                if let Some(player) = players.remove(&token.0) {
                                     player.remove().await;
                                     let connection = &mut player.client.connection.lock();
                                     poll.registry().deregister(connection.by_ref())?;
@@ -277,7 +278,7 @@ fn main() -> io::Result<()> {
                         };
 
                         // Poll current Clients (non players)
-                        let (done, make_player) = if let Some(client) = clients.get_mut(&token) {
+                        let (done, make_player) = if let Some(client) = clients.get_mut(&token.0) {
                             client.poll(event).await;
                             let closed = client.closed.load(std::sync::atomic::Ordering::Relaxed);
                             if !closed {
@@ -293,14 +294,14 @@ fn main() -> io::Result<()> {
                             (false, false)
                         };
                         if done || make_player {
-                            if let Some(client) = clients.remove(&token) {
+                            if let Some(client) = clients.remove(&token.0) {
                                 if done {
                                     let connection = &mut client.connection.lock();
                                     poll.registry().deregister(connection.by_ref())?;
                                 } else if make_player {
-                                    let token = client.token;
-                                    let (player, world) = server.add_player(token, client).await;
-                                    players.insert(token, player.clone());
+                                    let id = client.id;
+                                    let (player, world) = server.add_player(id, client).await;
+                                    players.insert(id, player.clone());
                                     world.spawn_player(&BASIC_CONFIG, player).await;
                                 }
                             }
@@ -310,10 +311,4 @@ fn main() -> io::Result<()> {
             }
         }
     })
-}
-
-fn next(current: &mut Token) -> Token {
-    let next = current.0;
-    current.0 += 1;
-    Token(next)
 }

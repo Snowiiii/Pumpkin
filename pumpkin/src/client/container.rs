@@ -388,7 +388,7 @@ impl Player {
                 .filter(|player_id| *player_id != self.entity_id())
                 .collect_vec()
         };
-        let player_token = self.client.token;
+        let player_token = self.client.id;
 
         // TODO: Figure out better way to get only the players from player_ids
         // Also refactor out a better method to get individual advanced state ids

@@ -14,7 +14,7 @@ use crate::{
 
 use authentication::GameProfile;
 use crossbeam::atomic::AtomicCell;
-use mio::{event::Event, net::TcpStream, Token};
+use mio::{event::Event, net::TcpStream};
 use parking_lot::Mutex;
 use pumpkin_config::compression::CompressionInfo;
 use pumpkin_core::text::TextComponent;
@@ -99,8 +99,8 @@ pub struct Client {
     pub encryption: AtomicBool,
     /// Indicates if the client connection is closed.
     pub closed: AtomicBool,
-    /// A unique token identifying the client.
-    pub token: Token,
+    /// A unique id identifying the client.
+    pub id: usize,
     /// The underlying TCP connection to the client.
     pub connection: Arc<Mutex<TcpStream>>,
     /// The client's IP address.
@@ -122,7 +122,7 @@ pub struct Client {
 
 impl Client {
     pub fn new(
-        token: Token,
+        id: usize,
         connection: TcpStream,
         address: SocketAddr,
         keep_alive_sender: Arc<tokio::sync::mpsc::Sender<i64>>,
@@ -132,7 +132,7 @@ impl Client {
             gameprofile: Mutex::new(None),
             config: Mutex::new(None),
             brand: Mutex::new(None),
-            token,
+            id,
             address: Mutex::new(address),
             connection_state: AtomicCell::new(ConnectionState::HandShake),
             connection: Arc::new(Mutex::new(connection)),
