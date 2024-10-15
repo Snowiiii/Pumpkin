@@ -74,13 +74,15 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 Check out our [Github Project](https://github.com/users/Snowiiii/projects/12/views/3) to see current progress
 
 ## How to run
-See https://snowiiii.github.io/Pumpkin/about/quick-start.html
+
+See our [Quick Start](https://snowiiii.github.io/Pumpkin/about/quick-start.html) Guide to get Pumpkin running
 
 ## Contributions
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Docs
+
 The Documentation of Pumpkin can be found at https://snowiiii.github.io/Pumpkin/
 
 ## Communication
@@ -88,6 +90,7 @@ The Documentation of Pumpkin can be found at https://snowiiii.github.io/Pumpkin/
 Consider joining our [discord](https://discord.gg/wT8XjrjKkf) to stay up-to-date on events, updates, and connect with other members.
 
 ## Funding
+
 If you want to fund me and help the project, Check out my [GitHub sponsors](https://github.com/sponsors/Snowiiii)
 
 ## Thanks

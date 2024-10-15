@@ -1,20 +1,20 @@
-### Benchmarks
+# Benchmarks
 
-Here i compare common Minecraft servers against Pumpkin.
+Here, I compare common Minecraft servers against Pumpkin.
 
-Is this comparsion fair?. Not really, While you could say Pumpkin has currently way less features than other Servers which should use less resources, You should also consider that other Servers had already Years for
-Optimazations, Espacilly Vanilla forks which don't have to go trough the pain of rewriting the entire vanilla logic are free to focus on optimations
+Is this comparison fair?. Not really. While you could say Pumpkin currently has way fewer features than other Servers which should use less resources, You should also consider that other Servers had already Years for
+Optimizations, Especially Vanilla forks, which don't have to go through the pain of rewriting the entire vanilla logic, are free to focus on optimizations
 
 ALL TESTS HAVE BEEN RAN MULTIPLE TIMES TO GUARANTEE CONSISTENT RESULTS
 
-ALL PLAYERS DID NOT MOVE WHEN SPAWNING, ONLY THE INITAL 8 CHUNKS WHERE LOADED, THATS ALSO THE REASON CPU MAX IS USALLY HIGH ON FIRST PLAYER
+ALL PLAYERS DID NOT MOVE WHEN SPAWNING, ONLY THE INITIAL 8 CHUNKS WERE LOADED, THAT'S ALSO THE REASON CPU MAX IS USUALLY HIGH ON THE FIRST PLAYER
 ALL SERVERS USED ITS OWN TERRAIN GENERATION, NO WORLD WAS PRE-LOADED
 
 ![Screenshot From 2024-10-15 16-42-53](https://github.com/user-attachments/assets/e08fbb00-42fe-4479-a03b-11bb6886c91a)
 
-### Specefications
+# Specifications
 
-#### Technical
+## Technical
 
 **Software**
 
@@ -41,7 +41,7 @@ ALL SERVERS USED ITS OWN TERRAIN GENERATION, NO WORLD WAS PRE-LOADED
 - JRE Version: OpenJDK Runtime Environment (build 23+37)
 - Vendor: Oracle
 
-#### Game
+## Game
 
 - Minecraft version: 1.21.1
 - View distance: 10
@@ -51,7 +51,7 @@ ALL SERVERS USED ITS OWN TERRAIN GENERATION, NO WORLD WAS PRE-LOADED
 
 <sub><sup>online mode was disabled, so i can easier test with non premium accounts</sup></sub>
 
-### Pumpkin
+# Pumpkin
 
 Build: [8febc50](https://github.com/Snowiiii/Pumpkin/commit/8febc5035d5611558c13505b7724e6ca284e0ada)
 
@@ -75,7 +75,7 @@ Run args:
 
 <sub><sup>pumpkin does cache already loaded chunks, resulting in no extra RAM besides player data and minimal CPU usage</sup></sub>
 
-### Vanilla
+# Vanilla
 
 Release: [1.21.1](https://piston-data.mojang.com/v1/objects/59353fb40c36d304f2035d51e7d6e6baa98dc05c/server.jar)
 
@@ -97,7 +97,7 @@ Run args: `nogui`
 | 5       | 1.8GB | 2,0%     | 20,0%   |
 | 10      | 2,2GB | 4,0%     | 24,0%   |
 
-### Paper
+# Paper
 
 Build: [122](https://api.papermc.io/v2/projects/paper/versions/1.21.1/builds/122/downloads/paper-1.21.1-122.jar)
 
@@ -119,7 +119,7 @@ Run args: `nogui`
 | 5       | 1.9GB | 1.5%     | 15,0%   |
 | 10      | 2GB   | 3,0%     | 20,0%   |
 
-### Purpur
+# Purpur
 
 Build: [2324](https://api.purpurmc.org/v2/purpur/1.21.1/2324/download)
 
@@ -141,7 +141,7 @@ Run args: `nogui`
 | 5       | 1.9GB | 1.6%     | 20,0%   |
 | 10      | 2.2GB | 2-2,5,0% | 26,0%   |
 
-### Minestom
+# Minestom
 
 Commit: [0ca1dda2fe](https://github.com/Minestom/Minestom/commit/0ca1dda2fe11390a1b89a228bbe7bf78fefc73e1)
 
