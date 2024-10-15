@@ -18,6 +18,7 @@ export default defineConfig({
         items: [
           { text: "Introduction", link: "/about/introduction" },
           { text: "Quick Start", link: "/about/quick-start" },
+          { text: "Benchmarks", link: "/about/benchmarks" },
         ],
       },
       {
