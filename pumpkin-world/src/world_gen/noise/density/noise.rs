@@ -118,9 +118,9 @@ impl<'a> ShiftedNoiseFunction<'a> {
 
 impl<'a> DensityFunctionImpl<'a> for ShiftedNoiseFunction<'a> {
     fn sample(&self, pos: &NoisePos) -> f64 {
-        let d = (pos.x() as f64).mul_add(self.xz_scale, self.shift_x.sample(pos));
-        let e = (pos.y() as f64).mul_add(self.y_scale, self.shift_y.sample(pos));
-        let f = (pos.z() as f64).mul_add(self.xz_scale, self.shift_z.sample(pos));
+        let d = pos.x() as f64 * self.xz_scale + self.shift_x.sample(pos);
+        let e = pos.y() as f64 * self.y_scale + self.shift_y.sample(pos);
+        let f = pos.z() as f64 * self.xz_scale + self.shift_z.sample(pos);
 
         self.noise.sample(d, e, f)
     }

@@ -109,7 +109,7 @@ impl RandomGenerator {
 
     #[inline]
     pub fn next_triangular(&mut self, mode: f64, deviation: f64) -> f64 {
-        deviation.mul_add(self.next_f64() - self.next_f64(), mode)
+        mode + deviation * (self.next_f64() - self.next_f64())
     }
 
     #[inline]
