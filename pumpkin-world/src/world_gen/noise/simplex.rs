@@ -46,7 +46,7 @@ impl SimplexNoiseSampler {
     }
 
     fn grad(gradient_index: usize, x: f64, y: f64, z: f64, distance: f64) -> f64 {
-        let d = z.mul_add(-z, y.mul_add(-y, x.mul_add(-x, distance)));
+        let d = distance - x * x - y * y - z * z;
         if d < 0f64 {
             0f64
         } else {

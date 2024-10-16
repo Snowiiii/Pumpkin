@@ -73,7 +73,7 @@ impl PerlinNoiseSampler {
     }
 
     fn perlin_fade(value: f64) -> f64 {
-        value * value * value * value.mul_add(value.mul_add(6f64, -15f64), 10f64)
+        value * value * value * (value * (value * 6f64 - 15f64) + 10f64)
     }
 
     fn map(&self, input: i32) -> i32 {

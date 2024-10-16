@@ -13,7 +13,7 @@ pub trait GaussianGenerator: RandomImpl {
             loop {
                 let d = 2f64.mul_add(self.next_f64(), -1f64);
                 let e = 2f64.mul_add(self.next_f64(), -1f64);
-                let f = d.mul_add(d, e * e);
+                let f = d * d + e * e;
 
                 if f < 1f64 && f != 0f64 {
                     let g = (-2f64 * f.ln() / f).sqrt();
