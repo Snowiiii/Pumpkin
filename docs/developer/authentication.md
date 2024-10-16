@@ -2,44 +2,39 @@
 
 ### Why Authentication
 
-Minecraft is the most Popular game out there, And is very easy to play it without paying for it. In Fact, you don't pay for the Game, You pay for a Minecraft Account.
-People who don't buy the Game, but play it online are using [Cracked Accounts](#cracked-accounts)
+Minecraft is the most popular game out there and is very easy to play without paying for it. In fact, you don't pay for the game; you pay for a Minecraft account. People who don't buy the game but play it online are using [Cracked Accounts](#cracked-accounts).
 
 #### Cracked Accounts
 
-- Don't cost any Money
-- Everyone can set their own Nickname
-- Have no UUID
-- Have no Skin/Cape
-- Not Secure
+- Don't cost any money.
+- Everyone can set their own nickname.
+- Have no UUID.
+- Have no skin/cape.
+- Not secure.
 
-The Problem is that everyone can name themselves however they want, by, for example, allowing them to Join the Server as a Staff Member for example and having extended permissions.
-Cracked accounts are also often used for Botting and [Denial of Service](https://de.wikipedia.org/wiki/Denial_of_Service) attacks.
+The problem is that everyone can name themselves however they want, which allows them to join the server as a staff member, for example, and have extended permissions. Cracked accounts are also often used for botting and [Denial of Service](https://de.wikipedia.org/wiki/Denial_of_Service) attacks.
 
 ### Cracked Server
 
-By default, the `online_mode` is enabled in the configuration, This enables Authentication disabling [Cracked Accounts](#cracked-accounts). When you are willing to allow Cracked Accounts, you can disable `online_mode`
-in the `configuration.toml`
+By default, `online_mode` is enabled in the configuration. This enables authentication, disabling [Cracked Accounts](#cracked-accounts). If you want to allow cracked accounts, you can disable `online_mode` in the `configuration.toml`.
 
-### How Mojang Authentication works
+### How Mojang Authentication Works
 
-To ensure a player has a premium accounts:
+To ensure a player has a premium account:
 
 1. A client with a premium account sends a login request to the Mojang session server.
 2. **Mojang's servers** verify the client's credentials and add the player to their servers.
-3. Now, our server will send a Request to the Session servers and check if the Player has joined the Session Server.
-4. If the request is successful, It will give use more information about the Player (e.g. UUID, Name, Skin/Cape...)
+3. Our server sends a request to the session servers to check if the player has joined the session server.
+4. If the request is successful, it will provide more information about the player (e.g., UUID, name, skin/cape...).
 
 ### Custom Authentication Server
 
-Pumpkin does support custom Authentication servers, You can replace the Authentication URL in `features.toml`.
+Pumpkin does support custom authentication servers. You can replace the authentication URL in `features.toml`.
 
 #### How Pumpkin Authentication Works
 
 1. **GET Request:** Pumpkin sends a GET request to the specified authentication URL.
-
 2. **Status Code 200:** If the authentication is successful, the server responds with a status code of 200.
-
 3. **Parse JSON Game Profile:** Pumpkin parses the JSON game profile returned in the response.
 
 #### Game Profile
@@ -49,7 +44,7 @@ struct GameProfile {
     id: UUID,
     name: String,
     properties: Vec<Property>,
-    profile_actions: Option<Vec<ProfileAction>>, // Optional, Only present when actions are applied
+    profile_actions: Option<Vec<ProfileAction>>, // Optional, only present when actions are applied
 }
 ```
 

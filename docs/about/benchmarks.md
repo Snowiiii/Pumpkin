@@ -2,13 +2,12 @@
 
 Here, I compare common Minecraft servers against Pumpkin.
 
-Is this comparison fair?. Not really. While you could say Pumpkin currently has way fewer features than other Servers which should use less resources, You should also consider that other Servers had already Years for
-Optimizations, Especially Vanilla forks, which don't have to go through the pain of rewriting the entire vanilla logic, are free to focus on optimizations
+Is this comparison fair? Not really. While Pumpkin currently has far fewer features than other servers, which might suggest it uses fewer resources, it's important to consider that other servers have had years for optimization. Especially vanilla forks, which don’t need to rewrite the entire vanilla logic, can focus exclusively on optimizations.
 
 ALL TESTS HAVE BEEN RAN MULTIPLE TIMES TO GUARANTEE CONSISTENT RESULTS
 
 ALL PLAYERS DID NOT MOVE WHEN SPAWNING, ONLY THE INITIAL 8 CHUNKS WERE LOADED, THAT'S ALSO THE REASON CPU MAX IS USUALLY HIGH ON THE FIRST PLAYER
-ALL SERVERS USED ITS OWN TERRAIN GENERATION, NO WORLD WAS PRE-LOADED
+ALL SERVERS USED THEIR OWN TERRAIN GENERATION, NO WORLD WAS PRE-LOADED
 
 ![Screenshot From 2024-10-15 16-42-53](https://github.com/user-attachments/assets/e08fbb00-42fe-4479-a03b-11bb6886c91a)
 
@@ -49,7 +48,7 @@ ALL SERVERS USED ITS OWN TERRAIN GENERATION, NO WORLD WAS PRE-LOADED
 - Online mode: false
 - Rcon: false
 
-<sub><sup>online mode was disabled, so i can easier test with non premium accounts</sup></sub>
+<sub><sup>online mode was disabled for easier testing with non-premium accounts</sup></sub>
 
 ## Pumpkin
 
@@ -73,7 +72,7 @@ Run args:
 | 5       | 26,0MB  | 0,0%     | 1,0%    |
 | 10      | 27,1MB  | 0,0%     | 1,5%    |
 
-<sub><sup>pumpkin does cache already loaded chunks, resulting in no extra RAM besides player data and minimal CPU usage</sup></sub>
+<sub><sup>pumpkin does cache already loaded chunks, resulting in no extra RAM usage besides player data and minimal CPU usage</sup></sub>
 
 #### Compile time
 Compiling from Nothing
