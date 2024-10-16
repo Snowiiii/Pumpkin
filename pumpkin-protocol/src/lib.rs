@@ -11,6 +11,7 @@ use thiserror::Error;
 
 pub mod bytebuf;
 pub mod client;
+pub mod format;
 pub mod packet_codec;
 pub mod packet_decoder;
 pub mod packet_encoder;
