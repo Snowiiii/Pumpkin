@@ -67,7 +67,7 @@ impl<'a> Spline<'a> {
         if f == 0f32 {
             value
         } else {
-            f.mul_add(point - points[i].location, value)
+            value + f * (point - points[i].location)
         }
     }
 
@@ -154,8 +154,8 @@ impl<'a> Spline<'a> {
                 let ad = z.min(ab);
                 let ae = aa.max(ac);
 
-                f = f.min(0.25f32.mul_add(ad, x));
-                g = g.max(0.25f32.mul_add(ae, y));
+                f = f.min(x + 0.25f32 * ad);
+                g = g.max(y + 0.25f32 * ae);
             }
         }
 
@@ -189,12 +189,9 @@ impl<'a> Spline<'a> {
                     let n = point_1.value.apply(pos);
                     let o = point_2.value.apply(pos);
 
-                    let p = point_1
-                        .derivative
-                        .mul_add(point_2.location - point_1.location, -(o - n));
-                    let q =
-                        (-point_2.derivative).mul_add(point_2.location - point_1.location, o - n);
-                    (k * (1f32 - k)).mul_add(lerp(k, p, q), lerp(k, n, o))
+                    let p = point_1.derivative * (point_2.location - point_1.location) - (o - n);
+                    let q = -point_2.derivative * (point_2.location - point_1.location) + (o - n);
+                    lerp(k, n, o) + k * (1f32 - k) * lerp(k, p, q)
                 }
             }
             Range::Below => {

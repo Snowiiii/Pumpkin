@@ -46,7 +46,7 @@ impl SimplexNoiseSampler {
     }
 
     fn grad(gradient_index: usize, x: f64, y: f64, z: f64, distance: f64) -> f64 {
-        let d = z.mul_add(-z, y.mul_add(-y, x.mul_add(-x, distance)));
+        let d = distance - x * x - y * y - z * z;
         if d < 0f64 {
             0f64
         } else {
@@ -71,8 +71,8 @@ impl SimplexNoiseSampler {
 
         let n = h - l as f64 + Self::UNSKEW_FACTOR_2D;
         let o = k - m as f64 + Self::UNSKEW_FACTOR_2D;
-        let p = 2f64.mul_add(Self::UNSKEW_FACTOR_2D, h - 1f64);
-        let q = 2f64.mul_add(Self::UNSKEW_FACTOR_2D, k - 1f64);
+        let p = h - 1f64 + 2f64 * Self::UNSKEW_FACTOR_2D;
+        let q = k - 1f64 + 2f64 * Self::UNSKEW_FACTOR_2D;
 
         let r = i & 0xFF;
         let s = j & 0xFF;
@@ -236,8 +236,8 @@ impl OctaveSimplexNoiseSampler {
         for sampler in self.octave_samplers.iter() {
             if let Some(sampler) = sampler {
                 d += sampler.sample_2d(
-                    x.mul_add(e, if use_origin { sampler.x_origin } else { 0f64 }),
-                    y.mul_add(e, if use_origin { sampler.y_origin } else { 0f64 }),
+                    x * e + if use_origin { sampler.x_origin } else { 0f64 },
+                    y * e + if use_origin { sampler.y_origin } else { 0f64 },
                 ) * f;
             }
 

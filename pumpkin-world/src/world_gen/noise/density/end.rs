@@ -29,7 +29,7 @@ impl EndIslandFunction {
         let k = x % 2;
         let l = z % 2;
 
-        let f = ((x * x + z * z) as f32).sqrt().mul_add(-8f32, 100f32);
+        let f = 100f32 - ((x * x + z * z) as f32).sqrt() * 8f32;
         let mut f = f.clamp(-100f32, 80f32);
 
         for m in -12..=12 {
@@ -40,11 +40,10 @@ impl EndIslandFunction {
                 if (o * o + p * p) > 4096i64
                     && sampler.sample_2d(o as f64, p as f64) < -0.9f32 as f64
                 {
-                    let g =
-                        (o as f32).abs().mul_add(3439f32, (p as f32).abs() * 147f32) % 13f32 + 9f32;
+                    let g = ((o as f32).abs() * 3439f32 + (p as f32).abs() * 147f32) % 13f32 + 9f32;
                     let h = (k - m * 2) as f32;
                     let q = (l - n * 2) as f32;
-                    let r = h.hypot(q).mul_add(-g, 100f32);
+                    let r = 100f32 - (h * h + q * q).sqrt() * g;
                     let s = r.clamp(-100f32, 80f32);
 
                     f = f.max(s);
