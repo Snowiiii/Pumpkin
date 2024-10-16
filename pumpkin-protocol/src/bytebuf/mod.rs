@@ -370,7 +370,6 @@ impl ByteBuffer {
         if self.buffer.len() >= len {
             Ok(self.buffer.copy_to_bytes(len))
         } else {
-            dbg!("{:?} < {:?}", self.buffer.len(), len);
             Err(DeserializerError::Message(
                 "Unable to copy bytes".to_string(),
             ))
