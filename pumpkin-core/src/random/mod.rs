@@ -109,7 +109,7 @@ impl RandomGenerator {
 
     #[inline]
     pub fn next_triangular(&mut self, mode: f64, deviation: f64) -> f64 {
-        mode + deviation * (self.next_f64() - self.next_f64())
+        deviation.mul_add(self.next_f64() - self.next_f64(), mode)
     }
 
     #[inline]
@@ -184,7 +184,7 @@ pub trait RandomImpl {
     fn next_gaussian(&mut self) -> f64;
 
     fn next_triangular(&mut self, mode: f64, deviation: f64) -> f64 {
-        mode + deviation * (self.next_f64() - self.next_f64())
+        deviation.mul_add(self.next_f64() - self.next_f64(), mode)
     }
 
     fn skip(&mut self, count: i32) {
