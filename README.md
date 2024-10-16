@@ -48,7 +48,6 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] World Loading
   - [x] Entity Spawning
   - [x] Chunk Loading
-  - [ ] World Generation
   - [x] Chunk Generation
   - [ ] World Borders
   - [ ] World Saving

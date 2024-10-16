@@ -1,8 +1,8 @@
-### Basic Configuration
+# Basic Configuration
 
 Representing `configuration.toml`
 
-### Server Address
+## Server Address
 
 The address to bind the server to
 
@@ -10,7 +10,7 @@ The address to bind the server to
 server_address=0.0.0.0
 ```
 
-### Seed
+## Seed
 
 The seed for world generation
 
@@ -18,7 +18,7 @@ The seed for world generation
 seed=
 ```
 
-### Max players
+## Max players
 
 The maximum number of players allowed on the server
 
@@ -26,7 +26,7 @@ The maximum number of players allowed on the server
 max_players=10000
 ```
 
-### View distance
+## View distance
 
 The maximum view distance for players
 
@@ -34,7 +34,7 @@ The maximum view distance for players
 view_distance=10
 ```
 
-### Simulation distance
+## Simulation distance
 
 The maximum simulation distance for players
 
@@ -42,7 +42,7 @@ The maximum simulation distance for players
 simulation_distance=10
 ```
 
-### Default difficulty
+## Default difficulty
 
 The default game difficulty
 
@@ -57,7 +57,7 @@ Normal
 Hard
 ```
 
-### Allow nether
+## Allow nether
 
 Whether the Nether dimension is enabled
 
@@ -65,7 +65,7 @@ Whether the Nether dimension is enabled
 allow_nether=true
 ```
 
-### Hardcore
+## Hardcore
 
 Whether the server is in hardcore mode.
 
@@ -73,7 +73,7 @@ Whether the server is in hardcore mode.
 hardcore=true
 ```
 
-### Online Mode
+## Online Mode
 
 Whether online mode is enabled. Requires valid Minecraft accounts
 
@@ -81,7 +81,7 @@ Whether online mode is enabled. Requires valid Minecraft accounts
 online_mode=true
 ```
 
-### Encryption
+## Encryption
 
 Whether packet encryption is enabled
 
@@ -92,7 +92,7 @@ Whether packet encryption is enabled
 encryption=true
 ```
 
-### Motd
+## Motd
 
 The server's description displayed on the status screen.
 
@@ -100,7 +100,7 @@ The server's description displayed on the status screen.
 motd=true
 ```
 
-### Default gamemode
+## Default gamemode
 
 The default game mode for players
 
@@ -116,7 +116,7 @@ Adventure
 Spectator
 ```
 
-### IP Scrubbing
+## IP Scrubbing
 
 Whether to scrub player IPs from logs
 
