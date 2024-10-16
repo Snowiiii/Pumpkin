@@ -12,7 +12,7 @@ Minecraft is the most popular game out there and is very easy to play without pa
 - Have no skin/cape.
 - Not secure.
 
-The problem is that everyone can name themselves however they want, which allows them to join the server as a staff member, for example, and have extended permissions. Cracked accounts are also often used for botting and [Denial of Service](https://de.wikipedia.org/wiki/Denial_of_Service) attacks.
+The problem is that everyone can name themselves however they want, which allows them to join the server as a staff member, for example, and have extended permissions. Cracked accounts are also often used for botting and [Denial of Service](https://en.wikipedia.org/wiki/Denial-of-service_attack) attacks.
 
 ### Cracked Server
 
