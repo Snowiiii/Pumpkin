@@ -68,7 +68,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Commands
 - Proxy
   - [x] Bungeecord
-  - [ ] Velocity
+  - [x] Velocity
 
 Check out our [Github Project](https://github.com/users/Snowiiii/projects/12/views/3) to see current progress
 

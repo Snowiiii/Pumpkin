@@ -16,9 +16,6 @@ enabled=false
 
 Whether [Velocity](https://papermc.io/software/velocity) Proxy is enabled
 
-> [!IMPORTANT]
-> Velocity support is currently WIP
-
 ```toml
 enabled=false
 ```
