@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 
 use bytes::{BufMut, BytesMut};
 use hmac::{Hmac, Mac};
@@ -60,9 +60,8 @@ pub fn receive_plugin_response(
             ));
             return;
         }
-        // TODO: dont default to localhost
-        let addr: SocketAddr = buf.get_string().unwrap().parse()
-            .unwrap_or_else(|_| ([127, 0, 0, 1], 25565).into());
+        // TODO: no unwrap
+        let addr: SocketAddr = SocketAddr::new(buf.get_string().unwrap().parse::<IpAddr>().unwrap(), 0);
 
         *client.address.lock() = addr;
 
