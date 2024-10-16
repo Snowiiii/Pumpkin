@@ -20,7 +20,7 @@ use uuid::Uuid;
 use crate::{
     client::authentication::{self, validate_textures, GameProfile},
     entity::player::{ChatMode, Hand},
-    proxy::velocity::velocity_login,
+    proxy::velocity::{self, velocity_login},
     server::{Server, CURRENT_MC_VERSION},
 };
 
@@ -180,7 +180,9 @@ impl Client {
         Err(AuthError::MissingAuthClient)
     }
 
-    pub fn handle_plugin_response(&self, _plugin_response: SLoginPluginResponse) {}
+    pub fn handle_plugin_response(&self, plugin_response: SLoginPluginResponse) {
+        velocity::receive_plugin_response(self, &ADVANCED_CONFIG.proxy.velocity, plugin_response);
+    }
 
     pub fn handle_login_acknowledged(
         &self,
