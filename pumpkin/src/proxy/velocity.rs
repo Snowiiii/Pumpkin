@@ -4,11 +4,14 @@ use bytes::{BufMut, BytesMut};
 use hmac::{Hmac, Mac};
 use pumpkin_config::proxy::VelocityConfig;
 use pumpkin_protocol::{
-    bytebuf::ByteBuffer, client::login::{CLoginPluginRequest, CLoginSuccess}, server::login::SLoginPluginResponse, Property
+    bytebuf::ByteBuffer,
+    client::login::{CLoginPluginRequest, CLoginSuccess},
+    server::login::SLoginPluginResponse,
+    Property,
 };
 use sha2::Sha256;
 
-use crate::client::Client;
+use crate::client::{authentication::GameProfile, Client};
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -61,34 +64,44 @@ pub fn receive_plugin_response(
             return;
         }
         // TODO: no unwrap
-        let addr: SocketAddr = SocketAddr::new(buf.get_string().unwrap().parse::<IpAddr>().unwrap(), 0);
+        let addr: SocketAddr = SocketAddr::new(
+            buf.get_string().unwrap().parse::<IpAddr>().unwrap(),
+            client.address.lock().port(),
+        );
 
         *client.address.lock() = addr;
 
         let uuid = buf.get_uuid().unwrap();
-            
-        let username = buf.get_string().unwrap();
-    
-        // Read game profile properties
-        let properties = buf.get_list(|data| {
-            let name = data.get_string()?;
-            let value = data.get_string()?;
-            let signature = data.get_option(|data| {
-                data.get_string()
-            })?;
 
-            Ok(Property {
-                name,
-                value,
-                signature,
+        let username = buf.get_string().unwrap();
+
+        // Read game profile properties
+        let properties = buf
+            .get_list(|data| {
+                let name = data.get_string()?;
+                let value = data.get_string()?;
+                let signature = data.get_option(|data| data.get_string())?;
+
+                Ok(Property {
+                    name,
+                    value,
+                    signature,
+                })
             })
-        }).unwrap();
+            .unwrap();
 
         client.send_packet(&CLoginSuccess {
             uuid: &uuid,
             username: &username,
             properties: &properties,
             strict_error_handling: false,
+        });
+
+        *client.gameprofile.lock() = Some(GameProfile {
+            id: uuid,
+            name: username,
+            properties,
+            profile_actions: None,
         });
     }
 }

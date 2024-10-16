@@ -1,8 +1,11 @@
 use std::{
-    collections::VecDeque, io::{self, Write}, net::SocketAddr, sync::{
+    collections::VecDeque,
+    io::{self, Write},
+    net::SocketAddr,
+    sync::{
         atomic::{AtomicBool, AtomicI32},
         Arc,
-    }
+    },
 };
 
 use crate::{
@@ -394,7 +397,7 @@ impl Client {
                             dbg!("a");
                             self.kick(&err.to_string());
                             break;
-                        },
+                        }
                     }
                 }
                 dec.clear();

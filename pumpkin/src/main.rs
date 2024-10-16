@@ -221,7 +221,7 @@ fn main() -> io::Result<()> {
                         )?;
                         let keep_alive = tokio::sync::mpsc::channel(1024);
                         let client =
-                            Arc::new(Client::new(id, connection, addr, keep_alive.0.into()));
+                            Arc::new(Client::new(id, connection, address, keep_alive.0.into()));
 
                         {
                             let client = client.clone();
