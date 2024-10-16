@@ -394,7 +394,6 @@ impl Client {
                             }
                         }
                         Err(err) => {
-                            dbg!("a");
                             self.kick(&err.to_string());
                             break;
                         }
