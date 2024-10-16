@@ -58,7 +58,7 @@ RCON is a very simple protocol with a few packets. Here's how an RCON packet loo
    - The server verifies the password and responds with an authentication response packet.
    - If successful, the response packet includes the same ID as the one sent by the client. If unsuccessful, the ID is -1.
 
-3. **Command Execution:**
+2. **Command Execution:**
 
    - The authenticated client can now send command execution packets, with each packet containing the command to be executed.
    - The server processes the command and sends back an output packet containing the result or any error messages.
