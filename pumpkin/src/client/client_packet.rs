@@ -20,7 +20,7 @@ use uuid::Uuid;
 use crate::{
     client::authentication::{self, validate_textures, GameProfile},
     entity::player::{ChatMode, Hand},
-    proxy::{bungeecord::bungeecord_login, velocity::velocity_login},
+    proxy::{bungeecord::bungeecord_login, velocity::{receive_plugin_response, velocity_login}},
     server::{Server, CURRENT_MC_VERSION},
 };
 

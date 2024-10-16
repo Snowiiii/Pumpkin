@@ -225,22 +225,21 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         println!("{:?}", self.connection_state.load());
         match self.connection_state.load() {
-            pumpkin_protocol::ConnectionState::HandShake => self.handle_handshake_packet(packet).unwrap(),
-            pumpkin_protocol::ConnectionState::Status => self.handle_status_packet(server, packet).unwrap(),
+            pumpkin_protocol::ConnectionState::HandShake => self.handle_handshake_packet(packet),
+            pumpkin_protocol::ConnectionState::Status => self.handle_status_packet(server, packet),
             // TODO: Check config if transfer is enabled
             pumpkin_protocol::ConnectionState::Login
             | pumpkin_protocol::ConnectionState::Transfer => {
-                self.handle_login_packet(server, packet).await.unwrap()
+                self.handle_login_packet(server, packet).await
             }
             pumpkin_protocol::ConnectionState::Config => {
-                self.handle_config_packet(server, packet).await.unwrap()
+                self.handle_config_packet(server, packet).await
             }
             _ => {
                 log::error!("Invalid Connection state {:?}", self.connection_state);
-                // Ok(())
+                Ok(())
             }
-        };
-        Ok(())
+        }
     }
 
     fn handle_handshake_packet(&self, packet: &mut RawPacket) -> Result<(), DeserializerError> {
