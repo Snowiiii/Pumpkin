@@ -265,5 +265,5 @@ const GRADIENTS: [Gradient; 16] = [
 ];
 
 fn dot(gradient: &Gradient, x: f64, y: f64, z: f64) -> f64 {
-    (gradient.z as f64).mul_add(z, (gradient.x as f64).mul_add(x, gradient.y as f64 * y))
+    gradient.x as f64 * x + gradient.y as f64 * y + gradient.z as f64 * z
 }

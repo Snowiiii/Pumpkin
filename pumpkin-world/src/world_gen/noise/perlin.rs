@@ -73,7 +73,7 @@ impl PerlinNoiseSampler {
     }
 
     fn perlin_fade(value: f64) -> f64 {
-        value * value * value * value.mul_add(value.mul_add(6f64, -15f64), 10f64)
+        value * value * value * (value * (value * 6f64 - 15f64) + 10f64)
     }
 
     fn map(&self, input: i32) -> i32 {
@@ -183,9 +183,7 @@ impl OctavePerlinNoiseSampler {
     }
 
     pub fn maintain_precision(value: f64) -> f64 {
-        (value / 3.3554432E7f64 + 0.5f64)
-            .floor()
-            .mul_add(-3.3554432E7f64, value)
+        value - (value / 3.3554432E7f64 + 0.5f64).floor() * 3.3554432E7f64
     }
 
     pub fn calculate_amplitudes(octaves: &[i32]) -> (i32, Vec<f64>) {
