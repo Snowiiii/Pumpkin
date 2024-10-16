@@ -1,4 +1,5 @@
 use std::{
+    collections::VecDeque,
     io::{self, Write},
     net::SocketAddr,
     sync::{
@@ -112,7 +113,7 @@ pub struct Client {
     /// The packet decoder for incoming packets.
     dec: Arc<Mutex<PacketDecoder>>,
     /// A queue of raw packets received from the client, waiting to be processed.
-    pub client_packets_queue: Arc<Mutex<Vec<RawPacket>>>,
+    pub client_packets_queue: Arc<Mutex<VecDeque<RawPacket>>>,
 
     /// Indicates whether the client should be converted into a player.
     pub make_player: AtomicBool,
@@ -143,7 +144,7 @@ impl Client {
             dec: Arc::new(Mutex::new(PacketDecoder::default())),
             encryption: AtomicBool::new(false),
             closed: AtomicBool::new(false),
-            client_packets_queue: Arc::new(Mutex::new(Vec::new())),
+            client_packets_queue: Arc::new(Mutex::new(VecDeque::new())),
             make_player: AtomicBool::new(false),
             keep_alive_sender,
             last_alive_received: AtomicCell::new(std::time::Instant::now()),
@@ -153,7 +154,7 @@ impl Client {
     /// Adds a Incoming packet to the queue
     pub fn add_packet(&self, packet: RawPacket) {
         let mut client_packets_queue = self.client_packets_queue.lock();
-        client_packets_queue.push(packet);
+        client_packets_queue.push_back(packet);
     }
 
     /// Sets the Packet encryption
@@ -209,8 +210,9 @@ impl Client {
 
     /// Processes all packets send by the client
     pub async fn process_packets(&self, server: &Arc<Server>) {
-        while let Some(mut packet) = self.client_packets_queue.lock().pop() {
+        while let Some(mut packet) = self.client_packets_queue.lock().pop_front() {
             let _ = self.handle_packet(server, &mut packet).await.map_err(|e| {
+                dbg!("{:?}", packet.id);
                 let text = format!("Error while reading incoming packet {}", e);
                 log::error!("{}", text);
                 self.kick(&text)
@@ -224,6 +226,7 @@ impl Client {
         server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
+        println!("{:?}", self.connection_state.load());
         match self.connection_state.load() {
             pumpkin_protocol::ConnectionState::HandShake => self.handle_handshake_packet(packet),
             pumpkin_protocol::ConnectionState::Status => self.handle_status_packet(server, packet),
@@ -381,13 +384,20 @@ impl Client {
             if !received_data.is_empty() {
                 let mut dec = self.dec.lock();
                 dec.queue_slice(&received_data);
-                match dec.decode() {
-                    Ok(packet) => {
-                        if let Some(packet) = packet {
-                            self.add_packet(packet);
+                loop {
+                    match dec.decode() {
+                        Ok(packet) => {
+                            if let Some(packet) = packet {
+                                self.add_packet(packet);
+                            } else {
+                                break;
+                            }
+                        }
+                        Err(err) => {
+                            self.kick(&err.to_string());
+                            break;
                         }
                     }
-                    Err(err) => self.kick(&err.to_string()),
                 }
                 dec.clear();
             }

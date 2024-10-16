@@ -276,7 +276,7 @@ impl Player {
 impl Player {
     pub async fn process_packets(&self, server: &Arc<Server>) {
         let mut packets = self.client.client_packets_queue.lock();
-        while let Some(mut packet) = packets.pop() {
+        while let Some(mut packet) = packets.pop_back() {
             match self.handle_play_packet(server, &mut packet).await {
                 Ok(_) => {}
                 Err(e) => {
