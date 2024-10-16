@@ -33,7 +33,7 @@ You also can see all the information the Packets has which we can either Write o
 
 ### Adding a Clientbound Packet
 
-1. Adding a Packet is easy. First you have to dereive serde Serialize for packets.
+1. Adding a Packet is easy. First you have to derive serde Serialize for packets.
 
 ```rust
 #[derive(Serialize)]
