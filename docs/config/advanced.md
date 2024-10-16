@@ -31,6 +31,13 @@ This secret is used to ensure that player info forwarded by Velocity comes from 
 secret=
 ```
 
+### Bungeecord
+`proxy.bungeecord`
+
+```toml
+enabled=false
+```
+
 ## Authentication
 
 `authentication`

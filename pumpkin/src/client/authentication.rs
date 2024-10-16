@@ -6,6 +6,8 @@ use pumpkin_core::ProfileAction;
 use pumpkin_protocol::Property;
 use reqwest::{StatusCode, Url};
 use serde::Deserialize;
+use sha1::Digest;
+use sha2::Sha256;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -117,6 +119,10 @@ pub fn is_texture_url_valid(url: Url, config: &TextureConfig) -> Result<(), Text
         return Err(TextureError::DisallowedUrlDomain(domain.to_string()));
     }
     Ok(())
+}
+
+pub fn offline_uuid(username: &str) -> Result<Uuid, uuid::Error> {
+    Uuid::from_slice(&Sha256::digest(username)[..16])
 }
 
 #[derive(Error, Debug)]

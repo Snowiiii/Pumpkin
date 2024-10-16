@@ -93,6 +93,8 @@ pub struct Client {
     pub brand: Mutex<Option<String>>,
     /// The minecraft protocol version used by the client.
     pub protocol_version: AtomicI32,
+    /// The Address used to connect to the Server, Send in the Handshake
+    pub server_address: Mutex<String>,
     /// The current connection state of the client (e.g., Handshaking, Status, Play).
     pub connection_state: AtomicCell<ConnectionState>,
     /// Whether encryption is enabled for the connection.
@@ -132,6 +134,7 @@ impl Client {
             gameprofile: Mutex::new(None),
             config: Mutex::new(None),
             brand: Mutex::new(None),
+            server_address: Mutex::new("".to_string()),
             id,
             address: Mutex::new(address),
             connection_state: AtomicCell::new(ConnectionState::HandShake),

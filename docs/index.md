@@ -22,6 +22,6 @@ features:
     details: Pumpkin is written 100% in Rust, ensuring memory safety and unmatched performance.
   - title: Feature complete
     details: With all vanilla features supported, you will have no issues.
-  - title: Extensible
-    details: Using Extism you can extend Pumpkin to your needs. Play your way!
+  - title: Flexibility
+    details: Highly configurable, with the ability to disable unnecessary features.
 ---
