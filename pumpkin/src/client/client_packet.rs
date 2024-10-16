@@ -20,7 +20,7 @@ use uuid::Uuid;
 use crate::{
     client::authentication::{self, validate_textures, GameProfile},
     entity::player::{ChatMode, Hand},
-    proxy::velocity::{self, velocity_login},
+    proxy::{bungeecord::bungeecord_login, velocity::velocity_login},
     server::{Server, CURRENT_MC_VERSION},
 };
 
@@ -36,6 +36,7 @@ impl Client {
         let version = handshake.protocol_version.0;
         self.protocol_version
             .store(version, std::sync::atomic::Ordering::Relaxed);
+        *self.server_address.lock() = handshake.server_address;
 
         self.connection_state.store(handshake.next_state);
         if self.connection_state.load() != ConnectionState::Status {
@@ -79,23 +80,32 @@ impl Client {
         // default game profile, when no online mode
         // TODO: make offline uuid
         let mut gameprofile = self.gameprofile.lock();
-        *gameprofile = Some(GameProfile {
-            id: login_start.uuid,
-            name: login_start.name,
-            properties: vec![],
-            profile_actions: None,
-        });
         let proxy = &ADVANCED_CONFIG.proxy;
         if proxy.enabled {
             if proxy.velocity.enabled {
-                velocity_login(self)
+                velocity_login(self);
+            } else if proxy.bungeecord.enabled {
+                match bungeecord_login(self, login_start.name) {
+                    Ok((_ip, profile)) => {
+                        // self.address.lock() = ip;
+                        self.finish_login(&profile);
+                        *gameprofile = Some(profile);
+                    }
+                    Err(error) => self.kick(&error.to_string()),
+                }
             }
-            return;
-        }
+        } else {
+            *gameprofile = Some(GameProfile {
+                id: login_start.uuid,
+                name: login_start.name,
+                properties: vec![],
+                profile_actions: None,
+            });
 
-        // TODO: check config for encryption
-        let verify_token: [u8; 4] = rand::random();
-        self.send_packet(&server.encryption_request(&verify_token, BASIC_CONFIG.online_mode));
+            // TODO: check config for encryption
+            let verify_token: [u8; 4] = rand::random();
+            self.send_packet(&server.encryption_request(&verify_token, BASIC_CONFIG.online_mode));
+        }
     }
 
     pub async fn handle_encryption_response(
@@ -122,6 +132,14 @@ impl Client {
             }
         }
 
+        if let Some(profile) = gameprofile.as_ref() {
+            self.finish_login(profile);
+        } else {
+            self.kick("No Game profile");
+        }
+    }
+
+    fn finish_login(&self, profile: &GameProfile) {
         // enable compression
         if ADVANCED_CONFIG.packet_compression.enabled {
             let compression = ADVANCED_CONFIG.packet_compression.compression_info.clone();
@@ -129,12 +147,8 @@ impl Client {
             self.set_compression(Some(compression));
         }
 
-        if let Some(profile) = gameprofile.as_ref() {
-            let packet = CLoginSuccess::new(&profile.id, &profile.name, &profile.properties, false);
-            self.send_packet(&packet);
-        } else {
-            self.kick("game profile is none");
-        }
+        let packet = CLoginSuccess::new(&profile.id, &profile.name, &profile.properties, false);
+        self.send_packet(&packet);
     }
 
     async fn autenticate(
@@ -181,7 +195,7 @@ impl Client {
     }
 
     pub fn handle_plugin_response(&self, plugin_response: SLoginPluginResponse) {
-        velocity::receive_plugin_response(self, &ADVANCED_CONFIG.proxy.velocity, plugin_response);
+        receive_plugin_response(self, &ADVANCED_CONFIG.proxy.velocity, plugin_response);
     }
 
     pub fn handle_login_acknowledged(

@@ -15,7 +15,6 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 
 ## What Pumpkin will not
 
-- Be a drop-in replacement for vanilla or other servers
 - Be compatible with plugins or mods for other servers
 - Function as a framework for building a server from scratch.
 
