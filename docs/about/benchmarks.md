@@ -75,6 +75,17 @@ Run args:
 
 <sub><sup>pumpkin does cache already loaded chunks, resulting in no extra RAM besides player data and minimal CPU usage</sup></sub>
 
+#### Compile time
+Compiling from Nothing
+
+**Debug:** 10.35sec
+**Release:** 38.40sec
+
+Recompilation (pumpkin crate)
+
+**Debug:** 1.82sec
+**Release:** 28.68sec
+
 ## Vanilla
 
 Release: [1.21.1](https://piston-data.mojang.com/v1/objects/59353fb40c36d304f2035d51e7d6e6baa98dc05c/server.jar)

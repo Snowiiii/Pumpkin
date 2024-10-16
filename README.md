@@ -19,12 +19,12 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 - **Performance**: Leveraging multi-threading for maximum speed and efficiency.
 - **Compatibility**: Supports the latest Minecraft server version and adheres to vanilla game mechanics.
 - **Security**: Prioritizes security by preventing known exploits.
-- **Flexibility**: Highly configurable with the ability to disable unnecessary features.
+- **Flexibility**: Highly configurable, with the ability to disable unnecessary features.
 - **Extensibility**: Provides a foundation for plugin development.
 
 ## What Pumpkin will not
 
-- Be a drop-in replacement for vanilla or other servers
+- Be a drop-in replacement for Vanilla or other servers
 - Be compatible with plugins or mods for other servers
 - Function as a framework for building a server from scratch.
 

@@ -4,7 +4,7 @@
 
 `proxy`
 
-Wether Proxy Configuration is enabled
+Whether Proxy Configuration is Enabled
 
 ```toml
 enabled=false
@@ -14,7 +14,7 @@ enabled=false
 
 `proxy.velocity`
 
-Wether [Velocity](https://papermc.io/software/velocity) Proxy is enabled
+Whether [Velocity](https://papermc.io/software/velocity) Proxy is enabled
 
 > [!IMPORTANT]
 > Velocity support is currently WIP
@@ -35,7 +35,7 @@ secret=
 
 `authentication`
 
-Wether Authentication is enabled
+Whether Authentication is enabled
 
 ```toml
 enabled=false
@@ -151,7 +151,7 @@ cape=true
 #### Elytra
 
 Use player elytras
-(i didn't know myself that there are custom elytras)
+(I didn't know myself that there are custom elytras)
 
 ```toml
 elytra=true
@@ -161,7 +161,7 @@ elytra=true
 
 `packet_compression`
 
-Wether Packet Compression is enabled
+Whether Packet Compression is enabled
 
 ```toml
 enable=true
@@ -171,7 +171,7 @@ enable=true
 
 #### Threshold
 
-The compression threshold used when compression is enabled
+The compression threshold is used when compression is enabled
 
 ```toml
 threshold=256
@@ -196,7 +196,7 @@ level=4
 
 `resource_pack`
 
-Wether a Resource Pack is enabled
+Whether a Resource Pack is enabled
 
 ```toml
 enable=false
@@ -248,7 +248,7 @@ use_console=true
 
 ### Log Console
 
-Should be commands from players be logged in console
+Should commands from players be logged into the console?
 
 ```toml
 log_console=true
@@ -258,7 +258,7 @@ log_console=true
 
 `rcon`
 
-Wether RCON is enabled
+Whether RCON is enabled
 
 ```toml
 enable=false
@@ -362,7 +362,7 @@ knockback=true
 
 ### Swing
 
-Should player swing when attacking
+Should players swing when attacking?
 
 ```toml
 swing=true
@@ -396,7 +396,7 @@ Trace
 
 ### Env
 
-Enables the user to choose log level by setting `RUST_LOG=<level>` environment variable
+Enables the user to choose log level by setting the `RUST_LOG=<level>` environment variable
 
 ```toml
 env=false
