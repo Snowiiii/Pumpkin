@@ -13,6 +13,6 @@ FROM alpine:3.20
 WORKDIR /pumpkin
 RUN apk add --no-cache libgcc
 COPY --from=builder /pumpkin/pumpkin.release /pumpkin/pumpkin
-ENV RUST_BACKTRACE=full
+ENV RUST_BACKTRACE=1
 EXPOSE 25565
 ENTRYPOINT ["/pumpkin/pumpkin"]
