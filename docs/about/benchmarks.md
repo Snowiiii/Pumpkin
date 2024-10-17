@@ -159,7 +159,7 @@ Compile args:
 
 Run args:
 
-**Language:** Kotlin 2.0.0
+**Language:** Java
 
 **File Size:** 2,8MB (Library)
 
