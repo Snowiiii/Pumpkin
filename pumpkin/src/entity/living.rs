@@ -18,7 +18,7 @@ impl LivingEntity {
         }
     }
 
-    pub fn set_health(&self, health: f32) {
+    pub async fn set_health(&self, health: f32) {
         self.health.store(health);
         // tell everyone entities health changed
         self.entity
@@ -26,21 +26,24 @@ impl LivingEntity {
             .broadcast_packet_all(&CSetEntityMetadata::new(
                 self.entity.entity_id.into(),
                 Metadata::new(9, 3.into(), health),
-            ));
+            ))
+            .await;
     }
 
     /// Kills the Entity
     ///
     /// This is similar to `kill` but Spawn Particles, Animation and plays death sound
-    pub fn kill(&self) {
+    pub async fn kill(&self) {
         // Spawns death smoke particles
         self.entity
             .world
-            .broadcast_packet_all(&CEntityStatus::new(self.entity.entity_id, 60));
+            .broadcast_packet_all(&CEntityStatus::new(self.entity.entity_id, 60))
+            .await;
         // Plays the death sound and death animation
         self.entity
             .world
-            .broadcast_packet_all(&CEntityStatus::new(self.entity.entity_id, 3));
-        self.entity.remove();
+            .broadcast_packet_all(&CEntityStatus::new(self.entity.entity_id, 3))
+            .await;
+        self.entity.remove().await;
     }
 }

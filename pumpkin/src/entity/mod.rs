@@ -122,8 +122,8 @@ impl Entity {
     }
 
     /// Removes the Entity from their current World
-    pub fn remove(&self) {
-        self.world.remove_entity(self);
+    pub async fn remove(&self) {
+        self.world.remove_entity(self).await;
     }
 
     /// Applies knockback to the entity, following vanilla Minecraft's mechanics.
@@ -190,7 +190,7 @@ impl Entity {
             b &= !(1 << index);
         }
         let packet = CSetEntityMetadata::new(self.entity_id.into(), Metadata::new(0, 0.into(), b));
-        self.world.broadcast_packet_all(&packet);
+        self.world.broadcast_packet_all(&packet).await;
     }
 
     pub async fn set_pose(&self, pose: EntityPose) {
@@ -200,7 +200,7 @@ impl Entity {
             self.entity_id.into(),
             Metadata::new(6, 20.into(), (pose).into()),
         );
-        self.world.broadcast_packet_all(&packet)
+        self.world.broadcast_packet_all(&packet).await
     }
 }
 

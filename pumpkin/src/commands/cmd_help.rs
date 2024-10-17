@@ -3,7 +3,6 @@ use crate::commands::dispatcher::{CommandDispatcher, InvalidTreeError};
 use crate::commands::tree::{Command, CommandTree, ConsumedArgs, RawArgs};
 use crate::commands::tree_builder::argument;
 use crate::commands::CommandSender;
-use pumpkin_core::text::TextComponent;
 
 const NAMES: [&str; 3] = ["help", "h", "?"];
 
@@ -38,12 +37,12 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
             argument(ARG_COMMAND, consume_arg_command).execute(&|sender, server, args| {
                 let tree = parse_arg_command(args, &server.command_dispatcher)?;
 
-                sender.send_message(TextComponent::text(&format!(
-                    "{} - {} Usage: {}",
-                    tree.names.join("/"),
-                    tree.description,
-                    tree
-                )));
+                // sender.send_message(TextComponent::text(&format!(
+                //     "{} - {} Usage: {}",
+                //     tree.names.join("/"),
+                //     tree.description,
+                //     tree
+                // )));
 
                 Ok(())
             }),
@@ -57,12 +56,12 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
                     continue;
                 };
 
-                sender.send_message(TextComponent::text(&format!(
-                    "{} - {} Usage: {}",
-                    tree.names.join("/"),
-                    tree.description,
-                    tree
-                )));
+                // sender.send_message(TextComponent::text(&format!(
+                //     "{} - {} Usage: {}",
+                //     tree.names.join("/"),
+                //     tree.description,
+                //     tree
+                // )));
             }
 
             Ok(())

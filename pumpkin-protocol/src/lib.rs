@@ -142,8 +142,8 @@ pub enum PacketError {
     FailedWrite(String),
     #[error("failed to flush decoder")]
     FailedFinish,
-    #[error("failed to write encoded packet to connection: {0}")]
-    ConnectionWrite(String),
+    #[error("failed to write encoded packet to connection")]
+    ConnectionWrite,
     #[error("packet exceeds maximum length")]
     TooLong,
     #[error("packet length is out of bounds")]

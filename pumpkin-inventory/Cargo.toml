@@ -11,5 +11,5 @@ num-traits = "0.2"
 num-derive = "0.4"
 thiserror = "1.0.63"
 itertools.workspace = true
-parking_lot.workspace = true
 crossbeam.workspace = true
+tokio.workspace = true
