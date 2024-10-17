@@ -63,7 +63,8 @@ impl PacketDecoder {
                 // TODO: use libdeflater or zune-inflate?
                 let mut z = ZlibDecoder::new(&mut self.decompress_buf[..]);
 
-                z.write_all(r).map_err(|_| PacketError::FailedWrite)?;
+                z.write_all(r)
+                    .map_err(|e| PacketError::FailedWrite(e.to_string()))?;
                 z.finish().map_err(|_| PacketError::FailedFinish)?;
 
                 let total_packet_len = VarInt(packet_len).written_size() + packet_len as usize;

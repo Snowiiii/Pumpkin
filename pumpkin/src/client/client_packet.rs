@@ -21,8 +21,8 @@ use crate::{
     client::authentication::{self, validate_textures, GameProfile},
     entity::player::{ChatMode, Hand},
     proxy::{
-        bungeecord::bungeecord_login,
-        velocity::{receive_plugin_response, velocity_login},
+        bungeecord,
+        velocity::{self, velocity_login},
     },
     server::{Server, CURRENT_MC_VERSION},
 };
@@ -88,7 +88,7 @@ impl Client {
             if proxy.velocity.enabled {
                 velocity_login(self);
             } else if proxy.bungeecord.enabled {
-                match bungeecord_login(self, login_start.name) {
+                match bungeecord::bungeecord_login(self, login_start.name) {
                     Ok((_ip, profile)) => {
                         // self.address.lock() = ip;
                         self.finish_login(&profile);
@@ -136,20 +136,22 @@ impl Client {
         }
 
         if let Some(profile) = gameprofile.as_ref() {
+            if ADVANCED_CONFIG.packet_compression.enabled {
+                self.enable_compression();
+            }
             self.finish_login(profile);
         } else {
             self.kick("No Game profile");
         }
     }
 
-    fn finish_login(&self, profile: &GameProfile) {
-        // enable compression
-        if ADVANCED_CONFIG.packet_compression.enabled {
-            let compression = ADVANCED_CONFIG.packet_compression.compression_info.clone();
-            self.send_packet(&CSetCompression::new(compression.threshold.into()));
-            self.set_compression(Some(compression));
-        }
+    fn enable_compression(&self) {
+        let compression = ADVANCED_CONFIG.packet_compression.compression_info.clone();
+        self.send_packet(&CSetCompression::new(compression.threshold.into()));
+        self.set_compression(Some(compression));
+    }
 
+    fn finish_login(&self, profile: &GameProfile) {
         let packet = CLoginSuccess::new(&profile.id, &profile.name, &profile.properties, false);
         self.send_packet(&packet);
     }
@@ -173,7 +175,7 @@ impl Client {
                     .allow_banned_players
                 {
                     if !actions.is_empty() {
-                        self.kick("Your account can't join");
+                        return Err(AuthError::Banned);
                     }
                 } else {
                     for allowed in &ADVANCED_CONFIG
@@ -182,7 +184,7 @@ impl Client {
                         .allowed_actions
                     {
                         if !actions.contains(allowed) {
-                            self.kick("Your account can't join");
+                            return Err(AuthError::DisallowedAction);
                         }
                     }
                 }
@@ -198,7 +200,22 @@ impl Client {
     }
 
     pub fn handle_plugin_response(&self, plugin_response: SLoginPluginResponse) {
-        receive_plugin_response(self, &ADVANCED_CONFIG.proxy.velocity, plugin_response);
+        let velocity_config = &ADVANCED_CONFIG.proxy.velocity;
+        if velocity_config.enabled {
+            let mut address = self.address.lock();
+            match velocity::receive_velocity_plugin_response(
+                address.port(),
+                velocity_config,
+                plugin_response,
+            ) {
+                Ok((profile, new_address)) => {
+                    self.finish_login(&profile);
+                    *self.gameprofile.lock() = Some(profile);
+                    *address = new_address
+                }
+                Err(error) => self.kick(&error.to_string()),
+            }
+        }
     }
 
     pub fn handle_login_acknowledged(

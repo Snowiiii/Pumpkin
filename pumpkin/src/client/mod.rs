@@ -192,7 +192,7 @@ impl Client {
         self.connection
             .lock()
             .write_all(&enc.take())
-            .map_err(|_| PacketError::ConnectionWrite)
+            .map_err(|e| PacketError::ConnectionWrite(e.to_string()))
             .unwrap_or_else(|e| self.kick(&e.to_string()));
     }
 
@@ -204,7 +204,7 @@ impl Client {
         self.connection
             .lock()
             .write_all(&enc.take())
-            .map_err(|_| PacketError::ConnectionWrite)?;
+            .map_err(|e| PacketError::ConnectionWrite(e.to_string()))?;
         Ok(())
     }
 
@@ -226,7 +226,6 @@ impl Client {
         server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
-        println!("{:?}", self.connection_state.load());
         match self.connection_state.load() {
             pumpkin_protocol::ConnectionState::HandShake => self.handle_handshake_packet(packet),
             pumpkin_protocol::ConnectionState::Status => self.handle_status_packet(server, packet),
