@@ -5,14 +5,15 @@ use dimensions::Dimension;
 use fastnbt::SerOpts;
 use paint::Painting;
 use pumpkin_protocol::client::config::RegistryEntry;
+pub use recipe::Recipe;
 use serde::Serialize;
 use wolf::WolfVariant;
-
 mod biomes;
 mod chat_type;
 mod damage_type;
 mod dimensions;
 mod paint;
+mod recipe;
 mod wolf;
 
 pub struct Registry {

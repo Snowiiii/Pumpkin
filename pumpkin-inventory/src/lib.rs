@@ -4,6 +4,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use pumpkin_world::item::ItemStack;
 
 pub mod container_click;
+mod crafting;
 pub mod drag_handler;
 mod error;
 mod open_container;
