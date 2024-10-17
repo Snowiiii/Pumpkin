@@ -10,11 +10,11 @@ use crate::world_gen::noise::lerp;
 
 #[inline]
 fn get_offset_value(f: f32, g: f32, h: f32) -> f32 {
-    let k = 1f32 - (1f32 - g) * 0.5f32;
+    let k = (1f32 - g).mul_add(-0.5f32, 1f32);
     let l = 0.5f32 * (1f32 - g);
 
     let m = (f + 1.17f32) * 0.46082947f32;
-    let n = m * k - l;
+    let n = m.mul_add(k, -l);
 
     if f < h {
         n.max(-0.2222f32)
@@ -25,7 +25,7 @@ fn get_offset_value(f: f32, g: f32, h: f32) -> f32 {
 
 #[inline]
 fn skew_map(f: f32) -> f32 {
-    let k = 1f32 - (1f32 - f) * 0.5f32;
+    let k = (1f32 - f).mul_add(-0.5f32, 1f32);
     let l = 0.5f32 * (1f32 - f);
 
     l / (0.46082947f32 * k) - 1.17f32
