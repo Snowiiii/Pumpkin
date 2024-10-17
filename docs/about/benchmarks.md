@@ -159,7 +159,7 @@ Compile args:
 
 Run args:
 
-**Language:** Kotlin 2.0.0
+**Language:** Benchmarks ran with Kotlin 2.0.0 (Minestom itself is made with Java)
 
 **File Size:** 2,8MB (Library)
 
