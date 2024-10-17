@@ -1,5 +1,3 @@
-use pumpkin_core::text::TextComponent;
-
 use crate::commands::dispatcher::InvalidTreeError::{
     InvalidConsumptionError, InvalidRequirementError,
 };
@@ -28,9 +26,9 @@ pub struct CommandDispatcher<'a> {
 impl<'a> CommandDispatcher<'a> {
     pub fn handle_command(&self, sender: &mut CommandSender, server: &Server, cmd: &str) {
         if let Err(err) = self.dispatch(sender, server, cmd) {
-            sender.send_message(
-                TextComponent::text(&err).color_named(pumpkin_core::text::color::NamedColor::Red),
-            )
+            // sender.send_message(
+            //     TextComponent::text(&err).color_named(pumpkin_core::text::color::NamedColor::Red),
+            // )
         }
     }
 

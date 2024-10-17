@@ -20,11 +20,11 @@ pub enum BungeeCordError {
     FailedMakeOfflineUUID,
 }
 
-pub fn bungeecord_login(
+pub async fn bungeecord_login(
     client: &Client,
     username: String,
 ) -> Result<(IpAddr, GameProfile), BungeeCordError> {
-    let server_address = client.server_address.lock();
+    let server_address = client.server_address.lock().await;
     let data = server_address.split('\0').take(4).collect::<Vec<_>>();
 
     // Ip of player, only given if ip_forward on bungee is true
@@ -32,7 +32,7 @@ pub fn bungeecord_login(
         Some(ip) => ip
             .parse()
             .map_err(|_| BungeeCordError::FailedParseAddress)?,
-        None => client.address.lock().ip(),
+        None => client.address.lock().await.ip(),
     };
 
     // Uuid of player, only given if ip_forward on bungee is true

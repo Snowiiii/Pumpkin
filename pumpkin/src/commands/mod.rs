@@ -24,11 +24,11 @@ pub enum CommandSender<'a> {
 }
 
 impl<'a> CommandSender<'a> {
-    pub fn send_message(&mut self, text: TextComponent) {
+    pub async fn send_message(&mut self, text: TextComponent<'a>) {
         match self {
             // TODO: add color and stuff to console
             CommandSender::Console => log::info!("{}", text.to_pretty_console()),
-            CommandSender::Player(c) => c.send_system_message(text),
+            CommandSender::Player(c) => c.send_system_message(text).await,
             CommandSender::Rcon(s) => s.push(text.to_pretty_console()),
         }
     }
