@@ -2,6 +2,7 @@ use connection_cache::{CachedBranding, CachedStatus};
 use key_store::KeyStore;
 use parking_lot::{Mutex, RwLock};
 use pumpkin_config::BASIC_CONFIG;
+use pumpkin_core::text::TextComponent;
 use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::drag_handler::DragHandler;
@@ -124,6 +125,13 @@ impl Server {
     {
         for world in &self.worlds {
             world.broadcast_packet_all(packet)
+        }
+    }
+
+    /// Sends a message to all players in every world
+    pub fn broadcast_message(&self, content: &TextComponent) {
+        for world in &self.worlds {
+            world.broadcast_message(content);
         }
     }
 

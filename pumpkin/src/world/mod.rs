@@ -9,7 +9,7 @@ use crate::{
 use num_traits::ToPrimitive;
 use parking_lot::Mutex;
 use pumpkin_config::BasicConfiguration;
-use pumpkin_core::math::vector2::Vector2;
+use pumpkin_core::{math::vector2::Vector2, text::TextComponent};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_protocol::{
     client::play::{
@@ -257,6 +257,13 @@ impl World {
             }
         }
         dbg!("DONE CHUNKS", inst.elapsed());
+    }
+
+    /// Sends a message to all players
+    pub fn broadcast_message(&self, content: &TextComponent) {
+        for player in self.current_players.lock().values() {
+            player.send_system_message(content.clone());
+        }
     }
 
     /// Gets a Player by entity id
