@@ -2,6 +2,7 @@ use connection_cache::{CachedBranding, CachedStatus};
 use key_store::KeyStore;
 use parking_lot::{Mutex, RwLock};
 use pumpkin_config::BASIC_CONFIG;
+use pumpkin_core::math::distance::distance;
 use pumpkin_core::math::vector3::Vector3;
 use pumpkin_core::text::TextComponent;
 use pumpkin_core::GameMode;
@@ -145,13 +146,6 @@ impl Server {
     pub fn get_nearest_player(&self, target: &Vector3<f64>) -> Option<Arc<Player>> {
         // TODO respect which world the player is in
         let world = self.worlds.first()?;
-
-        fn distance(p1: &Vector3<f64>, p2: &Vector3<f64>) -> f64 {
-            let dx = p1.x - p2.x;
-            let dy = p1.y - p2.y;
-            let dz = p1.z - p2.z;
-            dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt()
-        }
 
         world
             .current_players

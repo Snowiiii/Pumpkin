@@ -3,6 +3,7 @@ pub mod position;
 pub mod vector2;
 pub mod vector3;
 pub mod voxel_shape;
+pub mod distance;
 
 pub fn wrap_degrees(var: f32) -> f32 {
     let mut var1 = var % 360.0;
