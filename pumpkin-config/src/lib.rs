@@ -97,6 +97,9 @@ pub struct BasicConfiguration {
     /// Whether to remove IPs from logs or not
     #[serde_inline_default(true)]
     pub scrub_ips: bool,
+    /// Path to server favicon
+    #[serde(default = "String::new")]
+    pub favicon_path: String,
 }
 
 fn default_server_address() -> SocketAddr {
@@ -119,6 +122,7 @@ impl Default for BasicConfiguration {
             motd: "A Blazing fast Pumpkin Server!".to_string(),
             default_gamemode: GameMode::Survival,
             scrub_ips: true,
+            favicon_path: "".to_string(),
         }
     }
 }
