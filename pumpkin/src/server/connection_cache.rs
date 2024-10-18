@@ -57,8 +57,9 @@ impl CachedStatus {
     }
 
     pub fn build_response(config: &BasicConfiguration) -> StatusResponse {
-        let icon_path = "/icon.png";
-        let icon = if Path::new(icon_path).exists() {
+        let icon_path = &config.favicon_path;
+
+        let icon = if !icon_path.is_empty() && Path::new(icon_path).exists() {
             Some(Self::load_icon(icon_path))
         } else {
             None
