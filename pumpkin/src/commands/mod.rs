@@ -10,6 +10,7 @@ mod cmd_echest;
 mod cmd_gamemode;
 mod cmd_help;
 mod cmd_kill;
+mod cmd_kick;
 mod cmd_pumpkin;
 mod cmd_stop;
 pub mod dispatcher;
@@ -75,6 +76,7 @@ pub fn default_dispatcher<'a>() -> CommandDispatcher<'a> {
     dispatcher.register(cmd_help::init_command_tree());
     dispatcher.register(cmd_echest::init_command_tree());
     dispatcher.register(cmd_kill::init_command_tree());
+    dispatcher.register(cmd_kick::init_command_tree());
 
     dispatcher
 }
