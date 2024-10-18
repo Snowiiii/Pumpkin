@@ -10,7 +10,7 @@ const DESCRIPTION: &str = "Sends a message to all players.";
 const ARG_CONTENT: &str = "content";
 
 pub fn consume_arg_content(_src: &CommandSender, args: &mut RawArgs) -> Option<String> {
-    args.pop().map_or(None, |v| Some(v.to_string()))
+    args.pop().map(|v| v.to_string())
 }
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
