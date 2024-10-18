@@ -2,6 +2,9 @@ use connection_cache::{CachedBranding, CachedStatus};
 use key_store::KeyStore;
 use parking_lot::{Mutex, RwLock};
 use pumpkin_config::BASIC_CONFIG;
+use pumpkin_core::math::distance::distance;
+use pumpkin_core::math::vector3::Vector3;
+use pumpkin_core::text::TextComponent;
 use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::drag_handler::DragHandler;
@@ -125,6 +128,35 @@ impl Server {
         for world in &self.worlds {
             world.broadcast_packet_all(packet)
         }
+    }
+
+    /// Sends a message to all players in every world
+    pub fn broadcast_message(&self, content: TextComponent) {
+        for world in &self.worlds {
+            world.broadcast_message(&content);
+        }
+    }
+
+    /// Get all online players
+    pub fn get_online_players(&self) -> impl Iterator<Item = Arc<Player>> + '_ {
+        self.worlds.iter().flat_map(|world| world.get_players())
+    }
+
+    /// Gets the nearest player from the world position
+    pub fn get_nearest_player(&self, target: &Vector3<f64>) -> Option<Arc<Player>> {
+        // TODO respect which world the player is in
+        let world = self.worlds.first()?;
+
+        world
+            .current_players
+            .lock()
+            .values()
+            .min_by(|a, b| {
+                let dist_a = distance(&a.last_position.load(), target);
+                let dist_b = distance(&b.last_position.load(), target);
+                dist_a.partial_cmp(&dist_b).unwrap()
+            })
+            .cloned()
     }
 
     /// Searches every world for a player by name
