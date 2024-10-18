@@ -3,6 +3,7 @@ use std::{
     fs::File,
     io::{Cursor, Read},
     path::Path,
+    sync::LazyLock,
 };
 
 use base64::{engine::general_purpose, Engine as _};
@@ -13,6 +14,29 @@ use pumpkin_protocol::{
 };
 
 use super::CURRENT_MC_VERSION;
+
+static DEFAULT_ICON: LazyLock<&[u8]> =
+    LazyLock::new(|| include_bytes!("../../../assets/default_icon.png"));
+
+fn load_icon_from_file<P: AsRef<Path>>(path: P) -> Result<String, Box<dyn error::Error>> {
+    let mut icon_file = File::open(path)?;
+    let mut buf = Vec::new();
+    icon_file.read_to_end(&mut buf)?;
+    load_icon_from_bytes(&buf)
+}
+
+fn load_icon_from_bytes(png_data: &[u8]) -> Result<String, Box<dyn error::Error>> {
+    let icon = png::Decoder::new(Cursor::new(&png_data));
+    let reader = icon.read_info()?;
+    let info = reader.info();
+    assert!(info.width == 64, "Icon width must be 64");
+    assert!(info.height == 64, "Icon height must be 64");
+
+    // Reader consumes the image. Once we verify dimensions, we want to encode the entire raw image
+    let mut result = "data:image/png;base64,".to_owned();
+    general_purpose::STANDARD.encode_string(png_data, &mut result);
+    Ok(result)
+}
 
 pub struct CachedStatus {
     _status_response: StatusResponse,
@@ -62,39 +86,21 @@ impl CachedStatus {
     }
 
     pub fn build_response(config: &BasicConfiguration) -> StatusResponse {
-        let icon_path = &config.favicon_path;
-
-        let icon = if icon_path.is_empty() {
-            // See if an icon exists at ./icon.png
-            let default_local_path = "./icon.png";
-            if Path::new(default_local_path).exists() {
-                log::info!("Loading server icon from {}", default_local_path);
-                let maybe_icon = Self::load_icon(default_local_path);
-                match maybe_icon {
-                    Ok(result) => Some(result),
-                    Err(e) => {
-                        log::warn!("Failed to load icon: {:?}", e);
-                        None
-                    }
-                }
-            } else {
-                log::info!("Using default server icon");
-                Some(pumpkin_macros::create_icon!().to_string())
-            }
-        } else if Path::new(icon_path).exists() {
-            log::info!("Loading server icon from {}", icon_path);
-            let maybe_icon = Self::load_icon(icon_path);
-            match maybe_icon {
+        let icon = if config.use_favicon {
+            let icon_path = &config.favicon_path;
+            log::info!("Loading server favicon from '{}'", icon_path);
+            match load_icon_from_file(icon_path).or_else(|err| {
+                log::warn!("Failed to load icon from '{}': {}", icon_path, err);
+                load_icon_from_bytes(DEFAULT_ICON.as_ref())
+            }) {
                 Ok(result) => Some(result),
-                Err(e) => {
-                    log::warn!("Failed to load icon: {:?}", e);
+                Err(err) => {
+                    log::warn!("Failed to load default icon: {}", err);
                     None
                 }
             }
         } else {
-            // TODO: Add definitive option to have no icon?
-            // Currently can just use a bad path
-            log::warn!("Failed to load server icon at path {}", icon_path);
+            log::info!("Not using a server favicon");
             None
         };
 
@@ -115,22 +121,5 @@ impl CachedStatus {
             favicon: icon,
             enforce_secure_chat: false,
         }
-    }
-
-    fn load_icon<P: AsRef<Path>>(path: P) -> Result<String, Box<dyn error::Error>> {
-        let mut icon_file = File::open(path).expect("Failed to load icon");
-        let mut buf = Vec::new();
-        icon_file.read_to_end(&mut buf)?;
-
-        let icon = png::Decoder::new(Cursor::new(&buf));
-        let reader = icon.read_info()?;
-        let info = reader.info();
-        assert!(info.width == 64, "Icon width must be 64");
-        assert!(info.height == 64, "Icon height must be 64");
-
-        // Reader consumes the image. Once we verify dimensions, we want to encode the entire raw image
-        let mut result = "data:image/png;base64,".to_owned();
-        general_purpose::STANDARD.encode_string(&buf, &mut result);
-        Ok(result)
     }
 }

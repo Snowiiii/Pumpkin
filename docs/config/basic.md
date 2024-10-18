@@ -100,12 +100,20 @@ The server's description displayed on the status screen.
 motd=true
 ```
 
-## Favicon
+## Use favicon
+
+Whether to use a server favicon or not
+
+```toml
+use_favicon=true
+```
+
+## Favicon path
 
 The path to the server's favicon
 
 ```toml
-favicon_path=
+favicon_path=./icon.png
 ```
 
 ## Default gamemode

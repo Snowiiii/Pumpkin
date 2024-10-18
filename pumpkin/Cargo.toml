@@ -7,7 +7,6 @@ edition = "2021"
 [dependencies]
 # pumpkin
 pumpkin-core = { path = "../pumpkin-core" }
-pumpkin-macros = { path = "../pumpkin-macros" }
 pumpkin-config = { path = "../pumpkin-config" }
 pumpkin-inventory = { path = "../pumpkin-inventory" }
 pumpkin-world = { path = "../pumpkin-world" }

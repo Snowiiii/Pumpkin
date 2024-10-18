@@ -97,8 +97,11 @@ pub struct BasicConfiguration {
     /// Whether to remove IPs from logs or not
     #[serde_inline_default(true)]
     pub scrub_ips: bool,
+    /// Whether to use a server favicon
+    #[serde_inline_default(true)]
+    pub use_favicon: bool,
     /// Path to server favicon
-    #[serde(default = "String::new")]
+    #[serde_inline_default("icon.png".to_string())]
     pub favicon_path: String,
 }
 
@@ -122,7 +125,8 @@ impl Default for BasicConfiguration {
             motd: "A Blazing fast Pumpkin Server!".to_string(),
             default_gamemode: GameMode::Survival,
             scrub_ips: true,
-            favicon_path: "".to_string(),
+            use_favicon: true,
+            favicon_path: "icon.png".to_string(),
         }
     }
 }
