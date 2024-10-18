@@ -1,4 +1,4 @@
-use pumpkin_core::text::{style::Style, TextComponent};
+use pumpkin_core::text::TextComponent;
 use pumpkin_macros::packet;
 
 use crate::{ClientPacket, NumberFormat, VarInt};

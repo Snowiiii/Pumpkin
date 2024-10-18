@@ -1,5 +1,6 @@
 use bytebuf::{packet_id::Packet, ByteBuffer, DeserializerError};
 use bytes::Buf;
+use pumpkin_core::text::{style::Style, TextComponent};
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
 use thiserror::Error;
@@ -245,6 +246,7 @@ pub struct KnownPack<'a> {
     pub version: &'a str,
 }
 
+#[derive(Serialize)]
 pub enum NumberFormat<'a> {
     /// Show nothing
     Blank,

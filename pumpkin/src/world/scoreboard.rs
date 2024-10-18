@@ -1,0 +1,123 @@
+use std::collections::HashMap;
+
+use pumpkin_core::text::TextComponent;
+use pumpkin_protocol::{
+    client::play::{CDisplayObjective, CUpdateObjectives, CUpdateScore, RenderType},
+    NumberFormat, VarInt,
+};
+
+use super::World;
+
+pub struct Scoreboard {
+    objectives: HashMap<String, ScoreboardObjective<'static>>,
+    //  teams: HashMap<String, Team>,
+}
+
+impl Default for Scoreboard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Scoreboard {
+    pub fn new() -> Self {
+        Self {
+            objectives: HashMap::new(),
+        }
+    }
+
+    pub fn add_objective(&mut self, world: &World, objective: ScoreboardObjective) {
+        if self.objectives.contains_key(objective.name) {
+            // Maybe make this an error ?
+            log::warn!(
+                "Tried to create Objective which does already exist, {}",
+                &objective.name
+            );
+            return;
+        }
+        world.broadcast_packet_all(&CUpdateObjectives::new(
+            objective.name,
+            pumpkin_protocol::client::play::Mode::Add,
+            objective.display_name,
+            objective.render_type,
+            objective.number_format,
+        ));
+        world.broadcast_packet_all(&CDisplayObjective::new(
+            pumpkin_protocol::client::play::DisplaySlot::Sidebar,
+            "test",
+        ));
+    }
+
+    pub fn update_score(&self, world: &World, score: ScoreboardScore) {
+        if self.objectives.contains_key(score.objective_name) {
+            log::warn!(
+                "Tried to place a score into a Objective which does not exist, {}",
+                &score.objective_name
+            );
+            return;
+        }
+        world.broadcast_packet_all(&CUpdateScore::new(
+            score.entity_name,
+            score.objective_name,
+            score.value,
+            score.display_name,
+            score.number_format,
+        ));
+    }
+
+    // pub fn add_team(&mut self, name: String) {
+    //     if self.teams.contains_key(&name) {
+    //         // Maybe make this an error ?
+    //         log::warn!("Tried to create Team which does already exist, {}", name);
+    //     }
+    // }
+}
+
+pub struct ScoreboardObjective<'a> {
+    name: &'a str,
+    display_name: TextComponent<'a>,
+    render_type: RenderType,
+    number_format: Option<NumberFormat<'a>>,
+}
+
+impl<'a> ScoreboardObjective<'a> {
+    pub const fn new(
+        name: &'a str,
+        display_name: TextComponent<'a>,
+        render_type: RenderType,
+        number_format: Option<NumberFormat<'a>>,
+    ) -> Self {
+        Self {
+            name,
+            display_name,
+            render_type,
+            number_format,
+        }
+    }
+}
+
+pub struct ScoreboardScore<'a> {
+    entity_name: &'a str,
+    objective_name: &'a str,
+    value: VarInt,
+    display_name: Option<TextComponent<'a>>,
+    number_format: Option<NumberFormat<'a>>,
+}
+
+impl<'a> ScoreboardScore<'a> {
+    pub const fn new(
+        entity_name: &'a str,
+        objective_name: &'a str,
+        value: VarInt,
+        display_name: Option<TextComponent<'a>>,
+        number_format: Option<NumberFormat<'a>>,
+    ) -> Self {
+        Self {
+            entity_name,
+            objective_name,
+            value,
+            display_name,
+            number_format,
+        }
+    }
+}

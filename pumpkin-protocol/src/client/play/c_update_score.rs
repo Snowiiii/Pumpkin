@@ -1,8 +1,10 @@
 use pumpkin_core::text::TextComponent;
 use pumpkin_macros::packet;
+use serde::Serialize;
 
 use crate::{NumberFormat, VarInt};
 
+#[derive(Serialize)]
 #[packet(0x61)]
 pub struct CUpdateScore<'a> {
     entity_name: &'a str,

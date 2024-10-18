@@ -19,7 +19,10 @@ use pumpkin_protocol::{
     ClientPacket, VarInt,
 };
 use pumpkin_world::level::Level;
+use scoreboard::Scoreboard;
 use tokio::sync::mpsc;
+
+pub mod scoreboard;
 
 /// Represents a Minecraft world, containing entities, players, and the underlying level data.
 ///
@@ -35,6 +38,7 @@ pub struct World {
     pub level: Arc<Mutex<Level>>,
     /// A map of active players within the world, keyed by their unique token.
     pub current_players: Arc<Mutex<HashMap<usize, Arc<Player>>>>,
+    pub scoreboard: Mutex<Scoreboard>,
     // TODO: entities
 }
 
@@ -43,6 +47,7 @@ impl World {
         Self {
             level: Arc::new(Mutex::new(level)),
             current_players: Arc::new(Mutex::new(HashMap::new())),
+            scoreboard: Mutex::new(Scoreboard::new()),
         }
     }
 
