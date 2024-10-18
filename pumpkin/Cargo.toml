@@ -24,6 +24,8 @@ bytes = "1.7"
 
 rand = "0.8.5"
 
+regex = "1.11.0"
+
 num-traits = "0.2"
 num-derive = "0.4"
 num-bigint = "0.4"
@@ -53,7 +55,7 @@ thiserror = "1.0"
 
 # icon loading
 base64 = "0.22.1"
-png = "0.17.14" 
+png = "0.17.14"
 
 # logging
 simple_logger = { version = "5.0.0", features = ["threads"] }

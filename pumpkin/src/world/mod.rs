@@ -266,6 +266,15 @@ impl World {
         }
     }
 
+    /// Gets all players
+    pub fn get_players(&self) -> Vec<Arc<Player>> {
+        self.current_players
+            .lock()
+            .values()
+            .cloned()
+            .collect::<Vec<_>>()
+    }
+
     /// Gets a Player by entity id
     pub fn get_player_by_entityid(&self, id: EntityId) -> Option<Arc<Player>> {
         for player in self.current_players.lock().values() {
