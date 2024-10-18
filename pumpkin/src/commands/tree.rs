@@ -1,5 +1,5 @@
 use super::RunFunctionType;
-use crate::commands::CommandSender;
+use crate::{commands::CommandSender, server::Server};
 use std::collections::{HashMap, VecDeque};
 
 /// see [crate::commands::tree_builder::argument]
@@ -9,7 +9,9 @@ pub type RawArgs<'a> = Vec<&'a str>;
 pub type ConsumedArgs<'a> = HashMap<&'a str, String>;
 
 /// see [crate::commands::tree_builder::argument]
-pub type ArgumentConsumer<'a> = fn(&CommandSender, &mut RawArgs) -> Option<String>;
+/// Provide value or an Optional error message, If no Error message provided the default will be used
+pub type ArgumentConsumer<'a> =
+    fn(&CommandSender, &Server, &mut RawArgs) -> Result<String, Option<String>>;
 
 pub struct Node<'a> {
     pub(crate) children: Vec<usize>,

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use dispatcher::InvalidTreeError;
 use pumpkin_core::text::TextComponent;
 use tree::ConsumedArgs;
@@ -21,7 +23,7 @@ mod tree_format;
 pub enum CommandSender<'a> {
     Rcon(&'a mut Vec<String>),
     Console,
-    Player(&'a Player),
+    Player(Arc<Player>),
 }
 
 impl<'a> CommandSender<'a> {
@@ -49,9 +51,9 @@ impl<'a> CommandSender<'a> {
             CommandSender::Rcon(_) => true,
         }
     }
-    pub fn as_mut_player(&mut self) -> Option<&Player> {
+    pub fn as_mut_player(&mut self) -> Option<Arc<Player>> {
         match self {
-            CommandSender::Player(player) => Some(player),
+            CommandSender::Player(player) => Some(player.clone()),
             CommandSender::Console => None,
             CommandSender::Rcon(_) => None,
         }

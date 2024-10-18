@@ -58,14 +58,17 @@ impl<'a> CommandDispatcher<'a> {
                     println!("Error while parsing command \"{cmd}\": a requirement that was expected was not met.");
                     return Err("Internal Error (See logs for details)".into());
                 }
-                Ok(is_fitting_path) => {
-                    if is_fitting_path {
-                        return Ok(());
+                Ok(is_fitting_path) => match is_fitting_path {
+                    Ok(_) => return Ok(()),
+                    Err(error) => {
+                        // Custom error message or not ?
+                        if let Some(error) = error {
+                            return Err(error);
+                        }
                     }
-                }
+                },
             }
         }
-
         Err(format!("Invalid Syntax. Usage: {}", tree))
     }
 
@@ -90,7 +93,7 @@ impl<'a> CommandDispatcher<'a> {
         path: Vec<usize>,
         tree: &CommandTree,
         mut raw_args: RawArgs,
-    ) -> Result<bool, InvalidTreeError> {
+    ) -> Result<Result<(), Option<String>>, InvalidTreeError> {
         let mut parsed_args: ConsumedArgs = HashMap::new();
 
         for node in path.iter().map(|&i| &tree.nodes[i]) {
@@ -98,36 +101,37 @@ impl<'a> CommandDispatcher<'a> {
                 NodeType::ExecuteLeaf { run } => {
                     return if raw_args.is_empty() {
                         run(src, server, &parsed_args)?;
-                        Ok(true)
+                        Ok(Ok(()))
                     } else {
-                        Ok(false)
+                        Ok(Err(None))
                     };
                 }
                 NodeType::Literal { string, .. } => {
                     if raw_args.pop() != Some(string) {
-                        return Ok(false);
+                        return Ok(Err(None));
                     }
                 }
                 NodeType::Argument {
                     consumer: consume,
                     name,
                     ..
-                } => {
-                    if let Some(consumed) = consume(src, &mut raw_args) {
+                } => match consume(src, server, &mut raw_args) {
+                    Ok(consumed) => {
                         parsed_args.insert(name, consumed);
-                    } else {
-                        return Ok(false);
                     }
-                }
+                    Err(err) => {
+                        return Ok(Err(err));
+                    }
+                },
                 NodeType::Require { predicate, .. } => {
                     if !predicate(src) {
-                        return Ok(false);
+                        return Ok(Err(None));
                     }
                 }
             }
         }
 
-        Ok(false)
+        Ok(Err(None))
     }
 
     /// Register a command with the dispatcher.

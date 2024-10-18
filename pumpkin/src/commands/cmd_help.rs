@@ -3,6 +3,7 @@ use crate::commands::dispatcher::{CommandDispatcher, InvalidTreeError};
 use crate::commands::tree::{Command, CommandTree, ConsumedArgs, RawArgs};
 use crate::commands::tree_builder::argument;
 use crate::commands::CommandSender;
+use crate::server::Server;
 use pumpkin_core::text::TextComponent;
 
 const NAMES: [&str; 3] = ["help", "h", "?"];
@@ -11,12 +12,16 @@ const DESCRIPTION: &str = "Print a help message.";
 
 const ARG_COMMAND: &str = "command";
 
-fn consume_arg_command(_src: &CommandSender, _args: &mut RawArgs) -> Option<String> {
+fn consume_arg_command(
+    _src: &CommandSender,
+    _server: &Server,
+    _args: &mut RawArgs,
+) -> Result<String, Option<String>> {
     //   let s = args.pop()?;
 
     // dispatcher.get_tree(s).ok().map(|tree| tree.names[0].into())
     // TODO
-    None
+    Err(None)
 }
 
 fn parse_arg_command<'a>(

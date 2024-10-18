@@ -14,6 +14,7 @@ use crate::commands::tree::{CommandTree, ConsumedArgs, RawArgs};
 use crate::commands::tree_builder::{argument, require};
 use crate::commands::CommandSender;
 use crate::commands::CommandSender::Player;
+use crate::server::Server;
 
 const NAMES: [&str; 1] = ["gamemode"];
 
@@ -22,20 +23,27 @@ const DESCRIPTION: &str = "Change a player's gamemode.";
 const ARG_GAMEMODE: &str = "gamemode";
 const ARG_TARGET: &str = "target";
 
-pub fn consume_arg_gamemode(_src: &CommandSender, args: &mut RawArgs) -> Option<String> {
-    let s = args.pop()?;
-
-    if let Ok(id) = s.parse::<u8>() {
-        match GameMode::from_u8(id) {
-            None | Some(GameMode::Undefined) => {}
-            Some(_) => return Some(s.into()),
+pub fn consume_arg_gamemode(
+    _src: &CommandSender,
+    _server: &Server,
+    args: &mut RawArgs,
+) -> Result<String, Option<String>> {
+    if let Some(arg) = args.pop() {
+        if let Ok(id) = arg.parse::<u8>() {
+            match GameMode::from_u8(id) {
+                None | Some(GameMode::Undefined) => {}
+                Some(_) => return Ok(arg.into()),
+            };
         };
-    };
 
-    match GameMode::from_str(s) {
-        Err(_) | Ok(GameMode::Undefined) => None,
-        Ok(_) => Some(s.into()),
+        match GameMode::from_str(arg) {
+            Err(_) | Ok(GameMode::Undefined) => {
+                return Err(Some(format!("Gamemode not found: {}", arg)))
+            }
+            Ok(_) => return Ok(arg.into()),
+        }
     }
+    Err(None)
 }
 
 pub fn parse_arg_gamemode(consumed_args: &ConsumedArgs) -> Result<GameMode, InvalidTreeError> {
