@@ -1,4 +1,9 @@
-use std::{fs::File, path::Path};
+use core::error;
+use std::{
+    fs::File,
+    io::{Cursor, Read},
+    path::Path,
+};
 
 use base64::{engine::general_purpose, Engine as _};
 use pumpkin_config::{BasicConfiguration, BASIC_CONFIG};
@@ -59,9 +64,37 @@ impl CachedStatus {
     pub fn build_response(config: &BasicConfiguration) -> StatusResponse {
         let icon_path = &config.favicon_path;
 
-        let icon = if !icon_path.is_empty() && Path::new(icon_path).exists() {
-            Some(Self::load_icon(icon_path))
+        let icon = if icon_path.is_empty() {
+            // See if an icon exists at ./icon.png
+            let default_local_path = "./icon.png";
+            if Path::new(default_local_path).exists() {
+                log::info!("Loading server icon from {}", default_local_path);
+                let maybe_icon = Self::load_icon(default_local_path);
+                match maybe_icon {
+                    Ok(result) => Some(result),
+                    Err(e) => {
+                        log::warn!("Failed to load icon: {:?}", e);
+                        None
+                    }
+                }
+            } else {
+                log::info!("Using default server icon");
+                Some(pumpkin_macros::create_icon!().to_string())
+            }
+        } else if Path::new(icon_path).exists() {
+            log::info!("Loading server icon from {}", icon_path);
+            let maybe_icon = Self::load_icon(icon_path);
+            match maybe_icon {
+                Ok(result) => Some(result),
+                Err(e) => {
+                    log::warn!("Failed to load icon: {:?}", e);
+                    None
+                }
+            }
         } else {
+            // TODO: Add definitive option to have no icon?
+            // Currently can just use a bad path
+            log::warn!("Failed to load server icon at path {}", icon_path);
             None
         };
 
@@ -84,20 +117,20 @@ impl CachedStatus {
         }
     }
 
-    fn load_icon<P: AsRef<Path>>(path: P) -> String {
-        let icon = png::Decoder::new(File::open(path).expect("Failed to load icon"));
-        let mut reader = icon.read_info().unwrap();
+    fn load_icon<P: AsRef<Path>>(path: P) -> Result<String, Box<dyn error::Error>> {
+        let mut icon_file = File::open(path).expect("Failed to load icon");
+        let mut buf = Vec::new();
+        icon_file.read_to_end(&mut buf)?;
+
+        let icon = png::Decoder::new(Cursor::new(&buf));
+        let reader = icon.read_info()?;
         let info = reader.info();
         assert!(info.width == 64, "Icon width must be 64");
         assert!(info.height == 64, "Icon height must be 64");
-        // Allocate the output buffer.
-        let mut buf = vec![0; reader.output_buffer_size()];
-        // Read the next frame. An APNG might contain multiple frames.
-        let info = reader.next_frame(&mut buf).unwrap();
-        // Grab the bytes of the image.
-        let bytes = &buf[..info.buffer_size()];
+
+        // Reader consumes the image. Once we verify dimensions, we want to encode the entire raw image
         let mut result = "data:image/png;base64,".to_owned();
-        general_purpose::STANDARD.encode_string(bytes, &mut result);
-        result
+        general_purpose::STANDARD.encode_string(&buf, &mut result);
+        Ok(result)
     }
 }

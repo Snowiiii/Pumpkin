@@ -40,3 +40,10 @@ pub fn blocks_enum(_item: TokenStream) -> TokenStream {
 pub fn block_categories_enum(_item: TokenStream) -> TokenStream {
     block_state::block_type_enum_impl()
 }
+
+mod icon;
+#[proc_macro]
+/// Creates the default server icon
+pub fn create_icon(_item: TokenStream) -> TokenStream {
+    icon::create_icon_impl()
+}
