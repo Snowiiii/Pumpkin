@@ -43,6 +43,7 @@ mod c_update_entity_pos;
 mod c_update_entity_pos_rot;
 mod c_update_entity_rot;
 mod c_update_objectives;
+mod c_update_score;
 mod c_worldevent;
 mod player_action;
 
@@ -91,5 +92,6 @@ pub use c_update_entity_pos::*;
 pub use c_update_entity_pos_rot::*;
 pub use c_update_entity_rot::*;
 pub use c_update_objectives::*;
+pub use c_update_score::*;
 pub use c_worldevent::*;
 pub use player_action::*;

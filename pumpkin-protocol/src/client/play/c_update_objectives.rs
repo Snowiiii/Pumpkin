@@ -1,7 +1,7 @@
 use pumpkin_core::text::{style::Style, TextComponent};
 use pumpkin_macros::packet;
 
-use crate::{ClientPacket, VarInt};
+use crate::{ClientPacket, NumberFormat, VarInt};
 
 #[packet(0x5E)]
 pub struct CUpdateObjectives<'a> {
@@ -15,16 +15,16 @@ pub struct CUpdateObjectives<'a> {
 impl<'a> CUpdateObjectives<'a> {
     pub fn new(
         objective_name: &'a str,
-        mode: u8,
+        mode: Mode,
         display_name: TextComponent<'a>,
-        render_type: VarInt,
+        render_type: RenderType,
         number_format: Option<NumberFormat<'a>>,
     ) -> Self {
         Self {
             objective_name,
-            mode,
+            mode: mode as u8,
             display_name,
-            render_type,
+            render_type: VarInt(render_type as i32),
             number_format,
         }
     }
@@ -68,13 +68,4 @@ pub enum Mode {
 pub enum RenderType {
     Integer,
     Hearts,
-}
-
-pub enum NumberFormat<'a> {
-    /// Show nothing
-    Blank,
-    /// The styling to be used when formatting the score number
-    Styled(Style<'a>),
-    /// The text to be used as placeholder.
-    Fixed(TextComponent<'a>),
 }
