@@ -1,3 +1,6 @@
+use std::{io::Cursor, sync::LazyLock};
+
+use base64::{engine::general_purpose, Engine as _};
 use proc_macro::TokenStream;
 use quote::quote;
 
@@ -41,9 +44,19 @@ pub fn block_categories_enum(_item: TokenStream) -> TokenStream {
     block_state::block_type_enum_impl()
 }
 
-mod icon;
+static ICON: LazyLock<&[u8]> = LazyLock::new(|| include_bytes!("../../assets/default_icon.png"));
 #[proc_macro]
-/// Creates the default server icon
+/// Returns a base64 string encoding of the default server favicon
 pub fn create_icon(_item: TokenStream) -> TokenStream {
-    icon::create_icon_impl()
+    let icon = png::Decoder::new(Cursor::new(ICON.as_ref()));
+    let reader = icon.read_info().unwrap();
+    let info = reader.info();
+    assert!(info.width == 64, "Icon width must be 64");
+    assert!(info.height == 64, "Icon height must be 64");
+
+    // Once we validate the dimensions, we can encode the image as-is
+    let mut result = "data:image/png;base64,".to_owned();
+    general_purpose::STANDARD.encode_string(ICON.as_ref(), &mut result);
+
+    quote! {#result}.into()
 }
