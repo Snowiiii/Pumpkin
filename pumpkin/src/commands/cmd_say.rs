@@ -5,7 +5,6 @@ use crate::commands::CommandSender;
 use crate::server::Server;
 use pumpkin_core::math::vector3::Vector3;
 use pumpkin_core::text::{color::NamedColor, TextComponent};
-use regex::Regex;
 
 const NAMES: [&str; 1] = ["say"];
 const DESCRIPTION: &str = "Sends a message to all players.";
@@ -13,7 +12,14 @@ const DESCRIPTION: &str = "Sends a message to all players.";
 const ARG_CONTENT: &str = "content";
 
 pub fn consume_arg_content(_src: &CommandSender, args: &mut RawArgs) -> Option<String> {
-    args.pop().map(|v| v.to_string())
+    let mut all_args: Vec<String> = args.drain(..).map(|v| v.to_string()).collect();
+
+    if all_args.is_empty() {
+        None
+    } else {
+        all_args.reverse();
+        Some(all_args.join(" "))
+    }
 }
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
@@ -40,20 +46,12 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
 
 fn parse_selectors(content: &str, sender: &CommandSender, server: &Server) -> String {
     let mut final_message = String::new();
-    let mut current_pos = 0;
 
-    // regex to match
-    // (@p, @a, @r, @e, @s, @here)
-    let selector_pattern = Regex::new(r"@[parehs]\b").unwrap();
+    let tokens: Vec<&str> = content.split_whitespace().collect();
 
-    for selector_match in selector_pattern.find_iter(content) {
-        let selector = selector_match.as_str();
-        let start = selector_match.start();
-
-        // before selector
-        final_message.push_str(&content[current_pos..start]);
-
-        let result = match selector {
+    for token in tokens {
+        // TODO impl @e
+        let result = match token {
             "@p" => {
                 let position = match sender {
                     CommandSender::Player(p) => p.last_position.load(),
@@ -83,23 +81,19 @@ fn parse_selectors(content: &str, sender: &CommandSender, server: &Server) -> St
                 .get_online_players()
                 .map(|p| p.gameprofile.name.clone())
                 .collect::<Vec<_>>(),
-            "@e" => vec![], // TODO
             "@here" => server
                 .get_online_players()
                 .map(|p| p.gameprofile.name.clone())
                 .collect::<Vec<_>>(),
-            _ => continue,
+            _ => vec![token.to_string()],
         };
 
         // formatted player names
         final_message.push_str(&format_player_names(&result));
-
-        current_pos = selector_match.end();
+        final_message.push(' ');
     }
 
-    final_message.push_str(&content[current_pos..]);
-
-    final_message
+    final_message.trim_end().to_string()
 }
 
 // Helper function to format player names according to spec

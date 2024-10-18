@@ -24,8 +24,6 @@ bytes = "1.7"
 
 rand = "0.8.5"
 
-regex = "1.11.0"
-
 num-traits = "0.2"
 num-derive = "0.4"
 num-bigint = "0.4"
