@@ -59,10 +59,6 @@ png = "0.17.14"
 simple_logger = { version = "5.0.0", features = ["threads"] }
 log.workspace = true
 
-# networking
-mio = { version = "1.0.2", features = ["net", "os-poll"] }
-
-parking_lot.workspace = true
 crossbeam.workspace = true
 uuid.workspace = true
 tokio.workspace = true

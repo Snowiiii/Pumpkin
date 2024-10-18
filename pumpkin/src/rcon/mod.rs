@@ -1,16 +1,13 @@
 use std::{
     collections::HashMap,
-    io::{self, Read, Write},
+    io::{self},
     net::SocketAddr,
 };
 
-use mio::{
-    net::{TcpListener, TcpStream},
-    Events, Interest, Poll, Token,
-};
 use packet::{ClientboundPacket, Packet, PacketError, ServerboundPacket};
 use pumpkin_config::{RCONConfig, ADVANCED_CONFIG};
 use thiserror::Error;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::server::Server;
 
@@ -26,87 +23,40 @@ pub enum RCONError {
     Io(io::Error),
 }
 
-const SERVER: Token = Token(0);
-
 pub struct RCONServer;
 
 impl RCONServer {
     pub async fn new(config: &RCONConfig, server: &Server) -> Result<Self, io::Error> {
         assert!(config.enabled, "RCON is not enabled");
-        let mut poll = Poll::new().unwrap();
-        let mut listener = TcpListener::bind(config.address).unwrap();
-
-        poll.registry()
-            .register(&mut listener, SERVER, Interest::READABLE)
-            .unwrap();
-
-        let mut unique_id = SERVER.0 + 1;
-
-        let mut events = Events::with_capacity(20);
+        let listener = tokio::net::TcpListener::bind(config.address).await.unwrap();
 
         let mut connections: HashMap<usize, RCONClient> = HashMap::new();
 
         let password = config.password.clone();
 
+        let mut unique_id = 0;
         loop {
-            poll.poll(&mut events, None).unwrap();
+            // Asynchronously wait for an inbound socket.
+            let (connection, address) = listener.accept().await?;
 
-            for event in events.iter() {
-                match event.token() {
-                    SERVER => loop {
-                        // Received an event for the TCP server socket, which
-                        // indicates we can accept an connection.
-                        let (mut connection, address) = match listener.accept() {
-                            Ok((connection, address)) => (connection, address),
-                            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
-                                // If we get a `WouldBlock` error we know our
-                                // listener has no more incoming connections queued,
-                                // so we can return to polling and wait for some
-                                // more.
-                                break;
-                            }
-                            Err(e) => {
-                                // If it was any other kind of error, something went
-                                // wrong and we terminate with an error.
-                                return Err(e);
-                            }
-                        };
-                        if config.max_connections != 0
-                            && connections.len() >= config.max_connections as usize
-                        {
-                            break;
-                        }
+            if config.max_connections != 0 && connections.len() >= config.max_connections as usize {
+                continue;
+            }
 
-                        unique_id += 1;
-                        let token = unique_id;
-                        poll.registry()
-                            .register(
-                                &mut connection,
-                                Token(token),
-                                Interest::READABLE.add(Interest::WRITABLE),
-                            )
-                            .unwrap();
-                        connections.insert(token, RCONClient::new(connection, address));
-                    },
+            unique_id += 1;
+            let token = unique_id;
+            connections.insert(token, RCONClient::new(connection, address));
 
-                    token => {
-                        let done = if let Some(client) = connections.get_mut(&token.0) {
-                            client.handle(server, &password).await
-                        } else {
-                            false
-                        };
-                        if done {
-                            if let Some(mut client) = connections.remove(&token.0) {
-                                let config = &ADVANCED_CONFIG.rcon;
-                                if config.logging.log_quit {
-                                    log::info!(
-                                        "RCON ({}): Client closed connection",
-                                        client.address
-                                    );
-                                }
-                                poll.registry().deregister(&mut client.connection)?;
-                            }
-                        }
+            let done = if let Some(client) = connections.get_mut(&token) {
+                client.handle(server, &password).await
+            } else {
+                false
+            };
+            if done {
+                if let Some(client) = connections.remove(&token) {
+                    let config = &ADVANCED_CONFIG.rcon;
+                    if config.logging.log_quit {
+                        log::info!("RCON ({}): Client closed connection", client.address);
                     }
                 }
             }
@@ -115,7 +65,7 @@ impl RCONServer {
 }
 
 pub struct RCONClient {
-    connection: TcpStream,
+    connection: tokio::net::TcpStream,
     address: SocketAddr,
     logged_in: bool,
     incoming: Vec<u8>,
@@ -123,7 +73,7 @@ pub struct RCONClient {
 }
 
 impl RCONClient {
-    pub const fn new(connection: TcpStream, address: SocketAddr) -> Self {
+    pub const fn new(connection: tokio::net::TcpStream, address: SocketAddr) -> Self {
         Self {
             connection,
             address,
@@ -136,7 +86,7 @@ impl RCONClient {
     pub async fn handle(&mut self, server: &Server, password: &str) -> bool {
         if !self.closed {
             loop {
-                match self.read_bytes() {
+                match self.read_bytes().await {
                     // Stream closed, so we can't reply, so we just close everything.
                     Ok(true) => return true,
                     Ok(false) => {}
@@ -205,9 +155,9 @@ impl RCONClient {
         }
     }
 
-    fn read_bytes(&mut self) -> io::Result<bool> {
+    async fn read_bytes(&mut self) -> io::Result<bool> {
         let mut buf = [0; 1460];
-        let n = self.connection.read(&mut buf)?;
+        let n = self.connection.read(&mut buf).await?;
         if n == 0 {
             return Ok(true);
         }
@@ -224,6 +174,7 @@ impl RCONClient {
         let buf = packet.write_buf(id, body);
         self.connection
             .write(&buf)
+            .await
             .map_err(PacketError::FailedSend)?;
         Ok(())
     }

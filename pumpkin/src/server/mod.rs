@@ -1,6 +1,5 @@
 use connection_cache::{CachedBranding, CachedStatus};
 use key_store::KeyStore;
-use parking_lot::{Mutex, RwLock};
 use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
@@ -19,6 +18,8 @@ use std::{
     },
     time::Duration,
 };
+use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
 use crate::client::EncryptionError;
 use crate::{
@@ -100,17 +101,17 @@ impl Server {
         // TODO: select default from config
         let world = &self.worlds[0];
 
-        let player = Arc::new(Player::new(client, world.clone(), entity_id, gamemode));
-        world.add_player(id, player.clone());
+        let player = Arc::new(Player::new(client, world.clone(), entity_id, gamemode).await);
+        world.add_player(id, player.clone()).await;
         (player, world.clone())
     }
 
-    pub fn try_get_container(
+    pub async fn try_get_container(
         &self,
         player_id: EntityId,
         container_id: u64,
     ) -> Option<Arc<Mutex<Box<dyn Container>>>> {
-        let open_containers = self.open_containers.read();
+        let open_containers = self.open_containers.read().await;
         open_containers
             .get(&container_id)?
             .try_open(player_id)
@@ -118,19 +119,19 @@ impl Server {
     }
 
     /// Sends a Packet to all Players in all worlds
-    pub fn broadcast_packet_all<P>(&self, packet: &P)
+    pub async fn broadcast_packet_all<P>(&self, packet: &P)
     where
         P: ClientPacket,
     {
         for world in &self.worlds {
-            world.broadcast_packet_all(packet)
+            world.broadcast_packet_all(packet).await
         }
     }
 
     /// Searches every world for a player by name
-    pub fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
+    pub async fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
         for world in self.worlds.iter() {
-            if let Some(player) = world.get_player_by_name(name) {
+            if let Some(player) = world.get_player_by_name(name).await {
                 return Some(player);
             }
         }
