@@ -264,9 +264,9 @@ impl World {
 
     /// Sends a message to all players
     pub fn broadcast_message(&self, content: &TextComponent) {
-        for player in self.current_players.lock().values() {
+        self.current_players.lock().values().for_each(|player| {
             player.send_system_message(content.clone());
-        }
+        });
     }
 
     /// Gets all players
