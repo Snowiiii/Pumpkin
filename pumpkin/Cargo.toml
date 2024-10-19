@@ -53,7 +53,7 @@ thiserror = "1.0"
 
 # icon loading
 base64 = "0.22.1"
-png = "0.17.14" 
+png = "0.17.14"
 
 # logging
 simple_logger = { version = "5.0.0", features = ["threads"] }

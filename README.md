@@ -18,7 +18,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 
 - **Performance**: Leveraging multi-threading for maximum speed and efficiency.
 - **Compatibility**: Supports the latest Minecraft server version and adheres to vanilla game mechanics.
-- **Security**: Prioritizes security by preventing known exploits.
+- **Security**: Prioritizes security by preventing known security exploits.
 - **Flexibility**: Highly configurable, with the ability to disable unnecessary features.
 - **Extensibility**: Provides a foundation for plugin development.
 
@@ -48,6 +48,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Entity Spawning
   - [x] Chunk Loading
   - [x] Chunk Generation
+  - [x] Scoreboard
   - [ ] World Borders
   - [ ] World Saving
 - Player

@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use std::{f32::consts::PI, sync::Arc};
 
 use crate::{
     commands::CommandSender,
@@ -227,9 +227,13 @@ impl Player {
             .await;
     }
 
-    pub fn handle_chat_command(&self, server: &Server, command: SChatCommand) {
+    pub fn handle_chat_command(self: &Arc<Self>, server: &Server, command: SChatCommand) {
         let dispatcher = server.command_dispatcher.clone();
-        dispatcher.handle_command(&mut CommandSender::Player(self), server, &command.command);
+        dispatcher.handle_command(
+            &mut CommandSender::Player(self.clone()),
+            server,
+            &command.command,
+        );
         if ADVANCED_CONFIG.commands.log_console {
             log::info!(
                 "Player ({}): executed command /{}",

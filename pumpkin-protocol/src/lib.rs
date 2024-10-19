@@ -1,5 +1,6 @@
 use bytebuf::{packet_id::Packet, ByteBuffer, DeserializerError};
 use bytes::Buf;
+use pumpkin_core::text::{style::Style, TextComponent};
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
 use thiserror::Error;
@@ -243,4 +244,14 @@ pub struct KnownPack<'a> {
     pub namespace: &'a str,
     pub id: &'a str,
     pub version: &'a str,
+}
+
+#[derive(Serialize)]
+pub enum NumberFormat<'a> {
+    /// Show nothing
+    Blank,
+    /// The styling to be used when formatting the score number
+    Styled(Style<'a>),
+    /// The text to be used as placeholder.
+    Fixed(TextComponent<'a>),
 }

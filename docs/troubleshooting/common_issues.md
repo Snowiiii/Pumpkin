@@ -18,7 +18,7 @@
 
     **Cause:** The server is currently not calculating hit boxes for blocks, we're working on that.
 
-3.  The Server is unresponsive
+3.  ### The Server is unresponsive
 
     **Issue:** You have to wait before reconnecting or can't do basic things while chunks are loading.
 
