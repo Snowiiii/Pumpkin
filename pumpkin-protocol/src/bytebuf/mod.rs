@@ -209,6 +209,10 @@ impl ByteBuffer {
         self.put_list(v, |p, &v| p.put_var_int(&v.into()))
     }
 
+    pub fn put_u8_arr(&mut self, v: &[u8]) {
+        self.put_list(v, |p, &v| p.put_u8(v))
+    }
+
     /*  pub fn get_nbt(&mut self) -> Option<fastnbt::value::Value> {
             match crab_nbt::NbtTag::deserialize(self.buf()) {
                 Ok(v) => Some(v),
