@@ -30,7 +30,7 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
                 let message = &format!("[Console]: {content}");
                 let message = TextComponent::text(message).color_named(NamedColor::Blue);
 
-                server.broadcast_message(message.clone());
+                server.broadcast_message(&message);
                 sender.send_message(message);
             } else {
                 sender.send_message(

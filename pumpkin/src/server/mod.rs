@@ -131,9 +131,9 @@ impl Server {
     }
 
     /// Sends a message to all players in every world
-    pub fn broadcast_message(&self, content: TextComponent) {
+    pub fn broadcast_message(&self, content: &TextComponent) {
         for world in &self.worlds {
-            world.broadcast_message(&content);
+            world.broadcast_message(content);
         }
     }
 
