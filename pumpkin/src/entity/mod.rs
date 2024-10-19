@@ -101,13 +101,14 @@ impl Entity {
             let block_pos = self.block_pos.load();
             let block_pos_vec = block_pos.0;
             if i != block_pos_vec.x || j != block_pos_vec.y || k != block_pos_vec.z {
-                self.block_pos.store(WorldPosition(Vector3::new(i, j, k)));
+                let new_block_pos = Vector3::new(i, j, k);
+                self.block_pos.store(WorldPosition(new_block_pos));
 
                 let chunk_pos = self.chunk_pos.load();
                 if get_section_cord(i) != chunk_pos.x || get_section_cord(k) != chunk_pos.z {
                     self.chunk_pos.store(Vector2::new(
-                        get_section_cord(block_pos_vec.x),
-                        get_section_cord(block_pos_vec.z),
+                        get_section_cord(new_block_pos.x),
+                        get_section_cord(new_block_pos.z),
                     ));
                 }
             }
