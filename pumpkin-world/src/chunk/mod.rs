@@ -24,7 +24,7 @@ pub trait ChunkReader: Sync + Send {
     fn read_chunk(
         &self,
         save_file: &SaveFile,
-        at: Vector2<i32>,
+        at: &Vector2<i32>,
     ) -> Result<ChunkData, ChunkReadingError>;
 }
 
@@ -225,7 +225,7 @@ impl Index<ChunkRelativeBlockCoordinates> for ChunkBlocks {
 }
 
 impl ChunkData {
-    pub fn from_bytes(chunk_data: Vec<u8>, at: Vector2<i32>) -> Result<Self, ChunkParsingError> {
+    pub fn from_bytes(chunk_data: Vec<u8>, at: &Vector2<i32>) -> Result<Self, ChunkParsingError> {
         if fastnbt::from_bytes::<ChunkStatus>(&chunk_data).expect("Failed reading chunk status.")
             != ChunkStatus::Full
         {
@@ -307,7 +307,7 @@ impl ChunkData {
 
         Ok(ChunkData {
             blocks,
-            position: at,
+            position: *at,
         })
     }
 }

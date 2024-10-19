@@ -207,13 +207,15 @@ fn main() -> io::Result<()> {
                             log::warn!("failed to set TCP_NODELAY {e}");
                         }
 
-                        log::info!(
-                            "Accepted connection from: {}",
-                            scrub_address(&format!("{}", address))
-                        );
-
                         unique_id += 1;
                         let id = unique_id;
+
+                        log::info!(
+                            "Accepted connection from: {} (id: {})",
+                            scrub_address(&format!("{}", address)),
+                            id
+                        );
+
                         poll.registry().register(
                             &mut connection,
                             Token(id),

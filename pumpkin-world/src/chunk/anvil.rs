@@ -88,7 +88,7 @@ impl ChunkReader for AnvilChunkReader {
     fn read_chunk(
         &self,
         save_file: &SaveFile,
-        at: pumpkin_core::math::vector2::Vector2<i32>,
+        at: &pumpkin_core::math::vector2::Vector2<i32>,
     ) -> Result<super::ChunkData, ChunkReadingError> {
         let region = (
             ((at.x as f32) / 32.0).floor() as i32,

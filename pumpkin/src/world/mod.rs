@@ -233,9 +233,15 @@ impl World {
         let (sender, mut chunk_receiver) = mpsc::channel(distance as usize);
 
         let level = self.level.clone();
-        let closed = client.closed.load(std::sync::atomic::Ordering::Relaxed);
+        if client.closed.load(std::sync::atomic::Ordering::Relaxed) {
+            log::info!(
+                "The connection with {} has closed before world chunks were spawned",
+                client.id
+            );
+            return;
+        }
         let chunks = Arc::new(chunks);
-        tokio::task::spawn_blocking(move || level.lock().fetch_chunks(&chunks, sender, closed));
+        tokio::task::spawn_blocking(move || level.lock().fetch_chunks(&chunks, sender));
 
         while let Some(chunk_data) = chunk_receiver.recv().await {
             // dbg!(chunk_pos);
@@ -252,6 +258,9 @@ impl World {
                     len / (1024 * 1024)
                 );
             }
+
+            // TODO: Queue player packs in a queue so we don't need to check if its closed before
+            // sending
             if !client.closed.load(std::sync::atomic::Ordering::Relaxed) {
                 client.send_packet(&CChunkData(&chunk_data));
             }
