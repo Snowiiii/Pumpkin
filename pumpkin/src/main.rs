@@ -159,17 +159,18 @@ async fn main() -> io::Result<()> {
         // Asynchronously wait for an inbound socket.
         let (connection, address) = listener.accept().await?;
 
-        log::info!(
-            "Accepted connection from: {}",
-            scrub_address(&format!("{}", address))
-        );
-
         if let Err(e) = connection.set_nodelay(true) {
             log::warn!("failed to set TCP_NODELAY {e}");
         }
 
         unique_id += 1;
         let id = unique_id;
+
+        log::info!(
+            "Accepted connection from: {} (id: {})",
+            scrub_address(&format!("{}", address)),
+            id
+        );
 
         let keep_alive = tokio::sync::mpsc::channel(1024);
         let client = Arc::new(Client::new(id, connection, addr, keep_alive.0.into()));

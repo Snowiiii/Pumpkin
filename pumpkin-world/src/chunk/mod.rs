@@ -24,7 +24,7 @@ pub trait ChunkReader: Sync + Send {
     fn read_chunk(
         &self,
         save_file: &SaveFile,
-        at: Vector2<i32>,
+        at: &Vector2<i32>,
     ) -> Result<ChunkData, ChunkReadingError>;
 }
 

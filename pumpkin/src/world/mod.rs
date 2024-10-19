@@ -245,24 +245,39 @@ impl World {
         player_chunker::player_join(self, player.clone()).await;
     }
 
+    pub async fn mark_chunks_as_not_watched(&self, chunks: &[Vector2<i32>]) {
+        let level = self.level.lock().await;
+        level.mark_chunk_as_not_watched_and_clean(chunks);
+    }
+
+    pub async fn mark_chunks_as_watched(&self, chunks: &[Vector2<i32>]) {
+        let level = self.level.lock().await;
+        level.mark_chunk_as_newly_watched(chunks);
+    }
+
     async fn spawn_world_chunks(
         &self,
         client: Arc<Client>,
         chunks: Vec<Vector2<i32>>,
         distance: i32,
     ) {
+        if client.closed.load(std::sync::atomic::Ordering::Relaxed) {
+            log::info!(
+                "The connection with {} has closed before world chunks were spawned",
+                client.id
+            );
+            return;
+        }
         let inst = std::time::Instant::now();
         let (sender, mut chunk_receiver) = mpsc::channel(distance as usize);
 
         let level = self.level.clone();
-        let closed = client.closed.load(std::sync::atomic::Ordering::Relaxed);
         let chunks = Arc::new(chunks);
         tokio::spawn(async move {
             let level = level.lock().await;
-            level.fetch_chunks(&chunks, sender, closed)
+            level.fetch_chunks(&chunks, sender)
         });
 
-        let client = client;
         tokio::spawn(async move {
             while let Some(chunk_data) = chunk_receiver.recv().await {
                 // dbg!(chunk_pos);
@@ -279,6 +294,9 @@ impl World {
                         len / (1024 * 1024)
                     );
                 }
+
+                // TODO: Queue player packs in a queue so we don't need to check if its closed before
+                // sending
                 if !client.closed.load(std::sync::atomic::Ordering::Relaxed) {
                     client.send_packet(&CChunkData(&chunk_data)).await;
                 }

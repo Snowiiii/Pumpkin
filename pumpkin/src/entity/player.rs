@@ -7,7 +7,7 @@ use crossbeam::atomic::AtomicCell;
 use num_derive::FromPrimitive;
 use num_traits::ToPrimitive;
 use pumpkin_core::{
-    math::{boundingbox::BoundingBox, position::WorldPosition, vector3::Vector3},
+    math::{boundingbox::BoundingBox, position::WorldPosition, vector2::Vector2, vector3::Vector3},
     text::TextComponent,
     GameMode,
 };
@@ -30,15 +30,15 @@ use pumpkin_protocol::{
 use tokio::sync::Mutex;
 
 use pumpkin_protocol::server::play::{SCloseContainer, SKeepAlive};
-use pumpkin_world::item::ItemStack;
+use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
 
 use super::Entity;
-use crate::error::PumpkinError;
 use crate::{
     client::{authentication::GameProfile, Client, PlayerConfig},
     server::Server,
-    world::World,
+    world::{player_chunker::chunk_section_from_pos, World},
 };
+use crate::{error::PumpkinError, world::player_chunker::get_view_distance};
 
 use super::living::LivingEntity;
 
@@ -139,6 +139,15 @@ impl Player {
     /// Removes the Player out of the current World
     pub async fn remove(&self) {
         self.living_entity.entity.world.remove_player(self).await;
+
+        let watched = chunk_section_from_pos(&self.living_entity.entity.block_pos.load());
+        let view_distance = get_view_distance(self).await as i32;
+        let cylindrical = Cylindrical::new(Vector2::new(watched.x, watched.z), view_distance);
+        self.living_entity
+            .entity
+            .world
+            .mark_chunks_as_not_watched(&cylindrical.all_chunks_within())
+            .await;
     }
 
     pub const fn entity_id(&self) -> EntityId {
