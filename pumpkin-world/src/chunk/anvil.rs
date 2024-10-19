@@ -1,12 +1,9 @@
-use std::{
-    fs::OpenOptions,
-    io::{Read, Seek},
-};
-
-use flate2::bufread::{GzDecoder, ZlibDecoder};
-use itertools::Itertools;
-
 use crate::level::SaveFile;
+use byteorder::{BigEndian, ReadBytesExt};
+use flate2::bufread::{GzDecoder, ZlibDecoder};
+use pumpkin_core::math::vector2::Vector2;
+use std::fs::File;
+use std::io::{Read, Seek};
 
 use super::{ChunkData, ChunkReader, ChunkReadingError, CompressionError};
 
@@ -85,79 +82,97 @@ impl Compression {
 }
 
 impl ChunkReader for AnvilChunkReader {
-    fn read_chunk(
-        &self,
-        save_file: &SaveFile,
-        at: pumpkin_core::math::vector2::Vector2<i32>,
-    ) -> Result<super::ChunkData, ChunkReadingError> {
+    fn read_chunk(&self, save_file: &SaveFile, at: Vector2<i32>) -> Result<ChunkData, ChunkReadingError> {
         let region = (
             ((at.x as f32) / 32.0).floor() as i32,
             ((at.z as f32) / 32.0).floor() as i32,
         );
 
-        let mut region_file = OpenOptions::new()
-            .read(true)
-            .open(
+        let mut region_file =
+            File::open(
                 save_file
                     .region_folder
                     .join(format!("r.{}.{}.mca", region.0, region.1)),
             )
-            .map_err(|err| match err.kind() {
-                std::io::ErrorKind::NotFound => ChunkReadingError::ChunkNotExist,
-                kind => ChunkReadingError::IoError(kind),
-            })?;
+                .map_err(|err| match err.kind() {
+                    std::io::ErrorKind::NotFound => ChunkReadingError::ChunkNotExist,
+                    kind => ChunkReadingError::IoError(kind),
+                })?;
 
-        let mut location_table: [u8; 4096] = [0; 4096];
-        let mut timestamp_table: [u8; 4096] = [0; 4096];
 
-        // fill the location and timestamp tables
-        region_file
-            .read_exact(&mut location_table)
-            .map_err(|err| ChunkReadingError::IoError(err.kind()))?;
-        region_file
-            .read_exact(&mut timestamp_table)
-            .map_err(|err| ChunkReadingError::IoError(err.kind()))?;
+        let index = 4 * ((at.x as u64 % 32) + (at.z as u64 % 32) * 32);
+        region_file.seek(std::io::SeekFrom::Start(index * 4)).map_err(|_| ChunkReadingError::RegionIsInvalid)?;
+        let location = region_file.read_u32::<BigEndian>().map_err(|_| ChunkReadingError::RegionIsInvalid)?;
 
-        let modulus = |a: i32, b: i32| ((a % b) + b) % b;
-        let chunk_x = modulus(at.x, 32) as u32;
-        let chunk_z = modulus(at.z, 32) as u32;
-        let table_entry = (chunk_x + chunk_z * 32) * 4;
-
-        let mut offset = vec![0u8];
-        offset.extend_from_slice(&location_table[table_entry as usize..table_entry as usize + 3]);
-        let offset = u32::from_be_bytes(offset.try_into().unwrap()) as u64 * 4096;
-        let size = location_table[table_entry as usize + 3] as usize * 4096;
+        let offset = ((location >> 8) & 0xFFFFFF) * 4096;
+        let size = (location & 0xFF) * 4096;
 
         if offset == 0 && size == 0 {
             return Err(ChunkReadingError::ChunkNotExist);
         }
 
-        // Read the file using the offset and size
-        let mut file_buf = {
-            region_file
-                .seek(std::io::SeekFrom::Start(offset))
-                .map_err(|_| ChunkReadingError::RegionIsInvalid)?;
-            let mut out = vec![0; size];
-            region_file
-                .read_exact(&mut out)
-                .map_err(|_| ChunkReadingError::RegionIsInvalid)?;
-            out
-        };
+        let mut chunk_data = vec![0u8; size as usize];
+        region_file.seek(std::io::SeekFrom::Start(offset as u64)).map_err(|_| ChunkReadingError::RegionIsInvalid)?;
+        region_file.read_exact(&mut chunk_data).map_err(|_| ChunkReadingError::RegionIsInvalid)?;
 
-        // TODO: check checksum to make sure chunk is not corrupted
-        let header = file_buf.drain(0..5).collect_vec();
+        let chunk_header = chunk_data[0..4].to_vec();
+        let chunk_compressed_data = chunk_data[5..].to_vec();
+        let uncompressed_size = u32::from(chunk_header[0]) << 24
+            | u32::from(chunk_header[1]) << 16
+            | u32::from(chunk_header[2]) << 8
+            | u32::from(chunk_header[3]);
+        let compression_type = chunk_data[4];
+        let res = match compression_type {
+            1 => {
+                let mut decompressed_data = Vec::new();
+                let mut decoder = flate2::read::GzDecoder::new(&chunk_compressed_data[..]);
+                decoder.read_to_end(&mut decompressed_data).unwrap();
+                Some(decompressed_data)
+            }
+            2 => {
+                let mut decompressor = zune_inflate::DeflateDecoder::new(&chunk_compressed_data[..]);
+                Some(decompressor.decode_zlib().unwrap())
+            }
+            3 => Some(chunk_compressed_data),
+            4 => {
+                let mut decompressed_data = vec![0; uncompressed_size as usize];
+                lz4::Decoder::new(&chunk_compressed_data[..])
+                    .and_then(|mut decoder| decoder.read_exact(&mut decompressed_data))
+                    .map_err(|e| ChunkReadingError::Compression(CompressionError::LZ4Error(e)))?;
+                Some(decompressed_data)
+            }
+            _ => {
+                None
+            }
+        }.ok_or(ChunkReadingError::Compression(CompressionError::UnknownCompression))?;
+        ChunkData::from_bytes(res, at).map_err(ChunkReadingError::ParsingError)
+    }
+}
 
-        let compression = Compression::from_byte(header[4])
-            .ok_or_else(|| ChunkReadingError::Compression(CompressionError::UnknownCompression))?;
 
-        let size = u32::from_be_bytes(header[..4].try_into().unwrap());
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
 
-        // size includes the compression scheme byte, so we need to subtract 1
-        let chunk_data = file_buf.drain(0..size as usize - 1).collect_vec();
-        let decompressed_chunk = compression
-            .decompress_data(chunk_data)
-            .map_err(ChunkReadingError::Compression)?;
+    #[test]
+    fn test_bad_load_fails() {
+        let file_path = PathBuf::from("../.etc/shouldnotexist/");
+        let result = AnvilChunkReader::new().read_chunk(&SaveFile {
+            root_folder: PathBuf::from(""),
+            region_folder: file_path.clone(),
+        }, Vector2::new(0, 0));
+        assert!(result.is_err());
+    }
 
-        ChunkData::from_bytes(decompressed_chunk, at).map_err(ChunkReadingError::ParsingError)
+    #[test]
+    fn test_get_chunk() {
+        let file_path = PathBuf::from("../.etc/regions");
+        let loaded_file = AnvilChunkReader::new().read_chunk(&SaveFile {
+            root_folder: PathBuf::from(""),
+            region_folder: file_path.clone(),
+        }, Vector2::new(0, 0));
+        assert!(loaded_file.is_ok());
+        assert_eq!(loaded_file.unwrap().position, Vector2::new(0, 0));
     }
 }

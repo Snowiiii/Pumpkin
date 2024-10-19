@@ -27,8 +27,7 @@ pub struct Level {
 }
 
 pub struct SaveFile {
-    #[expect(dead_code)]
-    root_folder: PathBuf,
+    pub root_folder: PathBuf,
     pub region_folder: PathBuf,
 }
 
@@ -73,7 +72,7 @@ impl Level {
     ///
     /// Note: The order of the output chunks will almost never be in the same order as the order of input chunks
     pub fn fetch_chunks(
-        &self,
+        &mut self,
         chunks: &[Vector2<i32>],
         channel: mpsc::Sender<Arc<ChunkData>>,
         is_alive: bool,

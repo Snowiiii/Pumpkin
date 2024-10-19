@@ -1,7 +1,7 @@
 use std::cmp::max;
 use std::collections::HashMap;
 use std::ops::Index;
-
+use std::path::PathBuf;
 use fastnbt::LongArray;
 use pumpkin_core::math::vector2::Vector2;
 use serde::{Deserialize, Serialize};
@@ -15,6 +15,7 @@ use crate::{
 };
 
 pub mod anvil;
+pub mod unsafe_anvil;
 
 const CHUNK_AREA: usize = 16 * 16;
 const SUBCHUNK_VOLUME: usize = CHUNK_AREA * 16;
@@ -40,6 +41,8 @@ pub enum ChunkReadingError {
     ChunkNotExist,
     #[error("Failed to parse Chunk from bytes: {0}")]
     ParsingError(ChunkParsingError),
+    #[error("Failed to find region file: {0}")]
+    RegionNotFound(PathBuf),
 }
 
 #[derive(Error, Debug)]
@@ -320,4 +323,6 @@ pub enum ChunkParsingError {
     ChunkNotGenerated,
     #[error("Error deserializing chunk: {0}")]
     ErrorDeserializingChunk(String),
+    #[error("Invalid region data: {0}")]
+    InvalidRegionData(PathBuf),
 }
