@@ -130,9 +130,9 @@ impl Server {
 
     /// Sends a message to all players in every world
     pub fn broadcast_message(&self, content: &TextComponent) {
-        for world in &self.worlds {
-            world.broadcast_message(content);
-        }
+        self.worlds
+            .iter()
+            .for_each(|w| w.broadcast_message(content));
     }
 
     /// Get all online player names
