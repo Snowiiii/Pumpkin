@@ -1,13 +1,13 @@
-use std::f32::consts::PI;
-
+use super::PlayerConfig;
 use crate::{
     commands::CommandSender,
     entity::player::{ChatMode, Hand, Player},
     server::Server,
     world::player_chunker,
 };
-use num_traits::FromPrimitive;
+use num_traits::{Euclid, FromPrimitive};
 use pumpkin_config::ADVANCED_CONFIG;
+use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::{
     math::{position::WorldPosition, vector3::Vector3, wrap_degrees},
     text::TextComponent,
@@ -29,10 +29,13 @@ use pumpkin_protocol::{
         SUseItemOn, Status,
     },
 };
-use pumpkin_world::block::{BlockFace, BlockState};
+use pumpkin_world::block::{BlockFace, BlockId, BlockState};
+use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
 use pumpkin_world::global_registry;
-
-use super::PlayerConfig;
+use pumpkin_world::level::Level;
+use std::f32::consts::PI;
+use std::sync::atomic::Ordering;
+use std::sync::{Arc, Mutex};
 
 fn modulus(a: f32, b: f32) -> f32 {
     ((a % b) + b) % b
@@ -453,6 +456,38 @@ impl Player {
         }
     }
     pub async fn handle_player_action(&self, player_action: SPlayerAction) {
+        async fn break_block(
+            location: WorldPosition,
+            level: Arc<tokio::sync::Mutex<Level>>,
+            closed: bool,
+        ) {
+            let (sender, mut recv) = tokio::sync::mpsc::channel(1024);
+            let (chunk_pos_x, rel_pos_x) = location.0.x.div_rem_euclid(&16);
+
+            let (chunk_pos_z, rel_pos_z) = location.0.z.div_rem_euclid(&16);
+            let chunks = [Vector2 {
+                x: chunk_pos_x,
+                z: chunk_pos_z,
+            }];
+
+            level
+                .lock()
+                .await
+                .fetch_chunks(&chunks, sender, closed)
+                .await;
+
+            while let Some(a) = recv.recv().await {
+                a.write().await.blocks.set_block(
+                    ChunkRelativeBlockCoordinates {
+                        x: (rel_pos_x as u32).into(),
+                        y: location.0.y.into(),
+                        z: (rel_pos_z as u32).into(),
+                    },
+                    BlockId { data: 0 },
+                );
+            }
+        }
+
         match Status::from_i32(player_action.status.0) {
             Some(status) => match status {
                 Status::StartedDigging => {
@@ -468,6 +503,12 @@ impl Player {
                         // TODO: currently this is always dirt replace it
                         let entity = &self.living_entity.entity;
                         let world = &entity.world;
+                        break_block(
+                            location,
+                            world.level.clone(),
+                            self.client.closed.load(Ordering::Relaxed),
+                        )
+                        .await;
                         world
                             .broadcast_packet_all(&CWorldEvent::new(2001, &location, 11, false))
                             .await;
@@ -490,15 +531,24 @@ impl Player {
                     let location = player_action.location;
                     if !self.can_interact_with_block_at(&location, 1.0) {
                         // TODO: maybe log?
+                        dbg!("hello");
                         return;
                     }
                     // Block break & block break sound
                     // TODO: currently this is always dirt replace it
                     let entity = &self.living_entity.entity;
                     let world = &entity.world;
+
+                    break_block(
+                        location,
+                        world.level.clone(),
+                        self.client.closed.load(Ordering::Relaxed),
+                    )
+                    .await;
                     world
                         .broadcast_packet_all(&CWorldEvent::new(2001, &location, 11, false))
                         .await;
+
                     // AIR
                     world
                         .broadcast_packet_all(&CBlockUpdate::new(&location, 0.into()))

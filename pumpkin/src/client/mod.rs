@@ -99,7 +99,7 @@ pub struct Client {
     /// Whether encryption is enabled for the connection.
     pub encryption: AtomicBool,
     /// Indicates if the client connection is closed.
-    pub closed: AtomicBool,
+    pub closed: Arc<AtomicBool>,
     /// A unique id identifying the client.
     pub id: usize,
     /// The underlying TCP connection to the client.
@@ -145,7 +145,7 @@ impl Client {
             enc: Arc::new(Mutex::new(PacketEncoder::default())),
             dec: Arc::new(Mutex::new(PacketDecoder::default())),
             encryption: AtomicBool::new(false),
-            closed: AtomicBool::new(false),
+            closed: AtomicBool::new(false).into(),
             client_packets_queue: Arc::new(Mutex::new(VecDeque::new())),
             make_player: AtomicBool::new(false),
             keep_alive_sender,

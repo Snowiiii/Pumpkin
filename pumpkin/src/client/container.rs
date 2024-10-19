@@ -447,7 +447,7 @@ impl Player {
                 slot_index,
                 &slot,
             );
-            player.client.send_packet(&packet);
+            player.client.send_packet(&packet).await;
         }
         Ok(())
     }

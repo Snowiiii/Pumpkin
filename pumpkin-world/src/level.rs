@@ -1,12 +1,11 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
-
-use parking_lot::Mutex;
 use pumpkin_core::math::vector2::Vector2;
-use rayon::prelude::*;
-use tokio::sync::mpsc;
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use tokio::sync::{mpsc, Mutex, RwLock};
 
 use crate::{
-    chunk::{anvil::AnvilChunkReader, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError},
+    chunk::{
+        anvil::AnvilChunkReader, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
+    },
     world_gen::{get_world_gen, Seed, WorldGenerator},
 };
 
@@ -21,7 +20,7 @@ use crate::{
 /// For more details on world generation, refer to the `WorldGenerator` module.
 pub struct Level {
     save_file: Option<SaveFile>,
-    loaded_chunks: Arc<Mutex<HashMap<Vector2<i32>, Arc<ChunkData>>>>,
+    loaded_chunks: Arc<Mutex<HashMap<Vector2<i32>, Arc<RwLock<ChunkData>>>>>,
     chunk_reader: Box<dyn ChunkReader>,
     world_gen: Box<dyn WorldGenerator>,
 }
@@ -72,31 +71,35 @@ impl Level {
     /// MUST be called from a tokio runtime thread
     ///
     /// Note: The order of the output chunks will almost never be in the same order as the order of input chunks
-    pub fn fetch_chunks(
+    pub async fn fetch_chunks(
         &self,
         chunks: &[Vector2<i32>],
-        channel: mpsc::Sender<Arc<ChunkData>>,
+        channel: mpsc::Sender<Arc<RwLock<ChunkData>>>,
         is_alive: bool,
     ) {
-        chunks.into_par_iter().for_each(|at| {
+        for chunk in chunks {
             if is_alive {
                 return;
             }
-            let mut loaded_chunks = self.loaded_chunks.lock();
+            let mut loaded_chunks = self.loaded_chunks.lock().await;
             let channel = channel.clone();
 
             // Check if chunks is already loaded
-            if loaded_chunks.contains_key(at) {
+            if loaded_chunks.contains_key(chunk) {
                 channel
-                    .blocking_send(loaded_chunks.get(at).unwrap().clone())
+                    .send(loaded_chunks.get(chunk).unwrap().clone())
+                    .await
                     .expect("Failed sending ChunkData.");
                 return;
             }
-            let at = *at;
+            let at = *chunk;
             let data = match &self.save_file {
                 Some(save_file) => {
                     match self.chunk_reader.read_chunk(save_file, at) {
-                        Err(ChunkReadingError::ParsingError(ChunkParsingError::ChunkNotGenerated) | ChunkReadingError::ChunkNotExist) => {
+                        Err(
+                            ChunkReadingError::ParsingError(ChunkParsingError::ChunkNotGenerated)
+                            | ChunkReadingError::ChunkNotExist,
+                        ) => {
                             // This chunk was not generated yet.
                             Ok(self.world_gen.generate_chunk(at))
                         }
@@ -110,11 +113,12 @@ impl Level {
                 }
             }
             .unwrap();
-            let data = Arc::new(data);
+            let data = Arc::new(RwLock::new(data));
             channel
-                .blocking_send(data.clone())
+                .send(data.clone())
+                .await
                 .expect("Failed sending ChunkData.");
             loaded_chunks.insert(at, data);
-        })
+        }
     }
 }

@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use std::{collections::HashMap, sync::Arc};
 
 pub mod player_chunker;
@@ -254,32 +255,31 @@ impl World {
         let chunks = Arc::new(chunks);
         tokio::spawn(async move {
             let level = level.lock().await;
-            level.fetch_chunks(&chunks, sender, closed)
+            level.fetch_chunks(&chunks, sender, closed).await;
         });
 
         let client = client.clone();
-        tokio::spawn(async move {
-            while let Some(chunk_data) = chunk_receiver.recv().await {
-                // dbg!(chunk_pos);
-                #[cfg(debug_assertions)]
-                if chunk_data.position == (0, 0).into() {
-                    use pumpkin_protocol::bytebuf::ByteBuffer;
-                    let mut test = ByteBuffer::empty();
-                    CChunkData(&chunk_data).write(&mut test);
-                    let len = test.buf().len();
-                    log::debug!(
-                        "Chunk packet size: {}B {}KB {}MB",
-                        len,
-                        len / 1024,
-                        len / (1024 * 1024)
-                    );
-                }
-                if !client.closed.load(std::sync::atomic::Ordering::Relaxed) {
-                    client.send_packet(&CChunkData(&chunk_data)).await;
-                }
+        while let Some(chunk_data) = chunk_receiver.recv().await {
+            let chunk_data = chunk_data.read().await;
+            // dbg!(chunk_pos);
+            #[cfg(debug_assertions)]
+            if chunk_data.position == (0, 0).into() {
+                use pumpkin_protocol::bytebuf::ByteBuffer;
+                let mut test = ByteBuffer::empty();
+                CChunkData(&chunk_data).write(&mut test);
+                let len = test.buf().len();
+                log::debug!(
+                    "Chunk packet size: {}B {}KB {}MB",
+                    len,
+                    len / 1024,
+                    len / (1024 * 1024)
+                );
             }
-            dbg!("DONE CHUNKS", inst.elapsed());
-        });
+            if !client.closed.load(std::sync::atomic::Ordering::Relaxed) {
+                client.send_packet(&CChunkData(&chunk_data)).await;
+            }
+        }
+        dbg!("DONE CHUNKS", inst.elapsed());
     }
 
     /// Gets a Player by entity id
