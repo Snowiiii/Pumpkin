@@ -117,7 +117,7 @@ impl Player {
                 ),
             )
             .await;
-        player_chunker::update_position(entity, self).await;
+        player_chunker::update_position(self).await;
     }
 
     pub async fn handle_position_rotation(&self, position_rotation: SPlayerPositionRotation) {
@@ -193,7 +193,7 @@ impl Player {
                 &CHeadRot::new(entity_id.into(), yaw as u8),
             )
             .await;
-        player_chunker::update_position(entity, self).await;
+        player_chunker::update_position(self).await;
     }
 
     pub async fn handle_rotation(&self, rotation: SPlayerRotation) {
@@ -227,13 +227,15 @@ impl Player {
             .await;
     }
 
-    pub fn handle_chat_command(self: &Arc<Self>, server: &Server, command: SChatCommand) {
+    pub async fn handle_chat_command(self: &Arc<Self>, server: &Server, command: SChatCommand) {
         let dispatcher = server.command_dispatcher.clone();
-        dispatcher.handle_command(
-            &mut CommandSender::Player(self.clone()),
-            server,
-            &command.command,
-        );
+        dispatcher
+            .handle_command(
+                &mut CommandSender::Player(self.clone()),
+                server,
+                &command.command,
+            )
+            .await;
         if ADVANCED_CONFIG.commands.log_console {
             log::info!(
                 "Player ({}): executed command /{}",

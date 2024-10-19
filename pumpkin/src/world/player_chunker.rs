@@ -7,7 +7,7 @@ use pumpkin_core::math::{
 use pumpkin_protocol::client::play::CCenterChunk;
 use pumpkin_world::cylindrical_chunk_iterator::Cylindrical;
 
-use crate::entity::{player::Player, Entity};
+use crate::entity::player::Player;
 
 use super::World;
 
@@ -46,7 +46,7 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
         |chunk_pos| {
             loading_chunks.push(chunk_pos);
         },
-        |chunk_pos| {
+        |_| {
             // player
             //     .client
             //     .send_packet(&CUnloadChunk::new(chunk_pos.x, chunk_pos.z));
@@ -60,7 +60,8 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
     }
 }
 
-pub async fn update_position(entity: &Entity, player: &Player) {
+pub async fn update_position(player: &Player) {
+    let entity = &player.living_entity.entity;
     let current_watched = player.watched_section.load();
     let new_watched = chunk_section_from_pos(&entity.block_pos.load());
     if current_watched != new_watched {
@@ -89,7 +90,7 @@ pub async fn update_position(entity: &Entity, player: &Player) {
             |chunk_pos| {
                 loading_chunks.push(chunk_pos);
             },
-            |chunk_pos| {
+            |_| {
                 // player
                 //     .client
                 //     .send_packet(&CUnloadChunk::new(chunk_pos.x, chunk_pos.z));

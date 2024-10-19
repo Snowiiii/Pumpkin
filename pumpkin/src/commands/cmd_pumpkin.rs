@@ -1,11 +1,10 @@
-use pumpkin_core::text::{color::NamedColor, TextComponent};
-use pumpkin_protocol::CURRENT_MC_PROTOCOL;
-
-use crate::{commands::tree::CommandTree, server::CURRENT_MC_VERSION};
+use crate::commands::tree::CommandTree;
 
 const NAMES: [&str; 1] = ["pumpkin"];
 
 const DESCRIPTION: &str = "Display information about Pumpkin.";
+
+#[expect(unused)]
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).execute(&|sender, _, _| {

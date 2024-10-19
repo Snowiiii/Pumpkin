@@ -320,7 +320,8 @@ impl Player {
                 Ok(())
             }
             SChatCommand::PACKET_ID => {
-                self.handle_chat_command(server, SChatCommand::read(bytebuf)?);
+                self.handle_chat_command(server, SChatCommand::read(bytebuf)?)
+                    .await;
                 Ok(())
             }
             SPlayerPosition::PACKET_ID => {

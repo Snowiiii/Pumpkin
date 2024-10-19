@@ -385,11 +385,9 @@ impl Client {
     pub async fn poll(&self) {
         loop {
             let mut dec = self.dec.lock().await;
-            if let Ok(packet) = dec.decode() {
-                if let Some(packet) = packet {
-                    self.add_packet(packet).await;
-                    return;
-                }
+            if let Ok(Some(packet)) = dec.decode() {
+                self.add_packet(packet).await;
+                return;
             };
 
             dec.reserve(4096);

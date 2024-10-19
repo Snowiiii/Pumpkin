@@ -4,7 +4,6 @@ use crate::commands::tree::{Command, CommandTree, ConsumedArgs, RawArgs};
 use crate::commands::tree_builder::argument;
 use crate::commands::CommandSender;
 use crate::server::Server;
-use pumpkin_core::text::TextComponent;
 
 const NAMES: [&str; 3] = ["help", "h", "?"];
 
@@ -36,6 +35,8 @@ fn parse_arg_command<'a>(
         .get_tree(command_name)
         .map_err(|_| InvalidConsumptionError(Some(command_name.into())))
 }
+
+#[allow(unused_variables)]
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION)

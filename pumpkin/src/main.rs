@@ -88,10 +88,10 @@ async fn main() -> io::Result<()> {
 
     init_logger();
 
-    let rt = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .unwrap();
+    // let rt = tokio::runtime::Builder::new_multi_thread()
+    //     .enable_all()
+    //     .build()
+    //     .unwrap();
 
     ctrlc::set_handler(|| {
         log::warn!(
@@ -141,7 +141,9 @@ async fn main() -> io::Result<()> {
 
                 if !out.is_empty() {
                     let dispatcher = server.command_dispatcher.clone();
-                    dispatcher.handle_command(&mut commands::CommandSender::Console, &server, &out);
+                    dispatcher
+                        .handle_command(&mut commands::CommandSender::Console, &server, &out)
+                        .await;
                 }
             }
         });

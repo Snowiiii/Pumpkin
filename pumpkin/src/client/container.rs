@@ -18,6 +18,8 @@ use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
 use std::sync::Arc;
 
+#[expect(unused)]
+
 impl Player {
     pub async fn open_container(&self, server: &Server, minecraft_menu_id: &str) {
         let inventory = self.inventory.lock().await;
@@ -450,7 +452,7 @@ impl Player {
                 slot_index,
                 &slot,
             );
-            player.client.send_packet(&packet);
+            player.client.send_packet(&packet).await;
         }
         Ok(())
     }

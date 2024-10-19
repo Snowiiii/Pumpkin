@@ -262,7 +262,7 @@ impl World {
             level.fetch_chunks(&chunks, sender, closed)
         });
 
-        let client = client.clone();
+        let client = client;
         tokio::spawn(async move {
             while let Some(chunk_data) = chunk_receiver.recv().await {
                 // dbg!(chunk_pos);
