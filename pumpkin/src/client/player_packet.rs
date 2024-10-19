@@ -41,8 +41,8 @@ fn modulus(a: f32, b: f32) -> f32 {
 /// Handles all Play Packets send by a real Player
 /// NEVER TRUST THE CLIENT. HANDLE EVERY ERROR, UNWRAP/EXPECT ARE FORBIDDEN
 impl Player {
-    pub fn handle_confirm_teleport(&self, confirm_teleport: SConfirmTeleport) {
-        let mut awaiting_teleport = self.awaiting_teleport.lock();
+    pub async fn handle_confirm_teleport(&self, confirm_teleport: SConfirmTeleport) {
+        let mut awaiting_teleport = self.awaiting_teleport.lock().await;
         if let Some((id, position)) = awaiting_teleport.as_ref() {
             if id == &confirm_teleport.teleport_id {
                 // we should set the pos now to that we requested in the teleport packet, Is may fixed issues when the client sended position packets while being teleported
@@ -52,12 +52,13 @@ impl Player {
 
                 *awaiting_teleport = None;
             } else {
-                self.kick(TextComponent::text("Wrong teleport id"))
+                self.kick(TextComponent::text("Wrong teleport id")).await
             }
         } else {
             self.kick(TextComponent::text(
                 "Send Teleport confirm, but we did not teleport",
             ))
+            .await
         }
     }
 
@@ -71,7 +72,7 @@ impl Player {
 
     pub async fn handle_position(&self, position: SPlayerPosition) {
         if position.x.is_nan() || position.feet_y.is_nan() || position.z.is_nan() {
-            self.kick(TextComponent::text("Invalid movement"));
+            self.kick(TextComponent::text("Invalid movement")).await;
             return;
         }
         let entity = &self.living_entity.entity;
@@ -104,17 +105,19 @@ impl Player {
         //     return;
         // }
         // send new position to all other players
-        world.broadcast_packet_expect(
-            &[self.client.id],
-            &CUpdateEntityPos::new(
-                entity_id.into(),
-                x.mul_add(4096.0, -(lastx * 4096.0)) as i16,
-                y.mul_add(4096.0, -(lasty * 4096.0)) as i16,
-                z.mul_add(4096.0, -(lastz * 4096.0)) as i16,
-                position.ground,
-            ),
-        );
-        player_chunker::update_position(entity, self).await;
+        world
+            .broadcast_packet_expect(
+                &[self.client.id],
+                &CUpdateEntityPos::new(
+                    entity_id.into(),
+                    x.mul_add(4096.0, -(lastx * 4096.0)) as i16,
+                    y.mul_add(4096.0, -(lasty * 4096.0)) as i16,
+                    z.mul_add(4096.0, -(lastz * 4096.0)) as i16,
+                    position.ground,
+                ),
+            )
+            .await;
+        player_chunker::update_position(self).await;
     }
 
     pub async fn handle_position_rotation(&self, position_rotation: SPlayerPositionRotation) {
@@ -122,11 +125,11 @@ impl Player {
             || position_rotation.feet_y.is_nan()
             || position_rotation.z.is_nan()
         {
-            self.kick(TextComponent::text("Invalid movement"));
+            self.kick(TextComponent::text("Invalid movement")).await;
             return;
         }
         if position_rotation.yaw.is_infinite() || position_rotation.pitch.is_infinite() {
-            self.kick(TextComponent::text("Invalid rotation"));
+            self.kick(TextComponent::text("Invalid rotation")).await;
             return;
         }
         let entity = &self.living_entity.entity;
@@ -170,28 +173,32 @@ impl Player {
         // }
         // send new position to all other players
 
-        world.broadcast_packet_expect(
-            &[self.client.id],
-            &CUpdateEntityPosRot::new(
-                entity_id.into(),
-                x.mul_add(4096.0, -(lastx * 4096.0)) as i16,
-                y.mul_add(4096.0, -(lasty * 4096.0)) as i16,
-                z.mul_add(4096.0, -(lastz * 4096.0)) as i16,
-                yaw as u8,
-                pitch as u8,
-                position_rotation.ground,
-            ),
-        );
-        world.broadcast_packet_expect(
-            &[self.client.id],
-            &CHeadRot::new(entity_id.into(), yaw as u8),
-        );
-        player_chunker::update_position(entity, self).await;
+        world
+            .broadcast_packet_expect(
+                &[self.client.id],
+                &CUpdateEntityPosRot::new(
+                    entity_id.into(),
+                    x.mul_add(4096.0, -(lastx * 4096.0)) as i16,
+                    y.mul_add(4096.0, -(lasty * 4096.0)) as i16,
+                    z.mul_add(4096.0, -(lastz * 4096.0)) as i16,
+                    yaw as u8,
+                    pitch as u8,
+                    position_rotation.ground,
+                ),
+            )
+            .await;
+        world
+            .broadcast_packet_expect(
+                &[self.client.id],
+                &CHeadRot::new(entity_id.into(), yaw as u8),
+            )
+            .await;
+        player_chunker::update_position(self).await;
     }
 
     pub async fn handle_rotation(&self, rotation: SPlayerRotation) {
         if !rotation.yaw.is_finite() || !rotation.pitch.is_finite() {
-            self.kick(TextComponent::text("Invalid rotation"));
+            self.kick(TextComponent::text("Invalid rotation")).await;
             return;
         }
         let entity = &self.living_entity.entity;
@@ -211,18 +218,24 @@ impl Player {
         let world = &entity.world;
         let packet =
             CUpdateEntityRot::new(entity_id.into(), yaw as u8, pitch as u8, rotation.ground);
-        world.broadcast_packet_expect(&[self.client.id], &packet);
+        world
+            .broadcast_packet_expect(&[self.client.id], &packet)
+            .await;
         let packet = CHeadRot::new(entity_id.into(), yaw as u8);
-        world.broadcast_packet_expect(&[self.client.id], &packet);
+        world
+            .broadcast_packet_expect(&[self.client.id], &packet)
+            .await;
     }
 
-    pub fn handle_chat_command(self: &Arc<Self>, server: &Server, command: SChatCommand) {
+    pub async fn handle_chat_command(self: &Arc<Self>, server: &Server, command: SChatCommand) {
         let dispatcher = server.command_dispatcher.clone();
-        dispatcher.handle_command(
-            &mut CommandSender::Player(self.clone()),
-            server,
-            &command.command,
-        );
+        dispatcher
+            .handle_command(
+                &mut CommandSender::Player(self.clone()),
+                server,
+                &command.command,
+            )
+            .await;
         if ADVANCED_CONFIG.commands.log_console {
             log::info!(
                 "Player ({}): executed command /{}",
@@ -284,6 +297,7 @@ impl Player {
             }
         } else {
             self.kick(TextComponent::text("Invalid player command"))
+                .await
         }
     }
 
@@ -296,13 +310,15 @@ impl Player {
                 };
                 let id = self.entity_id();
                 let world = &self.living_entity.entity.world;
-                world.broadcast_packet_expect(
-                    &[self.client.id],
-                    &CEntityAnimation::new(id.into(), animation as u8),
-                )
+                world
+                    .broadcast_packet_expect(
+                        &[self.client.id],
+                        &CEntityAnimation::new(id.into(), animation as u8),
+                    )
+                    .await
             }
             None => {
-                self.kick(TextComponent::text("Invalid hand"));
+                self.kick(TextComponent::text("Invalid hand")).await;
             }
         };
     }
@@ -312,7 +328,7 @@ impl Player {
 
         let message = chat_message.message;
         if message.len() > 256 {
-            self.kick(TextComponent::text("Oversized message"));
+            self.kick(TextComponent::text("Oversized message")).await;
             return;
         }
 
@@ -321,20 +337,22 @@ impl Player {
 
         let entity = &self.living_entity.entity;
         let world = &entity.world;
-        world.broadcast_packet_all(&CPlayerChatMessage::new(
-            gameprofile.id,
-            1.into(),
-            chat_message.signature.as_deref(),
-            &message,
-            chat_message.timestamp,
-            chat_message.salt,
-            &[],
-            Some(TextComponent::text(&message)),
-            FilterType::PassThrough,
-            1.into(),
-            TextComponent::text(&gameprofile.name),
-            None,
-        ))
+        world
+            .broadcast_packet_all(&CPlayerChatMessage::new(
+                gameprofile.id,
+                1.into(),
+                chat_message.signature.as_deref(),
+                &message,
+                chat_message.timestamp,
+                chat_message.salt,
+                &[],
+                Some(TextComponent::text(&message)),
+                FilterType::PassThrough,
+                1.into(),
+                TextComponent::text(&gameprofile.name),
+                None,
+            ))
+            .await
 
         /* server.broadcast_packet(
             self,
@@ -347,12 +365,12 @@ impl Player {
         ) */
     }
 
-    pub fn handle_client_information_play(&self, client_information: SClientInformationPlay) {
+    pub async fn handle_client_information_play(&self, client_information: SClientInformationPlay) {
         if let (Some(main_hand), Some(chat_mode)) = (
             Hand::from_i32(client_information.main_hand.into()),
             ChatMode::from_i32(client_information.chat_mode.into()),
         ) {
-            *self.config.lock() = PlayerConfig {
+            *self.config.lock().await = PlayerConfig {
                 locale: client_information.locale,
                 view_distance: client_information.view_distance,
                 chat_mode,
@@ -364,6 +382,7 @@ impl Player {
             };
         } else {
             self.kick(TextComponent::text("Invalid hand or chat type"))
+                .await
         }
     }
 
@@ -381,7 +400,8 @@ impl Player {
                     let config = &ADVANCED_CONFIG.pvp;
                     if config.enabled {
                         let world = &entity.world;
-                        let attacked_player = world.get_player_by_entityid(entity_id.0 as EntityId);
+                        let attacked_player =
+                            world.get_player_by_entityid(entity_id.0 as EntityId).await;
                         if let Some(player) = attacked_player {
                             let victem_entity = &player.living_entity.entity;
                             if config.protect_creative
@@ -411,17 +431,20 @@ impl Player {
                                     .store(velocity.multiply(0.6, 1.0, 0.6));
 
                                 victem_entity.velocity.store(saved_velo);
-                                player.client.send_packet(packet);
+                                player.client.send_packet(packet).await;
                             }
                             if config.hurt_animation {
-                                world.broadcast_packet_all(&CHurtAnimation::new(
-                                    &entity_id,
-                                    entity.yaw.load(),
-                                ))
+                                world
+                                    .broadcast_packet_all(&CHurtAnimation::new(
+                                        &entity_id,
+                                        entity.yaw.load(),
+                                    ))
+                                    .await
                             }
                             if config.swing {}
                         } else {
                             self.kick(TextComponent::text("Interacted with invalid entity id"))
+                                .await
                         }
                     }
                 }
@@ -432,7 +455,7 @@ impl Player {
                     dbg!("todo");
                 }
             },
-            None => self.kick(TextComponent::text("Invalid action type")),
+            None => self.kick(TextComponent::text("Invalid action type")).await,
         }
     }
     pub async fn handle_player_action(&self, player_action: SPlayerAction) {
@@ -451,9 +474,13 @@ impl Player {
                         // TODO: currently this is always dirt replace it
                         let entity = &self.living_entity.entity;
                         let world = &entity.world;
-                        world.broadcast_packet_all(&CWorldEvent::new(2001, &location, 11, false));
+                        world
+                            .broadcast_packet_all(&CWorldEvent::new(2001, &location, 11, false))
+                            .await;
                         // AIR
-                        world.broadcast_packet_all(&CBlockUpdate::new(&location, 0.into()));
+                        world
+                            .broadcast_packet_all(&CBlockUpdate::new(&location, 0.into()))
+                            .await;
                     }
                 }
                 Status::CancelledDigging => {
@@ -475,12 +502,17 @@ impl Player {
                     // TODO: currently this is always dirt replace it
                     let entity = &self.living_entity.entity;
                     let world = &entity.world;
-                    world.broadcast_packet_all(&CWorldEvent::new(2001, &location, 11, false));
+                    world
+                        .broadcast_packet_all(&CWorldEvent::new(2001, &location, 11, false))
+                        .await;
                     // AIR
-                    world.broadcast_packet_all(&CBlockUpdate::new(&location, 0.into()));
+                    world
+                        .broadcast_packet_all(&CBlockUpdate::new(&location, 0.into()))
+                        .await;
                     // TODO: Send this every tick
                     self.client
-                        .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence));
+                        .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence))
+                        .await;
                 }
                 Status::DropItemStack => {
                     dbg!("todo");
@@ -495,13 +527,14 @@ impl Player {
                     dbg!("todo");
                 }
             },
-            None => self.kick(TextComponent::text("Invalid status")),
+            None => self.kick(TextComponent::text("Invalid status")).await,
         }
     }
 
-    pub fn handle_play_ping_request(&self, request: SPlayPingRequest) {
+    pub async fn handle_play_ping_request(&self, request: SPlayPingRequest) {
         self.client
-            .send_packet(&CPingResponse::new(request.payload));
+            .send_packet(&CPingResponse::new(request.payload))
+            .await;
     }
 
     pub async fn handle_use_item_on(&self, use_item_on: SUseItemOn) {
@@ -513,7 +546,7 @@ impl Player {
         }
 
         if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
-            if let Some(item) = self.inventory.lock().held_item() {
+            if let Some(item) = self.inventory.lock().await.held_item() {
                 let minecraft_id = global_registry::find_minecraft_id(
                     global_registry::ITEM_REGISTRY,
                     item.item_id,
@@ -522,20 +555,25 @@ impl Player {
                 if let Ok(block_state_id) = BlockState::new(minecraft_id, None) {
                     let entity = &self.living_entity.entity;
                     let world = &entity.world;
-                    world.broadcast_packet_all(&CBlockUpdate::new(
-                        &location,
-                        block_state_id.get_id_mojang_repr().into(),
-                    ));
-                    world.broadcast_packet_all(&CBlockUpdate::new(
-                        &WorldPosition(location.0 + face.to_offset()),
-                        block_state_id.get_id_mojang_repr().into(),
-                    ));
+                    world
+                        .broadcast_packet_all(&CBlockUpdate::new(
+                            &location,
+                            block_state_id.get_id_mojang_repr().into(),
+                        ))
+                        .await;
+                    world
+                        .broadcast_packet_all(&CBlockUpdate::new(
+                            &WorldPosition(location.0 + face.to_offset()),
+                            block_state_id.get_id_mojang_repr().into(),
+                        ))
+                        .await;
                 }
             }
             self.client
-                .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence));
+                .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
+                .await;
         } else {
-            self.kick(TextComponent::text("Invalid block face"))
+            self.kick(TextComponent::text("Invalid block face")).await
         }
     }
 
@@ -544,42 +582,49 @@ impl Player {
         log::error!("An item was used(SUseItem), but the packet is not implemented yet");
     }
 
-    pub fn handle_set_held_item(&self, held: SSetHeldItem) {
+    pub async fn handle_set_held_item(&self, held: SSetHeldItem) {
         let slot = held.slot;
         if !(0..=8).contains(&slot) {
-            self.kick(TextComponent::text("Invalid held slot"))
+            self.kick(TextComponent::text("Invalid held slot")).await;
+            return;
         }
-        self.inventory.lock().set_selected(slot as usize);
+        self.inventory.lock().await.set_selected(slot as usize);
     }
 
-    pub fn handle_set_creative_slot(&self, packet: SSetCreativeSlot) -> Result<(), InventoryError> {
+    pub async fn handle_set_creative_slot(
+        &self,
+        packet: SSetCreativeSlot,
+    ) -> Result<(), InventoryError> {
         if self.gamemode.load() != GameMode::Creative {
             return Err(InventoryError::PermissionError);
         }
-        self.inventory
-            .lock()
-            .set_slot(packet.slot as usize, packet.clicked_item.to_item(), false)
+        self.inventory.lock().await.set_slot(
+            packet.slot as usize,
+            packet.clicked_item.to_item(),
+            false,
+        )
     }
 
     // TODO:
     // This function will in the future be used to keep track of if the client is in a valid state.
     // But this is not possible yet
-    pub fn handle_close_container(&self, server: &Server, packet: SCloseContainer) {
+    pub async fn handle_close_container(&self, server: &Server, packet: SCloseContainer) {
         // window_id 0 represents both 9x1 Generic AND inventory here
         self.inventory
             .lock()
+            .await
             .state_id
             .store(0, std::sync::atomic::Ordering::Relaxed);
         let open_container = self.open_container.load();
         if let Some(id) = open_container {
-            let mut open_containers = server.open_containers.write();
+            let mut open_containers = server.open_containers.write().await;
             if let Some(container) = open_containers.get_mut(&id) {
                 container.remove_player(self.entity_id())
             }
             self.open_container.store(None);
         }
         let Some(_window_type) = WindowType::from_u8(packet.window_id) else {
-            self.kick(TextComponent::text("Invalid window ID"));
+            self.kick(TextComponent::text("Invalid window ID")).await;
             return;
         };
     }

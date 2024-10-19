@@ -3,7 +3,7 @@ use pumpkin_inventory::InventoryError;
 use pumpkin_protocol::bytebuf::DeserializerError;
 use std::fmt::Display;
 
-pub trait PumpkinError: std::error::Error + Display {
+pub trait PumpkinError: Send + std::error::Error + Display {
     fn is_kick(&self) -> bool;
 
     fn log(&self) {

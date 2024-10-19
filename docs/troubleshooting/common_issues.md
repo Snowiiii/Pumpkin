@@ -18,13 +18,7 @@
 
     **Cause:** The server is currently not calculating hit boxes for blocks, we're working on that.
 
-3.  ### The Server is unresponsive
-
-    **Issue:** You have to wait before reconnecting or can't do basic things while chunks are loading.
-
-    **Cause:** The server has currently blocking issues, we're working on that.
-
-4.  ### Failed to verify username
+3.  ### Failed to verify username
 
     **Issue:** Some players reported having issues logging into the Server, including a "Failed to verify username" error.
 

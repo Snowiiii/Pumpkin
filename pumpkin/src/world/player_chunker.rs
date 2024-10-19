@@ -4,17 +4,18 @@ use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::math::{
     get_section_cord, position::WorldPosition, vector2::Vector2, vector3::Vector3,
 };
-use pumpkin_protocol::client::play::{CCenterChunk, CUnloadChunk};
+use pumpkin_protocol::client::play::CCenterChunk;
 use pumpkin_world::cylindrical_chunk_iterator::Cylindrical;
 
-use crate::entity::{player::Player, Entity};
+use crate::entity::player::Player;
 
 use super::World;
 
-fn get_view_distance(player: &Player) -> i8 {
+async fn get_view_distance(player: &Player) -> i8 {
     player
         .config
         .lock()
+        .await
         .view_distance
         .clamp(2, BASIC_CONFIG.view_distance as i8)
 }
@@ -24,11 +25,14 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
     player.watched_section.store(new_watched);
     let watched_section = new_watched;
     let chunk_pos = player.living_entity.entity.chunk_pos.load();
-    player.client.send_packet(&CCenterChunk {
-        chunk_x: chunk_pos.x.into(),
-        chunk_z: chunk_pos.z.into(),
-    });
-    let view_distance = get_view_distance(&player) as i32;
+    player
+        .client
+        .send_packet(&CCenterChunk {
+            chunk_x: chunk_pos.x.into(),
+            chunk_z: chunk_pos.z.into(),
+        })
+        .await;
+    let view_distance = get_view_distance(&player).await as i32;
     dbg!(view_distance);
     let old_cylindrical = Cylindrical::new(
         Vector2::new(watched_section.x, watched_section.z),
@@ -42,38 +46,43 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
         |chunk_pos| {
             loading_chunks.push(chunk_pos);
         },
-        |chunk_pos| {
-            player
-                .client
-                .send_packet(&CUnloadChunk::new(chunk_pos.x, chunk_pos.z));
+        |_| {
+            // player
+            //     .client
+            //     .send_packet(&CUnloadChunk::new(chunk_pos.x, chunk_pos.z));
         },
         true,
     );
     if !loading_chunks.is_empty() {
         world
-            .spawn_world_chunks(&player.client, loading_chunks, view_distance)
+            .spawn_world_chunks(player.client.clone(), loading_chunks, view_distance)
             .await;
     }
 }
 
-pub async fn update_position(entity: &Entity, player: &Player) {
+pub async fn update_position(player: &Player) {
+    let entity = &player.living_entity.entity;
     let current_watched = player.watched_section.load();
     let new_watched = chunk_section_from_pos(&entity.block_pos.load());
     if current_watched != new_watched {
         let chunk_pos = entity.chunk_pos.load();
-        player.client.send_packet(&CCenterChunk {
-            chunk_x: chunk_pos.x.into(),
-            chunk_z: chunk_pos.z.into(),
-        });
+        player
+            .client
+            .send_packet(&CCenterChunk {
+                chunk_x: chunk_pos.x.into(),
+                chunk_z: chunk_pos.z.into(),
+            })
+            .await;
 
-        let view_distance = get_view_distance(player) as i32;
+        let view_distance = get_view_distance(player).await as i32;
         let old_cylindrical = Cylindrical::new(
             Vector2::new(current_watched.x, current_watched.z),
             view_distance,
         );
-        let new_cylindrical =
-            Cylindrical::new(Vector2::new(chunk_pos.x, chunk_pos.z), view_distance);
+        let new_cylindrical = Cylindrical::new(chunk_pos, view_distance);
+
         player.watched_section.store(new_watched);
+
         let mut loading_chunks = Vec::new();
         Cylindrical::for_each_changed_chunk(
             old_cylindrical,
@@ -81,17 +90,17 @@ pub async fn update_position(entity: &Entity, player: &Player) {
             |chunk_pos| {
                 loading_chunks.push(chunk_pos);
             },
-            |chunk_pos| {
-                player
-                    .client
-                    .send_packet(&CUnloadChunk::new(chunk_pos.x, chunk_pos.z));
+            |_| {
+                // player
+                //     .client
+                //     .send_packet(&CUnloadChunk::new(chunk_pos.x, chunk_pos.z));
             },
             false,
         );
         if !loading_chunks.is_empty() {
             entity
                 .world
-                .spawn_world_chunks(&player.client, loading_chunks, view_distance)
+                .spawn_world_chunks(player.client.clone(), loading_chunks, view_distance)
                 .await;
         }
     }

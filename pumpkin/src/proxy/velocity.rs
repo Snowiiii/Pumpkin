@@ -44,17 +44,19 @@ pub enum VelocityError {
     FailedReadProfileProperties,
 }
 
-pub fn velocity_login(client: &Client) {
+pub async fn velocity_login(client: &Client) {
     // TODO: validate packet transaction id from plugin response with this
     let velocity_message_id: i32 = rand::thread_rng().gen();
 
     let mut buf = BytesMut::new();
     buf.put_u8(MAX_SUPPORTED_FORWARDING_VERSION);
-    client.send_packet(&CLoginPluginRequest::new(
-        velocity_message_id.into(),
-        PLAYER_INFO_CHANNEL,
-        &buf,
-    ));
+    client
+        .send_packet(&CLoginPluginRequest::new(
+            velocity_message_id.into(),
+            PLAYER_INFO_CHANNEL,
+            &buf,
+        ))
+        .await;
 }
 
 pub fn check_integrity(data: (&[u8], &[u8]), secret: &str) -> bool {

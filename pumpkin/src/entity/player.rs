@@ -6,7 +6,6 @@ use std::sync::{
 use crossbeam::atomic::AtomicCell;
 use num_derive::FromPrimitive;
 use num_traits::ToPrimitive;
-use parking_lot::Mutex;
 use pumpkin_core::{
     math::{boundingbox::BoundingBox, position::WorldPosition, vector3::Vector3},
     text::TextComponent,
@@ -28,6 +27,7 @@ use pumpkin_protocol::{
     },
     RawPacket, ServerPacket, VarInt,
 };
+use tokio::sync::Mutex;
 
 use pumpkin_protocol::server::play::{SCloseContainer, SKeepAlive};
 use pumpkin_world::item::ItemStack;
@@ -91,13 +91,13 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new(
+    pub async fn new(
         client: Arc<Client>,
         world: Arc<World>,
         entity_id: EntityId,
         gamemode: GameMode,
     ) -> Self {
-        let gameprofile = client.gameprofile.lock().clone().map_or_else(
+        let gameprofile = client.gameprofile.lock().await.clone().map_or_else(
             || {
                 log::error!("No gameprofile?. Impossible");
                 GameProfile {
@@ -109,7 +109,7 @@ impl Player {
             },
             |profile| profile,
         );
-        let config = client.config.lock().clone().unwrap_or_default();
+        let config = client.config.lock().await.clone().unwrap_or_default();
         Self {
             living_entity: LivingEntity::new(Entity::new(
                 entity_id,
@@ -138,7 +138,7 @@ impl Player {
 
     /// Removes the Player out of the current World
     pub async fn remove(&self) {
-        self.living_entity.entity.world.remove_player(self);
+        self.living_entity.entity.world.remove_player(self).await;
     }
 
     pub const fn entity_id(&self) -> EntityId {
@@ -146,7 +146,7 @@ impl Player {
     }
 
     /// Updates the current abilities the Player has
-    pub fn send_abilties_update(&mut self) {
+    pub async fn send_abilties_update(&mut self) {
         let mut b = 0i8;
         let abilities = &self.abilities;
 
@@ -162,14 +162,16 @@ impl Player {
         if abilities.creative {
             b |= 8;
         }
-        self.client.send_packet(&CPlayerAbilities::new(
-            b,
-            abilities.fly_speed,
-            abilities.walk_speed_fov,
-        ));
+        self.client
+            .send_packet(&CPlayerAbilities::new(
+                b,
+                abilities.fly_speed,
+                abilities.walk_speed_fov,
+            ))
+            .await;
     }
 
-    pub fn teleport(&self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
+    pub async fn teleport(&self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
         // this is the ultra special magic code used to create the teleport id
         // This returns the old value
         let i = self
@@ -183,16 +185,18 @@ impl Player {
         let entity = &self.living_entity.entity;
         entity.set_pos(x, y, z);
         entity.set_rotation(yaw, pitch);
-        *self.awaiting_teleport.lock() = Some((teleport_id.into(), Vector3::new(x, y, z)));
-        self.client.send_packet(&CSyncPlayerPosition::new(
-            x,
-            y,
-            z,
-            yaw,
-            pitch,
-            0,
-            teleport_id.into(),
-        ));
+        *self.awaiting_teleport.lock().await = Some((teleport_id.into(), Vector3::new(x, y, z)));
+        self.client
+            .send_packet(&CSyncPlayerPosition::new(
+                x,
+                y,
+                z,
+                yaw,
+                pitch,
+                0,
+                teleport_id.into(),
+            ))
+            .await;
     }
 
     pub fn block_interaction_range(&self) -> f64 {
@@ -216,7 +220,7 @@ impl Player {
     }
 
     /// Kicks the Client with a reason depending on the connection state
-    pub fn kick(&self, reason: TextComponent) {
+    pub async fn kick<'a>(&self, reason: TextComponent<'a>) {
         assert!(!self
             .client
             .closed
@@ -224,6 +228,7 @@ impl Player {
 
         self.client
             .try_send_packet(&CPlayDisconnect::new(&reason))
+            .await
             .unwrap_or_else(|_| self.client.close());
         log::info!(
             "Kicked {} for {}",
@@ -233,15 +238,16 @@ impl Player {
         self.client.close()
     }
 
-    pub fn set_health(&self, health: f32, food: i32, food_saturation: f32) {
-        self.living_entity.set_health(health);
+    pub async fn set_health(&self, health: f32, food: i32, food_saturation: f32) {
+        self.living_entity.set_health(health).await;
         self.food.store(food, std::sync::atomic::Ordering::Relaxed);
         self.food_saturation.store(food_saturation);
         self.client
-            .send_packet(&CSetHealth::new(health, food.into(), food_saturation));
+            .send_packet(&CSetHealth::new(health, food.into(), food_saturation))
+            .await;
     }
 
-    pub fn set_gamemode(&self, gamemode: GameMode) {
+    pub async fn set_gamemode(&self, gamemode: GameMode) {
         // We could send the same gamemode without problems. But why waste bandwidth ?
         let current_gamemode = self.gamemode.load();
         assert!(
@@ -260,34 +266,39 @@ impl Player {
                     uuid: self.gameprofile.id,
                     actions: vec![PlayerAction::UpdateGameMode((gamemode as i32).into())],
                 }],
-            ));
-        self.client.send_packet(&CGameEvent::new(
-            GameEvent::ChangeGameMode,
-            gamemode.to_f32().unwrap(),
-        ));
+            ))
+            .await;
+        self.client
+            .send_packet(&CGameEvent::new(
+                GameEvent::ChangeGameMode,
+                gamemode.to_f32().unwrap(),
+            ))
+            .await;
     }
 
-    pub fn send_system_message(&self, text: &TextComponent) {
+    pub async fn send_system_message<'a>(&self, text: &TextComponent<'a>) {
         self.client
-            .send_packet(&CSystemChatMessage::new(text, false));
+            .send_packet(&CSystemChatMessage::new(text, false))
+            .await;
     }
 }
 
 impl Player {
     pub async fn process_packets(self: &Arc<Self>, server: &Arc<Server>) {
-        let mut packets = self.client.client_packets_queue.lock();
+        let mut packets = self.client.client_packets_queue.lock().await;
         while let Some(mut packet) = packets.pop_back() {
             match self.handle_play_packet(server, &mut packet).await {
                 Ok(_) => {}
                 Err(e) => {
                     if e.is_kick() {
                         if let Some(kick_reason) = e.client_kick_reason() {
-                            self.kick(TextComponent::text(&kick_reason))
+                            self.kick(TextComponent::text(&kick_reason)).await
                         } else {
                             self.kick(TextComponent::text(&format!(
                                 "Error while reading incoming packet {}",
                                 e
-                            )));
+                            )))
+                            .await;
                         }
                     }
                     e.log();
@@ -304,11 +315,13 @@ impl Player {
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SConfirmTeleport::PACKET_ID => {
-                self.handle_confirm_teleport(SConfirmTeleport::read(bytebuf)?);
+                self.handle_confirm_teleport(SConfirmTeleport::read(bytebuf)?)
+                    .await;
                 Ok(())
             }
             SChatCommand::PACKET_ID => {
-                self.handle_chat_command(server, SChatCommand::read(bytebuf)?);
+                self.handle_chat_command(server, SChatCommand::read(bytebuf)?)
+                    .await;
                 Ok(())
             }
             SPlayerPosition::PACKET_ID => {
@@ -342,7 +355,8 @@ impl Player {
                 Ok(())
             }
             SClientInformationPlay::PACKET_ID => {
-                self.handle_client_information_play(SClientInformationPlay::read(bytebuf)?);
+                self.handle_client_information_play(SClientInformationPlay::read(bytebuf)?)
+                    .await;
                 Ok(())
             }
             SInteract::PACKET_ID => {
@@ -364,15 +378,18 @@ impl Player {
                 Ok(())
             }
             SSetHeldItem::PACKET_ID => {
-                self.handle_set_held_item(SSetHeldItem::read(bytebuf)?);
+                self.handle_set_held_item(SSetHeldItem::read(bytebuf)?)
+                    .await;
                 Ok(())
             }
             SSetCreativeSlot::PACKET_ID => {
-                self.handle_set_creative_slot(SSetCreativeSlot::read(bytebuf)?)?;
+                self.handle_set_creative_slot(SSetCreativeSlot::read(bytebuf)?)
+                    .await?;
                 Ok(())
             }
             SPlayPingRequest::PACKET_ID => {
-                self.handle_play_ping_request(SPlayPingRequest::read(bytebuf)?);
+                self.handle_play_ping_request(SPlayPingRequest::read(bytebuf)?)
+                    .await;
                 Ok(())
             }
             SClickContainer::PACKET_ID => {
@@ -381,7 +398,8 @@ impl Player {
                 Ok(())
             }
             SCloseContainer::PACKET_ID => {
-                self.handle_close_container(server, SCloseContainer::read(bytebuf)?);
+                self.handle_close_container(server, SCloseContainer::read(bytebuf)?)
+                    .await;
                 Ok(())
             }
             SKeepAlive::PACKET_ID => {

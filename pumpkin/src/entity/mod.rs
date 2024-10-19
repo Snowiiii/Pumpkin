@@ -101,13 +101,14 @@ impl Entity {
             let block_pos = self.block_pos.load();
             let block_pos_vec = block_pos.0;
             if i != block_pos_vec.x || j != block_pos_vec.y || k != block_pos_vec.z {
-                self.block_pos.store(WorldPosition(Vector3::new(i, j, k)));
+                let new_block_pos = Vector3::new(i, j, k);
+                self.block_pos.store(WorldPosition(new_block_pos));
 
                 let chunk_pos = self.chunk_pos.load();
                 if get_section_cord(i) != chunk_pos.x || get_section_cord(k) != chunk_pos.z {
                     self.chunk_pos.store(Vector2::new(
-                        get_section_cord(block_pos_vec.x),
-                        get_section_cord(block_pos_vec.z),
+                        get_section_cord(new_block_pos.x),
+                        get_section_cord(new_block_pos.z),
                     ));
                 }
             }
@@ -122,8 +123,8 @@ impl Entity {
     }
 
     /// Removes the Entity from their current World
-    pub fn remove(&self) {
-        self.world.remove_entity(self);
+    pub async fn remove(&self) {
+        self.world.remove_entity(self).await;
     }
 
     /// Applies knockback to the entity, following vanilla Minecraft's mechanics.
@@ -190,7 +191,7 @@ impl Entity {
             b &= !(1 << index);
         }
         let packet = CSetEntityMetadata::new(self.entity_id.into(), Metadata::new(0, 0.into(), b));
-        self.world.broadcast_packet_all(&packet);
+        self.world.broadcast_packet_all(&packet).await;
     }
 
     pub async fn set_pose(&self, pose: EntityPose) {
@@ -200,7 +201,7 @@ impl Entity {
             self.entity_id.into(),
             Metadata::new(6, 20.into(), (pose).into()),
         );
-        self.world.broadcast_packet_all(&packet)
+        self.world.broadcast_packet_all(&packet).await
     }
 }
 
