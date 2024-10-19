@@ -6,9 +6,9 @@ use super::block_registry::{Block, BlockCategory, BLOCKS};
 
 #[derive(Clone)]
 pub struct BlockState {
-    state_id: u16,
-    block: Block,
-    category: BlockCategory,
+    pub state_id: u16,
+    pub block: Block,
+    pub category: BlockCategory,
 }
 
 impl BlockState {
