@@ -9,7 +9,10 @@ use crate::{
 use num_traits::ToPrimitive;
 use parking_lot::Mutex;
 use pumpkin_config::BasicConfiguration;
-use pumpkin_core::{math::vector2::Vector2, text::TextComponent};
+use pumpkin_core::{
+    math::{distance::distance, vector2::Vector2, vector3::Vector3},
+    text::TextComponent,
+};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_protocol::{
     client::play::{
@@ -273,6 +276,18 @@ impl World {
             .values()
             .map(|p| p.gameprofile.name.clone())
             .collect::<Vec<_>>()
+    }
+
+    pub fn get_nearest_player_name(&self, target: &Vector3<f64>) -> Option<String> {
+        self.current_players
+            .lock()
+            .values()
+            .min_by(|a, b| {
+                let dist_a = distance(&a.last_position.load(), target);
+                let dist_b = distance(&b.last_position.load(), target);
+                dist_a.partial_cmp(&dist_b).unwrap()
+            })
+            .map(|p| p.gameprofile.name.clone())
     }
 
     /// Gets a Player by entity id

@@ -2,6 +2,7 @@ use crate::commands::tree::CommandTree;
 use crate::commands::tree::RawArgs;
 use crate::commands::tree_builder::argument;
 use crate::commands::CommandSender;
+use crate::entity::player::Player;
 use crate::server::Server;
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 
@@ -61,8 +62,7 @@ fn parse_token<'a>(token: &'a str, sender: &'a CommandSender, server: &'a Server
     let result = match token {
         "@p" => {
             if let CommandSender::Player(player) = sender {
-                server
-                    .get_nearest_player_name(player)
+                get_nearest_player_name(player)
                     .map_or_else(Vec::new, |player_name| vec![player_name])
             } else {
                 return token.to_string();
@@ -92,6 +92,17 @@ fn parse_token<'a>(token: &'a str, sender: &'a CommandSender, server: &'a Server
     };
 
     format_player_names(&result)
+}
+
+// Gets the nearest player name in the same world
+fn get_nearest_player_name(player: &Player) -> Option<String> {
+    let target = player.last_position.load();
+
+    player
+        .living_entity
+        .entity
+        .world
+        .get_nearest_player_name(&target)
 }
 
 // Helper function to format player names according to spec

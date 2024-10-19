@@ -2,7 +2,6 @@ use connection_cache::{CachedBranding, CachedStatus};
 use key_store::KeyStore;
 use parking_lot::{Mutex, RwLock};
 use pumpkin_config::BASIC_CONFIG;
-use pumpkin_core::math::distance::distance;
 use pumpkin_core::text::TextComponent;
 use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
@@ -142,25 +141,6 @@ impl Server {
             .iter()
             .flat_map(|world| world.get_player_names())
             .collect::<Vec<_>>()
-    }
-
-    /// Gets the nearest player from another player
-    pub fn get_nearest_player_name(&self, player: &Player) -> Option<String> {
-        let target = player.last_position.load();
-
-        player
-            .living_entity
-            .entity
-            .world
-            .current_players
-            .lock()
-            .values()
-            .min_by(|a, b| {
-                let dist_a = distance(&a.last_position.load(), &target);
-                let dist_b = distance(&b.last_position.load(), &target);
-                dist_a.partial_cmp(&dist_b).unwrap()
-            })
-            .map(|p| p.gameprofile.name.clone())
     }
 
     /// Searches every world for a player by name
