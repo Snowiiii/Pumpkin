@@ -31,7 +31,10 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
                 let message = TextComponent::text(message).color_named(NamedColor::Blue);
 
                 server.broadcast_message(&message);
-                sender.send_message(message);
+
+                if !sender.is_player() {
+                    sender.send_message(message);
+                }
             } else {
                 sender.send_message(
                     TextComponent::text("Please provide a message: say [content]")
