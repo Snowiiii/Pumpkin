@@ -242,7 +242,7 @@ pub fn block_state_impl(item: TokenStream) -> TokenStream {
         let category_name: proc_macro2::TokenStream = format!(
             "crate::block::BlockCategory::{}",
             &pascal_case(
-                &block_info
+                block_info
                     .definition
                     .category
                     .split_once(':')
@@ -254,7 +254,7 @@ pub fn block_state_impl(item: TokenStream) -> TokenStream {
         .unwrap();
         let block_name: proc_macro2::TokenStream = format!(
             "crate::block::Block::{}",
-            &pascal_case(&block_name.split_once(':').expect("Bad minecraft id").1,)
+            &pascal_case(block_name.split_once(':').expect("Bad minecraft id").1,)
         )
         .parse()
         .unwrap();
@@ -270,7 +270,7 @@ pub fn block_state_impl(item: TokenStream) -> TokenStream {
         let category_name: proc_macro2::TokenStream = format!(
             "pumpkin_world::block::BlockCategory::{}",
             &pascal_case(
-                &block_info
+                block_info
                     .definition
                     .category
                     .split_once(':')
@@ -282,7 +282,7 @@ pub fn block_state_impl(item: TokenStream) -> TokenStream {
         .unwrap();
         let block_name: proc_macro2::TokenStream = format!(
             "pumpkin_world::block::Block::{}",
-            &pascal_case(&block_name.split_once(':').expect("Bad minecraft id").1,)
+            &pascal_case(block_name.split_once(':').expect("Bad minecraft id").1,)
         )
         .parse()
         .unwrap();
