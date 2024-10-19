@@ -32,13 +32,14 @@ pub fn get_chunk(x: u32, z: u32, file_path: PathBuf) -> Option<Vec<u8>> {
 /// # Examples
 ///
 /// ```no_run
+/// use std::fs::File;
 /// use fastanvil::Region;
 /// use std::path::PathBuf;
 /// use crate::pumpkin_world::chunk::unsafe_anvil::load_anvil_file;
 ///
 /// let file_path = PathBuf::from("r.0.0.mca");
 ///
-/// let mut fast_file = Region::from_stream(file_path.clone()).unwrap();
+/// let mut fast_file = Region::from_stream(File::open(file_path.clone()).unwrap()).unwrap();
 /// let loaded_file = load_anvil_file(file_path).unwrap();
 ///
 /// let chunk = loaded_file.get_chunk(0, 0);

@@ -83,7 +83,7 @@ const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> L
 async fn main() -> io::Result<()> {
     use std::sync::Arc;
 
-    use entity::player::Player;
+    
     use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
     use pumpkin_core::text::{color::NamedColor, TextComponent};
     use rcon::RCONServer;
