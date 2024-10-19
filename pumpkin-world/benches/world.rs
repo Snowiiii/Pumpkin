@@ -13,7 +13,7 @@ fn anvil_benchmark(c: &mut Criterion) {
         region_folder: PathBuf::from("../.etc/regions"),
     };
     let reader = pumpkin_world::chunk::anvil::AnvilChunkReader::new();
-    group.bench_function("Old", |b| b.iter(|| {
+    group.bench_function("Custom", |b| b.iter(|| {
         black_box(reader.read_chunk(&save_file, Vector2::new(0, 0)).unwrap());
     }));
     

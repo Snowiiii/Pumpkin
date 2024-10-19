@@ -51,6 +51,8 @@ pub enum CompressionError {
     UnknownCompression,
     #[error("Error while working with zlib compression: {0}")]
     ZlibError(std::io::Error),
+    #[error("Error while working with zune's zlib decompression: {0}")]
+    ZuneZlibError(zune_inflate::errors::InflateDecodeErrors),
     #[error("Error while working with Gzip compression: {0}")]
     GZipError(std::io::Error),
     #[error("Error while working with LZ4 compression: {0}")]
