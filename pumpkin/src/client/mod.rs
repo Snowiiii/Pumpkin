@@ -387,7 +387,6 @@ impl Client {
             let mut dec = self.dec.lock().await;
             if let Ok(packet) = dec.decode() {
                 if let Some(packet) = packet {
-                    dbg!("a");
                     self.add_packet(packet).await;
                     return;
                 }

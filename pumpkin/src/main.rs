@@ -22,7 +22,6 @@ use client::Client;
 use pumpkin_protocol::client::play::CKeepAlive;
 use pumpkin_protocol::ConnectionState;
 use server::Server;
-use std::collections::HashMap;
 use std::io::{self};
 use std::time::Duration;
 
@@ -128,9 +127,6 @@ async fn main() -> io::Result<()> {
     let use_console = ADVANCED_CONFIG.commands.use_console;
     let rcon = ADVANCED_CONFIG.rcon.clone();
 
-    let players: Arc<tokio::sync::Mutex<HashMap<usize, Arc<Player>>>> =
-        Arc::new(tokio::sync::Mutex::new(HashMap::new()));
-
     let server = Arc::new(Server::new());
     log::info!("Started Server took {}ms", time.elapsed().as_millis());
     log::info!("You now can connect to the server, Listening on {}", addr);
@@ -212,45 +208,34 @@ async fn main() -> io::Result<()> {
             });
         }
 
-        let players = players.clone();
         let server = server.clone();
         tokio::spawn(async move {
-            let mut players = players.lock().await; // Move ownership of players
             let server = &server; // Reference to server
-                                  // poll Player
-            if let Some(player) = players.get_mut(&id) {
+            while !client.closed.load(std::sync::atomic::Ordering::Relaxed)
+                && !client
+                    .make_player
+                    .load(std::sync::atomic::Ordering::Relaxed)
+            {
+                client.process_packets(server).await;
+                client.poll().await;
+            }
+            if client
+                .make_player
+                .load(std::sync::atomic::Ordering::Relaxed)
+            {
+                let id = client.id;
+                let (player, world) = server.add_player(id, client).await;
+                world.spawn_player(&BASIC_CONFIG, player.clone()).await;
+                // poll Player
                 while !player
                     .client
                     .closed
                     .load(std::sync::atomic::Ordering::Relaxed)
                 {
-                    dbg!("a");
                     player.process_packets(server).await;
                     player.client.poll().await;
                 }
-                if let Some(player) = players.remove(&id) {
-                    dbg!("removed player");
-                    player.remove().await;
-                }
-            } else {
-                // Poll current Clients (non players)
-                while !client.closed.load(std::sync::atomic::Ordering::Relaxed)
-                    && !client
-                        .make_player
-                        .load(std::sync::atomic::Ordering::Relaxed)
-                {
-                    client.process_packets(server).await;
-                    client.poll().await;
-                }
-                if client
-                    .make_player
-                    .load(std::sync::atomic::Ordering::Relaxed)
-                {
-                    let id = client.id;
-                    let (player, world) = server.add_player(id, client).await;
-                    players.insert(id, player.clone());
-                    world.spawn_player(&BASIC_CONFIG, player).await;
-                }
+                player.remove().await;
             }
         });
     }
