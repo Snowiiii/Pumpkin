@@ -67,7 +67,6 @@ impl Cylindrical {
         self.center.z + self.view_distance + 1
     }
 
-    #[allow(dead_code)]
     fn is_within_distance(&self, x: i32, z: i32) -> bool {
         let max_dist_squared = self.view_distance * self.view_distance;
         let max_dist = self.view_distance as i64;
@@ -75,5 +74,20 @@ impl Cylindrical {
         let dist_z = (z - self.center.z).abs().max(0) - (1);
         let dist_squared = dist_x.pow(2) + (max_dist.min(dist_z as i64) as i32).pow(2);
         dist_squared < max_dist_squared
+    }
+
+    /// Returns an iterator of all chunks within this cylinder
+    pub fn all_chunks_within(&self) -> Vec<Vector2<i32>> {
+        // This is a naive implementation: start with square and cut out ones that dont fit
+        let mut all_chunks = Vec::new();
+        for x in -self.view_distance..=self.view_distance {
+            for z in -self.view_distance..=self.view_distance {
+                all_chunks.push(Vector2::new(self.center.x + x, self.center.z + z));
+            }
+        }
+        all_chunks
+            .into_iter()
+            .filter(|chunk| self.is_within_distance(chunk.x, chunk.z))
+            .collect()
     }
 }
