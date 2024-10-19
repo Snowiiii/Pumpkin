@@ -136,13 +136,13 @@ impl Server {
         }
     }
 
-    /// Get all online players
-    pub fn get_online_players(&self) -> impl Iterator<Item = Arc<Player>> + '_ {
-        self.worlds.iter().flat_map(|world| world.get_players())
+    /// Get all online player names
+    pub fn get_online_player_names(&self) -> Vec<String> {
+        self.worlds.iter().flat_map(|world| world.get_player_names()).collect::<Vec<_>>()
     }
 
     /// Gets the nearest player from another player
-    pub fn get_nearest_player(&self, player: &Player) -> Option<Arc<Player>> {
+    pub fn get_nearest_player_name(&self, player: &Player) -> Option<String> {
         let target = player.last_position.load();
 
         player
@@ -157,7 +157,7 @@ impl Server {
                 let dist_b = distance(&b.last_position.load(), &target);
                 dist_a.partial_cmp(&dist_b).unwrap()
             })
-            .cloned()
+            .map(|p| p.gameprofile.name.clone())
     }
 
     /// Searches every world for a player by name

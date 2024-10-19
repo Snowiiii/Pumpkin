@@ -49,56 +49,49 @@ fn parse_selectors(content: &str, sender: &CommandSender, server: &Server) -> St
     let tokens: Vec<&str> = content.split_whitespace().collect();
 
     for token in tokens {
-        // TODO impl @e
-        let result = match token {
-            "@p" => {
-                if let CommandSender::Player(player) = sender {
-                    vec![server
-                        .get_nearest_player(player)
-                        .map_or_else(|| String::from("nobody"), |p| p.gameprofile.name.clone())]
-                } else {
-                    final_message.push_str(token);
-                    final_message.push(' ');
-                    continue;
-                }
-            }
-            "@r" => {
-                let online_players: Vec<String> = server
-                    .get_online_players()
-                    .map(|p| p.gameprofile.name.clone())
-                    .collect();
-
-                if online_players.is_empty() {
-                    vec![String::from("nobody")]
-                } else {
-                    vec![online_players[rand::random::<usize>() % online_players.len()].clone()]
-                }
-            }
-            "@s" => match sender {
-                CommandSender::Player(p) => vec![p.gameprofile.name.clone()],
-                _ => vec![String::from("console")],
-            },
-            "@a" => server
-                .get_online_players()
-                .map(|p| p.gameprofile.name.clone())
-                .collect::<Vec<_>>(),
-            "@here" => server
-                .get_online_players()
-                .map(|p| p.gameprofile.name.clone())
-                .collect::<Vec<_>>(),
-            _ => {
-                final_message.push_str(token);
-                final_message.push(' ');
-                continue;
-            }
-        };
-
-        // formatted player names
-        final_message.push_str(&format_player_names(&result));
+        let parsed_token = parse_token(token, sender, server);
+        final_message.push_str(&parsed_token);
         final_message.push(' ');
     }
 
     final_message.trim_end().to_string()
+}
+
+fn parse_token<'a>(token: &'a str, sender: &'a CommandSender, server: &'a Server) -> String {
+    let result = match token {
+        "@p" => {
+            if let CommandSender::Player(player) = sender {
+                server
+                    .get_nearest_player_name(player)
+                    .map_or_else(Vec::new, |player_name| vec![player_name])
+            } else {
+                return token.to_string();
+            }
+        }
+        "@r" => {
+            let online_player_names: Vec<String> = server.get_online_player_names();
+
+            if online_player_names.is_empty() {
+                vec![String::from("nobody")]
+            } else {
+                vec![
+                    online_player_names[rand::random::<usize>() % online_player_names.len()]
+                        .clone(),
+                ]
+            }
+        }
+        "@s" => match sender {
+            CommandSender::Player(p) => vec![p.gameprofile.name.clone()],
+            _ => vec![String::from("console")],
+        },
+        "@a" => server.get_online_player_names(),
+        "@here" => server.get_online_player_names(),
+        _ => {
+            return token.to_string();
+        }
+    };
+
+    format_player_names(&result)
 }
 
 // Helper function to format player names according to spec

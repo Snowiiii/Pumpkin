@@ -267,11 +267,11 @@ impl World {
     }
 
     /// Gets all players
-    pub fn get_players(&self) -> Vec<Arc<Player>> {
+    pub fn get_player_names(&self) -> Vec<String> {
         self.current_players
             .lock()
             .values()
-            .cloned()
+            .map(|p| p.gameprofile.name.clone())
             .collect::<Vec<_>>()
     }
 
