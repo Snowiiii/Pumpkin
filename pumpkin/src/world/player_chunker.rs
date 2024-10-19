@@ -4,7 +4,7 @@ use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::math::{
     get_section_cord, position::WorldPosition, vector2::Vector2, vector3::Vector3,
 };
-use pumpkin_protocol::client::play::CCenterChunk;
+use pumpkin_protocol::client::play::{CCenterChunk, CUnloadChunk};
 use pumpkin_world::cylindrical_chunk_iterator::Cylindrical;
 
 use crate::entity::player::Player;
@@ -64,6 +64,18 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
 
     if !unloading_chunks.is_empty() {
         world.mark_chunks_as_not_watched(&unloading_chunks).await;
+        for chunk in unloading_chunks {
+            if !player
+                .client
+                .closed
+                .load(std::sync::atomic::Ordering::Relaxed)
+            {
+                player
+                    .client
+                    .send_packet(&CUnloadChunk::new(chunk.x, chunk.z))
+                    .await;
+            }
+        }
     }
 }
 
@@ -119,6 +131,18 @@ pub async fn update_position(player: &Player) {
                 .world
                 .mark_chunks_as_not_watched(&unloading_chunks)
                 .await;
+            for chunk in unloading_chunks {
+                if !player
+                    .client
+                    .closed
+                    .load(std::sync::atomic::Ordering::Relaxed)
+                {
+                    player
+                        .client
+                        .send_packet(&CUnloadChunk::new(chunk.x, chunk.z))
+                        .await;
+                }
+            }
         }
     }
 }
