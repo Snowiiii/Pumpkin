@@ -15,7 +15,6 @@ itertools.workspace = true
 thiserror = "1.0"
 futures = "0.3"
 
-
 # Compression
 flate2 = "1.0"
 lz4 = "1.11.1"

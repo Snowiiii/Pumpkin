@@ -267,7 +267,7 @@ impl Player {
         ));
     }
 
-    pub fn send_system_message(&self, text: TextComponent) {
+    pub fn send_system_message(&self, text: &TextComponent) {
         self.client
             .send_packet(&CSystemChatMessage::new(text, false));
     }

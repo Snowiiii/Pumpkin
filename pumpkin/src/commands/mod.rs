@@ -31,7 +31,7 @@ impl<'a> CommandSender<'a> {
         match self {
             // TODO: add color and stuff to console
             CommandSender::Console => log::info!("{}", text.to_pretty_console()),
-            CommandSender::Player(c) => c.send_system_message(text),
+            CommandSender::Player(c) => c.send_system_message(&text),
             CommandSender::Rcon(s) => s.push(text.to_pretty_console()),
         }
     }

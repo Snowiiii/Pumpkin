@@ -74,14 +74,14 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
 
                         return if let Player(target) = sender {
                             if target.gamemode.load() == gamemode {
-                                target.send_system_message(TextComponent::text(&format!(
+                                target.send_system_message(&TextComponent::text(&format!(
                                     "You already in {:?} gamemode",
                                     gamemode
                                 )));
                             } else {
                                 // TODO
                                 target.set_gamemode(gamemode);
-                                target.send_system_message(TextComponent::text(&format!(
+                                target.send_system_message(&TextComponent::text(&format!(
                                     "Game mode was set to {:?}",
                                     gamemode
                                 )));
@@ -98,16 +98,16 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
                         let target = parse_arg_player(sender, server, ARG_TARGET, args)?;
 
                         if target.gamemode.load() == gamemode {
-                            target.send_system_message(TextComponent::text(&format!(
-                                "You already in {:?} gamemode",
-                                gamemode
+                            sender.send_message(TextComponent::text(&format!(
+                                "{} is already in {:?} gamemode",
+                                target.gameprofile.name, gamemode
                             )));
                         } else {
                             // TODO
                             target.set_gamemode(gamemode);
-                            target.send_system_message(TextComponent::text(&format!(
-                                "Game mode was set to {:?}",
-                                gamemode
+                            sender.send_message(TextComponent::text(&format!(
+                                "{}'s Game mode was set to {:?}",
+                                target.gameprofile.name, gamemode
                             )));
                         }
 
