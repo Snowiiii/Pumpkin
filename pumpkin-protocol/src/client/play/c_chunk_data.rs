@@ -125,7 +125,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
 
         self.0.blocks.iter_subchunks().for_each(|chunk| {
             let mut chunk_light = [0u8; 2048];
-            for (i, block) in chunk.into_iter().enumerate() {
+            for (i, block) in chunk.iter().enumerate() {
                 if !block.is_air() {
                     continue;
                 }
@@ -139,7 +139,8 @@ impl<'a> ClientPacket for CChunkData<'a> {
 
         buf.put_var_int(&lighting_subchunks.len().into());
         for subchunk in lighting_subchunks {
-            buf.put_u8_arr(&subchunk);
+            buf.put_var_int(&VarInt(subchunk.len() as i32));
+            buf.put_slice(&subchunk);
         }
 
         // Block Lighting
