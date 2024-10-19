@@ -1,8 +1,8 @@
+use crate::chunk::{ChunkParsingError, ChunkReadingError};
+use memmap2::Mmap;
 use std::io::Read;
 use std::path::PathBuf;
-use memmap2::Mmap;
 use tracing::error;
-use crate::chunk::{ChunkParsingError, ChunkReadingError};
 
 pub struct LoadedAnvilFile {
     pub table: [u8; 4096],
@@ -48,7 +48,6 @@ pub fn get_chunk(x: u32, z: u32, file_path: PathBuf) -> Option<Vec<u8>> {
 /// ```
 #[allow(unsafe_code)]
 pub fn load_anvil_file(file_path: PathBuf) -> Result<LoadedAnvilFile, ChunkReadingError> {
-
     // Check if the file exists
     if !file_path.exists() {
         return Err(ChunkReadingError::RegionNotFound(file_path));
@@ -58,7 +57,9 @@ pub fn load_anvil_file(file_path: PathBuf) -> Result<LoadedAnvilFile, ChunkReadi
         Ok(meta) => {
             // We should have at least 8KB of data; 4KB for locations and 4KB for timestamps
             if meta.len() <= (4 * 1024) * 2 {
-                return Err(ChunkReadingError::ParsingError(ChunkParsingError::InvalidRegionData(file_path)));
+                return Err(ChunkReadingError::ParsingError(
+                    ChunkParsingError::InvalidRegionData(file_path),
+                ));
             }
         }
         Err(e) => {
@@ -66,13 +67,9 @@ pub fn load_anvil_file(file_path: PathBuf) -> Result<LoadedAnvilFile, ChunkReadi
         }
     }
 
-    let file = std::fs::File::open(&file_path).map_err(
-        |e| ChunkReadingError::IoError(e.kind())
-    )?;
+    let file = std::fs::File::open(&file_path).map_err(|e| ChunkReadingError::IoError(e.kind()))?;
 
-    let res = unsafe { Mmap::map(&file) }.map_err(
-        |e| ChunkReadingError::IoError(e.kind())
-    )?;
+    let res = unsafe { Mmap::map(&file) }.map_err(|e| ChunkReadingError::IoError(e.kind()))?;
 
     let table = {
         let mut table = [0; 4096];
@@ -86,7 +83,6 @@ pub fn load_anvil_file(file_path: PathBuf) -> Result<LoadedAnvilFile, ChunkReadi
     })
 }
 
-
 impl LoadedAnvilFile {
     /// Get all the locations from the table
     ///
@@ -95,12 +91,13 @@ impl LoadedAnvilFile {
     /// can be used to get the chunk data with `get_chunk_from_location`. They are probably in order
     /// but not guaranteed to be
     pub fn get_locations(&self) -> Vec<u32> {
-        (0..1024).map(|i| {
-            u32::from(self.table[i * 4]) << 24
-                | u32::from(self.table[i * 4 + 1]) << 16
-                | u32::from(self.table[i * 4 + 2]) << 8
-                | u32::from(self.table[i * 4 + 3])
-        })
+        (0..1024)
+            .map(|i| {
+                u32::from(self.table[i * 4]) << 24
+                    | u32::from(self.table[i * 4 + 1]) << 16
+                    | u32::from(self.table[i * 4 + 2]) << 8
+                    | u32::from(self.table[i * 4 + 3])
+            })
             .filter(|&x| x != 0)
             .collect::<Vec<u32>>()
     }
@@ -177,14 +174,13 @@ impl LoadedAnvilFile {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use fastanvil::Region;
+    use rayon::prelude::*;
     use std::fs::File;
     use std::io::Read;
-    use fastanvil::Region;
-    use super::*;
-    use rayon::prelude::*;
 
     #[test]
     fn test_load_anvil_file() {
@@ -210,7 +206,10 @@ mod tests {
         let file_path = PathBuf::from("../.etc/regions/r.0.0.mca");
         let loaded_file = load_anvil_file(file_path.clone()).unwrap();
         let chunk = loaded_file.get_chunk(0, 0);
-        let fast_chunk = Region::from_stream(File::open(file_path).unwrap()).unwrap().read_chunk(0, 0).unwrap();
+        let fast_chunk = Region::from_stream(File::open(file_path).unwrap())
+            .unwrap()
+            .read_chunk(0, 0)
+            .unwrap();
         assert!(chunk.is_some());
         assert!(fast_chunk.is_some());
         assert_eq!(chunk.clone().unwrap(), fast_chunk.unwrap());

@@ -248,7 +248,7 @@ impl World {
         let closed = client.closed.load(std::sync::atomic::Ordering::Relaxed);
         let chunks = Arc::new(chunks);
         tokio::spawn(async move {
-            let level = level.lock().await;
+            let mut level = level.lock().await;
             level.fetch_chunks(&chunks, sender, closed)
         });
 
