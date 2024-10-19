@@ -3,11 +3,7 @@ use std::collections::HashMap;
 use crate::{bytebuf::ByteBuffer, BitSet, ClientPacket, VarInt};
 use itertools::Itertools;
 use pumpkin_macros::packet;
-use pumpkin_world::{
-    block::{Block, BlockState},
-    chunk::ChunkData,
-    DIRECT_PALETTE_BITS,
-};
+use pumpkin_world::{chunk::ChunkData, DIRECT_PALETTE_BITS};
 
 #[packet(0x27)]
 pub struct CChunkData<'a>(pub &'a ChunkData);
