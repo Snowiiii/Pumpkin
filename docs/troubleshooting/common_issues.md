@@ -1,16 +1,6 @@
 ### Common Issues
 
-1.  ### Broken Chunk Lighting
-
-    See [#93](https://github.com/Snowiiii/Pumpkin/issues/93)
-
-    **Issue:** Broken chunk lighting on your Minecraft server.
-
-    **Cause:** The server is currently not calculating lighting for chunks, we're working on that.
-
-    **Temporary Fix:** Use a full-bright resource pack. This will temporarily resolve the issue by making all chunks appear brightly lit. You can find many full-bright resource packs online.
-
-2.  ### I can place blocks inside me
+1.  ### I can place blocks inside me
 
     See [#49](https://github.com/Snowiiii/Pumpkin/issues/49)
 
@@ -18,7 +8,7 @@
 
     **Cause:** The server is currently not calculating hit boxes for blocks, we're working on that.
 
-3.  ### Failed to verify username
+2.  ### Failed to verify username
 
     **Issue:** Some players reported having issues logging into the Server, including a "Failed to verify username" error.
 

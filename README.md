@@ -45,6 +45,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] World Joining
   - [x] Player Tab-list
   - [x] World Loading
+  - [x] Lighting
   - [x] Entity Spawning
   - [x] Chunk Loading
   - [x] Chunk Generation
