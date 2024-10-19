@@ -19,7 +19,7 @@ impl Cylindrical {
         old_cylindrical: Cylindrical,
         new_cylindrical: Cylindrical,
         mut newly_included: impl FnMut(Vector2<i32>),
-        just_removed: impl FnMut(Vector2<i32>),
+        mut just_removed: impl FnMut(Vector2<i32>),
         ignore: bool,
     ) {
         let min_x = old_cylindrical.left().min(new_cylindrical.left());
@@ -29,26 +29,24 @@ impl Cylindrical {
 
         for x in min_x..=max_x {
             for z in min_z..=max_z {
-                // TODO
-                // let old_is_within = if ignore {
-                //     false
-                // } else {
-                //     old_cylindrical.is_within_distance(x, z)
-                // };
-                // let new_is_within = if ignore {
-                //     true
-                // } else {
-                //     new_cylindrical.is_within_distance(x, z)
-                // };
+                let old_is_within = if ignore {
+                    false
+                } else {
+                    old_cylindrical.is_within_distance(x, z)
+                };
+                let new_is_within = if ignore {
+                    true
+                } else {
+                    new_cylindrical.is_within_distance(x, z)
+                };
 
-                // if old_is_within != new_is_within {
-                //     if new_is_within {
-                newly_included(Vector2::new(x, z));
-                //     } else {
-                //         dbg!("aa");
-                //         just_removed(Vector2::new(x, z));
-                //     }
-                // }
+                if old_is_within != new_is_within {
+                    if new_is_within {
+                        newly_included(Vector2::new(x, z));
+                    } else {
+                        just_removed(Vector2::new(x, z));
+                    }
+                }
             }
         }
     }
