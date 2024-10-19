@@ -6,7 +6,9 @@ use rayon::prelude::*;
 use tokio::sync::mpsc;
 
 use crate::{
-    chunk::{anvil::AnvilChunkReader, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError},
+    chunk::{
+        anvil::AnvilChunkReader, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
+    },
     world_gen::{get_world_gen, Seed, WorldGenerator},
 };
 
@@ -96,7 +98,10 @@ impl Level {
             let data = match &self.save_file {
                 Some(save_file) => {
                     match self.chunk_reader.read_chunk(save_file, at) {
-                        Err(ChunkReadingError::ParsingError(ChunkParsingError::ChunkNotGenerated) | ChunkReadingError::ChunkNotExist) => {
+                        Err(
+                            ChunkReadingError::ParsingError(ChunkParsingError::ChunkNotGenerated)
+                            | ChunkReadingError::ChunkNotExist,
+                        ) => {
                             // This chunk was not generated yet.
                             Ok(self.world_gen.generate_chunk(at))
                         }

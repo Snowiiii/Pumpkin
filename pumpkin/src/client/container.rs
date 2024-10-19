@@ -1,6 +1,7 @@
 use crate::entity::player::Player;
 use crate::server::Server;
 use itertools::Itertools;
+use pumpkin_core::text::TextComponent;
 use pumpkin_core::GameMode;
 use pumpkin_inventory::container_click::{
     Click, ClickType, KeyClick, MouseClick, MouseDragState, MouseDragType,
@@ -10,7 +11,7 @@ use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
 use pumpkin_inventory::Container;
 use pumpkin_inventory::{container_click, InventoryError, OptionallyCombinedContainer};
 use pumpkin_protocol::client::play::{
-    CCloseContainer, CSetContainerContent, CSetContainerProperty, CSetContainerSlot,
+    CCloseContainer, COpenScreen, CSetContainerContent, CSetContainerProperty, CSetContainerSlot,
 };
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
@@ -26,28 +27,30 @@ impl Player {
         let total_opened_containers = inventory.total_opened_containers;
         let container = self.get_open_container(server);
         let container = container.as_ref().map(|container| container.lock());
-        // let menu_protocol_id = (*pumpkin_world::global_registry::REGISTRY
-        //     .get("minecraft:menu")
-        //     .unwrap()
-        //     .entries
-        //     .get(minecraft_menu_id)
-        //     .expect("Should be a valid menu id")
-        //     .get("protocol_id")
-        //     .unwrap())
-        // .into();
-        // let window_title = container
-        //     .as_ref()
-        //     .map(|container| container.window_name())
-        //     .unwrap_or_else(|| inventory.window_name());
-        // let title = TextComponent::text(window_title);
+        let menu_protocol_id = (*pumpkin_world::global_registry::REGISTRY
+            .get("minecraft:menu")
+            .unwrap()
+            .entries
+            .get(minecraft_menu_id)
+            .expect("Should be a valid menu id")
+            .get("protocol_id")
+            .unwrap())
+        .into();
+        let window_title = match container {
+            Some(container) => container.await.window_name(),
+            None => inventory.window_name(),
+        };
+        let title = TextComponent::text(window_title);
 
-        // self.client.send_packet(&COpenScreen::new(
-        //     total_opened_containers.into(),
-        //     menu_protocol_id,
-        //     title,
-        // ));
+        self.client
+            .send_packet(&COpenScreen::new(
+                total_opened_containers.into(),
+                menu_protocol_id,
+                title,
+            ))
+            .await;
         drop(inventory);
-        //  self.set_container_content(container.as_deref_mut());
+        // self.set_container_content(container.as_deref_mut());
     }
 
     pub async fn set_container_content(&self, container: Option<&mut Box<dyn Container>>) {

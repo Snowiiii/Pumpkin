@@ -298,8 +298,9 @@ impl World {
     }
 
     /// Gets a Player by name
-    pub async fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
-        for player in self.current_players.lock().await.values() {
+    pub fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
+        // not sure of blocking lock
+        for player in self.current_players.blocking_lock().values() {
             if player.gameprofile.name == name {
                 return Some(player.clone());
             }

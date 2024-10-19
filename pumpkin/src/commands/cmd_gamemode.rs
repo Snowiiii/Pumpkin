@@ -98,17 +98,17 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
                         let target = parse_arg_player(sender, server, ARG_TARGET, args)?;
 
                         if target.gamemode.load() == gamemode {
-                            sender.send_message(TextComponent::text(&format!(
-                                "{} is already in {:?} gamemode",
-                                target.gameprofile.name, gamemode
-                            )));
+                            // sender.send_message(TextComponent::text(&format!(
+                            //     "{} is already in {:?} gamemode",
+                            //     target.gameprofile.name, gamemode
+                            // )));
                         } else {
                             // TODO
                             target.set_gamemode(gamemode);
-                            sender.send_message(TextComponent::text(&format!(
-                                "{}'s Game mode was set to {:?}",
-                                target.gameprofile.name, gamemode
-                            )));
+                            // sender.send_message(TextComponent::text(&format!(
+                            //     "{}'s Game mode was set to {:?}",
+                            //     target.gameprofile.name, gamemode
+                            // )));
                         }
 
                         Ok(())

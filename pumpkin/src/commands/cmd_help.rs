@@ -43,12 +43,12 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
             argument(ARG_COMMAND, consume_arg_command).execute(&|sender, server, args| {
                 let tree = parse_arg_command(args, &server.command_dispatcher)?;
 
-                sender.send_message(TextComponent::text(&format!(
-                    "{} - {} Usage: {}",
-                    tree.names.join("/"),
-                    tree.description,
-                    tree
-                )));
+                // sender.send_message(TextComponent::text(&format!(
+                //     "{} - {} Usage: {}",
+                //     tree.names.join("/"),
+                //     tree.description,
+                //     tree
+                // )));
 
                 Ok(())
             }),
@@ -62,12 +62,12 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
                     continue;
                 };
 
-                sender.send_message(TextComponent::text(&format!(
-                    "{} - {} Usage: {}",
-                    tree.names.join("/"),
-                    tree.description,
-                    tree
-                )));
+                // sender.send_message(TextComponent::text(&format!(
+                //     "{} - {} Usage: {}",
+                //     tree.names.join("/"),
+                //     tree.description,
+                //     tree
+                // )));
             }
 
             Ok(())

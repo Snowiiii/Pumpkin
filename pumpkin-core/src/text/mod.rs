@@ -40,6 +40,13 @@ impl<'a> TextComponent<'a> {
         }
     }
 
+    pub fn text_string(text: String) -> Self {
+        Self {
+            content: TextContent::Text { text: text.into() },
+            style: Style::default(),
+        }
+    }
+
     pub fn to_pretty_console(self) -> String {
         let style = self.style;
         let color = style.color;

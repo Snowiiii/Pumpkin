@@ -276,7 +276,7 @@ impl Player {
             .await;
     }
 
-    pub async fn send_system_message<'a>(&self, text: TextComponent<'a>) {
+    pub async fn send_system_message<'a>(&self, text: &TextComponent<'a>) {
         self.client
             .send_packet(&CSystemChatMessage::new(text, false))
             .await;
@@ -284,7 +284,7 @@ impl Player {
 }
 
 impl Player {
-    pub async fn process_packets(&self, server: &Arc<Server>) {
+    pub async fn process_packets(self: &Arc<Self>, server: &Arc<Server>) {
         let mut packets = self.client.client_packets_queue.lock().await;
         while let Some(mut packet) = packets.pop_back() {
             match self.handle_play_packet(server, &mut packet).await {
@@ -308,7 +308,7 @@ impl Player {
     }
 
     pub async fn handle_play_packet(
-        &self,
+        self: &Arc<Self>,
         server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), Box<dyn PumpkinError>> {

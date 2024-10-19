@@ -11,7 +11,6 @@
 #![expect(clippy::significant_drop_tightening)]
 #![expect(clippy::future_not_send)]
 #![expect(clippy::single_call_fn)]
-#![expect(clippy::await_holding_lock)]
 
 #[cfg(target_os = "wasi")]
 compile_error!("Compiling for WASI targets is not supported!");
@@ -150,7 +149,7 @@ async fn main() -> io::Result<()> {
     if rcon.enabled {
         let server = server.clone();
         tokio::spawn(async move {
-            RCONServer::new(&rcon, &server).await.unwrap();
+            RCONServer::new(&rcon, server).await.unwrap();
         });
     }
     let mut unique_id = 0;

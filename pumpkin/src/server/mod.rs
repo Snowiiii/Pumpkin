@@ -131,7 +131,7 @@ impl Server {
     /// Searches every world for a player by name
     pub async fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
         for world in self.worlds.iter() {
-            if let Some(player) = world.get_player_by_name(name).await {
+            if let Some(player) = world.get_player_by_name(name) {
                 return Some(player);
             }
         }

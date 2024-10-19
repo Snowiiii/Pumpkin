@@ -1,4 +1,7 @@
-use crate::commands::tree::CommandTree;
+use pumpkin_core::text::{color::NamedColor, TextComponent};
+use pumpkin_protocol::CURRENT_MC_PROTOCOL;
+
+use crate::{commands::tree::CommandTree, server::CURRENT_MC_VERSION};
 
 const NAMES: [&str; 1] = ["pumpkin"];
 
@@ -11,7 +14,7 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
 
         // sender.send_message(TextComponent::text(
         //     &format!("Pumpkin {version}, {description} (Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL})")
-        // ).color_named(NamedColor::Green));
+        // ).color_named(NamedColor::Green)).await;
 
         Ok(())
     })

@@ -78,11 +78,10 @@ pub async fn update_position(entity: &Entity, player: &Player) {
             Vector2::new(current_watched.x, current_watched.z),
             view_distance,
         );
-        let new_cylindrical =
-            Cylindrical::new(chunk_pos, view_distance);
+        let new_cylindrical = Cylindrical::new(chunk_pos, view_distance);
 
         player.watched_section.store(new_watched);
-        
+
         let mut loading_chunks = Vec::new();
         Cylindrical::for_each_changed_chunk(
             old_cylindrical,
