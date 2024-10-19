@@ -3,7 +3,6 @@ use key_store::KeyStore;
 use parking_lot::{Mutex, RwLock};
 use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::math::distance::distance;
-use pumpkin_core::math::vector3::Vector3;
 use pumpkin_core::text::TextComponent;
 use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
@@ -142,18 +141,20 @@ impl Server {
         self.worlds.iter().flat_map(|world| world.get_players())
     }
 
-    /// Gets the nearest player from the world position
-    pub fn get_nearest_player(&self, target: &Vector3<f64>) -> Option<Arc<Player>> {
-        // TODO respect which world the player is in
-        let world = self.worlds.first()?;
+    /// Gets the nearest player from another player
+    pub fn get_nearest_player(&self, player: &Player) -> Option<Arc<Player>> {
+        let target = player.last_position.load();
 
-        world
+        player
+            .living_entity
+            .entity
+            .world
             .current_players
             .lock()
             .values()
             .min_by(|a, b| {
-                let dist_a = distance(&a.last_position.load(), target);
-                let dist_b = distance(&b.last_position.load(), target);
+                let dist_a = distance(&a.last_position.load(), &target);
+                let dist_b = distance(&b.last_position.load(), &target);
                 dist_a.partial_cmp(&dist_b).unwrap()
             })
             .cloned()

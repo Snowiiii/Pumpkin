@@ -3,7 +3,6 @@ use crate::commands::tree::RawArgs;
 use crate::commands::tree_builder::argument;
 use crate::commands::CommandSender;
 use crate::server::Server;
-use pumpkin_core::math::vector3::Vector3;
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 
 const NAMES: [&str; 1] = ["say"];
@@ -53,13 +52,15 @@ fn parse_selectors(content: &str, sender: &CommandSender, server: &Server) -> St
         // TODO impl @e
         let result = match token {
             "@p" => {
-                let position = match sender {
-                    CommandSender::Player(p) => p.last_position.load(),
-                    _ => Vector3::new(0., 0., 0.),
-                };
-                vec![server
-                    .get_nearest_player(&position)
-                    .map_or_else(|| String::from("nobody"), |p| p.gameprofile.name.clone())]
+                if let CommandSender::Player(player) = sender {
+                    vec![server
+                        .get_nearest_player(player)
+                        .map_or_else(|| String::from("nobody"), |p| p.gameprofile.name.clone())]
+                } else {
+                    final_message.push_str(token);
+                    final_message.push(' ');
+                    continue;
+                }
             }
             "@r" => {
                 let online_players: Vec<String> = server
@@ -85,7 +86,11 @@ fn parse_selectors(content: &str, sender: &CommandSender, server: &Server) -> St
                 .get_online_players()
                 .map(|p| p.gameprofile.name.clone())
                 .collect::<Vec<_>>(),
-            _ => vec![token.to_string()],
+            _ => {
+                final_message.push_str(token);
+                final_message.push(' ');
+                continue;
+            }
         };
 
         // formatted player names
