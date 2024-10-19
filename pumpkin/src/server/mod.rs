@@ -138,7 +138,10 @@ impl Server {
 
     /// Get all online player names
     pub fn get_online_player_names(&self) -> Vec<String> {
-        self.worlds.iter().flat_map(|world| world.get_player_names()).collect::<Vec<_>>()
+        self.worlds
+            .iter()
+            .flat_map(|world| world.get_player_names())
+            .collect::<Vec<_>>()
     }
 
     /// Gets the nearest player from another player
