@@ -176,13 +176,13 @@ Run args:
 
 <sub>[Used example code from](https://minestom.net/docs/setup/your-first-server)</sub>
 
-| Players | RAM                 | CPU idle                                | CPU Max          |
-| ------- | ------------------- | --------------------------------------- | ---------------- |
-| 0       | <FmtNum :n=228 />MB | <FmtNum :n=0.1 /> - <FmtNum :n=0.3 />%  | <FmtNum :n=1 />% |
+| Players | RAM                 | CPU idle                               | CPU Max          |
+| ------- | ------------------- | -------------------------------------- | ---------------- |
+| 0       | <FmtNum :n=228 />MB | <FmtNum :n=0.1 /> - <FmtNum :n=0.3 />% | <FmtNum :n=1 />% |
 | 1       | <FmtNum :n=365 />MB | <FmtNum :n=0.9 /> - <FmtNum :n=1.0 />% | <FmtNum :n=5 />% |
-| 2       | <FmtNum :n=371 />MB | <FmtNum :n=1 /> - <FmtNum :n=1.1 />%    | <FmtNum :n=4 />% |
-| 5       | <FmtNum :n=390 />MB | <FmtNum :n=1.0 />%                      | <FmtNum :n=6 />% |
-| 10      | <FmtNum :n=421 />MB | <FmtNum :n=3 />%                        | <FmtNum :n=9 />% |
+| 2       | <FmtNum :n=371 />MB | <FmtNum :n=1 /> - <FmtNum :n=1.1 />%   | <FmtNum :n=4 />% |
+| 5       | <FmtNum :n=390 />MB | <FmtNum :n=1.0 />%                     | <FmtNum :n=6 />% |
+| 10      | <FmtNum :n=421 />MB | <FmtNum :n=3 />%                       | <FmtNum :n=9 />% |
 
 
 Benchmarked at <FmtDateTime :d="new Date('2024-10-15T16:34Z')" />
