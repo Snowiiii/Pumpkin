@@ -64,17 +64,13 @@ fn fetch_translations(
 
 fn make_hashmap(vec: Vec<Value>) -> HashMap<String, String> {
     let mut hashmap: HashMap<String, String> = HashMap::new();
-    let empty_string = String::default(); //Compiler complains about temporary values, clippy complains about unwrap_or
 
     for value in vec {
         if let Value::Object(map) = value {
-            let text = map.keys().next().unwrap_or(&empty_string);
-            if let Value::String(translation) = map
-                .values()
-                .next()
-                .unwrap_or(&Value::String(String::default()))
-            {
-                hashmap.insert(text.to_owned(), translation.to_owned());
+            if let Some(text) = map.keys().next() {
+                if let Some(Value::String(translation)) = map.values().next() {
+                    hashmap.insert(text.to_owned(), translation.to_owned());
+                }
             }
         }
     }
