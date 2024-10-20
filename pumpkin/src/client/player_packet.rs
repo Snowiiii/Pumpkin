@@ -436,9 +436,7 @@ impl Player {
                                     victem_velocity.z as f32,
                                 );
                                 let velocity = entity.velocity.load();
-                                entity
-                                    .velocity
-                                    .store(velocity.multiply(0.6, 1.0, 0.6));
+                                entity.velocity.store(velocity.multiply(0.6, 1.0, 0.6));
 
                                 victem_entity.velocity.store(saved_velo);
                                 player.client.send_packet(packet).await;
