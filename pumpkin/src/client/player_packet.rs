@@ -20,7 +20,7 @@ use pumpkin_protocol::{
     client::play::{
         Animation, CAcknowledgeBlockChange, CBlockUpdate, CEntityAnimation, CEntityVelocity,
         CHeadRot, CHurtAnimation, CPingResponse, CPlayerChatMessage, CUpdateEntityPos,
-        CUpdateEntityPosRot, CUpdateEntityRot, CWorldEvent, FilterType,
+        CUpdateEntityPosRot, CUpdateEntityRot, FilterType,
     },
     server::play::{
         Action, ActionType, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport,
@@ -483,13 +483,7 @@ impl Player {
                         // TODO: currently this is always dirt replace it
                         let entity = &self.living_entity.entity;
                         let world = &entity.world;
-                        world
-                            .broadcast_packet_all(&CWorldEvent::new(2001, &location, 11, false))
-                            .await;
-                        // AIR
-                        world
-                            .broadcast_packet_all(&CBlockUpdate::new(&location, 0.into()))
-                            .await;
+                        world.break_block(location).await;
                     }
                 }
                 Status::CancelledDigging => {
@@ -511,13 +505,7 @@ impl Player {
                     // TODO: currently this is always dirt replace it
                     let entity = &self.living_entity.entity;
                     let world = &entity.world;
-                    world
-                        .broadcast_packet_all(&CWorldEvent::new(2001, &location, 11, false))
-                        .await;
-                    // AIR
-                    world
-                        .broadcast_packet_all(&CBlockUpdate::new(&location, 0.into()))
-                        .await;
+                    world.break_block(location).await;
                     // TODO: Send this every tick
                     self.client
                         .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence))
