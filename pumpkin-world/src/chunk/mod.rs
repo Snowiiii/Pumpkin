@@ -16,9 +16,9 @@ use crate::{
 
 pub mod anvil;
 
-const CHUNK_AREA: usize = 16 * 16;
-const SUBCHUNK_VOLUME: usize = CHUNK_AREA * 16;
-const CHUNK_VOLUME: usize = CHUNK_AREA * WORLD_HEIGHT;
+pub const CHUNK_AREA: usize = 16 * 16;
+pub const SUBCHUNK_VOLUME: usize = CHUNK_AREA * 16;
+pub const CHUNK_VOLUME: usize = CHUNK_AREA * WORLD_HEIGHT;
 
 pub trait ChunkReader: Sync + Send {
     fn read_chunk(
@@ -87,7 +87,7 @@ struct ChunkSectionBlockStates {
 #[serde(rename_all = "UPPERCASE")]
 pub struct ChunkHeightmaps {
     motion_blocking: LongArray,
-    world_surface: LongArray,
+    pub world_surface: LongArray,
 }
 
 #[derive(Deserialize, Debug)]
@@ -203,7 +203,7 @@ impl ChunkBlocks {
             .map(|subchunk| subchunk.try_into().unwrap())
     }
 
-    fn convert_index(index: ChunkRelativeBlockCoordinates) -> usize {
+    pub fn convert_index(index: ChunkRelativeBlockCoordinates) -> usize {
         // % works for negative numbers as intended.
         index.y.get_absolute() as usize * CHUNK_AREA + *index.z as usize * 16 + *index.x as usize
     }

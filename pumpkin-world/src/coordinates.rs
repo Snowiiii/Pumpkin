@@ -73,6 +73,19 @@ pub struct BlockCoordinates {
     pub z: i32,
 }
 
+impl BlockCoordinates {
+    pub fn chunk_coordinates(&self) -> Vector2<i32> {
+        Vector2::new(self.x / 16, self.z / 16)
+    }
+    pub fn relative_chunk_coordinates(&self) -> ChunkRelativeBlockCoordinates {
+        ChunkRelativeBlockCoordinates {
+            x: ChunkRelativeOffset((self.x % 16) as u8),
+            y: self.y,
+            z: ChunkRelativeOffset((self.z % 16) as u8),
+        }
+    }
+}
+
 /// BlockCoordinates that do not specify a height.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct XZBlockCoordinates {

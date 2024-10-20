@@ -3,7 +3,11 @@ use std::collections::HashMap;
 use crate::{bytebuf::ByteBuffer, BitSet, ClientPacket, VarInt};
 use itertools::Itertools;
 use pumpkin_macros::packet;
-use pumpkin_world::{chunk::ChunkData, DIRECT_PALETTE_BITS};
+use pumpkin_world::{
+    chunk::{ChunkData, SUBCHUNK_VOLUME},
+    lighting::ChunkLighting,
+    DIRECT_PALETTE_BITS,
+};
 
 #[packet(0x27)]
 pub struct CChunkData<'a>(pub &'a ChunkData);
@@ -113,7 +117,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
         // Sky Light Mask
         // All of the chunks, this is not optimal and uses way more data than needed but will be
         // overhauled with full lighting system.
-        buf.put_bit_set(&BitSet(VarInt(1), &[0b01111111111111111111111110]));
+        buf.put_bit_set(&BitSet(VarInt(1), &[0b11111111111111111111111111]));
         // Block Light Mask
         buf.put_bit_set(&BitSet(VarInt(1), &[0]));
         // Empty Sky Light Mask
@@ -122,20 +126,32 @@ impl<'a> ClientPacket for CChunkData<'a> {
         buf.put_bit_set(&BitSet(VarInt(1), &[0]));
 
         let mut lighting_subchunks = Vec::new();
+        let lighting = ChunkLighting::new(&self.0.blocks, &self.0.blocks.heightmap.world_surface);
+        let light_data = lighting.generate_initial_lighting();
 
-        self.0.blocks.iter_subchunks().for_each(|chunk| {
-            let mut chunk_light = [0u8; 2048];
-            for (i, block) in chunk.iter().enumerate() {
-                if !block.is_air() {
-                    continue;
-                }
-                let index = i / 2;
-                let mask = if i % 2 == 1 { 0xF0 } else { 0x0F };
-                chunk_light[index] |= mask;
+        for subchunk_lighting in light_data.chunks(SUBCHUNK_VOLUME) {
+            let mut output = Vec::with_capacity(SUBCHUNK_VOLUME / 2);
+            for i in 0..(SUBCHUNK_VOLUME / 2) {
+                let value = subchunk_lighting[i * 2].get_skylight()
+                    | (subchunk_lighting[i * 2 + 1].get_skylight() << 4);
+                output.push(value);
             }
+            lighting_subchunks.push(output);
+        }
 
-            lighting_subchunks.push(chunk_light);
-        });
+        // self.0.blocks.iter_subchunks().for_each(|chunk| {
+        //     let mut chunk_light = [0u8; 2048];
+        //     for (i, block) in chunk.iter().enumerate() {
+        //         if !block.is_air() {
+        //             continue;
+        //         }
+        //         let index = i / 2;
+        //         let mask = if i % 2 == 1 { 0xF0 } else { 0x0F };
+        //         chunk_light[index] |= mask;
+        //     }
+        //
+        //     lighting_subchunks.push(chunk_light);
+        // });
 
         buf.put_var_int(&lighting_subchunks.len().into());
         for subchunk in lighting_subchunks {
