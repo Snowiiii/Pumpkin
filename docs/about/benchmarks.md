@@ -2,14 +2,6 @@
 
 Here, common Minecraft servers are compared against Pumpkin.
 
-> [!NOTE]
-> All tests have been ran multiple times to guarantee consistent results.
-> All players did not move when spawning, only the initial 8 chunks were loaded.
-> All servers used their own terrain generation, no world was pre-loaded.
-
-> [!IMPORTANT]
-> `CPU Max` is usually higher with one player is as the initial chunks are being loaded.
-
 > [!CAUTION]
 > **This comparison is unfair.** Pumpkin currently has far fewer features than other servers, which might suggest it uses fewer resources.
 > It's also important to consider that other servers have had years for optimization.
@@ -55,6 +47,14 @@ Here, common Minecraft servers are compared against Pumpkin.
 - Rcon: false
 
 <sub><sup>online mode was disabled for easier testing with non-premium accounts</sup></sub>
+
+> [!NOTE]
+> All tests have been ran multiple times to guarantee consistent results.
+> All players did not move when spawning, only the initial 8 chunks were loaded.
+> All servers used their own terrain generation, no world was pre-loaded.
+
+> [!IMPORTANT]
+> `CPU Max` is usually higher with one player as the initial chunks are being loaded.
 
 ## Pumpkin
 
