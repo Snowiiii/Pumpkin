@@ -6,9 +6,9 @@ use pumpkin_macros::packet;
 use pumpkin_world::{chunk::ChunkData, DIRECT_PALETTE_BITS};
 
 #[packet(0x27)]
-pub struct CChunkData(pub ChunkData);
+pub struct CChunkData<'a>(pub &'a ChunkData);
 
-impl ClientPacket for CChunkData {
+impl<'a> ClientPacket for CChunkData<'a> {
     fn write(&self, buf: &mut crate::bytebuf::ByteBuffer) {
         // Chunk X
         buf.put_i32(self.0.position.x);
