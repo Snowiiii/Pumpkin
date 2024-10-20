@@ -421,13 +421,13 @@ impl Player {
                             if config.knockback {
                                 let yaw = entity.yaw.load();
                                 let strength = 1.0;
-                                let victem_velocity = victem_entity.velocity.load();
-                                let saved_velo = victem_velocity;
+                                let saved_velo = victem_entity.velocity.load();
                                 victem_entity.knockback(
                                     strength * 0.5,
                                     (yaw * (PI / 180.0)).sin() as f64,
                                     -(yaw * (PI / 180.0)).cos() as f64,
                                 );
+                                let victem_velocity = victem_entity.velocity.load();
                                 let packet = &CEntityVelocity::new(
                                     &entity_id,
                                     victem_velocity.x as f32,
@@ -435,9 +435,7 @@ impl Player {
                                     victem_velocity.z as f32,
                                 );
                                 let velocity = entity.velocity.load();
-                                victem_entity
-                                    .velocity
-                                    .store(velocity.multiply(0.6, 1.0, 0.6));
+                                entity.velocity.store(velocity.multiply(0.6, 1.0, 0.6));
 
                                 victem_entity.velocity.store(saved_velo);
                                 player.client.send_packet(packet).await;
