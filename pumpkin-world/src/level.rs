@@ -182,6 +182,7 @@ impl Level {
             });
             match maybe_chunk {
                 Some(chunk) => {
+                    log::debug!("Sending chunk {:?}", at);
                     channel
                         .blocking_send(chunk.clone())
                         .expect("Failed sending ChunkData.");

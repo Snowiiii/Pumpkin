@@ -302,6 +302,7 @@ impl World {
 
         tokio::spawn(async move {
             while let Some(chunk_data) = chunk_receiver.recv().await {
+                log::debug!("Recieved chunk {:?}", chunk_data.position);
                 // dbg!(chunk_pos);
                 #[cfg(debug_assertions)]
                 if chunk_data.position == (0, 0).into() {
