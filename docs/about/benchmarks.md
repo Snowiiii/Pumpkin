@@ -105,13 +105,13 @@ Run args: `nogui`
 
 **Shutdown time:** <FmtNum :n=4 />sec
 
-| Players | RAM                | CPU idle                             | CPU Max |
-| ------- | ------------------ | ------------------------------------ | ------- |
-| 0       | 860MB              | <FmtNum n=0.1 /> - <FmtNum n=0.3 />% | 51%     |
-| 1       | <FmtNum n=1.5 />GB | <FmtNum n=0.9 /> - 1%                | 41%     |
-| 2       | <FmtNum n=1.6 />GB | 1 - <FmtNum n=1.1 />%                | 10%     |
-| 5       | <FmtNum n=1.8 />GB | 2%                                   | 20%     |
-| 10      | <FmtNum n=2.2 />GB | 4%                                   | 24%     |
+| Players | RAM                   | CPU idle                                 | CPU Max            |
+| ------- | --------------------- | ---------------------------------------- | ------------------ |
+| 0       | <FmtNum n="860" />MB  | <FmtNum n="0.1" /> - <FmtNum n="0.3" />% | <FmtNum n="51" />% |
+| 1       | <FmtNum n="1.5" />GB  | <FmtNum n="0.9" /> - <FmtNum n="1" />%   | <FmtNum n="41" />% |
+| 2       | <FmtNum n="1.6" />GB  | <FmtNum n="1" /> - <FmtNum n="1.1" />%   | <FmtNum n="10" />% |
+| 5       | <FmtNum n="1.8" />GB  | <FmtNum n="2" />%                        | <FmtNum n="20" />% |
+| 10      | <FmtNum n="2.2" />GB  | <FmtNum n="4" />%                        | <FmtNum n="24" />% |
 
 ## Paper
 
