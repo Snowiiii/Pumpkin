@@ -8,11 +8,15 @@ use std::{
 };
 
 use serde_json::Value;
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum TranslationError {
+    #[error("File cannot be opened.")]
     InvalidFile,
-    FileRead,
+    #[error("Failed to read file. Error: {0}")]
+    FileRead(std::io::Error),
+    #[error("Invalid JSON encountered. Use only objects in the translation file.")]
     JsonParse,
 }
 
@@ -28,7 +32,7 @@ pub fn translate(
     Ok(results)
 }
 
-//Read a huge object line by line and tricking serde_json into thinking they are individual objects
+///Read a huge object line by line and tricking serde_json into thinking they are individual objects
 fn fetch_translations(
     mut reader: impl BufRead,
     message: &str,
@@ -39,7 +43,7 @@ fn fetch_translations(
     loop {
         let bytes_read = reader
             .read_line(&mut buf)
-            .map_err(|_| TranslationError::FileRead)?;
+            .map_err(TranslationError::FileRead)?;
 
         if bytes_read == 0 {
             break;
