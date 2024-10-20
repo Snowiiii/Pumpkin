@@ -126,7 +126,11 @@ impl World {
         let z = 10.0;
         let yaw = 10.0;
         let pitch = 10.0;
-        player.teleport(x, y, z, 10.0, 10.0).await;
+        player.teleport(x, y, z, yaw, pitch).await;
+
+        let pos = player.living_entity.entity.pos.load();
+        player.last_position.store(pos);
+
         let gameprofile = &player.gameprofile;
         // first send info update to our new player, So he can see his Skin
         // also send his info to everyone else

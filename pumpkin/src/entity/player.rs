@@ -180,6 +180,7 @@ impl Player {
             .await;
     }
 
+    /// yaw and pitch in degrees
     pub async fn teleport(&self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
         // this is the ultra special magic code used to create the teleport id
         // This returns the old value

@@ -75,21 +75,26 @@ impl Player {
             self.kick(TextComponent::text("Invalid movement")).await;
             return;
         }
+
         let entity = &self.living_entity.entity;
         entity.set_pos(
             Self::clamp_horizontal(position.x),
             Self::clamp_vertical(position.feet_y),
             Self::clamp_horizontal(position.z),
         );
+
         let pos = entity.pos.load();
-        self.last_position.store(pos);
         let last_position = self.last_position.load();
+
+        self.last_position.store(pos);
+
         entity
             .on_ground
             .store(position.ground, std::sync::atomic::Ordering::Relaxed);
+
         let entity_id = entity.entity_id;
         let Vector3 { x, y, z } = pos;
-        let (lastx, lasty, lastz) = (last_position.x, last_position.y, last_position.z);
+        let (last_x, last_y, last_z) = (last_position.x, last_position.y, last_position.z);
         let world = &entity.world;
 
         // let delta = Vector3::new(x - lastx, y - lasty, z - lastz);
@@ -110,9 +115,9 @@ impl Player {
                 &[self.client.id],
                 &CUpdateEntityPos::new(
                     entity_id.into(),
-                    x.mul_add(4096.0, -(lastx * 4096.0)) as i16,
-                    y.mul_add(4096.0, -(lasty * 4096.0)) as i16,
-                    z.mul_add(4096.0, -(lastz * 4096.0)) as i16,
+                    x.mul_add(4096.0, -(last_x * 4096.0)) as i16,
+                    y.mul_add(4096.0, -(last_y * 4096.0)) as i16,
+                    z.mul_add(4096.0, -(last_z * 4096.0)) as i16,
                     position.ground,
                 ),
             )
@@ -128,24 +133,28 @@ impl Player {
             self.kick(TextComponent::text("Invalid movement")).await;
             return;
         }
+
         if position_rotation.yaw.is_infinite() || position_rotation.pitch.is_infinite() {
             self.kick(TextComponent::text("Invalid rotation")).await;
             return;
         }
-        let entity = &self.living_entity.entity;
 
+        let entity = &self.living_entity.entity;
         entity.set_pos(
             Self::clamp_horizontal(position_rotation.x),
             Self::clamp_vertical(position_rotation.feet_y),
             Self::clamp_horizontal(position_rotation.z),
         );
+
         let pos = entity.pos.load();
-        self.last_position.store(pos);
         let last_position = self.last_position.load();
+
+        self.last_position.store(pos);
         entity.on_ground.store(
             position_rotation.ground,
             std::sync::atomic::Ordering::Relaxed,
         );
+
         entity.set_rotation(
             wrap_degrees(position_rotation.yaw) % 360.0,
             wrap_degrees(position_rotation.pitch).clamp(-90.0, 90.0) % 360.0,
@@ -153,7 +162,8 @@ impl Player {
 
         let entity_id = entity.entity_id;
         let Vector3 { x, y, z } = pos;
-        let (lastx, lasty, lastz) = (last_position.x, last_position.y, last_position.z);
+        let (last_x, last_y, last_z) = (last_position.x, last_position.y, last_position.z);
+
         let yaw = modulus(entity.yaw.load() * 256.0 / 360.0, 256.0);
         let pitch = modulus(entity.pitch.load() * 256.0 / 360.0, 256.0);
         // let head_yaw = (entity.head_yaw * 256.0 / 360.0).floor();
@@ -178,9 +188,9 @@ impl Player {
                 &[self.client.id],
                 &CUpdateEntityPosRot::new(
                     entity_id.into(),
-                    x.mul_add(4096.0, -(lastx * 4096.0)) as i16,
-                    y.mul_add(4096.0, -(lasty * 4096.0)) as i16,
-                    z.mul_add(4096.0, -(lastz * 4096.0)) as i16,
+                    x.mul_add(4096.0, -(last_x * 4096.0)) as i16,
+                    y.mul_add(4096.0, -(last_y * 4096.0)) as i16,
+                    z.mul_add(4096.0, -(last_z * 4096.0)) as i16,
                     yaw as u8,
                     pitch as u8,
                     position_rotation.ground,
