@@ -5,8 +5,9 @@ use dimensions::Dimension;
 use fastnbt::SerOpts;
 use paint::Painting;
 use pumpkin_protocol::client::config::RegistryEntry;
-pub use recipe::Recipe;
+pub use recipe::{IngredientSlot, IngredientType, Recipe, RECIPES};
 use serde::Serialize;
+pub use tags::ITEM_TAGS;
 use wolf::WolfVariant;
 mod biomes;
 mod chat_type;
@@ -14,6 +15,7 @@ mod damage_type;
 mod dimensions;
 mod paint;
 mod recipe;
+mod tags;
 mod wolf;
 
 pub struct Registry {

@@ -1,6 +1,7 @@
 use std::sync::atomic::AtomicU32;
 
 use crate::container_click::MouseClick;
+use crate::crafting::check_if_matches_crafting;
 use crate::{handle_item_change, Container, InventoryError, WindowType};
 use pumpkin_world::item::ItemStack;
 
@@ -127,6 +128,15 @@ impl PlayerInventory {
         slots.extend(self.items.iter_mut());
         slots.push(&mut self.offhand);
         slots
+    }
+
+    pub fn check_craft(&self) -> Option<ItemStack> {
+        let v1 = [self.crafting[0], self.crafting[1], None];
+        let v2 = [self.crafting[2], self.crafting[3], None];
+        let v3 = [None; 3];
+        let together = [v1, v2, v3];
+
+        check_if_matches_crafting(together)
     }
 }
 

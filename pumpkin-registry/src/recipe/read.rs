@@ -1,14 +1,14 @@
-use crate::recipe::read::ingredients::{IngredientSlot, IngredientType, Ingredients};
+use crate::recipe::read::ingredients::{IngredientSlot, Ingredients};
 use crate::recipe::read::SpecialCraftingType::{
     ArmorDye, BannerDuplicate, BookCloning, Firework, RepairItem, ShieldDecoration,
     ShulkerboxColoring, SuspiciousStew, TippedArrow,
 };
 use crate::recipe::recipe_formats::ShapedCrafting;
-use serde::de::{Error, MapAccess, SeqAccess, Visitor};
+use itertools::Itertools;
+use serde::de::{Error, MapAccess, Visitor};
 use serde::{de, Deserialize, Deserializer};
 use std::collections::HashMap;
-use std::fmt::{write, Formatter};
-use std::marker::PhantomData;
+use std::fmt::Formatter;
 use std::ops::Deref;
 use std::str::FromStr;
 
@@ -82,16 +82,26 @@ impl FromStr for RecipeType {
         }
     }
 }
-
-mod ingredients {
+pub mod ingredients {
     use serde::de::{MapAccess, SeqAccess, Visitor};
     use serde::{de, Deserialize, Deserializer};
+    use std::collections::HashMap;
     use std::fmt::Formatter;
+    use std::hash::{Hash, Hasher};
 
-    #[derive(Clone)]
+    #[derive(Clone, PartialEq, Debug, Eq, Hash)]
     pub enum IngredientType {
         Item(String),
         Tag(String),
+    }
+
+    impl IngredientType {
+        pub fn to_all_types(&self, item_tags: &HashMap<String, Vec<String>>) -> Vec<String> {
+            match &self {
+                IngredientType::Tag(tag) => item_tags.get(tag).unwrap().clone(),
+                IngredientType::Item(s) => vec![s.to_string()],
+            }
+        }
     }
 
     struct IngredientTypeVisitor;
@@ -121,9 +131,19 @@ mod ingredients {
         }
     }
 
+    #[derive(Clone, Debug, Eq, PartialEq, Hash)]
     pub enum IngredientSlot {
         Single(IngredientType),
         Many(Vec<IngredientType>),
+    }
+
+    impl PartialEq<IngredientType> for IngredientSlot {
+        fn eq(&self, other: &IngredientType) -> bool {
+            match self {
+                IngredientSlot::Single(ingredient) => other == ingredient,
+                IngredientSlot::Many(ingredients) => ingredients.contains(&other),
+            }
+        }
     }
 
     impl<'de> Deserialize<'de> for IngredientSlot {
@@ -197,9 +217,11 @@ mod ingredients {
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum RecipeResult {
     Many { count: u8, id: String },
     Single { id: String },
+    Special,
 }
 
 impl<'de> Deserialize<'de> for RecipeResult {
@@ -247,7 +269,8 @@ impl<'de> Deserialize<'de> for RecipeResult {
         deserializer.deserialize_map(ResultVisitor)
     }
 }
-pub struct RecipeKeys(HashMap<char, IngredientSlot>);
+pub struct RecipeKeys(pub(super) HashMap<char, IngredientSlot>);
+
 impl<'de> Deserialize<'de> for RecipeKeys {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -365,20 +388,54 @@ impl<'de> Deserialize<'de> for Recipe {
                     .ok_or_else(|| de::Error::missing_field("type"))?
                     .parse()
                     .unwrap();
-                let result = result.ok_or_else(|| de::Error::missing_field("result"))?;
+
+                let result = match recipe_type {
+                    RecipeType::Crafting(CraftingType::Special(_))
+                    | RecipeType::Crafting(CraftingType::DecoratedPot)
+                    | RecipeType::Smithing(_) => RecipeResult::Special,
+                    _ => result.ok_or_else(|| de::Error::missing_field("result"))?,
+                };
+
                 match recipe_type {
                     RecipeType::Crafting(CraftingType::Shaped) => {
-                        Ok(Recipe::from(ShapedCrafting::new(
-                            keys.ok_or_else(|| de::Error::missing_field("keys"))?,
-                            pattern
-                                .ok_or_else(|| de::Error::missing_field("pattern"))?
-                                .into_iter()
-                                .map(|s| s.to_string())
-                                .collect(),
-                            result,
-                        )))
+                        let mut rows = [[None; 3], [None; 3], [None; 3]];
+                        pattern
+                            .ok_or_else(|| de::Error::missing_field("pattern"))?
+                            .into_iter()
+                            .map(|s| {
+                                let mut chars = [None; 3];
+                                s.chars()
+                                    .enumerate()
+                                    .for_each(|(i, char)| chars[i] = Some(char));
+                                chars
+                            })
+                            .enumerate()
+                            .for_each(|(i, row)| rows[i] = row);
+                        let keys = keys.ok_or_else(|| de::Error::missing_field("keys"))?;
+                        Ok(Recipe::from(ShapedCrafting::new(keys, rows, result)))
                     }
-                    _ => Ok(Recipe(Box::new(Test { recipe_type }))),
+                    RecipeType::Crafting(CraftingType::Shapeless) => Ok(Recipe(Box::new(Test {
+                        recipe_type,
+                        result,
+                    }))),
+                    RecipeType::Crafting(CraftingType::Special(_)) => Ok(Recipe(Box::new(Test {
+                        recipe_type,
+                        result,
+                    }))),
+                    RecipeType::Crafting(CraftingType::DecoratedPot) => {
+                        Ok(Recipe(Box::new(Test {
+                            recipe_type,
+                            result,
+                        })))
+                    }
+                    RecipeType::Smithing(smithing_type) => Ok(Recipe(Box::new(Test {
+                        recipe_type,
+                        result: RecipeResult::Special,
+                    }))),
+                    _ => Ok(Recipe(Box::new(Test {
+                        recipe_type,
+                        result,
+                    }))),
                 }
             }
         }
@@ -416,17 +473,30 @@ fn visit_option<'de, T: Deserialize<'de>, Map: MapAccess<'de>>(
     }
 }
 
-struct Recipe(Box<dyn RecipeTrait>);
+pub struct Recipe(Box<dyn RecipeTrait + 'static + Send + Sync>);
 
 struct Test {
     recipe_type: RecipeType,
+    result: RecipeResult,
 }
 impl RecipeTrait for Test {
     fn recipe_type(&self) -> RecipeType {
         self.recipe_type
     }
+
+    fn pattern(&self) -> Vec<[[Option<IngredientSlot>; 3]; 3]> {
+        vec![[
+            [const { None }; 3],
+            [const { None }; 3],
+            [const { None }; 3],
+        ]]
+    }
+
+    fn result(&self) -> &RecipeResult {
+        &self.result
+    }
 }
-impl<T: RecipeTrait + 'static> From<T> for Recipe {
+impl<T: RecipeTrait + 'static + Sync + Send> From<T> for Recipe {
     fn from(value: T) -> Self {
         Recipe(Box::new(value))
     }
@@ -434,10 +504,39 @@ impl<T: RecipeTrait + 'static> From<T> for Recipe {
 
 pub trait RecipeTrait {
     fn recipe_type(&self) -> RecipeType;
+
+    fn pattern(&self) -> Vec<[[Option<IngredientSlot>; 3]; 3]>;
+    /*fn take_items(&self, input: [[&mut Option<IngredientType>;3];3]) {
+        for pattern in self.pattern() {
+
+            if pattern.iter().enumerate().all(|(i,pattern)|{
+              pattern.iter().enumerate().all(|(j,pattern)|{
+                  match (pattern, &input[i][j]) {
+                      (None, None) => true,
+                      (Some(p), Some(i)) => p==i,
+                      _ => false
+                  }
+              })
+            }) {
+                input.into_iter().for_each(|row|{
+                    row.into_iter().for_each(|slot|{
+                        match slot {
+                            None => (),
+                            Some(item) => {
+
+                            }
+                        }
+                    })
+                })
+            }
+        }
+    }*/
+
+    fn result(&self) -> &RecipeResult;
 }
 
 impl Deref for Recipe {
-    type Target = Box<dyn RecipeTrait>;
+    type Target = Box<dyn RecipeTrait + 'static + Send + Sync>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -451,6 +550,7 @@ pub enum CraftingType {
     Special(SpecialCraftingType),
     DecoratedPot,
 }
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum SpecialCraftingType {
     BookCloning,
