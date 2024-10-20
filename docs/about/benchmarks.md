@@ -179,7 +179,7 @@ Run args:
 | Players | RAM                 | CPU idle                                | CPU Max          |
 | ------- | ------------------- | --------------------------------------- | ---------------- |
 | 0       | <FmtNum :n=228 />MB | <FmtNum :n=0.1 /> - <FmtNum :n=0.3 />%  | <FmtNum :n=1 />% |
-| 1       | <FmtNum :n=365 />MB | <FmtNum :n=0.9 /> - <FmtNu:m :n=1.0 />% | <FmtNum :n=5 />% |
+| 1       | <FmtNum :n=365 />MB | <FmtNum :n=0.9 /> - <FmtNum :n=1.0 />% | <FmtNum :n=5 />% |
 | 2       | <FmtNum :n=371 />MB | <FmtNum :n=1 /> - <FmtNum :n=1.1 />%    | <FmtNum :n=4 />% |
 | 5       | <FmtNum :n=390 />MB | <FmtNum :n=1.0 />%                      | <FmtNum :n=6 />% |
 | 10      | <FmtNum :n=421 />MB | <FmtNum :n=3 />%                        | <FmtNum :n=9 />% |
