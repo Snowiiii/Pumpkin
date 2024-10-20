@@ -108,7 +108,6 @@ impl<'a, 'b> ChunkLighting<'a, 'b> {
     }
 
     fn set_skylight_source(&mut self, coordinates: Coordinates, level: u8) {
-        println!("{}", coordinates.1 % 16);
         for i in coordinates.1 % 16 + 1..32 {
             let base = (coordinates.1 / 16) * 16;
             let light_index = Self::coords_to_light_index((coordinates.0, base + i, coordinates.2));
