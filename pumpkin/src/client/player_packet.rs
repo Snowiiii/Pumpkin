@@ -15,7 +15,6 @@ use pumpkin_core::{
 };
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::{InventoryError, WindowType};
-use pumpkin_protocol::server::play::{SCloseContainer, SSetPlayerGround, SUseItem};
 use pumpkin_protocol::{
     client::play::{
         Animation, CAcknowledgeBlockChange, CBlockUpdate, CEntityAnimation, CEntityVelocity,
@@ -23,10 +22,10 @@ use pumpkin_protocol::{
         CUpdateEntityPosRot, CUpdateEntityRot, CWorldEvent, FilterType,
     },
     server::play::{
-        Action, ActionType, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport,
-        SInteract, SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition,
-        SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm,
-        SUseItemOn, Status,
+        Action, ActionType, SChatCommand, SChatMessage, SClientInformationPlay, SCloseContainer,
+        SConfirmTeleport, SInteract, SPlayPingRequest, SPlayerAbilities, SPlayerAction,
+        SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
+        SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn, Status,
     },
 };
 use pumpkin_world::block::{BlockFace, BlockState};
@@ -468,6 +467,7 @@ impl Player {
             None => self.kick(TextComponent::text("Invalid action type")).await,
         }
     }
+
     pub async fn handle_player_action(&self, player_action: SPlayerAction) {
         match Status::from_i32(player_action.status.0) {
             Some(status) => match status {
@@ -539,6 +539,13 @@ impl Player {
             },
             None => self.kick(TextComponent::text("Invalid status")).await,
         }
+    }
+
+    pub async fn handle_player_abilities(&self, player_abilities: SPlayerAbilities) {
+        let mut abilities = self.abilities.lock().await;
+
+        // Set the flying ability
+        abilities.flying = player_abilities.flags & 0x02 != 0 && abilities.allow_flying;
     }
 
     pub async fn handle_play_ping_request(&self, request: SPlayPingRequest) {
