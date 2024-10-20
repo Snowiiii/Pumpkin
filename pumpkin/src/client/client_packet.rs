@@ -99,17 +99,27 @@ impl Client {
                 }
             }
         } else {
-            *gameprofile = Some(GameProfile {
+            let profile = GameProfile {
                 id: login_start.uuid,
                 name: login_start.name,
                 properties: vec![],
                 profile_actions: None,
-            });
+            };
 
-            // TODO: check config for encryption
-            let verify_token: [u8; 4] = rand::random();
-            self.send_packet(&server.encryption_request(&verify_token, BASIC_CONFIG.online_mode))
+            if BASIC_CONFIG.encryption {
+                let verify_token: [u8; 4] = rand::random();
+                self.send_packet(
+                    &server.encryption_request(&verify_token, BASIC_CONFIG.online_mode),
+                )
                 .await;
+            } else {
+                if ADVANCED_CONFIG.packet_compression.enabled {
+                    self.enable_compression().await;
+                }
+                self.finish_login(&profile).await;
+            }
+
+            *gameprofile = Some(profile);
         }
     }
 
@@ -118,34 +128,43 @@ impl Client {
         server: &Server,
         encryption_response: SEncryptionResponse,
     ) {
-        let shared_secret = server.decrypt(&encryption_response.shared_secret).unwrap();
+        let shared_secret = match server.decrypt(&encryption_response.shared_secret) {
+            Ok(shared_secret) => shared_secret,
+            Err(error) => {
+                self.kick(&error.to_string()).await;
+                return;
+            }
+        };
 
         if let Err(error) = self.set_encryption(Some(&shared_secret)).await {
             self.kick(&error.to_string()).await;
             return;
         }
+
         let mut gameprofile = self.gameprofile.lock().await;
+
+        let Some(profile) = gameprofile.as_mut() else {
+            self.kick("No Game profile").await;
+            return;
+        };
 
         if BASIC_CONFIG.online_mode {
             match self
-                .autenticate(server, &shared_secret, &gameprofile.as_ref().unwrap().name)
+                .autenticate(server, &shared_secret, &profile.name)
                 .await
             {
-                Ok(profile) => *gameprofile = Some(profile),
+                Ok(new_profile) => *profile = new_profile,
                 Err(e) => {
                     self.kick(&e.to_string()).await;
+                    return;
                 }
             }
         }
 
-        if let Some(profile) = gameprofile.as_ref() {
-            if ADVANCED_CONFIG.packet_compression.enabled {
-                self.enable_compression().await;
-            }
-            self.finish_login(profile).await;
-        } else {
-            self.kick("No Game profile").await;
+        if ADVANCED_CONFIG.packet_compression.enabled {
+            self.enable_compression().await;
         }
+        self.finish_login(profile).await;
     }
 
     async fn enable_compression(&self) {
