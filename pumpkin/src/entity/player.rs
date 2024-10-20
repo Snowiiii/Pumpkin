@@ -353,11 +353,14 @@ impl Player {
         server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), Box<dyn PumpkinError>> {
-        log::debug!(
-            "Handling player packet with id {} for {}",
-            packet.id.0,
-            self.client.id
-        );
+        /*
+                log::debug!(
+                    "Handling player packet with id {} for {}",
+                    packet.id.0,
+                    self.client.id
+                );
+        */
+
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SConfirmTeleport::PACKET_ID => {
