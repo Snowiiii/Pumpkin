@@ -112,9 +112,6 @@ pub async fn update_position(player: &Player) {
             },
             |chunk_pos| {
                 unloading_chunks.push(chunk_pos);
-                // player
-                //     .client
-                //     .send_packet(&CUnloadChunk::new(chunk_pos.x, chunk_pos.z));
             },
             false,
         );
@@ -131,6 +128,7 @@ pub async fn update_position(player: &Player) {
                 .world
                 .mark_chunks_as_not_watched(&unloading_chunks)
                 .await;
+            // we may don't need to iter twice
             for chunk in unloading_chunks {
                 if !player
                     .client
