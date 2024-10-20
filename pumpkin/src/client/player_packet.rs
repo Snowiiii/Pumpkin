@@ -8,8 +8,9 @@ use crate::{
 };
 use num_traits::FromPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
+use pumpkin_core::math::position::WorldPosition;
 use pumpkin_core::{
-    math::{position::WorldPosition, vector3::Vector3, wrap_degrees},
+    math::{vector3::Vector3, wrap_degrees},
     text::TextComponent,
     GameMode,
 };
@@ -18,9 +19,9 @@ use pumpkin_inventory::{InventoryError, WindowType};
 use pumpkin_protocol::server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem};
 use pumpkin_protocol::{
     client::play::{
-        Animation, CAcknowledgeBlockChange, CBlockUpdate, CEntityAnimation, CEntityVelocity,
-        CHeadRot, CHurtAnimation, CPingResponse, CPlayerChatMessage, CUpdateEntityPos,
-        CUpdateEntityPosRot, CUpdateEntityRot, FilterType,
+        Animation, CAcknowledgeBlockChange, CEntityAnimation, CEntityVelocity, CHeadRot,
+        CHurtAnimation, CPingResponse, CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot,
+        CUpdateEntityRot, FilterType,
     },
     server::play::{
         Action, ActionType, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport,
@@ -29,7 +30,7 @@ use pumpkin_protocol::{
         SSwingArm, SUseItemOn, Status,
     },
 };
-use pumpkin_world::block::{BlockFace, BlockState};
+use pumpkin_world::block::{BlockFace, BlockId, BlockState};
 use pumpkin_world::global_registry;
 
 use super::PlayerConfig;
@@ -580,17 +581,14 @@ impl Player {
                 if let Ok(block_state_id) = BlockState::new(minecraft_id, None) {
                     let entity = &self.living_entity.entity;
                     let world = &entity.world;
+
                     world
-                        .broadcast_packet_all(&CBlockUpdate::new(
-                            &location,
-                            block_state_id.get_id_mojang_repr().into(),
-                        ))
-                        .await;
-                    world
-                        .broadcast_packet_all(&CBlockUpdate::new(
-                            &WorldPosition(location.0 + face.to_offset()),
-                            block_state_id.get_id_mojang_repr().into(),
-                        ))
+                        .set_block(
+                            WorldPosition(location.0 + face.to_offset()),
+                            BlockId {
+                                data: block_state_id.get_id_mojang_repr() as u16,
+                            },
+                        )
                         .await;
                 }
             }
