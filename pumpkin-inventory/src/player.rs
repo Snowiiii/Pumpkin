@@ -2,6 +2,7 @@ use std::slice::IterMut;
 use std::sync::atomic::AtomicU32;
 
 use crate::container_click::MouseClick;
+use crate::crafting::check_if_matches_crafting;
 use crate::{handle_item_change, Container, InventoryError, WindowType};
 use pumpkin_world::item::ItemStack;
 
@@ -54,29 +55,23 @@ impl PlayerInventory {
     /// Useful functionality for plugins in the future.
     pub fn set_slot(
         &mut self,
-        slot: u16,
+        slot: usize,
         item: Option<ItemStack>,
         item_allowed_override: bool,
     ) -> Result<(), InventoryError> {
-        if !(0..=45).contains(&slot) {
-            return Err(InventoryError::InvalidSlot);
-        }
-
-        match item_allowed_override {
-            true => {
-                *self.all_slots()[slot as usize] = item;
+        if item_allowed_override {
+            if !(0..=45).contains(&slot) {
+                Err(InventoryError::InvalidSlot)?
             }
-            false => {
-                let slot = slot as usize;
-                let slot_condition = self.slot_condition(slot)?;
-                if let Some(item) = item {
-                    if slot_condition(&item) {
-                        self.all_slots()[slot] = &mut Some(item);
-                    }
-                }
+            *self.all_slots()[slot] = item;
+            return Ok(());
+        }
+        let slot_condition = self.slot_condition(slot)?;
+        if let Some(item) = item {
+            if slot_condition(&item) {
+                *self.all_slots()[slot] = Some(item);
             }
         }
-
         Ok(())
     }
     #[allow(clippy::type_complexity)]
@@ -146,6 +141,15 @@ impl PlayerInventory {
         slots.extend(self.items.iter_mut());
         slots.push(&mut self.offhand);
         slots
+    }
+
+    pub fn check_craft(&self) -> Option<ItemStack> {
+        let v1 = [self.crafting[0], self.crafting[1], None];
+        let v2 = [self.crafting[2], self.crafting[3], None];
+        let v3 = [None; 3];
+        let together = [v1, v2, v3];
+
+        check_if_matches_crafting(together)
     }
 
     pub fn iter_items_mut(&mut self) -> IterMut<Option<ItemStack>> {
