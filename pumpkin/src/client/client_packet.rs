@@ -99,12 +99,12 @@ impl Client {
                 }
             }
         } else {
-            *gameprofile = Some(GameProfile {
+            let profile = GameProfile {
                 id: login_start.uuid,
                 name: login_start.name,
                 properties: vec![],
                 profile_actions: None,
-            });
+            };
 
             if BASIC_CONFIG.encryption {
                 let verify_token: [u8; 4] = rand::random();
@@ -116,13 +116,10 @@ impl Client {
                 if ADVANCED_CONFIG.packet_compression.enabled {
                     self.enable_compression().await;
                 }
-                self.finish_login(
-                    gameprofile
-                        .as_ref()
-                        .expect("The GameProfile was just set to Some, this should never fail"),
-                )
-                .await;
+                self.finish_login(&profile).await;
             }
+
+            *gameprofile = Some(profile);
         }
     }
 
