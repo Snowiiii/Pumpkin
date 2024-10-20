@@ -295,12 +295,13 @@ impl World {
         let level = self.level.clone();
         let chunks = Arc::new(chunks);
         tokio::spawn(async move {
+            log::debug!("Spawned chunk fetcher for {}", client_id);
             let level = level.lock().await;
             level.fetch_chunks(&chunks, sender);
         });
-        log::debug!("Spawned chunk fetcher for {}", client_id);
 
         tokio::spawn(async move {
+            log::debug!("Spawned chunk sender for {}", client_id);
             while let Some(chunk_data) = chunk_receiver.recv().await {
                 log::debug!("Recieved chunk {:?}", chunk_data.position);
                 // dbg!(chunk_pos);
@@ -327,7 +328,6 @@ impl World {
 
             log::debug!("chunks sent after {}ms", inst.elapsed().as_millis());
         });
-        log::debug!("Spawned chunk sender for {}", client_id);
     }
 
     /// Gets a Player by entity id
