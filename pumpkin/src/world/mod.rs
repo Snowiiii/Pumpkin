@@ -1,4 +1,3 @@
-use std::ops::Deref;
 use std::{collections::HashMap, sync::Arc};
 
 pub mod player_chunker;
@@ -293,12 +292,13 @@ impl World {
 
         tokio::spawn(async move {
             while let Some(chunk_data) = chunk_receiver.recv().await {
-                let chunk_data = chunk_data.read().await.deref().clone();
+                let chunk_data = chunk_data.read().await;
+                let packet = CChunkData(&chunk_data);
                 #[cfg(debug_assertions)]
                 if chunk_data.position == (0, 0).into() {
                     use pumpkin_protocol::bytebuf::ByteBuffer;
                     let mut test = ByteBuffer::empty();
-                    CChunkData(chunk_data.clone()).write(&mut test);
+                    packet.write(&mut test);
                     let len = test.buf().len();
                     log::debug!(
                         "Chunk packet size: {}B {}KB {}MB",
@@ -307,7 +307,6 @@ impl World {
                         len / (1024 * 1024)
                     );
                 }
-                let packet = CChunkData(chunk_data);
 
                 // TODO: Queue player packs in a queue so we don't need to check if its closed before
                 // sending
