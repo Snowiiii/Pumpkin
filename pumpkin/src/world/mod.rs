@@ -289,7 +289,14 @@ impl World {
             return;
         }
         let inst = std::time::Instant::now();
-        let (sender, mut chunk_receiver) = mpsc::channel(distance as usize);
+
+        // NOTE:
+        // level.fetch_chunks is synchronous with par_iter
+        // -> if not enough cores can fill buffer as the chunk sender will not be able to receive
+        // Channel must have at least the number of chunks being sent in cache
+        //
+        // TODO: Make level.fetch_chunks async?
+        let (sender, mut chunk_receiver) = mpsc::channel((distance * distance) as usize);
         let client_id = client.id;
 
         let level = self.level.clone();
