@@ -290,13 +290,7 @@ impl World {
         }
         let inst = std::time::Instant::now();
 
-        // NOTE:
-        // level.fetch_chunks is synchronous with par_iter
-        // -> if not enough cores can fill buffer as the chunk sender will not be able to receive
-        // Channel must have at least the number of chunks being sent in cache
-        //
-        // TODO: Make level.fetch_chunks async?
-        let (sender, mut chunk_receiver) = mpsc::channel((distance * distance) as usize);
+        let (sender, mut chunk_receiver) = mpsc::channel(distance as usize);
         let client_id = client.id;
 
         let level = self.level.clone();
@@ -304,13 +298,12 @@ impl World {
         tokio::spawn(async move {
             log::debug!("Spawned chunk fetcher for {}", client_id);
             let level = level.lock().await;
-            level.fetch_chunks(&chunks, sender);
+            level.fetch_chunks(&chunks, sender).await;
         });
 
         tokio::spawn(async move {
             log::debug!("Spawned chunk sender for {}", client_id);
             while let Some(chunk_data) = chunk_receiver.recv().await {
-                log::debug!("Recieved chunk {:?}", chunk_data.position);
                 // dbg!(chunk_pos);
                 #[cfg(debug_assertions)]
                 if chunk_data.position == (0, 0).into() {
