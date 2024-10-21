@@ -381,17 +381,17 @@ impl Client {
             dec.reserve(4096);
             let mut buf = dec.take_capacity();
 
-            if self
-                .connection_reader
-                .lock()
-                .await
-                .read_buf(&mut buf)
-                .await
-                .unwrap()
-                == 0
-            {
-                self.close();
-                return false;
+            match self.connection_reader.lock().await.read_buf(&mut buf).await {
+                Ok(0) => {
+                    self.close();
+                    return false;
+                }
+                Err(error) => {
+                    log::error!("Error while reading incoming packet {}", error);
+                    self.close();
+                    return false;
+                }
+                _ => {}
             }
 
             // This should always be an O(1) unsplit because we reserved space earlier and
