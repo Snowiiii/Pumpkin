@@ -33,7 +33,11 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
         })
         .await;
     let view_distance = i32::from(get_view_distance(&player).await);
-    dbg!(view_distance);
+    log::debug!(
+        "Player {} joined with view distance: {}",
+        player.gameprofile.name,
+        view_distance
+    );
     let old_cylindrical = Cylindrical::new(
         Vector2::new(watched_section.x, watched_section.z),
         view_distance,

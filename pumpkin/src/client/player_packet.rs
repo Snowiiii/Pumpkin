@@ -280,7 +280,6 @@ impl Player {
                         entity.set_sneaking(false).await;
                     }
                 }
-                pumpkin_protocol::server::play::Action::LeaveBed => todo!(),
                 pumpkin_protocol::server::play::Action::StartSprinting => {
                     if !entity.sprinting.load(std::sync::atomic::Ordering::Relaxed) {
                         entity.set_sprinting(true).await;
@@ -291,9 +290,12 @@ impl Player {
                         entity.set_sprinting(false).await;
                     }
                 }
-                pumpkin_protocol::server::play::Action::StartHorseJump => todo!(),
-                pumpkin_protocol::server::play::Action::StopHorseJump => todo!(),
-                pumpkin_protocol::server::play::Action::OpenVehicleInventory => todo!(),
+                pumpkin_protocol::server::play::Action::LeaveBed
+                | pumpkin_protocol::server::play::Action::StartHorseJump
+                | pumpkin_protocol::server::play::Action::StopHorseJump
+                | pumpkin_protocol::server::play::Action::OpenVehicleInventory => {
+                    log::debug!("todo");
+                }
                 pumpkin_protocol::server::play::Action::StartFlyingElytra => {
                     let fall_flying = entity.check_fall_flying();
                     if entity
@@ -334,7 +336,7 @@ impl Player {
     }
 
     pub async fn handle_chat_message(&self, chat_message: SChatMessage) {
-        dbg!("got message");
+        log::debug!("Received chat message");
 
         let message = chat_message.message;
         if message.len() > 256 {
@@ -369,7 +371,7 @@ impl Player {
             &CDisguisedChatMessage::new(
                 TextComponent::from(message.clone()),
                 VarInt(0),
-                gameprofile.name.clone().into(),
+               gameprofile.name.clone().into(),
                 None,
             ),
         ) */
@@ -456,11 +458,8 @@ impl Player {
                         }
                     }
                 }
-                ActionType::Interact => {
-                    dbg!("todo");
-                }
-                ActionType::InteractAt => {
-                    dbg!("todo");
+                ActionType::Interact | ActionType::InteractAt => {
+                    log::debug!("todo");
                 }
             },
             None => self.kick(TextComponent::text("Invalid action type")).await,
@@ -472,7 +471,11 @@ impl Player {
             Some(status) => match status {
                 Status::StartedDigging => {
                     if !self.can_interact_with_block_at(&player_action.location, 1.0) {
-                        // TODO: maybe log?
+                        log::warn!(
+                            "Player {0} tried to interact with block out of reach at {1}",
+                            self.gameprofile.name,
+                            player_action.location
+                        );
                         return;
                     }
                     // TODO: do validation
@@ -494,7 +497,11 @@ impl Player {
                 }
                 Status::CancelledDigging => {
                     if !self.can_interact_with_block_at(&player_action.location, 1.0) {
-                        // TODO: maybe log?
+                        log::warn!(
+                            "Player {0} tried to interact with block out of reach at {1}",
+                            self.gameprofile.name,
+                            player_action.location
+                        );
                         return;
                     }
                     self.current_block_destroy_stage
@@ -504,7 +511,11 @@ impl Player {
                     // TODO: do validation
                     let location = player_action.location;
                     if !self.can_interact_with_block_at(&location, 1.0) {
-                        // TODO: maybe log?
+                        log::warn!(
+                            "Player {0} tried to interact with block out of reach at {1}",
+                            self.gameprofile.name,
+                            player_action.location
+                        );
                         return;
                     }
                     // Block break & block break sound
@@ -523,17 +534,11 @@ impl Player {
                         .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence))
                         .await;
                 }
-                Status::DropItemStack => {
-                    dbg!("todo");
-                }
-                Status::DropItem => {
-                    dbg!("todo");
-                }
-                Status::ShootArrowOrFinishEating => {
-                    dbg!("todo");
-                }
-                Status::SwapItem => {
-                    dbg!("todo");
+                Status::DropItemStack
+                | Status::DropItem
+                | Status::ShootArrowOrFinishEating
+                | Status::SwapItem => {
+                    log::debug!("todo");
                 }
             },
             None => self.kick(TextComponent::text("Invalid status")).await,

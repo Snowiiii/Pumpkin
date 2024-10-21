@@ -47,7 +47,7 @@ impl RCONServer {
             let password = password.clone();
             let server = server.clone();
             tokio::spawn(async move { while !client.handle(&server, &password).await {} });
-            dbg!("closed");
+            log::debug!("closed RCON connection");
             connections -= 1;
         }
     }
@@ -85,7 +85,6 @@ impl RCONClient {
                     return true;
                 }
             }
-            dbg!("a");
             // If we get a close here, we might have a reply, which we still want to write.
             let _ = self.poll(server, password).await.map_err(|e| {
                 log::error!("RCON error: {e}");

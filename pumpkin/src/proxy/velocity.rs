@@ -103,7 +103,7 @@ pub fn receive_velocity_plugin_response(
     config: &VelocityConfig,
     response: SLoginPluginResponse,
 ) -> Result<(GameProfile, SocketAddr), VelocityError> {
-    dbg!("velocity response");
+    log::debug!("received velocity response");
     if let Some(data) = response.data {
         let (signature, data_without_signature) = data.split_at(32);
 

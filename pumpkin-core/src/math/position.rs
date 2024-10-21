@@ -1,3 +1,5 @@
+use std::fmt;
+
 use serde::{Deserialize, Serialize};
 
 use super::vector3::Vector3;
@@ -41,5 +43,11 @@ impl<'de> Deserialize<'de> for WorldPosition {
             }
         }
         deserializer.deserialize_i64(Visitor)
+    }
+}
+
+impl std::fmt::Display for WorldPosition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, {},{})", self.0.x, self.0.y, self.0.z)
     }
 }
