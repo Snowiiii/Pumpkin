@@ -278,10 +278,15 @@ impl World {
 
     pub async fn mark_chunks_as_watched(&self, chunks: &[Vector2<i32>]) {
         let level = self.level.lock().await;
-        level.mark_chunk_as_newly_watched(chunks);
+        level.mark_chunks_as_newly_watched(chunks);
     }
 
-    fn spawn_world_chunks(&self, client: Arc<Client>, chunks: Vec<Vector2<i32>>, distance: i32) {
+    pub async fn get_cached_chunk_len(&self) -> usize {
+        let level = self.level.lock().await;
+        level.loaded_chunk_count()
+    }
+
+    fn spawn_world_chunks(&self, client: Arc<Client>, chunks: Vec<Vector2<i32>>) {
         if client.closed.load(std::sync::atomic::Ordering::Relaxed) {
             log::info!(
                 "The connection with {} has closed before world chunks were spawned",
@@ -290,19 +295,18 @@ impl World {
             return;
         }
         let inst = std::time::Instant::now();
-        let (sender, mut chunk_receiver) = mpsc::channel(distance as usize);
-        let client_id = client.id;
+
+        // The smaller the channel, the less memory but the slower it is
+        let (sender, mut chunk_receiver) = mpsc::channel(10);
 
         let level = self.level.clone();
         let chunks = Arc::new(chunks);
         tokio::spawn(async move {
-            log::debug!("Spawned chunk fetcher for {}", client_id);
             let level = level.lock().await;
-            level.fetch_chunks(&chunks, sender);
+            level.fetch_chunks(&chunks, sender).await;
         });
 
         tokio::spawn(async move {
-            log::debug!("Spawned chunk sender for {}", client_id);
             while let Some(chunk_data) = chunk_receiver.recv().await {
                 // dbg!(chunk_pos);
                 #[cfg(debug_assertions)]
