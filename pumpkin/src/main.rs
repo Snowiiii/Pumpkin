@@ -205,6 +205,7 @@ async fn main() -> io::Result<()> {
                 .load(std::sync::atomic::Ordering::Relaxed)
             {
                 let id = client.id;
+                log::debug!("Creating player for id {}", id);
                 let (player, world) = server.add_player(id, client).await;
                 world.spawn_player(&BASIC_CONFIG, player.clone()).await;
                 // poll Player

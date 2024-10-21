@@ -353,110 +353,94 @@ impl Player {
         server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), Box<dyn PumpkinError>> {
+        log::debug!(
+            "Handling player packet with id {} for {}",
+            packet.id.0,
+            self.client.id
+        );
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SConfirmTeleport::PACKET_ID => {
                 self.handle_confirm_teleport(SConfirmTeleport::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SChatCommand::PACKET_ID => {
                 self.handle_chat_command(server, SChatCommand::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SPlayerPosition::PACKET_ID => {
                 self.handle_position(SPlayerPosition::read(bytebuf)?).await;
-                Ok(())
             }
             SPlayerPositionRotation::PACKET_ID => {
                 self.handle_position_rotation(SPlayerPositionRotation::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SPlayerRotation::PACKET_ID => {
                 self.handle_rotation(SPlayerRotation::read(bytebuf)?).await;
-                Ok(())
             }
             SSetPlayerGround::PACKET_ID => {
                 self.handle_player_ground(&SSetPlayerGround::read(bytebuf)?);
-                Ok(())
             }
             SPlayerCommand::PACKET_ID => {
                 self.handle_player_command(SPlayerCommand::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SSwingArm::PACKET_ID => {
                 self.handle_swing_arm(SSwingArm::read(bytebuf)?).await;
-                Ok(())
             }
             SChatMessage::PACKET_ID => {
                 self.handle_chat_message(SChatMessage::read(bytebuf)?).await;
-                Ok(())
             }
             SClientInformationPlay::PACKET_ID => {
                 self.handle_client_information_play(SClientInformationPlay::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SInteract::PACKET_ID => {
                 self.handle_interact(server, SInteract::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SPlayerAction::PACKET_ID => {
                 self.handle_player_action(SPlayerAction::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SPlayerAbilities::PACKET_ID => {
                 self.handle_player_abilities(SPlayerAbilities::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SUseItemOn::PACKET_ID => {
                 self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await;
-                Ok(())
             }
             SUseItem::PACKET_ID => {
                 self.handle_use_item(&SUseItem::read(bytebuf)?);
-                Ok(())
             }
             SSetHeldItem::PACKET_ID => {
                 self.handle_set_held_item(SSetHeldItem::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SSetCreativeSlot::PACKET_ID => {
                 self.handle_set_creative_slot(SSetCreativeSlot::read(bytebuf)?)
                     .await?;
-                Ok(())
             }
             SPlayPingRequest::PACKET_ID => {
                 self.handle_play_ping_request(SPlayPingRequest::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SClickContainer::PACKET_ID => {
                 self.handle_click_container(server, SClickContainer::read(bytebuf)?)
                     .await?;
-                Ok(())
             }
             SCloseContainer::PACKET_ID => {
                 self.handle_close_container(server, SCloseContainer::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SKeepAlive::PACKET_ID => {
                 self.handle_keep_alive(SKeepAlive::read(bytebuf)?).await;
-                Ok(())
             }
             _ => {
                 log::error!("Failed to handle player packet id {:#04x}", packet.id.0);
-                Ok(())
             }
-        }
+        };
+        Ok(())
     }
 }
 

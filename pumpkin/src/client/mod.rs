@@ -175,6 +175,7 @@ impl Client {
 
     /// Send a Clientbound Packet to the Client
     pub async fn send_packet<P: ClientPacket>(&self, packet: &P) {
+        log::debug!("Sending packet with id {} to {}", P::PACKET_ID, self.id);
         // assert!(!self.closed);
         let mut enc = self.enc.lock().await;
         if let Err(error) = enc.append_packet(packet) {
@@ -200,6 +201,11 @@ impl Client {
 
     pub async fn try_send_packet<P: ClientPacket>(&self, packet: &P) -> Result<(), PacketError> {
         // assert!(!self.closed);
+        log::debug!(
+            "Trying to send packet with id {} to {}",
+            P::PACKET_ID,
+            self.id
+        );
 
         let mut enc = self.enc.lock().await;
         enc.append_packet(packet)?;
