@@ -13,9 +13,9 @@ use thiserror::Error;
 
 use crate::client::{authentication::GameProfile, Client};
 
-/// Proxy implementation for Velocity <https://papermc.io/software/velocity> by PaperMC
-/// Sadly PaperMC does not care about 3th Parties providing support for Velocity, There is no documentation.
-/// I had to understand the Code logic by looking at PaperMC's Velocity implementation: <https://github.com/PaperMC/Paper/blob/master/patches/server/0731-Add-Velocity-IP-Forwarding-Support.patch>
+/// Proxy implementation for Velocity <https://papermc.io/software/velocity> by `PaperMC`
+/// Sadly `PaperMC` does not care about 3th Parties providing support for Velocity, There is no documentation.
+/// I had to understand the Code logic by looking at `PaperMC`'s Velocity implementation: <https://github.com/PaperMC/Paper/blob/master/patches/server/0731-Add-Velocity-IP-Forwarding-Support.patch>
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -59,6 +59,7 @@ pub async fn velocity_login(client: &Client) {
         .await;
 }
 
+#[must_use]
 pub fn check_integrity(data: (&[u8], &[u8]), secret: &str) -> bool {
     let (signature, data_without_signature) = data;
     // Our fault, We can panic/expect ?
@@ -80,7 +81,7 @@ fn read_game_profile(buf: &mut ByteBuffer) -> Result<GameProfile, VelocityError>
         .get_list(|data| {
             let name = data.get_string()?;
             let value = data.get_string()?;
-            let signature = data.get_option(|data| data.get_string())?;
+            let signature = data.get_option(pumpkin_protocol::bytebuf::ByteBuffer::get_string)?;
 
             Ok(Property {
                 name,

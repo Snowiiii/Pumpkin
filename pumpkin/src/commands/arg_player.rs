@@ -17,9 +17,8 @@ pub fn consume_arg_player(
             "@s" => {
                 if src.is_player() {
                     return Ok(arg.into());
-                } else {
-                    return Err(Some("You are not a Player".into()));
                 }
+                return Err(Some("You are not a Player".into()));
             }
             "@p" if src.is_player() => return Ok(arg.into()),
             "@r" => todo!(),        // todo: implement random player target selector
@@ -31,7 +30,7 @@ pub fn consume_arg_player(
                         return Ok(name.into());
                     }
                 }
-                return Err(Some(format!("Player not found: {}", arg)));
+                return Err(Some(format!("Player not found: {arg}")));
             }
         }
     }
@@ -52,9 +51,9 @@ pub fn parse_arg_player(
 
     match s {
         "@s" if src.is_player() => Ok(src.as_mut_player().unwrap()),
-        "@p" if src.is_player() => Ok(src.as_mut_player().unwrap()),
-        "@r" => Err(InvalidConsumptionError(Some(s.into()))), // todo: implement random player target selector
-        "@a" | "@e" => Err(InvalidConsumptionError(Some(s.into()))), // todo: implement all players target selector
+        "@p" => todo!(),
+        "@r" => todo!(),        // todo: implement random player target selector
+        "@a" | "@e" => todo!(), // todo: implement all players target selector
         name => {
             for world in &server.worlds {
                 if let Some(player) = world.get_player_by_name(name) {

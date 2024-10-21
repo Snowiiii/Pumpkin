@@ -15,7 +15,7 @@ pub(crate) enum InvalidTreeError {
     /// never fail.
     InvalidConsumptionError(Option<String>),
 
-    /// Return this if a condition that a [Node::Require] should ensure is met is not met.
+    /// Return this if a condition that a [`Node::Require`] should ensure is met is not met.
     InvalidRequirementError,
 }
 
@@ -24,7 +24,7 @@ pub struct CommandDispatcher<'a> {
     pub(crate) commands: HashMap<&'a str, Command<'a>>,
 }
 
-/// Stores registered [CommandTree]s and dispatches commands to them.
+/// Stores registered [`CommandTree`]s and dispatches commands to them.
 impl<'a> CommandDispatcher<'a> {
     pub async fn handle_command(&self, sender: &mut CommandSender<'a>, server: &Server, cmd: &str) {
         if let Err(err) = self.dispatch(sender, server, cmd) {
@@ -37,7 +37,7 @@ impl<'a> CommandDispatcher<'a> {
         }
     }
 
-    /// Execute a command using its corresponding [CommandTree].
+    /// Execute a command using its corresponding [`CommandTree`].
     pub(crate) fn dispatch(
         &'a self,
         src: &mut CommandSender,
@@ -52,7 +52,7 @@ impl<'a> CommandDispatcher<'a> {
 
         // try paths until fitting path is found
         for path in tree.iter_paths() {
-            match Self::try_is_fitting_path(src, server, path, tree, raw_args.clone()) {
+            match Self::try_is_fitting_path(src, server, &path, tree, raw_args.clone()) {
                 Err(InvalidConsumptionError(s)) => {
                     println!("Error while parsing command \"{cmd}\": {s:?} was consumed, but couldn't be parsed");
                     return Err("Internal Error (See logs for details)".into());
@@ -62,7 +62,7 @@ impl<'a> CommandDispatcher<'a> {
                     return Err("Internal Error (See logs for details)".into());
                 }
                 Ok(is_fitting_path) => match is_fitting_path {
-                    Ok(_) => return Ok(()),
+                    Ok(()) => return Ok(()),
                     Err(error) => {
                         // Custom error message or not ?
                         if let Some(error) = error {
@@ -72,7 +72,7 @@ impl<'a> CommandDispatcher<'a> {
                 },
             }
         }
-        Err(format!("Invalid Syntax. Usage: {}", tree))
+        Err(format!("Invalid Syntax. Usage: {tree}"))
     }
 
     pub(crate) fn get_tree(&'a self, key: &str) -> Result<&'a CommandTree<'a>, String> {
@@ -93,7 +93,7 @@ impl<'a> CommandDispatcher<'a> {
     fn try_is_fitting_path(
         src: &mut CommandSender,
         server: &Server,
-        path: Vec<usize>,
+        path: &[usize],
         tree: &CommandTree,
         mut raw_args: RawArgs,
     ) -> Result<Result<(), Option<String>>, InvalidTreeError> {

@@ -201,7 +201,7 @@ impl Entity {
             self.entity_id.into(),
             Metadata::new(6, 20.into(), (pose).into()),
         );
-        self.world.broadcast_packet_all(&packet).await
+        self.world.broadcast_packet_all(&packet).await;
     }
 }
 

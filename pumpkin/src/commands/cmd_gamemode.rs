@@ -37,7 +37,7 @@ pub fn consume_arg_gamemode(
 
         match GameMode::from_str(arg) {
             Err(_) | Ok(GameMode::Undefined) => {
-                return Err(Some(format!("Gamemode not found: {}", arg)))
+                return Err(Some(format!("Gamemode not found: {arg}")))
             }
             Ok(_) => return Ok(arg.into()),
         }

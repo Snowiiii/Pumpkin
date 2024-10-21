@@ -76,7 +76,7 @@ pub struct Player {
     /// This field represents the various abilities that the player possesses, such as flight, invulnerability, and other special effects.
     ///
     /// **Note:** When the `abilities` field is updated, the server should send a `send_abilities_update` packet to the client to notify them of the changes.
-    pub abilities: Mutex<PlayerAbilities>,
+    pub abilities: Mutex<Abilities>,
     /// The player's last known position.
     ///
     /// This field is used to calculate the player's movement delta for network synchronization and other purposes.
@@ -110,7 +110,7 @@ impl Player {
                 log::error!("No gameprofile?. Impossible");
                 GameProfile {
                     id: uuid::Uuid::new_v4(),
-                    name: "".to_string(),
+                    name: String::new(),
                     properties: vec![],
                     profile_actions: None,
                 }
@@ -137,7 +137,7 @@ impl Player {
             open_container: AtomicCell::new(None),
             carried_item: AtomicCell::new(None),
             teleport_id_count: AtomicI32::new(0),
-            abilities: Mutex::new(PlayerAbilities::default()),
+            abilities: Mutex::new(Abilities::default()),
             gamemode: AtomicCell::new(gamemode),
             watched_section: AtomicCell::new(Vector3::new(0, 0, 0)),
             last_position: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
@@ -152,7 +152,7 @@ impl Player {
         self.living_entity.entity.world.remove_player(self).await;
 
         let watched = chunk_section_from_pos(&self.living_entity.entity.block_pos.load());
-        let view_distance = get_view_distance(self).await as i32;
+        let view_distance = i32::from(get_view_distance(self).await);
         let cylindrical = Cylindrical::new(Vector2::new(watched.x, watched.z), view_distance);
         self.living_entity
             .entity
@@ -256,7 +256,7 @@ impl Player {
         let standing_eye_height = self.living_entity.entity.standing_eye_height;
         box_pos.squared_magnitude(Vector3 {
             x: entity_pos.x,
-            y: entity_pos.y + standing_eye_height as f64,
+            y: entity_pos.y + f64::from(standing_eye_height),
             z: entity_pos.z,
         }) < d * d
     }
@@ -277,7 +277,7 @@ impl Player {
             self.gameprofile.name,
             reason.to_pretty_console()
         );
-        self.client.close()
+        self.client.close();
     }
 
     pub async fn set_health(&self, health: f32, food: i32, food_saturation: f32) {
@@ -330,15 +330,14 @@ impl Player {
         let mut packets = self.client.client_packets_queue.lock().await;
         while let Some(mut packet) = packets.pop_back() {
             match self.handle_play_packet(server, &mut packet).await {
-                Ok(_) => {}
+                Ok(()) => {}
                 Err(e) => {
                     if e.is_kick() {
                         if let Some(kick_reason) = e.client_kick_reason() {
-                            self.kick(TextComponent::text(&kick_reason)).await
+                            self.kick(TextComponent::text(&kick_reason)).await;
                         } else {
                             self.kick(TextComponent::text(&format!(
-                                "Error while reading incoming packet {}",
-                                e
+                                "Error while reading incoming packet {e}"
                             )))
                             .await;
                         }
@@ -380,7 +379,7 @@ impl Player {
                 Ok(())
             }
             SSetPlayerGround::PACKET_ID => {
-                self.handle_player_ground(SSetPlayerGround::read(bytebuf)?);
+                self.handle_player_ground(&SSetPlayerGround::read(bytebuf)?);
                 Ok(())
             }
             SPlayerCommand::PACKET_ID => {
@@ -421,7 +420,7 @@ impl Player {
                 Ok(())
             }
             SUseItem::PACKET_ID => {
-                self.handle_use_item(SUseItem::read(bytebuf)?);
+                self.handle_use_item(&SUseItem::read(bytebuf)?);
                 Ok(())
             }
             SSetHeldItem::PACKET_ID => {
@@ -464,7 +463,7 @@ impl Player {
 /// Represents a player's abilities and special powers.
 ///
 /// This struct contains information about the player's current abilities, such as flight, invulnerability, and creative mode.
-pub struct PlayerAbilities {
+pub struct Abilities {
     /// Indicates whether the player is invulnerable to damage.
     pub invulnerable: bool,
     /// Indicates whether the player is currently flying.
@@ -479,7 +478,7 @@ pub struct PlayerAbilities {
     pub walk_speed_fov: f32,
 }
 
-impl Default for PlayerAbilities {
+impl Default for Abilities {
     fn default() -> Self {
         Self {
             invulnerable: false,

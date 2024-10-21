@@ -4,7 +4,7 @@ use crate::commands::CommandSender;
 use super::RunFunctionType;
 
 impl<'a> CommandTree<'a> {
-    /// Add a child [Node] to the root of this [CommandTree].
+    /// Add a child [Node] to the root of this [`CommandTree`].
     pub fn with_child(mut self, child: impl NodeBuilder<'a>) -> Self {
         let node = child.build(&mut self);
         self.children.push(self.nodes.len());
@@ -35,11 +35,11 @@ impl<'a> CommandTree<'a> {
 
     /// Executes if a command terminates at this [Node], i.e. without any arguments.
     ///
-    /// [ConsumedArgs] maps the names of all
+    /// [`ConsumedArgs`] maps the names of all
     /// arguments to the result of their consumption, i.e. a string that can be parsed to the
     /// desired type.
     ///
-    /// Also see [NonLeafNodeBuilder::execute].
+    /// Also see [`NonLeafNodeBuilder::execute`].
     pub fn execute(mut self, run: &'a RunFunctionType) -> Self {
         let node = Node {
             node_type: NodeType::ExecuteLeaf { run },
@@ -108,11 +108,11 @@ impl<'a> NonLeafNodeBuilder<'a> {
 
     /// Executes if a command terminates at this [Node].
     ///
-    /// [ConsumedArgs] maps the names of all
+    /// [`ConsumedArgs`] maps the names of all
     /// arguments to the result of their consumption, i.e. a string that can be parsed to the
     /// desired type.
     ///
-    /// Also see [CommandTree::execute].
+    /// Also see [`CommandTree::execute`].
     pub fn execute(mut self, run: &'a RunFunctionType) -> Self {
         self.leaf_nodes.push(LeafNodeBuilder {
             node_type: NodeType::ExecuteLeaf { run },
@@ -132,14 +132,14 @@ pub const fn literal(string: &str) -> NonLeafNodeBuilder {
     }
 }
 
-/// ```name``` identifies this argument in [ConsumedArgs].
+/// ```name``` identifies this argument in [`ConsumedArgs`].
 ///
 /// ```consumer: ArgumentConsumer``` has the purpose of validating arguments. Conversion may start
 /// here, as long as the result remains a [String] (e.g. convert offset to absolute position actual
 /// coordinates), because the result of this function will be passed to following
-/// [NonLeafNodeBuilder::execute] nodes in a [ConsumedArgs] instance. It must remove consumed arg(s)
-/// from [RawArgs] and return them. It must return None if [RawArgs] are invalid. [RawArgs] is
-/// reversed, so [Vec::pop] can be used to obtain args in ltr order.
+/// [`NonLeafNodeBuilder::execute`] nodes in a [`ConsumedArgs`] instance. It must remove consumed arg(s)
+/// from [`RawArgs`] and return them. It must return None if [`RawArgs`] are invalid. [`RawArgs`] is
+/// reversed, so [`Vec::pop`] can be used to obtain args in ltr order.
 pub fn argument<'a>(name: &'a str, consumer: ArgumentConsumer) -> NonLeafNodeBuilder<'a> {
     NonLeafNodeBuilder {
         node_type: NodeType::Argument { name, consumer },

@@ -118,6 +118,7 @@ pub struct Client {
 }
 
 impl Client {
+    #[must_use]
     pub fn new(id: usize, connection: tokio::net::TcpStream, address: SocketAddr) -> Self {
         let (connection_reader, connection_writer) = connection.into_split();
         Self {
@@ -125,7 +126,7 @@ impl Client {
             gameprofile: Mutex::new(None),
             config: Mutex::new(None),
             brand: Mutex::new(None),
-            server_address: Mutex::new("".to_string()),
+            server_address: Mutex::new(String::new()),
             id,
             address: Mutex::new(address),
             connection_state: AtomicCell::new(ConnectionState::HandShake),
@@ -210,9 +211,8 @@ impl Client {
     pub async fn process_packets(&self, server: &Arc<Server>) {
         while let Some(mut packet) = self.client_packets_queue.lock().await.pop_front() {
             if let Err(error) = self.handle_packet(server, &mut packet).await {
-                let text = format!("Error while reading incoming packet {}", error);
-                log::error!("{}", text);
-                self.kick(&text).await
+                log::error!("Error while reading incoming packet {error}", text);
+                self.kick(&text).await;
             };
         }
     }
@@ -238,7 +238,7 @@ impl Client {
             pumpkin_protocol::ConnectionState::Config => {
                 self.handle_config_packet(server, packet).await
             }
-            _ => {
+            pumpkin_protocol::ConnectionState::Play => {
                 log::error!("Invalid Connection state {:?}", self.connection_state);
                 Ok(())
             }
@@ -250,19 +250,15 @@ impl Client {
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
         let bytebuf = &mut packet.bytebuf;
-        match packet.id.0 {
-            SHandShake::PACKET_ID => {
-                self.handle_handshake(SHandShake::read(bytebuf)?).await;
-                Ok(())
-            }
-            _ => {
-                log::error!(
-                    "Failed to handle packet id {} while in Handshake state",
-                    packet.id.0
-                );
-                Ok(())
-            }
+        if packet.id.0 == SHandShake::PACKET_ID {
+            self.handle_handshake(SHandShake::read(bytebuf)?).await;
+        } else {
+            log::error!(
+                "Failed to handle packet id {} while in Handshake state",
+                packet.id.0
+            );
         }
+        Ok(())
     }
 
     async fn handle_status_packet(
@@ -275,21 +271,19 @@ impl Client {
             SStatusRequest::PACKET_ID => {
                 self.handle_status_request(server, SStatusRequest::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SStatusPingRequest::PACKET_ID => {
                 self.handle_ping_request(SStatusPingRequest::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             _ => {
                 log::error!(
                     "Failed to handle packet id {} while in Status state",
                     packet.id.0
                 );
-                Ok(())
             }
         }
+        Ok(())
     }
 
     async fn handle_login_packet(
@@ -302,31 +296,27 @@ impl Client {
             SLoginStart::PACKET_ID => {
                 self.handle_login_start(server, SLoginStart::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SEncryptionResponse::PACKET_ID => {
                 self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SLoginPluginResponse::PACKET_ID => {
                 self.handle_plugin_response(SLoginPluginResponse::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SLoginAcknowledged::PACKET_ID => {
                 self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             _ => {
                 log::error!(
                     "Failed to handle packet id {} while in Login state",
                     packet.id.0
                 );
-                Ok(())
             }
         }
+        Ok(())
     }
 
     async fn handle_config_packet(
@@ -339,31 +329,26 @@ impl Client {
             SClientInformationConfig::PACKET_ID => {
                 self.handle_client_information_config(SClientInformationConfig::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SPluginMessage::PACKET_ID => {
                 self.handle_plugin_message(SPluginMessage::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SAcknowledgeFinishConfig::PACKET_ID => {
-                self.handle_config_acknowledged(SAcknowledgeFinishConfig::read(bytebuf)?)
-                    .await;
-                Ok(())
+                self.handle_config_acknowledged(&SAcknowledgeFinishConfig::read(bytebuf)?);
             }
             SKnownPacks::PACKET_ID => {
                 self.handle_known_packs(server, SKnownPacks::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             _ => {
                 log::error!(
                     "Failed to handle packet id {} while in Config state",
                     packet.id.0
                 );
-                Ok(())
             }
         }
+        Ok(())
     }
 
     /// Reads the connection until our buffer of len 4096 is full, then decode
@@ -380,17 +365,17 @@ impl Client {
             dec.reserve(4096);
             let mut buf = dec.take_capacity();
 
-            if self
-                .connection_reader
-                .lock()
-                .await
-                .read_buf(&mut buf)
-                .await
-                .unwrap()
-                == 0
-            {
-                self.close();
-                return false;
+            match self.connection_reader.lock().await.read_buf(&mut buf).await {
+                Ok(0) => {
+                    self.close();
+                    return false;
+                }
+                Err(error) => {
+                    log::error!("Error while reading incoming packet {}", error);
+                    self.close();
+                    return false;
+                }
+                _ => {}
             }
 
             // This should always be an O(1) unsplit because we reserved space earlier and
@@ -405,7 +390,7 @@ impl Client {
         match self.connection_state.load() {
             ConnectionState::Login => {
                 self.try_send_packet(&CLoginDisconnect::new(
-                    &serde_json::to_string_pretty(&reason).unwrap_or_else(|_| "".into()),
+                    &serde_json::to_string_pretty(&reason).unwrap_or_else(|_| String::new()),
                 ))
                 .await
                 .unwrap_or_else(|_| self.close());
@@ -422,10 +407,10 @@ impl Client {
                     .unwrap_or_else(|_| self.close());
             }
             _ => {
-                log::warn!("Can't kick in {:?} State", self.connection_state)
+                log::warn!("Can't kick in {:?} State", self.connection_state);
             }
         }
-        self.close()
+        self.close();
     }
 
     /// You should prefer to use `kick` when you can

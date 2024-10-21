@@ -9,12 +9,10 @@ trait IsVisible {
 
 impl<'a> IsVisible for Node<'a> {
     fn is_visible(&self) -> bool {
-        match self.node_type {
-            NodeType::ExecuteLeaf { .. } => false,
-            NodeType::Literal { .. } => true,
-            NodeType::Argument { .. } => true,
-            NodeType::Require { .. } => false,
-        }
+        matches!(
+            self.node_type,
+            NodeType::Literal { .. } | NodeType::Argument { .. }
+        )
     }
 }
 
@@ -43,7 +41,7 @@ fn flatten_require_nodes(nodes: &[Node], children: &[usize]) -> Vec<usize> {
         let node = &nodes[i];
         match &node.node_type {
             NodeType::Require { .. } => {
-                new_children.extend(flatten_require_nodes(nodes, node.children.as_slice()))
+                new_children.extend(flatten_require_nodes(nodes, node.children.as_slice()));
             }
             _ => new_children.push(i),
         }
