@@ -7,7 +7,7 @@ use crate::{
     world::player_chunker,
 };
 use num_traits::FromPrimitive;
-use pumpkin_config::{logging, ADVANCED_CONFIG};
+use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::{
     math::{position::WorldPosition, vector3::Vector3, wrap_degrees},
     text::TextComponent,
