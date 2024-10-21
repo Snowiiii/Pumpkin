@@ -1,5 +1,5 @@
+use pumpkin_inventory::{Chest, OpenContainer};
 use async_trait::async_trait;
-use pumpkin_inventory::OpenContainer;
 
 use crate::command::{
     args::ConsumedArgs, tree::CommandTree, CommandExecutor, CommandSender, InvalidTreeError,
@@ -28,7 +28,7 @@ impl CommandExecutor for EchestExecutor {
                 if let Some(ender_chest) = open_containers.get_mut(&0) {
                     ender_chest.add_player(entity_id);
                 } else {
-                    let open_container = OpenContainer::empty(entity_id);
+                    let open_container = OpenContainer::new_empty_container::<Chest>(entity_id);
                     open_containers.insert(0, open_container);
                 }
             }

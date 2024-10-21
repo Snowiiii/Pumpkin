@@ -24,6 +24,9 @@ pub struct Item {
     food: Option<FoodComponent>,
 }
 
+pub fn get_item_protocol_id(item_id: &str) -> u32 {
+    global_registry::get_protocol_id(ITEM_REGISTRY, item_id)
+}
 #[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
 struct FoodComponent {

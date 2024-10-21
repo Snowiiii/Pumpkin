@@ -1,6 +1,4 @@
 use std::slice::IterMut;
-use std::sync::atomic::AtomicU32;
-
 use crate::container_click::MouseClick;
 use crate::crafting::check_if_matches_crafting;
 use crate::{handle_item_change, Container, InventoryError, WindowType};
@@ -143,15 +141,6 @@ impl PlayerInventory {
         slots
     }
 
-    pub fn check_craft(&self) -> Option<ItemStack> {
-        let v1 = [self.crafting[0], self.crafting[1], None];
-        let v2 = [self.crafting[2], self.crafting[3], None];
-        let v3 = [None; 3];
-        let together = [v1, v2, v3];
-
-        check_if_matches_crafting(together)
-    }
-
     pub fn iter_items_mut(&mut self) -> IterMut<Option<ItemStack>> {
         self.items.iter_mut()
     }
@@ -172,14 +161,23 @@ impl Container for PlayerInventory {
         carried_slot: &mut Option<ItemStack>,
         slot: usize,
         mouse_click: MouseClick,
+        invert: bool,
     ) -> Result<(), InventoryError> {
         let slot_condition = self.slot_condition(slot)?;
         let item_slot = self.get_slot(slot)?;
         if let Some(item) = carried_slot {
             if slot_condition(item) {
+                if invert {
+                    handle_item_change(item_slot, carried_slot, mouse_click);
+                    return Ok(());
+                }
                 handle_item_change(carried_slot, item_slot, mouse_click);
             }
         } else {
+            if invert {
+                handle_item_change(item_slot, carried_slot, mouse_click);
+                return Ok(());
+            }
             handle_item_change(carried_slot, item_slot, mouse_click)
         }
         Ok(())
@@ -199,5 +197,15 @@ impl Container for PlayerInventory {
 
     fn all_combinable_slots_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
         self.items.iter_mut().collect()
+    }
+
+    fn craft(&mut self) -> bool {
+        let v1 = [self.crafting[0], self.crafting[1], None];
+        let v2 = [self.crafting[2], self.crafting[3], None];
+        let v3 = [None; 3];
+        let together = [v1, v2, v3];
+
+        self.crafting_output = check_if_matches_crafting(together);
+        self.crafting.iter().any(|s| s.is_some())
     }
 }

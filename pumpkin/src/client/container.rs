@@ -17,9 +17,8 @@ use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
 use pumpkin_protocol::VarInt;
 use pumpkin_world::item::ItemStack;
+use std::ops::DerefMut;
 use std::sync::Arc;
-
-#[expect(unused)]
 
 impl Player {
     pub async fn open_container(&self, server: &Server, window_type: WindowType) {
@@ -149,21 +148,53 @@ impl Player {
             packet.button,
             packet.slot,
         )?;
+        let (crafted_item, crafted_item_slot) = {
+            let mut inventory = self.inventory.lock().await;
+            let combined = OptionallyCombinedContainer::new(
+                inventory.deref_mut(),
+                opened_container.as_deref_mut(),
+            );
+            (
+                combined.crafted_item_slot(),
+                combined.crafting_output_slot(),
+            )
+        };
+        let crafted_is_picked = crafted_item.is_some()
+            && match click.slot {
+                container_click::Slot::Normal(slot) => {
+                    crafted_item_slot.is_some_and(|crafted_slot| crafted_slot == slot)
+                }
+                _ => false,
+            };
         let mut update_whole_container = false;
 
         match click.click_type {
             ClickType::MouseClick(mouse_click) => {
-                self.mouse_click(opened_container.as_deref_mut(), mouse_click, click.slot)
-                    .await
+                self.mouse_click(
+                    opened_container.as_deref_mut(),
+                    mouse_click,
+                    click.slot,
+                    crafted_is_picked,
+                )
+                .await
             }
             ClickType::ShiftClick => {
-                self.shift_mouse_click(opened_container.as_deref_mut(), click.slot)
-                    .await
+                self.shift_mouse_click(
+                    opened_container.as_deref_mut(),
+                    click.slot,
+                    crafted_is_picked,
+                )
+                .await
             }
             ClickType::KeyClick(key_click) => match click.slot {
                 container_click::Slot::Normal(slot) => {
-                    self.number_button_pressed(opened_container.as_deref_mut(), key_click, slot)
-                        .await
+                    self.number_button_pressed(
+                        opened_container.as_deref_mut(),
+                        key_click,
+                        slot,
+                        crafted_is_picked,
+                    )
+                    .await
                 }
                 container_click::Slot::OutsideInventory => Err(InventoryError::InvalidPacket),
             },
@@ -196,6 +227,25 @@ impl Player {
                 Ok(())
             }
         }?;
+        // Checks for if crafted item has been taken
+        {
+            let mut inventory = self.inventory.lock().await;
+            let mut combined = OptionallyCombinedContainer::new(
+                inventory.deref_mut(),
+                opened_container.as_deref_mut(),
+            );
+            if combined.crafted_item_slot().is_none() && crafted_item.is_some() {
+                combined.recipe_used()
+            }
+        }
+        if match &mut opened_container {
+            Some(container) => container.craft(),
+            None => self.inventory.lock().await.craft(),
+        } {
+            self.set_container_content(opened_container.as_deref_mut())
+                .await;
+        }
+
         if let Some(mut opened_container) = opened_container {
             if update_whole_container {
                 drop(opened_container);
@@ -220,14 +270,19 @@ impl Player {
         opened_container: Option<&mut Box<dyn Container>>,
         mouse_click: MouseClick,
         slot: container_click::Slot,
+        taking_crafted: bool,
     ) -> Result<(), InventoryError> {
         let mut inventory = self.inventory.lock().await;
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
-
         match slot {
             container_click::Slot::Normal(slot) => {
                 let mut carried_item = self.carried_item.load();
-                let res = container.handle_item_change(&mut carried_item, slot, mouse_click);
+                let res = container.handle_item_change(
+                    &mut carried_item,
+                    slot,
+                    mouse_click,
+                    taking_crafted,
+                );
                 self.carried_item.store(carried_item);
                 res
             }
@@ -239,6 +294,7 @@ impl Player {
         &self,
         opened_container: Option<&mut Box<dyn Container>>,
         slot: container_click::Slot,
+        taking_crafted: bool,
     ) -> Result<(), InventoryError> {
         let mut inventory = self.inventory.lock().await;
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
@@ -272,7 +328,12 @@ impl Player {
                     };
                     if let Some(slot) = slots {
                         let mut item_slot = container.all_slots()[slot].map(|i| i);
-                        container.handle_item_change(&mut item_slot, slot, MouseClick::Left)?;
+                        container.handle_item_change(
+                            &mut item_slot,
+                            slot,
+                            MouseClick::Left,
+                            taking_crafted,
+                        )?;
                         *container.all_slots()[slot] = item_slot;
                     }
                 }
@@ -287,6 +348,7 @@ impl Player {
         opened_container: Option<&mut Box<dyn Container>>,
         key_click: KeyClick,
         slot: usize,
+        taking_crafted: bool,
     ) -> Result<(), InventoryError> {
         let changing_slot = match key_click {
             KeyClick::Slot(slot) => slot,
@@ -296,7 +358,12 @@ impl Player {
         let mut changing_item_slot = inventory.get_slot(changing_slot as usize)?.to_owned();
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
 
-        container.handle_item_change(&mut changing_item_slot, slot, MouseClick::Left)?;
+        container.handle_item_change(
+            &mut changing_item_slot,
+            slot,
+            MouseClick::Left,
+            taking_crafted,
+        )?;
         *inventory.get_slot(changing_slot as usize)? = changing_item_slot;
         Ok(())
     }

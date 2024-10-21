@@ -78,6 +78,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_stop::init_command_tree());
     dispatcher.register(cmd_help::init_command_tree());
     dispatcher.register(cmd_echest::init_command_tree());
+    dispatcher.register(cmd_craft::init_command_tree());
     dispatcher.register(cmd_kill::init_command_tree());
     dispatcher.register(cmd_kick::init_command_tree());
     dispatcher.register(cmd_worldborder::init_command_tree());

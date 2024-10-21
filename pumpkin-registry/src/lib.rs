@@ -11,7 +11,7 @@ use instrument::Instrument;
 use jukebox_song::JukeboxSong;
 use paint::Painting;
 use pumpkin_protocol::client::config::RegistryEntry;
-pub use recipe::{IngredientSlot, IngredientType, Recipe, RECIPES};
+pub use recipe::{IngredientSlot, IngredientType, Recipe, RecipeResult, RECIPES};
 use serde::Serialize;
 pub use tags::ITEM_TAGS;
 use serde::{Deserialize, Serialize};
