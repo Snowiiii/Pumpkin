@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:smelting",
+  "category": "blocks",
+  "cookingtime": 200,
+  "experience": 0.1,
+  "ingredient": {
+    "item": "minecraft:orange_terracotta"
+  },
+  "result": {
+    "id": "minecraft:orange_glazed_terracotta"
+  }
+}

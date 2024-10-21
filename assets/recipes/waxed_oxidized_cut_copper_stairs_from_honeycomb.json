@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "group": "waxed_oxidized_cut_copper_stairs",
+  "ingredients": [
+    {
+      "item": "minecraft:oxidized_cut_copper_stairs"
+    },
+    {
+      "item": "minecraft:honeycomb"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "minecraft:waxed_oxidized_cut_copper_stairs"
+  }
+}

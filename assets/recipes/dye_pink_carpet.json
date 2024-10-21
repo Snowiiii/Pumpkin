@@ -1,0 +1,61 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "group": "carpet",
+  "ingredients": [
+    {
+      "item": "minecraft:pink_dye"
+    },
+    [
+      {
+        "item": "minecraft:black_carpet"
+      },
+      {
+        "item": "minecraft:blue_carpet"
+      },
+      {
+        "item": "minecraft:brown_carpet"
+      },
+      {
+        "item": "minecraft:cyan_carpet"
+      },
+      {
+        "item": "minecraft:gray_carpet"
+      },
+      {
+        "item": "minecraft:green_carpet"
+      },
+      {
+        "item": "minecraft:light_blue_carpet"
+      },
+      {
+        "item": "minecraft:light_gray_carpet"
+      },
+      {
+        "item": "minecraft:lime_carpet"
+      },
+      {
+        "item": "minecraft:magenta_carpet"
+      },
+      {
+        "item": "minecraft:orange_carpet"
+      },
+      {
+        "item": "minecraft:purple_carpet"
+      },
+      {
+        "item": "minecraft:red_carpet"
+      },
+      {
+        "item": "minecraft:yellow_carpet"
+      },
+      {
+        "item": "minecraft:white_carpet"
+      }
+    ]
+  ],
+  "result": {
+    "count": 1,
+    "id": "minecraft:pink_carpet"
+  }
+}

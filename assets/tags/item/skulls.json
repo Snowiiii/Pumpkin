@@ -1,0 +1,11 @@
+{
+  "values": [
+    "minecraft:player_head",
+    "minecraft:creeper_head",
+    "minecraft:zombie_head",
+    "minecraft:skeleton_skull",
+    "minecraft:wither_skeleton_skull",
+    "minecraft:dragon_head",
+    "minecraft:piglin_head"
+  ]
+}
