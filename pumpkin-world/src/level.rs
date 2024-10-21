@@ -7,7 +7,7 @@ use tokio::sync::mpsc;
 
 use crate::{
     chunk::{
-        anvil::AnvilChunkReader, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
+        anvil::AnvilChunkFormat, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
     },
     world_gen::{get_world_gen, Seed, WorldGenerator},
 };
@@ -52,7 +52,7 @@ impl Level {
                     root_folder,
                     region_folder,
                 }),
-                chunk_reader: Box::new(AnvilChunkReader::new()),
+                chunk_reader: Box::new(AnvilChunkFormat::new()),
                 loaded_chunks: Arc::new(RwLock::new(HashMap::new())),
                 chunk_watchers: Arc::new(Mutex::new(HashMap::new())),
             }
@@ -64,7 +64,7 @@ impl Level {
             Self {
                 world_gen,
                 save_file: None,
-                chunk_reader: Box::new(AnvilChunkReader::new()),
+                chunk_reader: Box::new(AnvilChunkFormat::new()),
                 loaded_chunks: Arc::new(RwLock::new(HashMap::new())),
                 chunk_watchers: Arc::new(Mutex::new(HashMap::new())),
             }
