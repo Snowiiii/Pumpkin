@@ -154,11 +154,24 @@ impl Player {
         let watched = chunk_section_from_pos(&self.living_entity.entity.block_pos.load());
         let view_distance = i32::from(get_view_distance(self).await);
         let cylindrical = Cylindrical::new(Vector2::new(watched.x, watched.z), view_distance);
+        let all_chunks = cylindrical.all_chunks_within();
+
+        log::debug!(
+            "Removing player id {}, unwatching {} chunks",
+            self.client.id,
+            all_chunks.len()
+        );
         self.living_entity
             .entity
             .world
-            .mark_chunks_as_not_watched(&cylindrical.all_chunks_within())
+            .mark_chunks_as_not_watched(&all_chunks)
             .await;
+
+        log::debug!(
+            "Removed player id {} ({} chunks remain cached)",
+            self.client.id,
+            self.living_entity.entity.world.get_cached_chunk_len().await
+        );
     }
 
     pub async fn tick(&self) {
