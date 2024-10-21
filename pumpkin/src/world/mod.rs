@@ -387,7 +387,7 @@ impl World {
     }
 
     pub async fn get_chunks(&self, chunks: Vec<Vector2<i32>>) -> Vec<Arc<RwLock<ChunkData>>> {
-        let (sender, mut receive) = mpsc::channel(1024);
+        let (sender, mut receive) = mpsc::channel(chunks.len());
         {
             let level = self.level.clone();
             tokio::spawn(async move { level.lock().await.fetch_chunks(&chunks, sender) });
