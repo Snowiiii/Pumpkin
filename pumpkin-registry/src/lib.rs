@@ -1,86 +1,60 @@
+use crate::damage_type::DamageType;
 use biomes::Biome;
 use chat_type::ChatType;
 use dimensions::Dimension;
 use fastnbt::SerOpts;
 use paint::Painting;
 use pumpkin_protocol::client::config::RegistryEntry;
+pub use recipe::{IngredientSlot, IngredientType, Recipe, RecipeResult, RECIPES};
+use serde::Serialize;
+pub use tags::ITEM_TAGS;
 use wolf::WolfVariant;
-
 mod biomes;
 mod chat_type;
 mod damage_type;
 mod dimensions;
 mod paint;
+mod recipe;
+mod tags;
 mod wolf;
 
 pub struct Registry {
-    pub registry_id: String,
+    pub registry_id: &'static str,
     pub registry_entries: Vec<RegistryEntry<'static>>,
+}
+
+fn get_entry<T: Serialize + Default>(entry_id: &'static str) -> RegistryEntry<'static> {
+    RegistryEntry {
+        entry_id,
+        data: fastnbt::to_bytes_with_opts(&T::default(), SerOpts::network_nbt()).unwrap(),
+    }
+}
+trait RegistryType: Serialize + Default {
+    const REGISTRY_ID: &'static str;
+    const ENTRY_IDS: &'static [&'static str];
+
+    fn registry() -> Registry {
+        let entries = Self::ENTRY_IDS
+            .iter()
+            .map(|entry| get_entry::<Self>(entry))
+            .collect();
+        Registry {
+            registry_id: Self::REGISTRY_ID,
+            registry_entries: entries,
+        }
+    }
 }
 
 impl Registry {
     /// We should parse this from a JSON in the future
     pub fn get_static() -> Vec<Self> {
-        let dimensions = Registry {
-            registry_id: "minecraft:dimension_type".to_string(),
-            registry_entries: vec![RegistryEntry {
-                entry_id: "minecraft:overworld",
-                data: fastnbt::to_bytes_with_opts(&Dimension::default(), SerOpts::network_nbt())
-                    .unwrap(),
-            }],
-        };
-        let biomes = Registry {
-            registry_id: "minecraft:worldgen/biome".to_string(),
-            registry_entries: vec![
-                RegistryEntry {
-                    entry_id: "minecraft:plains",
-                    data: fastnbt::to_bytes_with_opts(&Biome::default(), SerOpts::network_nbt())
-                        .unwrap(),
-                },
-                RegistryEntry {
-                    entry_id: "minecraft:snowy_taiga",
-                    data: fastnbt::to_bytes_with_opts(&Biome::default(), SerOpts::network_nbt())
-                        .unwrap(),
-                },
-            ],
-        };
-        let wolf_variants = Registry {
-            registry_id: "minecraft:wolf_variant".to_string(),
-            registry_entries: vec![RegistryEntry {
-                entry_id: "minecraft:wolf_variant",
-                data: fastnbt::to_bytes_with_opts(&WolfVariant::default(), SerOpts::network_nbt())
-                    .unwrap(),
-            }],
-        };
-
-        let chat_types = Registry {
-            registry_id: "minecraft:chat_type".to_string(),
-            registry_entries: vec![RegistryEntry {
-                entry_id: "minecraft:chat",
-                data: fastnbt::to_bytes_with_opts(&ChatType::default(), SerOpts::network_nbt())
-                    .unwrap(),
-            }],
-        };
-
-        let damage_types = Registry {
-            registry_id: "minecraft:damage_type".to_string(),
-            registry_entries: damage_type::entries(),
-        };
-        let paintings = Registry {
-            registry_id: "minecraft:painting_variant".to_string(),
-            registry_entries: vec![RegistryEntry {
-                entry_id: "minecraft:painting_variant",
-                data: fastnbt::to_bytes_with_opts(&Painting::default(), SerOpts::network_nbt())
-                    .unwrap(),
-            }],
-        };
         vec![
-            dimensions,
-            damage_types,
-            biomes,
-            wolf_variants,
-            paintings,
-            chat_types,
+            Dimension::registry(),
+            DamageType::registry(),
+            Biome::registry(),
+            WolfVariant::registry(),
+            Painting::registry(),
+            ChatType::registry(),
         ]
     }
 }

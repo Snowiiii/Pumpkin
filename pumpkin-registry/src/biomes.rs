@@ -1,3 +1,4 @@
+use crate::RegistryType;
 use pumpkin_protocol::VarInt;
 use serde::Serialize;
 
@@ -115,4 +116,8 @@ impl Default for Biome {
             },
         }
     }
+}
+impl RegistryType for Biome {
+    const REGISTRY_ID: &'static str = "minecraft:worldgen/biome";
+    const ENTRY_IDS: &'static [&'static str] = &["minecraft:plains", "minecraft:snowy_taiga"];
 }

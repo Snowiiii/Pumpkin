@@ -1,5 +1,4 @@
-use fastnbt::SerOpts;
-use pumpkin_protocol::client::config::RegistryEntry;
+use crate::RegistryType;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
@@ -13,7 +12,7 @@ pub struct DamageType {
     death_message_type: Option<String>,
 }
 
-const NAMES: &[&str] = &[
+pub(super) const NAMES: &[&str] = &[
     "arrow",
     "bad_respawn_point",
     "cactus",
@@ -63,24 +62,19 @@ const NAMES: &[&str] = &[
     "wither_skull",
 ];
 
-pub(super) fn entries() -> Vec<RegistryEntry<'static>> {
-    let items: Vec<_> = NAMES
-        .iter()
-        .map(|name| RegistryEntry {
-            entry_id: name,
-            data: fastnbt::to_bytes_with_opts(
-                &DamageType {
-                    exhaustion: 0.1,
-                    message_id: "inFire".into(),
-                    scaling: "when_caused_by_living_non_player".into(),
-                    death_message_type: None,
-                    effects: None,
-                },
-                SerOpts::network_nbt(),
-            )
-            .unwrap(),
-        })
-        .collect();
+impl Default for DamageType {
+    fn default() -> Self {
+        DamageType {
+            exhaustion: 0.1,
+            message_id: "inFire".into(),
+            scaling: "when_caused_by_living_non_player".into(),
+            death_message_type: None,
+            effects: None,
+        }
+    }
+}
 
-    items
+impl RegistryType for DamageType {
+    const REGISTRY_ID: &'static str = "minecraft:damage_type";
+    const ENTRY_IDS: &'static [&'static str] = NAMES;
 }

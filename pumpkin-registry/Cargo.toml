@@ -11,3 +11,5 @@ pumpkin-core = { path = "../pumpkin-core" }
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 
 serde.workspace = true
+itertools.workspace = true
+serde_json = "1.0.132"

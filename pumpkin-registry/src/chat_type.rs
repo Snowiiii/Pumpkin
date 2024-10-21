@@ -1,3 +1,4 @@
+use crate::RegistryType;
 use pumpkin_core::text::style::Style;
 use serde::Serialize;
 
@@ -30,4 +31,8 @@ impl Default for ChatType {
             },
         }
     }
+}
+impl RegistryType for ChatType {
+    const REGISTRY_ID: &'static str = "minecraft:chat_type";
+    const ENTRY_IDS: &'static [&'static str] = &["minecraft:chat"];
 }
