@@ -93,8 +93,13 @@ impl World {
         // This code follows the vanilla packet order
         let entity_id = player.entity_id();
         let gamemode = player.gamemode.load();
-        log::debug!("spawning player, entity id {}", entity_id);
+        log::debug!(
+            "spawning player {}, entity id {}",
+            player.client.id,
+            entity_id
+        );
 
+        log::debug!("Sending login packet to {}", player.client.id);
         // login packet for our new player
         player
             .client
@@ -120,9 +125,9 @@ impl World {
                 false,
             ))
             .await;
-        log::debug!("sending abilities");
         // player abilities
         // TODO: this is for debug purpose, remove later
+        log::debug!("Sending player abilities to {}", player.client.id);
         player
             .client
             .send_packet(&CPlayerAbilities::new(0x02, 0.4, 0.1))
@@ -134,6 +139,8 @@ impl World {
         let z = 10.0;
         let yaw = 10.0;
         let pitch = 10.0;
+
+        log::debug!("Sending player teleport to {}", player.client.id);
         player.teleport(x, y, z, yaw, pitch).await;
 
         let pos = player.living_entity.entity.pos.load();
@@ -142,6 +149,7 @@ impl World {
         let gameprofile = &player.gameprofile;
         // first send info update to our new player, So he can see his Skin
         // also send his info to everyone else
+        log::debug!("Broadcasting player info for {}", player.client.id);
         self.broadcast_packet_all(&CPlayerInfoUpdate::new(
             0x01 | 0x08,
             &[pumpkin_protocol::client::play::Player {
@@ -177,6 +185,7 @@ impl World {
                     ],
                 });
             }
+            log::debug!("Sending player info to {}", player.client.id);
             player
                 .client
                 .send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries))
@@ -185,6 +194,7 @@ impl World {
 
         let gameprofile = &player.gameprofile;
 
+        log::debug!("Broadcasting player spawn for {}", player.client.id);
         // spawn player for every client
         self.broadcast_packet_expect(
             &[player.client.id],
@@ -218,6 +228,7 @@ impl World {
             let entity = &existing_player.living_entity.entity;
             let pos = entity.pos.load();
             let gameprofile = &existing_player.gameprofile;
+            log::debug!("Sending player entities to {}", player.client.id);
             player
                 .client
                 .send_packet(&CSpawnEntity::new(
@@ -244,10 +255,12 @@ impl World {
                 entity_id.into(),
                 Metadata::new(17, VarInt(0), config.skin_parts),
             );
+            log::debug!("Broadcasting skin for {}", player.client.id);
             self.broadcast_packet_all(&packet).await;
         }
 
         // Start waiting for level chunks, Sets the "Loading Terrain" screen
+        log::debug!("Sending waiting chunks to {}", player.client.id);
         player
             .client
             .send_packet(&CGameEvent::new(GameEvent::StartWaitingChunks, 0.0))

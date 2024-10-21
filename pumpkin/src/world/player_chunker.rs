@@ -25,6 +25,8 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
     player.watched_section.store(new_watched);
     let watched_section = new_watched;
     let chunk_pos = player.living_entity.entity.chunk_pos.load();
+
+    log::debug!("Sending center chunk to {}", player.client.id);
     player
         .client
         .send_packet(&CCenterChunk {
@@ -34,10 +36,12 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
         .await;
     let view_distance = i32::from(get_view_distance(&player).await);
     log::debug!(
-        "Player {} joined with view distance: {}",
+        "Player {} ({}) joined with view distance: {}",
         player.gameprofile.name,
+        player.client.id,
         view_distance
     );
+
     let old_cylindrical = Cylindrical::new(
         Vector2::new(watched_section.x, watched_section.z),
         view_distance,
@@ -59,6 +63,15 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
         },
         true,
     );
+
+    log::debug!(
+        "{} added {} remove ({}) for {}",
+        loading_chunks.len(),
+        unloading_chunks.len(),
+        view_distance,
+        player.client.id
+    );
+
     if !loading_chunks.is_empty() {
         world.mark_chunks_as_watched(&loading_chunks).await;
         world.spawn_world_chunks(player.client.clone(), loading_chunks, view_distance);
