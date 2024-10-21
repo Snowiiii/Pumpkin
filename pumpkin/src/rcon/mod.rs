@@ -62,7 +62,7 @@ pub struct RCONClient {
 }
 
 impl RCONClient {
-    pub const fn new(connection: tokio::net::TcpStream, address: SocketAddr) -> Self {
+    #[must_use] pub const fn new(connection: tokio::net::TcpStream, address: SocketAddr) -> Self {
         Self {
             connection,
             address,
