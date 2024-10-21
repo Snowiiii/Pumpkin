@@ -7,7 +7,6 @@ edition.workspace = true
 # For items
 pumpkin-world = { path = "../pumpkin-world" }
 
-simple_logger = { version = "5.0.0", features = ["threads"] }
 log.workspace = true
 
 num-traits = "0.2"
