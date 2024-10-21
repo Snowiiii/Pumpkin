@@ -280,7 +280,6 @@ impl Player {
                         entity.set_sneaking(false).await;
                     }
                 }
-                pumpkin_protocol::server::play::Action::LeaveBed => log::debug!("todo"),
                 pumpkin_protocol::server::play::Action::StartSprinting => {
                     if !entity.sprinting.load(std::sync::atomic::Ordering::Relaxed) {
                         entity.set_sprinting(true).await;
@@ -291,9 +290,12 @@ impl Player {
                         entity.set_sprinting(false).await;
                     }
                 }
-                pumpkin_protocol::server::play::Action::StartHorseJump => log::debug!("todo"),
-                pumpkin_protocol::server::play::Action::StopHorseJump => log::debug!("todo"),
-                pumpkin_protocol::server::play::Action::OpenVehicleInventory => log::debug!("todo"),
+                pumpkin_protocol::server::play::Action::LeaveBed
+                | pumpkin_protocol::server::play::Action::StartHorseJump
+                | pumpkin_protocol::server::play::Action::StopHorseJump
+                | pumpkin_protocol::server::play::Action::OpenVehicleInventory => {
+                    log::debug!("todo");
+                }
                 pumpkin_protocol::server::play::Action::StartFlyingElytra => {
                     let fall_flying = entity.check_fall_flying();
                     if entity
@@ -456,10 +458,7 @@ impl Player {
                         }
                     }
                 }
-                ActionType::Interact => {
-                    log::debug!("todo");
-                }
-                ActionType::InteractAt => {
+                ActionType::Interact | ActionType::InteractAt => {
                     log::debug!("todo");
                 }
             },
@@ -535,16 +534,10 @@ impl Player {
                         .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence))
                         .await;
                 }
-                Status::DropItemStack => {
-                    log::debug!("todo");
-                }
-                Status::DropItem => {
-                    log::debug!("todo");
-                }
-                Status::ShootArrowOrFinishEating => {
-                    log::debug!("todo");
-                }
-                Status::SwapItem => {
+                Status::DropItemStack
+                | Status::DropItem
+                | Status::ShootArrowOrFinishEating
+                | Status::SwapItem => {
                     log::debug!("todo");
                 }
             },
