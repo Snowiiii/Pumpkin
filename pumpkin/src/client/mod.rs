@@ -265,15 +265,19 @@ impl Client {
         &self,
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
+        log::debug!("Handling handshake group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
-        if packet.id.0 == SHandShake::PACKET_ID {
-            self.handle_handshake(SHandShake::read(bytebuf)?).await;
-        } else {
-            log::error!(
-                "Failed to handle packet id {} while in Handshake state",
-                packet.id.0
-            );
-        }
+        match packet.id.0 {
+            SHandShake::PACKET_ID => {
+                self.handle_handshake(SHandShake::read(bytebuf)?).await;
+            }
+            _ => {
+                log::error!(
+                    "Failed to handle packet id {} while in Handshake state",
+                    packet.id.0
+                );
+            }
+        };
         Ok(())
     }
 
@@ -282,6 +286,7 @@ impl Client {
         server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
+        log::debug!("Handling status group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SStatusRequest::PACKET_ID => {
@@ -298,7 +303,7 @@ impl Client {
                     packet.id.0
                 );
             }
-        }
+        };
         Ok(())
     }
 
@@ -307,6 +312,7 @@ impl Client {
         server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
+        log::debug!("Handling login group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SLoginStart::PACKET_ID => {
@@ -331,7 +337,7 @@ impl Client {
                     packet.id.0
                 );
             }
-        }
+        };
         Ok(())
     }
 
@@ -340,6 +346,7 @@ impl Client {
         server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
+        log::debug!("Handling config group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SClientInformationConfig::PACKET_ID => {
@@ -363,7 +370,7 @@ impl Client {
                     packet.id.0
                 );
             }
-        }
+        };
         Ok(())
     }
 
