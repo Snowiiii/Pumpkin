@@ -8,6 +8,7 @@ use crate::commands::dispatcher::CommandDispatcher;
 use crate::entity::player::Player;
 use crate::server::Server;
 mod arg_player;
+mod cmd_craft;
 mod cmd_echest;
 mod cmd_gamemode;
 mod cmd_help;
@@ -76,6 +77,7 @@ pub fn default_dispatcher<'a>() -> CommandDispatcher<'a> {
     dispatcher.register(cmd_stop::init_command_tree());
     dispatcher.register(cmd_help::init_command_tree());
     dispatcher.register(cmd_echest::init_command_tree());
+    dispatcher.register(cmd_craft::init_command_tree());
     dispatcher.register(cmd_kill::init_command_tree());
     dispatcher.register(cmd_kick::init_command_tree());
 
