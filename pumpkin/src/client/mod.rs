@@ -210,7 +210,6 @@ impl Client {
     pub async fn process_packets(&self, server: &Arc<Server>) {
         while let Some(mut packet) = self.client_packets_queue.lock().await.pop_front() {
             if let Err(error) = self.handle_packet(server, &mut packet).await {
-                dbg!("{:?}", packet.id);
                 let text = format!("Error while reading incoming packet {}", error);
                 log::error!("{}", text);
                 self.kick(&text).await
@@ -402,7 +401,7 @@ impl Client {
 
     /// Kicks the Client with a reason depending on the connection state
     pub async fn kick(&self, reason: &str) {
-        dbg!(reason);
+        log::debug!("Kicking client with reason: {}", reason);
         match self.connection_state.load() {
             ConnectionState::Login => {
                 self.try_send_packet(&CLoginDisconnect::new(

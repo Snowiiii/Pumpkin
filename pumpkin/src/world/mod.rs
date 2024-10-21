@@ -119,7 +119,7 @@ impl World {
                 false,
             ))
             .await;
-        dbg!("sending abilities");
+        log::debug!("sending abilities");
         // player abilities
         // TODO: this is for debug purpose, remove later
         player
@@ -312,7 +312,9 @@ impl World {
                     client.send_packet(&CChunkData(&chunk_data)).await;
                 }
             }
-            dbg!("DONE CHUNKS", inst.elapsed());
+
+            log::trace!("chunks sent after {}ms", inst.elapsed().as_millis());
+
         });
     }
 

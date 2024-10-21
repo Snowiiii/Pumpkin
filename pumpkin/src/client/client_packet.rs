@@ -34,7 +34,7 @@ use super::{authentication::AuthError, Client, PlayerConfig};
 /// NEVER TRUST THE CLIENT. HANDLE EVERY ERROR, UNWRAP/EXPECT
 impl Client {
     pub async fn handle_handshake(&self, handshake: SHandShake) {
-        dbg!("handshake");
+        log::debug!("handshake");
         let version = handshake.protocol_version.0;
         self.protocol_version
             .store(version, std::sync::atomic::Ordering::Relaxed);
@@ -60,7 +60,7 @@ impl Client {
     }
 
     pub async fn handle_ping_request(&self, ping_request: SStatusPingRequest) {
-        dbg!("ping");
+        log::debug!("recieved ping request");
         self.send_packet(&CPingResponse::new(ping_request.payload))
             .await;
         self.close();
@@ -275,13 +275,13 @@ impl Client {
             version: "1.21",
         }]))
         .await;
-        dbg!("login acknowledged");
+        log::debug!("login acknowledged");
     }
     pub async fn handle_client_information_config(
         &self,
         client_information: SClientInformationConfig,
     ) {
-        dbg!("got client settings");
+        log::debug!("got client settings");
         if let (Some(main_hand), Some(chat_mode)) = (
             Hand::from_i32(client_information.main_hand.into()),
             ChatMode::from_i32(client_information.chat_mode.into()),
@@ -305,7 +305,7 @@ impl Client {
         if plugin_message.channel.starts_with("minecraft:brand")
             || plugin_message.channel.starts_with("MC|Brand")
         {
-            dbg!("got a client brand");
+            log::debug!("got a client brand");
             match String::from_utf8(plugin_message.data) {
                 Ok(brand) => *self.brand.lock().await = Some(brand),
                 Err(e) => self.kick(&e.to_string()).await,
@@ -323,12 +323,12 @@ impl Client {
         }
 
         // We are done with configuring
-        dbg!("finish config");
+        log::debug!("finished config");
         self.send_packet(&CFinishConfig::new()).await;
     }
 
     pub async fn handle_config_acknowledged(&self, _config_acknowledged: SAcknowledgeFinishConfig) {
-        dbg!("config acknowledged");
+        log::debug!("config acknowledged");
         self.connection_state.store(ConnectionState::Play);
         self.make_player
             .store(true, std::sync::atomic::Ordering::Relaxed);

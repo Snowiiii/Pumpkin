@@ -190,7 +190,7 @@ impl Player {
                 //  self.mouse_drag(drag_handler, opened_container.as_deref_mut(), drag_state)
             }
             ClickType::DropType(_drop_type) => {
-                dbg!("todo");
+                todo!();
                 Ok(())
             }
         }?;

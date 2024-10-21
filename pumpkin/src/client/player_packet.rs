@@ -7,7 +7,7 @@ use crate::{
     world::player_chunker,
 };
 use num_traits::FromPrimitive;
-use pumpkin_config::ADVANCED_CONFIG;
+use pumpkin_config::{logging, ADVANCED_CONFIG};
 use pumpkin_core::{
     math::{position::WorldPosition, vector3::Vector3, wrap_degrees},
     text::TextComponent,
@@ -334,7 +334,7 @@ impl Player {
     }
 
     pub async fn handle_chat_message(&self, chat_message: SChatMessage) {
-        dbg!("got message");
+        log::debug!("received chat message");
 
         let message = chat_message.message;
         if message.len() > 256 {
@@ -457,10 +457,10 @@ impl Player {
                     }
                 }
                 ActionType::Interact => {
-                    dbg!("todo");
+                    todo!();
                 }
                 ActionType::InteractAt => {
-                    dbg!("todo");
+                    todo!();
                 }
             },
             None => self.kick(TextComponent::text("Invalid action type")).await,
@@ -468,8 +468,6 @@ impl Player {
     }
 
     pub async fn handle_player_action(&self, player_action: SPlayerAction) {
-
-
         match Status::from_i32(player_action.status.0) {
             Some(status) => match status {
                 Status::StartedDigging => {
@@ -538,16 +536,16 @@ impl Player {
                         .await;
                 }
                 Status::DropItemStack => {
-                    dbg!("todo");
+                    todo!();
                 }
                 Status::DropItem => {
-                    dbg!("todo");
+                    todo!();
                 }
                 Status::ShootArrowOrFinishEating => {
-                    dbg!("todo");
+                    todo!();
                 }
                 Status::SwapItem => {
-                    dbg!("todo");
+                    todo!();
                 }
             },
             None => self.kick(TextComponent::text("Invalid status")).await,
