@@ -392,11 +392,16 @@ impl World {
             let level = self.level.clone();
             tokio::spawn(async move { level.lock().await.fetch_chunks(&chunks, sender) });
         }
-        let mut received = vec![];
-        while let Some(chunk) = receive.recv().await {
-            received.push(chunk);
-        }
-        received
+        tokio::spawn(async move {
+            let mut received = vec![];
+
+            while let Some(chunk) = receive.recv().await {
+                received.push(chunk);
+            }
+            received
+        })
+        .await
+        .unwrap()
     }
 
     pub async fn break_block(&self, position: WorldPosition) {
