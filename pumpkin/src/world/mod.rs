@@ -405,4 +405,15 @@ impl World {
         self.broadcast_packet_all(&CWorldEvent::new(2001, &position, 11, false))
             .await;
     }
+
+    pub async fn get_block(&self, position: WorldPosition) -> BlockId {
+        let (chunk, relative) = position.chunk_and_chunk_relative_position();
+        let relative = ChunkRelativeBlockCoordinates::from(relative);
+        self.get_chunks(vec![chunk]).await[0]
+            .clone()
+            .read()
+            .await
+            .blocks
+            .get_block(relative)
+    }
 }
