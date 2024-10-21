@@ -34,12 +34,16 @@ use super::{authentication::AuthError, Client, PlayerConfig};
 /// NEVER TRUST THE CLIENT. HANDLE EVERY ERROR, UNWRAP/EXPECT
 impl Client {
     pub async fn handle_handshake(&self, handshake: SHandShake) {
-        log::debug!("handshake");
         let version = handshake.protocol_version.0;
         self.protocol_version
             .store(version, std::sync::atomic::Ordering::Relaxed);
         *self.server_address.lock().await = handshake.server_address;
 
+        log::debug!(
+            "Handshake: id {} is now in state {:?}",
+            self.id,
+            &handshake.next_state
+        );
         self.connection_state.store(handshake.next_state);
         if self.connection_state.load() != ConnectionState::Status {
             let protocol = version;
@@ -56,6 +60,7 @@ impl Client {
     }
 
     pub async fn handle_status_request(&self, server: &Server, _status_request: SStatusRequest) {
+        log::debug!("recieved status request");
         self.send_packet(&server.get_status()).await;
     }
 

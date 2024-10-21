@@ -181,15 +181,20 @@ impl Client {
             self.kick(&error.to_string()).await;
             return;
         }
-        if let Err(error) = self
-            .connection_writer
-            .lock()
-            .await
+
+        let mut writer = self.connection_writer.lock().await;
+        if let Err(error) = writer
             .write_all(&enc.take())
             .await
             .map_err(|_| PacketError::ConnectionWrite)
         {
             self.kick(&error.to_string()).await;
+        } else if let Err(error) = writer.flush().await {
+            log::warn!(
+                "Failed to flush writer for id {}: {}",
+                self.id,
+                error.to_string()
+            );
         }
     }
 
@@ -198,10 +203,15 @@ impl Client {
 
         let mut enc = self.enc.lock().await;
         enc.append_packet(packet)?;
-        self.connection_writer
-            .lock()
-            .await
+
+        let mut writer = self.connection_writer.lock().await;
+        writer
             .write_all(&enc.take())
+            .await
+            .map_err(|_| PacketError::ConnectionWrite)?;
+
+        writer
+            .flush()
             .await
             .map_err(|_| PacketError::ConnectionWrite)?;
         Ok(())
@@ -209,10 +219,15 @@ impl Client {
 
     /// Processes all packets send by the client
     pub async fn process_packets(&self, server: &Arc<Server>) {
-        while let Some(mut packet) = self.client_packets_queue.lock().await.pop_front() {
+        let mut packet_queue = self.client_packets_queue.lock().await;
+        while let Some(mut packet) = packet_queue.pop_front() {
             if let Err(error) = self.handle_packet(server, &mut packet).await {
                 let text = format!("Error while reading incoming packet {error}");
-                log::error!("{text}");
+                log::error!(
+                    "Failed to read incoming packet with id {}: {}",
+                    i32::from(packet.id),
+                    error
+                );
                 self.kick(&text).await;
             };
         }
@@ -358,26 +373,38 @@ impl Client {
     pub async fn poll(&self) -> bool {
         loop {
             let mut dec = self.dec.lock().await;
-            if let Ok(Some(packet)) = dec.decode() {
-                self.add_packet(packet).await;
-                return true;
-            };
+
+            match dec.decode() {
+                Ok(Some(packet)) => {
+                    self.add_packet(packet).await;
+                    return true;
+                }
+                Ok(None) => log::debug!("Waiting for more data to complete packet..."),
+                Err(err) => log::warn!(
+                    "Failed to decode packet for id {}: {}",
+                    self.id,
+                    err.to_string()
+                ),
+            }
 
             dec.reserve(4096);
             let mut buf = dec.take_capacity();
 
-            match self.connection_reader.lock().await.read_buf(&mut buf).await {
-                Ok(0) => {
-                    self.close();
-                    return false;
+            let bytes_read = self.connection_reader.lock().await.read_buf(&mut buf).await;
+            match bytes_read {
+                Ok(cnt) => {
+                    log::debug!("Read {} bytes", cnt);
+                    if cnt == 0 {
+                        self.close();
+                        return false;
+                    }
                 }
                 Err(error) => {
                     log::error!("Error while reading incoming packet {}", error);
                     self.close();
                     return false;
                 }
-                _ => {}
-            }
+            };
 
             // This should always be an O(1) unsplit because we reserved space earlier and
             // the call to `read_buf` shouldn't have grown the allocation.
@@ -387,7 +414,7 @@ impl Client {
 
     /// Kicks the Client with a reason depending on the connection state
     pub async fn kick(&self, reason: &str) {
-        log::debug!("Kicking client with reason: {}", reason);
+        log::info!("Kicking for id {} for {}", self.id, reason);
         match self.connection_state.load() {
             ConnectionState::Login => {
                 self.try_send_packet(&CLoginDisconnect::new(
