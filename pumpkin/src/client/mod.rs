@@ -118,7 +118,8 @@ pub struct Client {
 }
 
 impl Client {
-    #[must_use] pub fn new(id: usize, connection: tokio::net::TcpStream, address: SocketAddr) -> Self {
+    #[must_use]
+    pub fn new(id: usize, connection: tokio::net::TcpStream, address: SocketAddr) -> Self {
         let (connection_reader, connection_writer) = connection.into_split();
         Self {
             protocol_version: AtomicI32::new(0),
