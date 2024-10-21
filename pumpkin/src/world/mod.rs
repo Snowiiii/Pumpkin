@@ -310,7 +310,6 @@ impl World {
             }
 
             log::debug!("chunks sent after {}ms", inst.elapsed().as_millis());
-
         });
     }
 

@@ -328,7 +328,6 @@ impl Client {
         self.send_packet(&CFinishConfig::new()).await;
     }
 
-
     pub fn handle_config_acknowledged(&self, _config_acknowledged: &SAcknowledgeFinishConfig) {
         log::debug!("config acknowledged");
         self.connection_state.store(ConnectionState::Play);

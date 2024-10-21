@@ -211,7 +211,8 @@ impl Client {
     pub async fn process_packets(&self, server: &Arc<Server>) {
         while let Some(mut packet) = self.client_packets_queue.lock().await.pop_front() {
             if let Err(error) = self.handle_packet(server, &mut packet).await {
-                log::error!("Error while reading incoming packet {error}");
+                let text = format!("Error while reading incoming packet {error}");
+                log::error!("{text}");
                 self.kick(&text).await;
             };
         }
