@@ -10,7 +10,6 @@ pub struct OpenContainer {
 impl OpenContainer {
     pub fn try_open(&self, player_id: i32) -> Option<&Arc<Mutex<Box<dyn Container>>>> {
         if !self.players.contains(&player_id) {
-            dbg!("couldn't open container");
             log::debug!("couldn't open container");
             return None;
         }
