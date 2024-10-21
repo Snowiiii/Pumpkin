@@ -82,5 +82,5 @@ pub fn default_dispatcher<'a>() -> CommandDispatcher<'a> {
     dispatcher
 }
 
-type RunFunctionType =
-    (dyn Fn(&mut CommandSender, &Server, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync);
+type RunFunctionType = (dyn Fn(&mut CommandSender, &Arc<Server>, &ConsumedArgs) -> Result<(), InvalidTreeError>
+     + Sync);

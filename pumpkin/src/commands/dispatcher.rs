@@ -7,6 +7,7 @@ use crate::commands::tree::{Command, CommandTree, ConsumedArgs, NodeType, RawArg
 use crate::commands::CommandSender;
 use crate::server::Server;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub(crate) enum InvalidTreeError {
@@ -26,7 +27,12 @@ pub struct CommandDispatcher<'a> {
 
 /// Stores registered [CommandTree]s and dispatches commands to them.
 impl<'a> CommandDispatcher<'a> {
-    pub async fn handle_command(&self, sender: &mut CommandSender<'a>, server: &Server, cmd: &str) {
+    pub async fn handle_command(
+        &self,
+        sender: &mut CommandSender<'a>,
+        server: &Arc<Server>,
+        cmd: &str,
+    ) {
         if let Err(err) = self.dispatch(sender, server, cmd) {
             sender
                 .send_message(
@@ -41,7 +47,7 @@ impl<'a> CommandDispatcher<'a> {
     pub(crate) fn dispatch(
         &'a self,
         src: &mut CommandSender,
-        server: &Server,
+        server: &Arc<Server>,
         cmd: &str,
     ) -> Result<(), String> {
         let mut parts = cmd.split_ascii_whitespace();
@@ -92,7 +98,7 @@ impl<'a> CommandDispatcher<'a> {
 
     fn try_is_fitting_path(
         src: &mut CommandSender,
-        server: &Server,
+        server: &Arc<Server>,
         path: Vec<usize>,
         tree: &CommandTree,
         mut raw_args: RawArgs,
