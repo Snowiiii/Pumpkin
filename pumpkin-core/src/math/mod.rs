@@ -1,4 +1,5 @@
 pub mod boundingbox;
+pub mod distance;
 pub mod position;
 pub mod vector2;
 pub mod vector3;
