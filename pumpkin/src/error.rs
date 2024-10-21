@@ -22,14 +22,20 @@ impl<ErrorType: PumpkinError + 'static> From<ErrorType> for Box<dyn PumpkinError
 }
 impl PumpkinError for InventoryError {
     fn is_kick(&self) -> bool {
-        use InventoryError::*;
+        use InventoryError::{
+            ClosedContainerInteract, InvalidPacket, InvalidSlot, LockError,
+            MultiplePlayersDragging, OutOfOrderDragging, PermissionError,
+        };
         match self {
             InvalidSlot | ClosedContainerInteract(..) | InvalidPacket | PermissionError => true,
             LockError | OutOfOrderDragging | MultiplePlayersDragging => false,
         }
     }
     fn severity(&self) -> log::Level {
-        use InventoryError::*;
+        use InventoryError::{
+            ClosedContainerInteract, InvalidPacket, InvalidSlot, LockError,
+            MultiplePlayersDragging, OutOfOrderDragging, PermissionError,
+        };
         match self {
             LockError
             | InvalidSlot

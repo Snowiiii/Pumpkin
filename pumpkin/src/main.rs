@@ -1,9 +1,9 @@
 #![deny(clippy::all)]
-// #![warn(clippy::pedantic)]
+#![warn(clippy::pedantic)]
 // #![warn(clippy::restriction)]
 #![warn(clippy::nursery)]
 #![warn(clippy::cargo)]
-// expect
+// REMOVE SOME WHEN RELEASE
 #![expect(clippy::cargo_common_metadata)]
 #![expect(clippy::multiple_crate_versions)]
 #![expect(clippy::while_float)]
@@ -11,6 +11,16 @@
 #![expect(clippy::significant_drop_tightening)]
 #![expect(clippy::future_not_send)]
 #![expect(clippy::single_call_fn)]
+#![expect(clippy::cast_sign_loss)]
+#![expect(clippy::cast_possible_truncation)]
+#![expect(clippy::cast_possible_wrap)]
+#![expect(clippy::too_many_lines)]
+#![expect(clippy::missing_panics_doc)]
+#![expect(clippy::missing_errors_doc)]
+#![expect(clippy::module_name_repetitions)]
+#![expect(clippy::struct_excessive_bools)]
+#![expect(clippy::many_single_char_names)]
+#![expect(clippy::float_cmp)]
 
 #[cfg(target_os = "wasi")]
 compile_error!("Compiling for WASI targets is not supported!");
@@ -60,7 +70,7 @@ fn init_logger() {
 
         logger = logger.with_colors(ADVANCED_CONFIG.logging.color);
         logger = logger.with_threads(ADVANCED_CONFIG.logging.threads);
-        logger.init().unwrap()
+        logger.init().unwrap();
     }
 }
 
@@ -82,6 +92,7 @@ async fn main() -> io::Result<()> {
     use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
     use pumpkin_core::text::{color::NamedColor, TextComponent};
     use rcon::RCONServer;
+    use std::time::Instant;
 
     init_logger();
 
@@ -108,8 +119,6 @@ async fn main() -> io::Result<()> {
         // TODO: Gracefully exit?
         std::process::exit(1);
     }));
-
-    use std::time::Instant;
 
     let time = Instant::now();
 
@@ -173,7 +182,7 @@ async fn main() -> io::Result<()> {
 
         log::info!(
             "Accepted connection from: {} (id: {})",
-            scrub_address(&format!("{}", address)),
+            scrub_address(&format!("{address}")),
             id
         );
 
@@ -188,7 +197,7 @@ async fn main() -> io::Result<()> {
             {
                 let open = client.poll().await;
                 if open {
-                    client.process_packets(&server).await
+                    client.process_packets(&server).await;
                 };
             }
             if client
@@ -206,7 +215,7 @@ async fn main() -> io::Result<()> {
                 {
                     let open = player.client.poll().await;
                     if open {
-                        player.process_packets(&server).await
+                        player.process_packets(&server).await;
                     };
                 }
                 player.remove().await;

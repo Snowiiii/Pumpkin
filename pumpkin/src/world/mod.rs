@@ -43,6 +43,7 @@ pub struct World {
 }
 
 impl World {
+    #[must_use]
     pub fn load(level: Level) -> Self {
         Self {
             level: Arc::new(Mutex::new(level)),
@@ -174,7 +175,7 @@ impl World {
                         },
                         PlayerAction::UpdateListed(true),
                     ],
-                })
+                });
             }
             player
                 .client
@@ -234,7 +235,7 @@ impl World {
                     0.0,
                     0.0,
                 ))
-                .await
+                .await;
         }
         // entity meta data
         // set skin parts
@@ -243,7 +244,7 @@ impl World {
                 entity_id.into(),
                 Metadata::new(17, VarInt(0), config.skin_parts),
             );
-            self.broadcast_packet_all(&packet).await
+            self.broadcast_packet_all(&packet).await;
         }
 
         // Start waiting for level chunks, Sets the "Loading Terrain" screen
@@ -266,12 +267,7 @@ impl World {
         level.mark_chunk_as_newly_watched(chunks);
     }
 
-    async fn spawn_world_chunks(
-        &self,
-        client: Arc<Client>,
-        chunks: Vec<Vector2<i32>>,
-        distance: i32,
-    ) {
+    fn spawn_world_chunks(&self, client: Arc<Client>, chunks: Vec<Vector2<i32>>, distance: i32) {
         if client.closed.load(std::sync::atomic::Ordering::Relaxed) {
             log::info!(
                 "The connection with {} has closed before world chunks were spawned",
@@ -286,7 +282,7 @@ impl World {
         let chunks = Arc::new(chunks);
         tokio::spawn(async move {
             let level = level.lock().await;
-            level.fetch_chunks(&chunks, sender)
+            level.fetch_chunks(&chunks, sender);
         });
 
         tokio::spawn(async move {
@@ -358,6 +354,6 @@ impl World {
 
     pub async fn remove_entity(&self, entity: &Entity) {
         self.broadcast_packet_all(&CRemoveEntities::new(&[entity.entity_id.into()]))
-            .await
+            .await;
     }
 }

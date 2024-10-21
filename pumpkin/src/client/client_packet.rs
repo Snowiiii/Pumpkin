@@ -192,15 +192,11 @@ impl Client {
             let profile = authentication::authenticate(username, &hash, &ip, auth_client).await?;
             // Check if player should join
             if let Some(actions) = &profile.profile_actions {
-                if !ADVANCED_CONFIG
+                if ADVANCED_CONFIG
                     .authentication
                     .player_profile
                     .allow_banned_players
                 {
-                    if !actions.is_empty() {
-                        return Err(AuthError::Banned);
-                    }
-                } else {
                     for allowed in &ADVANCED_CONFIG
                         .authentication
                         .player_profile
@@ -210,6 +206,11 @@ impl Client {
                             return Err(AuthError::DisallowedAction);
                         }
                     }
+                    if !actions.is_empty() {
+                        return Err(AuthError::Banned);
+                    }
+                } else if !actions.is_empty() {
+                    return Err(AuthError::Banned);
                 }
             }
             // validate textures
@@ -234,7 +235,7 @@ impl Client {
                 Ok((profile, new_address)) => {
                     self.finish_login(&profile).await;
                     *self.gameprofile.lock().await = Some(profile);
-                    *address = new_address
+                    *address = new_address;
                 }
                 Err(error) => self.kick(&error.to_string()).await,
             }
@@ -259,10 +260,10 @@ impl Client {
                 &resource_config.resource_pack_url,
                 &resource_config.resource_pack_sha1,
                 resource_config.force,
-                if !resource_config.prompt_message.is_empty() {
-                    Some(TextComponent::text(&resource_config.prompt_message))
-                } else {
+                if resource_config.prompt_message.is_empty() {
                     None
+                } else {
+                    Some(TextComponent::text(&resource_config.prompt_message))
                 },
             );
 
@@ -298,7 +299,7 @@ impl Client {
                 server_listing: client_information.server_listing,
             });
         } else {
-            self.kick("Invalid hand or chat type").await
+            self.kick("Invalid hand or chat type").await;
         }
     }
 
@@ -328,7 +329,7 @@ impl Client {
         self.send_packet(&CFinishConfig::new()).await;
     }
 
-    pub async fn handle_config_acknowledged(&self, _config_acknowledged: SAcknowledgeFinishConfig) {
+    pub fn handle_config_acknowledged(&self, _config_acknowledged: &SAcknowledgeFinishConfig) {
         dbg!("config acknowledged");
         self.connection_state.store(ConnectionState::Play);
         self.make_player

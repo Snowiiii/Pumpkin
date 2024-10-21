@@ -8,6 +8,7 @@ pub struct Ticker {
 }
 
 impl Ticker {
+    #[must_use]
     pub fn new(tps: f32) -> Self {
         Self {
             tick_interval: Duration::from_millis((1000.0 / tps) as u64),

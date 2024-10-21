@@ -13,7 +13,7 @@ use tokio::io::AsyncReadExt;
 pub enum ServerboundPacket {
     /// Typically, the first packet sent by the client, which is used to authenticate the connection with the server.
     Auth = 2,
-    /// This packet type represents a command issued to the server by a client. This can be a ConCommand such as kill <player> or weather clear.
+    /// This packet type represents a command issued to the server by a client. This can be a `ConCommand` such as kill <player> or weather clear.
     /// The response will vary depending on the command issued.
     ExecCommand = 3,
 }
@@ -21,7 +21,7 @@ pub enum ServerboundPacket {
 impl ServerboundPacket {
     pub const fn from_i32(n: i32) -> Self {
         match n {
-            3 => Self::Auth,
+            //  3 => Self::Auth,
             2 => Self::ExecCommand,
             _ => Self::Auth,
         }
@@ -32,21 +32,21 @@ impl ServerboundPacket {
 #[repr(i32)]
 /// Server -> Client
 pub enum ClientboundPacket {
-    /// This packet is a notification of the connection's current auth status. When the server receives an auth request, it will respond with an empty SERVERDATA_RESPONSE_VALUE,
-    /// followed immediately by a SERVERDATA_AUTH_RESPONSE indicating whether authentication succeeded or failed. Note that the status code is returned in the packet id field, so when pairing the response with the original auth request, you may need to look at the packet id of the preceeding SERVERDATA_RESPONSE_VALUE.
+    /// This packet is a notification of the connection's current auth status. When the server receives an auth request, it will respond with an empty `SERVERDATA_RESPONSE_VALUE`,
+    /// followed immediately by a `SERVERDATA_AUTH_RESPONSE` indicating whether authentication succeeded or failed. Note that the status code is returned in the packet id field, so when pairing the response with the original auth request, you may need to look at the packet id of the preceeding `SERVERDATA_RESPONSE_VALUE`.
     AuthResponse = 2,
-    /// A SERVERDATA_RESPONSE packet is the response to a SERVERDATA_EXECCOMMAND request.
+    /// A `SERVERDATA_RESPONSE` packet is the response to a `SERVERDATA_EXECCOMMAND` request.
     Output = 0,
 }
 
 impl ClientboundPacket {
-    pub fn write_buf(&self, id: i32, body: String) -> BytesMut {
+    pub fn write_buf(self, id: i32, body: &str) -> BytesMut {
         // let len = outgoing.len() as u64;
         let mut buf = BytesMut::new();
         // 10 is for 4 bytes ty, 4 bytes id, and 2 terminating nul bytes.
         buf.put_i32_le(10 + body.len() as i32);
         buf.put_i32_le(id);
-        buf.put_i32_le(*self as i32);
+        buf.put_i32_le(self as i32);
         let bytes = body.as_bytes();
         buf.put_slice(bytes);
         buf.put_u8(0);

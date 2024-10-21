@@ -52,13 +52,13 @@ impl Player {
 
                 *awaiting_teleport = None;
             } else {
-                self.kick(TextComponent::text("Wrong teleport id")).await
+                self.kick(TextComponent::text("Wrong teleport id")).await;
             }
         } else {
             self.kick(TextComponent::text(
                 "Send Teleport confirm, but we did not teleport",
             ))
-            .await
+            .await;
         }
     }
 
@@ -255,7 +255,7 @@ impl Player {
         }
     }
 
-    pub fn handle_player_ground(&self, ground: SSetPlayerGround) {
+    pub fn handle_player_ground(&self, ground: &SSetPlayerGround) {
         self.living_entity
             .entity
             .on_ground
@@ -272,23 +272,23 @@ impl Player {
             match action {
                 pumpkin_protocol::server::play::Action::StartSneaking => {
                     if !entity.sneaking.load(std::sync::atomic::Ordering::Relaxed) {
-                        entity.set_sneaking(true).await
+                        entity.set_sneaking(true).await;
                     }
                 }
                 pumpkin_protocol::server::play::Action::StopSneaking => {
                     if entity.sneaking.load(std::sync::atomic::Ordering::Relaxed) {
-                        entity.set_sneaking(false).await
+                        entity.set_sneaking(false).await;
                     }
                 }
                 pumpkin_protocol::server::play::Action::LeaveBed => todo!(),
                 pumpkin_protocol::server::play::Action::StartSprinting => {
                     if !entity.sprinting.load(std::sync::atomic::Ordering::Relaxed) {
-                        entity.set_sprinting(true).await
+                        entity.set_sprinting(true).await;
                     }
                 }
                 pumpkin_protocol::server::play::Action::StopSprinting => {
                     if entity.sprinting.load(std::sync::atomic::Ordering::Relaxed) {
-                        entity.set_sprinting(false).await
+                        entity.set_sprinting(false).await;
                     }
                 }
                 pumpkin_protocol::server::play::Action::StartHorseJump => todo!(),
@@ -307,7 +307,7 @@ impl Player {
             }
         } else {
             self.kick(TextComponent::text("Invalid player command"))
-                .await
+                .await;
         }
     }
 
@@ -325,7 +325,7 @@ impl Player {
                         &[self.client.id],
                         &CEntityAnimation::new(id.into(), animation as u8),
                     )
-                    .await
+                    .await;
             }
             None => {
                 self.kick(TextComponent::text("Invalid hand")).await;
@@ -362,7 +362,7 @@ impl Player {
                 TextComponent::text(&gameprofile.name),
                 None,
             ))
-            .await
+            .await;
 
         /* server.broadcast_packet(
             self,
@@ -392,7 +392,7 @@ impl Player {
             };
         } else {
             self.kick(TextComponent::text("Invalid hand or chat type"))
-                .await
+                .await;
         }
     }
 
@@ -425,8 +425,8 @@ impl Player {
                                 let saved_velo = victem_entity.velocity.load();
                                 victem_entity.knockback(
                                     strength * 0.5,
-                                    (yaw * (PI / 180.0)).sin() as f64,
-                                    -(yaw * (PI / 180.0)).cos() as f64,
+                                    f64::from((yaw * (PI / 180.0)).sin()),
+                                    f64::from(-(yaw * (PI / 180.0)).cos()),
                                 );
                                 let victem_velocity = victem_entity.velocity.load();
                                 let packet = &CEntityVelocity::new(
@@ -447,12 +447,12 @@ impl Player {
                                         &entity_id,
                                         entity.yaw.load(),
                                     ))
-                                    .await
+                                    .await;
                             }
                             if config.swing {}
                         } else {
                             self.kick(TextComponent::text("Interacted with invalid entity id"))
-                                .await
+                                .await;
                         }
                     }
                 }
@@ -552,7 +552,7 @@ impl Player {
             self.wait_for_keep_alive
                 .store(false, std::sync::atomic::Ordering::Relaxed);
         } else {
-            self.kick(TextComponent::text("Timeout")).await
+            self.kick(TextComponent::text("Timeout")).await;
         }
     }
 
@@ -605,11 +605,11 @@ impl Player {
                 .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
                 .await;
         } else {
-            self.kick(TextComponent::text("Invalid block face")).await
+            self.kick(TextComponent::text("Invalid block face")).await;
         }
     }
 
-    pub fn handle_use_item(&self, _use_item: SUseItem) {
+    pub fn handle_use_item(&self, _use_item: &SUseItem) {
         // TODO: handle packet correctly
         log::error!("An item was used(SUseItem), but the packet is not implemented yet");
     }
@@ -651,7 +651,7 @@ impl Player {
         if let Some(id) = open_container {
             let mut open_containers = server.open_containers.write().await;
             if let Some(container) = open_containers.get_mut(&id) {
-                container.remove_player(self.entity_id())
+                container.remove_player(self.entity_id());
             }
             self.open_container.store(None);
         }

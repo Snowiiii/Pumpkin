@@ -71,7 +71,7 @@ impl Player {
             .carried_item
             .load()
             .as_ref()
-            .map_or_else(Slot::empty, |item| item.into());
+            .map_or_else(Slot::empty, std::convert::Into::into);
 
         // Gets the previous value
         let i = inventory
@@ -92,7 +92,7 @@ impl Player {
         inventory.total_opened_containers += 1;
         self.client
             .send_packet(&CCloseContainer::new(inventory.total_opened_containers))
-            .await
+            .await;
     }
 
     pub async fn set_container_property<T: WindowPropertyTrait>(
@@ -270,7 +270,7 @@ impl Player {
                         slots.skip(36).rev().find_map(find_condition)
                     };
                     if let Some(slot) = slots {
-                        let mut item_slot = container.all_slots()[slot].map(|i| i.to_owned());
+                        let mut item_slot = container.all_slots()[slot].map(|i| i);
                         container.handle_item_change(&mut item_slot, slot, MouseClick::Left)?;
                         *container.all_slots()[slot] = item_slot;
                     }
@@ -363,13 +363,14 @@ impl Player {
         let player_id = self.entity_id();
         let container_id = opened_container
             .as_ref()
-            .map(|container| container.internal_pumpkin_id())
-            .unwrap_or(player_id as u64);
+            .map_or(player_id as u64, |container| {
+                container.internal_pumpkin_id()
+            });
         match mouse_drag_state {
             MouseDragState::Start(drag_type) => {
                 if drag_type == MouseDragType::Middle && self.gamemode.load() != GameMode::Creative
                 {
-                    Err(InventoryError::PermissionError)?
+                    Err(InventoryError::PermissionError)?;
                 }
                 drag_handler
                     .new_drag(container_id, player_id, drag_type)
@@ -417,15 +418,15 @@ impl Player {
             .await
             .iter()
             .filter_map(|(token, player)| {
-                if *token != player_token {
+                if *token == player_token {
+                    None
+                } else {
                     let entity_id = player.entity_id();
                     if player_ids.contains(&entity_id) {
                         Some(player.clone())
                     } else {
                         None
                     }
-                } else {
-                    None
                 }
             })
             .collect_vec();

@@ -113,8 +113,8 @@ impl CachedStatus {
                 max: config.max_players,
                 online: 0,
                 sample: vec![Sample {
-                    name: "".into(),
-                    id: "".into(),
+                    name: String::new(),
+                    id: String::new(),
                 }],
             }),
             description: config.motd.clone(),

@@ -35,39 +35,30 @@ impl<'a> CommandSender<'a> {
         }
     }
 
+    #[must_use]
     pub const fn is_player(&self) -> bool {
-        match self {
-            CommandSender::Console => false,
-            CommandSender::Player(_) => true,
-            CommandSender::Rcon(_) => false,
-        }
+        matches!(self, CommandSender::Player(_))
     }
 
+    #[must_use]
     pub const fn is_console(&self) -> bool {
-        match self {
-            CommandSender::Console => true,
-            CommandSender::Player(_) => false,
-            CommandSender::Rcon(_) => true,
-        }
+        matches!(self, CommandSender::Console)
     }
     pub fn as_mut_player(&mut self) -> Option<Arc<Player>> {
         match self {
             CommandSender::Player(player) => Some(player.clone()),
-            CommandSender::Console => None,
-            CommandSender::Rcon(_) => None,
+            _ => None,
         }
     }
 
     /// todo: implement
+    #[must_use]
     pub const fn permission_lvl(&self) -> i32 {
-        match self {
-            CommandSender::Rcon(_) => 4,
-            CommandSender::Console => 4,
-            CommandSender::Player(_) => 4,
-        }
+        4
     }
 }
 
+#[must_use]
 pub fn default_dispatcher<'a>() -> CommandDispatcher<'a> {
     let mut dispatcher = CommandDispatcher::default();
 

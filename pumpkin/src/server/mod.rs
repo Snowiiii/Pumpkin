@@ -56,6 +56,7 @@ pub struct Server {
 
 impl Server {
     #[allow(clippy::new_without_default)]
+    #[must_use]
     pub fn new() -> Self {
         // TODO: only create when needed
 
@@ -126,13 +127,13 @@ impl Server {
         P: ClientPacket,
     {
         for world in &self.worlds {
-            world.broadcast_packet_all(packet).await
+            world.broadcast_packet_all(packet).await;
         }
     }
 
     /// Searches every world for a player by name
-    pub async fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
-        for world in self.worlds.iter() {
+    pub fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
+        for world in &self.worlds {
             if let Some(player) = world.get_player_by_name(name) {
                 return Some(player);
             }

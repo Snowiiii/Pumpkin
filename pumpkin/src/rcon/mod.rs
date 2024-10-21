@@ -95,15 +95,14 @@ impl RCONClient {
     }
 
     async fn poll(&mut self, server: &Server, password: &str) -> Result<(), PacketError> {
-        let packet = match self.receive_packet().await? {
-            Some(p) => p,
-            None => return Ok(()),
+        let Some(packet) = self.receive_packet().await? else {
+            return Ok(());
         };
         let config = &ADVANCED_CONFIG.rcon;
         match packet.get_type() {
             ServerboundPacket::Auth => {
                 if packet.get_body() == password {
-                    self.send(ClientboundPacket::AuthResponse, packet.get_id(), "".into())
+                    self.send(ClientboundPacket::AuthResponse, packet.get_id(), "")
                         .await?;
                     if config.logging.log_logged_successfully {
                         log::info!("RCON ({}): Client logged in successfully", self.address);
@@ -113,8 +112,7 @@ impl RCONClient {
                     if config.logging.log_wrong_password {
                         log::info!("RCON ({}): Client has tried wrong password", self.address);
                     }
-                    self.send(ClientboundPacket::AuthResponse, -1, "".into())
-                        .await?;
+                    self.send(ClientboundPacket::AuthResponse, -1, "").await?;
                     self.closed = true;
                 }
             }
@@ -133,7 +131,7 @@ impl RCONClient {
                         if config.logging.log_commands {
                             log::info!("RCON ({}): {}", self.address, line);
                         }
-                        self.send(ClientboundPacket::Output, packet.get_id(), line)
+                        self.send(ClientboundPacket::Output, packet.get_id(), &line)
                             .await?;
                     }
                 }
@@ -156,7 +154,7 @@ impl RCONClient {
         &mut self,
         packet: ClientboundPacket,
         id: i32,
-        body: String,
+        body: &str,
     ) -> Result<(), PacketError> {
         let buf = packet.write_buf(id, body);
         self.connection

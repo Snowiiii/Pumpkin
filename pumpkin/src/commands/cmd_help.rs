@@ -56,7 +56,7 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
         )
         .execute(&|sender, server, _args| {
             let mut keys: Vec<&str> = server.command_dispatcher.commands.keys().copied().collect();
-            keys.sort();
+            keys.sort_unstable();
 
             for key in keys {
                 let Command::Tree(tree) = &server.command_dispatcher.commands[key] else {
