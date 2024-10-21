@@ -24,8 +24,8 @@ use pumpkin_world::chunk::ChunkData;
 use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
 use pumpkin_world::level::Level;
 use scoreboard::Scoreboard;
-use tokio::sync::Mutex;
 use tokio::sync::{mpsc, RwLock};
+use tokio::sync::{mpsc::Receiver, Mutex};
 
 pub mod scoreboard;
 
@@ -283,10 +283,15 @@ impl World {
 
     pub async fn mark_chunks_as_watched(&self, chunks: &[Vector2<i32>]) {
         let level = self.level.lock().await;
-        level.mark_chunk_as_newly_watched(chunks).await;
+        level.mark_chunks_as_newly_watched(chunks);
     }
 
-    async fn spawn_world_chunks(&self, client: Arc<Client>, chunks: Vec<Vector2<i32>>) {
+    pub async fn get_cached_chunk_len(&self) -> usize {
+        let level = self.level.lock().await;
+        level.loaded_chunk_count()
+    }
+
+    fn spawn_world_chunks(&self, client: Arc<Client>, chunks: Vec<Vector2<i32>>) {
         if client.closed.load(std::sync::atomic::Ordering::Relaxed) {
             log::info!(
                 "The connection with {} has closed before world chunks were spawned",
@@ -295,10 +300,10 @@ impl World {
             return;
         }
         let inst = std::time::Instant::now();
-        let chunks = self.get_chunks(chunks).await;
+        let mut receiver = self.receive_chunks(chunks);
 
         tokio::spawn(async move {
-            for chunk_data in chunks {
+            while let Some(chunk_data) = receiver.recv().await {
                 let chunk_data = chunk_data.read().await;
                 let packet = CChunkData(&chunk_data);
                 #[cfg(debug_assertions)]
@@ -376,7 +381,12 @@ impl World {
         // Since we divide by 16 remnant can never exceed u8
         let relative = ChunkRelativeBlockCoordinates::from(relative_coordinates);
 
-        let chunk = self.get_chunks(vec![chunk_coordinate]).await[0].clone();
+        let mut receiver = self.receive_chunks(vec![chunk_coordinate]);
+        let chunk = receiver
+            .recv()
+            .await
+            .expect("Stream closed for an unknown reason");
+
         chunk.write().await.blocks.set_block(relative, block_id);
 
         self.broadcast_packet_all(&CBlockUpdate::new(
@@ -386,22 +396,17 @@ impl World {
         .await;
     }
 
-    pub async fn get_chunks(&self, chunks: Vec<Vector2<i32>>) -> Vec<Arc<RwLock<ChunkData>>> {
-        let (sender, mut receive) = mpsc::channel(chunks.len());
+    // Stream the chunks (don't collect them and then do stuff with them)
+    pub fn receive_chunks(&self, chunks: Vec<Vector2<i32>>) -> Receiver<Arc<RwLock<ChunkData>>> {
+        let (sender, receive) = mpsc::channel(chunks.len());
         {
             let level = self.level.clone();
-            tokio::spawn(async move { level.lock().await.fetch_chunks(&chunks, sender) });
+            tokio::spawn(async move {
+                let level = level.lock().await;
+                level.fetch_chunks(&chunks, sender).await;
+            });
         }
-        tokio::spawn(async move {
-            let mut received = vec![];
-
-            while let Some(chunk) = receive.recv().await {
-                received.push(chunk);
-            }
-            received
-        })
-        .await
-        .unwrap()
+        receive
     }
 
     pub async fn break_block(&self, position: WorldPosition) {
@@ -414,11 +419,12 @@ impl World {
     pub async fn get_block(&self, position: WorldPosition) -> BlockId {
         let (chunk, relative) = position.chunk_and_chunk_relative_position();
         let relative = ChunkRelativeBlockCoordinates::from(relative);
-        self.get_chunks(vec![chunk]).await[0]
-            .clone()
-            .read()
+        let mut receiver = self.receive_chunks(vec![chunk]);
+        let chunk = receiver
+            .recv()
             .await
-            .blocks
-            .get_block(relative)
+            .expect("Channel closed from some reason");
+        let chunk = chunk.read().await;
+        chunk.blocks.get_block(relative)
     }
 }
