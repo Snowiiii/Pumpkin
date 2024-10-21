@@ -123,7 +123,7 @@ impl Level {
         let dropped_chunk_data = dropped_chunks
             .iter()
             .filter_map(|chunk| {
-                log::debug!("Unloading chunk {:?}", chunk);
+                //log::debug!("Unloading chunk {:?}", chunk);
                 loaded_chunks.remove_entry(*chunk)
             })
             .collect();
