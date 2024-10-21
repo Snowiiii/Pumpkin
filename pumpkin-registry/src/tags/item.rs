@@ -1,7 +1,5 @@
 use super::Tag;
-use crate::Recipe;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::sync::LazyLock;
 
 pub static ITEM_TAGS: LazyLock<HashMap<String, Vec<String>>> = LazyLock::new(|| {

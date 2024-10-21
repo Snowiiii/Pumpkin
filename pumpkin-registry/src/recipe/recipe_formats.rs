@@ -2,10 +2,7 @@ use super::super::recipe::RecipeType;
 use super::read::{
     ingredients::IngredientSlot, CraftingType, RecipeKeys, RecipeResult, RecipeTrait,
 };
-use crate::recipe::read::ingredients::IngredientType;
 use itertools::Itertools;
-use std::collections::HashMap;
-struct Pattern<const W: usize, const H: usize>([[char; W]; H]);
 
 pub struct ShapedCrafting {
     keys: RecipeKeys,
@@ -17,9 +14,8 @@ impl RecipeKeys {
         &self,
         pattern: [[Option<char>; 3]; 3],
     ) -> [[Option<IngredientSlot>; 3]; 3] {
-        pattern.map(|row| {
-            row.map(|maybe_char| maybe_char.map(|char| self.0.get(&char).cloned()).flatten())
-        })
+        pattern
+            .map(|row| row.map(|maybe_char| maybe_char.and_then(|char| self.0.get(&char).cloned())))
     }
 }
 pub struct ShapelessCrafting {
