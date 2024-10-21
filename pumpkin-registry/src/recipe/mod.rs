@@ -1,14 +1,10 @@
 mod read;
 mod recipe_formats;
-mod recipe_type;
 
-use crate::recipe::read::CraftingType;
 pub use read::{
     ingredients::IngredientSlot, ingredients::IngredientType, Recipe, RecipeResult, RecipeType,
 };
-use std::cell::LazyCell;
-use std::collections::HashMap;
-use std::sync::{Arc, LazyLock};
+use std::sync::LazyLock;
 
 pub static RECIPES: LazyLock<Vec<Recipe>> = LazyLock::new(|| {
     let mut recipes = vec![];

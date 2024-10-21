@@ -132,7 +132,7 @@ impl Player {
 
         if opened_container.is_some() {
             let total_containers = self.inventory.lock().await.total_opened_containers;
-            if packet.window_id != total_containers {
+            if packet.window_id.0 != total_containers {
                 return Err(InventoryError::ClosedContainerInteract(self.entity_id()));
             }
         } else if packet.window_id.0 != 0 {

@@ -4,30 +4,12 @@ use crate::recipe::read::SpecialCraftingType::{
     ShulkerboxColoring, SuspiciousStew, TippedArrow,
 };
 use crate::recipe::recipe_formats::ShapedCrafting;
-use itertools::Itertools;
 use serde::de::{Error, MapAccess, Visitor};
 use serde::{de, Deserialize, Deserializer};
 use std::collections::HashMap;
 use std::fmt::Formatter;
 use std::ops::Deref;
 use std::str::FromStr;
-
-#[derive(Deserialize)]
-struct RecipeItem {
-    item: String,
-}
-
-#[derive(Deserialize)]
-struct Shaped {
-    key: HashMap<String, RecipeItem>,
-    pattern: Vec<String>,
-    result: RecipeResult,
-}
-
-struct Shapeless {
-    ingredients: Vec<RecipeItem>,
-    result: RecipeResult,
-}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RecipeType {
@@ -87,7 +69,7 @@ pub mod ingredients {
     use serde::{de, Deserialize, Deserializer};
     use std::collections::HashMap;
     use std::fmt::Formatter;
-    use std::hash::{Hash, Hasher};
+    use std::hash::Hash;
 
     #[derive(Clone, PartialEq, Debug, Eq, Hash)]
     pub enum IngredientType {
@@ -141,7 +123,7 @@ pub mod ingredients {
         fn eq(&self, other: &IngredientType) -> bool {
             match self {
                 IngredientSlot::Single(ingredient) => other == ingredient,
-                IngredientSlot::Many(ingredients) => ingredients.contains(&other),
+                IngredientSlot::Many(ingredients) => ingredients.contains(other),
             }
         }
     }
@@ -187,7 +169,8 @@ pub mod ingredients {
         }
     }
 
-    pub struct Ingredients(Vec<IngredientSlot>);
+    #[expect(unused)]
+    pub struct Ingredients(pub Vec<IngredientSlot>);
     impl<'de> Deserialize<'de> for Ingredients {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
@@ -197,7 +180,7 @@ pub mod ingredients {
             impl<'de> Visitor<'de> for IngredientsVisitor {
                 type Value = Ingredients;
                 fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
-                    todo!()
+                    write!(formatter, "valid ingredients")
                 }
 
                 fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
@@ -428,7 +411,7 @@ impl<'de> Deserialize<'de> for Recipe {
                             result,
                         })))
                     }
-                    RecipeType::Smithing(smithing_type) => Ok(Recipe(Box::new(Test {
+                    RecipeType::Smithing(_) => Ok(Recipe(Box::new(Test {
                         recipe_type,
                         result: RecipeResult::Special,
                     }))),
@@ -469,7 +452,10 @@ fn visit_option<'de, T: Deserialize<'de>, Map: MapAccess<'de>>(
 ) -> Result<(), Map::Error> {
     match option {
         Some(_) => Err(<Map as MapAccess>::Error::duplicate_field(field)),
-        None => Ok(*option = Some(map.next_value()?)),
+        None => {
+            *option = Some(map.next_value()?);
+            Ok(())
+        }
     }
 }
 
@@ -552,7 +538,7 @@ pub enum CraftingType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum SpecialCraftingType {
+pub enum SpecialCraftingType {
     BookCloning,
     RepairItem,
     ArmorDye,
@@ -565,19 +551,19 @@ enum SpecialCraftingType {
     TippedArrow,
 }
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum FireworkCrafting {
+pub enum FireworkCrafting {
     Rocket,
     Star,
     StarFade,
 }
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum MapCrafting {
+pub enum MapCrafting {
     Extending,
     Cloning,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum SmithingType {
+pub enum SmithingType {
     Normal,
     Trim,
     Transform,
@@ -590,8 +576,6 @@ mod test {
 
     #[test]
     fn check_all_recipes() {
-        let mut files = std::fs::read_dir("../assets/recipes").unwrap();
-        let len = files.count();
         for recipe in std::fs::read_dir("../assets/recipes").unwrap() {
             let r = recipe.unwrap();
             let s = std::fs::read_to_string(r.path()).unwrap();

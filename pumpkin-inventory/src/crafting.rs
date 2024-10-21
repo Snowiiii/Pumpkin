@@ -1,6 +1,6 @@
 use itertools::Itertools;
-use pumpkin_registry::{IngredientSlot, IngredientType, Recipe, RecipeResult, ITEM_TAGS, RECIPES};
-use pumpkin_world::item::{get_item_protocol_id, ItemStack, ITEMS};
+use pumpkin_registry::{IngredientSlot, IngredientType, RecipeResult, ITEM_TAGS, RECIPES};
+use pumpkin_world::item::{get_item_protocol_id, ItemStack};
 
 fn check_ingredient_type(ingredient_type: &IngredientType, input: ItemStack) -> bool {
     match ingredient_type {
