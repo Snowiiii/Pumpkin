@@ -21,9 +21,9 @@ use pumpkin_protocol::{
     },
     server::play::{
         SChatCommand, SChatMessage, SClickContainer, SClientInformationPlay, SConfirmTeleport,
-        SInteract, SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition,
-        SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround,
-        SSwingArm, SUseItem, SUseItemOn,
+        SInteract, SPlayPingRequest, SPlayerAbilities, SPlayerAction, SPlayerCommand,
+        SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
+        SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
     },
     RawPacket, ServerPacket, VarInt,
 };
@@ -73,7 +73,7 @@ pub struct Player {
     /// This field represents the various abilities that the player possesses, such as flight, invulnerability, and other special effects.
     ///
     /// **Note:** When the `abilities` field is updated, the server should send a `send_abilities_update` packet to the client to notify them of the changes.
-    pub abilities: PlayerAbilities,
+    pub abilities: Mutex<PlayerAbilities>,
     /// The player's last known position.
     ///
     /// This field is used to calculate the player's movement delta for network synchronization and other purposes.
@@ -129,7 +129,7 @@ impl Player {
             open_container: AtomicCell::new(None),
             carried_item: AtomicCell::new(None),
             teleport_id_count: AtomicI32::new(0),
-            abilities: PlayerAbilities::default(),
+            abilities: Mutex::new(PlayerAbilities::default()),
             gamemode: AtomicCell::new(gamemode),
             watched_section: AtomicCell::new(Vector3::new(0, 0, 0)),
             last_position: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
@@ -157,7 +157,7 @@ impl Player {
     /// Updates the current abilities the Player has
     pub async fn send_abilties_update(&mut self) {
         let mut b = 0i8;
-        let abilities = &self.abilities;
+        let abilities = &self.abilities.lock().await;
 
         if abilities.invulnerable {
             b |= 1;
@@ -376,6 +376,11 @@ impl Player {
             }
             SPlayerAction::PACKET_ID => {
                 self.handle_player_action(SPlayerAction::read(bytebuf)?)
+                    .await;
+                Ok(())
+            }
+            SPlayerAbilities::PACKET_ID => {
+                self.handle_player_abilities(SPlayerAbilities::read(bytebuf)?)
                     .await;
                 Ok(())
             }

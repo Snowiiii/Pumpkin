@@ -77,9 +77,7 @@ Cargo.lock
 
 # === PROJECT SPECIFIC ===
 # mc decompiled source
-mc-source-code/DecompilerMC/
-mc-source-code/src/
-mc-source-code/target/
+mc-source-code/
 
 plugins/*
 world/*
