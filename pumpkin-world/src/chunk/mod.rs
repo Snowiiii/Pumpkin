@@ -28,6 +28,15 @@ pub trait ChunkReader: Sync + Send {
     ) -> Result<ChunkData, ChunkReadingError>;
 }
 
+pub trait ChunkWriter: Send + Sync {
+    fn write_chunk(
+        &self,
+        chunk: &ChunkData,
+        save_file: &SaveFile,
+        at: Vector2<i32>,
+    ) -> Result<(), ChunkWritingError>;
+}
+
 #[derive(Error, Debug)]
 pub enum ChunkReadingError {
     #[error("Io error: {0}")]
@@ -40,6 +49,12 @@ pub enum ChunkReadingError {
     ChunkNotExist,
     #[error("Failed to parse Chunk from bytes: {0}")]
     ParsingError(ChunkParsingError),
+}
+
+#[derive(Error, Debug)]
+pub enum ChunkWritingError {
+    #[error("Io error: {0}")]
+    IoError(std::io::ErrorKind),
 }
 
 #[derive(Error, Debug)]
@@ -308,6 +323,9 @@ impl ChunkData {
             blocks,
             position: at,
         })
+    }
+    pub fn to_bytes(&self) -> Vec<u8> {
+        unimplemented!()
     }
 }
 

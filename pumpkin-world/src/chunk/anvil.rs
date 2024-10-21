@@ -1,6 +1,7 @@
 use std::{
     fs::OpenOptions,
     io::{Read, Seek},
+    os::windows::fs::FileExt,
 };
 
 use flate2::bufread::{GzDecoder, ZlibDecoder};
@@ -8,18 +9,19 @@ use itertools::Itertools;
 
 use crate::level::SaveFile;
 
-use super::{ChunkData, ChunkReader, ChunkReadingError, CompressionError};
+use super::{
+    ChunkData, ChunkReader, ChunkReadingError, ChunkWriter, ChunkWritingError, CompressionError,
+};
 
-#[derive(Clone)]
-pub struct AnvilChunkReader {}
+pub struct AnvilChunkFormat;
 
-impl Default for AnvilChunkReader {
+impl Default for AnvilChunkFormat {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl AnvilChunkReader {
+impl AnvilChunkFormat {
     pub fn new() -> Self {
         Self {}
     }
@@ -85,7 +87,11 @@ impl Compression {
     }
 }
 
-impl ChunkReader for AnvilChunkReader {
+fn modulus(a: i32, b: i32) -> i32 {
+    ((a % b) + b) % b
+}
+
+impl ChunkReader for AnvilChunkFormat {
     fn read_chunk(
         &self,
         save_file: &SaveFile,
@@ -119,7 +125,6 @@ impl ChunkReader for AnvilChunkReader {
             .read_exact(&mut timestamp_table)
             .map_err(|err| ChunkReadingError::IoError(err.kind()))?;
 
-        let modulus = |a: i32, b: i32| ((a % b) + b) % b;
         let chunk_x = modulus(at.x, 32) as u32;
         let chunk_z = modulus(at.z, 32) as u32;
         let table_entry = (chunk_x + chunk_z * 32) * 4;
@@ -160,5 +165,138 @@ impl ChunkReader for AnvilChunkReader {
             .map_err(ChunkReadingError::Compression)?;
 
         ChunkData::from_bytes(decompressed_chunk, *at).map_err(ChunkReadingError::ParsingError)
+    }
+}
+
+impl ChunkWriter for AnvilChunkFormat {
+    fn write_chunk(
+        &self,
+        chunk: &ChunkData,
+        save_file: &SaveFile,
+        at: pumpkin_core::math::vector2::Vector2<i32>,
+    ) -> Result<(), super::ChunkWritingError> {
+        // TODO: update timestamp
+
+        let bytes = chunk.to_bytes();
+
+        let region = (
+            ((at.x as f32) / 32.0).floor() as i32,
+            ((at.z as f32) / 32.0).floor() as i32,
+        );
+
+        let mut region_file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(
+                save_file
+                    .region_folder
+                    .join(format!("r.{}.{}.mca", region.0, region.1)),
+            )
+            .map_err(|err| match err.kind() {
+                kind => ChunkWritingError::IoError(kind),
+            })?;
+
+        let mut location_table: [u8; 4096] = [0; 4096];
+        let mut timestamp_table: [u8; 4096] = [0; 4096];
+
+        let file_meta = region_file
+            .metadata()
+            .map_err(|err| ChunkWritingError::IoError(err.kind()))?;
+
+        // fill the location and timestamp tables if they exist
+        if file_meta.len() >= 4096 * 2 {
+            region_file
+                .read_exact(&mut location_table)
+                .map_err(|err| ChunkWritingError::IoError(err.kind()))?;
+            region_file
+                .read_exact(&mut timestamp_table)
+                .map_err(|err| ChunkWritingError::IoError(err.kind()))?;
+        }
+
+        // write new location and timestamp table
+        if let Err(err) = region_file.seek_write(&[location_table, timestamp_table].concat(), 0) {
+            return Err(ChunkWritingError::IoError(err.kind()));
+        }
+
+        let chunk_x = modulus(at.x, 32) as u32;
+        let chunk_z = modulus(at.z, 32) as u32;
+
+        let table_entry = (chunk_x + chunk_z * 32) * 4;
+
+        let mut offset = vec![0u8];
+        offset.extend_from_slice(&location_table[table_entry as usize..table_entry as usize + 3]);
+        let at_offset = u32::from_be_bytes(offset.try_into().unwrap()) as u64 * 4096;
+        let at_size = location_table[table_entry as usize + 3] as usize * 4096;
+
+        let mut end_index = 4096 * 2;
+        if at_offset != 0 || at_size != 0 {
+            // move other chunks earlier, if there is a hole
+            for (other_offset, other_size, other_table_entry) in location_table
+                .chunks(4)
+                .enumerate()
+                .filter_map(|(index, v)| {
+                    if table_entry == index as u32 {
+                        return None;
+                    }
+                    let mut offset = vec![0u8];
+                    offset.extend_from_slice(&v[0..3]);
+                    let offset = u32::from_be_bytes(offset.try_into().unwrap()) as u64 * 4096;
+                    let size = v[3] as usize * 4096;
+                    if offset == 0 && size == 0 {
+                        return None;
+                    }
+                    Some((offset, size, index * 4))
+                })
+                .sorted_by(|a, b| a.cmp(b))
+            {
+                if at_offset > other_offset {
+                    continue;
+                }
+                let mut buf = vec![0u8; other_size];
+                region_file
+                    .seek_read(&mut buf, other_offset)
+                    .expect(&format!(
+                        "Region file r.-{},{}.mca got corrupted, sorry",
+                        region.0, region.1,
+                    ));
+
+                region_file
+                    .seek_write(&buf, other_offset - at_size as u64)
+                    .expect(&format!(
+                        "Region file r.-{},{}.mca got corrupted, sorry",
+                        region.0, region.1,
+                    ));
+                let location_bytes =
+                    &(((other_offset - at_size as u64) / 4096) as u32).to_be_bytes()[0..3];
+                let size_bytes = [(other_size / 4096) as u8];
+                let location_entry = [location_bytes, &size_bytes].concat();
+                location_table[other_table_entry..other_table_entry + 4]
+                    .as_mut()
+                    .copy_from_slice(&location_entry);
+
+                end_index = other_offset + other_size as u64;
+            }
+        } else {
+            for (offset, size) in location_table.chunks(4).filter_map(|v| {
+                let mut offset = vec![0u8];
+                offset.extend_from_slice(&v[0..3]);
+                let offset = u32::from_be_bytes(offset.try_into().unwrap()) as u64 * 4096;
+                let size = v[3] as usize * 4096;
+                if offset == 0 && size == 0 {
+                    return None;
+                }
+                Some((offset, size))
+            }) {
+                end_index = u64::max(offset + size as u64, end_index);
+            }
+        }
+
+        region_file.seek_write(&bytes, end_index).expect(&format!(
+            "Region file r.-{},{}.mca got corrupted, sorry",
+            region.0, region.1,
+        ));
+
+        Ok(())
     }
 }
