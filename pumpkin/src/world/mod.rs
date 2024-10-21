@@ -125,6 +125,7 @@ impl World {
                 false,
             ))
             .await;
+
         // player abilities
         // TODO: this is for debug purpose, remove later
         log::debug!("Sending player abilities to {}", player.client.id);
@@ -297,7 +298,7 @@ impl World {
         tokio::spawn(async move {
             log::debug!("Spawned chunk fetcher for {}", client_id);
             let level = level.lock().await;
-            level.fetch_chunks(&chunks, sender)
+            level.fetch_chunks(&chunks, sender);
         });
 
         tokio::spawn(async move {
