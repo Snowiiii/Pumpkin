@@ -74,7 +74,9 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
 
     if !loading_chunks.is_empty() {
         world.mark_chunks_as_watched(&loading_chunks).await;
-        world.spawn_world_chunks(player.client.clone(), loading_chunks, view_distance);
+        world
+            .spawn_world_chunks(player.client.clone(), loading_chunks)
+            .await;
     }
 
     if !unloading_chunks.is_empty() {
@@ -134,7 +136,8 @@ pub async fn update_position(player: &Player) {
             entity.world.mark_chunks_as_watched(&loading_chunks).await;
             entity
                 .world
-                .spawn_world_chunks(player.client.clone(), loading_chunks, view_distance);
+                .spawn_world_chunks(player.client.clone(), loading_chunks)
+                .await;
         }
 
         if !unloading_chunks.is_empty() {
