@@ -76,13 +76,10 @@ Cargo.lock
 #.idea/
 
 # === PROJECT SPECIFIC ===
-# mc decompiled source
-mc-source-code/
-
 plugins/*
 world/*
 
-# project's binary configurations
+# project's configurations
 configuration.toml
 features.toml
 

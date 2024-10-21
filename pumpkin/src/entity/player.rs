@@ -1,6 +1,9 @@
-use std::sync::{
-    atomic::{AtomicI32, AtomicU8},
-    Arc,
+use std::{
+    sync::{
+        atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU8},
+        Arc,
+    },
+    time::{Duration, Instant},
 };
 
 use crossbeam::atomic::AtomicCell;
@@ -16,7 +19,7 @@ use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
-        CGameEvent, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSetHealth,
+        CGameEvent, CKeepAlive, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSetHealth,
         CSyncPlayerPosition, CSystemChatMessage, GameEvent, PlayerAction,
     },
     server::play::{
@@ -85,9 +88,14 @@ pub struct Player {
     pub teleport_id_count: AtomicI32,
     /// The pending teleport information, including the teleport ID and target location.
     pub awaiting_teleport: Mutex<Option<(VarInt, Vector3<f64>)>>,
-
     /// The coordinates of the chunk section the player is currently watching.
     pub watched_section: AtomicCell<Vector3<i32>>,
+    /// Did we send a keep alive Packet and wait for the response?
+    pub wait_for_keep_alive: AtomicBool,
+    /// Whats the keep alive packet payload we send, The client should responde with the same id
+    pub keep_alive_id: AtomicI64,
+    /// Last time we send a keep alive
+    pub last_keep_alive_time: AtomicCell<Instant>,
 }
 
 impl Player {
@@ -133,6 +141,9 @@ impl Player {
             gamemode: AtomicCell::new(gamemode),
             watched_section: AtomicCell::new(Vector3::new(0, 0, 0)),
             last_position: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
+            wait_for_keep_alive: AtomicBool::new(false),
+            keep_alive_id: AtomicI64::new(0),
+            last_keep_alive_time: AtomicCell::new(std::time::Instant::now()),
         }
     }
 
@@ -148,6 +159,27 @@ impl Player {
             .world
             .mark_chunks_as_not_watched(&cylindrical.all_chunks_within())
             .await;
+    }
+
+    pub async fn tick(&self) {
+        let now = Instant::now();
+        if now.duration_since(self.last_keep_alive_time.load()) >= Duration::from_secs(15) {
+            // We never got a response from our last keep alive we send
+            if self
+                .wait_for_keep_alive
+                .load(std::sync::atomic::Ordering::Relaxed)
+            {
+                self.kick(TextComponent::text("Timeout")).await;
+                return;
+            }
+            self.wait_for_keep_alive
+                .store(true, std::sync::atomic::Ordering::Relaxed);
+            self.last_keep_alive_time.store(now);
+            let id = now.elapsed().as_millis() as i64;
+            self.keep_alive_id
+                .store(id, std::sync::atomic::Ordering::Relaxed);
+            self.client.send_packet(&CKeepAlive::new(id)).await;
+        }
     }
 
     pub const fn entity_id(&self) -> EntityId {
@@ -418,11 +450,7 @@ impl Player {
                 Ok(())
             }
             SKeepAlive::PACKET_ID => {
-                self.client
-                    .keep_alive_sender
-                    .send(SKeepAlive::read(bytebuf)?.keep_alive_id)
-                    .await
-                    .unwrap();
+                self.handle_keep_alive(SKeepAlive::read(bytebuf)?).await;
                 Ok(())
             }
             _ => {

@@ -81,6 +81,13 @@ impl World {
         }
     }
 
+    pub async fn tick(&self) {
+        let current_players = self.current_players.lock().await;
+        for player in current_players.values() {
+            player.tick().await;
+        }
+    }
+
     pub async fn spawn_player(&self, base_config: &BasicConfiguration, player: Arc<Player>) {
         // This code follows the vanilla packet order
         let entity_id = player.entity_id();

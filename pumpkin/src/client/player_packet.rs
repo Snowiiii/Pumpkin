@@ -15,6 +15,7 @@ use pumpkin_core::{
 };
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::{InventoryError, WindowType};
+use pumpkin_protocol::server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem};
 use pumpkin_protocol::{
     client::play::{
         Animation, CAcknowledgeBlockChange, CBlockUpdate, CEntityAnimation, CEntityVelocity,
@@ -22,10 +23,10 @@ use pumpkin_protocol::{
         CUpdateEntityPosRot, CUpdateEntityRot, CWorldEvent, FilterType,
     },
     server::play::{
-        Action, ActionType, SChatCommand, SChatMessage, SClientInformationPlay, SCloseContainer,
-        SConfirmTeleport, SInteract, SPlayPingRequest, SPlayerAbilities, SPlayerAction,
-        SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
-        SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn, Status,
+        Action, ActionType, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport,
+        SInteract, SPlayPingRequest, SPlayerAbilities, SPlayerAction, SPlayerCommand,
+        SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
+        SSwingArm, SUseItemOn, Status,
     },
 };
 use pumpkin_world::block::{BlockFace, BlockState};
@@ -536,6 +537,22 @@ impl Player {
                 }
             },
             None => self.kick(TextComponent::text("Invalid status")).await,
+        }
+    }
+
+    pub async fn handle_keep_alive(&self, keep_alive: SKeepAlive) {
+        if self
+            .wait_for_keep_alive
+            .load(std::sync::atomic::Ordering::Relaxed)
+            && keep_alive.keep_alive_id
+                == self
+                    .keep_alive_id
+                    .load(std::sync::atomic::Ordering::Relaxed)
+        {
+            self.wait_for_keep_alive
+                .store(false, std::sync::atomic::Ordering::Relaxed);
+        } else {
+            self.kick(TextComponent::text("Timeout")).await
         }
     }
 

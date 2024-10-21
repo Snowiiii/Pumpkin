@@ -31,6 +31,8 @@ use crate::{
 
 mod connection_cache;
 mod key_store;
+pub mod ticker;
+
 pub const CURRENT_MC_VERSION: &str = "1.21.1";
 
 pub struct Server {
@@ -167,5 +169,11 @@ impl Server {
 
     pub fn digest_secret(&self, secret: &[u8]) -> String {
         self.key_store.get_digest(secret)
+    }
+
+    async fn tick(&self) {
+        for world in &self.worlds {
+            world.tick().await;
+        }
     }
 }

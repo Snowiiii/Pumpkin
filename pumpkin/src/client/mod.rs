@@ -105,7 +105,6 @@ pub struct Client {
     /// The underlying TCP connection to the client.
     pub connection_reader: Arc<Mutex<tokio::net::tcp::OwnedReadHalf>>,
     pub connection_writer: Arc<Mutex<tokio::net::tcp::OwnedWriteHalf>>,
-
     /// The client's IP address.
     pub address: Mutex<SocketAddr>,
     /// The packet encoder for outgoing packets.
@@ -114,22 +113,12 @@ pub struct Client {
     dec: Arc<Mutex<PacketDecoder>>,
     /// A queue of raw packets received from the client, waiting to be processed.
     pub client_packets_queue: Arc<Mutex<VecDeque<RawPacket>>>,
-
     /// Indicates whether the client should be converted into a player.
     pub make_player: AtomicBool,
-    /// Sends each keep alive packet that the server receives for a player to here, which gets picked up in a tokio task
-    pub keep_alive_sender: Arc<tokio::sync::mpsc::Sender<i64>>,
-    /// Stores the last time it was confirmed that the client is alive
-    pub last_alive_received: AtomicCell<std::time::Instant>,
 }
 
 impl Client {
-    pub fn new(
-        id: usize,
-        connection: tokio::net::TcpStream,
-        address: SocketAddr,
-        keep_alive_sender: Arc<tokio::sync::mpsc::Sender<i64>>,
-    ) -> Self {
+    pub fn new(id: usize, connection: tokio::net::TcpStream, address: SocketAddr) -> Self {
         let (connection_reader, connection_writer) = connection.into_split();
         Self {
             protocol_version: AtomicI32::new(0),
@@ -148,8 +137,6 @@ impl Client {
             closed: AtomicBool::new(false),
             client_packets_queue: Arc::new(Mutex::new(VecDeque::new())),
             make_player: AtomicBool::new(false),
-            keep_alive_sender,
-            last_alive_received: AtomicCell::new(std::time::Instant::now()),
         }
     }
 
@@ -382,12 +369,13 @@ impl Client {
 
     /// Reads the connection until our buffer of len 4096 is full, then decode
     /// Close connection when an error occurs or when the Client closed the connection
-    pub async fn poll(&self) {
+    /// Returns if connection is still open
+    pub async fn poll(&self) -> bool {
         loop {
             let mut dec = self.dec.lock().await;
             if let Ok(Some(packet)) = dec.decode() {
                 self.add_packet(packet).await;
-                return;
+                return true;
             };
 
             dec.reserve(4096);
@@ -403,7 +391,7 @@ impl Client {
                 == 0
             {
                 self.close();
-                return;
+                return false;
             }
 
             // This should always be an O(1) unsplit because we reserved space earlier and
