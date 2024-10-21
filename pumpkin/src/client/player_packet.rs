@@ -234,7 +234,11 @@ impl Player {
             .await;
     }
 
-    pub async fn handle_chat_command(self: &Arc<Self>, server: &Server, command: SChatCommand) {
+    pub async fn handle_chat_command(
+        self: &Arc<Self>,
+        server: &Arc<Server>,
+        command: SChatCommand,
+    ) {
         let dispatcher = server.command_dispatcher.clone();
         dispatcher
             .handle_command(
@@ -636,14 +640,12 @@ impl Player {
             return;
         };
         // window_id 0 represents both 9x1 Generic AND inventory here
-        self.inventory
-            .lock()
-            .await
-            .state_id
-            .store(0, std::sync::atomic::Ordering::Relaxed);
+        let mut inventory = self.inventory.lock().await;
+
+        inventory.state_id = 0;
         let open_container = self.open_container.load();
         if let Some(id) = open_container {
-            let mut open_containers = server.open_containers.write().await;
+            let mut open_containers = server.open_containers.write().unwrap();
             if let Some(container) = open_containers.get_mut(&id) {
                 container.remove_player(self.entity_id());
             }

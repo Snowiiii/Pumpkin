@@ -19,7 +19,6 @@ use std::{
     time::Duration,
 };
 use tokio::sync::Mutex;
-use tokio::sync::RwLock;
 
 use crate::client::EncryptionError;
 use crate::{
@@ -49,7 +48,7 @@ pub struct Server {
     pub worlds: Vec<Arc<World>>,
     /// Caches game registries for efficient access.
     pub cached_registry: Vec<Registry>,
-    pub open_containers: RwLock<HashMap<u64, OpenContainer>>,
+    pub open_containers: std::sync::RwLock<HashMap<u64, OpenContainer>>,
     /// Tracks open containers used for item interactions.
     pub drag_handler: DragHandler,
     /// Assigns unique IDs to entities.
@@ -84,7 +83,7 @@ impl Server {
         ));
         Self {
             cached_registry: Registry::get_synced(),
-            open_containers: RwLock::new(HashMap::new()),
+            open_containers: std::sync::RwLock::new(HashMap::new()),
             drag_handler: DragHandler::new(),
             // 0 is invalid
             entity_id: 2.into(),
@@ -157,7 +156,7 @@ impl Server {
         player_id: EntityId,
         container_id: u64,
     ) -> Option<Arc<Mutex<Box<dyn Container>>>> {
-        let open_containers = self.open_containers.read().await;
+        let open_containers = self.open_containers.read().unwrap();
         open_containers
             .get(&container_id)?
             .try_open(player_id)
