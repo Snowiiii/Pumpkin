@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, f32::consts::PI, sync::Arc};
+use std::{f32::consts::PI, sync::Arc};
 
 use crate::{
     commands::CommandSender,
@@ -369,7 +369,7 @@ impl Player {
             &CDisguisedChatMessage::new(
                 TextComponent::from(message.clone()),
                 VarInt(0),
-                gameprofile.name.clone().into(),
+               gameprofile.name.clone().into(),
                 None,
             ),
         ) */
@@ -468,20 +468,15 @@ impl Player {
     }
 
     pub async fn handle_player_action(&self, player_action: SPlayerAction) {
-        let profile_guard = self.client.gameprofile.lock().await;
-        let profile = profile_guard
-            .as_ref()
-            .expect("failed to get player profile");
+
 
         match Status::from_i32(player_action.status.0) {
             Some(status) => match status {
                 Status::StartedDigging => {
                     if !self.can_interact_with_block_at(&player_action.location, 1.0) {
-                        // TODO: maybe log?
-
                         log::warn!(
                             "Player {0} tried to interact with block out of reach at {1}",
-                            profile.name,
+                            self.gameprofile.name,
                             player_action.location
                         );
                         return;
@@ -507,7 +502,7 @@ impl Player {
                     if !self.can_interact_with_block_at(&player_action.location, 1.0) {
                         log::warn!(
                             "Player {0} tried to interact with block out of reach at {1}",
-                            profile.name,
+                            self.gameprofile.name,
                             player_action.location
                         );
                         return;
@@ -521,7 +516,7 @@ impl Player {
                     if !self.can_interact_with_block_at(&location, 1.0) {
                         log::warn!(
                             "Player {0} tried to interact with block out of reach at {1}",
-                            profile.name,
+                            self.gameprofile.name,
                             player_action.location
                         );
                         return;
