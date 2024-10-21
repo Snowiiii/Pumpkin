@@ -14,8 +14,9 @@ use crate::{bytebuf::ByteBuffer, ClientPacket, PacketError, VarInt, MAX_PACKET_S
 type Cipher = cfb8::Encryptor<aes::Aes128>;
 
 // Encoder: Server -> Client
-// Supports ZLib endecoding/compression
-// Supports Aes128 Encyption
+// Supports ZLib encoding/compression
+// Supports Aes128 Encryption
+// TODO: Depreciate in favor of Codecs
 #[derive(Default)]
 pub struct PacketEncoder {
     buf: BytesMut,
