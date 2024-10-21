@@ -31,6 +31,10 @@ tokio = { version = "1.40", features = [
     "sync",
 ] }
 
+thiserror = "1.0"
+num-traits = "0.2"
+num-derive = "0.4"
+
 # Concurrency/Parallelism and Synchronization
 rayon = "1.10.0"
 parking_lot = "0.12.3"
