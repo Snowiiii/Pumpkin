@@ -10,6 +10,7 @@ use crate::level::SaveFile;
 
 use super::{ChunkData, ChunkReader, ChunkReadingError, CompressionError};
 
+#[derive(Clone)]
 pub struct AnvilChunkReader {}
 
 impl Default for AnvilChunkReader {

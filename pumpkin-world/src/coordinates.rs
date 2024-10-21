@@ -1,11 +1,11 @@
 use std::ops::Deref;
 
+use crate::{WORLD_LOWEST_Y, WORLD_MAX_Y};
 use derive_more::derive::{AsMut, AsRef, Display, Into};
 use num_traits::{PrimInt, Signed, Unsigned};
 use pumpkin_core::math::vector2::Vector2;
+use pumpkin_core::math::vector3::Vector3;
 use serde::{Deserialize, Serialize};
-
-use crate::{WORLD_LOWEST_Y, WORLD_MAX_Y};
 
 #[derive(
     Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, AsRef, AsMut, Into, Display,
@@ -127,6 +127,16 @@ impl ChunkRelativeXZBlockCoordinates {
             x: self.x,
             y: height,
             z: self.z,
+        }
+    }
+}
+
+impl From<Vector3<i32>> for ChunkRelativeBlockCoordinates {
+    fn from(value: Vector3<i32>) -> Self {
+        Self {
+            x: (value.x as u8).into(),
+            z: (value.z as u8).into(),
+            y: value.y.into(),
         }
     }
 }
