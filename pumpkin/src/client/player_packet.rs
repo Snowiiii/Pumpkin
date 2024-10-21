@@ -280,7 +280,7 @@ impl Player {
                         entity.set_sneaking(false).await
                     }
                 }
-                pumpkin_protocol::server::play::Action::LeaveBed => todo!(),
+                pumpkin_protocol::server::play::Action::LeaveBed => log::debug!("todo"),
                 pumpkin_protocol::server::play::Action::StartSprinting => {
                     if !entity.sprinting.load(std::sync::atomic::Ordering::Relaxed) {
                         entity.set_sprinting(true).await
@@ -291,9 +291,9 @@ impl Player {
                         entity.set_sprinting(false).await
                     }
                 }
-                pumpkin_protocol::server::play::Action::StartHorseJump => todo!(),
-                pumpkin_protocol::server::play::Action::StopHorseJump => todo!(),
-                pumpkin_protocol::server::play::Action::OpenVehicleInventory => todo!(),
+                pumpkin_protocol::server::play::Action::StartHorseJump => log::debug!("todo"),
+                pumpkin_protocol::server::play::Action::StopHorseJump => log::debug!("todo"),
+                pumpkin_protocol::server::play::Action::OpenVehicleInventory => log::debug!("todo"),
                 pumpkin_protocol::server::play::Action::StartFlyingElytra => {
                     let fall_flying = entity.check_fall_flying();
                     if entity
@@ -334,7 +334,7 @@ impl Player {
     }
 
     pub async fn handle_chat_message(&self, chat_message: SChatMessage) {
-        log::debug!("received chat message");
+        log::debug!("Received chat message");
 
         let message = chat_message.message;
         if message.len() > 256 {
@@ -457,10 +457,10 @@ impl Player {
                     }
                 }
                 ActionType::Interact => {
-                    todo!();
+                    log::debug!("todo");
                 }
                 ActionType::InteractAt => {
-                    todo!();
+                    log::debug!("todo");
                 }
             },
             None => self.kick(TextComponent::text("Invalid action type")).await,
@@ -536,16 +536,16 @@ impl Player {
                         .await;
                 }
                 Status::DropItemStack => {
-                    todo!();
+                    log::debug!("todo");
                 }
                 Status::DropItem => {
-                    todo!();
+                    log::debug!("todo");
                 }
                 Status::ShootArrowOrFinishEating => {
-                    todo!();
+                    log::debug!("todo");
                 }
                 Status::SwapItem => {
-                    todo!();
+                    log::debug!("todo");
                 }
             },
             None => self.kick(TextComponent::text("Invalid status")).await,

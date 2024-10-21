@@ -152,14 +152,14 @@ impl Player {
         match click.click_type {
             ClickType::MouseClick(mouse_click) => {
                 //  self.mouse_click(opened_container.as_deref_mut(), mouse_click, click.slot).await
-                todo!()
+                log::debug("todo!")()
             }
             ClickType::ShiftClick => {
                 //   self.shift_mouse_click(opened_container.as_deref_mut(), click.slot).await
-                todo!()
+                log::debug("todo!")()
             }
             ClickType::KeyClick(key_click) => {
-                todo!()
+                log::debug("todo!")()
                 //                container_click::Slot::Normal(slot) => {
                 //                      self.number_button_pressed(opened_container.as_deref_mut(), key_click, slot).await
                 //                  }
@@ -171,7 +171,7 @@ impl Player {
                 // } else {
                 //     Err(InventoryError::InvalidPacket)
                 // }
-                todo!()
+                log::debug("todo!")()
             }
             ClickType::DoubleClick => {
                 update_whole_container = true;
@@ -180,17 +180,17 @@ impl Player {
                 // } else {
                 //     Err(InventoryError::InvalidPacket)
                 // }
-                todo!()
+                log::debug("todo!")()
             }
             ClickType::MouseDrag { drag_state } => {
                 if drag_state == MouseDragState::End {
                     update_whole_container = true;
                 }
-                todo!()
+                log::debug("todo!")()
                 //  self.mouse_drag(drag_handler, opened_container.as_deref_mut(), drag_state)
             }
             ClickType::DropType(_drop_type) => {
-                todo!();
+                log::debug("todo!")();
                 Ok(())
             }
         }?;

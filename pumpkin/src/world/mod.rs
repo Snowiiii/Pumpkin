@@ -313,7 +313,7 @@ impl World {
                 }
             }
 
-            log::trace!("chunks sent after {}ms", inst.elapsed().as_millis());
+            log::debug!("chunks sent after {}ms", inst.elapsed().as_millis());
 
         });
     }
