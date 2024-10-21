@@ -1,4 +1,4 @@
-use std::{f32::consts::PI, sync::Arc};
+use std::{borrow::Borrow, f32::consts::PI, sync::Arc};
 
 use crate::{
     commands::CommandSender,
@@ -468,11 +468,22 @@ impl Player {
     }
 
     pub async fn handle_player_action(&self, player_action: SPlayerAction) {
+        let profile_guard = self.client.gameprofile.lock().await;
+        let profile = profile_guard
+            .as_ref()
+            .expect("failed to get player profile");
+
         match Status::from_i32(player_action.status.0) {
             Some(status) => match status {
                 Status::StartedDigging => {
                     if !self.can_interact_with_block_at(&player_action.location, 1.0) {
                         // TODO: maybe log?
+
+                        log::warn!(
+                            "Player {0} tried to interact with block out of reach at {1}",
+                            profile.name,
+                            player_action.location
+                        );
                         return;
                     }
                     // TODO: do validation
@@ -494,7 +505,11 @@ impl Player {
                 }
                 Status::CancelledDigging => {
                     if !self.can_interact_with_block_at(&player_action.location, 1.0) {
-                        // TODO: maybe log?
+                        log::warn!(
+                            "Player {0} tried to interact with block out of reach at {1}",
+                            profile.name,
+                            player_action.location
+                        );
                         return;
                     }
                     self.current_block_destroy_stage
@@ -504,7 +519,11 @@ impl Player {
                     // TODO: do validation
                     let location = player_action.location;
                     if !self.can_interact_with_block_at(&location, 1.0) {
-                        // TODO: maybe log?
+                        log::warn!(
+                            "Player {0} tried to interact with block out of reach at {1}",
+                            profile.name,
+                            player_action.location
+                        );
                         return;
                     }
                     // Block break & block break sound

@@ -32,7 +32,6 @@ use super::{authentication::AuthError, Client, PlayerConfig};
 /// Processes incoming Packets from the Client to the Server
 /// Implements the `Client` Packets
 /// NEVER TRUST THE CLIENT. HANDLE EVERY ERROR, UNWRAP/EXPECT
-/// TODO: REMOVE ALL UNWRAPS
 impl Client {
     pub async fn handle_handshake(&self, handshake: SHandShake) {
         dbg!("handshake");
