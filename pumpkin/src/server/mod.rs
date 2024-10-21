@@ -1,6 +1,7 @@
 use connection_cache::{CachedBranding, CachedStatus};
 use key_store::KeyStore;
 use pumpkin_config::BASIC_CONFIG;
+use pumpkin_core::text::TextComponent;
 use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::drag_handler::DragHandler;
@@ -129,6 +130,21 @@ impl Server {
         for world in &self.worlds {
             world.broadcast_packet_all(packet).await;
         }
+    }
+
+    /// Sends a message to all players in every world
+    pub fn broadcast_message(&self, content: &TextComponent) {
+        self.worlds
+            .iter()
+            .for_each(|w| w.broadcast_message(content));
+    }
+
+    /// Get all online player names
+    pub fn get_online_player_names(&self) -> Vec<String> {
+        self.worlds
+            .iter()
+            .flat_map(|world| world.get_player_names())
+            .collect::<Vec<_>>()
     }
 
     /// Searches every world for a player by name
