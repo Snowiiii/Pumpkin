@@ -8,7 +8,7 @@ use crate::{
 };
 use num_traits::FromPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
-use pumpkin_core::math::{position::WorldPosition, vector3::Math};
+use pumpkin_core::math::position::WorldPosition;
 use pumpkin_core::{
     math::{vector3::Vector3, wrap_degrees},
     text::TextComponent,
@@ -16,8 +16,12 @@ use pumpkin_core::{
 };
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::{InventoryError, WindowType};
-use pumpkin_macros::sound;
-use pumpkin_protocol::{client::play::CParticle, server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem}, VarInt};
+use pumpkin_macros::{particle, sound};
+use pumpkin_protocol::{
+    client::play::CParticle,
+    server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem},
+    VarInt,
+};
 use pumpkin_protocol::{
     client::play::{
         Animation, CAcknowledgeBlockChange, CEntityAnimation, CEntityVelocity, CHeadRot,
@@ -32,8 +36,11 @@ use pumpkin_protocol::{
     },
     SoundCategory,
 };
-use pumpkin_world::block::{BlockFace, BlockId, BlockState};
 use pumpkin_world::global_registry;
+use pumpkin_world::{
+    block::{BlockFace, BlockId, BlockState},
+    item::ItemStack,
+};
 
 use super::PlayerConfig;
 
@@ -426,14 +433,12 @@ impl Player {
                                 .store(0, std::sync::atomic::Ordering::Relaxed);
 
                             // TODO: attack damage attribute and deal damage
-                            let mut damage = 2.0;
-                            damage *=
-                                0.2 * attack_cooldown_progress * attack_cooldown_progress * 0.8;
-                            let g = damage * attack_cooldown_progress;
+                            let damage = 2.0;
 
-                            if (config.protect_creative
-                                && player.gamemode.load() == GameMode::Creative)
-                                || (damage <= 0.0 && g <= 0.0)
+                            let damage = player.living_entity.damage(damage);
+                            if !damage
+                                || (config.protect_creative
+                                    && player.gamemode.load() == GameMode::Creative)
                             {
                                 world
                                     .play_sound(
@@ -480,12 +485,11 @@ impl Player {
                                     .await;
                             }
 
-                            let on_ground = entity.on_ground.load(std::sync::atomic::Ordering::Relaxed);
+                            let on_ground =
+                                entity.on_ground.load(std::sync::atomic::Ordering::Relaxed);
 
                             // TODO: even more checks
-                            let is_crit = strong_attack
-                                && !on_ground
-                                && !sprinting;
+                            let is_crit = strong_attack && !on_ground && !sprinting;
 
                             if is_crit {
                                 // damage *= 1.5;
@@ -502,7 +506,13 @@ impl Player {
                                     .await;
                             }
 
-                            let sword = player.inventory.lock().await.held_item().is_some_and(|item| item.is_sword());
+                            let sword = player
+                                .inventory
+                                .lock()
+                                .await
+                                .held_item()
+                                .is_some_and(ItemStack::is_sword);
+
                             let sweep = sword
                                 && strong_attack
                                 && !is_crit
@@ -519,13 +529,13 @@ impl Player {
                                         pos.y,
                                         pos.z,
                                         1.0,
-                                        1.0
+                                        1.0,
                                     )
                                     .await;
 
                                 let yaw = entity.yaw.load();
-                                let d = -(yaw * (PI / 180.0)).sin() as f64;
-                                let e = (yaw * (PI / 180.0)).cos() as f64;
+                                let d = -f64::from((yaw * (PI / 180.0)).sin());
+                                let e = f64::from((yaw * (PI / 180.0)).cos());
 
                                 let scale = 0.5;
                                 // TODO: use entity height
@@ -542,7 +552,7 @@ impl Player {
                                         0.0,
                                         0.0,
                                         0,
-                                        VarInt(62), // sweep
+                                        VarInt(particle!("minecraft:sweep_attack")), // sweep
                                         &[],
                                     ))
                                     .await;

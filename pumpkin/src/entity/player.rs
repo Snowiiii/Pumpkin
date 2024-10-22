@@ -169,6 +169,8 @@ impl Player {
         self.last_attacked_ticks
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
+        self.living_entity.tick();
+
         if now.duration_since(self.last_keep_alive_time.load()) >= Duration::from_secs(15) {
             // We never got a response from our last keep alive we send
             if self
