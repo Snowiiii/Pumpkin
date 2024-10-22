@@ -30,6 +30,7 @@ use log::LevelFilter;
 use client::Client;
 use server::{ticker::Ticker, Server};
 use std::io::{self};
+use tokio::io::{AsyncBufReadExt, BufReader};
 
 // Setup some tokens to allow us to identify which event is for which socket.
 
@@ -140,11 +141,14 @@ async fn main() -> io::Result<()> {
     if use_console {
         let server = server.clone();
         tokio::spawn(async move {
-            let stdin = std::io::stdin();
+            let stdin = tokio::io::stdin();
+            let mut reader = BufReader::new(stdin);
             loop {
                 let mut out = String::new();
-                stdin
+
+                reader
                     .read_line(&mut out)
+                    .await
                     .expect("Failed to read console line");
 
                 if !out.is_empty() {
