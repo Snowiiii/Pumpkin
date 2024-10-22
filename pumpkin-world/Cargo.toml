@@ -19,6 +19,7 @@ parking_lot.workspace = true
 num-traits.workspace = true
 num-derive.workspace = true
 futures = "0.3"
+dashmap = "6.1.0"
 
 # Compression
 flate2 = "1.0"
