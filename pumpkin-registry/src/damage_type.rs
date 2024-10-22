@@ -4,13 +4,13 @@ use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct DamageType {
-    message_id: String,
-    scaling: String,
-    exhaustion: f32,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    effects: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     death_message_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    effects: Option<String>,
+    exhaustion: f32,
+    message_id: String,
+    scaling: String,
 }
 
 const NAMES: &[&str] = &[
@@ -19,7 +19,6 @@ const NAMES: &[&str] = &[
     "cactus",
     "cramming",
     "campfire",
-    "cramming",
     "dragon_breath",
     "drown",
     "dry_out",

@@ -10,11 +10,7 @@ pub struct CLoginSuccess<'a> {
 }
 
 impl<'a> CLoginSuccess<'a> {
-    pub fn new(
-        uuid: &'a uuid::Uuid,
-        username: &'a str,
-        properties: &'a [Property],
-    ) -> Self {
+    pub fn new(uuid: &'a uuid::Uuid, username: &'a str, properties: &'a [Property]) -> Self {
         Self {
             uuid,
             username,
