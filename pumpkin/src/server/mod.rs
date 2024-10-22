@@ -6,7 +6,6 @@ use pumpkin_entity::EntityId;
 use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::{Container, OpenContainer};
 use pumpkin_protocol::client::login::CEncryptionRequest;
-use pumpkin_protocol::client::status::CStatusResponse;
 use pumpkin_protocol::{client::config::CPluginMessage, ClientPacket};
 use pumpkin_registry::Registry;
 use pumpkin_world::dimension::Dimension;
@@ -37,7 +36,7 @@ pub const CURRENT_MC_VERSION: &str = "1.21.1";
 
 pub struct Server {
     key_store: KeyStore,
-    server_listing: CachedStatus,
+    server_listing: Mutex<CachedStatus>,
     server_branding: CachedBranding,
 
     pub command_dispatcher: Arc<CommandDispatcher<'static>>,
@@ -89,7 +88,7 @@ impl Server {
             command_dispatcher: Arc::new(command_dispatcher),
             auth_client,
             key_store: KeyStore::new(),
-            server_listing: CachedStatus::new(),
+            server_listing: Mutex::new(CachedStatus::new()),
             server_branding: CachedBranding::new(),
         }
     }
@@ -106,7 +105,19 @@ impl Server {
 
         let player = Arc::new(Player::new(client, world.clone(), entity_id, gamemode).await);
         world.add_player(id, player.clone()).await;
+        // TODO: Config if we want increase online
+        if let Some(config) = player.client.config.lock().await.as_ref() {
+            // TODO: Config so we can also just ignore this hehe
+            if config.server_listing {
+                self.server_listing.lock().await.add_player();
+            }
+        }
         (player, world.clone())
+    }
+
+    pub async fn remove_player(&self) {
+        // TODO: Config if we want increase online
+        self.server_listing.lock().await.remove_player();
     }
 
     pub async fn try_get_container(
@@ -151,8 +162,8 @@ impl Server {
         self.server_branding.get_branding()
     }
 
-    pub fn get_status(&self) -> CStatusResponse<'_> {
-        self.server_listing.get_status()
+    pub fn get_status(&self) -> &Mutex<CachedStatus> {
+        &self.server_listing
     }
 
     pub fn encryption_request<'a>(
