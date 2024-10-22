@@ -429,7 +429,7 @@ impl Client {
 
     /// Kicks the Client with a reason depending on the connection state
     pub async fn kick(&self, reason: &str) {
-        log::info!("Kicking id {} for {}", self.id, reason);
+        log::info!("Kicking Client id {} for {}", self.id, reason);
         match self.connection_state.load() {
             ConnectionState::Login => {
                 self.try_send_packet(&CLoginDisconnect::new(

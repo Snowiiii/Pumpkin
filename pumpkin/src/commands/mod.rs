@@ -21,17 +21,17 @@ mod tree_builder;
 mod tree_format;
 
 pub enum CommandSender<'a> {
-    Rcon(&'a mut Vec<String>),
+    Rcon(&'a tokio::sync::Mutex<Vec<String>>),
     Console,
     Player(Arc<Player>),
 }
 
 impl<'a> CommandSender<'a> {
-    pub async fn send_message(&mut self, text: TextComponent<'a>) {
+    pub async fn send_message(&self, text: TextComponent<'a>) {
         match self {
             CommandSender::Console => log::info!("{}", text.to_pretty_console()),
             CommandSender::Player(c) => c.send_system_message(&text).await,
-            CommandSender::Rcon(s) => s.push(text.to_pretty_console()),
+            CommandSender::Rcon(s) => s.lock().await.push(text.to_pretty_console()),
         }
     }
 
@@ -44,7 +44,8 @@ impl<'a> CommandSender<'a> {
     pub const fn is_console(&self) -> bool {
         matches!(self, CommandSender::Console)
     }
-    pub fn as_mut_player(&mut self) -> Option<Arc<Player>> {
+    #[must_use]
+    pub fn as_player(&self) -> Option<Arc<Player>> {
         match self {
             CommandSender::Player(player) => Some(player.clone()),
             _ => None,

@@ -286,7 +286,7 @@ impl Player {
             .await
             .unwrap_or_else(|_| self.client.close());
         log::info!(
-            "Kicked {} for {}",
+            "Kicked Player {} for {}",
             self.gameprofile.name,
             reason.to_pretty_console()
         );
