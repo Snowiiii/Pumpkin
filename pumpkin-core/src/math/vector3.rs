@@ -9,6 +9,16 @@ pub struct Vector3<T> {
     pub z: T,
 }
 
+impl<T: Math + Copy + Default> Default for Vector3<T> {
+    fn default() -> Self {
+        Vector3 {
+            x: T::default(),
+            y: T::default(),
+            z: T::default(),
+        }
+    }
+}
+
 impl<T: Math + Copy> Vector3<T> {
     pub const fn new(x: T, y: T, z: T) -> Self {
         Vector3 { x, y, z }
