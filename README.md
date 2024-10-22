@@ -18,13 +18,12 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 
 - **Performance**: Leveraging multi-threading for maximum speed and efficiency.
 - **Compatibility**: Supports the latest Minecraft server version and adheres to vanilla game mechanics.
-- **Security**: Prioritizes security by preventing known exploits.
-- **Flexibility**: Highly configurable with the ability to disable unnecessary features.
+- **Security**: Prioritizes security by preventing known security exploits.
+- **Flexibility**: Highly configurable, with the ability to disable unnecessary features.
 - **Extensibility**: Provides a foundation for plugin development.
 
 ## What Pumpkin will not
 
-- Be a drop-in replacement for vanilla or other servers
 - Be compatible with plugins or mods for other servers
 - Function as a framework for building a server from scratch.
 
@@ -46,10 +45,11 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] World Joining
   - [x] Player Tab-list
   - [x] World Loading
+  - [x] Lighting
   - [x] Entity Spawning
   - [x] Chunk Loading
-  - [ ] World Generation
   - [x] Chunk Generation
+  - [x] Scoreboard
   - [ ] World Borders
   - [ ] World Saving
 - Player
@@ -69,7 +69,8 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Chat
   - [x] Commands
 - Proxy
-  - [ ] Velocity
+  - [x] Bungeecord
+  - [x] Velocity
 
 Check out our [Github Project](https://github.com/users/Snowiiii/projects/12/views/3) to see current progress
 
@@ -91,7 +92,7 @@ Consider joining our [discord](https://discord.gg/wT8XjrjKkf) to stay up-to-date
 
 ## Funding
 
-If you want to fund me and help the project, Check out my [GitHub sponsors](https://github.com/sponsors/Snowiiii)
+If you want to fund me and help the project, Check out my [GitHub sponsors](https://github.com/sponsors/Snowiiii) or my [PayPal](https://www.paypal.me/alexxmedvedev)
 
 ## Thanks
 

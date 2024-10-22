@@ -1,11 +1,33 @@
-use serde::{Deserialize, Serialize};
-
 use super::vector3::Vector3;
+use std::fmt;
+
+use crate::math::vector2::Vector2;
+use num_traits::Euclid;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy)]
 /// Aka Block Position
 pub struct WorldPosition(pub Vector3<i32>);
 
+impl WorldPosition {
+    pub fn chunk_and_chunk_relative_position(&self) -> (Vector2<i32>, Vector3<i32>) {
+        let (z_chunk, z_rem) = self.0.z.div_rem_euclid(&16);
+        let (x_chunk, x_rem) = self.0.x.div_rem_euclid(&16);
+        let chunk_coordinate = Vector2 {
+            x: x_chunk,
+            z: z_chunk,
+        };
+
+        // Since we divide by 16 remnant can never exceed u8
+        let relative = Vector3 {
+            x: x_rem,
+            z: z_rem,
+
+            y: self.0.y,
+        };
+        (chunk_coordinate, relative)
+    }
+}
 impl Serialize for WorldPosition {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -41,5 +63,11 @@ impl<'de> Deserialize<'de> for WorldPosition {
             }
         }
         deserializer.deserialize_i64(Visitor)
+    }
+}
+
+impl std::fmt::Display for WorldPosition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, {},{})", self.0.x, self.0.y, self.0.z)
     }
 }

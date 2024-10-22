@@ -1,7 +1,6 @@
 use crate::entity::player::Player;
 use crate::server::Server;
 use itertools::Itertools;
-use parking_lot::Mutex;
 use pumpkin_core::text::TextComponent;
 use pumpkin_core::GameMode;
 use pumpkin_inventory::container_click::{
@@ -19,15 +18,17 @@ use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
 use std::sync::Arc;
 
+#[expect(unused)]
+
 impl Player {
-    pub fn open_container(&self, server: &Server, minecraft_menu_id: &str) {
-        let inventory = self.inventory.lock();
+    pub async fn open_container(&self, server: &Server, minecraft_menu_id: &str) {
+        let inventory = self.inventory.lock().await;
         inventory
             .state_id
             .store(0, std::sync::atomic::Ordering::Relaxed);
         let total_opened_containers = inventory.total_opened_containers;
         let container = self.get_open_container(server);
-        let mut container = container.as_ref().map(|container| container.lock());
+        let container = container.as_ref().map(|container| container.lock());
         let menu_protocol_id = (*pumpkin_world::global_registry::REGISTRY
             .get("minecraft:menu")
             .unwrap()
@@ -37,23 +38,25 @@ impl Player {
             .get("protocol_id")
             .unwrap())
         .into();
-        let window_title = container
-            .as_ref()
-            .map(|container| container.window_name())
-            .unwrap_or_else(|| inventory.window_name());
+        let window_title = match container {
+            Some(container) => container.await.window_name(),
+            None => inventory.window_name(),
+        };
         let title = TextComponent::text(window_title);
 
-        self.client.send_packet(&COpenScreen::new(
-            total_opened_containers.into(),
-            menu_protocol_id,
-            title,
-        ));
+        self.client
+            .send_packet(&COpenScreen::new(
+                total_opened_containers.into(),
+                menu_protocol_id,
+                title,
+            ))
+            .await;
         drop(inventory);
-        self.set_container_content(container.as_deref_mut());
+        // self.set_container_content(container.as_deref_mut());
     }
 
-    pub fn set_container_content(&self, container: Option<&mut Box<dyn Container>>) {
-        let mut inventory = self.inventory.lock();
+    pub async fn set_container_content(&self, container: Option<&mut Box<dyn Container>>) {
+        let mut inventory = self.inventory.lock().await;
 
         let total_opened_containers = inventory.total_opened_containers;
         let container = OptionallyCombinedContainer::new(&mut inventory, container);
@@ -68,7 +71,7 @@ impl Player {
             .carried_item
             .load()
             .as_ref()
-            .map_or_else(Slot::empty, |item| item.into());
+            .map_or_else(Slot::empty, std::convert::Into::into);
 
         // Gets the previous value
         let i = inventory
@@ -80,27 +83,30 @@ impl Player {
             &slots,
             &carried_item,
         );
-        self.client.send_packet(&packet);
+        self.client.send_packet(&packet).await;
     }
 
     /// The official Minecraft client is weird, and will always just close *any* window that is opened when this gets sent
-    pub fn close_container(&self) {
-        let mut inventory = self.inventory.lock();
+    pub async fn close_container(&self) {
+        let mut inventory = self.inventory.lock().await;
         inventory.total_opened_containers += 1;
         self.client
             .send_packet(&CCloseContainer::new(inventory.total_opened_containers))
+            .await;
     }
 
-    pub fn set_container_property<T: WindowPropertyTrait>(
+    pub async fn set_container_property<T: WindowPropertyTrait>(
         &mut self,
         window_property: WindowProperty<T>,
     ) {
         let (id, value) = window_property.into_tuple();
-        self.client.send_packet(&CSetContainerProperty::new(
-            self.inventory.lock().total_opened_containers,
-            id,
-            value,
-        ));
+        self.client
+            .send_packet(&CSetContainerProperty::new(
+                self.inventory.lock().await.total_opened_containers,
+                id,
+                value,
+            ))
+            .await;
     }
 
     pub async fn handle_click_container(
@@ -109,22 +115,23 @@ impl Player {
         packet: SClickContainer,
     ) -> Result<(), InventoryError> {
         let opened_container = self.get_open_container(server);
-        let mut opened_container = opened_container.as_ref().map(|container| container.lock());
+        let opened_container = opened_container.as_ref().map(|container| container.lock());
         let drag_handler = &server.drag_handler;
 
         let state_id = self
             .inventory
             .lock()
+            .await
             .state_id
             .load(std::sync::atomic::Ordering::Relaxed);
         // This is just checking for regular desync, client hasn't done anything malicious
         if state_id != packet.state_id.0 as u32 {
-            self.set_container_content(opened_container.as_deref_mut());
+            //  self.set_container_content(opened_container.as_deref_mut());
             return Ok(());
         }
 
         if opened_container.is_some() {
-            if packet.window_id != self.inventory.lock().total_opened_containers {
+            if packet.window_id != self.inventory.lock().await.total_opened_containers {
                 return Err(InventoryError::ClosedContainerInteract(self.entity_id()));
             }
         } else if packet.window_id != 0 {
@@ -144,49 +151,56 @@ impl Player {
 
         match click.click_type {
             ClickType::MouseClick(mouse_click) => {
-                self.mouse_click(opened_container.as_deref_mut(), mouse_click, click.slot)
+                //  self.mouse_click(opened_container.as_deref_mut(), mouse_click, click.slot).await
+                todo!()
             }
             ClickType::ShiftClick => {
-                self.shift_mouse_click(opened_container.as_deref_mut(), click.slot)
+                //   self.shift_mouse_click(opened_container.as_deref_mut(), click.slot).await
+                todo!()
             }
-            ClickType::KeyClick(key_click) => match click.slot {
-                container_click::Slot::Normal(slot) => {
-                    self.number_button_pressed(opened_container.as_deref_mut(), key_click, slot)
-                }
-                container_click::Slot::OutsideInventory => Err(InventoryError::InvalidPacket),
-            },
+            ClickType::KeyClick(key_click) => {
+                todo!()
+                //                container_click::Slot::Normal(slot) => {
+                //                      self.number_button_pressed(opened_container.as_deref_mut(), key_click, slot).await
+                //                  }
+                //                  container_click::Slot::OutsideInventory => Err(InventoryError::InvalidPacket),
+            }
             ClickType::CreativePickItem => {
-                if let container_click::Slot::Normal(slot) = click.slot {
-                    self.creative_pick_item(opened_container.as_deref_mut(), slot)
-                } else {
-                    Err(InventoryError::InvalidPacket)
-                }
+                // if let container_click::Slot::Normal(slot) = click.slot {
+                //     self.creative_pick_item(opened_container.as_deref_mut(), slot).await
+                // } else {
+                //     Err(InventoryError::InvalidPacket)
+                // }
+                todo!()
             }
             ClickType::DoubleClick => {
                 update_whole_container = true;
-                if let container_click::Slot::Normal(slot) = click.slot {
-                    self.double_click(opened_container.as_deref_mut(), slot)
-                } else {
-                    Err(InventoryError::InvalidPacket)
-                }
+                // if let container_click::Slot::Normal(slot) = click.slot {
+                //     self.double_click(opened_container.as_deref_mut(), slot)
+                // } else {
+                //     Err(InventoryError::InvalidPacket)
+                // }
+                todo!()
             }
             ClickType::MouseDrag { drag_state } => {
                 if drag_state == MouseDragState::End {
                     update_whole_container = true;
                 }
-                self.mouse_drag(drag_handler, opened_container.as_deref_mut(), drag_state)
+                todo!()
+                //  self.mouse_drag(drag_handler, opened_container.as_deref_mut(), drag_state)
             }
             ClickType::DropType(_drop_type) => {
-                dbg!("todo");
+                log::debug!("todo");
                 Ok(())
             }
         }?;
-        if let Some(mut opened_container) = opened_container {
+        if let Some(opened_container) = opened_container {
             if update_whole_container {
                 drop(opened_container);
                 self.send_whole_container_change(server).await?;
             } else if let container_click::Slot::Normal(slot_index) = click.slot {
-                let mut inventory = self.inventory.lock();
+                let mut inventory = self.inventory.lock().await;
+                let mut opened_container = opened_container.await;
                 let combined_container =
                     OptionallyCombinedContainer::new(&mut inventory, Some(&mut opened_container));
                 if let Some(slot) = combined_container.get_slot_excluding_inventory(slot_index) {
@@ -200,13 +214,13 @@ impl Player {
         Ok(())
     }
 
-    fn mouse_click(
+    async fn mouse_click(
         &self,
         opened_container: Option<&mut Box<dyn Container>>,
         mouse_click: MouseClick,
         slot: container_click::Slot,
     ) -> Result<(), InventoryError> {
-        let mut inventory = self.inventory.lock();
+        let mut inventory = self.inventory.lock().await;
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
 
         match slot {
@@ -220,12 +234,12 @@ impl Player {
         }
     }
 
-    fn shift_mouse_click(
+    async fn shift_mouse_click(
         &self,
         opened_container: Option<&mut Box<dyn Container>>,
         slot: container_click::Slot,
     ) -> Result<(), InventoryError> {
-        let mut inventory = self.inventory.lock();
+        let mut inventory = self.inventory.lock().await;
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
 
         match slot {
@@ -256,7 +270,7 @@ impl Player {
                         slots.skip(36).rev().find_map(find_condition)
                     };
                     if let Some(slot) = slots {
-                        let mut item_slot = container.all_slots()[slot].map(|i| i.to_owned());
+                        let mut item_slot = container.all_slots()[slot].map(|i| i);
                         container.handle_item_change(&mut item_slot, slot, MouseClick::Left)?;
                         *container.all_slots()[slot] = item_slot;
                     }
@@ -267,7 +281,7 @@ impl Player {
         Ok(())
     }
 
-    fn number_button_pressed(
+    async fn number_button_pressed(
         &self,
         opened_container: Option<&mut Box<dyn Container>>,
         key_click: KeyClick,
@@ -277,7 +291,7 @@ impl Player {
             KeyClick::Slot(slot) => slot,
             KeyClick::Offhand => 45,
         };
-        let mut inventory = self.inventory.lock();
+        let mut inventory = self.inventory.lock().await;
         let mut changing_item_slot = inventory.get_slot(changing_slot as usize)?.to_owned();
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
 
@@ -286,7 +300,7 @@ impl Player {
         Ok(())
     }
 
-    fn creative_pick_item(
+    async fn creative_pick_item(
         &self,
         opened_container: Option<&mut Box<dyn Container>>,
         slot: usize,
@@ -294,7 +308,7 @@ impl Player {
         if self.gamemode.load() != GameMode::Creative {
             return Err(InventoryError::PermissionError);
         }
-        let mut inventory = self.inventory.lock();
+        let mut inventory = self.inventory.lock().await;
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
         if let Some(Some(item)) = container.all_slots().get_mut(slot) {
             self.carried_item.store(Some(item.to_owned()));
@@ -302,12 +316,12 @@ impl Player {
         Ok(())
     }
 
-    fn double_click(
+    async fn double_click(
         &self,
         opened_container: Option<&mut Box<dyn Container>>,
         slot: usize,
     ) -> Result<(), InventoryError> {
-        let mut inventory = self.inventory.lock();
+        let mut inventory = self.inventory.lock().await;
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
         let mut slots = container.all_slots();
 
@@ -340,7 +354,7 @@ impl Player {
         Ok(())
     }
 
-    fn mouse_drag(
+    async fn mouse_drag(
         &self,
         drag_handler: &DragHandler,
         opened_container: Option<&mut Box<dyn Container>>,
@@ -349,28 +363,30 @@ impl Player {
         let player_id = self.entity_id();
         let container_id = opened_container
             .as_ref()
-            .map(|container| container.internal_pumpkin_id())
-            .unwrap_or(player_id as u64);
+            .map_or(player_id as u64, |container| {
+                container.internal_pumpkin_id()
+            });
         match mouse_drag_state {
             MouseDragState::Start(drag_type) => {
                 if drag_type == MouseDragType::Middle && self.gamemode.load() != GameMode::Creative
                 {
-                    Err(InventoryError::PermissionError)?
+                    Err(InventoryError::PermissionError)?;
                 }
-                drag_handler.new_drag(container_id, player_id, drag_type)
+                drag_handler
+                    .new_drag(container_id, player_id, drag_type)
+                    .await
             }
-            MouseDragState::AddSlot(slot) => drag_handler.add_slot(container_id, player_id, slot),
+            MouseDragState::AddSlot(slot) => {
+                drag_handler.add_slot(container_id, player_id, slot).await
+            }
             MouseDragState::End => {
-                let mut inventory = self.inventory.lock();
+                let mut inventory = self.inventory.lock().await;
                 let mut container =
                     OptionallyCombinedContainer::new(&mut inventory, opened_container);
                 let mut carried_item = self.carried_item.load();
-                let res = drag_handler.apply_drag(
-                    &mut carried_item,
-                    &mut container,
-                    &container_id,
-                    player_id,
-                );
+                let res = drag_handler
+                    .apply_drag(&mut carried_item, &mut container, &container_id, player_id)
+                    .await;
                 self.carried_item.store(carried_item);
                 res
             }
@@ -379,7 +395,7 @@ impl Player {
 
     async fn get_current_players_in_container(&self, server: &Server) -> Vec<Arc<Self>> {
         let player_ids = {
-            let open_containers = server.open_containers.read();
+            let open_containers = server.open_containers.read().await;
             open_containers
                 .get(&self.open_container.load().unwrap())
                 .unwrap()
@@ -399,17 +415,18 @@ impl Player {
             .world
             .current_players
             .lock()
+            .await
             .iter()
             .filter_map(|(token, player)| {
-                if *token != player_token {
+                if *token == player_token {
+                    None
+                } else {
                     let entity_id = player.entity_id();
                     if player_ids.contains(&entity_id) {
                         Some(player.clone())
                     } else {
                         None
                     }
-                } else {
-                    None
                 }
             })
             .collect_vec();
@@ -423,7 +440,7 @@ impl Player {
         slot: Slot,
     ) -> Result<(), InventoryError> {
         for player in self.get_current_players_in_container(server).await {
-            let inventory = player.inventory.lock();
+            let inventory = player.inventory.lock().await;
             let total_opened_containers = inventory.total_opened_containers;
 
             // Returns previous value
@@ -436,7 +453,7 @@ impl Player {
                 slot_index,
                 &slot,
             );
-            player.client.send_packet(&packet);
+            player.client.send_packet(&packet).await;
         }
         Ok(())
     }
@@ -446,15 +463,17 @@ impl Player {
 
         for player in players {
             let container = player.get_open_container(server);
-            let mut container = container.as_ref().map(|v| v.lock());
-            player.set_container_content(container.as_deref_mut());
+            let container = container.as_ref().map(|v| v.lock());
+            // player.set_container_content(container.as_deref_mut());
         }
         Ok(())
     }
 
-    pub fn get_open_container(&self, server: &Server) -> Option<Arc<Mutex<Box<dyn Container>>>> {
-        self.open_container
-            .load()
-            .map_or_else(|| None, |id| server.try_get_container(self.entity_id(), id))
+    pub fn get_open_container(
+        &self,
+        server: &Server,
+    ) -> Option<Arc<tokio::sync::Mutex<Box<dyn Container>>>> {
+        // self.open_container    .load().map_or_else(|| None, |id| server.try_get_container(self.entity_id(), id).await)
+        None
     }
 }

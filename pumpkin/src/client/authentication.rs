@@ -6,6 +6,8 @@ use pumpkin_core::ProfileAction;
 use pumpkin_protocol::Property;
 use reqwest::{StatusCode, Url};
 use serde::Deserialize;
+use sha1::Digest;
+use sha2::Sha256;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -94,12 +96,12 @@ pub fn validate_textures(property: &Property, config: &TextureConfig) -> Result<
     for texture in textures.textures {
         let url =
             Url::parse(&texture.1.url).map_err(|e| TextureError::InvalidURL(e.to_string()))?;
-        is_texture_url_valid(url, config)?
+        is_texture_url_valid(&url, config)?;
     }
     Ok(())
 }
 
-pub fn is_texture_url_valid(url: Url, config: &TextureConfig) -> Result<(), TextureError> {
+pub fn is_texture_url_valid(url: &Url, config: &TextureConfig) -> Result<(), TextureError> {
     let scheme = url.scheme();
     if !config
         .allowed_url_schemes
@@ -117,6 +119,10 @@ pub fn is_texture_url_valid(url: Url, config: &TextureConfig) -> Result<(), Text
         return Err(TextureError::DisallowedUrlDomain(domain.to_string()));
     }
     Ok(())
+}
+
+pub fn offline_uuid(username: &str) -> Result<Uuid, uuid::Error> {
+    Uuid::from_slice(&Sha256::digest(username)[..16])
 }
 
 #[derive(Error, Debug)]

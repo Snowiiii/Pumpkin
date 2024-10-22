@@ -18,7 +18,7 @@ pub fn wrap_degrees(var: f32) -> f32 {
 }
 
 pub fn squared_magnitude(a: f64, b: f64, c: f64) -> f64 {
-    a * a + b * b + c * c
+    c.mul_add(c, a.mul_add(a, b * b))
 }
 
 pub fn magnitude(a: f64, b: f64, c: f64) -> f64 {

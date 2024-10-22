@@ -238,24 +238,61 @@ pub fn block_state_impl(item: TokenStream) -> TokenStream {
     };
 
     let id = state.id;
-    let category_name = block_info.definition.category.clone();
-
     if std::env::var("CARGO_PKG_NAME").unwrap() == "pumpkin-world" {
+        let category_name: proc_macro2::TokenStream = format!(
+            "crate::block::BlockCategory::{}",
+            &pascal_case(
+                block_info
+                    .definition
+                    .category
+                    .split_once(':')
+                    .expect("Bad minecraft id")
+                    .1,
+            )
+        )
+        .parse()
+        .unwrap();
+        let block_name: proc_macro2::TokenStream = format!(
+            "crate::block::Block::{}",
+            &pascal_case(block_name.split_once(':').expect("Bad minecraft id").1,)
+        )
+        .parse()
+        .unwrap();
         quote! {
-          crate::block::block_state::BlockState::new_unchecked(
-                #id as u16,
-                crate::block::Block::from_registry_id(#block_name),
-                crate::block::BlockCategory::from_registry_id(#category_name),
-          )
+            crate::block::BlockState {
+                state_id: #id as u16,
+                category: #category_name,
+                block: #block_name,
+          }
         }
+        .into()
     } else {
+        let category_name: proc_macro2::TokenStream = format!(
+            "pumpkin_world::block::BlockCategory::{}",
+            &pascal_case(
+                block_info
+                    .definition
+                    .category
+                    .split_once(':')
+                    .expect("Bad minecraft id")
+                    .1,
+            )
+        )
+        .parse()
+        .unwrap();
+        let block_name: proc_macro2::TokenStream = format!(
+            "pumpkin_world::block::Block::{}",
+            &pascal_case(block_name.split_once(':').expect("Bad minecraft id").1,)
+        )
+        .parse()
+        .unwrap();
         quote! {
-          pumpkin_world::block::block_id::BlockStateId::new_unchecked(
-                #id as u16,
-                pumpkin_world::block::Block::from_registry_id(#block_name),
-                pumpkin_world::block::BlockCategory::from_registry_id(#category_name),
-          )
+          pumpkin_world::block::BlockState {
+                state_id: #id as u16,
+                category: #category_name,
+                block: #block_name,
+          }
         }
+        .into()
     }
-    .into()
 }

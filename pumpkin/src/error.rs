@@ -3,7 +3,7 @@ use pumpkin_inventory::InventoryError;
 use pumpkin_protocol::bytebuf::DeserializerError;
 use std::fmt::Display;
 
-pub trait PumpkinError: std::error::Error + Display {
+pub trait PumpkinError: Send + std::error::Error + Display {
     fn is_kick(&self) -> bool;
 
     fn log(&self) {
@@ -22,14 +22,20 @@ impl<ErrorType: PumpkinError + 'static> From<ErrorType> for Box<dyn PumpkinError
 }
 impl PumpkinError for InventoryError {
     fn is_kick(&self) -> bool {
-        use InventoryError::*;
+        use InventoryError::{
+            ClosedContainerInteract, InvalidPacket, InvalidSlot, LockError,
+            MultiplePlayersDragging, OutOfOrderDragging, PermissionError,
+        };
         match self {
             InvalidSlot | ClosedContainerInteract(..) | InvalidPacket | PermissionError => true,
             LockError | OutOfOrderDragging | MultiplePlayersDragging => false,
         }
     }
     fn severity(&self) -> log::Level {
-        use InventoryError::*;
+        use InventoryError::{
+            ClosedContainerInteract, InvalidPacket, InvalidSlot, LockError,
+            MultiplePlayersDragging, OutOfOrderDragging, PermissionError,
+        };
         match self {
             LockError
             | InvalidSlot

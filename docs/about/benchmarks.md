@@ -1,20 +1,17 @@
 # Benchmarks
 
-Here, I compare common Minecraft servers against Pumpkin.
+Here, common Minecraft servers are compared against Pumpkin.
 
-Is this comparison fair?. Not really. While you could say Pumpkin currently has way fewer features than other Servers which should use less resources, You should also consider that other Servers had already Years for
-Optimizations, Especially Vanilla forks, which don't have to go through the pain of rewriting the entire vanilla logic, are free to focus on optimizations
-
-ALL TESTS HAVE BEEN RAN MULTIPLE TIMES TO GUARANTEE CONSISTENT RESULTS
-
-ALL PLAYERS DID NOT MOVE WHEN SPAWNING, ONLY THE INITIAL 8 CHUNKS WERE LOADED, THAT'S ALSO THE REASON CPU MAX IS USUALLY HIGH ON THE FIRST PLAYER
-ALL SERVERS USED ITS OWN TERRAIN GENERATION, NO WORLD WAS PRE-LOADED
+> [!CAUTION]
+> **This comparison is unfair.** Pumpkin currently has far fewer features than other servers, which might suggest it uses fewer resources.
+> It's also important to consider that other servers have had years for optimization.
+> Vanilla forks, which don’t need to rewrite the entire vanilla logic, can focus exclusively on optimizations.
 
 ![Screenshot From 2024-10-15 16-42-53](https://github.com/user-attachments/assets/e08fbb00-42fe-4479-a03b-11bb6886c91a)
 
-# Specifications
+## Specifications
 
-## Technical
+#### Technical
 
 **Software**
 
@@ -41,7 +38,7 @@ ALL SERVERS USED ITS OWN TERRAIN GENERATION, NO WORLD WAS PRE-LOADED
 - JRE Version: OpenJDK Runtime Environment (build 23+37)
 - Vendor: Oracle
 
-## Game
+#### Game
 
 - Minecraft version: 1.21.1
 - View distance: 10
@@ -49,33 +46,52 @@ ALL SERVERS USED ITS OWN TERRAIN GENERATION, NO WORLD WAS PRE-LOADED
 - Online mode: false
 - Rcon: false
 
-<sub><sup>online mode was disabled, so i can easier test with non premium accounts</sup></sub>
+<sub><sup>online mode was disabled for easier testing with non-premium accounts</sup></sub>
 
-# Pumpkin
+> [!NOTE]
+> All tests have been ran multiple times to guarantee consistent results.
+> All players did not move when spawning, only the initial 8 chunks were loaded.
+> All servers used their own terrain generation, no world was pre-loaded.
+
+> [!IMPORTANT]
+> `CPU Max` is usually higher with one player as the initial chunks are being loaded.
+
+## Pumpkin
 
 Build: [8febc50](https://github.com/Snowiiii/Pumpkin/commit/8febc5035d5611558c13505b7724e6ca284e0ada)
 
-Compile args:`--release`
+Compile args: `--release`
 
 Run args:
 
-**File Size:** 12,3MB
+**File Size:** <FmtNum :n=12.3 />MB
 
-**Startup time:** 8ms
+**Startup time:** <FmtNum :n=8 />ms
 
-**Shutdown time:** 0ms
+**Shutdown time:** <FmtNum :n=0 />ms
 
-| Players | RAM     | CPU idle | CPU Max |
-| ------- | ------- | -------- | ------- |
-| 0       | 392,2KB | 0,0%     | 0,0%    |
-| 1       | 24,9MB  | 0,0%     | 4,0%    |
-| 2       | 25,1MB  | 0,0%     | 0,6%    |
-| 5       | 26,0MB  | 0,0%     | 1,0%    |
-| 10      | 27,1MB  | 0,0%     | 1,5%    |
+| Players | RAM                   | CPU Idle         | CPU Max            |
+| ------- | --------------------- | ---------------- | ------------------ |
+| 0       | <FmtNum :n=392.2 />KB | <FmtNum :n=0 />% | <FmtNum :n=0 />%   |
+| 1       | <FmtNum :n=24.9 />MB  | <FmtNum :n=0 />% | <FmtNum :n=4 />%   |
+| 2       | <FmtNum :n=25.1 />MB  | <FmtNum :n=0 />% | <FmtNum :n=0.6 />% |
+| 5       | <FmtNum :n=26 />MB    | <FmtNum :n=0 />% | <FmtNum :n=1 />%   |
+| 10      | <FmtNum :n=27.1 />MB  | <FmtNum :n=0 />% | <FmtNum :n=1.5 />% |
 
-<sub><sup>pumpkin does cache already loaded chunks, resulting in no extra RAM besides player data and minimal CPU usage</sup></sub>
+<sub><sup>Pumpkin does cache already loaded chunks, resulting in no extra RAM usage besides player data and minimal CPU usage.</sup></sub>
 
-# Vanilla
+#### Compile time
+Compiling from Nothing:
+
+**Debug:** <FmtNum :n=10.35 />sec
+**Release:** <FmtNum :n=38.40 />sec
+
+Recompilation (pumpkin crate):
+
+**Debug:** <FmtNum :n=1.82 />sec
+**Release:** <FmtNum :n=28.68 />sec
+
+## Vanilla
 
 Release: [1.21.1](https://piston-data.mojang.com/v1/objects/59353fb40c36d304f2035d51e7d6e6baa98dc05c/server.jar)
 
@@ -83,21 +99,21 @@ Compile args:
 
 Run args: `nogui`
 
-**File Size:** 51,6MB
+**File Size:** <FmtNum :n=51.6 />MB
 
-**Startup time:** 7sec
+**Startup time:** <FmtNum :n=7 />sec
 
-**Shutdown time:** 4sec
+**Shutdown time:** <FmtNum :n=4 />sec
 
-| Players | RAM   | CPU idle | CPU Max |
-| ------- | ----- | -------- | ------- |
-| 0       | 860MB | 0,1-0,3% | 51,0%   |
-| 1       | 1.5GB | 0,9-1%   | 41,0%   |
-| 2       | 1.6GB | 1,0-1,1% | 10,0%   |
-| 5       | 1.8GB | 2,0%     | 20,0%   |
-| 10      | 2,2GB | 4,0%     | 24,0%   |
+| Players | RAM                   | CPU idle                                 | CPU Max            |
+| ------- | --------------------- | ---------------------------------------- | ------------------ |
+| 0       | <FmtNum n="860" />MB  | <FmtNum n="0.1" /> - <FmtNum n="0.3" />% | <FmtNum n="51" />% |
+| 1       | <FmtNum n="1.5" />GB  | <FmtNum n="0.9" /> - <FmtNum n="1" />%   | <FmtNum n="41" />% |
+| 2       | <FmtNum n="1.6" />GB  | <FmtNum n="1" /> - <FmtNum n="1.1" />%   | <FmtNum n="10" />% |
+| 5       | <FmtNum n="1.8" />GB  | <FmtNum n="2" />%                        | <FmtNum n="20" />% |
+| 10      | <FmtNum n="2.2" />GB  | <FmtNum n="4" />%                        | <FmtNum n="24" />% |
 
-# Paper
+## Paper
 
 Build: [122](https://api.papermc.io/v2/projects/paper/versions/1.21.1/builds/122/downloads/paper-1.21.1-122.jar)
 
@@ -105,21 +121,22 @@ Compile args:
 
 Run args: `nogui`
 
-**File Size:** 49,4MB
+**File Size:** <FmtNum :n=49.4 />MB
 
-**Startup time:** 7sec
+**Startup time:** <FmtNum :n=7 />sec
 
-**Shutdown time:** 3sec
+**Shutdown time:** <FmtNum :n=3 />sec
 
-| Players | RAM   | CPU idle | CPU Max |
-| ------- | ----- | -------- | ------- |
-| 0       | 1.1GB | 0,2-0,3% | 36,0%   |
-| 1       | 1.7GB | 0,9-1,0% | 47,0%   |
-| 2       | 1.8GB | 1-1-1,0% | 10,0%   |
-| 5       | 1.9GB | 1.5%     | 15,0%   |
-| 10      | 2GB   | 3,0%     | 20,0%   |
+| Players | RAM                 | CPU idle                               | CPU Max           |
+| ------- | ------------------- | -------------------------------------- | ----------------- |
+| 0       | <FmtNum :n=1.1 />GB | <FmtNum :n=0.2 /> - <FmtNum :n=0.3 />% | <FmtNum :n=36 />% |
+| 1       | <FmtNum :n=1.7 />GB | <FmtNum :n=0.9 /> - <FmtNum :n=1.0 />% | <FmtNum :n=47 />% |
+| 2       | <FmtNum :n=1.8 />GB | <FmtNum :n=1 /> - <FmtNum :n=1.1 />%   | <FmtNum :n=10 />% |
+| 5       | <FmtNum :n=1.9 />GB | <FmtNum :n=1.5 />%                     | <FmtNum :n=15 />% |
+| 10      | <FmtNum :n=2 />GB   | <FmtNum :n=3 />%                       | <FmtNum :n=20 />% |
 
-# Purpur
+
+## Purpur
 
 Build: [2324](https://api.purpurmc.org/v2/purpur/1.21.1/2324/download)
 
@@ -127,21 +144,21 @@ Compile args:
 
 Run args: `nogui`
 
-**File Size:** 53,1MB
+**File Size:** <FmtNum :n=53.1 />MB
 
-**Startup time:** 8sec
+**Startup time:** <FmtNum :n=8 />sec
 
-**Shutdown time:** 4sec
+**Shutdown time:** <FmtNum :n=4 />sec
 
-| Players | RAM   | CPU idle | CPU Max |
-| ------- | ----- | -------- | ------- |
-| 0       | 1.4GB | 0,2-0,3% | 25,0%   |
-| 1       | 1.6GB | 0,7-1,0% | 35,0%   |
-| 2       | 1.7GB | 1,1-1,3% | 9,0%    |
-| 5       | 1.9GB | 1.6%     | 20,0%   |
-| 10      | 2.2GB | 2-2,5,0% | 26,0%   |
+| Players | RAM                 | CPU idle                               | CPU Max           |
+| ------- | ------------------- | -------------------------------------- | ----------------- |
+| 0       | <FmtNum :n=1.4 />GB | <FmtNum :n=0.2 /> - <FmtNum :n=0.3 />% | <FmtNum :n=25 />% |
+| 1       | <FmtNum :n=1.6 />GB | <FmtNum :n=0.7 /> - <FmtNum :n=1.0 />% | <FmtNum :n=35 />% |
+| 2       | <FmtNum :n=1.7 />GB | <FmtNum :n=1.1 /> - <FmtNum :n=1.3 />% | <FmtNum :n=9 />%  |
+| 5       | <FmtNum :n=1.9 />GB | <FmtNum :n=1.6 />%                     | <FmtNum :n=20 />% |
+| 10      | <FmtNum :n=2.2 />GB | <FmtNum :n=2 /> - <FmtNum :n=2.5 />%   | <FmtNum :n=26 />% |
 
-# Minestom
+## Minestom
 
 Commit: [0ca1dda2fe](https://github.com/Minestom/Minestom/commit/0ca1dda2fe11390a1b89a228bbe7bf78fefc73e1)
 
@@ -149,22 +166,23 @@ Compile args:
 
 Run args:
 
-**Language:** Kotlin 2.0.0
+**Language:** Benchmarks ran with Kotlin 2.0.0 (Minestom itself is made with Java)
 
-**File Size:** 2,8MB (Library)
+**File Size:** <FmtNum :n=2.8 />MB (Library)
 
-**Startup time:** 310ms
+**Startup time:** <FmtNum :n=310 />ms
 
-**Shutdown time:** 0ms
+**Shutdown time:** <FmtNum :n=0 />ms
 
 <sub>[Used example code from](https://minestom.net/docs/setup/your-first-server)</sub>
 
-| Players | RAM   | CPU idle | CPU Max |
-| ------- | ----- | -------- | ------- |
-| 0       | 228MB | 0,1-0,3% | 1,0%    |
-| 1       | 365MB | 0,9-1,0% | 5,0%    |
-| 2       | 371MB | 1-1,1%   | 4,0%    |
-| 5       | 390MB | 1,0%     | 6,0%    |
-| 10      | 421MB | 3,0%     | 9,0%    |
+| Players | RAM                 | CPU idle                               | CPU Max          |
+| ------- | ------------------- | -------------------------------------- | ---------------- |
+| 0       | <FmtNum :n=228 />MB | <FmtNum :n=0.1 /> - <FmtNum :n=0.3 />% | <FmtNum :n=1 />% |
+| 1       | <FmtNum :n=365 />MB | <FmtNum :n=0.9 /> - <FmtNum :n=1.0 />% | <FmtNum :n=5 />% |
+| 2       | <FmtNum :n=371 />MB | <FmtNum :n=1 /> - <FmtNum :n=1.1 />%   | <FmtNum :n=4 />% |
+| 5       | <FmtNum :n=390 />MB | <FmtNum :n=1.0 />%                     | <FmtNum :n=6 />% |
+| 10      | <FmtNum :n=421 />MB | <FmtNum :n=3 />%                       | <FmtNum :n=9 />% |
 
-Benchmarked at 15.10.2024 18:34 (UTC+2)
+
+Benchmarked at <FmtDateTime :d="new Date('2024-10-15T16:34Z')" />
