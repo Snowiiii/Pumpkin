@@ -1,5 +1,7 @@
 use std::time::{Duration, Instant};
 
+use tokio::time::sleep;
+
 use super::Server;
 
 pub struct Ticker {
@@ -28,7 +30,7 @@ impl Ticker {
             } else {
                 // Wait for the remaining time until the next tick
                 let sleep_time = self.tick_interval - elapsed;
-                std::thread::sleep(sleep_time);
+                sleep(sleep_time).await;
             }
         }
     }
