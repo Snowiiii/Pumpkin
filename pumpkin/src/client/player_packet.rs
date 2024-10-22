@@ -16,6 +16,7 @@ use pumpkin_core::{
 };
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::{InventoryError, WindowType};
+use pumpkin_macros::sound;
 use pumpkin_protocol::server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem};
 use pumpkin_protocol::{
     client::play::{
@@ -29,6 +30,7 @@ use pumpkin_protocol::{
         SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
         SSwingArm, SUseItemOn, Status,
     },
+    SoundCategory,
 };
 use pumpkin_world::block::{BlockFace, BlockId, BlockState};
 use pumpkin_world::global_registry;
@@ -417,20 +419,110 @@ impl Player {
                             world.get_player_by_entityid(entity_id.0 as EntityId).await;
                         if let Some(player) = attacked_player {
                             let victem_entity = &player.living_entity.entity;
+                            let pos = victem_entity.pos.load();
+
+                            let attack_cooldown_progress = self.get_attack_cooldown_progress(0.5);
+                            self.last_attacked_ticks
+                                .store(0, std::sync::atomic::Ordering::Relaxed);
+
                             if config.protect_creative
                                 && player.gamemode.load() == GameMode::Creative
                             {
+                                world
+                                    .play_sound(
+                                        sound!("minecraft:entity.player.attack.nodamage"),
+                                        SoundCategory::Players,
+                                        pos.x,
+                                        pos.y,
+                                        pos.z,
+                                        1.0,
+                                        1.0,
+                                    )
+                                    .await;
                                 return;
                             }
+
+                            let strong_attack = attack_cooldown_progress > 0.9;
+                            let sprinting =
+                                entity.sprinting.load(std::sync::atomic::Ordering::Relaxed);
+
+                            let is_knockback_hit = sprinting && strong_attack;
+                            if is_knockback_hit {
+                                world
+                                    .play_sound(
+                                        sound!("minecraft:entity.player.attack.knockback"),
+                                        SoundCategory::Players,
+                                        pos.x,
+                                        pos.y,
+                                        pos.z,
+                                        1.0,
+                                        1.0,
+                                    )
+                                    .await;
+                            }
+
+                            // TODO: even more checks
+                            let is_crit = strong_attack
+                                && !entity.on_ground.load(std::sync::atomic::Ordering::Relaxed)
+                                && !sprinting;
+
+                            if is_crit {
+                                world
+                                    .play_sound(
+                                        sound!("minecraft:entity.player.attack.crit"),
+                                        SoundCategory::Players,
+                                        pos.x,
+                                        pos.y,
+                                        pos.z,
+                                        1.0,
+                                        1.0,
+                                    )
+                                    .await;
+                            }
+
+                            let sweep = false;
+                            if !is_crit && !sweep {
+                                if strong_attack {
+                                    world
+                                        .play_sound(
+                                            sound!("minecraft:entity.player.attack.strong"),
+                                            SoundCategory::Players,
+                                            pos.x,
+                                            pos.y,
+                                            pos.z,
+                                            1.0,
+                                            1.0,
+                                        )
+                                        .await;
+                                } else {
+                                    world
+                                        .play_sound(
+                                            sound!("minecraft:entity.player.attack.weak"),
+                                            SoundCategory::Players,
+                                            pos.x,
+                                            pos.y,
+                                            pos.z,
+                                            1.0,
+                                            1.0,
+                                        )
+                                        .await;
+                                }
+                            }
+
                             if config.knockback {
                                 let yaw = entity.yaw.load();
-                                let strength = 1.0;
+                                let mut strength = 1.0;
+                                if is_knockback_hit {
+                                    strength += 1.0;
+                                }
+
                                 let saved_velo = victem_entity.velocity.load();
                                 victem_entity.knockback(
                                     strength * 0.5,
                                     f64::from((yaw * (PI / 180.0)).sin()),
                                     f64::from(-(yaw * (PI / 180.0)).cos()),
                                 );
+
                                 let victem_velocity = victem_entity.velocity.load();
                                 let packet = &CEntityVelocity::new(
                                     &entity_id,
@@ -650,5 +742,19 @@ impl Player {
             self.kick(TextComponent::text("Invalid window ID")).await;
             return;
         };
+    }
+
+    pub fn get_attack_cooldown_progress(&self, base_time: f32) -> f32 {
+        #[allow(clippy::cast_precision_loss)]
+        let x = self
+            .last_attacked_ticks
+            .load(std::sync::atomic::Ordering::Acquire) as f32
+            + base_time;
+        // TODO attack speed attribute
+        let attack_speed = 4.0;
+        let progress_per_tick = 1.0 / attack_speed * 20.0;
+
+        let progress = x / progress_per_tick;
+        num_traits::clamp(progress, 0.0, 1.0)
     }
 }

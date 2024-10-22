@@ -1,6 +1,6 @@
 use std::{
     sync::{
-        atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU8},
+        atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU32, AtomicU8},
         Arc,
     },
     time::{Duration, Instant},
@@ -96,6 +96,8 @@ pub struct Player {
     pub keep_alive_id: AtomicI64,
     /// Last time we send a keep alive
     pub last_keep_alive_time: AtomicCell<Instant>,
+    /// Amount of ticks since last attack
+    pub last_attacked_ticks: AtomicU32,
 }
 
 impl Player {
@@ -144,6 +146,7 @@ impl Player {
             wait_for_keep_alive: AtomicBool::new(false),
             keep_alive_id: AtomicI64::new(0),
             last_keep_alive_time: AtomicCell::new(std::time::Instant::now()),
+            last_attacked_ticks: AtomicU32::new(0),
         }
     }
 
@@ -163,6 +166,9 @@ impl Player {
 
     pub async fn tick(&self) {
         let now = Instant::now();
+        self.last_attacked_ticks
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+
         if now.duration_since(self.last_keep_alive_time.load()) >= Duration::from_secs(15) {
             // We never got a response from our last keep alive we send
             if self

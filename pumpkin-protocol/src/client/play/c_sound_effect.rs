@@ -21,6 +21,7 @@ pub struct CSoundEffect {
 }
 
 impl CSoundEffect {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         sound_id: VarInt,
         sound_category: SoundCategory,

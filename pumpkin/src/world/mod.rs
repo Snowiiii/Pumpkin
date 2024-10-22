@@ -11,7 +11,10 @@ use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::position::WorldPosition;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_entity::{entity_type::EntityType, EntityId};
-use pumpkin_protocol::client::play::{CBlockUpdate, CWorldEvent};
+use pumpkin_protocol::{
+    client::play::{CBlockUpdate, CSoundEffect, CWorldEvent},
+    SoundCategory,
+};
 use pumpkin_protocol::{
     client::play::{
         CChunkData, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate, CRemoveEntities,
@@ -23,6 +26,7 @@ use pumpkin_world::block::BlockId;
 use pumpkin_world::chunk::ChunkData;
 use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
 use pumpkin_world::level::Level;
+use rand::{thread_rng, Rng};
 use scoreboard::Scoreboard;
 use tokio::sync::Mutex;
 use tokio::sync::{mpsc, RwLock};
@@ -85,6 +89,31 @@ impl World {
         for (_, player) in current_players.iter().filter(|c| !except.contains(c.0)) {
             player.client.send_packet(packet).await;
         }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn play_sound(
+        &self,
+        sound_id: i32,
+        category: SoundCategory,
+        x: f64,
+        y: f64,
+        z: f64,
+        volume: f32,
+        pitch: f32,
+    ) {
+        let seed = thread_rng().gen::<f64>();
+        self.broadcast_packet_all(&CSoundEffect::new(
+            sound_id.into(),
+            category,
+            x,
+            y,
+            z,
+            volume,
+            pitch,
+            seed,
+        ))
+        .await;
     }
 
     pub async fn tick(&self) {
