@@ -213,7 +213,7 @@ impl ItemEntity {
                 dbg!(self.entity.pos.load().y);
             }*/
             //self.entity.bounds_check().await;
-            self.entity.collision_check(true).await;
+            self.entity.collision_check(false).await;
             let on_ground = self.entity.on_ground.load(Ordering::Relaxed);
             if !on_ground
                 || self.entity.velocity.load().horizontal_length_squared() > 1.0e-5

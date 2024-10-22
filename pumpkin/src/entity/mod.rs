@@ -170,48 +170,41 @@ impl Entity {
 
         let chunks = self.world.get_chunks(chunks).await;
 
-        for future_position in future_positions {
-            let (section_x, section_z) = (
-                get_section_cord(future_position.x.round() as i32),
-                get_section_cord(future_position.z.round() as i32),
-            );
-            // TODO: Add check for other blocks that affect collision, like water
-            for chunk in &chunks {
-                let chunk = chunk.clone();
-                let block = tokio::spawn(async move {
-                    let chunk = chunk.read().await;
-                    if chunk.position.x == section_x && chunk.position.z == section_z {
-                        return None;
-                    }
-                    Some(
-                        chunk
-                            .blocks
-                            .get_block(ChunkRelativeBlockCoordinates::from(Vector3 {
-                                x: future_position.x.floor(),
-                                z: future_position.z.floor(),
-                                y: future_position.y.ceil(),
-                            })),
-                    )
-                })
-                .await
-                .unwrap();
-                if let Some(block_id) = block {
-                    if !block_id.is_air() {
-                        if pos.y > future_position.y && !self.on_ground.load(Ordering::Relaxed) {
-                            let mut new_pos = pos;
-                            new_pos.y = pos.y.ceil();
-                            if self.on_ground.load(Ordering::Relaxed) {
-                                let velocity = self.velocity.load();
-                                self.velocity.store(velocity.multiply(1., 0., 1.));
-                            }
-                            self.on_ground.store(true, Ordering::Relaxed);
-                            if snap {
-                                self.set_pos(new_pos.x, new_pos.y, new_pos.z);
-                            }
+        for chunk in chunks {
+            let chunk = chunk.read().await;
+            for future_position in &future_positions {
+                let (section_x, section_z) = (
+                    get_section_cord(future_position.x.round() as i32),
+                    get_section_cord(future_position.z.round() as i32),
+                );
+                // TODO: Add check for other blocks that affect collision, like water
+                if chunk.position.x != section_x || chunk.position.z != section_z {
+                    continue;
+                }
+
+                let block_id =
+                    chunk
+                        .blocks
+                        .get_block(ChunkRelativeBlockCoordinates::from(Vector3 {
+                            x: future_position.x.floor(),
+                            z: future_position.z.floor(),
+                            y: future_position.y.floor(),
+                        }));
+                if !block_id.is_air() {
+                    if pos.y > future_position.y || !self.on_ground.load(Ordering::Relaxed) {
+                        let mut new_pos = pos;
+                        new_pos.y = pos.y.floor();
+                        if self.on_ground.load(Ordering::Relaxed) {
+                            let velocity = self.velocity.load();
+                            self.velocity.store(velocity.multiply(1., 0., 1.));
                         }
-                    } else {
-                        self.on_ground.store(false, Ordering::Relaxed);
+                        self.on_ground.store(true, Ordering::Relaxed);
+                        if snap {
+                            self.set_pos(new_pos.x, new_pos.y, new_pos.z);
+                        }
                     }
+                } else {
+                    self.on_ground.store(false, Ordering::Relaxed);
                 }
             }
         }

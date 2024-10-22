@@ -348,6 +348,9 @@ impl World {
 
     // Stream the chunks (don't collect them and then do stuff with them)
     pub fn receive_chunks(&self, chunks: Vec<Vector2<i32>>) -> Receiver<Arc<RwLock<ChunkData>>> {
+        if chunks.len() == 0 {
+            return vec![];
+        }
         let (sender, receive) = mpsc::channel(chunks.len());
         {
             let level = self.level.clone();
