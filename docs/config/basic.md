@@ -100,6 +100,15 @@ The server's description displayed on the status screen.
 motd=true
 ```
 
+## TPS
+
+The server's Tick rate.
+
+```toml
+tps=20.0
+```
+
+
 ## Use favicon
 
 Whether to use a server favicon or not
