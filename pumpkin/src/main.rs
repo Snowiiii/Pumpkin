@@ -1,7 +1,6 @@
 #![deny(clippy::all)]
 #![warn(clippy::pedantic)]
 // #![warn(clippy::restriction)]
-#![warn(clippy::nursery)]
 #![warn(clippy::cargo)]
 // REMOVE SOME WHEN RELEASE
 #![expect(clippy::cargo_common_metadata)]
