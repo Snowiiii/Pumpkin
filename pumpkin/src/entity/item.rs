@@ -23,7 +23,7 @@ pub struct ItemEntity {
 }
 
 impl ItemEntity {
-    pub fn spawn(player_entity: &Entity, item_stack: ItemStack, server: Arc<Server>) {
+    pub async fn spawn(player_entity: &Entity, item_stack: ItemStack, server: Arc<Server>) {
         let is_able_to_be_picked_up = Arc::new(AtomicBool::new(false));
         {
             let is_able_to_be_picked_up = is_able_to_be_picked_up.clone();
@@ -45,7 +45,6 @@ impl ItemEntity {
             uuid: Uuid::new_v4(),
             entity_type: EntityType::Item,
             world: player_entity.world.clone(),
-            health: (0.).into(),
             pos: AtomicCell::new(pos),
             block_pos: player_entity.block_pos.load().into(),
             chunk_pos: player_entity.chunk_pos.load().into(),
@@ -67,31 +66,35 @@ impl ItemEntity {
             entity: entity.clone(),
         };
 
-        server.broadcast_packet_all(&CSpawnEntity::from(entity.as_ref()));
+        server
+            .broadcast_packet_all(&CSpawnEntity::from(entity.as_ref()))
+            .await;
         {
             let server = server.clone();
             tokio::spawn(async move { item_entity.drop_loop(server).await });
         }
-        server.broadcast_packet_all(&CSetEntityMetadata {
-            entity_id: entity.entity_id.into(),
-            metadata: Metadata::new(8, 7.into(), Slot::from(&item_stack)),
-            end: 255,
-        });
+        server
+            .broadcast_packet_all(&CSetEntityMetadata {
+                entity_id: entity.entity_id.into(),
+                metadata: Metadata::new(8, 7.into(), Slot::from(&item_stack)),
+                end: 255,
+            })
+            .await;
     }
 
-    pub(self) fn check_pickup(self) -> PickupEvent {
+    pub(self) async fn check_pickup(self) -> PickupEvent {
         if !self.is_able_to_be_picked_up.load(Ordering::Relaxed) {
             return PickupEvent::NotPickedUp(self);
         }
 
         let pos = self.entity.pos.load();
-        for player in self.entity.world.current_players.lock().values() {
-            let player_pos = player.entity.pos.load();
+        for player in self.entity.world.current_players.lock().await.values() {
+            let player_pos = player.living_entity.entity.pos.load();
             if (pos.x - player_pos.x).abs() <= 1.
                 && (pos.z - player_pos.z).abs() <= 1.
                 && (pos.y - player_pos.y).abs() <= 1.
             {
-                let inventory = player.inventory.lock();
+                let inventory = player.inventory.lock().await;
                 if inventory.all_combinable_slots().par_iter().any(|slot| {
                     match slot {
                         None => true,
@@ -114,19 +117,21 @@ impl ItemEntity {
         PickupEvent::NotPickedUp(self)
     }
 
-    fn handle_pickup(
+    async fn handle_pickup(
         entity_id: EntityId,
         player: Arc<Player>,
         dropped_item: ItemStack,
         server: Arc<Server>,
     ) {
-        let mut inventory = player.inventory.lock();
+        let mut inventory = player.inventory.lock().await;
 
-        server.broadcast_packet_all(&CPickupItem::new_item(
-            entity_id.into(),
-            player.entity.entity_id.into(),
-            dropped_item.item_count,
-        ));
+        server
+            .broadcast_packet_all(&CPickupItem::new_item(
+                entity_id.into(),
+                player.living_entity.entity.entity_id.into(),
+                dropped_item.item_count,
+            ))
+            .await;
         let mut index = None;
 
         for (slot_index, slot) in inventory.hotbar_mut().into_iter().enumerate() {
@@ -170,9 +175,11 @@ impl ItemEntity {
             }
         }
         drop(inventory);
-        player.send_single_slot_inventory_change(
-            index.expect("It needs to have a valid slot for this path to get loaded"),
-        );
+        player
+            .send_single_slot_inventory_change(
+                index.expect("It needs to have a valid slot for this path to get loaded"),
+            )
+            .await;
     }
 
     async fn drop_loop(mut self, server: Arc<Server>) {
@@ -181,13 +188,13 @@ impl ItemEntity {
         loop {
             interval.tick().await;
             {
-                match self.check_pickup() {
+                match self.check_pickup().await {
                     PickupEvent::PickedUp {
                         entity_id,
                         player,
                         item: dropped_item,
                     } => {
-                        Self::handle_pickup(entity_id, player, dropped_item, server);
+                        Self::handle_pickup(entity_id, player, dropped_item, server).await;
                         break;
                     }
                     PickupEvent::NotPickedUp(s) => {
@@ -206,7 +213,7 @@ impl ItemEntity {
                 dbg!(self.entity.pos.load().y);
             }*/
             //self.entity.bounds_check().await;
-            self.entity.collision_check(false).await;
+            self.entity.collision_check(true).await;
             let on_ground = self.entity.on_ground.load(Ordering::Relaxed);
             if !on_ground
                 || self.entity.velocity.load().horizontal_length_squared() > 1.0e-5
@@ -234,10 +241,10 @@ impl ItemEntity {
                 }
 
                 self.entity.velocity.store(velocity);
-                self.entity.send_velocity(&server);
+                self.entity.send_velocity(&server).await;
             }
 
-            self.entity.send_position(old_position, &server);
+            self.entity.send_position(old_position, &server).await;
             ticks += 1;
         }
     }

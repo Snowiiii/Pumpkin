@@ -2,10 +2,6 @@ use std::{collections::HashMap, sync::Arc};
 
 pub mod player_chunker;
 
-use crate::{
-    client::Client,
-    entity::{player::Player, Entity},
-};
 use num_traits::ToPrimitive;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
@@ -49,8 +45,7 @@ pub struct World {
     /// A map of active players within the world, keyed by their unique token.
     pub current_players: Arc<Mutex<HashMap<uuid::Uuid, Arc<Player>>>>,
     pub scoreboard: Mutex<Scoreboard>,
-    pub items: Arc<Mutex<HashMap<i32, Arc<ItemEntity>>>>
-    // TODO: entities
+    pub items: Arc<Mutex<HashMap<i32, Arc<ItemEntity>>>>, // TODO: entities
 }
 
 impl World {
@@ -203,15 +198,14 @@ impl World {
                 .await;
         }
 
-        let gameprofile = &player.gameprofile;
-
         log::debug!("Broadcasting player spawn for {}", player.gameprofile.name);
         // spawn player for every client
         self.broadcast_packet_expect(
             &[player.gameprofile.id],
             // TODO: add velo
-            &CSpawnEntity::from(&player.entity),
-        ).await;
+            &CSpawnEntity::from(&player.living_entity.entity),
+        )
+        .await;
         // spawn players for our client
         let id = player.gameprofile.id;
         for (_, existing_player) in self.current_players.lock().await.iter().filter(|c| c.0 != &id) {

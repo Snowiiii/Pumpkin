@@ -2,7 +2,6 @@ use std::ops::Deref;
 
 use crate::{WORLD_LOWEST_Y, WORLD_MAX_Y};
 use derive_more::derive::{AsMut, AsRef, Display, Into};
-use num_traits::real::Real;
 use num_traits::{PrimInt, Signed, Unsigned};
 use pumpkin_core::math::position::WorldPosition;
 use pumpkin_core::math::vector2::Vector2;

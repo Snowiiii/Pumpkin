@@ -431,7 +431,8 @@ impl Player {
                                     f64::from((yaw * (PI / 180.0)).sin()),
                                     f64::from(-(yaw * (PI / 180.0)).cos()),
                                 );
-                                let packet = &CEntityVelocity::new(&entity_id, victem_velocity);
+                                let victim_velocity = entity.velocity.load();
+                                let packet = &CEntityVelocity::new(&entity_id, victim_velocity);
                                 let velocity = entity.velocity.load();
                                 entity.velocity.store(velocity.multiply(0.6, 1.0, 0.6));
 
@@ -517,24 +518,30 @@ impl Player {
                         .await;
                 }
                 Status::DropItemStack => {
-                    let mut inventory = self.inventory.lock();
+                    let mut inventory = self.inventory.lock().await;
                     let slot = inventory.held_item_mut();
                     if let Some(item) = slot {
-                        ItemEntity::spawn(&self.entity, *item, server.clone());
+                        ItemEntity::spawn(&self.living_entity.entity, *item, server.clone()).await;
                         *slot = None;
                     }
                 }
                 Status::DropItem => {
-                    let mut inventory = self.inventory.lock();
+                    let mut inventory = self.inventory.lock().await;
                     let slot = inventory.held_item_mut();
                     if let Some(held_item) = slot {
                         if held_item.item_count > 1 {
                             held_item.item_count -= 1;
                             let mut item = *held_item;
                             item.item_count = 1;
-                            ItemEntity::spawn(&self.entity, item, server.clone());
+                            ItemEntity::spawn(&self.living_entity.entity, item, server.clone())
+                                .await;
                         } else {
-                            ItemEntity::spawn(&self.entity, *held_item, server.clone());
+                            ItemEntity::spawn(
+                                &self.living_entity.entity,
+                                *held_item,
+                                server.clone(),
+                            )
+                            .await;
                             *slot = None;
                         }
                     }
@@ -546,7 +553,7 @@ impl Player {
                     dbg!("todo");
                 }
             },
-            None => self.kick(TextComponent::text("Invalid status")),
+            None => self.kick(TextComponent::text("Invalid status")).await,
         }
     }
 
@@ -555,9 +562,9 @@ impl Player {
             .wait_for_keep_alive
             .load(std::sync::atomic::Ordering::Relaxed)
             && keep_alive.keep_alive_id
-            == self
-            .keep_alive_id
-            .load(std::sync::atomic::Ordering::Relaxed)
+                == self
+                    .keep_alive_id
+                    .load(std::sync::atomic::Ordering::Relaxed)
         {
             self.wait_for_keep_alive
                 .store(false, std::sync::atomic::Ordering::Relaxed);
@@ -644,15 +651,15 @@ impl Player {
                 let item = None;
                 self.carried_item.swap(item);
                 if let Some(item) = item {
-                    ItemEntity::spawn(&self.entity, item, server.clone());
+                    ItemEntity::spawn(&self.living_entity.entity, item, server.clone()).await;
                 }
                 Ok(())
             }
-            _ => {
-                self.inventory
-                    .lock().await
-                    .set_slot(slot as usize, packet.clicked_item.to_item(), false)
-            }
+            _ => self.inventory.lock().await.set_slot(
+                slot as usize,
+                packet.clicked_item.to_item(),
+                false,
+            ),
         }
     }
 

@@ -16,6 +16,7 @@ use pumpkin_protocol::client::play::{
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
+use std::ops::DerefMut;
 use std::sync::Arc;
 
 #[expect(unused)]
@@ -117,7 +118,10 @@ impl Player {
         packet: SClickContainer,
     ) -> Result<(), InventoryError> {
         let opened_container = self.get_open_container(server);
-        let opened_container = opened_container.as_ref().map(|container| container.lock());
+        let mut opened_container = match opened_container.as_ref() {
+            Some(container) => Some(container.lock().await),
+            None => None,
+        };
         let drag_handler = &server.drag_handler;
 
         let state_id = self
@@ -196,19 +200,21 @@ impl Player {
                     container_click::Slot::Normal(slot) => slot,
                     container_click::Slot::OutsideInventory => Err(InventoryError::InvalidPacket)?,
                 };
-                self.drop_items(opened_container.as_deref_mut(), slot, drop_type)?;
+                self.drop_items(opened_container.as_deref_mut(), slot, drop_type)
+                    .await?;
                 Ok(())
             }
         }?;
-        if let Some(opened_container) = opened_container {
+        if let Some(mut opened_container) = opened_container {
             if update_whole_container {
                 drop(opened_container);
                 self.send_whole_container_change(server).await?;
             } else if let container_click::Slot::Normal(slot_index) = click.slot {
                 let mut inventory = self.inventory.lock().await;
-                let mut opened_container = opened_container.await;
-                let combined_container =
-                    OptionallyCombinedContainer::new(&mut inventory, Some(&mut opened_container));
+                let combined_container = OptionallyCombinedContainer::new(
+                    &mut inventory,
+                    Some(opened_container.deref_mut()),
+                );
                 if let Some(slot) = combined_container.get_slot_excluding_inventory(slot_index) {
                     let slot = Slot::from(slot);
                     drop(opened_container);
@@ -220,19 +226,21 @@ impl Player {
         Ok(())
     }
 
-    pub fn send_single_slot_inventory_change(&self, slot_index: usize) {
-        let inventory = self.inventory.lock();
+    pub async fn send_single_slot_inventory_change(&self, slot_index: usize) {
+        let inventory = self.inventory.lock().await;
         let state_id = inventory
             .state_id
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         let slot = Slot::from(inventory.all_combinable_slots()[slot_index]);
-        self.client.send_packet(&CSetContainerSlot::new(
-            0,
-            (state_id + 1) as i32,
-            slot_index + 9,
-            &slot,
-        ));
+        self.client
+            .send_packet(&CSetContainerSlot::new(
+                0,
+                (state_id + 1) as i32,
+                slot_index + 9,
+                &slot,
+            ))
+            .await;
     }
 
     async fn mouse_click(
@@ -414,13 +422,13 @@ impl Player {
         }
     }
 
-    pub fn drop_items(
+    pub async fn drop_items(
         &self,
         opened_container: Option<&mut Box<dyn Container>>,
         slot: usize,
         drop_type: DropType,
     ) -> Result<(), InventoryError> {
-        let mut inventory = self.inventory.lock();
+        let mut inventory = self.inventory.lock().await;
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
         let mut all_slots = container.all_slots();
         let Some(slot) = all_slots.get_mut(slot) else {
