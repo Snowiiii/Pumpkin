@@ -4,14 +4,16 @@ use std::{
     collections::HashMap,
     fs::File,
     io::{BufRead, BufReader},
-    path::PathBuf,
 };
 
+use pumpkin_config::TranslationConfig;
 use serde_json::Value;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum TranslationError {
+    #[error("Translations not turned on")]
+    NotEnabled,
     #[error("File cannot be opened.")]
     InvalidFile,
     #[error("Failed to read file. Error: {0}")]
@@ -21,15 +23,28 @@ pub enum TranslationError {
 }
 
 pub fn translate(
-    path: impl Into<PathBuf>,
+    config: TranslationConfig,
     message: &str,
 ) -> Result<HashMap<String, String>, TranslationError> {
-    let file = File::open(path.into()).map_err(|_| TranslationError::InvalidFile)?;
-    let mut bufreader = BufReader::new(file);
-    let translations = fetch_translations(&mut bufreader, message)?;
-    let results = make_hashmap(translations);
+    if config.enabled {
+        if !config.client_translations {
+            if let Some(path) = config.translation_file_path {
+                let file = File::open(path).map_err(|_| TranslationError::InvalidFile)?;
+                let mut bufreader = BufReader::new(file);
 
-    Ok(results)
+                let translations = fetch_translations(&mut bufreader, message)?;
+                let results = make_hashmap(translations);
+
+                Ok(results)
+            } else {
+                Err(TranslationError::InvalidFile)
+            }
+        } else {
+            Ok(HashMap::from([(message.to_owned(), message.to_owned())]))
+        }
+    } else {
+        Err(TranslationError::NotEnabled)
+    }
 }
 
 ///Read a huge object line by line and tricking serde_json into thinking they are individual objects

@@ -17,12 +17,14 @@ pub mod auth;
 pub mod logging;
 pub mod proxy;
 pub mod resource_pack;
+pub mod translation;
 
 pub use auth::AuthenticationConfig;
 pub use commands::CommandsConfig;
 pub use compression::CompressionConfig;
 pub use pvp::PVPConfig;
 pub use rcon::RCONConfig;
+pub use translation::TranslationConfig;
 
 mod commands;
 pub mod compression;
@@ -53,6 +55,7 @@ pub struct AdvancedConfiguration {
     pub rcon: RCONConfig,
     pub pvp: PVPConfig,
     pub logging: LoggingConfig,
+    pub translation: TranslationConfig,
 }
 
 #[serde_inline_default]
