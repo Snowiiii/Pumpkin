@@ -31,6 +31,8 @@ export default defineConfig({
           { text: "Introduction", link: "/developer/introduction" },
           { text: "Networking", link: "/developer/networking" },
           { text: "Authentication", link: "/developer/authentication" },
+          { text: "RCON", link: "/developer/rcon" },
+          
         ],
       },
       

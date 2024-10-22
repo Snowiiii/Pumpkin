@@ -2,10 +2,10 @@ use crate::container_click::MouseDragType;
 use crate::{Container, InventoryError};
 use itertools::Itertools;
 use num_traits::Euclid;
-use parking_lot::{Mutex, RwLock};
 use pumpkin_world::item::ItemStack;
 use std::collections::HashMap;
 use std::sync::Arc;
+use tokio::sync::{Mutex, RwLock};
 #[derive(Debug, Default)]
 pub struct DragHandler(RwLock<HashMap<u64, Arc<Mutex<Drag>>>>);
 
@@ -13,7 +13,7 @@ impl DragHandler {
     pub fn new() -> Self {
         Self(RwLock::new(HashMap::new()))
     }
-    pub fn new_drag(
+    pub async fn new_drag(
         &self,
         container_id: u64,
         player: i32,
@@ -24,21 +24,21 @@ impl DragHandler {
             drag_type,
             slots: vec![],
         };
-        let mut drags = self.0.write();
+        let mut drags = self.0.write().await;
         drags.insert(container_id, Arc::new(Mutex::new(drag)));
         Ok(())
     }
 
-    pub fn add_slot(
+    pub async fn add_slot(
         &self,
         container_id: u64,
         player: i32,
         slot: usize,
     ) -> Result<(), InventoryError> {
-        let drags = self.0.read();
+        let drags = self.0.read().await;
         match drags.get(&container_id) {
             Some(drag) => {
-                let mut drag = drag.lock();
+                let mut drag = drag.lock().await;
                 if drag.player != player {
                     Err(InventoryError::MultiplePlayersDragging)?
                 }
@@ -51,7 +51,7 @@ impl DragHandler {
         Ok(())
     }
 
-    pub fn apply_drag<T: Container>(
+    pub async fn apply_drag<T: Container>(
         &self,
         maybe_carried_item: &mut Option<ItemStack>,
         container: &mut T,
@@ -63,11 +63,11 @@ impl DragHandler {
             return Ok(());
         }
 
-        let mut drags = self.0.write();
+        let mut drags = self.0.write().await;
         let Some((_, drag)) = drags.remove_entry(container_id) else {
             Err(InventoryError::OutOfOrderDragging)?
         };
-        let drag = drag.lock();
+        let drag = drag.lock().await;
 
         if player != drag.player {
             Err(InventoryError::MultiplePlayersDragging)?

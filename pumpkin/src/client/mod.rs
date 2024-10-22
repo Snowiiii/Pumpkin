@@ -1,5 +1,5 @@
 use std::{
-    io::{self, Write},
+    collections::VecDeque,
     net::SocketAddr,
     sync::{
         atomic::{AtomicBool, AtomicI32},
@@ -14,8 +14,6 @@ use crate::{
 
 use authentication::GameProfile;
 use crossbeam::atomic::AtomicCell;
-use mio::{event::Event, net::TcpStream};
-use parking_lot::Mutex;
 use pumpkin_config::compression::CompressionInfo;
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
@@ -31,8 +29,9 @@ use pumpkin_protocol::{
     },
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::Mutex;
 
-use std::io::Read;
 use thiserror::Error;
 
 pub mod authentication;
@@ -93,6 +92,8 @@ pub struct Client {
     pub brand: Mutex<Option<String>>,
     /// The minecraft protocol version used by the client.
     pub protocol_version: AtomicI32,
+    /// The Address used to connect to the Server, Send in the Handshake
+    pub server_address: Mutex<String>,
     /// The current connection state of the client (e.g., Handshaking, Status, Play).
     pub connection_state: AtomicCell<ConnectionState>,
     /// Whether encryption is enabled for the connection.
@@ -102,7 +103,8 @@ pub struct Client {
     /// A unique id identifying the client.
     pub id: usize,
     /// The underlying TCP connection to the client.
-    pub connection: Arc<Mutex<TcpStream>>,
+    pub connection_reader: Arc<Mutex<tokio::net::tcp::OwnedReadHalf>>,
+    pub connection_writer: Arc<Mutex<tokio::net::tcp::OwnedWriteHalf>>,
     /// The client's IP address.
     pub address: Mutex<SocketAddr>,
     /// The packet encoder for outgoing packets.
@@ -110,51 +112,43 @@ pub struct Client {
     /// The packet decoder for incoming packets.
     dec: Arc<Mutex<PacketDecoder>>,
     /// A queue of raw packets received from the client, waiting to be processed.
-    pub client_packets_queue: Arc<Mutex<Vec<RawPacket>>>,
-
+    pub client_packets_queue: Arc<Mutex<VecDeque<RawPacket>>>,
     /// Indicates whether the client should be converted into a player.
     pub make_player: AtomicBool,
-    /// Sends each keep alive packet that the server receives for a player to here, which gets picked up in a tokio task
-    pub keep_alive_sender: Arc<tokio::sync::mpsc::Sender<i64>>,
-    /// Stores the last time it was confirmed that the client is alive
-    pub last_alive_received: AtomicCell<std::time::Instant>,
 }
 
 impl Client {
-    pub fn new(
-        id: usize,
-        connection: TcpStream,
-        address: SocketAddr,
-        keep_alive_sender: Arc<tokio::sync::mpsc::Sender<i64>>,
-    ) -> Self {
+    #[must_use]
+    pub fn new(id: usize, connection: tokio::net::TcpStream, address: SocketAddr) -> Self {
+        let (connection_reader, connection_writer) = connection.into_split();
         Self {
             protocol_version: AtomicI32::new(0),
             gameprofile: Mutex::new(None),
             config: Mutex::new(None),
             brand: Mutex::new(None),
+            server_address: Mutex::new(String::new()),
             id,
             address: Mutex::new(address),
             connection_state: AtomicCell::new(ConnectionState::HandShake),
-            connection: Arc::new(Mutex::new(connection)),
+            connection_reader: Arc::new(Mutex::new(connection_reader)),
+            connection_writer: Arc::new(Mutex::new(connection_writer)),
             enc: Arc::new(Mutex::new(PacketEncoder::default())),
             dec: Arc::new(Mutex::new(PacketDecoder::default())),
             encryption: AtomicBool::new(false),
             closed: AtomicBool::new(false),
-            client_packets_queue: Arc::new(Mutex::new(Vec::new())),
+            client_packets_queue: Arc::new(Mutex::new(VecDeque::new())),
             make_player: AtomicBool::new(false),
-            keep_alive_sender,
-            last_alive_received: AtomicCell::new(std::time::Instant::now()),
         }
     }
 
     /// Adds a Incoming packet to the queue
-    pub fn add_packet(&self, packet: RawPacket) {
-        let mut client_packets_queue = self.client_packets_queue.lock();
-        client_packets_queue.push(packet);
+    pub async fn add_packet(&self, packet: RawPacket) {
+        let mut client_packets_queue = self.client_packets_queue.lock().await;
+        client_packets_queue.push_back(packet);
     }
 
     /// Sets the Packet encryption
-    pub fn set_encryption(
+    pub async fn set_encryption(
         &self,
         shared_secret: Option<&[u8]>, // decrypted
     ) -> Result<(), EncryptionError> {
@@ -164,54 +158,84 @@ impl Client {
             let crypt_key: [u8; 16] = shared_secret
                 .try_into()
                 .map_err(|_| EncryptionError::SharedWrongLength)?;
-            self.dec.lock().set_encryption(Some(&crypt_key));
-            self.enc.lock().set_encryption(Some(&crypt_key));
+            self.dec.lock().await.set_encryption(Some(&crypt_key));
+            self.enc.lock().await.set_encryption(Some(&crypt_key));
         } else {
-            self.dec.lock().set_encryption(None);
-            self.enc.lock().set_encryption(None);
+            self.dec.lock().await.set_encryption(None);
+            self.enc.lock().await.set_encryption(None);
         }
         Ok(())
     }
 
     /// Sets the Packet compression
-    pub fn set_compression(&self, compression: Option<CompressionInfo>) {
-        self.dec.lock().set_compression(compression.is_some());
-        self.enc.lock().set_compression(compression);
+    pub async fn set_compression(&self, compression: Option<CompressionInfo>) {
+        self.dec.lock().await.set_compression(compression.is_some());
+        self.enc.lock().await.set_compression(compression);
     }
 
     /// Send a Clientbound Packet to the Client
-    pub fn send_packet<P: ClientPacket>(&self, packet: &P) {
+    pub async fn send_packet<P: ClientPacket>(&self, packet: &P) {
+        log::debug!("Sending packet with id {} to {}", P::PACKET_ID, self.id);
         // assert!(!self.closed);
-        let mut enc = self.enc.lock();
-        enc.append_packet(packet)
-            .unwrap_or_else(|e| self.kick(&e.to_string()));
-        self.connection
-            .lock()
+        let mut enc = self.enc.lock().await;
+        if let Err(error) = enc.append_packet(packet) {
+            self.kick(&error.to_string()).await;
+            return;
+        }
+
+        let mut writer = self.connection_writer.lock().await;
+        if let Err(error) = writer
             .write_all(&enc.take())
+            .await
             .map_err(|_| PacketError::ConnectionWrite)
-            .unwrap_or_else(|e| self.kick(&e.to_string()));
+        {
+            self.kick(&error.to_string()).await;
+        } else if let Err(error) = writer.flush().await {
+            log::warn!(
+                "Failed to flush writer for id {}: {}",
+                self.id,
+                error.to_string()
+            );
+        }
     }
 
-    pub fn try_send_packet<P: ClientPacket>(&self, packet: &P) -> Result<(), PacketError> {
+    pub async fn try_send_packet<P: ClientPacket>(&self, packet: &P) -> Result<(), PacketError> {
         // assert!(!self.closed);
+        log::debug!(
+            "Trying to send packet with id {} to {}",
+            P::PACKET_ID,
+            self.id
+        );
 
-        let mut enc = self.enc.lock();
+        let mut enc = self.enc.lock().await;
         enc.append_packet(packet)?;
-        self.connection
-            .lock()
+
+        let mut writer = self.connection_writer.lock().await;
+        writer
             .write_all(&enc.take())
+            .await
+            .map_err(|_| PacketError::ConnectionWrite)?;
+
+        writer
+            .flush()
+            .await
             .map_err(|_| PacketError::ConnectionWrite)?;
         Ok(())
     }
 
     /// Processes all packets send by the client
     pub async fn process_packets(&self, server: &Arc<Server>) {
-        while let Some(mut packet) = self.client_packets_queue.lock().pop() {
-            let _ = self.handle_packet(server, &mut packet).await.map_err(|e| {
-                let text = format!("Error while reading incoming packet {}", e);
-                log::error!("{}", text);
-                self.kick(&text)
-            });
+        let mut packet_queue = self.client_packets_queue.lock().await;
+        while let Some(mut packet) = packet_queue.pop_front() {
+            if let Err(error) = self.handle_packet(server, &mut packet).await {
+                let text = format!("Error while reading incoming packet {error}");
+                log::error!(
+                    "Failed to read incoming packet with id {}: {}",
+                    i32::from(packet.id),
+                    error
+                );
+                self.kick(&text).await;
+            };
         }
     }
 
@@ -222,8 +246,12 @@ impl Client {
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
         match self.connection_state.load() {
-            pumpkin_protocol::ConnectionState::HandShake => self.handle_handshake_packet(packet),
-            pumpkin_protocol::ConnectionState::Status => self.handle_status_packet(server, packet),
+            pumpkin_protocol::ConnectionState::HandShake => {
+                self.handle_handshake_packet(packet).await
+            }
+            pumpkin_protocol::ConnectionState::Status => {
+                self.handle_status_packet(server, packet).await
+            }
             // TODO: Check config if transfer is enabled
             pumpkin_protocol::ConnectionState::Login
             | pumpkin_protocol::ConnectionState::Transfer => {
@@ -232,53 +260,57 @@ impl Client {
             pumpkin_protocol::ConnectionState::Config => {
                 self.handle_config_packet(server, packet).await
             }
-            _ => {
+            pumpkin_protocol::ConnectionState::Play => {
                 log::error!("Invalid Connection state {:?}", self.connection_state);
                 Ok(())
             }
         }
     }
 
-    fn handle_handshake_packet(&self, packet: &mut RawPacket) -> Result<(), DeserializerError> {
+    async fn handle_handshake_packet(
+        &self,
+        packet: &mut RawPacket,
+    ) -> Result<(), DeserializerError> {
+        log::debug!("Handling handshake group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SHandShake::PACKET_ID => {
-                self.handle_handshake(SHandShake::read(bytebuf)?);
-                Ok(())
+                self.handle_handshake(SHandShake::read(bytebuf)?).await;
             }
             _ => {
                 log::error!(
                     "Failed to handle packet id {} while in Handshake state",
                     packet.id.0
                 );
-                Ok(())
             }
-        }
+        };
+        Ok(())
     }
 
-    fn handle_status_packet(
+    async fn handle_status_packet(
         &self,
         server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
+        log::debug!("Handling status group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SStatusRequest::PACKET_ID => {
-                self.handle_status_request(server, SStatusRequest::read(bytebuf)?);
-                Ok(())
+                self.handle_status_request(server, SStatusRequest::read(bytebuf)?)
+                    .await;
             }
             SStatusPingRequest::PACKET_ID => {
-                self.handle_ping_request(SStatusPingRequest::read(bytebuf)?);
-                Ok(())
+                self.handle_ping_request(SStatusPingRequest::read(bytebuf)?)
+                    .await;
             }
             _ => {
                 log::error!(
                     "Failed to handle packet id {} while in Status state",
                     packet.id.0
                 );
-                Ok(())
             }
-        }
+        };
+        Ok(())
     }
 
     async fn handle_login_packet(
@@ -286,33 +318,33 @@ impl Client {
         server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
+        log::debug!("Handling login group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SLoginStart::PACKET_ID => {
-                self.handle_login_start(server, SLoginStart::read(bytebuf)?);
-                Ok(())
+                self.handle_login_start(server, SLoginStart::read(bytebuf)?)
+                    .await;
             }
             SEncryptionResponse::PACKET_ID => {
                 self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf)?)
                     .await;
-                Ok(())
             }
             SLoginPluginResponse::PACKET_ID => {
-                self.handle_plugin_response(SLoginPluginResponse::read(bytebuf)?);
-                Ok(())
+                self.handle_plugin_response(SLoginPluginResponse::read(bytebuf)?)
+                    .await;
             }
             SLoginAcknowledged::PACKET_ID => {
-                self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf)?);
-                Ok(())
+                self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf)?)
+                    .await;
             }
             _ => {
                 log::error!(
                     "Failed to handle packet id {} while in Login state",
                     packet.id.0
                 );
-                Ok(())
             }
-        }
+        };
+        Ok(())
     }
 
     async fn handle_config_packet(
@@ -320,101 +352,106 @@ impl Client {
         server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
+        log::debug!("Handling config group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SClientInformationConfig::PACKET_ID => {
-                self.handle_client_information_config(SClientInformationConfig::read(bytebuf)?);
-                Ok(())
+                self.handle_client_information_config(SClientInformationConfig::read(bytebuf)?)
+                    .await;
             }
             SPluginMessage::PACKET_ID => {
-                self.handle_plugin_message(SPluginMessage::read(bytebuf)?);
-                Ok(())
+                self.handle_plugin_message(SPluginMessage::read(bytebuf)?)
+                    .await;
             }
             SAcknowledgeFinishConfig::PACKET_ID => {
-                self.handle_config_acknowledged(SAcknowledgeFinishConfig::read(bytebuf)?)
-                    .await;
-                Ok(())
+                self.handle_config_acknowledged(&SAcknowledgeFinishConfig::read(bytebuf)?);
             }
             SKnownPacks::PACKET_ID => {
-                self.handle_known_packs(server, SKnownPacks::read(bytebuf)?);
-                Ok(())
+                self.handle_known_packs(server, SKnownPacks::read(bytebuf)?)
+                    .await;
             }
             _ => {
                 log::error!(
                     "Failed to handle packet id {} while in Config state",
                     packet.id.0
                 );
-                Ok(())
             }
-        }
+        };
+        Ok(())
     }
 
     /// Reads the connection until our buffer of len 4096 is full, then decode
     /// Close connection when an error occurs or when the Client closed the connection
-    pub async fn poll(&self, event: &Event) {
-        if event.is_readable() {
-            let mut received_data = vec![];
-            let mut buf = [0; 4096];
-            loop {
-                let connection = self.connection.clone();
-                let mut connection = connection.lock();
-                match connection.read(&mut buf) {
-                    Ok(0) => {
-                        // Reading 0 bytes means the other side has closed the
-                        // connection or is done writing, then so are we.
-                        self.close();
-                        break;
-                    }
-                    Ok(n) => received_data.extend(&buf[..n]),
-                    // Would block "errors" are the OS's way of saying that the
-                    // connection is not actually ready to perform this I/O operation.
-                    Err(ref err) if would_block(err) => break,
-                    Err(ref err) if interrupted(err) => continue,
-                    // Other errors we'll consider fatal.
-                    Err(_) => self.close(),
+    /// Returns if connection is still open
+    pub async fn poll(&self) -> bool {
+        loop {
+            let mut dec = self.dec.lock().await;
+
+            match dec.decode() {
+                Ok(Some(packet)) => {
+                    self.add_packet(packet).await;
+                    return true;
                 }
+                Ok(None) => log::debug!("Waiting for more data to complete packet..."),
+                Err(err) => log::warn!(
+                    "Failed to decode packet for id {}: {}",
+                    self.id,
+                    err.to_string()
+                ),
             }
 
-            if !received_data.is_empty() {
-                let mut dec = self.dec.lock();
-                dec.queue_slice(&received_data);
-                match dec.decode() {
-                    Ok(packet) => {
-                        if let Some(packet) = packet {
-                            self.add_packet(packet);
-                        }
+            dec.reserve(4096);
+            let mut buf = dec.take_capacity();
+
+            let bytes_read = self.connection_reader.lock().await.read_buf(&mut buf).await;
+            match bytes_read {
+                Ok(cnt) => {
+                    log::debug!("Read {} bytes", cnt);
+                    if cnt == 0 {
+                        self.close();
+                        return false;
                     }
-                    Err(err) => self.kick(&err.to_string()),
                 }
-                dec.clear();
-            }
+                Err(error) => {
+                    log::error!("Error while reading incoming packet {}", error);
+                    self.close();
+                    return false;
+                }
+            };
+
+            // This should always be an O(1) unsplit because we reserved space earlier and
+            // the call to `read_buf` shouldn't have grown the allocation.
+            dec.queue_bytes(buf);
         }
     }
 
     /// Kicks the Client with a reason depending on the connection state
-    pub fn kick(&self, reason: &str) {
-        dbg!(reason);
+    pub async fn kick(&self, reason: &str) {
+        log::info!("Kicking for id {} for {}", self.id, reason);
         match self.connection_state.load() {
             ConnectionState::Login => {
                 self.try_send_packet(&CLoginDisconnect::new(
-                    &serde_json::to_string_pretty(&reason).unwrap_or_else(|_| "".into()),
+                    &serde_json::to_string_pretty(&reason).unwrap_or_else(|_| String::new()),
                 ))
+                .await
                 .unwrap_or_else(|_| self.close());
             }
             ConnectionState::Config => {
                 self.try_send_packet(&CConfigDisconnect::new(reason))
+                    .await
                     .unwrap_or_else(|_| self.close());
             }
             // This way players get kicked when players using client functions (e.g. poll, send_packet)
             ConnectionState::Play => {
                 self.try_send_packet(&CPlayDisconnect::new(&TextComponent::text(reason)))
+                    .await
                     .unwrap_or_else(|_| self.close());
             }
             _ => {
-                log::warn!("Can't kick in {:?} State", self.connection_state)
+                log::warn!("Can't kick in {:?} State", self.connection_state);
             }
         }
-        self.close()
+        self.close();
     }
 
     /// You should prefer to use `kick` when you can
@@ -430,12 +467,4 @@ pub enum EncryptionError {
     FailedDecrypt,
     #[error("shared secret has the wrong length")]
     SharedWrongLength,
-}
-
-fn would_block(err: &io::Error) -> bool {
-    err.kind() == io::ErrorKind::WouldBlock
-}
-
-pub fn interrupted(err: &io::Error) -> bool {
-    err.kind() == io::ErrorKind::Interrupted
 }

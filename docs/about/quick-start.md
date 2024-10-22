@@ -2,23 +2,23 @@
 
 There are currently no release builds, because there was no release :D.
 
-To get Pumpkin running you first have to clone it:
+To get Pumpkin running, you first have to clone it:
 
 ```shell
 git clone https://github.com/Snowiiii/Pumpkin.git
 cd Pumpkin
 ```
 
-You also may have to [install rust](https://www.rust-lang.org/tools/install) when you don't already have.
+You may also have to [install rust](https://www.rust-lang.org/tools/install) if you don't already have it.
 
-You can place a vanilla world into the Pumpkin/ directory when you want. Just name the World to `world`
+You can place a vanilla world into the Pumpkin/ directory if you want. Just name the World `world`
 
 Then run:
 
 > [!NOTE]
-> This can take a while. Because we enabled heavy optimizations for release builds
+> This can take a while because we enabled heavy optimizations for release builds
 >
-> To apply further optimizations specfic to your CPU and use your CPU features. You should set the target-cpu=native
+> To apply further optimizations specific to your CPU and use your CPU features, you should set the target-cpu=native
 > Rust flag.
 
 ```shell
@@ -34,7 +34,7 @@ The image is currently not published anywhere, but you can use the following com
 docker build . -t pumpkin
 ```
 
-To run it use the following command:
+To run it, use the following command:
 
 ```shell
 docker run --rm -p 25565:25565 -v "./world:/pumpkin/world" pumpkin

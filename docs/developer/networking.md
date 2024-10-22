@@ -1,10 +1,10 @@
 ### Networking
 
-Most of the Networking code in Pumpkin, can be found at [Pumpkin-Protocol](https://github.com/Snowiiii/Pumpkin/tree/master/pumpkin-protocol)
+Most of the Networking code in Pumpkin can be found at [Pumpkin-Protocol](https://github.com/Snowiiii/Pumpkin/tree/master/pumpkin-protocol)
 
-Serverbound: Client->Server
+Serverbound: Client→Server
 
-Clientbound: Server->Client
+Clientbound: Server→Client
 
 ### Structure
 
@@ -16,30 +16,30 @@ Packets in the Pumpkin protocol are organized by functionality and state.
 
 ### States
 
-**Handshake**: Always the first packet being send from the Client. This begins also determins the next state, usally to indicate if the player thans perform a Status Request, Join the Server or wants to be transfered.
+**Handshake**: Always the first packet being sent from the Client. This also determines the next state, usually to indicate if the player wants to perform a Status Request, join the server or wants to be transferred.
 
 **Status**: Indicates the Client wants to see a Status response (MOTD).
 
-**Login**: The Login sequence. Indicates the Client wants to join to the Server
+**Login**: The Login sequence. Indicates the Client wants to join to the Server.
 
-**Config**: A sequence of Configuration packets beining mostly send from the Server to the Client. (Features, Resource Pack, Server Links...)
+**Config**: A sequence of Configuration packets is mostly sent from the Server to the Client. (Features, Resource Pack, Server Links, etc.)
 
-**Play**: The final state which indicate the Player is now ready to Join in also used to handle all other Gameplay packets.
+**Play**: The final state, which indicates the Player is now ready to join, is also used to handle all other Gameplay packets.
 
 ### Minecraft Protocol
 
 You can find all Minecraft Java packets at https://wiki.vg/Protocol. There you also can see in which [State](#States) they are.
-You also can see all the information the Packets has which we can either Write or Read depending if its Serverbound or Clientbound
+You can also can see all the information the Packets have, which we can either Write or Read depending on whether they are Serverbound or Clientbound.
 
 ### Adding a Clientbound Packet
 
-1. Adding a Packet is easy. First you have to dereive serde Serialize for packets.
+1. Adding a Packet is easy. First, you have to derive serde Serialize for packets.
 
 ```rust
 #[derive(Serialize)]
 ```
 
-2. Next you have set the packet id using the packet macro
+2. Next, you have set the packet ID using the packet macro
 
 ```rust
 #[packet(0x1D)]
@@ -49,7 +49,7 @@ You also can see all the information the Packets has which we can either Write o
 
 > [!IMPORTANT]
 > Please start the Packet name with "C" for Clientbound.
-> Also please add the State to the packet if its a Packet sended in multiple States, For example there are 3 Disconnect Packets.
+> Also please add the State to the packet if its a Packet sent in multiple States, For example there are 3 Disconnect Packets.
 >
 > - CLoginDisconnect
 > - CConfigDisconnect
@@ -69,7 +69,7 @@ pub struct CPlayDisconnect {
 }
 ```
 
-4. Also don't forgot to impl a new function for Clientbound Packets so we can actaully send then by putting in the values
+4. Also don't forgot to impl a new function for Clientbound Packets so we can actually send them by putting in the values.
 
 Example:
 
@@ -81,7 +81,7 @@ impl CPlayDisconnect {
 }
 ```
 
-5. At the End everything should come together,
+5. In the end, everything should come together.
 
 ```rust
 #[derive(Serialize)]
@@ -97,7 +97,7 @@ impl CPlayDisconnect {
 }
 ```
 
-6. You can also Serialize the Packet manually, Which can be usefull if the Packet is more complex
+6. You can also Serialize the Packet manually, which can be useful if the Packet is more complex.
 
 ```diff
 -#[derive(Serialize)]
@@ -112,13 +112,13 @@ impl CPlayDisconnect {
 
 ### Adding a Serverbound Packet
 
-1. Adding a Packet is easy. First you have to dereive serde Deserialize for packets.
+1. Adding a Packet is easy. First, you have to derive serde Deserialize for packets.
 
 ```rust
 #[derive(Deserialize)]
 ```
 
-2. Next you have set the packet id using the packet macro
+2. Next, you have set the packet ID using the packet macro
 
 ```rust
 #[packet(0x1A)]
@@ -128,7 +128,7 @@ impl CPlayDisconnect {
 
 > [!IMPORTANT]
 > Please start the Packet name with "S" for Serverbound.
-> Also please add the State to the packet if its a Packet sended in multiple States.
+> Also please add the State to the packet if its a Packet sent in multiple States.
 
 Create fields within your packet structure to represent the data that will be sent to the client.
 
@@ -146,7 +146,7 @@ pub struct SPlayerPosition {
 }
 ```
 
-4. At the End everything should come together,
+4. In the end, everything should come together.
 
 ```rust
 #[derive(Deserialize)]
@@ -159,7 +159,7 @@ pub struct SPlayerPosition {
 }
 ```
 
-5. You can also Deserialize the Packet manually, Which can be usefull if the Packet is more complex
+5. You can also Deserialize the Packet manually, which can be useful if the Packet is more complex
 
 ```diff
 -#[derive(Deserialize)]
@@ -179,7 +179,7 @@ pub struct SPlayerPosition {
 
 ### Client
 
-Pumpkin has stores Client and Players seperatly, Everything what is not reached the Play State is a Simple Client. Here are the Differences
+Pumpkin has stores Client and Players separately. Everything that is not in the Play State is a Simple Client. Here are the Differences
 
 **Client**
 
@@ -267,9 +267,10 @@ For Players:
 ```
 
 ### Compression
-Minecraft Packets **can** use the ZLib compression for decoding/encoding there is usally a threshold set when compression is applied, This most often affects Chunk Packets.
+Minecraft Packets **can** use the ZLib compression for decoding/encoding. There is usually a threshold set when compression is applied, this most often affects Chunk Packets.
 
 ### Porting
 
-To port to a new Minecraft version, You can compare difference in Protocol on wiki.vg https://wiki.vg/index.php?title=Protocol&action=history
+To port to a new minecraft version, you can compare difference in Protocol on [wiki.vg](https://wiki.vg/index.php?title=Protocol&action=history)
+
 Also change the `CURRENT_MC_PROTOCOL` in `src/lib.rs`

@@ -40,7 +40,7 @@ impl<B: BiomeGenerator, T: PerlinTerrainGenerator> WorldGenerator for GenericGen
 
         let base_height = 64.0;
         let height_variation = 16.0;
-        let chunk_height = (noise_value * height_variation + base_height) as i32;
+        let chunk_height = noise_value.mul_add(height_variation, base_height) as i32;
 
         for x in 0..16u8 {
             for z in 0..16u8 {

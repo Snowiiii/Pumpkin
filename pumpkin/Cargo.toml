@@ -53,16 +53,12 @@ thiserror = "1.0"
 
 # icon loading
 base64 = "0.22.1"
-png = "0.17.14" 
+png = "0.17.14"
 
 # logging
 simple_logger = { version = "5.0.0", features = ["threads"] }
 log.workspace = true
 
-# networking
-mio = { version = "1.0.2", features = ["net", "os-poll"] }
-
-parking_lot.workspace = true
 crossbeam.workspace = true
 uuid.workspace = true
 tokio.workspace = true

@@ -10,6 +10,7 @@ use crate::level::SaveFile;
 
 use super::{ChunkData, ChunkReader, ChunkReadingError, CompressionError};
 
+#[derive(Clone)]
 pub struct AnvilChunkReader {}
 
 impl Default for AnvilChunkReader {
@@ -88,7 +89,7 @@ impl ChunkReader for AnvilChunkReader {
     fn read_chunk(
         &self,
         save_file: &SaveFile,
-        at: pumpkin_core::math::vector2::Vector2<i32>,
+        at: &pumpkin_core::math::vector2::Vector2<i32>,
     ) -> Result<super::ChunkData, ChunkReadingError> {
         let region = (
             ((at.x as f32) / 32.0).floor() as i32,
@@ -158,6 +159,6 @@ impl ChunkReader for AnvilChunkReader {
             .decompress_data(chunk_data)
             .map_err(ChunkReadingError::Compression)?;
 
-        ChunkData::from_bytes(decompressed_chunk, at).map_err(ChunkReadingError::ParsingError)
+        ChunkData::from_bytes(decompressed_chunk, *at).map_err(ChunkReadingError::ParsingError)
     }
 }

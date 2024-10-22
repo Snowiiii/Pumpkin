@@ -1,16 +1,13 @@
 use std::{
-    collections::HashMap,
-    io::{self, Read, Write},
+    io::{self},
     net::SocketAddr,
 };
 
-use mio::{
-    net::{TcpListener, TcpStream},
-    Events, Interest, Poll, Token,
-};
 use packet::{ClientboundPacket, Packet, PacketError, ServerboundPacket};
 use pumpkin_config::{RCONConfig, ADVANCED_CONFIG};
+use std::sync::Arc;
 use thiserror::Error;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::server::Server;
 
@@ -26,96 +23,38 @@ pub enum RCONError {
     Io(io::Error),
 }
 
-const SERVER: Token = Token(0);
-
 pub struct RCONServer;
 
 impl RCONServer {
-    pub async fn new(config: &RCONConfig, server: &Server) -> Result<Self, io::Error> {
+    pub async fn new(config: &RCONConfig, server: Arc<Server>) -> Result<Self, io::Error> {
         assert!(config.enabled, "RCON is not enabled");
-        let mut poll = Poll::new().unwrap();
-        let mut listener = TcpListener::bind(config.address).unwrap();
+        let listener = tokio::net::TcpListener::bind(config.address).await.unwrap();
 
-        poll.registry()
-            .register(&mut listener, SERVER, Interest::READABLE)
-            .unwrap();
+        let password = Arc::new(config.password.clone());
 
-        let mut unique_id = SERVER.0 + 1;
-
-        let mut events = Events::with_capacity(20);
-
-        let mut connections: HashMap<usize, RCONClient> = HashMap::new();
-
-        let password = config.password.clone();
-
+        let mut connections = 0;
         loop {
-            poll.poll(&mut events, None).unwrap();
+            // Asynchronously wait for an inbound socket.
+            let (connection, address) = listener.accept().await?;
 
-            for event in events.iter() {
-                match event.token() {
-                    SERVER => loop {
-                        // Received an event for the TCP server socket, which
-                        // indicates we can accept an connection.
-                        let (mut connection, address) = match listener.accept() {
-                            Ok((connection, address)) => (connection, address),
-                            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
-                                // If we get a `WouldBlock` error we know our
-                                // listener has no more incoming connections queued,
-                                // so we can return to polling and wait for some
-                                // more.
-                                break;
-                            }
-                            Err(e) => {
-                                // If it was any other kind of error, something went
-                                // wrong and we terminate with an error.
-                                return Err(e);
-                            }
-                        };
-                        if config.max_connections != 0
-                            && connections.len() >= config.max_connections as usize
-                        {
-                            break;
-                        }
-
-                        unique_id += 1;
-                        let token = unique_id;
-                        poll.registry()
-                            .register(
-                                &mut connection,
-                                Token(token),
-                                Interest::READABLE.add(Interest::WRITABLE),
-                            )
-                            .unwrap();
-                        connections.insert(token, RCONClient::new(connection, address));
-                    },
-
-                    token => {
-                        let done = if let Some(client) = connections.get_mut(&token.0) {
-                            client.handle(server, &password).await
-                        } else {
-                            false
-                        };
-                        if done {
-                            if let Some(mut client) = connections.remove(&token.0) {
-                                let config = &ADVANCED_CONFIG.rcon;
-                                if config.logging.log_quit {
-                                    log::info!(
-                                        "RCON ({}): Client closed connection",
-                                        client.address
-                                    );
-                                }
-                                poll.registry().deregister(&mut client.connection)?;
-                            }
-                        }
-                    }
-                }
+            if config.max_connections != 0 && connections >= config.max_connections {
+                continue;
             }
+
+            connections += 1;
+            let mut client = RCONClient::new(connection, address);
+
+            let password = password.clone();
+            let server = server.clone();
+            tokio::spawn(async move { while !client.handle(&server, &password).await {} });
+            log::debug!("closed RCON connection");
+            connections -= 1;
         }
     }
 }
 
 pub struct RCONClient {
-    connection: TcpStream,
+    connection: tokio::net::TcpStream,
     address: SocketAddr,
     logged_in: bool,
     incoming: Vec<u8>,
@@ -123,7 +62,8 @@ pub struct RCONClient {
 }
 
 impl RCONClient {
-    pub const fn new(connection: TcpStream, address: SocketAddr) -> Self {
+    #[must_use]
+    pub const fn new(connection: tokio::net::TcpStream, address: SocketAddr) -> Self {
         Self {
             connection,
             address,
@@ -133,18 +73,16 @@ impl RCONClient {
         }
     }
 
+    /// Returns if client is closed or not
     pub async fn handle(&mut self, server: &Server, password: &str) -> bool {
         if !self.closed {
-            loop {
-                match self.read_bytes() {
-                    // Stream closed, so we can't reply, so we just close everything.
-                    Ok(true) => return true,
-                    Ok(false) => {}
-                    Err(e) if e.kind() == io::ErrorKind::WouldBlock => break,
-                    Err(e) => {
-                        log::error!("could not read packet: {e}");
-                        return true;
-                    }
+            match self.read_bytes().await {
+                // Stream closed, so we can't reply, so we just close everything.
+                Ok(true) => return true,
+                Ok(false) => {}
+                Err(e) => {
+                    log::error!("could not read packet: {e}");
+                    return true;
                 }
             }
             // If we get a close here, we might have a reply, which we still want to write.
@@ -157,57 +95,54 @@ impl RCONClient {
     }
 
     async fn poll(&mut self, server: &Server, password: &str) -> Result<(), PacketError> {
-        loop {
-            let packet = match self.receive_packet().await? {
-                Some(p) => p,
-                None => return Ok(()),
-            };
-
-            let config = &ADVANCED_CONFIG.rcon;
-            match packet.get_type() {
-                ServerboundPacket::Auth => {
-                    let body = packet.get_body();
-                    if !body.is_empty() && packet.get_body() == password {
-                        self.send(ClientboundPacket::AuthResponse, packet.get_id(), "".into())
-                            .await?;
-                        if config.logging.log_logged_successfully {
-                            log::info!("RCON ({}): Client logged in successfully", self.address);
-                        }
-                        self.logged_in = true;
-                    } else {
-                        if config.logging.log_wrong_password {
-                            log::info!("RCON ({}): Client has tried wrong password", self.address);
-                        }
-                        self.send(ClientboundPacket::AuthResponse, -1, "".into())
-                            .await?;
-                        self.closed = true;
+        let Some(packet) = self.receive_packet().await? else {
+            return Ok(());
+        };
+        let config = &ADVANCED_CONFIG.rcon;
+        match packet.get_type() {
+            ServerboundPacket::Auth => {
+                if packet.get_body() == password {
+                    self.send(ClientboundPacket::AuthResponse, packet.get_id(), "")
+                        .await?;
+                    if config.logging.log_logged_successfully {
+                        log::info!("RCON ({}): Client logged in successfully", self.address);
                     }
+                    self.logged_in = true;
+                } else {
+                    if config.logging.log_wrong_password {
+                        log::info!("RCON ({}): Client has tried wrong password", self.address);
+                    }
+                    self.send(ClientboundPacket::AuthResponse, -1, "").await?;
+                    self.closed = true;
                 }
-                ServerboundPacket::ExecCommand => {
-                    if self.logged_in {
-                        let mut output = Vec::new();
-                        let dispatcher = server.command_dispatcher.clone();
-                        dispatcher.handle_command(
+            }
+            ServerboundPacket::ExecCommand => {
+                if self.logged_in {
+                    let mut output = Vec::new();
+                    let dispatcher = server.command_dispatcher.clone();
+                    dispatcher
+                        .handle_command(
                             &mut crate::commands::CommandSender::Rcon(&mut output),
                             server,
                             packet.get_body(),
-                        );
-                        for line in output {
-                            if config.logging.log_commands {
-                                log::info!("RCON ({}): {}", self.address, line);
-                            }
-                            self.send(ClientboundPacket::Output, packet.get_id(), line)
-                                .await?;
+                        )
+                        .await;
+                    for line in output {
+                        if config.logging.log_commands {
+                            log::info!("RCON ({}): {}", self.address, line);
                         }
+                        self.send(ClientboundPacket::Output, packet.get_id(), &line)
+                            .await?;
                     }
                 }
             }
         }
+        Ok(())
     }
 
-    fn read_bytes(&mut self) -> io::Result<bool> {
+    async fn read_bytes(&mut self) -> io::Result<bool> {
         let mut buf = [0; 1460];
-        let n = self.connection.read(&mut buf)?;
+        let n = self.connection.read(&mut buf).await?;
         if n == 0 {
             return Ok(true);
         }
@@ -219,11 +154,12 @@ impl RCONClient {
         &mut self,
         packet: ClientboundPacket,
         id: i32,
-        body: String,
+        body: &str,
     ) -> Result<(), PacketError> {
         let buf = packet.write_buf(id, body);
         self.connection
             .write(&buf)
+            .await
             .map_err(PacketError::FailedSend)?;
         Ok(())
     }

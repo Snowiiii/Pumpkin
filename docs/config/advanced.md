@@ -1,29 +1,26 @@
-### Advanced Configuration
+# Advanced Configuration
 
-### Proxy
+## Proxy
 
 `proxy`
 
-Wether Proxy Configuration is enabled
+Whether Proxy Configuration is Enabled
 
 ```toml
 enabled=false
 ```
 
-#### Velocity
+### Velocity
 
 `proxy.velocity`
 
-Wether [Velocity](https://papermc.io/software/velocity) Proxy is enabled
-
-> [!IMPORTANT]
-> Velocity support is currently WIP
+Whether [Velocity](https://papermc.io/software/velocity) Proxy is enabled
 
 ```toml
 enabled=false
 ```
 
-##### Velocity Secret
+#### Velocity Secret
 
 This secret is used to ensure that player info forwarded by Velocity comes from your proxy and not from someone pretending to run Velocity
 
@@ -31,17 +28,24 @@ This secret is used to ensure that player info forwarded by Velocity comes from 
 secret=
 ```
 
-### Authentication
-
-`authentication`
-
-Wether Authentication is enabled
+### Bungeecord
+`proxy.bungeecord`
 
 ```toml
 enabled=false
 ```
 
-#### Authentication URL
+## Authentication
+
+`authentication`
+
+Whether Authentication is enabled
+
+```toml
+enabled=false
+```
+
+### Authentication URL
 
 The Authentication URL being used
 
@@ -54,7 +58,7 @@ The Authentication URL being used
 auth_url="https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}"
 ```
 
-#### Prevent Proxy Connections
+### Prevent Proxy Connections
 
 Prevent proxy connections
 
@@ -62,7 +66,7 @@ Prevent proxy connections
 prevent_proxy_connections=false
 ```
 
-#### Prevent Proxy Connections URL
+### Prevent Proxy Connections URL
 
 The Authentication URL being used
 
@@ -77,11 +81,11 @@ The Authentication URL being used
 prevent_proxy_connection_auth_url = "https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}"
 ```
 
-#### Player Profile
+### Player Profile
 
 `authentication.player_profile`
 
-##### Allow Banned Players
+#### Allow Banned Players
 
 Allow players flagged by Mojang (banned, forced name change)
 
@@ -89,7 +93,7 @@ Allow players flagged by Mojang (banned, forced name change)
 allow_banned_players=false
 ```
 
-##### Allowed Actions
+#### Allowed Actions
 
 Depends on the value above
 
@@ -102,7 +106,7 @@ FORCED_NAME_CHANGE
 USING_BANNED_SKIN
 ```
 
-#### Textures
+### Textures
 
 `authentication.textures`
 
@@ -112,7 +116,7 @@ Whether to filter/validate player textures (e.g. Skins/Capes)
 enabled=true
 ```
 
-##### Allowed URL Schemes
+#### Allowed URL Schemes
 
 Allowed URL Schemes for Textures
 
@@ -120,7 +124,7 @@ Allowed URL Schemes for Textures
 allowed_url_schemes=["http", "https"]
 ```
 
-##### Allowed URL Domains
+#### Allowed URL Domains
 
 Allowed URL domains for Textures
 
@@ -128,11 +132,11 @@ Allowed URL domains for Textures
 allowed_url_domains=[".minecraft.net", ".mojang.com"]
 ```
 
-#### Texture Types
+### Texture Types
 
 `authentication.textures.types`
 
-##### Skin
+#### Skin
 
 Use player skins
 
@@ -140,7 +144,7 @@ Use player skins
 skin=true
 ```
 
-##### Cape
+#### Cape
 
 Use player capes
 
@@ -148,36 +152,36 @@ Use player capes
 cape=true
 ```
 
-##### Elytra
+#### Elytra
 
 Use player elytras
-(i didn't know myself that there are custom elytras)
+(I didn't know myself that there are custom elytras)
 
 ```toml
 elytra=true
 ```
 
-### Compression
+## Compression
 
 `packet_compression`
 
-Wether Packet Compression is enabled
+Whether Packet Compression is enabled
 
 ```toml
 enable=true
 ```
 
-#### Compression Info
+### Compression Info
 
-##### Threshold
+#### Threshold
 
-The compression threshold used when compression is enabled
+The compression threshold is used when compression is enabled
 
 ```toml
 threshold=256
 ```
 
-##### Level
+#### Level
 
 The Compression Level
 
@@ -192,17 +196,17 @@ The Compression Level
 level=4
 ```
 
-### Resource Pack
+## Resource Pack
 
 `resource_pack`
 
-Wether a Resource Pack is enabled
+Whether a Resource Pack is enabled
 
 ```toml
 enable=false
 ```
 
-#### Resource Pack URL
+### Resource Pack URL
 
 The download URL of the resource pack
 
@@ -210,7 +214,7 @@ The download URL of the resource pack
 resource_pack_url=
 ```
 
-#### Resource Pack SHA1
+### Resource Pack SHA1
 
 The SHA1 hash (40) of the resource pack
 
@@ -218,7 +222,7 @@ The SHA1 hash (40) of the resource pack
 resource_pack_sha1=
 ```
 
-#### Prompt Message
+### Prompt Message
 
 Custom prompt Text component, Leave blank for none
 
@@ -226,7 +230,7 @@ Custom prompt Text component, Leave blank for none
 prompt_message=
 ```
 
-#### Force
+### Force
 
 Will force the Player to accept the resource pack
 
@@ -234,11 +238,11 @@ Will force the Player to accept the resource pack
 force=false
 ```
 
-### Commands
+## Commands
 
 `commands`
 
-#### Use Console
+### Use Console
 
 Are commands from the Console accepted
 
@@ -246,25 +250,25 @@ Are commands from the Console accepted
 use_console=true
 ```
 
-#### Log Console
+### Log Console
 
-Should be commands from players be logged in console
+Should commands from players be logged into the console?
 
 ```toml
 log_console=true
 ```
 
-### RCON Config
+## RCON Config
 
 `rcon`
 
-Wether RCON is enabled
+Whether RCON is enabled
 
 ```toml
 enable=false
 ```
 
-#### Address
+### Address
 
 The network address and port where the RCON server will listen for connections
 
@@ -272,7 +276,7 @@ The network address and port where the RCON server will listen for connections
 address=false
 ```
 
-#### Password
+### Password
 
 The password required for RCON authentication
 
@@ -280,7 +284,7 @@ The password required for RCON authentication
 password=
 ```
 
-#### Maximum Connections
+### Maximum Connections
 
 The maximum number of concurrent RCON connections allowed
 
@@ -290,11 +294,11 @@ If 0 there is no limit
 max_connections=0
 ```
 
-#### RCON Logging
+### RCON Logging
 
 `rcon.logging`
 
-##### Logged Successfully
+#### Logged Successfully
 
 Whether successful RCON logins should be logged
 
@@ -302,7 +306,7 @@ Whether successful RCON logins should be logged
 log_logged_successfully=true
 ```
 
-##### Wrong Password
+#### Wrong Password
 
 Whether failed RCON login attempts with incorrect passwords should be logged
 
@@ -310,7 +314,7 @@ Whether failed RCON login attempts with incorrect passwords should be logged
 log_wrong_password=true
 ```
 
-##### Commands
+#### Commands
 
 Whether all RCON commands, regardless of success or failure, should be logged
 
@@ -318,7 +322,7 @@ Whether all RCON commands, regardless of success or failure, should be logged
 log_commands=true
 ```
 
-##### Disconnect
+#### Disconnect
 
 Whether RCON client quit should be logged
 
@@ -326,7 +330,7 @@ Whether RCON client quit should be logged
 log_quit=true
 ```
 
-### PVP
+## PVP
 
 `pvp`
 
@@ -336,7 +340,7 @@ Whether PVP is enabled
 enable=true
 ```
 
-#### Hurt Animation
+### Hurt Animation
 
 Do we want to have the Red hurt animation & fov bobbing
 
@@ -344,7 +348,7 @@ Do we want to have the Red hurt animation & fov bobbing
 hurt_animation=true
 ```
 
-#### Protect Creative
+### Protect Creative
 
 Should players in creative be protected against PVP
 
@@ -352,7 +356,7 @@ Should players in creative be protected against PVP
 protect_creative=true
 ```
 
-#### Knockback
+### Knockback
 
 Has PVP Knockback (Velocity)
 
@@ -360,15 +364,15 @@ Has PVP Knockback (Velocity)
 knockback=true
 ```
 
-#### Swing
+### Swing
 
-Should player swing when attacking
+Should players swing when attacking?
 
 ```toml
 swing=true
 ```
 
-### Logging
+## Logging
 
 `logging`
 Whether Logging is enabled
@@ -377,7 +381,7 @@ Whether Logging is enabled
 enable=true
 ```
 
-#### Level
+### Level
 
 At which level should be logged
 
@@ -394,15 +398,15 @@ Debug
 Trace
 ```
 
-#### Env
+### Env
 
-Enables the user to choose log level by setting `RUST_LOG=<level>` environment variable
+Enables the user to choose log level by setting the `RUST_LOG=<level>` environment variable
 
 ```toml
 env=false
 ```
 
-#### Threads
+### Threads
 
 Should threads be printed in the message
 
@@ -410,7 +414,7 @@ Should threads be printed in the message
 threads=true
 ```
 
-#### Color
+### Color
 
 Should color be enabled for logging messages
 
@@ -418,7 +422,7 @@ Should color be enabled for logging messages
 color=true
 ```
 
-#### Timestamp
+### Timestamp
 
 Should the timestamp be printed in the message
 
