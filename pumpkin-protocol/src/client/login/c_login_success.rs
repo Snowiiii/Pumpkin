@@ -7,7 +7,6 @@ pub struct CLoginSuccess<'a> {
     pub uuid: &'a uuid::Uuid,
     pub username: &'a str, // 16
     pub properties: &'a [Property],
-    pub strict_error_handling: bool,
 }
 
 impl<'a> CLoginSuccess<'a> {
@@ -15,13 +14,11 @@ impl<'a> CLoginSuccess<'a> {
         uuid: &'a uuid::Uuid,
         username: &'a str,
         properties: &'a [Property],
-        strict_error_handling: bool,
     ) -> Self {
         Self {
             uuid,
             username,
             properties,
-            strict_error_handling,
         }
     }
 }
@@ -35,6 +32,5 @@ impl<'a> ClientPacket for CLoginSuccess<'a> {
             p.put_string(&v.value);
             p.put_option(&v.signature, |p, v| p.put_string(v));
         });
-        bytebuf.put_bool(self.strict_error_handling);
     }
 }

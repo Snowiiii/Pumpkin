@@ -179,7 +179,7 @@ impl Client {
     }
 
     async fn finish_login(&self, profile: &GameProfile) {
-        let packet = CLoginSuccess::new(&profile.id, &profile.name, &profile.properties, false);
+        let packet = CLoginSuccess::new(&profile.id, &profile.name, &profile.properties);
         self.send_packet(&packet).await;
     }
 
