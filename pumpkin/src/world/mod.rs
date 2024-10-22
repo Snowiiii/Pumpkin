@@ -8,8 +8,10 @@ use crate::{
 };
 use num_traits::ToPrimitive;
 use pumpkin_config::BasicConfiguration;
+use pumpkin_core::math::position::WorldPosition;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_entity::{entity_type::EntityType, EntityId};
+use pumpkin_protocol::client::play::{CBlockUpdate, CWorldEvent};
 use pumpkin_protocol::{
     client::play::{
         CChunkData, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate, CRemoveEntities,
@@ -17,10 +19,13 @@ use pumpkin_protocol::{
     },
     ClientPacket, VarInt,
 };
+use pumpkin_world::block::BlockId;
+use pumpkin_world::chunk::ChunkData;
+use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
 use pumpkin_world::level::Level;
 use scoreboard::Scoreboard;
-use tokio::sync::mpsc;
 use tokio::sync::Mutex;
+use tokio::sync::{mpsc, RwLock};
 
 pub mod scoreboard;
 
@@ -93,8 +98,13 @@ impl World {
         // This code follows the vanilla packet order
         let entity_id = player.entity_id();
         let gamemode = player.gamemode.load();
-        log::debug!("spawning player, entity id {}", entity_id);
+        log::debug!(
+            "spawning player {}, entity id {}",
+            player.client.id,
+            entity_id
+        );
 
+        log::debug!("Sending login packet to {}", player.client.id);
         // login packet for our new player
         player
             .client
@@ -120,9 +130,10 @@ impl World {
                 false,
             ))
             .await;
-        log::debug!("sending abilities");
+
         // player abilities
         // TODO: this is for debug purpose, remove later
+        log::debug!("Sending player abilities to {}", player.client.id);
         player
             .client
             .send_packet(&CPlayerAbilities::new(0x02, 0.4, 0.1))
@@ -134,6 +145,8 @@ impl World {
         let z = 10.0;
         let yaw = 10.0;
         let pitch = 10.0;
+
+        log::debug!("Sending player teleport to {}", player.client.id);
         player.teleport(x, y, z, yaw, pitch).await;
 
         let pos = player.living_entity.entity.pos.load();
@@ -142,6 +155,7 @@ impl World {
         let gameprofile = &player.gameprofile;
         // first send info update to our new player, So he can see his Skin
         // also send his info to everyone else
+        log::debug!("Broadcasting player info for {}", player.client.id);
         self.broadcast_packet_all(&CPlayerInfoUpdate::new(
             0x01 | 0x08,
             &[pumpkin_protocol::client::play::Player {
@@ -177,6 +191,7 @@ impl World {
                     ],
                 });
             }
+            log::debug!("Sending player info to {}", player.client.id);
             player
                 .client
                 .send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries))
@@ -185,6 +200,7 @@ impl World {
 
         let gameprofile = &player.gameprofile;
 
+        log::debug!("Broadcasting player spawn for {}", player.client.id);
         // spawn player for every client
         self.broadcast_packet_expect(
             &[player.client.id],
@@ -218,6 +234,7 @@ impl World {
             let entity = &existing_player.living_entity.entity;
             let pos = entity.pos.load();
             let gameprofile = &existing_player.gameprofile;
+            log::debug!("Sending player entities to {}", player.client.id);
             player
                 .client
                 .send_packet(&CSpawnEntity::new(
@@ -244,10 +261,12 @@ impl World {
                 entity_id.into(),
                 Metadata::new(17, VarInt(0), config.skin_parts),
             );
+            log::debug!("Broadcasting skin for {}", player.client.id);
             self.broadcast_packet_all(&packet).await;
         }
 
         // Start waiting for level chunks, Sets the "Loading Terrain" screen
+        log::debug!("Sending waiting chunks to {}", player.client.id);
         player
             .client
             .send_packet(&CGameEvent::new(GameEvent::StartWaitingChunks, 0.0))
@@ -259,15 +278,15 @@ impl World {
 
     pub async fn mark_chunks_as_not_watched(&self, chunks: &[Vector2<i32>]) {
         let level = self.level.lock().await;
-        level.mark_chunk_as_not_watched_and_clean(chunks);
+        level.mark_chunk_as_not_watched_and_clean(chunks).await;
     }
 
     pub async fn mark_chunks_as_watched(&self, chunks: &[Vector2<i32>]) {
         let level = self.level.lock().await;
-        level.mark_chunk_as_newly_watched(chunks);
+        level.mark_chunk_as_newly_watched(chunks).await;
     }
 
-    fn spawn_world_chunks(&self, client: Arc<Client>, chunks: Vec<Vector2<i32>>, distance: i32) {
+    async fn spawn_world_chunks(&self, client: Arc<Client>, chunks: Vec<Vector2<i32>>) {
         if client.closed.load(std::sync::atomic::Ordering::Relaxed) {
             log::info!(
                 "The connection with {} has closed before world chunks were spawned",
@@ -276,23 +295,17 @@ impl World {
             return;
         }
         let inst = std::time::Instant::now();
-        let (sender, mut chunk_receiver) = mpsc::channel(distance as usize);
-
-        let level = self.level.clone();
-        let chunks = Arc::new(chunks);
-        tokio::spawn(async move {
-            let level = level.lock().await;
-            level.fetch_chunks(&chunks, sender);
-        });
+        let chunks = self.get_chunks(chunks).await;
 
         tokio::spawn(async move {
-            while let Some(chunk_data) = chunk_receiver.recv().await {
-                // dbg!(chunk_pos);
+            for chunk_data in chunks {
+                let chunk_data = chunk_data.read().await;
+                let packet = CChunkData(&chunk_data);
                 #[cfg(debug_assertions)]
                 if chunk_data.position == (0, 0).into() {
                     use pumpkin_protocol::bytebuf::ByteBuffer;
                     let mut test = ByteBuffer::empty();
-                    CChunkData(&chunk_data).write(&mut test);
+                    packet.write(&mut test);
                     let len = test.buf().len();
                     log::debug!(
                         "Chunk packet size: {}B {}KB {}MB",
@@ -305,7 +318,7 @@ impl World {
                 // TODO: Queue player packs in a queue so we don't need to check if its closed before
                 // sending
                 if !client.closed.load(std::sync::atomic::Ordering::Relaxed) {
-                    client.send_packet(&CChunkData(&chunk_data)).await;
+                    client.send_packet(&packet).await;
                 }
             }
 
@@ -356,5 +369,56 @@ impl World {
     pub async fn remove_entity(&self, entity: &Entity) {
         self.broadcast_packet_all(&CRemoveEntities::new(&[entity.entity_id.into()]))
             .await;
+    }
+    pub async fn set_block(&self, position: WorldPosition, block_id: BlockId) {
+        let (chunk_coordinate, relative_coordinates) = position.chunk_and_chunk_relative_position();
+
+        // Since we divide by 16 remnant can never exceed u8
+        let relative = ChunkRelativeBlockCoordinates::from(relative_coordinates);
+
+        let chunk = self.get_chunks(vec![chunk_coordinate]).await[0].clone();
+        chunk.write().await.blocks.set_block(relative, block_id);
+
+        self.broadcast_packet_all(&CBlockUpdate::new(
+            &position,
+            i32::from(block_id.data).into(),
+        ))
+        .await;
+    }
+
+    pub async fn get_chunks(&self, chunks: Vec<Vector2<i32>>) -> Vec<Arc<RwLock<ChunkData>>> {
+        let (sender, mut receive) = mpsc::channel(chunks.len());
+        {
+            let level = self.level.clone();
+            tokio::spawn(async move { level.lock().await.fetch_chunks(&chunks, sender) });
+        }
+        tokio::spawn(async move {
+            let mut received = vec![];
+
+            while let Some(chunk) = receive.recv().await {
+                received.push(chunk);
+            }
+            received
+        })
+        .await
+        .unwrap()
+    }
+
+    pub async fn break_block(&self, position: WorldPosition) {
+        self.set_block(position, BlockId { data: 0 }).await;
+
+        self.broadcast_packet_all(&CWorldEvent::new(2001, &position, 11, false))
+            .await;
+    }
+
+    pub async fn get_block(&self, position: WorldPosition) -> BlockId {
+        let (chunk, relative) = position.chunk_and_chunk_relative_position();
+        let relative = ChunkRelativeBlockCoordinates::from(relative);
+        self.get_chunks(vec![chunk]).await[0]
+            .clone()
+            .read()
+            .await
+            .blocks
+            .get_block(relative)
     }
 }
