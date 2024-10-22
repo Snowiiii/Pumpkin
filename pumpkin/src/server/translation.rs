@@ -26,28 +26,28 @@ pub fn translate(
     config: TranslationConfig,
     message: &str,
 ) -> Result<HashMap<String, String>, TranslationError> {
-    if config.enabled {
-        if !config.client_translations {
-            if let Some(path) = config.translation_file_path {
-                let file = File::open(path).map_err(|_| TranslationError::InvalidFile)?;
-                let mut bufreader = BufReader::new(file);
+    if !config.enabled {
+        return Err(TranslationError::NotEnabled);
+    }
 
-                let translations = fetch_translations(&mut bufreader, message)?;
-                let results = make_hashmap(translations);
+    if config.client_translations {
+        return Ok(HashMap::from([(message.to_owned(), message.to_owned())]));
+    }
 
-                Ok(results)
-            } else {
-                Err(TranslationError::InvalidFile)
-            }
-        } else {
-            Ok(HashMap::from([(message.to_owned(), message.to_owned())]))
-        }
+    if let Some(path) = config.translation_file_path {
+        let file = File::open(path).map_err(|_| TranslationError::InvalidFile)?;
+        let mut bufreader = BufReader::new(file);
+
+        let translations = fetch_translations(&mut bufreader, message)?;
+        let results = make_hashmap(translations);
+
+        Ok(results)
     } else {
-        Err(TranslationError::NotEnabled)
+        Err(TranslationError::InvalidFile)
     }
 }
 
-///Read a huge object line by line and tricking serde_json into thinking they are individual objects
+///Read a huge object line by line and tricking `serde_json` into thinking they are individual objects
 fn fetch_translations(
     mut reader: impl BufRead,
     message: &str,
@@ -66,7 +66,9 @@ fn fetch_translations(
 
         if buf == "{" || buf == "}" {
             continue;
-        } else if buf.contains(message) {
+        }
+
+        if buf.contains(message) {
             let mut buf = buf.trim().replace(',', "");
             buf.insert(0, '{');
             buf.push('}');
