@@ -3,6 +3,8 @@ use crate::entity::{random_float, Entity};
 use crate::server::Server;
 use crate::world::World;
 use crossbeam::atomic::AtomicCell;
+use pumpkin_core::math::position::WorldPosition;
+use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::vector3::Vector3;
 use pumpkin_entity::entity_type::EntityType;
 use pumpkin_entity::pose::EntityPose;
@@ -52,8 +54,8 @@ impl ItemEntity {
             entity_type: EntityType::Item,
             world,
             pos: AtomicCell::new(empty),
-            block_pos: AtomicCell::new(Default::default()),
-            chunk_pos: AtomicCell::new(Default::default()),
+            block_pos: AtomicCell::new(WorldPosition::default()),
+            chunk_pos: AtomicCell::new(Vector2::default()),
             sneaking: false.into(),
             sprinting: false.into(),
             fall_flying: false.into(),
@@ -97,17 +99,17 @@ impl ItemEntity {
         let player_pos = player_entity.pos.load();
         let pos = Vector3 {
             x: player_pos.x,
-            y: player_pos.y + player_entity.standing_eye_height as f64 - 0.3,
+            y: player_pos.y + f64::from(player_entity.standing_eye_height) - 0.3,
             z: player_pos.z,
         };
         Self::spawn(
             pos,
-            toss_velocity(player_entity).into(),
+            toss_velocity(player_entity),
             player_entity.world.clone(),
             item_stack,
             server,
         )
-        .await
+        .await;
     }
 
     pub(self) async fn check_pickup(self) -> PickupEvent {
@@ -247,7 +249,7 @@ impl ItemEntity {
                 || self.entity.velocity.load().horizontal_length_squared() > 1.0e-5
                 || ticks % 4 == 0
             {
-                self.entity.advance_position().await;
+                self.entity.advance_position();
                 self.entity.collision_check(true).await;
                 let on_ground = self.entity.on_ground.load(Ordering::Relaxed);
                 let slipperiness = 0.98 * if on_ground { 0.6 } else { 1. };
@@ -262,10 +264,8 @@ impl ItemEntity {
                     velocity.y = 0.;
                     velocity.x = 0.;
                 }
-                if on_ground {
-                    if velocity.y < 0. {
-                        velocity = velocity.multiply(1., -0.5, 1.);
-                    }
+                if on_ground && velocity.y < 0. {
+                    velocity = velocity.multiply(1., -0.5, 1.);
                 }
 
                 self.entity.velocity.store(velocity);
@@ -289,16 +289,16 @@ enum PickupEvent {
 
 fn toss_velocity(player: &Entity) -> Vector3<f64> {
     use std::f64::consts::PI;
-    let pitch_sin = f64::sin(player.pitch.load() as f64 * (PI / 180.0));
-    let pitch_cos = f64::cos(player.pitch.load() as f64 * (PI / 180.0));
-    let yaw_sin = f64::sin(player.yaw.load() as f64 * (PI / 180.0));
-    let yaw_cos = f64::cos(player.yaw.load() as f64 * (PI / 180.0));
+    let pitch_sin = f64::sin(f64::from(player.pitch.load()) * (PI / 180.0));
+    let pitch_cos = f64::cos(f64::from(player.pitch.load()) * (PI / 180.0));
+    let yaw_sin = f64::sin(f64::from(player.yaw.load()) * (PI / 180.0));
+    let yaw_cos = f64::cos(f64::from(player.yaw.load()) * (PI / 180.0));
     let random_angle = random_float() * (2.0 * PI);
     let random_offset = 0.02 * random_float();
 
     Vector3 {
-        x: (-yaw_sin * pitch_cos * 0.3) + f64::cos(random_angle) * random_offset,
-        y: -pitch_sin * 0.3 + 0.1 + (random_float() - random_float()) * 0.1,
-        z: (yaw_cos * pitch_cos * 0.3) + f64::sin(random_angle) * random_offset,
+        x: (-yaw_sin * pitch_cos).mul_add(0.3, f64::cos(random_angle) * random_offset),
+        y: (-pitch_sin).mul_add(0.3, (random_float() - random_float()).mul_add(0.1, 0.1)),
+        z: (yaw_cos * pitch_cos).mul_add(0.3, f64::sin(random_angle) * random_offset),
     }
 }

@@ -16,7 +16,6 @@ use pumpkin_protocol::client::play::{
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
-use std::ops::DerefMut;
 use std::sync::Arc;
 
 #[expect(unused)]
@@ -211,10 +210,8 @@ impl Player {
                 self.send_whole_container_change(server).await?;
             } else if let container_click::Slot::Normal(slot_index) = click.slot {
                 let mut inventory = self.inventory.lock().await;
-                let combined_container = OptionallyCombinedContainer::new(
-                    &mut inventory,
-                    Some(opened_container.deref_mut()),
-                );
+                let combined_container =
+                    OptionallyCombinedContainer::new(&mut inventory, Some(&mut *opened_container));
                 if let Some(slot) = combined_container.get_slot_excluding_inventory(slot_index) {
                     let slot = Slot::from(slot);
                     drop(opened_container);

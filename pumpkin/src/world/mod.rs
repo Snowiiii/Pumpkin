@@ -212,7 +212,7 @@ impl World {
         let id = player.gameprofile.id;
         for (_, existing_player) in self.current_players.lock().await.iter().filter(|c| c.0 != &id) {
             let entity = &existing_player.living_entity.entity;
-            player.client.send_packet(&CSpawnEntity::from(entity)).await
+            player.client.send_packet(&CSpawnEntity::from(entity)).await;
         }
         // entity meta data
         // set skin parts
@@ -350,7 +350,7 @@ impl World {
 
     // Stream the chunks (don't collect them and then do stuff with them)
     pub fn receive_chunks(&self, chunks: Vec<Vector2<i32>>) -> Receiver<Arc<RwLock<ChunkData>>> {
-        if chunks.len() == 0 {
+        if chunks.is_empty() {
             return vec![];
         }
         let (sender, receive) = mpsc::channel(chunks.len());
@@ -381,16 +381,8 @@ impl World {
             item_count: 1,
         };
         ItemEntity::spawn(
-            Vector3 {
-                x: position.0.x as f64,
-                y: position.0.y as f64,
-                z: position.0.z as f64,
-            },
-            Vector3 {
-                x: 0.,
-                y: 0.,
-                z: 0.,
-            },
+            Vector3::default(),
+            Vector3::default(),
             self.clone(),
             fake_item_stack,
             server,

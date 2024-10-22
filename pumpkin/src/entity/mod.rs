@@ -141,7 +141,7 @@ impl Entity {
         self.world.remove_entity(self).await;
     }
 
-    pub async fn advance_position(&self) {
+    pub fn advance_position(&self) {
         let mut velocity = self.velocity.load();
         let on_ground = self.on_ground.load(Ordering::Relaxed);
         if on_ground && velocity.y.is_sign_negative() {
@@ -164,7 +164,7 @@ impl Entity {
             let z_section = get_section_cord(future_position.z.floor() as i32);
             let chunk_pos = Vector2::new(x_section, z_section);
             if !chunks.contains(&chunk_pos) {
-                chunks.push(chunk_pos)
+                chunks.push(chunk_pos);
             }
         }
 
@@ -190,25 +190,25 @@ impl Entity {
                             z: future_position.z.floor(),
                             y: future_position.y.floor(),
                         }));
-                if !block_id.is_air() {
-                    if pos.y > future_position.y || !self.on_ground.load(Ordering::Relaxed) {
-                        let mut new_pos = pos;
-                        new_pos.y = pos.y.floor();
-                        if self.on_ground.load(Ordering::Relaxed) {
-                            let velocity = self.velocity.load();
-                            self.velocity.store(velocity.multiply(1., 0., 1.));
-                        }
-                        self.on_ground.store(true, Ordering::Relaxed);
-                        if snap {
-                            self.set_pos(new_pos.x, new_pos.y, new_pos.z);
-                        }
-                    }
-                } else {
+                if block_id.is_air() {
                     self.on_ground.store(false, Ordering::Relaxed);
+                } else if pos.y > future_position.y || !self.on_ground.load(Ordering::Relaxed) {
+                    let mut new_pos = pos;
+                    new_pos.y = pos.y.floor();
+                    if self.on_ground.load(Ordering::Relaxed) {
+                        let velocity = self.velocity.load();
+                        self.velocity.store(velocity.multiply(1., 0., 1.));
+                    }
+                    self.on_ground.store(true, Ordering::Relaxed);
+                    if snap {
+                        self.set_pos(new_pos.x, new_pos.y, new_pos.z);
+                    }
                 }
             }
         }
     }
+
+    #[allow(clippy::cast_precision_loss)]
     fn add_velocity_block_by_block(&self) -> Vec<Vector3<f64>> {
         let velocity = self.velocity.load();
         let pos = self.pos.load();
@@ -216,18 +216,18 @@ impl Entity {
             if velocity > 0. {
                 if velocity > 1. {
                     for i in (1..=(velocity.ceil() as i32)).rev() {
-                        out.push(i as f64);
+                        out.push(f64::from(i));
                     }
                 } else {
-                    out.push(1.)
+                    out.push(1.);
                 }
             } else if velocity < 0. {
                 if velocity < -1. {
                     for i in ((velocity.floor() as i32)..0).rev() {
-                        out.push(i as f64);
+                        out.push(f64::from(i));
                     }
                 } else {
-                    out.push(-1.)
+                    out.push(-1.);
                 }
             }
             out.iter_mut().for_each(|velocity| *velocity += pos.round());
@@ -247,7 +247,7 @@ impl Entity {
                 let increment = (last - first) / length as f64;
                 *other = (0..length)
                     .map(|i| first + increment * i as f64)
-                    .collect_vec()
+                    .collect_vec();
             }
         };
         let (x_len, y_len, z_len) = (x.len(), y.len(), z.len());
@@ -263,8 +263,8 @@ impl Entity {
         }
 
         x.into_iter()
-            .zip(y.into_iter())
-            .zip(z.into_iter())
+            .zip(y)
+            .zip(z)
             .map(|((x, y), z)| Vector3 { x, y, z })
             .collect_vec()
     }
@@ -272,9 +272,9 @@ impl Entity {
     pub async fn send_position(&self, old_position: Vector3<f64>, server: &Arc<Server>) {
         let pos = self.pos.load();
         let (dx, dy, dz) = (
-            pos.x * 4096. - old_position.x * 4096.,
-            pos.y * 4096. - old_position.y * 4096.,
-            pos.z * 4096. - old_position.z * 4096.,
+            pos.x.mul_add(4096., -(old_position.x * 4096.)),
+            pos.y.mul_add(4096., -(old_position.y * 4096.)),
+            pos.z.mul_add(4096., -(old_position.z * 4096.)),
         );
         server
             .broadcast_packet_all(&CUpdateEntityPos::new(
@@ -291,7 +291,7 @@ impl Entity {
         self.velocity.load();
         let entity_id = self.entity_id.into();
         let packet = CEntityVelocity::new(&entity_id, self.velocity.load());
-        server.broadcast_packet_all(&packet).await
+        server.broadcast_packet_all(&packet).await;
     }
     /// Applies knockback to the entity, following vanilla Minecraft's mechanics.
     ///
@@ -403,6 +403,7 @@ pub enum Flag {
     FallFlying,
 }
 
+#[must_use]
 pub fn random_float() -> f64 {
     rand::thread_rng().gen_range(0.0..=1.0)
 }
