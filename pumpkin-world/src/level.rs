@@ -81,8 +81,9 @@ impl Level {
     /// it is removed from memory. Should only be called on chunks the player was not watching
     /// before
     pub fn mark_chunks_as_newly_watched(&self, chunks: &[Vector2<i32>]) {
-        chunks.par_iter().for_each(|chunk| {
-            match self.chunk_watchers.entry(*chunk) {
+        chunks
+            .par_iter()
+            .for_each(|chunk| match self.chunk_watchers.entry(*chunk) {
                 Entry::Occupied(mut occupied) => {
                     let value = occupied.get_mut();
                     if let Some(new_value) = value.checked_add(1) {
@@ -95,52 +96,42 @@ impl Level {
                 Entry::Vacant(vacant) => {
                     vacant.insert(1);
                 }
-            }
-        });
+            });
     }
 
     /// Marks chunks no longer "watched" by a unique player. When no players are watching a chunk,
     /// it is removed from memory. Should only be called on chunks the player was watching before
     pub async fn mark_chunk_as_not_watched_and_clean(&self, chunks: &[Vector2<i32>]) {
-        let dropped_chunks = {
-            chunks
-                .par_iter()
-                .filter(|chunk| match self.chunk_watchers.entry(**chunk) {
-                    Entry::Occupied(mut occupied) => {
-                        let value = occupied.get_mut();
-                        *value = value.saturating_sub(1);
-                        if *value == 0 {
-                            occupied.remove_entry();
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    Entry::Vacant(_) => {
-                        log::error!(
-                            "Marking a chunk as not watched, but was vacant! ({:?})",
-                            chunk
-                        );
+        chunks
+            .par_iter()
+            .filter(|chunk| match self.chunk_watchers.entry(**chunk) {
+                Entry::Occupied(mut occupied) => {
+                    let value = occupied.get_mut();
+                    *value = value.saturating_sub(1);
+                    if *value == 0 {
+                        occupied.remove_entry();
+                        true
+                    } else {
                         false
                     }
-                })
-                .collect::<Vec<_>>()
-        };
-
-        let dropped_chunk_data = dropped_chunks
-            .par_iter()
-            .filter_map(|chunk| {
-                //log::debug!("Unloading chunk {:?}", chunk);
-
-                // This makes sense to parallelize because loadad_chunks is sharded
-                self.loaded_chunks.remove(chunk)
+                }
+                Entry::Vacant(_) => {
+                    log::error!(
+                        "Marking a chunk as not watched, but was vacant! ({:?})",
+                        chunk
+                    );
+                    false
+                }
             })
-            .collect();
-
-        self.write_chunks(dropped_chunk_data);
+            .for_each(|chunk_pos| {
+                //log::debug!("Unloading {:?}", chunk_pos);
+                if let Some(data) = self.loaded_chunks.remove(chunk_pos) {
+                    self.write_chunk(data);
+                };
+            });
     }
 
-    pub fn write_chunks(&self, _chunks_to_write: Vec<(Vector2<i32>, Arc<RwLock<ChunkData>>)>) {
+    pub fn write_chunk(&self, _chunk_to_write: (Vector2<i32>, Arc<RwLock<ChunkData>>)) {
         //TODO
     }
 

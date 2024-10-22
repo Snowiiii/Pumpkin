@@ -39,7 +39,7 @@ use super::Entity;
 use crate::{
     client::{authentication::GameProfile, Client, PlayerConfig},
     server::Server,
-    world::{player_chunker::chunk_section_from_pos, World},
+    world::World,
 };
 use crate::{error::PumpkinError, world::player_chunker::get_view_distance};
 
@@ -151,7 +151,7 @@ impl Player {
     pub async fn remove(&self) {
         self.living_entity.entity.world.remove_player(self).await;
 
-        let watched = chunk_section_from_pos(&self.living_entity.entity.block_pos.load());
+        let watched = self.watched_section.load();
         let view_distance = i32::from(get_view_distance(self).await);
         let cylindrical = Cylindrical::new(Vector2::new(watched.x, watched.z), view_distance);
         let all_chunks = cylindrical.all_chunks_within();

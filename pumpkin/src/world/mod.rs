@@ -381,12 +381,7 @@ impl World {
         // Since we divide by 16 remnant can never exceed u8
         let relative = ChunkRelativeBlockCoordinates::from(relative_coordinates);
 
-        let mut receiver = self.receive_chunks(vec![chunk_coordinate]);
-        let chunk = receiver
-            .recv()
-            .await
-            .expect("Stream closed for an unknown reason");
-
+        let chunk = self.receive_chunk(chunk_coordinate).await;
         chunk.write().await.blocks.set_block(relative, block_id);
 
         self.broadcast_packet_all(&CBlockUpdate::new(
@@ -409,6 +404,14 @@ impl World {
         receive
     }
 
+    pub async fn receive_chunk(&self, chunk: Vector2<i32>) -> Arc<RwLock<ChunkData>> {
+        let mut receiver = self.receive_chunks(vec![chunk]);
+        receiver
+            .recv()
+            .await
+            .expect("Channel closed for unknown reason")
+    }
+
     pub async fn break_block(&self, position: WorldPosition) {
         self.set_block(position, BlockId { data: 0 }).await;
 
@@ -419,11 +422,7 @@ impl World {
     pub async fn get_block(&self, position: WorldPosition) -> BlockId {
         let (chunk, relative) = position.chunk_and_chunk_relative_position();
         let relative = ChunkRelativeBlockCoordinates::from(relative);
-        let mut receiver = self.receive_chunks(vec![chunk]);
-        let chunk = receiver
-            .recv()
-            .await
-            .expect("Channel closed from some reason");
+        let chunk = self.receive_chunk(chunk).await;
         let chunk = chunk.read().await;
         chunk.blocks.get_block(relative)
     }
