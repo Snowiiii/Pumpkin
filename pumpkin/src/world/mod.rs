@@ -2,6 +2,12 @@ use std::{collections::HashMap, sync::Arc};
 
 pub mod player_chunker;
 
+use crate::entity::item::ItemEntity;
+use crate::server::Server;
+use crate::{
+    client::Client,
+    entity::{player::Player, Entity},
+};
 use num_traits::ToPrimitive;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
@@ -18,16 +24,12 @@ use pumpkin_protocol::{
 use pumpkin_world::block::BlockId;
 use pumpkin_world::chunk::ChunkData;
 use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
+use pumpkin_world::item::ItemStack;
 use pumpkin_world::level::Level;
 use scoreboard::Scoreboard;
 use tokio::sync::{mpsc, RwLock};
 use tokio::sync::{mpsc::Receiver, Mutex};
 
-use crate::entity::item::ItemEntity;
-use crate::{
-    client::Client,
-    entity::{player::Player, Entity},
-};
 pub mod scoreboard;
 
 /// Represents a Minecraft world, containing entities, players, and the underlying level data.
@@ -370,14 +372,35 @@ impl World {
             .expect("Channel closed for unknown reason")
     }
 
-    pub async fn break_block(&self, position: WorldPosition) {
+    pub async fn break_block(self: &Arc<Self>, position: WorldPosition, server: Arc<Server>) {
+        let block_id = self.get_block_id(position).await;
         self.set_block(position, BlockId { data: 0 }).await;
-
+        let item_id = block_id.get_as_item_id();
+        let fake_item_stack = ItemStack {
+            item_id,
+            item_count: 1,
+        };
+        ItemEntity::spawn(
+            Vector3 {
+                x: position.0.x as f64,
+                y: position.0.y as f64,
+                z: position.0.z as f64,
+            },
+            Vector3 {
+                x: 0.,
+                y: 0.,
+                z: 0.,
+            },
+            self.clone(),
+            fake_item_stack,
+            server,
+        )
+        .await;
         self.broadcast_packet_all(&CWorldEvent::new(2001, &position, 11, false))
             .await;
     }
 
-    pub async fn get_block(&self, position: WorldPosition) -> BlockId {
+    pub async fn get_block_id(&self, position: WorldPosition) -> BlockId {
         let (chunk, relative) = position.chunk_and_chunk_relative_position();
         let relative = ChunkRelativeBlockCoordinates::from(relative);
         let chunk = self.receive_chunk(chunk).await;

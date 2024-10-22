@@ -77,6 +77,7 @@ impl BlockId {
             .find(|(_, val)| val.states.iter().any(|state| state.id == *self))
             .map(|(key, _)| key.as_str())
             .unwrap();
+        dbg!(id);
         get_item_protocol_id(id)
     }
 }

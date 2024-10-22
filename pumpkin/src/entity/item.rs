@@ -1,6 +1,7 @@
 use crate::entity::player::Player;
 use crate::entity::{random_float, Entity};
 use crate::server::Server;
+use crate::world::World;
 use crossbeam::atomic::AtomicCell;
 use pumpkin_core::math::vector3::Vector3;
 use pumpkin_entity::entity_type::EntityType;
@@ -23,7 +24,13 @@ pub struct ItemEntity {
 }
 
 impl ItemEntity {
-    pub async fn spawn(player_entity: &Entity, item_stack: ItemStack, server: Arc<Server>) {
+    pub async fn spawn(
+        pos: Vector3<f64>,
+        velocity: Vector3<f64>,
+        world: Arc<World>,
+        item_stack: ItemStack,
+        server: Arc<Server>,
+    ) {
         let is_able_to_be_picked_up = Arc::new(AtomicBool::new(false));
         {
             let is_able_to_be_picked_up = is_able_to_be_picked_up.clone();
@@ -33,25 +40,24 @@ impl ItemEntity {
             });
         }
 
-        let player_pos = player_entity.pos.load();
-        let pos = Vector3 {
-            x: player_pos.x,
-            y: player_pos.y + player_entity.standing_eye_height as f64 - 0.3,
-            z: player_pos.z,
+        let empty = Vector3 {
+            x: 0.,
+            y: 0.,
+            z: 0.,
         };
 
         let entity = Arc::new(Entity {
             entity_id: server.new_entity_id(),
             uuid: Uuid::new_v4(),
             entity_type: EntityType::Item,
-            world: player_entity.world.clone(),
-            pos: AtomicCell::new(pos),
-            block_pos: player_entity.block_pos.load().into(),
-            chunk_pos: player_entity.chunk_pos.load().into(),
+            world,
+            pos: AtomicCell::new(empty),
+            block_pos: AtomicCell::new(Default::default()),
+            chunk_pos: AtomicCell::new(Default::default()),
             sneaking: false.into(),
             sprinting: false.into(),
             fall_flying: false.into(),
-            velocity: toss_velocity(player_entity).into(),
+            velocity: AtomicCell::new(velocity),
             on_ground: false.into(),
             in_ground: false.into(),
             yaw: 0.0.into(),
@@ -60,6 +66,8 @@ impl ItemEntity {
             standing_eye_height: 0.0,
             pose: EntityPose::Standing.into(),
         });
+        entity.set_pos(pos.x, pos.y, pos.z);
+
         let item_entity = Self {
             item_stack,
             is_able_to_be_picked_up,
@@ -80,6 +88,26 @@ impl ItemEntity {
                 end: 255,
             })
             .await;
+    }
+    pub async fn spawn_from_player(
+        player_entity: &Entity,
+        item_stack: ItemStack,
+        server: Arc<Server>,
+    ) {
+        let player_pos = player_entity.pos.load();
+        let pos = Vector3 {
+            x: player_pos.x,
+            y: player_pos.y + player_entity.standing_eye_height as f64 - 0.3,
+            z: player_pos.z,
+        };
+        Self::spawn(
+            pos,
+            toss_velocity(player_entity).into(),
+            player_entity.world.clone(),
+            item_stack,
+            server,
+        )
+        .await
     }
 
     pub(self) async fn check_pickup(self) -> PickupEvent {

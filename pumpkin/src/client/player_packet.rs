@@ -480,8 +480,8 @@ impl Player {
                         // Block break & block break sound
                         // TODO: currently this is always dirt replace it
                         let entity = &self.living_entity.entity;
-                        let world = &entity.world;
-                        world.break_block(location).await;
+                        let world = entity.world.clone();
+                        world.break_block(location, server.clone()).await;
                     }
                 }
                 Status::CancelledDigging => {
@@ -510,8 +510,8 @@ impl Player {
                     // Block break & block break sound
                     // TODO: currently this is always dirt replace it
                     let entity = &self.living_entity.entity;
-                    let world = &entity.world;
-                    world.break_block(location).await;
+                    let world = entity.world.clone();
+                    world.break_block(location, server.clone()).await;
                     // TODO: Send this every tick
                     self.client
                         .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence))
@@ -521,7 +521,12 @@ impl Player {
                     let mut inventory = self.inventory.lock().await;
                     let slot = inventory.held_item_mut();
                     if let Some(item) = slot {
-                        ItemEntity::spawn(&self.living_entity.entity, *item, server.clone()).await;
+                        ItemEntity::spawn_from_player(
+                            &self.living_entity.entity,
+                            *item,
+                            server.clone(),
+                        )
+                        .await;
                         *slot = None;
                     }
                 }
@@ -533,10 +538,14 @@ impl Player {
                             held_item.item_count -= 1;
                             let mut item = *held_item;
                             item.item_count = 1;
-                            ItemEntity::spawn(&self.living_entity.entity, item, server.clone())
-                                .await;
+                            ItemEntity::spawn_from_player(
+                                &self.living_entity.entity,
+                                item,
+                                server.clone(),
+                            )
+                            .await;
                         } else {
-                            ItemEntity::spawn(
+                            ItemEntity::spawn_from_player(
                                 &self.living_entity.entity,
                                 *held_item,
                                 server.clone(),
@@ -651,7 +660,8 @@ impl Player {
                 let item = None;
                 self.carried_item.swap(item);
                 if let Some(item) = item {
-                    ItemEntity::spawn(&self.living_entity.entity, item, server.clone()).await;
+                    ItemEntity::spawn_from_player(&self.living_entity.entity, item, server.clone())
+                        .await;
                 }
                 Ok(())
             }
