@@ -1,9 +1,11 @@
 use pumpkin_core::text::TextComponent;
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 
 use crate::{ClientPacket, NumberFormat, VarInt};
 
-#[packet(0x5E)]
+use super::ClientboundPlayPackets;
+
+#[client_packet(ClientboundPlayPackets::ScoreboardObjective as i32)]
 pub struct CUpdateObjectives<'a> {
     objective_name: &'a str,
     mode: u8,

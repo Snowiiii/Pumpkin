@@ -15,7 +15,7 @@ pub struct PlayerInventory {
     selected: usize,
     pub state_id: AtomicU32,
     // Notchian server wraps this value at 100, we can just keep it as a u8 that automatically wraps
-    pub total_opened_containers: u8,
+    pub total_opened_containers: i32,
 }
 
 impl Default for PlayerInventory {

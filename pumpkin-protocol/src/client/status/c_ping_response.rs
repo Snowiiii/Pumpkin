@@ -1,8 +1,10 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
+use super::ClientboundStatusPackets;
+
 #[derive(Serialize)]
-#[packet(0x01)]
+#[client_packet(ClientboundStatusPackets::PingRequest as i32)]
 pub struct CPingResponse {
     payload: i64, // must responde with the same as in `SPingRequest`
 }

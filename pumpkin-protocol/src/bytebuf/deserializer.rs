@@ -11,6 +11,8 @@ pub struct Deserializer<'a> {
 
 #[derive(Debug, Error)]
 pub enum DeserializerError {
+    #[error("Unknown Packet")]
+    UnknownPacket,
     #[error("serializer error {0}")]
     Message(String),
     #[error("Stdio error")]

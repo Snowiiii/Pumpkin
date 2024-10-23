@@ -1,10 +1,12 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
+use super::ClientboundLoginPackets;
+
 #[derive(Serialize)]
-#[packet(0x03)]
+#[client_packet(ClientboundLoginPackets::SetCompression as i32)]
 pub struct CSetCompression {
     threshold: VarInt,
 }

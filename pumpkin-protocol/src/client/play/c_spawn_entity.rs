@@ -1,10 +1,12 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x01)]
+#[client_packet(ClientboundPlayPackets::SpawnEntity as i32)]
 pub struct CSpawnEntity {
     entity_id: VarInt,
     #[serde(with = "uuid::serde::compact")]

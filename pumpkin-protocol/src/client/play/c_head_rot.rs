@@ -1,10 +1,12 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x48)]
+#[client_packet(ClientboundPlayPackets::EntityHeadLook as i32)]
 pub struct CHeadRot {
     entity_id: VarInt,
     head_yaw: u8,

@@ -1,9 +1,12 @@
 use pumpkin_core::text::TextComponent;
-use pumpkin_macros::packet;
+
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x4C)]
+#[client_packet(ClientboundPlayPackets::ActionBar as i32)]
 pub struct CActionBar<'a> {
     action_bar: TextComponent<'a>,
 }

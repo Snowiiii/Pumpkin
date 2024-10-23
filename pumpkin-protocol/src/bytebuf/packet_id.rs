@@ -74,13 +74,13 @@ impl<'de> Deserialize<'de> for VarInt {
     }
 }
 
-pub trait Packet {
+pub trait ClientPacketID {
     const PACKET_ID: VarIntType;
 }
 
 impl<P> ClientPacket for P
 where
-    P: Packet + Serialize,
+    P: ClientPacketID + Serialize,
 {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         let mut serializer = serializer::Serializer::new(ByteBuffer::empty());
@@ -95,7 +95,7 @@ where
 
 impl<P> ServerPacket for P
 where
-    P: Packet + DeserializeOwned,
+    P: DeserializeOwned,
 {
     fn read(bytebuf: &mut ByteBuffer) -> Result<P, DeserializerError> {
         let deserializer = deserializer::Deserializer::new(bytebuf);

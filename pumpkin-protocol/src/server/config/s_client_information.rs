@@ -1,9 +1,6 @@
-use pumpkin_macros::packet;
-
 use crate::VarInt;
 
 #[derive(serde::Deserialize)]
-#[packet(0x00)]
 pub struct SClientInformationConfig {
     pub locale: String, // 16
     pub view_distance: i8,

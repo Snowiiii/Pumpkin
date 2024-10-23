@@ -1,8 +1,10 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 
 use crate::{bytebuf::ByteBuffer, ClientPacket};
 
-#[packet(0x07)]
+use super::ClientboundConfigPackets;
+
+#[client_packet(ClientboundConfigPackets::RegistryData as i32)]
 pub struct CRegistryData<'a> {
     registry_id: &'a str,
     entries: &'a [RegistryEntry<'a>],

@@ -1,4 +1,4 @@
-use bytebuf::{packet_id::Packet, ByteBuffer, DeserializerError};
+use bytebuf::{packet_id::ClientPacketID, ByteBuffer, DeserializerError};
 use bytes::Buf;
 use pumpkin_core::text::{style::Style, TextComponent};
 use serde::{Deserialize, Serialize};
@@ -14,7 +14,7 @@ pub mod slot;
 
 /// To current Minecraft protocol
 /// Don't forget to change this when porting
-pub const CURRENT_MC_PROTOCOL: u32 = 767;
+pub const CURRENT_MC_PROTOCOL: u32 = 768;
 
 pub const MAX_PACKET_SIZE: i32 = 2097152;
 
@@ -182,11 +182,11 @@ pub struct RawPacket {
     pub bytebuf: ByteBuffer,
 }
 
-pub trait ClientPacket: Packet {
+pub trait ClientPacket: ClientPacketID {
     fn write(&self, bytebuf: &mut ByteBuffer);
 }
 
-pub trait ServerPacket: Packet + Sized {
+pub trait ServerPacket: Sized {
     fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError>;
 }
 
@@ -205,7 +205,7 @@ pub struct StatusResponse {
 }
 #[derive(Serialize)]
 pub struct Version {
-    /// The current name of the Version (e.g. 1.21.1)
+    /// The current name of the Version (e.g. 1.21.2)
     pub name: String,
     /// The current Protocol Version (e.g. 767)
     pub protocol: u32,
@@ -254,4 +254,37 @@ pub enum NumberFormat<'a> {
     Styled(Style<'a>),
     /// The text to be used as placeholder.
     Fixed(TextComponent<'a>),
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub enum PositionFlag {
+    X,
+    Y,
+    Z,
+    YRot,
+    XRot,
+    DeltaX,
+    DeltaY,
+    DeltaZ,
+    RotateDelta,
+}
+
+impl PositionFlag {
+    fn get_mask(&self) -> i32 {
+        match self {
+            PositionFlag::X => 1 << 0,
+            PositionFlag::Y => 1 << 1,
+            PositionFlag::Z => 1 << 2,
+            PositionFlag::YRot => 1 << 3,
+            PositionFlag::XRot => 1 << 4,
+            PositionFlag::DeltaX => 1 << 5,
+            PositionFlag::DeltaY => 1 << 6,
+            PositionFlag::DeltaZ => 1 << 7,
+            PositionFlag::RotateDelta => 1 << 8,
+        }
+    }
+
+    pub fn get_bitfield(flags: &[PositionFlag]) -> i32 {
+        flags.iter().fold(0, |acc, flag| acc | flag.get_mask())
+    }
 }
