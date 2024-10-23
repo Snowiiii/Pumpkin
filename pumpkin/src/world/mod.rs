@@ -205,14 +205,23 @@ impl World {
         self.broadcast_packet_expect(
             &[player.gameprofile.id],
             // TODO: add velo
-            &CSpawnEntity::from(&player.living_entity.entity),
+            &player.living_entity.entity.get_spawn_entity_packet(None),
         )
         .await;
         // spawn players for our client
         let id = player.gameprofile.id;
-        for (_, existing_player) in self.current_players.lock().await.iter().filter(|c| c.0 != &id) {
+        for (_, existing_player) in self
+            .current_players
+            .lock()
+            .await
+            .iter()
+            .filter(|c| c.0 != &id)
+        {
             let entity = &existing_player.living_entity.entity;
-            player.client.send_packet(&CSpawnEntity::from(entity)).await;
+            player
+                .client
+                .send_packet(&entity.get_spawn_entity_packet(None))
+                .await;
         }
         // entity meta data
         // set skin parts
@@ -350,9 +359,6 @@ impl World {
 
     // Stream the chunks (don't collect them and then do stuff with them)
     pub fn receive_chunks(&self, chunks: Vec<Vector2<i32>>) -> Receiver<Arc<RwLock<ChunkData>>> {
-        if chunks.is_empty() {
-            return vec![];
-        }
         let (sender, receive) = mpsc::channel(chunks.len());
         {
             let level = self.level.clone();

@@ -8,7 +8,7 @@ use pumpkin_core::math::{
     get_section_cord, position::WorldPosition, vector2::Vector2, vector3::Vector3,
 };
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
-use pumpkin_protocol::client::play::{CEntityVelocity, CUpdateEntityPos};
+use pumpkin_protocol::client::play::{CEntityVelocity, CSpawnEntity, CUpdateEntityPos};
 use pumpkin_protocol::{
     client::play::{CSetEntityMetadata, Metadata},
     VarInt,
@@ -22,7 +22,6 @@ use uuid::Uuid;
 pub mod item;
 pub mod living;
 pub mod player;
-mod to_packet;
 
 /// Represents a not living Entity (e.g. Item, Egg, Snowball...)
 pub struct Entity {
@@ -168,9 +167,12 @@ impl Entity {
             }
         }
 
-        let chunks = self.world.get_chunks(chunks).await;
+        if chunks.is_empty() {
+            return;
+        }
+        let mut chunks = self.world.receive_chunks(chunks);
 
-        for chunk in chunks {
+        while let Some(chunk) = chunks.recv().await {
             let chunk = chunk.read().await;
             for future_position in &future_positions {
                 let (section_x, section_z) = (
@@ -375,6 +377,26 @@ impl Entity {
         let mut velocity = self.velocity.load();
         velocity.y -= self.entity_type.gravity();
         self.velocity.store(velocity);
+    }
+
+    pub fn get_spawn_entity_packet(&self, data: Option<i32>) -> CSpawnEntity {
+        let pos = self.pos.load();
+        let velocity = self.velocity.load();
+        CSpawnEntity::new(
+            self.entity_id.into(),
+            self.uuid,
+            (self.entity_type as i32).into(),
+            pos.x,
+            pos.y,
+            pos.z,
+            self.pitch.load(),
+            self.yaw.load(),
+            self.head_yaw.load(),
+            data.unwrap_or(0).into(),
+            velocity.x,
+            velocity.y,
+            velocity.z,
+        )
     }
 }
 

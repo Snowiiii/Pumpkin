@@ -42,32 +42,14 @@ impl ItemEntity {
             });
         }
 
-        let empty = Vector3 {
-            x: 0.,
-            y: 0.,
-            z: 0.,
-        };
-
-        let entity = Arc::new(Entity {
-            entity_id: server.new_entity_id(),
-            uuid: Uuid::new_v4(),
-            entity_type: EntityType::Item,
+        let entity = Arc::new(Entity::new(
+            server.new_entity_id(),
+            Uuid::new_v4(),
             world,
-            pos: AtomicCell::new(empty),
-            block_pos: AtomicCell::new(WorldPosition::default()),
-            chunk_pos: AtomicCell::new(Vector2::default()),
-            sneaking: false.into(),
-            sprinting: false.into(),
-            fall_flying: false.into(),
-            velocity: AtomicCell::new(velocity),
-            on_ground: false.into(),
-            in_ground: false.into(),
-            yaw: 0.0.into(),
-            head_yaw: 0.0.into(),
-            pitch: 0.0.into(),
-            standing_eye_height: 0.0,
-            pose: EntityPose::Standing.into(),
-        });
+            EntityType::Item,
+            0.,
+        ));
+        entity.velocity.store(velocity);
         entity.set_pos(pos.x, pos.y, pos.z);
 
         let item_entity = Self {
@@ -77,18 +59,15 @@ impl ItemEntity {
         };
 
         server
-            .broadcast_packet_all(&CSpawnEntity::from(entity.as_ref()))
+            .broadcast_packet_all(&entity.get_spawn_entity_packet(None))
             .await;
         {
             let server = server.clone();
             tokio::spawn(async move { item_entity.drop_loop(server).await });
         }
+        let metadata = Metadata::new(8, 7.into(), Slot::from(&item_stack));
         server
-            .broadcast_packet_all(&CSetEntityMetadata {
-                entity_id: entity.entity_id.into(),
-                metadata: Metadata::new(8, 7.into(), Slot::from(&item_stack)),
-                end: 255,
-            })
+            .broadcast_packet_all(&CSetEntityMetadata::new(entity.entity_id.into(), metadata))
             .await;
     }
     pub async fn spawn_from_player(

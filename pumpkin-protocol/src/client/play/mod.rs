@@ -236,3 +236,13 @@ pub enum ClientboundPlayPackets {
     CustomReportDetails,
     ServerLinks,
 }
+
+#[cfg(test)]
+mod test {
+    use crate::client::play::ClientboundPlayPackets;
+
+    #[test]
+    fn check() {
+        assert_eq!(ClientboundPlayPackets::CollectItem as i32, 0x6F)
+    }
+}
