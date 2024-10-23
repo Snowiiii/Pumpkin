@@ -1,10 +1,12 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::{SoundCategory, VarInt};
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x68)]
+#[client_packet(ClientboundPlayPackets::SoundEffect as i32)]
 pub struct CSoundEffect {
     sound_id: VarInt,
     // TODO: add sound from name
