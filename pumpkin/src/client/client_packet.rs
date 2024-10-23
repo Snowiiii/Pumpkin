@@ -61,7 +61,8 @@ impl Client {
 
     pub async fn handle_status_request(&self, server: &Server, _status_request: SStatusRequest) {
         log::debug!("Handling status request for id {}", self.id);
-        self.send_packet(&server.get_status()).await;
+        let status = server.get_status();
+        self.send_packet(&status.lock().await.get_status()).await;
     }
 
     pub async fn handle_ping_request(&self, ping_request: SStatusPingRequest) {
@@ -178,7 +179,7 @@ impl Client {
     }
 
     async fn finish_login(&self, profile: &GameProfile) {
-        let packet = CLoginSuccess::new(&profile.id, &profile.name, &profile.properties, false);
+        let packet = CLoginSuccess::new(&profile.id, &profile.name, &profile.properties);
         self.send_packet(&packet).await;
     }
 

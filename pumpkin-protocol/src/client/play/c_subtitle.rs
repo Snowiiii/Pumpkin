@@ -1,9 +1,12 @@
 use pumpkin_core::text::TextComponent;
-use pumpkin_macros::packet;
+
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x63)]
+#[client_packet(ClientboundPlayPackets::SetTitleSubtitle as i32)]
 pub struct CSubtitle<'a> {
     subtitle: TextComponent<'a>,
 }

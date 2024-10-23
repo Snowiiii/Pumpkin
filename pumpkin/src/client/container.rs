@@ -78,7 +78,7 @@ impl Player {
             .state_id
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let packet = CSetContainerContent::new(
-            total_opened_containers,
+            total_opened_containers.into(),
             ((i + 1) as i32).into(),
             &slots,
             &carried_item,
@@ -91,7 +91,9 @@ impl Player {
         let mut inventory = self.inventory.lock().await;
         inventory.total_opened_containers += 1;
         self.client
-            .send_packet(&CCloseContainer::new(inventory.total_opened_containers))
+            .send_packet(&CCloseContainer::new(
+                inventory.total_opened_containers.into(),
+            ))
             .await;
     }
 
@@ -102,7 +104,7 @@ impl Player {
         let (id, value) = window_property.into_tuple();
         self.client
             .send_packet(&CSetContainerProperty::new(
-                self.inventory.lock().await.total_opened_containers,
+                self.inventory.lock().await.total_opened_containers.into(),
                 id,
                 value,
             ))
@@ -131,10 +133,10 @@ impl Player {
         }
 
         if opened_container.is_some() {
-            if packet.window_id != self.inventory.lock().await.total_opened_containers {
+            if packet.window_id.0 != self.inventory.lock().await.total_opened_containers {
                 return Err(InventoryError::ClosedContainerInteract(self.entity_id()));
             }
-        } else if packet.window_id != 0 {
+        } else if packet.window_id.0 != 0 {
             return Err(InventoryError::ClosedContainerInteract(self.entity_id()));
         }
 

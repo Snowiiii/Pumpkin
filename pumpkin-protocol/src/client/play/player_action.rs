@@ -12,4 +12,5 @@ pub enum PlayerAction<'a> {
     UpdateListed(bool),
     UpdateLatency(u8),
     UpdateDisplayName(u8),
+    UpdateListOrder,
 }

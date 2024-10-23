@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
     Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, AsRef, AsMut, Into, Display,
 )]
 #[serde(transparent)]
-pub struct Height(i16);
+pub struct Height(pub i16);
 
 impl Height {
     pub fn from_absolute(height: u16) -> Self {

@@ -50,7 +50,7 @@ pub fn parse_arg_player(
         .as_str();
 
     match s {
-        "@s" if src.is_player() => Ok(src.as_mut_player().unwrap()),
+        "@s" if src.is_player() => Ok(src.as_player().unwrap()),
         "@p" => todo!(),
         "@r" => todo!(),        // todo: implement random player target selector
         "@a" | "@e" => todo!(), // todo: implement all players target selector

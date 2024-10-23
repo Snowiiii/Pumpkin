@@ -14,18 +14,25 @@ use crate::{
 
 use authentication::GameProfile;
 use crossbeam::atomic::AtomicCell;
+use num_traits::FromPrimitive;
 use pumpkin_config::compression::CompressionInfo;
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
-    bytebuf::{packet_id::Packet, DeserializerError},
+    bytebuf::DeserializerError,
     client::{config::CConfigDisconnect, login::CLoginDisconnect, play::CPlayDisconnect},
     packet_decoder::PacketDecoder,
     packet_encoder::PacketEncoder,
     server::{
-        config::{SAcknowledgeFinishConfig, SClientInformationConfig, SKnownPacks, SPluginMessage},
+        config::{
+            SAcknowledgeFinishConfig, SClientInformationConfig, SKnownPacks, SPluginMessage,
+            ServerboundConfigPackets,
+        },
         handshake::SHandShake,
-        login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
-        status::{SStatusPingRequest, SStatusRequest},
+        login::{
+            SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart,
+            ServerboundLoginPackets,
+        },
+        status::{SStatusPingRequest, SStatusRequest, ServerboundStatusPackets},
     },
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
@@ -176,7 +183,7 @@ impl Client {
 
     /// Send a Clientbound Packet to the Client
     pub async fn send_packet<P: ClientPacket>(&self, packet: &P) {
-        log::debug!("Sending packet with id {} to {}", P::PACKET_ID, self.id);
+        //log::debug!("Sending packet with id {} to {}", P::PACKET_ID, self.id);
         // assert!(!self.closed);
         let mut enc = self.enc.lock().await;
         if let Err(error) = enc.append_packet(packet) {
@@ -202,11 +209,13 @@ impl Client {
 
     pub async fn try_send_packet<P: ClientPacket>(&self, packet: &P) -> Result<(), PacketError> {
         // assert!(!self.closed);
+        /*
         log::debug!(
             "Trying to send packet with id {} to {}",
             P::PACKET_ID,
             self.id
         );
+        */
 
         let mut enc = self.enc.lock().await;
         enc.append_packet(packet)?;
@@ -275,12 +284,12 @@ impl Client {
         log::debug!("Handling handshake group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
-            SHandShake::PACKET_ID => {
+            0 => {
                 self.handle_handshake(SHandShake::read(bytebuf)?).await;
             }
             _ => {
                 log::error!(
-                    "Failed to handle packet id {} while in Handshake state",
+                    "Failed to handle packet id {} in Handshake state",
                     packet.id.0
                 );
             }
@@ -295,21 +304,23 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling status group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
-        match packet.id.0 {
-            SStatusRequest::PACKET_ID => {
-                self.handle_status_request(server, SStatusRequest::read(bytebuf)?)
-                    .await;
-            }
-            SStatusPingRequest::PACKET_ID => {
-                self.handle_ping_request(SStatusPingRequest::read(bytebuf)?)
-                    .await;
-            }
-            _ => {
-                log::error!(
-                    "Failed to handle packet id {} while in Status state",
-                    packet.id.0
-                );
-            }
+        if let Some(packet) = ServerboundStatusPackets::from_i32(packet.id.0) {
+            match packet {
+                ServerboundStatusPackets::StatusRequest => {
+                    self.handle_status_request(server, SStatusRequest::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundStatusPackets::PingRequest => {
+                    self.handle_ping_request(SStatusPingRequest::read(bytebuf)?)
+                        .await;
+                }
+            };
+        } else {
+            log::error!(
+                "Failed to handle client packet id {:#04x} in Status State",
+                packet.id.0
+            );
+            return Err(DeserializerError::UnknownPacket);
         };
         Ok(())
     }
@@ -321,29 +332,32 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling login group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
-        match packet.id.0 {
-            SLoginStart::PACKET_ID => {
-                self.handle_login_start(server, SLoginStart::read(bytebuf)?)
-                    .await;
-            }
-            SEncryptionResponse::PACKET_ID => {
-                self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf)?)
-                    .await;
-            }
-            SLoginPluginResponse::PACKET_ID => {
-                self.handle_plugin_response(SLoginPluginResponse::read(bytebuf)?)
-                    .await;
-            }
-            SLoginAcknowledged::PACKET_ID => {
-                self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf)?)
-                    .await;
-            }
-            _ => {
-                log::error!(
-                    "Failed to handle packet id {} while in Login state",
-                    packet.id.0
-                );
-            }
+        if let Some(packet) = ServerboundLoginPackets::from_i32(packet.id.0) {
+            match packet {
+                ServerboundLoginPackets::LoginStart => {
+                    self.handle_login_start(server, SLoginStart::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundLoginPackets::EncryptionResponse => {
+                    self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundLoginPackets::PluginResponse => {
+                    self.handle_plugin_response(SLoginPluginResponse::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundLoginPackets::LoginAcknowledged => {
+                    self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundLoginPackets::CookieResponse => {}
+            };
+        } else {
+            log::error!(
+                "Failed to handle client packet id {:#04x} in Login State",
+                packet.id.0
+            );
+            return Ok(());
         };
         Ok(())
     }
@@ -355,28 +369,35 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling config group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
-        match packet.id.0 {
-            SClientInformationConfig::PACKET_ID => {
-                self.handle_client_information_config(SClientInformationConfig::read(bytebuf)?)
-                    .await;
-            }
-            SPluginMessage::PACKET_ID => {
-                self.handle_plugin_message(SPluginMessage::read(bytebuf)?)
-                    .await;
-            }
-            SAcknowledgeFinishConfig::PACKET_ID => {
-                self.handle_config_acknowledged(&SAcknowledgeFinishConfig::read(bytebuf)?);
-            }
-            SKnownPacks::PACKET_ID => {
-                self.handle_known_packs(server, SKnownPacks::read(bytebuf)?)
-                    .await;
-            }
-            _ => {
-                log::error!(
-                    "Failed to handle packet id {} while in Config state",
-                    packet.id.0
-                );
-            }
+        if let Some(packet) = ServerboundConfigPackets::from_i32(packet.id.0) {
+            #[expect(clippy::match_same_arms)]
+            match packet {
+                ServerboundConfigPackets::ClientInformation => {
+                    self.handle_client_information_config(SClientInformationConfig::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundConfigPackets::CookieResponse => {}
+                ServerboundConfigPackets::PluginMessage => {
+                    self.handle_plugin_message(SPluginMessage::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundConfigPackets::AcknowledgedFinish => {
+                    self.handle_config_acknowledged(&SAcknowledgeFinishConfig::read(bytebuf)?);
+                }
+                ServerboundConfigPackets::KeepAlive => {}
+                ServerboundConfigPackets::Pong => {}
+                ServerboundConfigPackets::ResourcePackResponse => {}
+                ServerboundConfigPackets::KnownPacks => {
+                    self.handle_known_packs(server, SKnownPacks::read(bytebuf)?)
+                        .await;
+                }
+            };
+        } else {
+            log::error!(
+                "Failed to handle client packet id {:#04x} in Config State",
+                packet.id.0
+            );
+            return Err(DeserializerError::UnknownPacket);
         };
         Ok(())
     }
@@ -393,7 +414,7 @@ impl Client {
                     self.add_packet(packet).await;
                     return true;
                 }
-                Ok(None) => log::debug!("Waiting for more data to complete packet..."),
+                Ok(None) => (), //log::debug!("Waiting for more data to complete packet..."),
                 Err(err) => log::warn!(
                     "Failed to decode packet for id {}: {}",
                     self.id,
@@ -407,7 +428,7 @@ impl Client {
             let bytes_read = self.connection_reader.lock().await.read_buf(&mut buf).await;
             match bytes_read {
                 Ok(cnt) => {
-                    log::debug!("Read {} bytes", cnt);
+                    //log::debug!("Read {} bytes", cnt);
                     if cnt == 0 {
                         self.close();
                         return false;
@@ -428,7 +449,7 @@ impl Client {
 
     /// Kicks the Client with a reason depending on the connection state
     pub async fn kick(&self, reason: &str) {
-        log::info!("Kicking for id {} for {}", self.id, reason);
+        log::info!("Kicking Client id {} for {}", self.id, reason);
         match self.connection_state.load() {
             ConnectionState::Login => {
                 self.try_send_packet(&CLoginDisconnect::new(

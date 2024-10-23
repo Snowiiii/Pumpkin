@@ -388,7 +388,7 @@ impl Player {
         ) */
     }
 
-    pub async fn handle_client_information_play(&self, client_information: SClientInformationPlay) {
+    pub async fn handle_client_information(&self, client_information: SClientInformationPlay) {
         if let (Some(main_hand), Some(chat_mode)) = (
             Hand::from_i32(client_information.main_hand.into()),
             ChatMode::from_i32(client_information.chat_mode.into()),
@@ -690,7 +690,7 @@ impl Player {
             }
             self.open_container.store(None);
         }
-        let Some(_window_type) = WindowType::from_u8(packet.window_id) else {
+        let Some(_window_type) = WindowType::from_i32(packet.window_id.0) else {
             self.kick(TextComponent::text("Invalid window ID")).await;
             return;
         };

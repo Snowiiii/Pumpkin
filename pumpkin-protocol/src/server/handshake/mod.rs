@@ -1,11 +1,8 @@
-use pumpkin_macros::packet;
-
 use crate::{
     bytebuf::{ByteBuffer, DeserializerError},
     ConnectionState, ServerPacket, VarInt,
 };
 
-#[packet(0x00)]
 pub struct SHandShake {
     pub protocol_version: VarInt,
     pub server_address: String, // 255

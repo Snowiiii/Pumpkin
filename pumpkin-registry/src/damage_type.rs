@@ -4,25 +4,25 @@ use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct DamageType {
-    message_id: String,
-    scaling: String,
-    exhaustion: f32,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    effects: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     death_message_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    effects: Option<String>,
+    exhaustion: f32,
+    message_id: String,
+    scaling: String,
 }
 
 const NAMES: &[&str] = &[
     "arrow",
     "bad_respawn_point",
     "cactus",
-    "cramming",
     "campfire",
     "cramming",
     "dragon_breath",
     "drown",
     "dry_out",
+    "ender_pearl",
     "explosion",
     "fall",
     "falling_anvil",
@@ -40,6 +40,7 @@ const NAMES: &[&str] = &[
     "indirect_magic",
     "lava",
     "lightning_bolt",
+    "mace_smash",
     "magic",
     "mob_attack",
     "mob_attack_no_aggro",
@@ -59,6 +60,7 @@ const NAMES: &[&str] = &[
     "thrown",
     "trident",
     "unattributed_fireball",
+    "wind_charge",
     "wither",
     "wither_skull",
 ];

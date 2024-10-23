@@ -118,20 +118,21 @@ impl RCONClient {
             }
             ServerboundPacket::ExecCommand => {
                 if self.logged_in {
-                    let mut output = Vec::new();
+                    let output = tokio::sync::Mutex::new(Vec::new());
                     let dispatcher = server.command_dispatcher.clone();
                     dispatcher
                         .handle_command(
-                            &mut crate::commands::CommandSender::Rcon(&mut output),
+                            &mut crate::commands::CommandSender::Rcon(&output),
                             server,
                             packet.get_body(),
                         )
                         .await;
-                    for line in output {
+                    let output = output.lock().await;
+                    for line in output.iter() {
                         if config.logging.log_commands {
                             log::info!("RCON ({}): {}", self.address, line);
                         }
-                        self.send(ClientboundPacket::Output, packet.get_id(), &line)
+                        self.send(ClientboundPacket::Output, packet.get_id(), line)
                             .await?;
                     }
                 }

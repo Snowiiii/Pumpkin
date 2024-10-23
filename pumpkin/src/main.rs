@@ -1,7 +1,6 @@
 #![deny(clippy::all)]
 #![warn(clippy::pedantic)]
 // #![warn(clippy::restriction)]
-#![warn(clippy::nursery)]
 #![warn(clippy::cargo)]
 // REMOVE SOME WHEN RELEASE
 #![expect(clippy::cargo_common_metadata)]
@@ -30,6 +29,7 @@ use log::LevelFilter;
 use client::Client;
 use server::{ticker::Ticker, Server};
 use std::io::{self};
+use tokio::io::{AsyncBufReadExt, BufReader};
 
 // Setup some tokens to allow us to identify which event is for which socket.
 
@@ -140,11 +140,14 @@ async fn main() -> io::Result<()> {
     if use_console {
         let server = server.clone();
         tokio::spawn(async move {
-            let stdin = std::io::stdin();
+            let stdin = tokio::io::stdin();
+            let mut reader = BufReader::new(stdin);
             loop {
                 let mut out = String::new();
-                stdin
+
+                reader
                     .read_line(&mut out)
+                    .await
                     .expect("Failed to read console line");
 
                 if !out.is_empty() {
@@ -168,7 +171,7 @@ async fn main() -> io::Result<()> {
             ticker.run(&server).await;
         });
     }
-    let mut unique_id = 0;
+    let mut player_count = 0;
     loop {
         // Asynchronously wait for an inbound socket.
         let (connection, address) = listener.accept().await?;
@@ -177,8 +180,8 @@ async fn main() -> io::Result<()> {
             log::warn!("failed to set TCP_NODELAY {e}");
         }
 
-        unique_id += 1;
-        let id = unique_id;
+        player_count += 1;
+        let id = player_count;
 
         log::info!(
             "Accepted connection from: {} (id: {})",
@@ -220,7 +223,9 @@ async fn main() -> io::Result<()> {
                     };
                 }
                 player.remove().await;
+                server.remove_player().await;
             }
         });
+        player_count -= 1;
     }
 }

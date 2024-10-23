@@ -9,22 +9,21 @@ pumpkin-macros = { path = "../pumpkin-macros" }
 pumpkin-world = { path = "../pumpkin-world" }
 pumpkin-core = { path = "../pumpkin-core" }
 
+uuid.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+itertools.workspace = true
+log.workspace = true
+
+num-traits.workspace = true
+num-derive.workspace = true
+
 bytes = "1.7"
 
-uuid.workspace = true
-
-serde.workspace = true
-
 flate2 = "1.0"
-
-thiserror = "1.0"
-log.workspace = true
-num-traits = "0.2"
-num-derive = "0.4"
 
 # encryption
 aes = "0.8.4"
 cfb8 = "0.8.1"
 
-itertools.workspace = true
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }

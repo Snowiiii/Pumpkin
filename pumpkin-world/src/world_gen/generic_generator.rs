@@ -39,8 +39,8 @@ impl<B: BiomeGenerator, T: PerlinTerrainGenerator> WorldGenerator for GenericGen
         let noise_value = self.perlin.get([at.x as f64 / 16.0, at.z as f64 / 16.0]);
 
         let base_height = 64.0;
-        let height_variation = 16.0;
-        let chunk_height = noise_value.mul_add(height_variation, base_height) as i32;
+        let chunk_height =
+            noise_value.mul_add(self.terrain_generator.height_variation(), base_height) as i16;
 
         for x in 0..16u8 {
             for z in 0..16u8 {
@@ -53,22 +53,20 @@ impl<B: BiomeGenerator, T: PerlinTerrainGenerator> WorldGenerator for GenericGen
                 );
 
                 // Iterate from the highest block to the lowest, in order to minimize the heightmap updates
-                for y in (WORLD_LOWEST_Y..chunk_height as i16).rev() {
+                for y in (WORLD_LOWEST_Y..chunk_height).rev() {
                     let coordinates = ChunkRelativeBlockCoordinates {
                         x: x.into(),
                         y: y.into(),
                         z: z.into(),
                     };
 
-                    blocks.set_block(
+                    //coordinates,
+                    self.terrain_generator.generate_block(
                         coordinates,
-                        self.terrain_generator
-                            .generate_block(
-                                coordinates.with_chunk_coordinates(at),
-                                chunk_height as i16,
-                                biome,
-                            )
-                            .into(),
+                        coordinates.with_chunk_coordinates(at),
+                        &mut blocks,
+                        chunk_height,
+                        biome,
                     );
                 }
             }

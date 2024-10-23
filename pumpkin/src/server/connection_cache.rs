@@ -10,7 +10,7 @@ use base64::{engine::general_purpose, Engine as _};
 use pumpkin_config::{BasicConfiguration, BASIC_CONFIG};
 use pumpkin_protocol::{
     client::{config::CPluginMessage, status::CStatusResponse},
-    Players, Sample, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
+    Players, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
 };
 
 use super::CURRENT_MC_VERSION;
@@ -39,7 +39,7 @@ fn load_icon_from_bytes(png_data: &[u8]) -> Result<String, Box<dyn error::Error>
 }
 
 pub struct CachedStatus {
-    _status_response: StatusResponse,
+    status_response: StatusResponse,
     // We cache the json response here so we don't parse it every time someone makes a Status request.
     // Keep in mind that we must parse this again, when the StatusResponse changes which usually happen when a player joins or leaves
     status_response_json: String,
@@ -76,13 +76,34 @@ impl CachedStatus {
             .expect("Failed to parse Status response into JSON");
 
         Self {
-            _status_response: status_response,
+            status_response,
             status_response_json,
         }
     }
 
     pub fn get_status(&self) -> CStatusResponse<'_> {
         CStatusResponse::new(&self.status_response_json)
+    }
+
+    // TODO: Player samples
+    pub fn add_player(&mut self) {
+        let status_response = &mut self.status_response;
+        if let Some(players) = &mut status_response.players {
+            players.online += 1;
+        }
+
+        self.status_response_json = serde_json::to_string(&status_response)
+            .expect("Failed to parse Status response into JSON");
+    }
+
+    pub fn remove_player(&mut self) {
+        let status_response = &mut self.status_response;
+        if let Some(players) = &mut status_response.players {
+            players.online -= 1;
+        }
+
+        self.status_response_json = serde_json::to_string(&status_response)
+            .expect("Failed to parse Status response into JSON");
     }
 
     pub fn build_response(config: &BasicConfiguration) -> StatusResponse {
@@ -112,14 +133,17 @@ impl CachedStatus {
             players: Some(Players {
                 max: config.max_players,
                 online: 0,
-                sample: vec![Sample {
-                    name: String::new(),
-                    id: String::new(),
-                }],
+                sample: vec![],
             }),
             description: config.motd.clone(),
             favicon: icon,
             enforce_secure_chat: false,
         }
+    }
+}
+
+impl Default for CachedStatus {
+    fn default() -> Self {
+        Self::new()
     }
 }

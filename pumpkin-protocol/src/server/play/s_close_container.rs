@@ -1,8 +1,8 @@
-use pumpkin_macros::packet;
 use serde::Deserialize;
 
+use crate::VarInt;
+
 #[derive(Deserialize)]
-#[packet(0x0F)]
 pub struct SCloseContainer {
-    pub window_id: u8,
+    pub window_id: VarInt,
 }

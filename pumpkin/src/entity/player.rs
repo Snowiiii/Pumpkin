@@ -8,7 +8,7 @@ use std::{
 
 use crossbeam::atomic::AtomicCell;
 use num_derive::FromPrimitive;
-use num_traits::ToPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 use pumpkin_core::{
     math::{boundingbox::BoundingBox, position::WorldPosition, vector2::Vector2, vector3::Vector3},
     text::TextComponent,
@@ -17,29 +17,28 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_protocol::{
-    bytebuf::packet_id::Packet,
+    bytebuf::DeserializerError,
     client::play::{
         CGameEvent, CKeepAlive, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSetHealth,
         CSyncPlayerPosition, CSystemChatMessage, GameEvent, PlayerAction,
     },
     server::play::{
-        SChatCommand, SChatMessage, SClickContainer, SClientInformationPlay, SConfirmTeleport,
-        SInteract, SPlayPingRequest, SPlayerAbilities, SPlayerAction, SPlayerCommand,
-        SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
-        SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
+        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SPlayerAbilities,
+        SPlayerAction, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetHeldItem,
+        SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn, ServerboundPlayPackets,
     },
     RawPacket, ServerPacket, VarInt,
 };
 use tokio::sync::Mutex;
 
-use pumpkin_protocol::server::play::{SCloseContainer, SKeepAlive};
+use pumpkin_protocol::server::play::SKeepAlive;
 use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
 
 use super::Entity;
 use crate::{
     client::{authentication::GameProfile, Client, PlayerConfig},
     server::Server,
-    world::{player_chunker::chunk_section_from_pos, World},
+    world::World,
 };
 use crate::{error::PumpkinError, world::player_chunker::get_view_distance};
 
@@ -154,14 +153,27 @@ impl Player {
     pub async fn remove(&self) {
         self.living_entity.entity.world.remove_player(self).await;
 
-        let watched = chunk_section_from_pos(&self.living_entity.entity.block_pos.load());
+        let watched = self.watched_section.load();
         let view_distance = i32::from(get_view_distance(self).await);
         let cylindrical = Cylindrical::new(Vector2::new(watched.x, watched.z), view_distance);
+        let all_chunks = cylindrical.all_chunks_within();
+
+        log::debug!(
+            "Removing player id {}, unwatching {} chunks",
+            self.client.id,
+            all_chunks.len()
+        );
         self.living_entity
             .entity
             .world
-            .mark_chunks_as_not_watched(&cylindrical.all_chunks_within())
+            .mark_chunks_as_not_watched(&all_chunks)
             .await;
+
+        log::debug!(
+            "Removed player id {} ({} chunks remain cached)",
+            self.client.id,
+            self.living_entity.entity.world.get_cached_chunk_len().await
+        );
     }
 
     pub async fn tick(&self) {
@@ -221,7 +233,7 @@ impl Player {
     }
 
     /// yaw and pitch in degrees
-    pub async fn teleport(&self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
+    pub async fn teleport(&self, position: Vector3<f64>, yaw: f32, pitch: f32) {
         // this is the ultra special magic code used to create the teleport id
         // This returns the old value
         let i = self
@@ -233,18 +245,17 @@ impl Player {
         }
         let teleport_id = i + 1;
         let entity = &self.living_entity.entity;
-        entity.set_pos(x, y, z);
+        entity.set_pos(position.x, position.y, position.z);
         entity.set_rotation(yaw, pitch);
-        *self.awaiting_teleport.lock().await = Some((teleport_id.into(), Vector3::new(x, y, z)));
+        *self.awaiting_teleport.lock().await = Some((teleport_id.into(), position));
         self.client
             .send_packet(&CSyncPlayerPosition::new(
-                x,
-                y,
-                z,
+                teleport_id.into(),
+                position,
+                Vector3::new(0.0, 0.0, 0.0),
                 yaw,
                 pitch,
-                0,
-                teleport_id.into(),
+                &[],
             ))
             .await;
     }
@@ -281,7 +292,7 @@ impl Player {
             .await
             .unwrap_or_else(|_| self.client.close());
         log::info!(
-            "Kicked {} for {}",
+            "Kicked Player {} for {}",
             self.gameprofile.name,
             reason.to_pretty_console()
         );
@@ -361,95 +372,109 @@ impl Player {
         server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), Box<dyn PumpkinError>> {
-        /*
-                log::debug!(
-                    "Handling player packet with id {} for {}",
-                    packet.id.0,
-                    self.client.id
-                );
-        */
-
         let bytebuf = &mut packet.bytebuf;
-        match packet.id.0 {
-            SConfirmTeleport::PACKET_ID => {
-                self.handle_confirm_teleport(SConfirmTeleport::read(bytebuf)?)
-                    .await;
-            }
-            SChatCommand::PACKET_ID => {
-                self.handle_chat_command(server, SChatCommand::read(bytebuf)?)
-                    .await;
-            }
-            SPlayerPosition::PACKET_ID => {
-                self.handle_position(SPlayerPosition::read(bytebuf)?).await;
-            }
-            SPlayerPositionRotation::PACKET_ID => {
-                self.handle_position_rotation(SPlayerPositionRotation::read(bytebuf)?)
-                    .await;
-            }
-            SPlayerRotation::PACKET_ID => {
-                self.handle_rotation(SPlayerRotation::read(bytebuf)?).await;
-            }
-            SSetPlayerGround::PACKET_ID => {
-                self.handle_player_ground(&SSetPlayerGround::read(bytebuf)?);
-            }
-            SPlayerCommand::PACKET_ID => {
-                self.handle_player_command(SPlayerCommand::read(bytebuf)?)
-                    .await;
-            }
-            SSwingArm::PACKET_ID => {
-                self.handle_swing_arm(SSwingArm::read(bytebuf)?).await;
-            }
-            SChatMessage::PACKET_ID => {
-                self.handle_chat_message(SChatMessage::read(bytebuf)?).await;
-            }
-            SClientInformationPlay::PACKET_ID => {
-                self.handle_client_information_play(SClientInformationPlay::read(bytebuf)?)
-                    .await;
-            }
-            SInteract::PACKET_ID => {
-                self.handle_interact(server, SInteract::read(bytebuf)?)
-                    .await;
-            }
-            SPlayerAction::PACKET_ID => {
-                self.handle_player_action(SPlayerAction::read(bytebuf)?)
-                    .await;
-            }
-            SPlayerAbilities::PACKET_ID => {
-                self.handle_player_abilities(SPlayerAbilities::read(bytebuf)?)
-                    .await;
-            }
-            SUseItemOn::PACKET_ID => {
-                self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await;
-            }
-            SUseItem::PACKET_ID => {
-                self.handle_use_item(&SUseItem::read(bytebuf)?);
-            }
-            SSetHeldItem::PACKET_ID => {
-                self.handle_set_held_item(SSetHeldItem::read(bytebuf)?)
-                    .await;
-            }
-            SSetCreativeSlot::PACKET_ID => {
-                self.handle_set_creative_slot(SSetCreativeSlot::read(bytebuf)?)
-                    .await?;
-            }
-            SPlayPingRequest::PACKET_ID => {
-                self.handle_play_ping_request(SPlayPingRequest::read(bytebuf)?)
-                    .await;
-            }
-            SClickContainer::PACKET_ID => {
-                self.handle_click_container(server, SClickContainer::read(bytebuf)?)
-                    .await?;
-            }
-            SCloseContainer::PACKET_ID => {
-                self.handle_close_container(server, SCloseContainer::read(bytebuf)?)
-                    .await;
-            }
-            SKeepAlive::PACKET_ID => {
-                self.handle_keep_alive(SKeepAlive::read(bytebuf)?).await;
-            }
-            _ => {
-                log::error!("Failed to handle player packet id {:#04x}", packet.id.0);
-            }
+        if let Some(packet) = ServerboundPlayPackets::from_i32(packet.id.0) {
+            #[expect(clippy::match_same_arms)]
+            match packet {
+                ServerboundPlayPackets::TeleportConfirm => {
+                    self.handle_confirm_teleport(SConfirmTeleport::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundPlayPackets::QueryBlockNbt => {}
+                ServerboundPlayPackets::SelectBundleItem => {}
+                ServerboundPlayPackets::SetDifficulty => {}
+                ServerboundPlayPackets::ChatAck => {}
+                ServerboundPlayPackets::ChatCommandUnsigned => {}
+                ServerboundPlayPackets::ChatCommand => {
+                    self.handle_chat_command(server, SChatCommand::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundPlayPackets::ChatMessage => {
+                    self.handle_chat_message(SChatMessage::read(bytebuf)?).await;
+                }
+                ServerboundPlayPackets::ChatSessionUpdate => {}
+                ServerboundPlayPackets::ChunkBatchAck => {}
+                ServerboundPlayPackets::ClientStatus => {}
+                ServerboundPlayPackets::ClientTickEnd => {}
+                ServerboundPlayPackets::ClientSettings => {
+                    self.handle_client_information(SClientInformationPlay::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundPlayPackets::TabComplete => {}
+                ServerboundPlayPackets::ConfigurationAck => {}
+                ServerboundPlayPackets::ClickWindowButton => {}
+                ServerboundPlayPackets::ClickWindow => {}
+                ServerboundPlayPackets::CloseWindow => {}
+                ServerboundPlayPackets::SlotStateChange => {}
+                ServerboundPlayPackets::CookieResponse => {}
+                ServerboundPlayPackets::PluginMessage => {}
+                ServerboundPlayPackets::DebugSampleSubscription => {}
+                ServerboundPlayPackets::EditBook => {}
+                ServerboundPlayPackets::QueryEntityNbt => {}
+                ServerboundPlayPackets::InteractEntity => {}
+                ServerboundPlayPackets::GenerateStructure => {}
+                ServerboundPlayPackets::KeepAlive => {
+                    self.handle_keep_alive(SKeepAlive::read(bytebuf)?).await;
+                }
+                ServerboundPlayPackets::LockDifficulty => {}
+                ServerboundPlayPackets::PlayerPosition => {
+                    self.handle_position(SPlayerPosition::read(bytebuf)?).await;
+                }
+                ServerboundPlayPackets::PlayerPositionAndRotation => {
+                    self.handle_position_rotation(SPlayerPositionRotation::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundPlayPackets::PlayerRotation => {
+                    self.handle_rotation(SPlayerRotation::read(bytebuf)?).await;
+                }
+                ServerboundPlayPackets::PlayerFlying => {
+                    self.handle_player_ground(&SSetPlayerGround::read(bytebuf)?);
+                }
+                ServerboundPlayPackets::VehicleMove => {}
+                ServerboundPlayPackets::SteerBoat => {}
+                ServerboundPlayPackets::PickItem => {}
+                ServerboundPlayPackets::DebugPing => {}
+                ServerboundPlayPackets::CraftRecipeRequest => {}
+                ServerboundPlayPackets::PlayerAbilities => {
+                    self.handle_player_abilities(SPlayerAbilities::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundPlayPackets::PlayerDigging => {
+                    self.handle_player_action(SPlayerAction::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundPlayPackets::EntityAction => {}
+                ServerboundPlayPackets::PlayerInput => {}
+                ServerboundPlayPackets::Pong => {}
+                ServerboundPlayPackets::SetRecipeBookState => {}
+                ServerboundPlayPackets::SetDisplayedRecipe => {}
+                ServerboundPlayPackets::NameItem => {}
+                ServerboundPlayPackets::ResourcePackStatus => {}
+                ServerboundPlayPackets::AdvancementTab => {}
+                ServerboundPlayPackets::SelectTrade => {}
+                ServerboundPlayPackets::SetBeaconEffect => {}
+                ServerboundPlayPackets::HeldItemChange => {
+                    self.handle_set_held_item(SSetHeldItem::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundPlayPackets::UpdateCommandBlock => {}
+                ServerboundPlayPackets::UpdateCommandBlockMinecart => {}
+                ServerboundPlayPackets::CreativeInventoryAction => {}
+                ServerboundPlayPackets::UpdateJigsawBlock => {}
+                ServerboundPlayPackets::UpdateStructureBlock => {}
+                ServerboundPlayPackets::UpdateSign => {}
+                ServerboundPlayPackets::Animation => {
+                    self.handle_swing_arm(SSwingArm::read(bytebuf)?).await;
+                }
+                ServerboundPlayPackets::Spectate => {}
+                ServerboundPlayPackets::PlayerBlockPlacement => {
+                    self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await;
+                }
+                ServerboundPlayPackets::UseItem => self.handle_use_item(&SUseItem::read(bytebuf)?),
+            };
+        } else {
+            log::error!("Failed to handle player packet id {:#04x}", packet.id.0);
+            return Err(Box::new(DeserializerError::UnknownPacket));
         };
         Ok(())
     }
