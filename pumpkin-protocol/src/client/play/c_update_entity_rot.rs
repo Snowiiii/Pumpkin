@@ -1,10 +1,12 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x30)]
+#[client_packet(ClientboundPlayPackets::EntityRotation as i32)]
 pub struct CUpdateEntityRot {
     entity_id: VarInt,
     yaw: u8,

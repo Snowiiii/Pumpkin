@@ -1,7 +1,9 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
+
+use super::ClientboundPlayPackets;
 #[derive(Serialize)]
-#[packet(0x14)]
+#[client_packet(ClientboundPlayPackets::WindowProperty as i32)]
 pub struct CSetContainerProperty {
     window_id: u8,
     property: i16,

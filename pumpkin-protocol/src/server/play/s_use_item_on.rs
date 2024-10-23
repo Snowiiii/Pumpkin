@@ -1,11 +1,9 @@
 use pumpkin_core::math::position::WorldPosition;
-use pumpkin_macros::packet;
 use serde::Deserialize;
 
 use crate::VarInt;
 
 #[derive(Deserialize)]
-#[packet(0x38)]
 pub struct SUseItemOn {
     pub hand: VarInt,
     pub location: WorldPosition,

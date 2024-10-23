@@ -1,8 +1,10 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x12)]
+#[client_packet(ClientboundPlayPackets::CloseWindow as i32)]
 pub struct CCloseContainer {
     window_id: u8,
 }

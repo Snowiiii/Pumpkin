@@ -1,8 +1,10 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 
 use crate::{bytebuf::ByteBuffer, ClientPacket, Property};
 
-#[packet(0x02)]
+use super::ClientboundLoginPackets;
+
+#[client_packet(ClientboundLoginPackets::LoginSuccess as i32)]
 pub struct CLoginSuccess<'a> {
     pub uuid: &'a uuid::Uuid,
     pub username: &'a str, // 16

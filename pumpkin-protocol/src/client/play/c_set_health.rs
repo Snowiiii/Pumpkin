@@ -1,10 +1,12 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x5D)]
+#[client_packet(ClientboundPlayPackets::UpdateHealth as i32)]
 pub struct CSetHealth {
     health: f32,
     food: VarInt,

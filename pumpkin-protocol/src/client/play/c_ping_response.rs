@@ -1,8 +1,10 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x36)]
+#[client_packet(ClientboundPlayPackets::Ping as i32)]
 pub struct CPingResponse {
     payload: i64,
 }

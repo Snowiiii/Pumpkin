@@ -20,6 +20,7 @@ mod s_swing_arm;
 mod s_use_item;
 mod s_use_item_on;
 
+use num_derive::FromPrimitive;
 pub use s_chat_command::*;
 pub use s_chat_message::*;
 pub use s_click_container::*;
@@ -41,3 +42,70 @@ pub use s_set_held_item::*;
 pub use s_swing_arm::*;
 pub use s_use_item::*;
 pub use s_use_item_on::*;
+
+#[derive(FromPrimitive)]
+pub enum ServerboundPlayPackets {
+    TeleportConfirm,
+    QueryBlockNbt,
+    SelectBundleItem,
+    SetDifficulty,
+    ChatAck,
+    ChatCommandUnsigned,
+    ChatCommand,
+    ChatMessage,
+    ChatSessionUpdate,
+    ChunkBatchAck,
+    ClientStatus,
+    ClientTickEnd,
+    ClientSettings,
+    TabComplete,
+    ConfigurationAck,
+    ClickWindowButton,
+    ClickWindow,
+    CloseWindow,
+    SlotStateChange,
+    CookieResponse,
+    PluginMessage,
+    DebugSampleSubscription,
+    EditBook,
+    QueryEntityNbt,
+    InteractEntity,
+    GenerateStructure,
+    KeepAlive,
+    LockDifficulty,
+    PlayerPosition,
+    PlayerPositionAndRotation,
+    PlayerRotation,
+    PlayerFlying,
+
+    VehicleMove,
+    SteerBoat,
+    PickItem,
+    DebugPing,
+    CraftRecipeRequest,
+    PlayerAbilities,
+    PlayerDigging,
+    EntityAction,
+    PlayerInput,
+    Pong,
+    SetRecipeBookState,
+    SetDisplayedRecipe,
+    NameItem,
+    ResourcePackStatus,
+    AdvancementTab,
+    SelectTrade,
+    SetBeaconEffect,
+    HeldItemChange,
+
+    UpdateCommandBlock,
+    UpdateCommandBlockMinecart,
+    CreativeInventoryAction,
+    UpdateJigsawBlock,
+    UpdateStructureBlock,
+    UpdateSign,
+
+    Animation,
+    Spectate,
+    PlayerBlockPlacement,
+    UseItem,
+}

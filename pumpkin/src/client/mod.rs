@@ -14,18 +14,25 @@ use crate::{
 
 use authentication::GameProfile;
 use crossbeam::atomic::AtomicCell;
+use num_traits::FromPrimitive;
 use pumpkin_config::compression::CompressionInfo;
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
-    bytebuf::{packet_id::Packet, DeserializerError},
+    bytebuf::DeserializerError,
     client::{config::CConfigDisconnect, login::CLoginDisconnect, play::CPlayDisconnect},
     packet_decoder::PacketDecoder,
     packet_encoder::PacketEncoder,
     server::{
-        config::{SAcknowledgeFinishConfig, SClientInformationConfig, SKnownPacks, SPluginMessage},
+        config::{
+            SAcknowledgeFinishConfig, SClientInformationConfig, SKnownPacks, SPluginMessage,
+            ServerboundConfigPackets,
+        },
         handshake::SHandShake,
-        login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
-        status::{SStatusPingRequest, SStatusRequest},
+        login::{
+            SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart,
+            ServerboundLoginPackets,
+        },
+        status::{SStatusPingRequest, SStatusRequest, ServerboundStatusPackets},
     },
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
@@ -276,12 +283,12 @@ impl Client {
         log::debug!("Handling handshake group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
-            SHandShake::PACKET_ID => {
+            0 => {
                 self.handle_handshake(SHandShake::read(bytebuf)?).await;
             }
             _ => {
                 log::error!(
-                    "Failed to handle packet id {} while in Handshake state",
+                    "Failed to handle packet id {} in Handshake state",
                     packet.id.0
                 );
             }
@@ -296,20 +303,24 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling status group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
-        match packet.id.0 {
-            SStatusRequest::PACKET_ID => {
-                self.handle_status_request(server, SStatusRequest::read(bytebuf)?)
-                    .await;
-            }
-            SStatusPingRequest::PACKET_ID => {
-                self.handle_ping_request(SStatusPingRequest::read(bytebuf)?)
-                    .await;
-            }
-            _ => {
+        let packet = match ServerboundStatusPackets::from_i32(packet.id.0) {
+            Some(packet) => packet,
+            None => {
                 log::error!(
-                    "Failed to handle packet id {} while in Status state",
+                    "Failed to handle client packet id {:#04x} in Status State",
                     packet.id.0
                 );
+                return Ok(());
+            }
+        };
+        match packet {
+            ServerboundStatusPackets::StatusRequest => {
+                self.handle_status_request(server, SStatusRequest::read(bytebuf)?)
+                    .await
+            }
+            ServerboundStatusPackets::PingRequest => {
+                self.handle_ping_request(SStatusPingRequest::read(bytebuf)?)
+                    .await
             }
         };
         Ok(())
@@ -322,29 +333,34 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling login group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
-        match packet.id.0 {
-            SLoginStart::PACKET_ID => {
-                self.handle_login_start(server, SLoginStart::read(bytebuf)?)
-                    .await;
-            }
-            SEncryptionResponse::PACKET_ID => {
-                self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf)?)
-                    .await;
-            }
-            SLoginPluginResponse::PACKET_ID => {
-                self.handle_plugin_response(SLoginPluginResponse::read(bytebuf)?)
-                    .await;
-            }
-            SLoginAcknowledged::PACKET_ID => {
-                self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf)?)
-                    .await;
-            }
-            _ => {
+        let packet = match ServerboundLoginPackets::from_i32(packet.id.0) {
+            Some(packet) => packet,
+            None => {
                 log::error!(
-                    "Failed to handle packet id {} while in Login state",
+                    "Failed to handle client packet id {:#04x} in Login State",
                     packet.id.0
                 );
+                return Ok(());
             }
+        };
+        match packet {
+            ServerboundLoginPackets::LoginStart => {
+                self.handle_login_start(server, SLoginStart::read(bytebuf)?)
+                    .await
+            }
+            ServerboundLoginPackets::EncryptionResponse => {
+                self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf)?)
+                    .await
+            }
+            ServerboundLoginPackets::PluginResponse => {
+                self.handle_plugin_response(SLoginPluginResponse::read(bytebuf)?)
+                    .await
+            }
+            ServerboundLoginPackets::LoginAcknowledged => {
+                self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf)?)
+                    .await
+            }
+            ServerboundLoginPackets::CookieResponse => {}
         };
         Ok(())
     }
@@ -356,27 +372,35 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling config group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
-        match packet.id.0 {
-            SClientInformationConfig::PACKET_ID => {
-                self.handle_client_information_config(SClientInformationConfig::read(bytebuf)?)
-                    .await;
-            }
-            SPluginMessage::PACKET_ID => {
-                self.handle_plugin_message(SPluginMessage::read(bytebuf)?)
-                    .await;
-            }
-            SAcknowledgeFinishConfig::PACKET_ID => {
-                self.handle_config_acknowledged(&SAcknowledgeFinishConfig::read(bytebuf)?);
-            }
-            SKnownPacks::PACKET_ID => {
-                self.handle_known_packs(server, SKnownPacks::read(bytebuf)?)
-                    .await;
-            }
-            _ => {
+        let packet = match ServerboundConfigPackets::from_i32(packet.id.0) {
+            Some(packet) => packet,
+            None => {
                 log::error!(
-                    "Failed to handle packet id {} while in Config state",
+                    "Failed to handle client packet id {:#04x} in Config State",
                     packet.id.0
                 );
+                return Ok(());
+            }
+        };
+        match packet {
+            ServerboundConfigPackets::ClientInformation => {
+                self.handle_client_information_config(SClientInformationConfig::read(bytebuf)?)
+                    .await
+            }
+            ServerboundConfigPackets::CookieResponse => {}
+            ServerboundConfigPackets::PluginMessage => {
+                self.handle_plugin_message(SPluginMessage::read(bytebuf)?)
+                    .await
+            }
+            ServerboundConfigPackets::AcknowledgedFinish => {
+                self.handle_config_acknowledged(&SAcknowledgeFinishConfig::read(bytebuf)?)
+            }
+            ServerboundConfigPackets::KeepAlive => {}
+            ServerboundConfigPackets::Pong => {}
+            ServerboundConfigPackets::ResourcePackResponse => {}
+            ServerboundConfigPackets::KnownPacks => {
+                self.handle_known_packs(server, SKnownPacks::read(bytebuf)?)
+                    .await
             }
         };
         Ok(())

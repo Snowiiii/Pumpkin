@@ -1,10 +1,12 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x5A)]
+#[client_packet(ClientboundPlayPackets::EntityVelocity as i32)]
 pub struct CEntityVelocity<'a> {
     entity_id: &'a VarInt,
     velocity_x: i16,

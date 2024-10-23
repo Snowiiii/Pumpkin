@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use pumpkin_macros::packet;
 
 use crate::{
     bytebuf::{ByteBuffer, DeserializerError},
@@ -7,7 +6,6 @@ use crate::{
 };
 
 // derive(Deserialize)]
-#[packet(0x06)]
 pub struct SChatMessage {
     pub message: String,
     pub timestamp: i64,

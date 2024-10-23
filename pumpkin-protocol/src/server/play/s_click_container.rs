@@ -1,11 +1,9 @@
 use crate::slot::Slot;
 use crate::VarInt;
-use pumpkin_macros::packet;
 use serde::de::SeqAccess;
 use serde::{de, Deserialize};
 
 #[derive(Debug)]
-#[packet(0x0E)]
 pub struct SClickContainer {
     pub window_id: u8,
     pub state_id: VarInt,

@@ -1,11 +1,8 @@
-use pumpkin_macros::packet;
-
 use crate::{
     bytebuf::{ByteBuffer, DeserializerError},
     Identifier, ServerPacket,
 };
 
-#[packet(0x02)]
 pub struct SPluginMessage {
     pub channel: Identifier,
     pub data: Vec<u8>,

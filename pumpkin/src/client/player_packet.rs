@@ -378,7 +378,7 @@ impl Player {
         ) */
     }
 
-    pub async fn handle_client_information_play(&self, client_information: SClientInformationPlay) {
+    pub async fn handle_client_information(&self, client_information: SClientInformationPlay) {
         if let (Some(main_hand), Some(chat_mode)) = (
             Hand::from_i32(client_information.main_hand.into()),
             ChatMode::from_i32(client_information.chat_mode.into()),

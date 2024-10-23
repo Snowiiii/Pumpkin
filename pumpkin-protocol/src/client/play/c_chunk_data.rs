@@ -2,10 +2,13 @@ use std::collections::HashMap;
 
 use crate::{bytebuf::ByteBuffer, BitSet, ClientPacket, VarInt};
 use itertools::Itertools;
-use pumpkin_macros::packet;
+
+use pumpkin_macros::client_packet;
 use pumpkin_world::{chunk::ChunkData, DIRECT_PALETTE_BITS};
 
-#[packet(0x27)]
+use super::ClientboundPlayPackets;
+
+#[client_packet(ClientboundPlayPackets::ChunkData as i32)]
 pub struct CChunkData<'a>(pub &'a ChunkData);
 
 impl<'a> ClientPacket for CChunkData<'a> {

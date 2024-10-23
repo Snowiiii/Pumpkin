@@ -1,11 +1,8 @@
-use pumpkin_macros::packet;
-
 use crate::{
     bytebuf::{ByteBuffer, DeserializerError},
     ServerPacket,
 };
 
-#[packet(0x00)]
 pub struct SLoginStart {
     pub name: String, // 16
     pub uuid: uuid::Uuid,

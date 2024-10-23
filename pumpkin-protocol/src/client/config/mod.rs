@@ -13,3 +13,24 @@ pub use c_finish_config::*;
 pub use c_known_packs::*;
 pub use c_plugin_message::*;
 pub use c_registry_data::*;
+
+#[repr(i32)]
+pub enum ClientboundConfigPackets {
+    CookieRequest,
+    PluginMessage,
+    Disconnect,
+    Finish,
+    KeepAlive,
+    Ping,
+    ResetChat,
+    RegistryData,
+    RemoveResourcePack,
+    AddResourcePack,
+    StoreCookie,
+    Transfer,
+    FeatureFlags,
+    UpdateTags,
+    KnownPacks,
+    CustomReportDetails,
+    ServerLinks,
+}

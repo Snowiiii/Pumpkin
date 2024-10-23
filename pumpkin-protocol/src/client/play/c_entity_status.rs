@@ -1,8 +1,10 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x1F)]
+#[client_packet(ClientboundPlayPackets::EntityStatus as i32)]
 pub struct CEntityStatus {
     entity_id: i32,
     entity_status: i8,

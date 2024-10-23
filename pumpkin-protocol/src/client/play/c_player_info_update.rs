@@ -1,10 +1,10 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 
 use crate::{bytebuf::ByteBuffer, ClientPacket, Property};
 
-use super::PlayerAction;
+use super::{ClientboundPlayPackets, PlayerAction};
 
-#[packet(0x3E)]
+#[client_packet(ClientboundPlayPackets::PlayerInfoUpdate as i32)]
 pub struct CPlayerInfoUpdate<'a> {
     pub actions: i8,
     pub players: &'a [Player<'a>],

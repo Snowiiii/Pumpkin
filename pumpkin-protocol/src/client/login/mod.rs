@@ -9,3 +9,13 @@ pub use c_login_disconnect::*;
 pub use c_login_success::*;
 pub use c_plugin_request::*;
 pub use c_set_compression::*;
+
+#[repr(i32)]
+pub enum ClientboundLoginPackets {
+    Disconnect,
+    EncryptionRequest,
+    LoginSuccess,
+    SetCompression,
+    LoginPluginRequest,
+    CookieRequest,
+}

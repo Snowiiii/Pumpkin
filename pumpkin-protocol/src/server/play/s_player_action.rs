@@ -1,11 +1,9 @@
 use num_derive::FromPrimitive;
 use pumpkin_core::math::position::WorldPosition;
-use pumpkin_macros::packet;
 
 use crate::VarInt;
 
 #[derive(serde::Deserialize)]
-#[packet(0x24)]
 pub struct SPlayerAction {
     pub status: VarInt,
     pub location: WorldPosition,
