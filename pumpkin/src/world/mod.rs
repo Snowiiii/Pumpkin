@@ -8,8 +8,8 @@ use crate::{
 };
 use num_traits::ToPrimitive;
 use pumpkin_config::BasicConfiguration;
-use pumpkin_core::math::position::WorldPosition;
 use pumpkin_core::math::vector2::Vector2;
+use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_protocol::{
     client::play::{CBlockUpdate, CSoundEffect, CWorldEvent},
@@ -91,26 +91,21 @@ impl World {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub async fn play_sound(
         &self,
         sound_id: i32,
         category: SoundCategory,
-        x: f64,
-        y: f64,
-        z: f64,
-        volume: f32,
-        pitch: f32,
+        posistion: &Vector3<f64>,
     ) {
         let seed = thread_rng().gen::<f64>();
         self.broadcast_packet_all(&CSoundEffect::new(
             sound_id.into(),
             category,
-            x,
-            y,
-            z,
-            volume,
-            pitch,
+            posistion.x,
+            posistion.y,
+            posistion.z,
+            1.0,
+            1.0,
             seed,
         ))
         .await;
