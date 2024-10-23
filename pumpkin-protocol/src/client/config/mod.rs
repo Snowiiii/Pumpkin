@@ -14,6 +14,8 @@ pub use c_known_packs::*;
 pub use c_plugin_message::*;
 pub use c_registry_data::*;
 
+/// DO NOT CHANGE ORDER
+/// This Enum has the exact order like vanilla, Vanilla parses their Packet IDs from the enum order. Its also way easier to port.
 #[repr(i32)]
 pub enum ClientboundConfigPackets {
     CookieRequest,

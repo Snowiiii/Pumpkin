@@ -39,10 +39,10 @@ You can also can see all the information the Packets have, which we can either W
 #[derive(Serialize)]
 ```
 
-2. Next, you have set the packet ID using the packet macro
+2. Next, you have set the packet using the packet macro, This uses the Packet ID from the enum order
 
 ```rust
-#[packet(0x1D)]
+#[client_packet(ClientboundPlayPackets::Disconnect as i32)]
 ```
 
 3. Now you can create the Struct.
@@ -85,7 +85,7 @@ impl CPlayDisconnect {
 
 ```rust
 #[derive(Serialize)]
-#[packet(0x1D)]
+#[client_packet(ClientboundPlayPackets::Disconnect as i32)]
 pub struct CPlayDisconnect {
     reason: TextComponent,
 }
@@ -118,13 +118,7 @@ impl CPlayDisconnect {
 #[derive(Deserialize)]
 ```
 
-2. Next, you have set the packet ID using the packet macro
-
-```rust
-#[packet(0x1A)]
-```
-
-3. Now you can create the Struct.
+2. Now you can create the Struct.
 
 > [!IMPORTANT]
 > Please start the Packet name with "S" for Serverbound.
@@ -146,11 +140,10 @@ pub struct SPlayerPosition {
 }
 ```
 
-4. In the end, everything should come together.
+3. In the end, everything should come together.
 
 ```rust
 #[derive(Deserialize)]
-#[packet(0x1A)]
 pub struct SPlayerPosition {
     pub x: f64,
     pub feet_y: f64,
@@ -159,7 +152,7 @@ pub struct SPlayerPosition {
 }
 ```
 
-5. You can also Deserialize the Packet manually, which can be useful if the Packet is more complex
+4. You can also Deserialize the Packet manually, which can be useful if the Packet is more complex
 
 ```diff
 -#[derive(Deserialize)]
@@ -175,7 +168,7 @@ pub struct SPlayerPosition {
 +    }
 ```
 
-6. You can listen for the Packet. See [Receive Packets](#receiving-packets)
+5. You can listen for the Packet. See [Receive Packets](#receiving-packets)
 
 ### Client
 
@@ -215,15 +208,18 @@ For Clients:
     packet: &mut RawPacket,
 ) -> Result<(), DeserializerError> {
     let bytebuf = &mut packet.bytebuf;
-    match packet.id.0 {
-        SHandShake::PACKET_ID => {
-            self.handle_handshake(server, SHandShake::read(bytebuf)?);
-            Ok(())
-        }
-+       MyPacket::PACKET_ID => {
-+           self.handle_mypacket(server, MyPacket::read(bytebuf)?);
-+           Ok(())
-+       }
+    if let Some(packet) = ServerboundStatusPackets::from_i32(packet.id.0) {
+        match packet {
+            ServerboundStatusPackets::StatusRequest => {
+                self.handle_status_request(server, SStatusRequest::read(bytebuf)?)
+                    .await;
+            }
+            ServerboundStatusPackets::MyPacket => {
++                self.handle_my_packet(MyPacket::read(bytebuf)?)
++                    .await;
+            }
+        };
+    } else {
         _ => {
             log::error!(
                 "Failed to handle packet id {} while in ... state",
@@ -246,27 +242,26 @@ For Players:
     packet: &mut RawPacket,
 ) -> Result<(), DeserializerError> {
     let bytebuf = &mut packet.bytebuf;
-    match packet.id.0 {
-        SHandShake::PACKET_ID => {
-            self.handle_handshake(server, SHandShake::read(bytebuf)?);
-            Ok(())
+    if let Some(packet) = ServerboundPlayPackets::from_i32(packet.id.0) {
+        ServerboundPlayPackets::ChatMessage => {
+            self.handle_chat_message(SChatMessage::read(bytebuf)?).await;
         }
-+       MyPacket::PACKET_ID => {
-+           self.handle_mypacket(server, MyPacket::read(bytebuf)?);
-+           Ok(())
-+       }
+       ServerboundPlayPackets::MyPacket => {
++           self.handle_mypacket(server, MyPacket::read(bytebuf)?).await;
+        }
         _ => {
             log::error!(
                 "Failed to handle packet id {} while in ... state",
                 packet.id.0
             );
-            Ok(())
         }
+        Ok(())
     }
 }
 ```
 
 ### Compression
+
 Minecraft Packets **can** use the ZLib compression for decoding/encoding. There is usually a threshold set when compression is applied, this most often affects Chunk Packets.
 
 ### Porting

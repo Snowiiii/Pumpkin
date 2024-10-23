@@ -43,6 +43,8 @@ pub use s_swing_arm::*;
 pub use s_use_item::*;
 pub use s_use_item_on::*;
 
+/// DO NOT CHANGE ORDER
+/// This Enum has the exact order like vanilla, Vanilla parses their Packet IDs from the enum order. Its also way easier to port.
 #[derive(FromPrimitive)]
 pub enum ServerboundPlayPackets {
     TeleportConfirm,

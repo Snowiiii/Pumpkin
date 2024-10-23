@@ -96,6 +96,8 @@ pub use c_update_score::*;
 pub use c_worldevent::*;
 pub use player_action::*;
 
+/// DO NOT CHANGE ORDER
+/// This Enum has the exact order like vanilla, Vanilla parses their Packet IDs from the enum order. Its also way easier to port.
 #[repr(i32)]
 pub enum ClientboundPlayPackets {
     Bundle,

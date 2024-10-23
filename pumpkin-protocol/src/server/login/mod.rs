@@ -9,6 +9,8 @@ pub use s_login_response::*;
 pub use s_login_start::*;
 pub use s_plugin_response::*;
 
+/// DO NOT CHANGE ORDER
+/// This Enum has the exact order like vanilla, Vanilla parses their Packet IDs from the enum order. Its also way easier to port.
 #[derive(FromPrimitive)]
 pub enum ServerboundLoginPackets {
     LoginStart,
