@@ -23,9 +23,10 @@ use pumpkin_protocol::{
         CSyncPlayerPosition, CSystemChatMessage, GameEvent, PlayerAction,
     },
     server::play::{
-        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SPlayerAbilities,
-        SPlayerAction, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetHeldItem,
-        SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn, ServerboundPlayPackets,
+        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
+        SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
+        SPlayerRotation, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
+        ServerboundPlayPackets,
     },
     RawPacket, ServerPacket, VarInt,
 };
@@ -411,7 +412,10 @@ impl Player {
                 ServerboundPlayPackets::DebugSampleSubscription => {}
                 ServerboundPlayPackets::EditBook => {}
                 ServerboundPlayPackets::QueryEntityNbt => {}
-                ServerboundPlayPackets::InteractEntity => {}
+                ServerboundPlayPackets::InteractEntity => {
+                    self.handle_interact(server, SInteract::read(bytebuf)?)
+                        .await;
+                }
                 ServerboundPlayPackets::GenerateStructure => {}
                 ServerboundPlayPackets::KeepAlive => {
                     self.handle_keep_alive(SKeepAlive::read(bytebuf)?).await;
@@ -443,7 +447,10 @@ impl Player {
                     self.handle_player_action(SPlayerAction::read(bytebuf)?)
                         .await;
                 }
-                ServerboundPlayPackets::EntityAction => {}
+                ServerboundPlayPackets::EntityAction => {
+                    self.handle_player_command(SPlayerCommand::read(bytebuf)?)
+                        .await;
+                }
                 ServerboundPlayPackets::PlayerInput => {}
                 ServerboundPlayPackets::Pong => {}
                 ServerboundPlayPackets::SetRecipeBookState => {}
