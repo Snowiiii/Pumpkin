@@ -646,7 +646,7 @@ impl Player {
             }
             self.open_container.store(None);
         }
-        let Some(_window_type) = WindowType::from_u8(packet.window_id) else {
+        let Some(_window_type) = WindowType::from_i32(packet.window_id.0) else {
             self.kick(TextComponent::text("Invalid window ID")).await;
             return;
         };

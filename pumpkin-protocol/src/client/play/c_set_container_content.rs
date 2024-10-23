@@ -9,7 +9,7 @@ use super::ClientboundPlayPackets;
 #[derive(Serialize)]
 #[client_packet(ClientboundPlayPackets::WindowItems as i32)]
 pub struct CSetContainerContent<'a> {
-    window_id: u8,
+    window_id: VarInt,
     state_id: VarInt,
     count: VarInt,
     slot_data: &'a [Slot],
@@ -17,7 +17,12 @@ pub struct CSetContainerContent<'a> {
 }
 
 impl<'a> CSetContainerContent<'a> {
-    pub fn new(window_id: u8, state_id: VarInt, slots: &'a [Slot], carried_item: &'a Slot) -> Self {
+    pub fn new(
+        window_id: VarInt,
+        state_id: VarInt,
+        slots: &'a [Slot],
+        carried_item: &'a Slot,
+    ) -> Self {
         Self {
             window_id,
             state_id,

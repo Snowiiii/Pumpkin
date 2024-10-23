@@ -8,8 +8,8 @@ use crate::{
 };
 use num_traits::ToPrimitive;
 use pumpkin_config::BasicConfiguration;
-use pumpkin_core::math::position::WorldPosition;
 use pumpkin_core::math::vector2::Vector2;
+use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_protocol::client::play::{CBlockUpdate, CWorldEvent};
 use pumpkin_protocol::{
@@ -141,14 +141,12 @@ impl World {
             .await;
 
         // teleport
-        let x = 10.0;
-        let y = 120.0;
-        let z = 10.0;
+        let position = Vector3::new(10.0, 120.0, 10.0);
         let yaw = 10.0;
         let pitch = 10.0;
 
         log::debug!("Sending player teleport to {}", player.client.id);
-        player.teleport(x, y, z, yaw, pitch).await;
+        player.teleport(position, yaw, pitch).await;
 
         let pos = player.living_entity.entity.pos.load();
         player.last_position.store(pos);
@@ -210,9 +208,9 @@ impl World {
                 entity_id.into(),
                 gameprofile.id,
                 (EntityType::Player as i32).into(),
-                x,
-                y,
-                z,
+                position.x,
+                position.y,
+                position.z,
                 pitch,
                 yaw,
                 yaw,

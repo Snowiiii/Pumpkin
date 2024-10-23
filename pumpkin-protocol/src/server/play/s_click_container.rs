@@ -5,7 +5,7 @@ use serde::{de, Deserialize};
 
 #[derive(Debug)]
 pub struct SClickContainer {
-    pub window_id: u8,
+    pub window_id: VarInt,
     pub state_id: VarInt,
     pub slot: i16,
     pub button: i8,
@@ -67,7 +67,7 @@ impl<'de> Deserialize<'de> for SClickContainer {
                     .ok_or(de::Error::custom("Failed to decode carried item"))?;
 
                 Ok(SClickContainer {
-                    window_id,
+                    window_id: window_id.into(),
                     state_id,
                     slot,
                     button,

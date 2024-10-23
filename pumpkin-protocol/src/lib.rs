@@ -255,3 +255,36 @@ pub enum NumberFormat<'a> {
     /// The text to be used as placeholder.
     Fixed(TextComponent<'a>),
 }
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub enum PositionFlag {
+    X,
+    Y,
+    Z,
+    YRot,
+    XRot,
+    DeltaX,
+    DeltaY,
+    DeltaZ,
+    RotateDelta,
+}
+
+impl PositionFlag {
+    fn get_mask(&self) -> i32 {
+        match self {
+            PositionFlag::X => 1 << 0,
+            PositionFlag::Y => 1 << 1,
+            PositionFlag::Z => 1 << 2,
+            PositionFlag::YRot => 1 << 3,
+            PositionFlag::XRot => 1 << 4,
+            PositionFlag::DeltaX => 1 << 5,
+            PositionFlag::DeltaY => 1 << 6,
+            PositionFlag::DeltaZ => 1 << 7,
+            PositionFlag::RotateDelta => 1 << 8,
+        }
+    }
+
+    pub fn get_bitfield(flags: &[PositionFlag]) -> i32 {
+        flags.iter().fold(0, |acc, flag| acc | flag.get_mask())
+    }
+}

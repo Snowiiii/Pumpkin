@@ -41,6 +41,7 @@ impl<'a> ClientPacket for CPlayerInfoUpdate<'a> {
                     PlayerAction::UpdateListed(listed) => p.put_bool(*listed),
                     PlayerAction::UpdateLatency(_) => todo!(),
                     PlayerAction::UpdateDisplayName(_) => todo!(),
+                    PlayerAction::UpdateListOrder => todo!(),
                 }
             }
         });

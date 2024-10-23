@@ -303,25 +303,23 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling status group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
-        let packet = match ServerboundStatusPackets::from_i32(packet.id.0) {
-            Some(packet) => packet,
-            None => {
-                log::error!(
-                    "Failed to handle client packet id {:#04x} in Status State",
-                    packet.id.0
-                );
-                return Ok(());
-            }
-        };
-        match packet {
-            ServerboundStatusPackets::StatusRequest => {
-                self.handle_status_request(server, SStatusRequest::read(bytebuf)?)
-                    .await
-            }
-            ServerboundStatusPackets::PingRequest => {
-                self.handle_ping_request(SStatusPingRequest::read(bytebuf)?)
-                    .await
-            }
+        if let Some(packet) = ServerboundStatusPackets::from_i32(packet.id.0) {
+            match packet {
+                ServerboundStatusPackets::StatusRequest => {
+                    self.handle_status_request(server, SStatusRequest::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundStatusPackets::PingRequest => {
+                    self.handle_ping_request(SStatusPingRequest::read(bytebuf)?)
+                        .await;
+                }
+            };
+        } else {
+            log::error!(
+                "Failed to handle client packet id {:#04x} in Status State",
+                packet.id.0
+            );
+            return Err(DeserializerError::UnknownPacket);
         };
         Ok(())
     }
@@ -333,34 +331,32 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling login group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
-        let packet = match ServerboundLoginPackets::from_i32(packet.id.0) {
-            Some(packet) => packet,
-            None => {
-                log::error!(
-                    "Failed to handle client packet id {:#04x} in Login State",
-                    packet.id.0
-                );
-                return Ok(());
-            }
-        };
-        match packet {
-            ServerboundLoginPackets::LoginStart => {
-                self.handle_login_start(server, SLoginStart::read(bytebuf)?)
-                    .await
-            }
-            ServerboundLoginPackets::EncryptionResponse => {
-                self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf)?)
-                    .await
-            }
-            ServerboundLoginPackets::PluginResponse => {
-                self.handle_plugin_response(SLoginPluginResponse::read(bytebuf)?)
-                    .await
-            }
-            ServerboundLoginPackets::LoginAcknowledged => {
-                self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf)?)
-                    .await
-            }
-            ServerboundLoginPackets::CookieResponse => {}
+        if let Some(packet) = ServerboundLoginPackets::from_i32(packet.id.0) {
+            match packet {
+                ServerboundLoginPackets::LoginStart => {
+                    self.handle_login_start(server, SLoginStart::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundLoginPackets::EncryptionResponse => {
+                    self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundLoginPackets::PluginResponse => {
+                    self.handle_plugin_response(SLoginPluginResponse::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundLoginPackets::LoginAcknowledged => {
+                    self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundLoginPackets::CookieResponse => {}
+            };
+        } else {
+            log::error!(
+                "Failed to handle client packet id {:#04x} in Login State",
+                packet.id.0
+            );
+            return Ok(());
         };
         Ok(())
     }
@@ -372,36 +368,35 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling config group for id {}", self.id);
         let bytebuf = &mut packet.bytebuf;
-        let packet = match ServerboundConfigPackets::from_i32(packet.id.0) {
-            Some(packet) => packet,
-            None => {
-                log::error!(
-                    "Failed to handle client packet id {:#04x} in Config State",
-                    packet.id.0
-                );
-                return Ok(());
-            }
-        };
-        match packet {
-            ServerboundConfigPackets::ClientInformation => {
-                self.handle_client_information_config(SClientInformationConfig::read(bytebuf)?)
-                    .await
-            }
-            ServerboundConfigPackets::CookieResponse => {}
-            ServerboundConfigPackets::PluginMessage => {
-                self.handle_plugin_message(SPluginMessage::read(bytebuf)?)
-                    .await
-            }
-            ServerboundConfigPackets::AcknowledgedFinish => {
-                self.handle_config_acknowledged(&SAcknowledgeFinishConfig::read(bytebuf)?)
-            }
-            ServerboundConfigPackets::KeepAlive => {}
-            ServerboundConfigPackets::Pong => {}
-            ServerboundConfigPackets::ResourcePackResponse => {}
-            ServerboundConfigPackets::KnownPacks => {
-                self.handle_known_packs(server, SKnownPacks::read(bytebuf)?)
-                    .await
-            }
+        if let Some(packet) = ServerboundConfigPackets::from_i32(packet.id.0) {
+            #[expect(clippy::match_same_arms)]
+            match packet {
+                ServerboundConfigPackets::ClientInformation => {
+                    self.handle_client_information_config(SClientInformationConfig::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundConfigPackets::CookieResponse => {}
+                ServerboundConfigPackets::PluginMessage => {
+                    self.handle_plugin_message(SPluginMessage::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundConfigPackets::AcknowledgedFinish => {
+                    self.handle_config_acknowledged(&SAcknowledgeFinishConfig::read(bytebuf)?);
+                }
+                ServerboundConfigPackets::KeepAlive => {}
+                ServerboundConfigPackets::Pong => {}
+                ServerboundConfigPackets::ResourcePackResponse => {}
+                ServerboundConfigPackets::KnownPacks => {
+                    self.handle_known_packs(server, SKnownPacks::read(bytebuf)?)
+                        .await;
+                }
+            };
+        } else {
+            log::error!(
+                "Failed to handle client packet id {:#04x} in Config State",
+                packet.id.0
+            );
+            return Err(DeserializerError::UnknownPacket);
         };
         Ok(())
     }

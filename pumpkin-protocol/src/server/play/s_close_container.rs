@@ -1,6 +1,8 @@
 use serde::Deserialize;
 
+use crate::VarInt;
+
 #[derive(Deserialize)]
 pub struct SCloseContainer {
-    pub window_id: u8,
+    pub window_id: VarInt,
 }
