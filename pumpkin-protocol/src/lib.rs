@@ -205,7 +205,7 @@ pub struct StatusResponse {
 }
 #[derive(Serialize)]
 pub struct Version {
-    /// The current name of the Version (e.g. 1.21.2)
+    /// The current name of the Version (e.g. 1.21.3)
     pub name: String,
     /// The current Protocol Version (e.g. 767)
     pub protocol: u32,
