@@ -171,7 +171,6 @@ async fn main() -> io::Result<()> {
             ticker.run(&server).await;
         });
     }
-    let mut player_count = 0;
     loop {
         // Asynchronously wait for an inbound socket.
         let (connection, address) = listener.accept().await?;
@@ -180,16 +179,12 @@ async fn main() -> io::Result<()> {
             log::warn!("failed to set TCP_NODELAY {e}");
         }
 
-        player_count += 1;
-        let id = player_count;
-
         log::info!(
-            "Accepted connection from: {} (id: {})",
+            "Accepted connection from: {} ",
             scrub_address(&format!("{address}")),
-            id
         );
 
-        let client = Arc::new(Client::new(id, connection, addr));
+        let client = Arc::new(Client::new(connection, addr));
 
         let server = server.clone();
         tokio::spawn(async move {
@@ -207,9 +202,7 @@ async fn main() -> io::Result<()> {
                 .make_player
                 .load(std::sync::atomic::Ordering::Relaxed)
             {
-                let id = client.id;
-                log::debug!("Creating player for id {}", id);
-                let (player, world) = server.add_player(id, client).await;
+                let (player, world) = server.add_player(client).await;
                 world.spawn_player(&BASIC_CONFIG, player.clone()).await;
                 // poll Player
                 while !player
@@ -226,6 +219,5 @@ async fn main() -> io::Result<()> {
                 server.remove_player().await;
             }
         });
-        player_count -= 1;
     }
 }

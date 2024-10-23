@@ -6,7 +6,7 @@ use crate::VarInt;
 use super::ClientboundPlayPackets;
 
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::EntityPositionSync as i32)]
+#[client_packet(ClientboundPlayPackets::EntityRelativeMove as i32)]
 pub struct CUpdateEntityPos {
     entity_id: VarInt,
     delta_x: i16,

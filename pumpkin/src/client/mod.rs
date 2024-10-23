@@ -108,8 +108,6 @@ pub struct Client {
     pub encryption: AtomicBool,
     /// Indicates if the client connection is closed.
     pub closed: AtomicBool,
-    /// A unique id identifying the client.
-    pub id: usize,
     /// The underlying TCP connection to the client.
     pub connection_reader: Arc<Mutex<tokio::net::tcp::OwnedReadHalf>>,
     pub connection_writer: Arc<Mutex<tokio::net::tcp::OwnedWriteHalf>>,
@@ -127,7 +125,7 @@ pub struct Client {
 
 impl Client {
     #[must_use]
-    pub fn new(id: usize, connection: tokio::net::TcpStream, address: SocketAddr) -> Self {
+    pub fn new(connection: tokio::net::TcpStream, address: SocketAddr) -> Self {
         let (connection_reader, connection_writer) = connection.into_split();
         Self {
             protocol_version: AtomicI32::new(0),
@@ -135,7 +133,6 @@ impl Client {
             config: Mutex::new(None),
             brand: Mutex::new(None),
             server_address: Mutex::new(String::new()),
-            id,
             address: Mutex::new(address),
             connection_state: AtomicCell::new(ConnectionState::HandShake),
             connection_reader: Arc::new(Mutex::new(connection_reader)),
@@ -199,11 +196,7 @@ impl Client {
         {
             self.kick(&error.to_string()).await;
         } else if let Err(error) = writer.flush().await {
-            log::warn!(
-                "Failed to flush writer for id {}: {}",
-                self.id,
-                error.to_string()
-            );
+            log::warn!("Failed to flush writer for: {}", error.to_string());
         }
     }
 
@@ -281,7 +274,7 @@ impl Client {
         &self,
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
-        log::debug!("Handling handshake group for id {}", self.id);
+        log::debug!("Handling handshake group");
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             0 => {
@@ -302,7 +295,7 @@ impl Client {
         server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
-        log::debug!("Handling status group for id {}", self.id);
+        log::debug!("Handling status group");
         let bytebuf = &mut packet.bytebuf;
         if let Some(packet) = ServerboundStatusPackets::from_i32(packet.id.0) {
             match packet {
@@ -330,7 +323,7 @@ impl Client {
         server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
-        log::debug!("Handling login group for id {}", self.id);
+        log::debug!("Handling login group for id");
         let bytebuf = &mut packet.bytebuf;
         if let Some(packet) = ServerboundLoginPackets::from_i32(packet.id.0) {
             match packet {
@@ -367,7 +360,7 @@ impl Client {
         server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
-        log::debug!("Handling config group for id {}", self.id);
+        log::debug!("Handling config group");
         let bytebuf = &mut packet.bytebuf;
         if let Some(packet) = ServerboundConfigPackets::from_i32(packet.id.0) {
             #[expect(clippy::match_same_arms)]
@@ -415,11 +408,7 @@ impl Client {
                     return true;
                 }
                 Ok(None) => (), //log::debug!("Waiting for more data to complete packet..."),
-                Err(err) => log::warn!(
-                    "Failed to decode packet for id {}: {}",
-                    self.id,
-                    err.to_string()
-                ),
+                Err(err) => log::warn!("Failed to decode packet for: {}", err.to_string()),
             }
 
             dec.reserve(4096);
@@ -449,7 +438,7 @@ impl Client {
 
     /// Kicks the Client with a reason depending on the connection state
     pub async fn kick(&self, reason: &str) {
-        log::info!("Kicking Client id {} for {}", self.id, reason);
+        log::info!("Kicking Client for {}", reason);
         match self.connection_state.load() {
             ConnectionState::Login => {
                 self.try_send_packet(&CLoginDisconnect::new(

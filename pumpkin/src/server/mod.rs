@@ -93,7 +93,7 @@ impl Server {
         }
     }
 
-    pub async fn add_player(&self, id: usize, client: Arc<Client>) -> (Arc<Player>, Arc<World>) {
+    pub async fn add_player(&self, client: Arc<Client>) -> (Arc<Player>, Arc<World>) {
         let entity_id = self.new_entity_id();
         let gamemode = match BASIC_CONFIG.default_gamemode {
             GameMode::Undefined => GameMode::Survival,
@@ -104,7 +104,9 @@ impl Server {
         let world = &self.worlds[0];
 
         let player = Arc::new(Player::new(client, world.clone(), entity_id, gamemode).await);
-        world.add_player(id, player.clone()).await;
+        world
+            .add_player(player.gameprofile.id, player.clone())
+            .await;
         // TODO: Config if we want increase online
         if let Some(config) = player.client.config.lock().await.as_ref() {
             // TODO: Config so we can also just ignore this hehe
