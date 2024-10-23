@@ -28,7 +28,7 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
     assert_eq!(new_watched.x, chunk_pos.x);
     assert_eq!(new_watched.z, chunk_pos.z);
 
-    log::debug!("Sending center chunk to {}", player.client.id);
+    log::debug!("Sending center chunk to {}", player.gameprofile.name);
     player
         .client
         .send_packet(&CCenterChunk {
@@ -40,7 +40,7 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
     log::debug!(
         "Player {} ({}) joined with view distance: {}",
         player.gameprofile.name,
-        player.client.id,
+        player.gameprofile.name,
         view_distance
     );
 

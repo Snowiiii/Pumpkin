@@ -157,7 +157,7 @@ impl Player {
 
         log::debug!(
             "Removing player id {}, unwatching {} chunks",
-            self.client.id,
+            self.gameprofile.name,
             all_chunks.len()
         );
         self.living_entity
@@ -168,7 +168,7 @@ impl Player {
 
         log::debug!(
             "Removed player id {} ({} chunks remain cached)",
-            self.client.id,
+            self.gameprofile.name,
             self.living_entity.entity.world.get_cached_chunk_len().await
         );
     }

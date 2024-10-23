@@ -42,7 +42,7 @@ pub struct World {
     /// The underlying level, responsible for chunk management and terrain generation.
     pub level: Arc<Mutex<Level>>,
     /// A map of active players within the world, keyed by their unique token.
-    pub current_players: Arc<Mutex<HashMap<usize, Arc<Player>>>>,
+    pub current_players: Arc<Mutex<HashMap<uuid::Uuid, Arc<Player>>>>,
     pub scoreboard: Mutex<Scoreboard>,
     // TODO: entities
 }
@@ -77,7 +77,7 @@ impl World {
     /// Sends the specified packet to every player currently logged in to the server, excluding the players listed in the `except` parameter.
     ///
     /// **Note:** This function acquires a lock on the `current_players` map, ensuring thread safety.
-    pub async fn broadcast_packet_expect<P>(&self, except: &[usize], packet: &P)
+    pub async fn broadcast_packet_expect<P>(&self, except: &[uuid::Uuid], packet: &P)
     where
         P: ClientPacket,
     {
@@ -100,11 +100,10 @@ impl World {
         let gamemode = player.gamemode.load();
         log::debug!(
             "spawning player {}, entity id {}",
-            player.client.id,
+            player.gameprofile.name,
             entity_id
         );
 
-        log::debug!("Sending login packet to {}", player.client.id);
         // login packet for our new player
         player
             .client
@@ -134,7 +133,7 @@ impl World {
 
         // player abilities
         // TODO: this is for debug purpose, remove later
-        log::debug!("Sending player abilities to {}", player.client.id);
+        log::debug!("Sending player abilities to {}", player.gameprofile.name);
         player
             .client
             .send_packet(&CPlayerAbilities::new(0x02, 0.4, 0.1))
@@ -145,7 +144,7 @@ impl World {
         let yaw = 10.0;
         let pitch = 10.0;
 
-        log::debug!("Sending player teleport to {}", player.client.id);
+        log::debug!("Sending player teleport to {}", player.gameprofile.name);
         player.teleport(position, yaw, pitch).await;
 
         let pos = player.living_entity.entity.pos.load();
@@ -154,7 +153,7 @@ impl World {
         let gameprofile = &player.gameprofile;
         // first send info update to our new player, So he can see his Skin
         // also send his info to everyone else
-        log::debug!("Broadcasting player info for {}", player.client.id);
+        log::debug!("Broadcasting player info for {}", player.gameprofile.name);
         self.broadcast_packet_all(&CPlayerInfoUpdate::new(
             0x01 | 0x08,
             &[pumpkin_protocol::client::play::Player {
@@ -176,7 +175,7 @@ impl World {
             let current_players = self.current_players.lock().await;
             for (_, playerr) in current_players
                 .iter()
-                .filter(|(c, _)| **c != player.client.id)
+                .filter(|(c, _)| **c != player.gameprofile.id)
             {
                 let gameprofile = &playerr.gameprofile;
                 entries.push(pumpkin_protocol::client::play::Player {
@@ -190,7 +189,7 @@ impl World {
                     ],
                 });
             }
-            log::debug!("Sending player info to {}", player.client.id);
+            log::debug!("Sending player info to {}", player.gameprofile.name);
             player
                 .client
                 .send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries))
@@ -199,10 +198,10 @@ impl World {
 
         let gameprofile = &player.gameprofile;
 
-        log::debug!("Broadcasting player spawn for {}", player.client.id);
+        log::debug!("Broadcasting player spawn for {}", player.gameprofile.name);
         // spawn player for every client
         self.broadcast_packet_expect(
-            &[player.client.id],
+            &[player.gameprofile.id],
             // TODO: add velo
             &CSpawnEntity::new(
                 entity_id.into(),
@@ -222,18 +221,18 @@ impl World {
         )
         .await;
         // spawn players for our client
-        let token = player.client.id;
+        let id = player.gameprofile.id;
         for (_, existing_player) in self
             .current_players
             .lock()
             .await
             .iter()
-            .filter(|c| c.0 != &token)
+            .filter(|c| c.0 != &id)
         {
             let entity = &existing_player.living_entity.entity;
             let pos = entity.pos.load();
             let gameprofile = &existing_player.gameprofile;
-            log::debug!("Sending player entities to {}", player.client.id);
+            log::debug!("Sending player entities to {}", player.gameprofile.name);
             player
                 .client
                 .send_packet(&CSpawnEntity::new(
@@ -260,12 +259,12 @@ impl World {
                 entity_id.into(),
                 Metadata::new(17, VarInt(0), config.skin_parts),
             );
-            log::debug!("Broadcasting skin for {}", player.client.id);
+            log::debug!("Broadcasting skin for {}", player.gameprofile.name);
             self.broadcast_packet_all(&packet).await;
         }
 
         // Start waiting for level chunks, Sets the "Loading Terrain" screen
-        log::debug!("Sending waiting chunks to {}", player.client.id);
+        log::debug!("Sending waiting chunks to {}", player.gameprofile.name);
         player
             .client
             .send_packet(&CGameEvent::new(GameEvent::StartWaitingChunks, 0.0))
@@ -292,10 +291,7 @@ impl World {
 
     fn spawn_world_chunks(&self, client: Arc<Client>, chunks: Vec<Vector2<i32>>) {
         if client.closed.load(std::sync::atomic::Ordering::Relaxed) {
-            log::info!(
-                "The connection with {} has closed before world chunks were spawned",
-                client.id
-            );
+            log::info!("The connection has closed before world chunks were spawned",);
             return;
         }
         let inst = std::time::Instant::now();
@@ -351,19 +347,19 @@ impl World {
         None
     }
 
-    pub async fn add_player(&self, id: usize, player: Arc<Player>) {
-        self.current_players.lock().await.insert(id, player);
+    pub async fn add_player(&self, uuid: uuid::Uuid, player: Arc<Player>) {
+        self.current_players.lock().await.insert(uuid, player);
     }
 
     pub async fn remove_player(&self, player: &Player) {
         self.current_players
             .lock()
             .await
-            .remove(&player.client.id)
+            .remove(&player.gameprofile.id)
             .unwrap();
         let uuid = player.gameprofile.id;
         self.broadcast_packet_expect(
-            &[player.client.id],
+            &[player.gameprofile.id],
             &CRemovePlayerInfo::new(1.into(), &[uuid]),
         )
         .await;
