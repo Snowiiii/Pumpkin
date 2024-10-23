@@ -32,7 +32,6 @@ use crate::{
 mod connection_cache;
 mod key_store;
 pub mod ticker;
-pub mod ticker;
 mod translation;
 
 pub const CURRENT_MC_VERSION: &str = "1.21.1";
