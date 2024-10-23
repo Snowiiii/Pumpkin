@@ -19,6 +19,7 @@ mod c_keep_alive;
 mod c_login;
 mod c_open_screen;
 mod c_particle;
+mod c_pickup_item;
 mod c_ping_response;
 mod c_play_disconnect;
 mod c_player_abilities;
@@ -68,6 +69,7 @@ pub use c_keep_alive::*;
 pub use c_login::*;
 pub use c_open_screen::*;
 pub use c_particle::*;
+pub use c_pickup_item::*;
 pub use c_ping_response::*;
 pub use c_play_disconnect::*;
 pub use c_player_abilities::*;
@@ -233,4 +235,14 @@ pub enum ClientboundPlayPackets {
     ProjectilePower,
     CustomReportDetails,
     ServerLinks,
+}
+
+#[cfg(test)]
+mod test {
+    use crate::client::play::ClientboundPlayPackets;
+
+    #[test]
+    fn check() {
+        assert_eq!(ClientboundPlayPackets::CollectItem as i32, 0x6F)
+    }
 }

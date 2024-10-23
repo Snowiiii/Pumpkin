@@ -1,8 +1,8 @@
 use std::{collections::HashMap, sync::LazyLock};
 
-use serde::Deserialize;
-
 use super::BlockState;
+use crate::item::get_item_protocol_id;
+use serde::Deserialize;
 
 pub static BLOCKS: LazyLock<HashMap<String, RegistryBlockType>> = LazyLock::new(|| {
     serde_json::from_str(include_str!("../../../assets/blocks.json"))
@@ -69,6 +69,16 @@ impl BlockId {
 
     pub fn get_id(&self) -> u16 {
         self.data
+    }
+
+    pub fn get_as_item_id(&self) -> u32 {
+        let id = BLOCKS
+            .iter()
+            .find(|(_, val)| val.states.iter().any(|state| state.id == *self))
+            .map(|(key, _)| key.as_str())
+            .unwrap();
+        dbg!(id);
+        get_item_protocol_id(id)
     }
 }
 

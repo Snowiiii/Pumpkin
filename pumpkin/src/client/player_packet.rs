@@ -1,5 +1,7 @@
 use std::{f32::consts::PI, sync::Arc};
 
+use super::PlayerConfig;
+use crate::entity::item::ItemEntity;
 use crate::{
     commands::CommandSender,
     entity::player::{ChatMode, Hand, Player},
@@ -32,8 +34,6 @@ use pumpkin_protocol::{
 };
 use pumpkin_world::block::{BlockFace, BlockId, BlockState};
 use pumpkin_world::global_registry;
-
-use super::PlayerConfig;
 
 fn modulus(a: f32, b: f32) -> f32 {
     ((a % b) + b) % b
@@ -333,7 +333,7 @@ impl Player {
             None => {
                 self.kick(TextComponent::text("Invalid hand")).await;
             }
-        };
+        }
     }
 
     pub async fn handle_chat_message(&self, chat_message: SChatMessage) {
@@ -431,13 +431,8 @@ impl Player {
                                     f64::from((yaw * (PI / 180.0)).sin()),
                                     f64::from(-(yaw * (PI / 180.0)).cos()),
                                 );
-                                let victem_velocity = victem_entity.velocity.load();
-                                let packet = &CEntityVelocity::new(
-                                    &entity_id,
-                                    victem_velocity.x as f32,
-                                    victem_velocity.y as f32,
-                                    victem_velocity.z as f32,
-                                );
+                                let victim_velocity = entity.velocity.load();
+                                let packet = &CEntityVelocity::new(&entity_id, victim_velocity);
                                 let velocity = entity.velocity.load();
                                 entity.velocity.store(velocity.multiply(0.6, 1.0, 0.6));
 
@@ -466,8 +461,7 @@ impl Player {
             None => self.kick(TextComponent::text("Invalid action type")).await,
         }
     }
-
-    pub async fn handle_player_action(&self, player_action: SPlayerAction) {
+    pub async fn handle_player_action(&self, server: &Arc<Server>, player_action: SPlayerAction) {
         match Status::from_i32(player_action.status.0) {
             Some(status) => match status {
                 Status::StartedDigging => {
@@ -486,8 +480,8 @@ impl Player {
                         // Block break & block break sound
                         // TODO: currently this is always dirt replace it
                         let entity = &self.living_entity.entity;
-                        let world = &entity.world;
-                        world.break_block(location).await;
+                        let world = entity.world.clone();
+                        world.break_block(location, server.clone()).await;
                     }
                 }
                 Status::CancelledDigging => {
@@ -516,18 +510,56 @@ impl Player {
                     // Block break & block break sound
                     // TODO: currently this is always dirt replace it
                     let entity = &self.living_entity.entity;
-                    let world = &entity.world;
-                    world.break_block(location).await;
+                    let world = entity.world.clone();
+                    world.break_block(location, server.clone()).await;
                     // TODO: Send this every tick
                     self.client
                         .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence))
                         .await;
                 }
-                Status::DropItemStack
-                | Status::DropItem
-                | Status::ShootArrowOrFinishEating
-                | Status::SwapItem => {
-                    log::debug!("todo");
+                Status::DropItemStack => {
+                    let mut inventory = self.inventory.lock().await;
+                    let slot = inventory.held_item_mut();
+                    if let Some(item) = slot {
+                        ItemEntity::spawn_from_player(
+                            &self.living_entity.entity,
+                            *item,
+                            server.clone(),
+                        )
+                        .await;
+                        *slot = None;
+                    }
+                }
+                Status::DropItem => {
+                    let mut inventory = self.inventory.lock().await;
+                    let slot = inventory.held_item_mut();
+                    if let Some(held_item) = slot {
+                        if held_item.item_count > 1 {
+                            held_item.item_count -= 1;
+                            let mut item = *held_item;
+                            item.item_count = 1;
+                            ItemEntity::spawn_from_player(
+                                &self.living_entity.entity,
+                                item,
+                                server.clone(),
+                            )
+                            .await;
+                        } else {
+                            ItemEntity::spawn_from_player(
+                                &self.living_entity.entity,
+                                *held_item,
+                                server.clone(),
+                            )
+                            .await;
+                            *slot = None;
+                        }
+                    }
+                }
+                Status::ShootArrowOrFinishEating => {
+                    dbg!("todo");
+                }
+                Status::SwapItem => {
+                    dbg!("todo");
                 }
             },
             None => self.kick(TextComponent::text("Invalid status")).await,
@@ -616,16 +648,29 @@ impl Player {
 
     pub async fn handle_set_creative_slot(
         &self,
+        server: &Arc<Server>,
         packet: SSetCreativeSlot,
     ) -> Result<(), InventoryError> {
         if self.gamemode.load() != GameMode::Creative {
             return Err(InventoryError::PermissionError);
         }
-        self.inventory.lock().await.set_slot(
-            packet.slot as usize,
-            packet.clicked_item.to_item(),
-            false,
-        )
+        let slot = packet.slot;
+        match slot {
+            -1 => {
+                let item = None;
+                self.carried_item.swap(item);
+                if let Some(item) = item {
+                    ItemEntity::spawn_from_player(&self.living_entity.entity, item, server.clone())
+                        .await;
+                }
+                Ok(())
+            }
+            _ => self.inventory.lock().await.set_slot(
+                slot as usize,
+                packet.clicked_item.to_item(),
+                false,
+            ),
+        }
     }
 
     // TODO:
