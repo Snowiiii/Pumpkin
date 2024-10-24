@@ -152,7 +152,7 @@ impl Client {
 
         if BASIC_CONFIG.online_mode {
             match self
-                .autenticate(server, &shared_secret, &profile.name)
+                .authenticate(server, &shared_secret, &profile.name)
                 .await
             {
                 Ok(new_profile) => *profile = new_profile,
@@ -181,7 +181,7 @@ impl Client {
         self.send_packet(&packet).await;
     }
 
-    async fn autenticate(
+    async fn authenticate(
         &self,
         server: &Server,
         shared_secret: &[u8],
