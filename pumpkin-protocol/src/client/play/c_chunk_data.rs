@@ -125,7 +125,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
             &self.0.blocks,
         );
 
-        let (sky_light_mask, empty_sky_light_mask) = chunk_light_data.subchunk_masks();
+        let (sky_light_mask, empty_sky_light_mask, subchunks) = chunk_light_data.packet_data();
 
         // Sky Light Mask
         // All of the chunks, this is not optimal and uses way more data than needed but will be
@@ -138,21 +138,22 @@ impl<'a> ClientPacket for CChunkData<'a> {
         // Empty Block Light Mask
         buf.put_bit_set(&BitSet(VarInt(1), &[0]));
 
-        let subchunks: Vec<_> = chunk_light_data
-            .subchunks
-            .into_iter()
-            .filter_map(|subchunk| match subchunk {
-                pumpkin_world::lighting2::SubChunkLighting::Uninitialized => None,
-                pumpkin_world::lighting2::SubChunkLighting::Initialized(light_data) => {
-                    Some(light_data.0)
-                }
-            })
-            .collect();
+        let debug = self.0.position.x == -1 && self.0.position.z == 0;
 
+        if debug {
+            println!("{:b}", sky_light_mask);
+            println!("{:b}", empty_sky_light_mask);
+            println!("New Chunk? {} ", subchunks.len());
+        }
         buf.put_var_int(&subchunks.len().into());
-        for subchunk in subchunks {
+        for (i, subchunk) in subchunks.into_iter().enumerate() {
             buf.put_var_int(&VarInt(subchunk.len() as i32));
-            buf.put_slice(&*subchunk);
+            buf.put_slice(&subchunk);
+            // if debug {
+            //     print!("Start Subchunk: ");
+            //     subchunk.iter().for_each(|v| print!("{:X}", v));
+            //     print!("\n");
+            // }
         }
 
         // Block Lighting

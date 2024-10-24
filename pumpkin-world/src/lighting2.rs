@@ -2,6 +2,14 @@ use std::collections::VecDeque;
 
 use crate::chunk::ChunkBlocks;
 
+fn div_16_floor(y: i32) -> i32 {
+    if y >= 0 {
+        y / 16
+    } else {
+        (y / 16) - 1
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Coordinates {
     x: i32,
@@ -69,15 +77,15 @@ impl From<ChunkRelativeCoordinates> for SubChunkRelativeCoordinates {
 impl Coordinates {
     fn chunk_coordinates(&self) -> ChunkCoordinates {
         ChunkCoordinates {
-            x: self.x / 16,
-            z: self.z / 16,
+            x: div_16_floor(self.x),
+            z: div_16_floor(self.z),
         }
     }
     fn subchunk_coordinates(&self) -> SubChunkCoordinates {
         SubChunkCoordinates {
-            x: self.x / 16,
-            y: self.y / 16,
-            z: self.z / 16,
+            x: div_16_floor(self.x),
+            y: div_16_floor(self.y),
+            z: div_16_floor(self.z),
         }
     }
 }
@@ -105,9 +113,8 @@ const TOTAL_BLOCK_SUBCHUNKS: usize = (MAX_BLOCK_SUBCHUNK - MIN_BLOCK_SUBCHUNK) a
 
 const CHUNK_AREA: usize = 16 * 16;
 const SUBCHUNK_VOLUME: usize = CHUNK_AREA * 16;
-const LIGHT_CHUNK_VOLUME: usize = SUBCHUNK_VOLUME * TOTAL_LIGHT_SUBCHUNKS;
-const BLOCK_CHUNK_VOLUME: usize = SUBCHUNK_VOLUME * TOTAL_BLOCK_SUBCHUNKS;
 
+#[derive(Debug)]
 pub struct SubChunkLightData(pub Box<[u8; SUBCHUNK_VOLUME / 2]>);
 
 impl SubChunkLightData {
@@ -146,10 +153,12 @@ impl SubChunkLightData {
     }
 }
 
+#[derive(Debug)]
 pub enum SubChunkLighting {
     Uninitialized,
     Initialized(SubChunkLightData),
 }
+
 impl SubChunkLighting {
     fn initialized() -> Self {
         Self::Initialized(SubChunkLightData {
@@ -316,102 +325,10 @@ impl ChunkLightData {
 
     fn directions(coordinates: Coordinates) -> [InDirection; 6] {
         Direction::VALUES.map(|direction| coordinates.in_direction(direction))
-        // let mut directions = Vec::with_capacity(6);
-        // let chunk_relative_coordinates: ChunkRelativeCoordinates = coordinates.clone().into();
-        //
-        // if chunk_relative_coordinates.x < 15 {
-        //     directions.push(InDirection::InChunk(ChunkRelativeCoordinates {
-        //         x: chunk_relative_coordinates.x + 1,
-        //         y: chunk_relative_coordinates.y,
-        //         z: chunk_relative_coordinates.z,
-        //     }));
-        // } else {
-        //     directions.push(InDirection::OutOfChunk(
-        //         ChunkRelativeCoordinates {
-        //             x: 0,
-        //             y: chunk_relative_coordinates.y,
-        //             z: chunk_relative_coordinates.z,
-        //         },
-        //         coordinates.chunk_coordinates(),
-        //     ))
-        // }
-        //
-        // if chunk_relative_coordinates.x > 0 {
-        //     directions.push(InDirection::InChunk(ChunkRelativeCoordinates {
-        //         x: chunk_relative_coordinates.x - 1,
-        //         y: chunk_relative_coordinates.y,
-        //         z: chunk_relative_coordinates.z,
-        //     }));
-        // } else {
-        //     directions.push(InDirection::OutOfChunk(
-        //         ChunkRelativeCoordinates {
-        //             x: 15,
-        //             y: chunk_relative_coordinates.y,
-        //             z: chunk_relative_coordinates.z,
-        //         },
-        //         coordinates.chunk_coordinates(),
-        //     ))
-        // }
-        //
-        // if chunk_relative_coordinates.y < MAX_LIGHT_SUBCHUNK * 16 - 1 {
-        //     directions.push(InDirection::InChunk(ChunkRelativeCoordinates {
-        //         x: chunk_relative_coordinates.x,
-        //         y: chunk_relative_coordinates.y + 1,
-        //         z: chunk_relative_coordinates.z,
-        //     }));
-        // } else {
-        //     directions.push(InDirection::OutOfWorld)
-        // }
-        //
-        // if chunk_relative_coordinates.y > MIN_LIGHT_SUBCHUNK * 16 {
-        //     directions.push(InDirection::InChunk(ChunkRelativeCoordinates {
-        //         x: chunk_relative_coordinates.x,
-        //         y: chunk_relative_coordinates.y - 1,
-        //         z: chunk_relative_coordinates.z,
-        //     }));
-        // } else {
-        //     directions.push(InDirection::OutOfWorld)
-        // }
-        //
-        // if chunk_relative_coordinates.z < 15 {
-        //     directions.push(InDirection::InChunk(ChunkRelativeCoordinates {
-        //         x: chunk_relative_coordinates.x,
-        //         y: chunk_relative_coordinates.y,
-        //         z: chunk_relative_coordinates.z + 1,
-        //     }));
-        // } else {
-        //     directions.push(InDirection::OutOfChunk(
-        //         ChunkRelativeCoordinates {
-        //             x: chunk_relative_coordinates.x,
-        //             y: chunk_relative_coordinates.y,
-        //             z: 0,
-        //         },
-        //         coordinates.chunk_coordinates(),
-        //     ))
-        // }
-        //
-        // if chunk_relative_coordinates.z > 0 {
-        //     directions.push(InDirection::InChunk(ChunkRelativeCoordinates {
-        //         x: chunk_relative_coordinates.x,
-        //         y: chunk_relative_coordinates.y,
-        //         z: chunk_relative_coordinates.z - 1,
-        //     }));
-        // } else {
-        //     directions.push(InDirection::OutOfChunk(
-        //         ChunkRelativeCoordinates {
-        //             x: chunk_relative_coordinates.x,
-        //             y: chunk_relative_coordinates.y,
-        //             z: chunk_relative_coordinates.z - 1,
-        //         },
-        //         coordinates.chunk_coordinates(),
-        //     ))
-        // }
-        //
-        // directions
     }
 
     fn get_light_level(&self, coordinates: ChunkRelativeCoordinates) -> u8 {
-        let subchunk_y = std::cmp::max(coordinates.y / 16, MIN_LIGHT_SUBCHUNK);
+        let subchunk_y = std::cmp::max(div_16_floor(coordinates.y), MIN_LIGHT_SUBCHUNK);
 
         if subchunk_y > MAX_LIGHT_SUBCHUNK {
             return 15;
@@ -429,7 +346,7 @@ impl ChunkLightData {
     }
 
     fn set_light_level(&mut self, coordinates: ChunkRelativeCoordinates, level: u8) {
-        let subchunk_y = coordinates.y / 16;
+        let subchunk_y = div_16_floor(coordinates.y);
 
         let subchunk = self.get_subchunk_mut(subchunk_y);
         match subchunk {
@@ -445,7 +362,7 @@ impl ChunkLightData {
             let world_coordinates = item
                 .coordinates
                 .with_chunk_coordinates(&self.chunk_coordinates);
-            for direction in Self::directions(world_coordinates) {
+            for direction in Self::directions(world_coordinates.clone()) {
                 let InDirection::Valid(neighbor) = direction else {
                     continue;
                 };
@@ -457,7 +374,7 @@ impl ChunkLightData {
                     continue;
                 }
 
-                let chunk_relative_coordinates: ChunkRelativeCoordinates = neighbor.into();
+                let chunk_relative_coordinates: ChunkRelativeCoordinates = neighbor.clone().into();
                 let current_level = self.get_light_level(chunk_relative_coordinates.clone());
 
                 let target_level = item.level - 1;
@@ -466,15 +383,20 @@ impl ChunkLightData {
                     continue;
                 }
 
-                let block = blocks.get_block(crate::coordinates::ChunkRelativeBlockCoordinates {
-                    x: chunk_relative_coordinates.x.into(),
-                    y: chunk_relative_coordinates.y.into(),
-                    z: chunk_relative_coordinates.z.into(),
-                });
+                if chunk_relative_coordinates.y >= MIN_BLOCK_SUBCHUNK * 16
+                    && chunk_relative_coordinates.y < MAX_BLOCK_SUBCHUNK * 16
+                {
+                    let block =
+                        blocks.get_block(crate::coordinates::ChunkRelativeBlockCoordinates {
+                            x: chunk_relative_coordinates.x.into(),
+                            y: chunk_relative_coordinates.y.into(),
+                            z: chunk_relative_coordinates.z.into(),
+                        });
 
-                // TODO: Handle other transparent blocks
-                if !block.is_air() {
-                    continue;
+                    // TODO: Handle other transparent blocks
+                    if !block.is_air() {
+                        continue;
+                    }
                 }
 
                 self.set_light_level(chunk_relative_coordinates.clone(), target_level);
@@ -494,15 +416,15 @@ impl ChunkLightData {
             increase_queue: VecDeque::new(),
         };
 
-        let empty_subchunks: Vec<_> = (MIN_LIGHT_SUBCHUNK..=MAX_LIGHT_SUBCHUNK)
-            .map(|i| Self::subchunk_empty(blocks, i))
+        let subchunks_with_blocks: Vec<_> = (MIN_LIGHT_SUBCHUNK..=MAX_LIGHT_SUBCHUNK)
+            .map(|i| !Self::subchunk_empty(blocks, i))
             .collect();
 
         for subchunk_y in MIN_LIGHT_SUBCHUNK..=MAX_LIGHT_SUBCHUNK {
             let i = (subchunk_y - MIN_LIGHT_SUBCHUNK) as usize;
-            if *empty_subchunks.get(i).unwrap_or(&false)
-                || *empty_subchunks.get(i + 1).unwrap_or(&false)
-                || *empty_subchunks.get(i - 1).unwrap_or(&false)
+            if *subchunks_with_blocks.get(i).unwrap_or(&false)
+                || *subchunks_with_blocks.get(i + 1).unwrap_or(&false)
+                || *subchunks_with_blocks.get(i - 1).unwrap_or(&false)
             {
                 chunk_light_data.set_subchunk(subchunk_y, SubChunkLighting::initialized());
             }
@@ -531,7 +453,9 @@ impl ChunkLightData {
                         let current_block_y = (subchunk_y * 16) + y as i32;
                         let next_block_y = (subchunk_y * 16) + (y as i32) - 1;
 
-                        let light_reduction = if next_block_y < MAX_BLOCK_SUBCHUNK * 16 {
+                        let light_reduction = if next_block_y < MAX_BLOCK_SUBCHUNK * 16
+                            && next_block_y >= MIN_BLOCK_SUBCHUNK * 16
+                        {
                             let next_block = blocks.get_block(
                                 crate::coordinates::ChunkRelativeBlockCoordinates {
                                     x: x.into(),
@@ -549,9 +473,9 @@ impl ChunkLightData {
                             0
                         };
 
-                        light_level = std::cmp::max(0, light_level - light_reduction);
+                        let next_light_level = std::cmp::max(0, light_level - light_reduction);
 
-                        if light_level > 0 {
+                        if next_light_level == 0 {
                             chunk_light_data.add_to_increase_queue(
                                 ChunkRelativeCoordinates {
                                     x,
@@ -562,31 +486,34 @@ impl ChunkLightData {
                             );
                             break 'column;
                         }
+
+                        light_level = next_light_level;
                     }
                 }
             }
         }
 
         chunk_light_data.propogate_increase(&blocks);
-
         chunk_light_data
     }
 
-    pub fn subchunk_masks(&self) -> (i64, i64) {
+    pub fn packet_data(&self) -> (i64, i64, Vec<[u8; 2048]>) {
         let mut empty_mask = 0;
         let mut set_mask = 0;
+        let mut things = Vec::new();
 
         for (i, subchunk) in self.subchunks.iter().enumerate() {
             match subchunk {
                 SubChunkLighting::Uninitialized => {}
                 SubChunkLighting::Initialized(light_data) => {
-                    set_mask |= 1 << i;
-                    for level in *light_data.0 {
-                        if level != 0 {
-                            // Add to empty
-                            empty_mask |= 1 << i;
-                            // Remove from set
-                            set_mask ^= 1 << i;
+                    // Add to empty
+                    empty_mask |= 1 << i;
+                    for (f, level) in light_data.0.iter().enumerate() {
+                        if *level != 0 {
+                            things.push(*light_data.0);
+                            set_mask |= 1 << i;
+                            // Remove from empty
+                            empty_mask ^= 1 << i;
                             break;
                         }
                     }
@@ -594,7 +521,7 @@ impl ChunkLightData {
             }
         }
 
-        (set_mask, empty_mask)
+        (set_mask, empty_mask, things)
     }
 }
 
