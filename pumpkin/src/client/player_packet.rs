@@ -707,6 +707,6 @@ impl Player {
         let progress_per_tick = 1.0 / attack_speed * 20.0;
 
         let progress = x / progress_per_tick;
-        num_traits::clamp(progress, 0.0, 1.0)
+        progress.clamp(0.0, 1.0)
     }
 }
