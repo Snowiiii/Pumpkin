@@ -3,8 +3,7 @@ const WORLD_DATA_VERSION: usize = 4082;
 use std::{
     collections::HashMap,
     fs::OpenOptions,
-    io::{Read, Seek, Write},
-    os::windows::fs::FileExt,
+    io::{Read, Seek, SeekFrom, Write},
 };
 
 use fastnbt::LongArray;
@@ -272,11 +271,6 @@ impl ChunkWriter for AnvilChunkFormat {
                 .map_err(|err| ChunkWritingError::IoError(err.kind()))?;
         }
 
-        // write new location and timestamp table
-        if let Err(err) = region_file.seek_write(&[location_table, timestamp_table].concat(), 0) {
-            return Err(ChunkWritingError::IoError(err.kind()));
-        }
-
         let chunk_x = modulus(at.x, 32) as u32;
         let chunk_z = modulus(at.z, 32) as u32;
 
@@ -312,23 +306,23 @@ impl ChunkWriter for AnvilChunkFormat {
                     continue;
                 }
                 let mut buf = vec![0u8; other_size];
-                region_file
-                    .seek_read(&mut buf, other_offset)
-                    .unwrap_or_else(|_| {
-                        panic!(
-                            "Region file r.-{},{}.mca got corrupted, sorry",
-                            region.0, region.1
-                        )
-                    });
+                region_file.seek(SeekFrom::Start(other_offset)).unwrap(); // TODO
+                region_file.read_exact(&mut buf).unwrap_or_else(|_| {
+                    panic!(
+                        "Region file r.-{},{}.mca got corrupted, sorry",
+                        region.0, region.1
+                    )
+                });
 
                 region_file
-                    .seek_write(&buf, other_offset - at_size as u64)
-                    .unwrap_or_else(|_| {
-                        panic!(
-                            "Region file r.-{},{}.mca got corrupted, sorry",
-                            region.0, region.1
-                        )
-                    });
+                    .seek(SeekFrom::Start(other_offset - at_size as u64))
+                    .unwrap(); // TODO
+                region_file.write_all(&buf).unwrap_or_else(|_| {
+                    panic!(
+                        "Region file r.-{},{}.mca got corrupted, sorry",
+                        region.0, region.1
+                    )
+                });
                 let location_bytes =
                     &(((other_offset - at_size as u64) / 4096) as u32).to_be_bytes()[0..3];
                 let size_bytes = [(other_size / 4096) as u8];
@@ -353,15 +347,27 @@ impl ChunkWriter for AnvilChunkFormat {
                 end_index = u64::max(offset + size as u64, end_index);
             }
         }
+        
+        let location_bytes = &(end_index as u32).to_be_bytes()[0..3];
+        let size_bytes = [(bytes.len() / 4096) as u8];
+        location_table[table_entry as usize..table_entry as usize + 4]
+            .as_mut()
+            .copy_from_slice(&[location_bytes, &size_bytes].concat());
 
-        region_file
-            .seek_write(&bytes, end_index)
-            .unwrap_or_else(|_| {
-                panic!(
-                    "Region file r.-{},{}.mca got corrupted, sorry",
-                    region.0, region.1
-                )
-            });
+        // write new location and timestamp table
+
+        region_file.seek(SeekFrom::Start(0)).unwrap(); // TODO
+        if let Err(err) = region_file.write_all(&[location_table, timestamp_table].concat()) {
+            return Err(ChunkWritingError::IoError(err.kind()));
+        }
+
+        region_file.seek(SeekFrom::Start(end_index)).unwrap(); // TODO
+        region_file.write_all(&bytes).unwrap_or_else(|_| {
+            panic!(
+                "Region file r.-{},{}.mca got corrupted, sorry",
+                region.0, region.1
+            )
+        });
 
         Ok(())
     }
