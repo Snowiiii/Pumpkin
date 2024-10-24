@@ -25,6 +25,7 @@ thiserror.workspace = true
 
 num-traits.workspace = true
 num-derive.workspace = true
+parking_lot.workspace = true
 
 # config
 serde.workspace = true
