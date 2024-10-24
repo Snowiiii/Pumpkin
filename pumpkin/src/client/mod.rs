@@ -43,6 +43,7 @@ use thiserror::Error;
 
 pub mod authentication;
 mod client_packet;
+mod combat;
 mod container;
 pub mod player_packet;
 

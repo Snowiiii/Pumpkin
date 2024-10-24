@@ -13,6 +13,7 @@ pumpkin-world = { path = "../pumpkin-world" }
 pumpkin-entity = { path = "../pumpkin-entity" }
 pumpkin-protocol = { path = "../pumpkin-protocol" }
 pumpkin-registry = { path = "../pumpkin-registry" }
+pumpkin-macros = { path = "../pumpkin-macros" }
 
 itertools.workspace = true
 log.workspace = true

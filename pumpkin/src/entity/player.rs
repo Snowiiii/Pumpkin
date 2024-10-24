@@ -1,6 +1,6 @@
 use std::{
     sync::{
-        atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU8},
+        atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU32, AtomicU8},
         Arc,
     },
     time::{Duration, Instant},
@@ -23,9 +23,10 @@ use pumpkin_protocol::{
         CSyncPlayerPosition, CSystemChatMessage, GameEvent, PlayerAction,
     },
     server::play::{
-        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SPlayerAbilities,
-        SPlayerAction, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetHeldItem,
-        SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn, ServerboundPlayPackets,
+        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
+        SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
+        SPlayerRotation, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
+        ServerboundPlayPackets,
     },
     RawPacket, ServerPacket, VarInt,
 };
@@ -95,6 +96,8 @@ pub struct Player {
     pub keep_alive_id: AtomicI64,
     /// Last time we send a keep alive
     pub last_keep_alive_time: AtomicCell<Instant>,
+    /// Amount of ticks since last attack
+    pub last_attacked_ticks: AtomicU32,
 }
 
 impl Player {
@@ -143,6 +146,7 @@ impl Player {
             wait_for_keep_alive: AtomicBool::new(false),
             keep_alive_id: AtomicI64::new(0),
             last_keep_alive_time: AtomicCell::new(std::time::Instant::now()),
+            last_attacked_ticks: AtomicU32::new(0),
         }
     }
 
@@ -175,6 +179,11 @@ impl Player {
 
     pub async fn tick(&self) {
         let now = Instant::now();
+        self.last_attacked_ticks
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+
+        self.living_entity.tick();
+
         if now.duration_since(self.last_keep_alive_time.load()) >= Duration::from_secs(15) {
             // We never got a response from our last keep alive we send
             if self
@@ -403,7 +412,10 @@ impl Player {
                 ServerboundPlayPackets::DebugSampleSubscription => {}
                 ServerboundPlayPackets::EditBook => {}
                 ServerboundPlayPackets::QueryEntityNbt => {}
-                ServerboundPlayPackets::InteractEntity => {}
+                ServerboundPlayPackets::InteractEntity => {
+                    self.handle_interact(server, SInteract::read(bytebuf)?)
+                        .await;
+                }
                 ServerboundPlayPackets::GenerateStructure => {}
                 ServerboundPlayPackets::KeepAlive => {
                     self.handle_keep_alive(SKeepAlive::read(bytebuf)?).await;
@@ -435,7 +447,10 @@ impl Player {
                     self.handle_player_action(SPlayerAction::read(bytebuf)?)
                         .await;
                 }
-                ServerboundPlayPackets::EntityAction => {}
+                ServerboundPlayPackets::EntityAction => {
+                    self.handle_player_command(SPlayerCommand::read(bytebuf)?)
+                        .await;
+                }
                 ServerboundPlayPackets::PlayerInput => {}
                 ServerboundPlayPackets::Pong => {}
                 ServerboundPlayPackets::SetRecipeBookState => {}

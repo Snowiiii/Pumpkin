@@ -1,6 +1,18 @@
 use crate::item::ItemStack;
 
 impl ItemStack {
+    pub fn is_sword(&self) -> bool {
+        [
+            818, // Wooden
+            823, // Stone
+            828, // Gold
+            833, // Iron
+            838, // Diamond
+            843, // Netherite
+        ]
+        .contains(&self.item_id)
+    }
+
     pub fn is_helmet(&self) -> bool {
         [
             // Leather
