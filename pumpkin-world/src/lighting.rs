@@ -2,7 +2,10 @@ use std::{collections::VecDeque, time::Instant};
 
 use pumpkin_core::math::vector2::Vector2;
 
-use crate::chunk::ChunkBlocks;
+use crate::{
+    block::{Block, BlockCategory, BlockId},
+    chunk::ChunkBlocks,
+};
 
 fn div_16_floor(y: i32) -> i32 {
     if y >= 0 {
@@ -252,6 +255,14 @@ impl Coordinates {
 }
 
 impl ChunkLightData {
+    fn block_light_filtering(block: BlockId) -> u8 {
+        if block.is_air() {
+            0
+        } else {
+            15
+        }
+    }
+
     fn add_to_increase_queue(&mut self, coordinates: ChunkRelativeCoordinates, level: u8) {
         self.increase_queue
             .push_back(LightChangeQueueItem { level, coordinates });
@@ -395,7 +406,6 @@ impl ChunkLightData {
         // Sky Light Columns
         for z in 0u8..16 {
             for x in 0u8..16 {
-                // TODO: Can be modified by certain blocks that filter light.
                 let mut light_level = 15;
                 // Start from the top down
                 'column: for (subchunk_index, subchunk) in
@@ -426,11 +436,7 @@ impl ChunkLightData {
                                 },
                             );
 
-                            if next_block.is_air() {
-                                0
-                            } else {
-                                15
-                            }
+                            Self::block_light_filtering(next_block)
                         } else {
                             0
                         };
