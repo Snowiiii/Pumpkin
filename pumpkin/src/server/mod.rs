@@ -153,6 +153,16 @@ impl Server {
         None
     }
 
+    /// Searches every world for a player by UUID
+    pub async fn get_player_by_uuid(&self, id: uuid::Uuid) -> Option<Arc<Player>> {
+        for world in &self.worlds {
+            if let Some(player) = world.get_player_by_uuid(id).await {
+                return Some(player);
+            }
+        }
+        None
+    }
+
     /// Generates a new entity id
     /// This should be global
     pub fn new_entity_id(&self) -> EntityId {
