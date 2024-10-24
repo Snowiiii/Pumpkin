@@ -2,12 +2,27 @@ use std::{collections::HashMap, sync::LazyLock};
 
 use serde::Deserialize;
 
-use super::BlockState;
+use super::{BlockState, BlockString};
 
 pub static BLOCKS: LazyLock<HashMap<String, RegistryBlockType>> = LazyLock::new(|| {
     serde_json::from_str(include_str!("../../../assets/blocks.json"))
         .expect("Could not parse block.json registry.")
 });
+
+pub static BLOCK_IDS_TO_BLOCK_STRING: LazyLock<HashMap<BlockId, BlockString>> =
+    LazyLock::new(|| {
+        let mut map = HashMap::new();
+        for (block_name, registry_block) in &*BLOCKS {
+            for state in registry_block.states.iter() {
+                let block_string = BlockString {
+                    name: block_name.as_str(),
+                    properties: &state.properties,
+                };
+                map.insert(state.id, block_string);
+            }
+        }
+        map
+    });
 
 pumpkin_macros::blocks_enum!();
 pumpkin_macros::block_categories_enum!();
@@ -69,6 +84,11 @@ impl BlockId {
 
     pub fn get_id(&self) -> u16 {
         self.data
+    }
+
+    /// This is advised to use only when necessary, since most of the time, you can get away with compairing block id's, which is much cheaper.
+    pub fn get_block_string(&self) -> Option<&'static BlockString> {
+        BLOCK_IDS_TO_BLOCK_STRING.get(self)
     }
 }
 
