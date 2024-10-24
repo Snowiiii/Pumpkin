@@ -236,7 +236,7 @@ impl ChunkWriter for AnvilChunkFormat {
             .map_err(|err| ChunkWritingError::ChunkSerializingError(err.to_string()))?;
         let bytes = Compression::ZLib
             .compress_data(bytes, Some(CompressionLevel::best()))
-            .map_err(|e| ChunkWritingError::Compression(e))?;
+            .map_err(ChunkWritingError::Compression)?;
 
         let region = (
             ((at.x as f32) / 32.0).floor() as i32,
@@ -247,14 +247,13 @@ impl ChunkWriter for AnvilChunkFormat {
             .read(true)
             .write(true)
             .create(true)
+            .truncate(false)
             .open(
                 save_file
                     .region_folder
                     .join(format!("r.{}.{}.mca", region.0, region.1)),
             )
-            .map_err(|err| match err.kind() {
-                kind => ChunkWritingError::IoError(kind),
-            })?;
+            .map_err(|err| ChunkWritingError::IoError(err.kind()))?;
 
         let mut location_table: [u8; 4096] = [0; 4096];
         let mut timestamp_table: [u8; 4096] = [0; 4096];
@@ -315,17 +314,21 @@ impl ChunkWriter for AnvilChunkFormat {
                 let mut buf = vec![0u8; other_size];
                 region_file
                     .seek_read(&mut buf, other_offset)
-                    .expect(&format!(
-                        "Region file r.-{},{}.mca got corrupted, sorry",
-                        region.0, region.1,
-                    ));
+                    .unwrap_or_else(|_| {
+                        panic!(
+                            "Region file r.-{},{}.mca got corrupted, sorry",
+                            region.0, region.1
+                        )
+                    });
 
                 region_file
                     .seek_write(&buf, other_offset - at_size as u64)
-                    .expect(&format!(
-                        "Region file r.-{},{}.mca got corrupted, sorry",
-                        region.0, region.1,
-                    ));
+                    .unwrap_or_else(|_| {
+                        panic!(
+                            "Region file r.-{},{}.mca got corrupted, sorry",
+                            region.0, region.1
+                        )
+                    });
                 let location_bytes =
                     &(((other_offset - at_size as u64) / 4096) as u32).to_be_bytes()[0..3];
                 let size_bytes = [(other_size / 4096) as u8];
@@ -351,10 +354,14 @@ impl ChunkWriter for AnvilChunkFormat {
             }
         }
 
-        region_file.seek_write(&bytes, end_index).expect(&format!(
-            "Region file r.-{},{}.mca got corrupted, sorry",
-            region.0, region.1,
-        ));
+        region_file
+            .seek_write(&bytes, end_index)
+            .unwrap_or_else(|_| {
+                panic!(
+                    "Region file r.-{},{}.mca got corrupted, sorry",
+                    region.0, region.1
+                )
+            });
 
         Ok(())
     }
@@ -425,6 +432,6 @@ impl AnvilChunkFormat {
 
         let bytes = fastnbt::to_bytes(&nbt);
 
-        bytes.map_err(|err| ChunkSerializingError::ErrorSerializingChunk(err))
+        bytes.map_err(ChunkSerializingError::ErrorSerializingChunk)
     }
 }

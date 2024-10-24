@@ -109,7 +109,6 @@ pub struct ChunkHeightmaps {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-#[expect(dead_code)]
 struct ChunkSection {
     #[serde(rename = "Y")]
     y: i32,
@@ -119,7 +118,6 @@ struct ChunkSection {
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 struct ChunkNbt {
-    #[expect(dead_code)]
     data_version: usize,
 
     #[serde(rename = "sections")]
