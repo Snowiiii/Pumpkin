@@ -397,7 +397,7 @@ impl AnvilChunkFormat {
                 let size = 64 - (palette.len() as i64 - 1).leading_zeros();
                 std::cmp::max(4, size)
             } as usize;
-            let blocks_in_pack = (64 / block_bit_size) as usize;
+            let blocks_in_pack = 64 / block_bit_size;
             let mut section_longs = Vec::new();
 
             let mut current_pack_long = 0i64;
