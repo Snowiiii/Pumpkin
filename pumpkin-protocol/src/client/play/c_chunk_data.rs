@@ -3,12 +3,7 @@ use std::collections::HashMap;
 use crate::{bytebuf::ByteBuffer, BitSet, ClientPacket, VarInt};
 use itertools::Itertools;
 use pumpkin_macros::client_packet;
-use pumpkin_world::{
-    chunk::{ChunkData, SUBCHUNK_VOLUME},
-    lighting::ChunkLighting,
-    lighting2::ChunkLightData,
-    DIRECT_PALETTE_BITS,
-};
+use pumpkin_world::{chunk::ChunkData, DIRECT_PALETTE_BITS};
 
 use super::ClientboundPlayPackets;
 
@@ -117,15 +112,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
         // TODO: block entities
         buf.put_var_int(&VarInt(0));
 
-        let chunk_light_data = ChunkLightData::initialize(
-            pumpkin_world::lighting2::ChunkCoordinates {
-                x: self.0.position.x,
-                z: self.0.position.z,
-            },
-            &self.0.blocks,
-        );
-
-        let (sky_light_mask, empty_sky_light_mask, subchunks) = chunk_light_data.packet_data();
+        let (sky_light_mask, empty_sky_light_mask, subchunks) = self.0.light.packet_data();
 
         // Sky Light Mask
         // All of the chunks, this is not optimal and uses way more data than needed but will be
@@ -138,22 +125,10 @@ impl<'a> ClientPacket for CChunkData<'a> {
         // Empty Block Light Mask
         buf.put_bit_set(&BitSet(VarInt(1), &[0]));
 
-        let debug = self.0.position.x == -1 && self.0.position.z == 0;
-
-        if debug {
-            println!("{:b}", sky_light_mask);
-            println!("{:b}", empty_sky_light_mask);
-            println!("New Chunk? {} ", subchunks.len());
-        }
         buf.put_var_int(&subchunks.len().into());
-        for (i, subchunk) in subchunks.into_iter().enumerate() {
+        for subchunk in subchunks.into_iter() {
             buf.put_var_int(&VarInt(subchunk.len() as i32));
-            buf.put_slice(&subchunk);
-            // if debug {
-            //     print!("Start Subchunk: ");
-            //     subchunk.iter().for_each(|v| print!("{:X}", v));
-            //     print!("\n");
-            // }
+            buf.put_slice(&**subchunk);
         }
 
         // Block Lighting

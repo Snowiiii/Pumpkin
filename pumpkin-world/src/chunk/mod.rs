@@ -11,6 +11,7 @@ use crate::{
     block::{block_state::BlockStateError, BlockId, BlockState},
     coordinates::{ChunkRelativeBlockCoordinates, Height},
     level::SaveFile,
+    lighting::ChunkLightData,
     WORLD_HEIGHT,
 };
 
@@ -57,6 +58,7 @@ pub enum CompressionError {
 pub struct ChunkData {
     pub blocks: ChunkBlocks,
     pub position: Vector2<i32>,
+    pub light: ChunkLightData,
 }
 pub struct ChunkBlocks {
     // TODO make this a Vec that doesn't store the upper layers that only contain air
@@ -305,6 +307,7 @@ impl ChunkData {
         }
 
         Ok(ChunkData {
+            light: ChunkLightData::initialize(at, &blocks),
             blocks,
             position: at,
         })
