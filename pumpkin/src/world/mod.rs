@@ -361,9 +361,19 @@ impl World {
         None
     }
 
-    /// Gets a Player by name
-    pub fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
-        // not sure of blocking lock
+    /// Gets a Player by username
+    pub async fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
+        for player in self.current_players.lock().await.values() {
+            if player.gameprofile.name == name {
+                return Some(player.clone());
+            }
+        }
+        None
+    }
+
+    /// Gets a Player by username (Blocking - Legacy use only)
+    pub fn get_player_by_name_blocking(&self, name: &str) -> Option<Arc<Player>> {
+        // TODO: Remove this blocking functions when commands are async.
         for player in self.current_players.blocking_lock().values() {
             if player.gameprofile.name == name {
                 return Some(player.clone());
