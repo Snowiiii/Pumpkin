@@ -28,6 +28,15 @@ pub trait ChunkReader: Sync + Send {
     ) -> Result<ChunkData, ChunkReadingError>;
 }
 
+pub trait ChunkWriter: Send + Sync {
+    fn write_chunk(
+        &self,
+        chunk: &ChunkData,
+        save_file: &SaveFile,
+        at: Vector2<i32>,
+    ) -> Result<(), ChunkWritingError>;
+}
+
 #[derive(Error, Debug)]
 pub enum ChunkReadingError {
     #[error("Io error: {0}")]
@@ -40,6 +49,16 @@ pub enum ChunkReadingError {
     ChunkNotExist,
     #[error("Failed to parse Chunk from bytes: {0}")]
     ParsingError(ChunkParsingError),
+}
+
+#[derive(Error, Debug)]
+pub enum ChunkWritingError {
+    #[error("Io error: {0}")]
+    IoError(std::io::ErrorKind),
+    #[error("Compression error {0}")]
+    Compression(CompressionError),
+    #[error("Chunk serializing error: {0}")]
+    ChunkSerializingError(String),
 }
 
 #[derive(Error, Debug)]
@@ -69,14 +88,14 @@ pub struct ChunkBlocks {
     pub heightmap: ChunkHeightmaps,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct PaletteEntry {
     name: String,
     properties: Option<HashMap<String, String>>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 struct ChunkSectionBlockStates {
     data: Option<LongArray>,
     palette: Vec<PaletteEntry>,
@@ -89,18 +108,16 @@ pub struct ChunkHeightmaps {
     world_surface: LongArray,
 }
 
-#[derive(Deserialize, Debug)]
-#[expect(dead_code)]
+#[derive(Deserialize, Serialize, Debug)]
 struct ChunkSection {
     #[serde(rename = "Y")]
     y: i32,
     block_states: Option<ChunkSectionBlockStates>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 struct ChunkNbt {
-    #[expect(dead_code)]
     data_version: usize,
 
     #[serde(rename = "sections")]
@@ -319,4 +336,10 @@ pub enum ChunkParsingError {
     ChunkNotGenerated,
     #[error("Error deserializing chunk: {0}")]
     ErrorDeserializingChunk(String),
+}
+
+#[derive(Error, Debug)]
+pub enum ChunkSerializingError {
+    #[error("Error serializing chunk: {0}")]
+    ErrorSerializingChunk(fastnbt::error::Error),
 }

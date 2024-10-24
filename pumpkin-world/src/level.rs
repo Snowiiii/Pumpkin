@@ -7,7 +7,7 @@ use tokio::sync::{mpsc, RwLock};
 
 use crate::{
     chunk::{
-        anvil::AnvilChunkReader, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
+        anvil::AnvilChunkFormat, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
     },
     world_gen::{get_world_gen, Seed, WorldGenerator},
 };
@@ -39,35 +39,28 @@ pub struct SaveFile {
 impl Level {
     pub fn from_root_folder(root_folder: PathBuf) -> Self {
         let world_gen = get_world_gen(Seed(0)).into(); // TODO Read Seed from config.
-        if root_folder.exists() {
+        let save_file = if root_folder.exists() {
             let region_folder = root_folder.join("region");
             assert!(
                 region_folder.exists(),
                 "World region folder does not exist, despite there being a root folder."
             );
-
-            Self {
-                world_gen,
-                save_file: Some(SaveFile {
-                    root_folder,
-                    region_folder,
-                }),
-                chunk_reader: Arc::new(AnvilChunkReader::new()),
-                loaded_chunks: Arc::new(DashMap::new()),
-                chunk_watchers: Arc::new(DashMap::new()),
-            }
+            Some(SaveFile {
+                root_folder,
+                region_folder,
+            })
         } else {
             log::warn!(
                 "Pumpkin currently only supports Superflat World generation. Use a vanilla ./world folder to play in a normal world."
             );
-
-            Self {
-                world_gen,
-                save_file: None,
-                chunk_reader: Arc::new(AnvilChunkReader::new()),
-                loaded_chunks: Arc::new(DashMap::new()),
-                chunk_watchers: Arc::new(DashMap::new()),
-            }
+            None
+        };
+        Self {
+            world_gen,
+            save_file,
+            chunk_reader: Arc::new(AnvilChunkFormat::new()),
+            loaded_chunks: Arc::new(DashMap::new()),
+            chunk_watchers: Arc::new(DashMap::new()),
         }
     }
 
