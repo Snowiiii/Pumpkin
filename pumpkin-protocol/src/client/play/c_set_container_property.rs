@@ -1,15 +1,19 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
+
+use crate::VarInt;
+
+use super::ClientboundPlayPackets;
 #[derive(Serialize)]
-#[packet(0x14)]
+#[client_packet(ClientboundPlayPackets::WindowProperty as i32)]
 pub struct CSetContainerProperty {
-    window_id: u8,
+    window_id: VarInt,
     property: i16,
     value: i16,
 }
 
 impl CSetContainerProperty {
-    pub const fn new(window_id: u8, property: i16, value: i16) -> Self {
+    pub const fn new(window_id: VarInt, property: i16, value: i16) -> Self {
         Self {
             window_id,
             property,

@@ -6,7 +6,6 @@ use pumpkin_entity::EntityId;
 use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::{Container, OpenContainer};
 use pumpkin_protocol::client::login::CEncryptionRequest;
-use pumpkin_protocol::client::status::CStatusResponse;
 use pumpkin_protocol::{client::config::CPluginMessage, ClientPacket};
 use pumpkin_registry::Registry;
 use pumpkin_world::dimension::Dimension;
@@ -31,11 +30,13 @@ use crate::{
 
 mod connection_cache;
 mod key_store;
-pub const CURRENT_MC_VERSION: &str = "1.21.1";
+pub mod ticker;
+
+pub const CURRENT_MC_VERSION: &str = "1.21.3";
 
 pub struct Server {
     key_store: KeyStore,
-    server_listing: CachedStatus,
+    server_listing: Mutex<CachedStatus>,
     server_branding: CachedBranding,
 
     pub command_dispatcher: Arc<CommandDispatcher<'static>>,
@@ -54,6 +55,7 @@ pub struct Server {
 
 impl Server {
     #[allow(clippy::new_without_default)]
+    #[must_use]
     pub fn new() -> Self {
         // TODO: only create when needed
 
@@ -86,12 +88,12 @@ impl Server {
             command_dispatcher: Arc::new(command_dispatcher),
             auth_client,
             key_store: KeyStore::new(),
-            server_listing: CachedStatus::new(),
+            server_listing: Mutex::new(CachedStatus::new()),
             server_branding: CachedBranding::new(),
         }
     }
 
-    pub async fn add_player(&self, id: usize, client: Arc<Client>) -> (Arc<Player>, Arc<World>) {
+    pub async fn add_player(&self, client: Arc<Client>) -> (Arc<Player>, Arc<World>) {
         let entity_id = self.new_entity_id();
         let gamemode = match BASIC_CONFIG.default_gamemode {
             GameMode::Undefined => GameMode::Survival,
@@ -102,8 +104,22 @@ impl Server {
         let world = &self.worlds[0];
 
         let player = Arc::new(Player::new(client, world.clone(), entity_id, gamemode).await);
-        world.add_player(id, player.clone()).await;
+        world
+            .add_player(player.gameprofile.id, player.clone())
+            .await;
+        // TODO: Config if we want increase online
+        if let Some(config) = player.client.config.lock().await.as_ref() {
+            // TODO: Config so we can also just ignore this hehe
+            if config.server_listing {
+                self.server_listing.lock().await.add_player();
+            }
+        }
         (player, world.clone())
+    }
+
+    pub async fn remove_player(&self) {
+        // TODO: Config if we want increase online
+        self.server_listing.lock().await.remove_player();
     }
 
     pub async fn try_get_container(
@@ -124,13 +140,13 @@ impl Server {
         P: ClientPacket,
     {
         for world in &self.worlds {
-            world.broadcast_packet_all(packet).await
+            world.broadcast_packet_all(packet).await;
         }
     }
 
     /// Searches every world for a player by name
-    pub async fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
-        for world in self.worlds.iter() {
+    pub fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
+        for world in &self.worlds {
             if let Some(player) = world.get_player_by_name(name) {
                 return Some(player);
             }
@@ -148,8 +164,8 @@ impl Server {
         self.server_branding.get_branding()
     }
 
-    pub fn get_status(&self) -> CStatusResponse<'_> {
-        self.server_listing.get_status()
+    pub fn get_status(&self) -> &Mutex<CachedStatus> {
+        &self.server_listing
     }
 
     pub fn encryption_request<'a>(
@@ -167,5 +183,11 @@ impl Server {
 
     pub fn digest_secret(&self, secret: &[u8]) -> String {
         self.key_store.get_digest(secret)
+    }
+
+    async fn tick(&self) {
+        for world in &self.worlds {
+            world.tick().await;
+        }
     }
 }

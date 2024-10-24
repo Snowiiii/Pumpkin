@@ -1,8 +1,10 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x0B)]
+#[client_packet(ClientboundPlayPackets::ServerDifficulty as i32)]
 pub struct CChangeDifficulty {
     difficulty: u8,
     locked: bool,

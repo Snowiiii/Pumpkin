@@ -71,14 +71,14 @@ impl Player {
             .carried_item
             .load()
             .as_ref()
-            .map_or_else(Slot::empty, |item| item.into());
+            .map_or_else(Slot::empty, std::convert::Into::into);
 
         // Gets the previous value
         let i = inventory
             .state_id
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let packet = CSetContainerContent::new(
-            total_opened_containers,
+            total_opened_containers.into(),
             ((i + 1) as i32).into(),
             &slots,
             &carried_item,
@@ -91,8 +91,10 @@ impl Player {
         let mut inventory = self.inventory.lock().await;
         inventory.total_opened_containers += 1;
         self.client
-            .send_packet(&CCloseContainer::new(inventory.total_opened_containers))
-            .await
+            .send_packet(&CCloseContainer::new(
+                inventory.total_opened_containers.into(),
+            ))
+            .await;
     }
 
     pub async fn set_container_property<T: WindowPropertyTrait>(
@@ -102,7 +104,7 @@ impl Player {
         let (id, value) = window_property.into_tuple();
         self.client
             .send_packet(&CSetContainerProperty::new(
-                self.inventory.lock().await.total_opened_containers,
+                self.inventory.lock().await.total_opened_containers.into(),
                 id,
                 value,
             ))
@@ -131,10 +133,10 @@ impl Player {
         }
 
         if opened_container.is_some() {
-            if packet.window_id != self.inventory.lock().await.total_opened_containers {
+            if packet.window_id.0 != self.inventory.lock().await.total_opened_containers {
                 return Err(InventoryError::ClosedContainerInteract(self.entity_id()));
             }
-        } else if packet.window_id != 0 {
+        } else if packet.window_id.0 != 0 {
             return Err(InventoryError::ClosedContainerInteract(self.entity_id()));
         }
 
@@ -190,7 +192,7 @@ impl Player {
                 //  self.mouse_drag(drag_handler, opened_container.as_deref_mut(), drag_state)
             }
             ClickType::DropType(_drop_type) => {
-                dbg!("todo");
+                log::debug!("todo");
                 Ok(())
             }
         }?;
@@ -270,7 +272,7 @@ impl Player {
                         slots.skip(36).rev().find_map(find_condition)
                     };
                     if let Some(slot) = slots {
-                        let mut item_slot = container.all_slots()[slot].map(|i| i.to_owned());
+                        let mut item_slot = container.all_slots()[slot].map(|i| i);
                         container.handle_item_change(&mut item_slot, slot, MouseClick::Left)?;
                         *container.all_slots()[slot] = item_slot;
                     }
@@ -363,13 +365,14 @@ impl Player {
         let player_id = self.entity_id();
         let container_id = opened_container
             .as_ref()
-            .map(|container| container.internal_pumpkin_id())
-            .unwrap_or(player_id as u64);
+            .map_or(player_id as u64, |container| {
+                container.internal_pumpkin_id()
+            });
         match mouse_drag_state {
             MouseDragState::Start(drag_type) => {
                 if drag_type == MouseDragType::Middle && self.gamemode.load() != GameMode::Creative
                 {
-                    Err(InventoryError::PermissionError)?
+                    Err(InventoryError::PermissionError)?;
                 }
                 drag_handler
                     .new_drag(container_id, player_id, drag_type)
@@ -403,7 +406,7 @@ impl Player {
                 .filter(|player_id| *player_id != self.entity_id())
                 .collect_vec()
         };
-        let player_token = self.client.id;
+        let player_token = self.gameprofile.id;
 
         // TODO: Figure out better way to get only the players from player_ids
         // Also refactor out a better method to get individual advanced state ids
@@ -417,15 +420,15 @@ impl Player {
             .await
             .iter()
             .filter_map(|(token, player)| {
-                if *token != player_token {
+                if *token == player_token {
+                    None
+                } else {
                     let entity_id = player.entity_id();
                     if player_ids.contains(&entity_id) {
                         Some(player.clone())
                     } else {
                         None
                     }
-                } else {
-                    None
                 }
             })
             .collect_vec();

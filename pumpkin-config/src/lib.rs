@@ -91,6 +91,8 @@ pub struct BasicConfiguration {
     /// The server's description displayed on the status screen.
     #[serde_inline_default("A Blazing fast Pumpkin Server!".to_string())]
     pub motd: String,
+    #[serde_inline_default(20.0)]
+    pub tps: f32,
     /// The default game mode for players.
     #[serde_inline_default(GameMode::Survival)]
     pub default_gamemode: GameMode,
@@ -123,6 +125,7 @@ impl Default for BasicConfiguration {
             online_mode: true,
             encryption: true,
             motd: "A Blazing fast Pumpkin Server!".to_string(),
+            tps: 20.0,
             default_gamemode: GameMode::Survival,
             scrub_ips: true,
             use_favicon: true,

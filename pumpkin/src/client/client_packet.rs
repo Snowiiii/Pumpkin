@@ -18,7 +18,7 @@ use pumpkin_protocol::{
 use uuid::Uuid;
 
 use crate::{
-    client::authentication::{self, validate_textures, GameProfile},
+    client::authentication::{self, offline_uuid, validate_textures, GameProfile},
     entity::player::{ChatMode, Hand},
     proxy::{
         bungeecord,
@@ -32,15 +32,14 @@ use super::{authentication::AuthError, Client, PlayerConfig};
 /// Processes incoming Packets from the Client to the Server
 /// Implements the `Client` Packets
 /// NEVER TRUST THE CLIENT. HANDLE EVERY ERROR, UNWRAP/EXPECT
-/// TODO: REMOVE ALL UNWRAPS
 impl Client {
     pub async fn handle_handshake(&self, handshake: SHandShake) {
-        dbg!("handshake");
         let version = handshake.protocol_version.0;
         self.protocol_version
             .store(version, std::sync::atomic::Ordering::Relaxed);
         *self.server_address.lock().await = handshake.server_address;
 
+        log::debug!("Handshake: next state {:?}", &handshake.next_state);
         self.connection_state.store(handshake.next_state);
         if self.connection_state.load() != ConnectionState::Status {
             let protocol = version;
@@ -57,11 +56,13 @@ impl Client {
     }
 
     pub async fn handle_status_request(&self, server: &Server, _status_request: SStatusRequest) {
-        self.send_packet(&server.get_status()).await;
+        log::debug!("Handling status request for id");
+        let status = server.get_status();
+        self.send_packet(&status.lock().await.get_status()).await;
     }
 
     pub async fn handle_ping_request(&self, ping_request: SStatusPingRequest) {
-        dbg!("ping");
+        log::debug!("Handling ping request for id");
         self.send_packet(&CPingResponse::new(ping_request.payload))
             .await;
         self.close();
@@ -75,7 +76,7 @@ impl Client {
     }
 
     pub async fn handle_login_start(&self, server: &Server, login_start: SLoginStart) {
-        log::debug!("login start, State {:?}", self.connection_state);
+        log::debug!("login start");
 
         if !Self::is_valid_player_name(&login_start.name) {
             self.kick("Invalid characters in username").await;
@@ -99,8 +100,14 @@ impl Client {
                 }
             }
         } else {
+            let id = if BASIC_CONFIG.online_mode {
+                login_start.uuid
+            } else {
+                offline_uuid(&login_start.name).expect("This is very not safe and bad")
+            };
+
             let profile = GameProfile {
-                id: login_start.uuid,
+                id,
                 name: login_start.name,
                 properties: vec![],
                 profile_actions: None,
@@ -128,13 +135,8 @@ impl Client {
         server: &Server,
         encryption_response: SEncryptionResponse,
     ) {
-        let shared_secret = match server.decrypt(&encryption_response.shared_secret) {
-            Ok(shared_secret) => shared_secret,
-            Err(error) => {
-                self.kick(&error.to_string()).await;
-                return;
-            }
-        };
+        log::debug!("Handling encryption for id");
+        let shared_secret = server.decrypt(&encryption_response.shared_secret).unwrap();
 
         if let Err(error) = self.set_encryption(Some(&shared_secret)).await {
             self.kick(&error.to_string()).await;
@@ -175,7 +177,7 @@ impl Client {
     }
 
     async fn finish_login(&self, profile: &GameProfile) {
-        let packet = CLoginSuccess::new(&profile.id, &profile.name, &profile.properties, false);
+        let packet = CLoginSuccess::new(&profile.id, &profile.name, &profile.properties);
         self.send_packet(&packet).await;
     }
 
@@ -192,15 +194,11 @@ impl Client {
             let profile = authentication::authenticate(username, &hash, &ip, auth_client).await?;
             // Check if player should join
             if let Some(actions) = &profile.profile_actions {
-                if !ADVANCED_CONFIG
+                if ADVANCED_CONFIG
                     .authentication
                     .player_profile
                     .allow_banned_players
                 {
-                    if !actions.is_empty() {
-                        return Err(AuthError::Banned);
-                    }
-                } else {
                     for allowed in &ADVANCED_CONFIG
                         .authentication
                         .player_profile
@@ -210,6 +208,11 @@ impl Client {
                             return Err(AuthError::DisallowedAction);
                         }
                     }
+                    if !actions.is_empty() {
+                        return Err(AuthError::Banned);
+                    }
+                } else if !actions.is_empty() {
+                    return Err(AuthError::Banned);
                 }
             }
             // validate textures
@@ -223,6 +226,7 @@ impl Client {
     }
 
     pub async fn handle_plugin_response(&self, plugin_response: SLoginPluginResponse) {
+        log::debug!("Handling plugin for id");
         let velocity_config = &ADVANCED_CONFIG.proxy.velocity;
         if velocity_config.enabled {
             let mut address = self.address.lock().await;
@@ -234,7 +238,7 @@ impl Client {
                 Ok((profile, new_address)) => {
                     self.finish_login(&profile).await;
                     *self.gameprofile.lock().await = Some(profile);
-                    *address = new_address
+                    *address = new_address;
                 }
                 Err(error) => self.kick(&error.to_string()).await,
             }
@@ -246,6 +250,7 @@ impl Client {
         server: &Server,
         _login_acknowledged: SLoginAcknowledged,
     ) {
+        log::debug!("Handling login acknowledged for id");
         self.connection_state.store(ConnectionState::Config);
         self.send_packet(&server.get_branding()).await;
 
@@ -259,10 +264,10 @@ impl Client {
                 &resource_config.resource_pack_url,
                 &resource_config.resource_pack_sha1,
                 resource_config.force,
-                if !resource_config.prompt_message.is_empty() {
-                    Some(TextComponent::text(&resource_config.prompt_message))
-                } else {
+                if resource_config.prompt_message.is_empty() {
                     None
+                } else {
+                    Some(TextComponent::text(&resource_config.prompt_message))
                 },
             );
 
@@ -276,13 +281,13 @@ impl Client {
             version: "1.21",
         }]))
         .await;
-        dbg!("login acknowledged");
+        log::debug!("login acknowledged");
     }
     pub async fn handle_client_information_config(
         &self,
         client_information: SClientInformationConfig,
     ) {
-        dbg!("got client settings");
+        log::debug!("Handling client settings for id");
         if let (Some(main_hand), Some(chat_mode)) = (
             Hand::from_i32(client_information.main_hand.into()),
             ChatMode::from_i32(client_information.chat_mode.into()),
@@ -298,15 +303,16 @@ impl Client {
                 server_listing: client_information.server_listing,
             });
         } else {
-            self.kick("Invalid hand or chat type").await
+            self.kick("Invalid hand or chat type").await;
         }
     }
 
     pub async fn handle_plugin_message(&self, plugin_message: SPluginMessage) {
+        log::debug!("Handling plugin message for id");
         if plugin_message.channel.starts_with("minecraft:brand")
             || plugin_message.channel.starts_with("MC|Brand")
         {
-            dbg!("got a client brand");
+            log::debug!("got a client brand");
             match String::from_utf8(plugin_message.data) {
                 Ok(brand) => *self.brand.lock().await = Some(brand),
                 Err(e) => self.kick(&e.to_string()).await,
@@ -315,6 +321,7 @@ impl Client {
     }
 
     pub async fn handle_known_packs(&self, server: &Server, _config_acknowledged: SKnownPacks) {
+        log::debug!("Handling known packs for id");
         for registry in &server.cached_registry {
             self.send_packet(&CRegistryData::new(
                 &registry.registry_id,
@@ -324,12 +331,12 @@ impl Client {
         }
 
         // We are done with configuring
-        dbg!("finish config");
+        log::debug!("finished config");
         self.send_packet(&CFinishConfig::new()).await;
     }
 
-    pub async fn handle_config_acknowledged(&self, _config_acknowledged: SAcknowledgeFinishConfig) {
-        dbg!("config acknowledged");
+    pub fn handle_config_acknowledged(&self, _config_acknowledged: &SAcknowledgeFinishConfig) {
+        log::debug!("Handling config acknowledge for id");
         self.connection_state.store(ConnectionState::Play);
         self.make_player
             .store(true, std::sync::atomic::Ordering::Relaxed);

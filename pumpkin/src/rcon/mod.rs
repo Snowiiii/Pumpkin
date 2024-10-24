@@ -47,7 +47,7 @@ impl RCONServer {
             let password = password.clone();
             let server = server.clone();
             tokio::spawn(async move { while !client.handle(&server, &password).await {} });
-            dbg!("closed");
+            log::debug!("closed RCON connection");
             connections -= 1;
         }
     }
@@ -62,6 +62,7 @@ pub struct RCONClient {
 }
 
 impl RCONClient {
+    #[must_use]
     pub const fn new(connection: tokio::net::TcpStream, address: SocketAddr) -> Self {
         Self {
             connection,
@@ -84,7 +85,6 @@ impl RCONClient {
                     return true;
                 }
             }
-            dbg!("a");
             // If we get a close here, we might have a reply, which we still want to write.
             let _ = self.poll(server, password).await.map_err(|e| {
                 log::error!("RCON error: {e}");
@@ -95,15 +95,14 @@ impl RCONClient {
     }
 
     async fn poll(&mut self, server: &Server, password: &str) -> Result<(), PacketError> {
-        let packet = match self.receive_packet().await? {
-            Some(p) => p,
-            None => return Ok(()),
+        let Some(packet) = self.receive_packet().await? else {
+            return Ok(());
         };
         let config = &ADVANCED_CONFIG.rcon;
         match packet.get_type() {
             ServerboundPacket::Auth => {
                 if packet.get_body() == password {
-                    self.send(ClientboundPacket::AuthResponse, packet.get_id(), "".into())
+                    self.send(ClientboundPacket::AuthResponse, packet.get_id(), "")
                         .await?;
                     if config.logging.log_logged_successfully {
                         log::info!("RCON ({}): Client logged in successfully", self.address);
@@ -113,23 +112,23 @@ impl RCONClient {
                     if config.logging.log_wrong_password {
                         log::info!("RCON ({}): Client has tried wrong password", self.address);
                     }
-                    self.send(ClientboundPacket::AuthResponse, -1, "".into())
-                        .await?;
+                    self.send(ClientboundPacket::AuthResponse, -1, "").await?;
                     self.closed = true;
                 }
             }
             ServerboundPacket::ExecCommand => {
                 if self.logged_in {
-                    let mut output = Vec::new();
+                    let output = tokio::sync::Mutex::new(Vec::new());
                     let dispatcher = server.command_dispatcher.clone();
                     dispatcher
                         .handle_command(
-                            &mut crate::commands::CommandSender::Rcon(&mut output),
+                            &mut crate::commands::CommandSender::Rcon(&output),
                             server,
                             packet.get_body(),
                         )
                         .await;
-                    for line in output {
+                    let output = output.lock().await;
+                    for line in output.iter() {
                         if config.logging.log_commands {
                             log::info!("RCON ({}): {}", self.address, line);
                         }
@@ -156,7 +155,7 @@ impl RCONClient {
         &mut self,
         packet: ClientboundPacket,
         id: i32,
-        body: String,
+        body: &str,
     ) -> Result<(), PacketError> {
         let buf = packet.write_buf(id, body);
         self.connection

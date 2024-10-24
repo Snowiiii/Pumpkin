@@ -1,9 +1,12 @@
 use pumpkin_core::text::TextComponent;
-use pumpkin_macros::packet;
+
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
+use super::ClientboundConfigPackets;
+
 #[derive(Serialize)]
-#[packet(0x09)]
+#[client_packet(ClientboundConfigPackets::AddResourcePack as i32)]
 pub struct CConfigAddResourcePack<'a> {
     uuid: uuid::Uuid,
     url: &'a str,

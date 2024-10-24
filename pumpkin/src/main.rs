@@ -1,9 +1,8 @@
 #![deny(clippy::all)]
-// #![warn(clippy::pedantic)]
+#![warn(clippy::pedantic)]
 // #![warn(clippy::restriction)]
-#![warn(clippy::nursery)]
 #![warn(clippy::cargo)]
-// expect
+// REMOVE SOME WHEN RELEASE
 #![expect(clippy::cargo_common_metadata)]
 #![expect(clippy::multiple_crate_versions)]
 #![expect(clippy::while_float)]
@@ -11,6 +10,16 @@
 #![expect(clippy::significant_drop_tightening)]
 #![expect(clippy::future_not_send)]
 #![expect(clippy::single_call_fn)]
+#![expect(clippy::cast_sign_loss)]
+#![expect(clippy::cast_possible_truncation)]
+#![expect(clippy::cast_possible_wrap)]
+#![expect(clippy::too_many_lines)]
+#![expect(clippy::missing_panics_doc)]
+#![expect(clippy::missing_errors_doc)]
+#![expect(clippy::module_name_repetitions)]
+#![expect(clippy::struct_excessive_bools)]
+#![expect(clippy::many_single_char_names)]
+#![expect(clippy::float_cmp)]
 
 #[cfg(target_os = "wasi")]
 compile_error!("Compiling for WASI targets is not supported!");
@@ -18,11 +27,9 @@ compile_error!("Compiling for WASI targets is not supported!");
 use log::LevelFilter;
 
 use client::Client;
-use pumpkin_protocol::client::play::CKeepAlive;
-use pumpkin_protocol::ConnectionState;
-use server::Server;
+use server::{ticker::Ticker, Server};
 use std::io::{self};
-use std::time::Duration;
+use tokio::io::{AsyncBufReadExt, BufReader};
 
 // Setup some tokens to allow us to identify which event is for which socket.
 
@@ -63,7 +70,7 @@ fn init_logger() {
 
         logger = logger.with_colors(ADVANCED_CONFIG.logging.color);
         logger = logger.with_threads(ADVANCED_CONFIG.logging.threads);
-        logger.init().unwrap()
+        logger.init().unwrap();
     }
 }
 
@@ -85,6 +92,7 @@ async fn main() -> io::Result<()> {
     use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
     use pumpkin_core::text::{color::NamedColor, TextComponent};
     use rcon::RCONServer;
+    use std::time::Instant;
 
     init_logger();
 
@@ -112,8 +120,6 @@ async fn main() -> io::Result<()> {
         std::process::exit(1);
     }));
 
-    use std::time::Instant;
-
     let time = Instant::now();
 
     // Setup the TCP server socket.
@@ -126,17 +132,22 @@ async fn main() -> io::Result<()> {
     let rcon = ADVANCED_CONFIG.rcon.clone();
 
     let server = Arc::new(Server::new());
+    let mut ticker = Ticker::new(BASIC_CONFIG.tps);
+
     log::info!("Started Server took {}ms", time.elapsed().as_millis());
     log::info!("You now can connect to the server, Listening on {}", addr);
 
     if use_console {
         let server = server.clone();
         tokio::spawn(async move {
-            let stdin = std::io::stdin();
+            let stdin = tokio::io::stdin();
+            let mut reader = BufReader::new(stdin);
             loop {
                 let mut out = String::new();
-                stdin
+
+                reader
                     .read_line(&mut out)
+                    .await
                     .expect("Failed to read console line");
 
                 if !out.is_empty() {
@@ -154,7 +165,12 @@ async fn main() -> io::Result<()> {
             RCONServer::new(&rcon, server).await.unwrap();
         });
     }
-    let mut unique_id = 0;
+    {
+        let server = server.clone();
+        tokio::spawn(async move {
+            ticker.run(&server).await;
+        });
+    }
     loop {
         // Asynchronously wait for an inbound socket.
         let (connection, address) = listener.accept().await?;
@@ -163,69 +179,30 @@ async fn main() -> io::Result<()> {
             log::warn!("failed to set TCP_NODELAY {e}");
         }
 
-        unique_id += 1;
-        let id = unique_id;
-
         log::info!(
-            "Accepted connection from: {} (id: {})",
-            scrub_address(&format!("{}", address)),
-            id
+            "Accepted connection from: {} ",
+            scrub_address(&format!("{address}")),
         );
 
-        let keep_alive = tokio::sync::mpsc::channel(1024);
-        let client = Arc::new(Client::new(id, connection, addr, keep_alive.0.into()));
-
-        {
-            let client = client.clone();
-            let mut receiver = keep_alive.1;
-            tokio::spawn(async move {
-                let mut interval = tokio::time::interval(Duration::from_secs(1));
-                loop {
-                    interval.tick().await;
-                    let now = std::time::Instant::now();
-                    if client.connection_state.load() == ConnectionState::Play {
-                        if now.duration_since(client.last_alive_received.load())
-                            >= Duration::from_secs(15)
-                        {
-                            dbg!("no keep alive");
-                            client.kick("No keep alive received").await;
-                            break;
-                        }
-                        let random = rand::random::<i64>();
-                        client
-                            .send_packet(&CKeepAlive {
-                                keep_alive_id: random,
-                            })
-                            .await;
-                        if let Some(id) = receiver.recv().await {
-                            if id == random {
-                                client.last_alive_received.store(now);
-                            }
-                        }
-                    } else {
-                        client.last_alive_received.store(now);
-                    }
-                }
-            });
-        }
+        let client = Arc::new(Client::new(connection, addr));
 
         let server = server.clone();
         tokio::spawn(async move {
-            let server = &server; // Reference to server
             while !client.closed.load(std::sync::atomic::Ordering::Relaxed)
                 && !client
                     .make_player
                     .load(std::sync::atomic::Ordering::Relaxed)
             {
-                client.process_packets(server).await;
-                client.poll().await;
+                let open = client.poll().await;
+                if open {
+                    client.process_packets(&server).await;
+                };
             }
             if client
                 .make_player
                 .load(std::sync::atomic::Ordering::Relaxed)
             {
-                let id = client.id;
-                let (player, world) = server.add_player(id, client).await;
+                let (player, world) = server.add_player(client).await;
                 world.spawn_player(&BASIC_CONFIG, player.clone()).await;
                 // poll Player
                 while !player
@@ -233,10 +210,13 @@ async fn main() -> io::Result<()> {
                     .closed
                     .load(std::sync::atomic::Ordering::Relaxed)
                 {
-                    player.process_packets(server).await;
-                    player.client.poll().await;
+                    let open = player.client.poll().await;
+                    if open {
+                        player.process_packets(&server).await;
+                    };
                 }
                 player.remove().await;
+                server.remove_player().await;
             }
         });
     }

@@ -20,6 +20,7 @@ impl Default for Scoreboard {
 }
 
 impl Scoreboard {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             objectives: HashMap::new(),
@@ -87,6 +88,7 @@ pub struct ScoreboardObjective<'a> {
 }
 
 impl<'a> ScoreboardObjective<'a> {
+    #[must_use]
     pub const fn new(
         name: &'a str,
         display_name: TextComponent<'a>,
@@ -111,6 +113,7 @@ pub struct ScoreboardScore<'a> {
 }
 
 impl<'a> ScoreboardScore<'a> {
+    #[must_use]
     pub const fn new(
         entity_name: &'a str,
         objective_name: &'a str,

@@ -8,28 +8,29 @@ use crate::{
 };
 use num_traits::FromPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
+use pumpkin_core::math::position::WorldPosition;
 use pumpkin_core::{
-    math::{position::WorldPosition, vector3::Vector3, wrap_degrees},
+    math::{vector3::Vector3, wrap_degrees},
     text::TextComponent,
     GameMode,
 };
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::{InventoryError, WindowType};
-use pumpkin_protocol::server::play::{SCloseContainer, SSetPlayerGround, SUseItem};
+use pumpkin_protocol::server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem};
 use pumpkin_protocol::{
     client::play::{
-        Animation, CAcknowledgeBlockChange, CBlockUpdate, CEntityAnimation, CEntityVelocity,
-        CHeadRot, CHurtAnimation, CPingResponse, CPlayerChatMessage, CUpdateEntityPos,
-        CUpdateEntityPosRot, CUpdateEntityRot, CWorldEvent, FilterType,
+        Animation, CAcknowledgeBlockChange, CEntityAnimation, CEntityVelocity, CHeadRot,
+        CHurtAnimation, CPingResponse, CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot,
+        CUpdateEntityRot, FilterType,
     },
     server::play::{
         Action, ActionType, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport,
-        SInteract, SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition,
-        SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm,
-        SUseItemOn, Status,
+        SInteract, SPlayPingRequest, SPlayerAbilities, SPlayerAction, SPlayerCommand,
+        SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
+        SSwingArm, SUseItemOn, Status,
     },
 };
-use pumpkin_world::block::{BlockFace, BlockState};
+use pumpkin_world::block::{BlockFace, BlockId, BlockState};
 use pumpkin_world::global_registry;
 
 use super::PlayerConfig;
@@ -52,13 +53,13 @@ impl Player {
 
                 *awaiting_teleport = None;
             } else {
-                self.kick(TextComponent::text("Wrong teleport id")).await
+                self.kick(TextComponent::text("Wrong teleport id")).await;
             }
         } else {
             self.kick(TextComponent::text(
                 "Send Teleport confirm, but we did not teleport",
             ))
-            .await
+            .await;
         }
     }
 
@@ -112,7 +113,7 @@ impl Player {
         // send new position to all other players
         world
             .broadcast_packet_expect(
-                &[self.client.id],
+                &[self.gameprofile.id],
                 &CUpdateEntityPos::new(
                     entity_id.into(),
                     x.mul_add(4096.0, -(last_x * 4096.0)) as i16,
@@ -185,7 +186,7 @@ impl Player {
 
         world
             .broadcast_packet_expect(
-                &[self.client.id],
+                &[self.gameprofile.id],
                 &CUpdateEntityPosRot::new(
                     entity_id.into(),
                     x.mul_add(4096.0, -(last_x * 4096.0)) as i16,
@@ -199,7 +200,7 @@ impl Player {
             .await;
         world
             .broadcast_packet_expect(
-                &[self.client.id],
+                &[self.gameprofile.id],
                 &CHeadRot::new(entity_id.into(), yaw as u8),
             )
             .await;
@@ -229,11 +230,11 @@ impl Player {
         let packet =
             CUpdateEntityRot::new(entity_id.into(), yaw as u8, pitch as u8, rotation.ground);
         world
-            .broadcast_packet_expect(&[self.client.id], &packet)
+            .broadcast_packet_expect(&[self.gameprofile.id], &packet)
             .await;
         let packet = CHeadRot::new(entity_id.into(), yaw as u8);
         world
-            .broadcast_packet_expect(&[self.client.id], &packet)
+            .broadcast_packet_expect(&[self.gameprofile.id], &packet)
             .await;
     }
 
@@ -255,7 +256,7 @@ impl Player {
         }
     }
 
-    pub fn handle_player_ground(&self, ground: SSetPlayerGround) {
+    pub fn handle_player_ground(&self, ground: &SSetPlayerGround) {
         self.living_entity
             .entity
             .on_ground
@@ -272,28 +273,30 @@ impl Player {
             match action {
                 pumpkin_protocol::server::play::Action::StartSneaking => {
                     if !entity.sneaking.load(std::sync::atomic::Ordering::Relaxed) {
-                        entity.set_sneaking(true).await
+                        entity.set_sneaking(true).await;
                     }
                 }
                 pumpkin_protocol::server::play::Action::StopSneaking => {
                     if entity.sneaking.load(std::sync::atomic::Ordering::Relaxed) {
-                        entity.set_sneaking(false).await
+                        entity.set_sneaking(false).await;
                     }
                 }
-                pumpkin_protocol::server::play::Action::LeaveBed => todo!(),
                 pumpkin_protocol::server::play::Action::StartSprinting => {
                     if !entity.sprinting.load(std::sync::atomic::Ordering::Relaxed) {
-                        entity.set_sprinting(true).await
+                        entity.set_sprinting(true).await;
                     }
                 }
                 pumpkin_protocol::server::play::Action::StopSprinting => {
                     if entity.sprinting.load(std::sync::atomic::Ordering::Relaxed) {
-                        entity.set_sprinting(false).await
+                        entity.set_sprinting(false).await;
                     }
                 }
-                pumpkin_protocol::server::play::Action::StartHorseJump => todo!(),
-                pumpkin_protocol::server::play::Action::StopHorseJump => todo!(),
-                pumpkin_protocol::server::play::Action::OpenVehicleInventory => todo!(),
+                pumpkin_protocol::server::play::Action::LeaveBed
+                | pumpkin_protocol::server::play::Action::StartHorseJump
+                | pumpkin_protocol::server::play::Action::StopHorseJump
+                | pumpkin_protocol::server::play::Action::OpenVehicleInventory => {
+                    log::debug!("todo");
+                }
                 pumpkin_protocol::server::play::Action::StartFlyingElytra => {
                     let fall_flying = entity.check_fall_flying();
                     if entity
@@ -307,7 +310,7 @@ impl Player {
             }
         } else {
             self.kick(TextComponent::text("Invalid player command"))
-                .await
+                .await;
         }
     }
 
@@ -322,10 +325,10 @@ impl Player {
                 let world = &self.living_entity.entity.world;
                 world
                     .broadcast_packet_expect(
-                        &[self.client.id],
+                        &[self.gameprofile.id],
                         &CEntityAnimation::new(id.into(), animation as u8),
                     )
-                    .await
+                    .await;
             }
             None => {
                 self.kick(TextComponent::text("Invalid hand")).await;
@@ -334,7 +337,7 @@ impl Player {
     }
 
     pub async fn handle_chat_message(&self, chat_message: SChatMessage) {
-        dbg!("got message");
+        log::debug!("Received chat message");
 
         let message = chat_message.message;
         if message.len() > 256 {
@@ -362,20 +365,20 @@ impl Player {
                 TextComponent::text(&gameprofile.name),
                 None,
             ))
-            .await
+            .await;
 
         /* server.broadcast_packet(
             self,
             &CDisguisedChatMessage::new(
                 TextComponent::from(message.clone()),
                 VarInt(0),
-                gameprofile.name.clone().into(),
+               gameprofile.name.clone().into(),
                 None,
             ),
         ) */
     }
 
-    pub async fn handle_client_information_play(&self, client_information: SClientInformationPlay) {
+    pub async fn handle_client_information(&self, client_information: SClientInformationPlay) {
         if let (Some(main_hand), Some(chat_mode)) = (
             Hand::from_i32(client_information.main_hand.into()),
             ChatMode::from_i32(client_information.chat_mode.into()),
@@ -392,7 +395,7 @@ impl Player {
             };
         } else {
             self.kick(TextComponent::text("Invalid hand or chat type"))
-                .await
+                .await;
         }
     }
 
@@ -422,13 +425,13 @@ impl Player {
                             if config.knockback {
                                 let yaw = entity.yaw.load();
                                 let strength = 1.0;
-                                let victem_velocity = victem_entity.velocity.load();
-                                let saved_velo = victem_velocity;
+                                let saved_velo = victem_entity.velocity.load();
                                 victem_entity.knockback(
                                     strength * 0.5,
-                                    (yaw * (PI / 180.0)).sin() as f64,
-                                    -(yaw * (PI / 180.0)).cos() as f64,
+                                    f64::from((yaw * (PI / 180.0)).sin()),
+                                    f64::from(-(yaw * (PI / 180.0)).cos()),
                                 );
+                                let victem_velocity = victem_entity.velocity.load();
                                 let packet = &CEntityVelocity::new(
                                     &entity_id,
                                     victem_velocity.x as f32,
@@ -436,9 +439,7 @@ impl Player {
                                     victem_velocity.z as f32,
                                 );
                                 let velocity = entity.velocity.load();
-                                victem_entity
-                                    .velocity
-                                    .store(velocity.multiply(0.6, 1.0, 0.6));
+                                entity.velocity.store(velocity.multiply(0.6, 1.0, 0.6));
 
                                 victem_entity.velocity.store(saved_velo);
                                 player.client.send_packet(packet).await;
@@ -449,31 +450,33 @@ impl Player {
                                         &entity_id,
                                         entity.yaw.load(),
                                     ))
-                                    .await
+                                    .await;
                             }
                             if config.swing {}
                         } else {
                             self.kick(TextComponent::text("Interacted with invalid entity id"))
-                                .await
+                                .await;
                         }
                     }
                 }
-                ActionType::Interact => {
-                    dbg!("todo");
-                }
-                ActionType::InteractAt => {
-                    dbg!("todo");
+                ActionType::Interact | ActionType::InteractAt => {
+                    log::debug!("todo");
                 }
             },
             None => self.kick(TextComponent::text("Invalid action type")).await,
         }
     }
+
     pub async fn handle_player_action(&self, player_action: SPlayerAction) {
         match Status::from_i32(player_action.status.0) {
             Some(status) => match status {
                 Status::StartedDigging => {
                     if !self.can_interact_with_block_at(&player_action.location, 1.0) {
-                        // TODO: maybe log?
+                        log::warn!(
+                            "Player {0} tried to interact with block out of reach at {1}",
+                            self.gameprofile.name,
+                            player_action.location
+                        );
                         return;
                     }
                     // TODO: do validation
@@ -484,18 +487,16 @@ impl Player {
                         // TODO: currently this is always dirt replace it
                         let entity = &self.living_entity.entity;
                         let world = &entity.world;
-                        world
-                            .broadcast_packet_all(&CWorldEvent::new(2001, &location, 11, false))
-                            .await;
-                        // AIR
-                        world
-                            .broadcast_packet_all(&CBlockUpdate::new(&location, 0.into()))
-                            .await;
+                        world.break_block(location).await;
                     }
                 }
                 Status::CancelledDigging => {
                     if !self.can_interact_with_block_at(&player_action.location, 1.0) {
-                        // TODO: maybe log?
+                        log::warn!(
+                            "Player {0} tried to interact with block out of reach at {1}",
+                            self.gameprofile.name,
+                            player_action.location
+                        );
                         return;
                     }
                     self.current_block_destroy_stage
@@ -505,40 +506,55 @@ impl Player {
                     // TODO: do validation
                     let location = player_action.location;
                     if !self.can_interact_with_block_at(&location, 1.0) {
-                        // TODO: maybe log?
+                        log::warn!(
+                            "Player {0} tried to interact with block out of reach at {1}",
+                            self.gameprofile.name,
+                            player_action.location
+                        );
                         return;
                     }
                     // Block break & block break sound
                     // TODO: currently this is always dirt replace it
                     let entity = &self.living_entity.entity;
                     let world = &entity.world;
-                    world
-                        .broadcast_packet_all(&CWorldEvent::new(2001, &location, 11, false))
-                        .await;
-                    // AIR
-                    world
-                        .broadcast_packet_all(&CBlockUpdate::new(&location, 0.into()))
-                        .await;
+                    world.break_block(location).await;
                     // TODO: Send this every tick
                     self.client
                         .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence))
                         .await;
                 }
-                Status::DropItemStack => {
-                    dbg!("todo");
-                }
-                Status::DropItem => {
-                    dbg!("todo");
-                }
-                Status::ShootArrowOrFinishEating => {
-                    dbg!("todo");
-                }
-                Status::SwapItem => {
-                    dbg!("todo");
+                Status::DropItemStack
+                | Status::DropItem
+                | Status::ShootArrowOrFinishEating
+                | Status::SwapItem => {
+                    log::debug!("todo");
                 }
             },
             None => self.kick(TextComponent::text("Invalid status")).await,
         }
+    }
+
+    pub async fn handle_keep_alive(&self, keep_alive: SKeepAlive) {
+        if self
+            .wait_for_keep_alive
+            .load(std::sync::atomic::Ordering::Relaxed)
+            && keep_alive.keep_alive_id
+                == self
+                    .keep_alive_id
+                    .load(std::sync::atomic::Ordering::Relaxed)
+        {
+            self.wait_for_keep_alive
+                .store(false, std::sync::atomic::Ordering::Relaxed);
+        } else {
+            self.kick(TextComponent::text("Timeout")).await;
+        }
+    }
+
+    pub async fn handle_player_abilities(&self, player_abilities: SPlayerAbilities) {
+        let mut abilities = self.abilities.lock().await;
+
+        // Set the flying ability
+        abilities.flying = player_abilities.flags & 0x02 != 0 && abilities.allow_flying;
     }
 
     pub async fn handle_play_ping_request(&self, request: SPlayPingRequest) {
@@ -565,17 +581,14 @@ impl Player {
                 if let Ok(block_state_id) = BlockState::new(minecraft_id, None) {
                     let entity = &self.living_entity.entity;
                     let world = &entity.world;
+
                     world
-                        .broadcast_packet_all(&CBlockUpdate::new(
-                            &location,
-                            block_state_id.get_id_mojang_repr().into(),
-                        ))
-                        .await;
-                    world
-                        .broadcast_packet_all(&CBlockUpdate::new(
-                            &WorldPosition(location.0 + face.to_offset()),
-                            block_state_id.get_id_mojang_repr().into(),
-                        ))
+                        .set_block(
+                            WorldPosition(location.0 + face.to_offset()),
+                            BlockId {
+                                data: block_state_id.get_id_mojang_repr() as u16,
+                            },
+                        )
                         .await;
                 }
             }
@@ -583,11 +596,11 @@ impl Player {
                 .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
                 .await;
         } else {
-            self.kick(TextComponent::text("Invalid block face")).await
+            self.kick(TextComponent::text("Invalid block face")).await;
         }
     }
 
-    pub fn handle_use_item(&self, _use_item: SUseItem) {
+    pub fn handle_use_item(&self, _use_item: &SUseItem) {
         // TODO: handle packet correctly
         log::error!("An item was used(SUseItem), but the packet is not implemented yet");
     }
@@ -629,11 +642,11 @@ impl Player {
         if let Some(id) = open_container {
             let mut open_containers = server.open_containers.write().await;
             if let Some(container) = open_containers.get_mut(&id) {
-                container.remove_player(self.entity_id())
+                container.remove_player(self.entity_id());
             }
             self.open_container.store(None);
         }
-        let Some(_window_type) = WindowType::from_u8(packet.window_id) else {
+        let Some(_window_type) = WindowType::from_i32(packet.window_id.0) else {
             self.kick(TextComponent::text("Invalid window ID")).await;
             return;
         };

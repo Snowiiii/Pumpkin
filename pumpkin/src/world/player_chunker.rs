@@ -23,8 +23,12 @@ pub async fn get_view_distance(player: &Player) -> i8 {
 pub async fn player_join(world: &World, player: Arc<Player>) {
     let new_watched = chunk_section_from_pos(&player.living_entity.entity.block_pos.load());
     player.watched_section.store(new_watched);
-    let watched_section = new_watched;
     let chunk_pos = player.living_entity.entity.chunk_pos.load();
+
+    assert_eq!(new_watched.x, chunk_pos.x);
+    assert_eq!(new_watched.z, chunk_pos.z);
+
+    log::debug!("Sending center chunk to {}", player.gameprofile.name);
     player
         .client
         .send_packet(&CCenterChunk {
@@ -32,59 +36,33 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
             chunk_z: chunk_pos.z.into(),
         })
         .await;
-    let view_distance = get_view_distance(&player).await as i32;
-    dbg!(view_distance);
-    let old_cylindrical = Cylindrical::new(
-        Vector2::new(watched_section.x, watched_section.z),
-        view_distance,
+    let view_distance = i32::from(get_view_distance(&player).await);
+    log::debug!(
+        "Player {} ({}) joined with view distance: {}",
+        player.gameprofile.name,
+        player.gameprofile.name,
+        view_distance
     );
-    let new_cylindrical = Cylindrical::new(Vector2::new(chunk_pos.x, chunk_pos.z), view_distance);
-    let mut loading_chunks = Vec::new();
-    let mut unloading_chunks = Vec::new();
-    Cylindrical::for_each_changed_chunk(
-        old_cylindrical,
-        new_cylindrical,
-        |chunk_pos| {
-            loading_chunks.push(chunk_pos);
-        },
-        |chunk_pos| {
-            unloading_chunks.push(chunk_pos);
-            // player
-            //     .client
-            //     .send_packet(&CUnloadChunk::new(chunk_pos.x, chunk_pos.z));
-        },
-        true,
-    );
-    if !loading_chunks.is_empty() {
-        world.mark_chunks_as_watched(&loading_chunks).await;
-        world
-            .spawn_world_chunks(player.client.clone(), loading_chunks, view_distance)
-            .await;
-    }
 
-    if !unloading_chunks.is_empty() {
-        world.mark_chunks_as_not_watched(&unloading_chunks).await;
-        for chunk in unloading_chunks {
-            if !player
-                .client
-                .closed
-                .load(std::sync::atomic::Ordering::Relaxed)
-            {
-                player
-                    .client
-                    .send_packet(&CUnloadChunk::new(chunk.x, chunk.z))
-                    .await;
-            }
-        }
-    }
+    let new_cylindrical = Cylindrical::new(Vector2::new(chunk_pos.x, chunk_pos.z), view_distance);
+    let loading_chunks = new_cylindrical.all_chunks_within();
+
+    world.mark_chunks_as_watched(&loading_chunks).await;
+    world.spawn_world_chunks(player.client.clone(), loading_chunks);
 }
 
 pub async fn update_position(player: &Player) {
     let entity = &player.living_entity.entity;
     let current_watched = player.watched_section.load();
     let new_watched = chunk_section_from_pos(&entity.block_pos.load());
+    player.watched_section.store(new_watched);
+
     if current_watched != new_watched {
+        //log::debug!("changing chunks");
         let chunk_pos = entity.chunk_pos.load();
+        assert_eq!(new_watched.x, chunk_pos.x);
+        assert_eq!(new_watched.z, chunk_pos.z);
+
         player
             .client
             .send_packet(&CCenterChunk {
@@ -93,14 +71,12 @@ pub async fn update_position(player: &Player) {
             })
             .await;
 
-        let view_distance = get_view_distance(player).await as i32;
+        let view_distance = i32::from(get_view_distance(player).await);
         let old_cylindrical = Cylindrical::new(
             Vector2::new(current_watched.x, current_watched.z),
             view_distance,
         );
         let new_cylindrical = Cylindrical::new(chunk_pos, view_distance);
-
-        player.watched_section.store(new_watched);
 
         let mut loading_chunks = Vec::new();
         let mut unloading_chunks = Vec::new();
@@ -112,18 +88,13 @@ pub async fn update_position(player: &Player) {
             },
             |chunk_pos| {
                 unloading_chunks.push(chunk_pos);
-                // player
-                //     .client
-                //     .send_packet(&CUnloadChunk::new(chunk_pos.x, chunk_pos.z));
             },
-            false,
         );
         if !loading_chunks.is_empty() {
             entity.world.mark_chunks_as_watched(&loading_chunks).await;
             entity
                 .world
-                .spawn_world_chunks(player.client.clone(), loading_chunks, view_distance)
-                .await;
+                .spawn_world_chunks(player.client.clone(), loading_chunks);
         }
 
         if !unloading_chunks.is_empty() {
@@ -131,6 +102,7 @@ pub async fn update_position(player: &Player) {
                 .world
                 .mark_chunks_as_not_watched(&unloading_chunks)
                 .await;
+            // we may don't need to iter twice
             for chunk in unloading_chunks {
                 if !player
                     .client
@@ -147,6 +119,7 @@ pub async fn update_position(player: &Player) {
     }
 }
 
+#[must_use]
 pub const fn chunk_section_from_pos(block_pos: &WorldPosition) -> Vector3<i32> {
     let block_pos = block_pos.0;
     Vector3::new(

@@ -9,7 +9,7 @@ const DESCRIPTION: &str =
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).execute(&|sender, server, _| {
-        if let Some(player) = sender.as_mut_player() {
+        if let Some(player) = sender.as_player() {
             let entity_id = player.entity_id();
             // player.open_container.store(Some(0));
             // {

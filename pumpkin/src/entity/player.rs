@@ -1,11 +1,14 @@
-use std::sync::{
-    atomic::{AtomicI32, AtomicU8},
-    Arc,
+use std::{
+    sync::{
+        atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU8},
+        Arc,
+    },
+    time::{Duration, Instant},
 };
 
 use crossbeam::atomic::AtomicCell;
 use num_derive::FromPrimitive;
-use num_traits::ToPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 use pumpkin_core::{
     math::{boundingbox::BoundingBox, position::WorldPosition, vector2::Vector2, vector3::Vector3},
     text::TextComponent,
@@ -14,29 +17,28 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_protocol::{
-    bytebuf::packet_id::Packet,
+    bytebuf::DeserializerError,
     client::play::{
-        CGameEvent, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSetHealth,
+        CGameEvent, CKeepAlive, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSetHealth,
         CSyncPlayerPosition, CSystemChatMessage, GameEvent, PlayerAction,
     },
     server::play::{
-        SChatCommand, SChatMessage, SClickContainer, SClientInformationPlay, SConfirmTeleport,
-        SInteract, SPlayPingRequest, SPlayerAction, SPlayerCommand, SPlayerPosition,
-        SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround,
-        SSwingArm, SUseItem, SUseItemOn,
+        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SPlayerAbilities,
+        SPlayerAction, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetHeldItem,
+        SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn, ServerboundPlayPackets,
     },
     RawPacket, ServerPacket, VarInt,
 };
 use tokio::sync::Mutex;
 
-use pumpkin_protocol::server::play::{SCloseContainer, SKeepAlive};
+use pumpkin_protocol::server::play::SKeepAlive;
 use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
 
 use super::Entity;
 use crate::{
     client::{authentication::GameProfile, Client, PlayerConfig},
     server::Server,
-    world::{player_chunker::chunk_section_from_pos, World},
+    world::World,
 };
 use crate::{error::PumpkinError, world::player_chunker::get_view_distance};
 
@@ -73,7 +75,7 @@ pub struct Player {
     /// This field represents the various abilities that the player possesses, such as flight, invulnerability, and other special effects.
     ///
     /// **Note:** When the `abilities` field is updated, the server should send a `send_abilities_update` packet to the client to notify them of the changes.
-    pub abilities: PlayerAbilities,
+    pub abilities: Mutex<Abilities>,
     /// The player's last known position.
     ///
     /// This field is used to calculate the player's movement delta for network synchronization and other purposes.
@@ -85,9 +87,14 @@ pub struct Player {
     pub teleport_id_count: AtomicI32,
     /// The pending teleport information, including the teleport ID and target location.
     pub awaiting_teleport: Mutex<Option<(VarInt, Vector3<f64>)>>,
-
     /// The coordinates of the chunk section the player is currently watching.
     pub watched_section: AtomicCell<Vector3<i32>>,
+    /// Did we send a keep alive Packet and wait for the response?
+    pub wait_for_keep_alive: AtomicBool,
+    /// Whats the keep alive packet payload we send, The client should responde with the same id
+    pub keep_alive_id: AtomicI64,
+    /// Last time we send a keep alive
+    pub last_keep_alive_time: AtomicCell<Instant>,
 }
 
 impl Player {
@@ -102,7 +109,7 @@ impl Player {
                 log::error!("No gameprofile?. Impossible");
                 GameProfile {
                     id: uuid::Uuid::new_v4(),
-                    name: "".to_string(),
+                    name: String::new(),
                     properties: vec![],
                     profile_actions: None,
                 }
@@ -129,10 +136,13 @@ impl Player {
             open_container: AtomicCell::new(None),
             carried_item: AtomicCell::new(None),
             teleport_id_count: AtomicI32::new(0),
-            abilities: PlayerAbilities::default(),
+            abilities: Mutex::new(Abilities::default()),
             gamemode: AtomicCell::new(gamemode),
             watched_section: AtomicCell::new(Vector3::new(0, 0, 0)),
             last_position: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
+            wait_for_keep_alive: AtomicBool::new(false),
+            keep_alive_id: AtomicI64::new(0),
+            last_keep_alive_time: AtomicCell::new(std::time::Instant::now()),
         }
     }
 
@@ -140,14 +150,48 @@ impl Player {
     pub async fn remove(&self) {
         self.living_entity.entity.world.remove_player(self).await;
 
-        let watched = chunk_section_from_pos(&self.living_entity.entity.block_pos.load());
-        let view_distance = get_view_distance(self).await as i32;
+        let watched = self.watched_section.load();
+        let view_distance = i32::from(get_view_distance(self).await);
         let cylindrical = Cylindrical::new(Vector2::new(watched.x, watched.z), view_distance);
+        let all_chunks = cylindrical.all_chunks_within();
+
+        log::debug!(
+            "Removing player id {}, unwatching {} chunks",
+            self.gameprofile.name,
+            all_chunks.len()
+        );
         self.living_entity
             .entity
             .world
-            .mark_chunks_as_not_watched(&cylindrical.all_chunks_within())
+            .mark_chunks_as_not_watched(&all_chunks)
             .await;
+
+        log::debug!(
+            "Removed player id {} ({} chunks remain cached)",
+            self.gameprofile.name,
+            self.living_entity.entity.world.get_cached_chunk_len().await
+        );
+    }
+
+    pub async fn tick(&self) {
+        let now = Instant::now();
+        if now.duration_since(self.last_keep_alive_time.load()) >= Duration::from_secs(15) {
+            // We never got a response from our last keep alive we send
+            if self
+                .wait_for_keep_alive
+                .load(std::sync::atomic::Ordering::Relaxed)
+            {
+                self.kick(TextComponent::text("Timeout")).await;
+                return;
+            }
+            self.wait_for_keep_alive
+                .store(true, std::sync::atomic::Ordering::Relaxed);
+            self.last_keep_alive_time.store(now);
+            let id = now.elapsed().as_millis() as i64;
+            self.keep_alive_id
+                .store(id, std::sync::atomic::Ordering::Relaxed);
+            self.client.send_packet(&CKeepAlive::new(id)).await;
+        }
     }
 
     pub const fn entity_id(&self) -> EntityId {
@@ -157,7 +201,7 @@ impl Player {
     /// Updates the current abilities the Player has
     pub async fn send_abilties_update(&mut self) {
         let mut b = 0i8;
-        let abilities = &self.abilities;
+        let abilities = &self.abilities.lock().await;
 
         if abilities.invulnerable {
             b |= 1;
@@ -181,7 +225,7 @@ impl Player {
     }
 
     /// yaw and pitch in degrees
-    pub async fn teleport(&self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
+    pub async fn teleport(&self, position: Vector3<f64>, yaw: f32, pitch: f32) {
         // this is the ultra special magic code used to create the teleport id
         // This returns the old value
         let i = self
@@ -193,18 +237,17 @@ impl Player {
         }
         let teleport_id = i + 1;
         let entity = &self.living_entity.entity;
-        entity.set_pos(x, y, z);
+        entity.set_pos(position.x, position.y, position.z);
         entity.set_rotation(yaw, pitch);
-        *self.awaiting_teleport.lock().await = Some((teleport_id.into(), Vector3::new(x, y, z)));
+        *self.awaiting_teleport.lock().await = Some((teleport_id.into(), position));
         self.client
             .send_packet(&CSyncPlayerPosition::new(
-                x,
-                y,
-                z,
+                teleport_id.into(),
+                position,
+                Vector3::new(0.0, 0.0, 0.0),
                 yaw,
                 pitch,
-                0,
-                teleport_id.into(),
+                &[],
             ))
             .await;
     }
@@ -224,7 +267,7 @@ impl Player {
         let standing_eye_height = self.living_entity.entity.standing_eye_height;
         box_pos.squared_magnitude(Vector3 {
             x: entity_pos.x,
-            y: entity_pos.y + standing_eye_height as f64,
+            y: entity_pos.y + f64::from(standing_eye_height),
             z: entity_pos.z,
         }) < d * d
     }
@@ -241,11 +284,11 @@ impl Player {
             .await
             .unwrap_or_else(|_| self.client.close());
         log::info!(
-            "Kicked {} for {}",
+            "Kicked Player {} for {}",
             self.gameprofile.name,
             reason.to_pretty_console()
         );
-        self.client.close()
+        self.client.close();
     }
 
     pub async fn set_health(&self, health: f32, food: i32, food_saturation: f32) {
@@ -298,15 +341,14 @@ impl Player {
         let mut packets = self.client.client_packets_queue.lock().await;
         while let Some(mut packet) = packets.pop_back() {
             match self.handle_play_packet(server, &mut packet).await {
-                Ok(_) => {}
+                Ok(()) => {}
                 Err(e) => {
                     if e.is_kick() {
                         if let Some(kick_reason) = e.client_kick_reason() {
-                            self.kick(TextComponent::text(&kick_reason)).await
+                            self.kick(TextComponent::text(&kick_reason)).await;
                         } else {
                             self.kick(TextComponent::text(&format!(
-                                "Error while reading incoming packet {}",
-                                e
+                                "Error while reading incoming packet {e}"
                             )))
                             .await;
                         }
@@ -323,115 +365,117 @@ impl Player {
         packet: &mut RawPacket,
     ) -> Result<(), Box<dyn PumpkinError>> {
         let bytebuf = &mut packet.bytebuf;
-        match packet.id.0 {
-            SConfirmTeleport::PACKET_ID => {
-                self.handle_confirm_teleport(SConfirmTeleport::read(bytebuf)?)
-                    .await;
-                Ok(())
-            }
-            SChatCommand::PACKET_ID => {
-                self.handle_chat_command(server, SChatCommand::read(bytebuf)?)
-                    .await;
-                Ok(())
-            }
-            SPlayerPosition::PACKET_ID => {
-                self.handle_position(SPlayerPosition::read(bytebuf)?).await;
-                Ok(())
-            }
-            SPlayerPositionRotation::PACKET_ID => {
-                self.handle_position_rotation(SPlayerPositionRotation::read(bytebuf)?)
-                    .await;
-                Ok(())
-            }
-            SPlayerRotation::PACKET_ID => {
-                self.handle_rotation(SPlayerRotation::read(bytebuf)?).await;
-                Ok(())
-            }
-            SSetPlayerGround::PACKET_ID => {
-                self.handle_player_ground(SSetPlayerGround::read(bytebuf)?);
-                Ok(())
-            }
-            SPlayerCommand::PACKET_ID => {
-                self.handle_player_command(SPlayerCommand::read(bytebuf)?)
-                    .await;
-                Ok(())
-            }
-            SSwingArm::PACKET_ID => {
-                self.handle_swing_arm(SSwingArm::read(bytebuf)?).await;
-                Ok(())
-            }
-            SChatMessage::PACKET_ID => {
-                self.handle_chat_message(SChatMessage::read(bytebuf)?).await;
-                Ok(())
-            }
-            SClientInformationPlay::PACKET_ID => {
-                self.handle_client_information_play(SClientInformationPlay::read(bytebuf)?)
-                    .await;
-                Ok(())
-            }
-            SInteract::PACKET_ID => {
-                self.handle_interact(server, SInteract::read(bytebuf)?)
-                    .await;
-                Ok(())
-            }
-            SPlayerAction::PACKET_ID => {
-                self.handle_player_action(SPlayerAction::read(bytebuf)?)
-                    .await;
-                Ok(())
-            }
-            SUseItemOn::PACKET_ID => {
-                self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await;
-                Ok(())
-            }
-            SUseItem::PACKET_ID => {
-                self.handle_use_item(SUseItem::read(bytebuf)?);
-                Ok(())
-            }
-            SSetHeldItem::PACKET_ID => {
-                self.handle_set_held_item(SSetHeldItem::read(bytebuf)?)
-                    .await;
-                Ok(())
-            }
-            SSetCreativeSlot::PACKET_ID => {
-                self.handle_set_creative_slot(SSetCreativeSlot::read(bytebuf)?)
-                    .await?;
-                Ok(())
-            }
-            SPlayPingRequest::PACKET_ID => {
-                self.handle_play_ping_request(SPlayPingRequest::read(bytebuf)?)
-                    .await;
-                Ok(())
-            }
-            SClickContainer::PACKET_ID => {
-                self.handle_click_container(server, SClickContainer::read(bytebuf)?)
-                    .await?;
-                Ok(())
-            }
-            SCloseContainer::PACKET_ID => {
-                self.handle_close_container(server, SCloseContainer::read(bytebuf)?)
-                    .await;
-                Ok(())
-            }
-            SKeepAlive::PACKET_ID => {
-                self.client
-                    .keep_alive_sender
-                    .send(SKeepAlive::read(bytebuf)?.keep_alive_id)
-                    .await
-                    .unwrap();
-                Ok(())
-            }
-            _ => {
-                log::error!("Failed to handle player packet id {:#04x}", packet.id.0);
-                Ok(())
-            }
-        }
+        if let Some(packet) = ServerboundPlayPackets::from_i32(packet.id.0) {
+            #[expect(clippy::match_same_arms)]
+            match packet {
+                ServerboundPlayPackets::TeleportConfirm => {
+                    self.handle_confirm_teleport(SConfirmTeleport::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundPlayPackets::QueryBlockNbt => {}
+                ServerboundPlayPackets::SelectBundleItem => {}
+                ServerboundPlayPackets::SetDifficulty => {}
+                ServerboundPlayPackets::ChatAck => {}
+                ServerboundPlayPackets::ChatCommandUnsigned => {}
+                ServerboundPlayPackets::ChatCommand => {
+                    self.handle_chat_command(server, SChatCommand::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundPlayPackets::ChatMessage => {
+                    self.handle_chat_message(SChatMessage::read(bytebuf)?).await;
+                }
+                ServerboundPlayPackets::ChatSessionUpdate => {}
+                ServerboundPlayPackets::ChunkBatchAck => {}
+                ServerboundPlayPackets::ClientStatus => {}
+                ServerboundPlayPackets::ClientTickEnd => {}
+                ServerboundPlayPackets::ClientSettings => {
+                    self.handle_client_information(SClientInformationPlay::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundPlayPackets::TabComplete => {}
+                ServerboundPlayPackets::ConfigurationAck => {}
+                ServerboundPlayPackets::ClickWindowButton => {}
+                ServerboundPlayPackets::ClickWindow => {}
+                ServerboundPlayPackets::CloseWindow => {}
+                ServerboundPlayPackets::SlotStateChange => {}
+                ServerboundPlayPackets::CookieResponse => {}
+                ServerboundPlayPackets::PluginMessage => {}
+                ServerboundPlayPackets::DebugSampleSubscription => {}
+                ServerboundPlayPackets::EditBook => {}
+                ServerboundPlayPackets::QueryEntityNbt => {}
+                ServerboundPlayPackets::InteractEntity => {}
+                ServerboundPlayPackets::GenerateStructure => {}
+                ServerboundPlayPackets::KeepAlive => {
+                    self.handle_keep_alive(SKeepAlive::read(bytebuf)?).await;
+                }
+                ServerboundPlayPackets::LockDifficulty => {}
+                ServerboundPlayPackets::PlayerPosition => {
+                    self.handle_position(SPlayerPosition::read(bytebuf)?).await;
+                }
+                ServerboundPlayPackets::PlayerPositionAndRotation => {
+                    self.handle_position_rotation(SPlayerPositionRotation::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundPlayPackets::PlayerRotation => {
+                    self.handle_rotation(SPlayerRotation::read(bytebuf)?).await;
+                }
+                ServerboundPlayPackets::PlayerFlying => {
+                    self.handle_player_ground(&SSetPlayerGround::read(bytebuf)?);
+                }
+                ServerboundPlayPackets::VehicleMove => {}
+                ServerboundPlayPackets::SteerBoat => {}
+                ServerboundPlayPackets::PickItem => {}
+                ServerboundPlayPackets::DebugPing => {}
+                ServerboundPlayPackets::CraftRecipeRequest => {}
+                ServerboundPlayPackets::PlayerAbilities => {
+                    self.handle_player_abilities(SPlayerAbilities::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundPlayPackets::PlayerDigging => {
+                    self.handle_player_action(SPlayerAction::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundPlayPackets::EntityAction => {}
+                ServerboundPlayPackets::PlayerInput => {}
+                ServerboundPlayPackets::Pong => {}
+                ServerboundPlayPackets::SetRecipeBookState => {}
+                ServerboundPlayPackets::SetDisplayedRecipe => {}
+                ServerboundPlayPackets::NameItem => {}
+                ServerboundPlayPackets::ResourcePackStatus => {}
+                ServerboundPlayPackets::AdvancementTab => {}
+                ServerboundPlayPackets::SelectTrade => {}
+                ServerboundPlayPackets::SetBeaconEffect => {}
+                ServerboundPlayPackets::HeldItemChange => {
+                    self.handle_set_held_item(SSetHeldItem::read(bytebuf)?)
+                        .await;
+                }
+                ServerboundPlayPackets::UpdateCommandBlock => {}
+                ServerboundPlayPackets::UpdateCommandBlockMinecart => {}
+                ServerboundPlayPackets::CreativeInventoryAction => {}
+                ServerboundPlayPackets::UpdateJigsawBlock => {}
+                ServerboundPlayPackets::UpdateStructureBlock => {}
+                ServerboundPlayPackets::UpdateSign => {}
+                ServerboundPlayPackets::Animation => {
+                    self.handle_swing_arm(SSwingArm::read(bytebuf)?).await;
+                }
+                ServerboundPlayPackets::Spectate => {}
+                ServerboundPlayPackets::PlayerBlockPlacement => {
+                    self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await;
+                }
+                ServerboundPlayPackets::UseItem => self.handle_use_item(&SUseItem::read(bytebuf)?),
+            };
+        } else {
+            log::error!("Failed to handle player packet id {:#04x}", packet.id.0);
+            return Err(Box::new(DeserializerError::UnknownPacket));
+        };
+        Ok(())
     }
 }
 
 /// Represents a player's abilities and special powers.
 ///
 /// This struct contains information about the player's current abilities, such as flight, invulnerability, and creative mode.
-pub struct PlayerAbilities {
+pub struct Abilities {
     /// Indicates whether the player is invulnerable to damage.
     pub invulnerable: bool,
     /// Indicates whether the player is currently flying.
@@ -446,7 +490,7 @@ pub struct PlayerAbilities {
     pub walk_speed_fov: f32,
 }
 
-impl Default for PlayerAbilities {
+impl Default for Abilities {
     fn default() -> Self {
         Self {
             invulnerable: false,

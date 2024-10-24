@@ -7,9 +7,11 @@ edition.workspace = true
 # For items
 pumpkin-world = { path = "../pumpkin-world" }
 
-num-traits = "0.2"
-num-derive = "0.4"
-thiserror = "1.0.63"
+log.workspace = true
 itertools.workspace = true
 crossbeam.workspace = true
 tokio.workspace = true
+thiserror.workspace = true
+
+num-traits.workspace = true
+num-derive.workspace = true
