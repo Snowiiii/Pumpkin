@@ -1,16 +1,29 @@
+const WORLD_DATA_VERSION: usize = 4082;
+
 use std::{
+    collections::HashMap,
     fs::OpenOptions,
-    io::{Read, Seek},
+    io::{Read, Seek, Write},
     os::windows::fs::FileExt,
 };
 
-use flate2::bufread::{GzDecoder, ZlibDecoder};
+use fastnbt::LongArray;
+use flate2::{
+    bufread::{GzDecoder, GzEncoder, ZlibDecoder, ZlibEncoder},
+    Compression as CompressionLevel,
+};
 use itertools::Itertools;
 
-use crate::level::SaveFile;
+use crate::{
+    block::{BlockId, BlockString},
+    chunk::{ChunkSection, ChunkSectionBlockStates, PaletteEntry},
+    level::SaveFile,
+    WORLD_LOWEST_Y,
+};
 
 use super::{
-    ChunkData, ChunkReader, ChunkReadingError, ChunkWriter, ChunkWritingError, CompressionError,
+    ChunkData, ChunkNbt, ChunkReader, ChunkReadingError, ChunkSerializingError, ChunkWriter,
+    ChunkWritingError, CompressionError,
 };
 
 pub struct AnvilChunkFormat;
@@ -81,6 +94,47 @@ impl Compression {
                     .read_to_end(&mut decompressed_data)
                     .map_err(CompressionError::LZ4Error)?;
                 Ok(decompressed_data)
+            }
+            Compression::Custom => todo!(),
+        }
+    }
+    fn compress_data(
+        &self,
+        uncompressed_data: Vec<u8>,
+        compression_level: Option<CompressionLevel>,
+    ) -> Result<Vec<u8>, CompressionError> {
+        let compression_level = compression_level.unwrap_or(CompressionLevel::best());
+        match self {
+            Compression::GZip => {
+                let mut decoder = GzEncoder::new(&uncompressed_data[..], compression_level);
+                let mut chunk_data = Vec::new();
+                decoder
+                    .read_to_end(&mut chunk_data)
+                    .map_err(CompressionError::GZipError)?;
+                Ok(chunk_data)
+            }
+            Compression::ZLib => {
+                let mut decoder = ZlibEncoder::new(&uncompressed_data[..], compression_level);
+                let mut chunk_data = Vec::new();
+                decoder
+                    .read_to_end(&mut chunk_data)
+                    .map_err(CompressionError::ZlibError)?;
+                Ok(chunk_data)
+            }
+            Compression::None => Ok(uncompressed_data),
+            Compression::LZ4 => {
+                let mut compressed_data = Vec::new();
+                let mut encoder = lz4::EncoderBuilder::new()
+                    .level(compression_level.level())
+                    .build(&mut compressed_data)
+                    .map_err(CompressionError::LZ4Error)?;
+                if let Err(err) = encoder.write_all(&uncompressed_data) {
+                    return Err(CompressionError::LZ4Error(err));
+                }
+                if let (_output, Err(err)) = encoder.finish() {
+                    return Err(CompressionError::LZ4Error(err));
+                }
+                Ok(compressed_data)
             }
             Compression::Custom => todo!(),
         }
@@ -171,13 +225,18 @@ impl ChunkReader for AnvilChunkFormat {
 impl ChunkWriter for AnvilChunkFormat {
     fn write_chunk(
         &self,
-        chunk: &ChunkData,
+        chunk_data: &ChunkData,
         save_file: &SaveFile,
         at: pumpkin_core::math::vector2::Vector2<i32>,
     ) -> Result<(), super::ChunkWritingError> {
         // TODO: update timestamp
 
-        let bytes = chunk.to_bytes();
+        let bytes = self
+            .chunk_to_bytes(chunk_data)
+            .map_err(|err| ChunkWritingError::ChunkSerializingError(err.to_string()))?;
+        let bytes = Compression::ZLib
+            .compress_data(bytes, Some(CompressionLevel::best()))
+            .map_err(|e| ChunkWritingError::Compression(e))?;
 
         let region = (
             ((at.x as f32) / 32.0).floor() as i32,
@@ -298,5 +357,74 @@ impl ChunkWriter for AnvilChunkFormat {
         ));
 
         Ok(())
+    }
+}
+
+impl AnvilChunkFormat {
+    pub fn chunk_to_bytes(&self, chunk_data: &ChunkData) -> Result<Vec<u8>, ChunkSerializingError> {
+        let mut sections = Vec::new();
+
+        for (i, blocks) in chunk_data.blocks.blocks.chunks(16 * 16 * 16).enumerate() {
+            // get unique blocks
+            let unique_blocks = blocks.iter().dedup().collect_vec();
+            let palette = HashMap::<BlockId, (&'static BlockString, usize)>::from_iter(
+                unique_blocks.iter().enumerate().map(|(i, v)| {
+                    (
+                        **v,
+                        (
+                            v.get_block_string()
+                                .expect("Tried saving a block which does not exist."),
+                            i,
+                        ),
+                    )
+                }),
+            );
+
+            let block_bit_size = {
+                let size = 64 - (palette.len() as i64 - 1).leading_zeros();
+                std::cmp::max(4, size)
+            } as usize;
+            let blocks_in_pack = (64 / block_bit_size) as usize;
+            let mut section_longs = Vec::new();
+
+            let mut current_pack_long = 0i64;
+
+            for block_pack in blocks.chunks(blocks_in_pack) {
+                for block in block_pack {
+                    let index = palette.get(block).expect("Just added all unique").1;
+                    current_pack_long = current_pack_long << block_bit_size | index as i64;
+                }
+                section_longs.push(current_pack_long);
+                current_pack_long = 0;
+            }
+
+            sections.push(ChunkSection {
+                y: i as i32 * 16 - WORLD_LOWEST_Y as i32,
+                block_states: Some(ChunkSectionBlockStates {
+                    data: Some(LongArray::new(section_longs)),
+                    palette: palette
+                        .into_iter()
+                        .map(|entry| PaletteEntry {
+                            name: entry.1 .0.name.to_string(),
+                            properties: if entry.1 .0.properties.is_empty() {
+                                None
+                            } else {
+                                Some(entry.1 .0.properties.clone())
+                            },
+                        })
+                        .collect(),
+                }),
+            });
+        }
+
+        let nbt = ChunkNbt {
+            data_version: WORLD_DATA_VERSION,
+            heightmaps: chunk_data.blocks.heightmap.clone(),
+            sections,
+        };
+
+        let bytes = fastnbt::to_bytes(&nbt);
+
+        bytes.map_err(|err| ChunkSerializingError::ErrorSerializingChunk(err))
     }
 }

@@ -55,6 +55,10 @@ pub enum ChunkReadingError {
 pub enum ChunkWritingError {
     #[error("Io error: {0}")]
     IoError(std::io::ErrorKind),
+    #[error("Compression error {0}")]
+    Compression(CompressionError),
+    #[error("Chunk serializing error: {0}")]
+    ChunkSerializingError(String),
 }
 
 #[derive(Error, Debug)]
@@ -84,14 +88,14 @@ pub struct ChunkBlocks {
     pub heightmap: ChunkHeightmaps,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct PaletteEntry {
     name: String,
     properties: Option<HashMap<String, String>>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 struct ChunkSectionBlockStates {
     data: Option<LongArray>,
     palette: Vec<PaletteEntry>,
@@ -104,7 +108,7 @@ pub struct ChunkHeightmaps {
     world_surface: LongArray,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[expect(dead_code)]
 struct ChunkSection {
     #[serde(rename = "Y")]
@@ -112,7 +116,7 @@ struct ChunkSection {
     block_states: Option<ChunkSectionBlockStates>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 struct ChunkNbt {
     #[expect(dead_code)]
@@ -324,9 +328,6 @@ impl ChunkData {
             position: at,
         })
     }
-    pub fn to_bytes(&self) -> Vec<u8> {
-        unimplemented!()
-    }
 }
 
 #[derive(Error, Debug)]
@@ -337,4 +338,10 @@ pub enum ChunkParsingError {
     ChunkNotGenerated,
     #[error("Error deserializing chunk: {0}")]
     ErrorDeserializingChunk(String),
+}
+
+#[derive(Error, Debug)]
+pub enum ChunkSerializingError {
+    #[error("Error serializing chunk: {0}")]
+    ErrorSerializingChunk(fastnbt::error::Error),
 }
