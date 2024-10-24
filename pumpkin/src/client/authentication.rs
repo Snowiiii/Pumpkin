@@ -143,6 +143,8 @@ pub enum AuthError {
     FailedParse,
     #[error("Unknown Status Code")]
     UnknownStatusCode(StatusCode),
+    #[error("You are already connected to this server")]
+    DuplicateConnection,
 }
 
 #[derive(Error, Debug)]

@@ -163,6 +163,13 @@ impl Client {
             }
         }
 
+        // don't allow a duplicate username
+        if let Some(online_player) = &server.get_player_by_name(&profile.name).await {
+            log::debug!("A player (IP '{}', attempted username '{}') tried to log in with the same username as an online player (UUID '{}', IP '{}', username '{}')", &self.address.lock().await.to_string(), &profile.name, &profile.id.to_string(), &online_player.client.address.lock().await.to_string(), &online_player.gameprofile.name);
+            self.kick("A player with this username is already connected").await;
+            return;
+        }
+
         if ADVANCED_CONFIG.packet_compression.enabled {
             self.enable_compression().await;
         }
@@ -192,6 +199,13 @@ impl Client {
             let ip = self.address.lock().await.ip();
 
             let profile = authentication::authenticate(username, &hash, &ip, auth_client).await?;
+            
+            // Don't allow duplicate UUIDs
+            if let Some(online_player) = &server.get_player_by_uuid(profile.id).await {
+                log::debug!("Player (IP '{}', username '{}') tried to log in with the same UUID ('{}') as an online player (IP '{}', username '{}')", &ip.to_string(), &profile.name, &profile.id.to_string(), &online_player.client.address.lock().await.to_string(), &online_player.gameprofile.name);
+                return Err(AuthError::DuplicateConnection);
+            }
+            
             // Check if player should join
             if let Some(actions) = &profile.profile_actions {
                 if ADVANCED_CONFIG
