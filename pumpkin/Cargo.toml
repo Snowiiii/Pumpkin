@@ -30,7 +30,7 @@ num-derive.workspace = true
 serde.workspace = true
 serde_json = "1.0"
 
-bytes = "1.7"
+bytes = "1.8"
 
 rand = "0.8.5"
 

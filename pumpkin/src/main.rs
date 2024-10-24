@@ -1,25 +1,20 @@
 #![deny(clippy::all)]
-#![warn(clippy::pedantic)]
+#![deny(clippy::pedantic)]
 // #![warn(clippy::restriction)]
-#![warn(clippy::cargo)]
+#![deny(clippy::cargo)]
 // REMOVE SOME WHEN RELEASE
 #![expect(clippy::cargo_common_metadata)]
 #![expect(clippy::multiple_crate_versions)]
-#![expect(clippy::while_float)]
 #![expect(clippy::significant_drop_in_scrutinee)]
 #![expect(clippy::significant_drop_tightening)]
-#![expect(clippy::future_not_send)]
 #![expect(clippy::single_call_fn)]
 #![expect(clippy::cast_sign_loss)]
 #![expect(clippy::cast_possible_truncation)]
 #![expect(clippy::cast_possible_wrap)]
-#![expect(clippy::too_many_lines)]
 #![expect(clippy::missing_panics_doc)]
 #![expect(clippy::missing_errors_doc)]
 #![expect(clippy::module_name_repetitions)]
 #![expect(clippy::struct_excessive_bools)]
-#![expect(clippy::many_single_char_names)]
-#![expect(clippy::float_cmp)]
 
 #[cfg(target_os = "wasi")]
 compile_error!("Compiling for WASI targets is not supported!");
@@ -30,6 +25,13 @@ use client::Client;
 use server::{ticker::Ticker, Server};
 use std::io::{self};
 use tokio::io::{AsyncBufReadExt, BufReader};
+
+use std::sync::Arc;
+
+use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
+use pumpkin_core::text::{color::NamedColor, TextComponent};
+use rcon::RCONServer;
+use std::time::Instant;
 
 // Setup some tokens to allow us to identify which event is for which socket.
 
@@ -87,20 +89,11 @@ const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> L
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
-    use std::sync::Arc;
-
-    use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
-    use pumpkin_core::text::{color::NamedColor, TextComponent};
-    use rcon::RCONServer;
-    use std::time::Instant;
-
     init_logger();
-
     // let rt = tokio::runtime::Builder::new_multi_thread()
     //     .enable_all()
     //     .build()
     //     .unwrap();
-
     ctrlc::set_handler(|| {
         log::warn!(
             "{}",
@@ -138,26 +131,7 @@ async fn main() -> io::Result<()> {
     log::info!("You now can connect to the server, Listening on {}", addr);
 
     if use_console {
-        let server = server.clone();
-        tokio::spawn(async move {
-            let stdin = tokio::io::stdin();
-            let mut reader = BufReader::new(stdin);
-            loop {
-                let mut out = String::new();
-
-                reader
-                    .read_line(&mut out)
-                    .await
-                    .expect("Failed to read console line");
-
-                if !out.is_empty() {
-                    let dispatcher = server.command_dispatcher.clone();
-                    dispatcher
-                        .handle_command(&mut commands::CommandSender::Console, &server, &out)
-                        .await;
-                }
-            }
-        });
+        setup_console(server.clone());
     }
     if rcon.enabled {
         let server = server.clone();
@@ -171,6 +145,7 @@ async fn main() -> io::Result<()> {
             ticker.run(&server).await;
         });
     }
+
     loop {
         // Asynchronously wait for an inbound socket.
         let (connection, address) = listener.accept().await?;
@@ -208,7 +183,7 @@ async fn main() -> io::Result<()> {
                 while !player
                     .client
                     .closed
-                    .load(std::sync::atomic::Ordering::Relaxed)
+                    .load(core::sync::atomic::Ordering::Relaxed)
                 {
                     let open = player.client.poll().await;
                     if open {
@@ -220,4 +195,26 @@ async fn main() -> io::Result<()> {
             }
         });
     }
+}
+
+fn setup_console(server: Arc<Server>) {
+    tokio::spawn(async move {
+        let stdin = tokio::io::stdin();
+        let mut reader = BufReader::new(stdin);
+        loop {
+            let mut out = String::new();
+
+            reader
+                .read_line(&mut out)
+                .await
+                .expect("Failed to read console line");
+
+            if !out.is_empty() {
+                let dispatcher = server.command_dispatcher.clone();
+                dispatcher
+                    .handle_command(&mut commands::CommandSender::Console, &server, &out)
+                    .await;
+            }
+        }
+    });
 }

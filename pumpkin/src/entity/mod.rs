@@ -90,22 +90,28 @@ impl Entity {
     /// Updates the entity's position, block position, and chunk position.
     ///
     /// This function calculates the new position, block position, and chunk position based on the provided coordinates. If any of these values change, the corresponding fields are updated.
+    #[expect(clippy::float_cmp)]
     pub fn set_pos(&self, x: f64, y: f64, z: f64) {
         let pos = self.pos.load();
         if pos.x != x || pos.y != y || pos.z != z {
             self.pos.store(Vector3::new(x, y, z));
-            let i = x.floor() as i32;
-            let j = y.floor() as i32;
-            let k = z.floor() as i32;
+            let floor_x = x.floor() as i32;
+            let floor_y = y.floor() as i32;
+            let floor_z = z.floor() as i32;
 
             let block_pos = self.block_pos.load();
             let block_pos_vec = block_pos.0;
-            if i != block_pos_vec.x || j != block_pos_vec.y || k != block_pos_vec.z {
-                let new_block_pos = Vector3::new(i, j, k);
+            if floor_x != block_pos_vec.x
+                || floor_y != block_pos_vec.y
+                || floor_z != block_pos_vec.z
+            {
+                let new_block_pos = Vector3::new(floor_x, floor_y, floor_z);
                 self.block_pos.store(WorldPosition(new_block_pos));
 
                 let chunk_pos = self.chunk_pos.load();
-                if get_section_cord(i) != chunk_pos.x || get_section_cord(k) != chunk_pos.z {
+                if get_section_cord(floor_x) != chunk_pos.x
+                    || get_section_cord(floor_z) != chunk_pos.z
+                {
                     self.chunk_pos.store(Vector2::new(
                         get_section_cord(new_block_pos.x),
                         get_section_cord(new_block_pos.z),

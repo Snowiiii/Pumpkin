@@ -118,6 +118,7 @@ impl World {
         }
     }
 
+    #[expect(clippy::too_many_lines)]
     pub async fn spawn_player(&self, base_config: &BasicConfiguration, player: Arc<Player>) {
         // This code follows the vanilla packet order
         let entity_id = player.entity_id();

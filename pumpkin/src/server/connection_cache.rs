@@ -3,7 +3,6 @@ use std::{
     fs::File,
     io::{Cursor, Read},
     path::Path,
-    sync::LazyLock,
 };
 
 use base64::{engine::general_purpose, Engine as _};
@@ -15,8 +14,7 @@ use pumpkin_protocol::{
 
 use super::CURRENT_MC_VERSION;
 
-static DEFAULT_ICON: LazyLock<&[u8]> =
-    LazyLock::new(|| include_bytes!("../../../assets/default_icon.png"));
+const DEFAULT_ICON: &[u8] = include_bytes!("../../../assets/default_icon.png");
 
 fn load_icon_from_file<P: AsRef<Path>>(path: P) -> Result<String, Box<dyn error::Error>> {
     let mut icon_file = File::open(path)?;
@@ -112,7 +110,7 @@ impl CachedStatus {
             log::info!("Loading server favicon from '{}'", icon_path);
             match load_icon_from_file(icon_path).or_else(|err| {
                 log::warn!("Failed to load icon from '{}': {}", icon_path, err);
-                load_icon_from_bytes(DEFAULT_ICON.as_ref())
+                load_icon_from_bytes(DEFAULT_ICON)
             }) {
                 Ok(result) => Some(result),
                 Err(err) => {

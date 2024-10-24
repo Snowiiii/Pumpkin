@@ -368,6 +368,7 @@ impl Player {
         }
     }
 
+    #[expect(clippy::too_many_lines)]
     pub async fn handle_play_packet(
         self: &Arc<Self>,
         server: &Arc<Server>,
