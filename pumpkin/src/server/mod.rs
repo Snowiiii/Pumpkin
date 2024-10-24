@@ -84,7 +84,7 @@ impl Server {
             // 0 is invalid
             entity_id: 2.into(),
             worlds: vec![Arc::new(world)],
-            command_dispatcher: Arc::new(command_dispatcher),
+            command_dispatcher,
             auth_client,
             key_store: KeyStore::new(),
             server_listing: Mutex::new(CachedStatus::new()),
