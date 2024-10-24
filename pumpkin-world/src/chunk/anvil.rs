@@ -347,7 +347,7 @@ impl ChunkWriter for AnvilChunkFormat {
                 end_index = u64::max(offset + size as u64, end_index);
             }
         }
-        
+
         let location_bytes = &(end_index as u32).to_be_bytes()[0..3];
         let size_bytes = [(bytes.len() / 4096) as u8];
         location_table[table_entry as usize..table_entry as usize + 4]

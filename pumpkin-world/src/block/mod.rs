@@ -1,15 +1,14 @@
 use num_derive::FromPrimitive;
 
 mod block_registry;
-mod block_string;
 pub mod block_state;
+mod block_string;
 
 use pumpkin_core::math::vector3::Vector3;
 
 pub use block_registry::{Block, BlockCategory, BlockId};
 pub use block_state::BlockState;
 pub use block_string::BlockString;
-
 
 #[derive(FromPrimitive)]
 pub enum BlockFace {
