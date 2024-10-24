@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use fastnbt::LongArray;
 
 use crate::{
+    block::BlockId,
     chunk::{ChunkBlocks, CHUNK_AREA, CHUNK_VOLUME, SUBCHUNK_VOLUME},
     coordinates::{ChunkRelativeBlockCoordinates, Height},
     WORLD_HEIGHT,
@@ -43,6 +44,12 @@ const LIGHT_VOLUME: usize = CHUNK_VOLUME + 2 * SUBCHUNK_VOLUME;
 // TODO: Work out the sub chunks, what is required to be sent
 // Only store/send required subchunks
 // Propagate over chunk boundaries.
+// Do by subchunk - keep list of empty chunks
+// 2 Arrays, one for block lighting, one for sky lighting
+
+pub fn is_block_transparent(block: BlockId) -> bool {
+    block.is_air()
+}
 
 pub struct ChunkLighting<'a, 'b> {
     blocks: &'a ChunkBlocks,
@@ -171,9 +178,11 @@ impl<'a, 'b> ChunkLighting<'a, 'b> {
         if coordinates.1 < 16 || coordinates.1 as usize >= 16 + WORLD_HEIGHT {
             return true;
         }
-        self.blocks
-            .get_block(Self::coords_to_block_coords(coordinates))
-            .is_air()
+
+        is_block_transparent(
+            self.blocks
+                .get_block(Self::coords_to_block_coords(coordinates)),
+        )
     }
 
     fn propogate_increase(&mut self) {

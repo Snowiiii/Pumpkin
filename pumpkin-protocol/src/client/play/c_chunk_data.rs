@@ -6,6 +6,7 @@ use pumpkin_macros::client_packet;
 use pumpkin_world::{
     chunk::{ChunkData, SUBCHUNK_VOLUME},
     lighting::ChunkLighting,
+    lighting2::ChunkLightData,
     DIRECT_PALETTE_BITS,
 };
 
@@ -116,49 +117,42 @@ impl<'a> ClientPacket for CChunkData<'a> {
         // TODO: block entities
         buf.put_var_int(&VarInt(0));
 
+        let chunk_light_data = ChunkLightData::initialize(
+            pumpkin_world::lighting2::ChunkCoordinates {
+                x: self.0.position.x,
+                z: self.0.position.z,
+            },
+            &self.0.blocks,
+        );
+
+        let (sky_light_mask, empty_sky_light_mask) = chunk_light_data.subchunk_masks();
+
         // Sky Light Mask
         // All of the chunks, this is not optimal and uses way more data than needed but will be
         // overhauled with full lighting system.
-        buf.put_bit_set(&BitSet(VarInt(1), &[0b11111111111111111111111111]));
+        buf.put_bit_set(&BitSet(VarInt(1), &[sky_light_mask]));
         // Block Light Mask
         buf.put_bit_set(&BitSet(VarInt(1), &[0]));
         // Empty Sky Light Mask
-        buf.put_bit_set(&BitSet(VarInt(1), &[0b0]));
+        buf.put_bit_set(&BitSet(VarInt(1), &[empty_sky_light_mask]));
         // Empty Block Light Mask
         buf.put_bit_set(&BitSet(VarInt(1), &[0]));
 
-        let mut lighting_subchunks = Vec::new();
-        let lighting = ChunkLighting::new(&self.0.blocks, &self.0.blocks.heightmap.world_surface);
-        let light_data = lighting.generate_initial_lighting();
+        let subchunks: Vec<_> = chunk_light_data
+            .subchunks
+            .into_iter()
+            .filter_map(|subchunk| match subchunk {
+                pumpkin_world::lighting2::SubChunkLighting::Uninitialized => None,
+                pumpkin_world::lighting2::SubChunkLighting::Initialized(light_data) => {
+                    Some(light_data.0)
+                }
+            })
+            .collect();
 
-        for subchunk_lighting in light_data.chunks(SUBCHUNK_VOLUME) {
-            let mut output = Vec::with_capacity(SUBCHUNK_VOLUME / 2);
-            for i in 0..(SUBCHUNK_VOLUME / 2) {
-                let value = subchunk_lighting[i * 2].get_skylight()
-                    | (subchunk_lighting[i * 2 + 1].get_skylight() << 4);
-                output.push(value);
-            }
-            lighting_subchunks.push(output);
-        }
-
-        // self.0.blocks.iter_subchunks().for_each(|chunk| {
-        //     let mut chunk_light = [0u8; 2048];
-        //     for (i, block) in chunk.iter().enumerate() {
-        //         if !block.is_air() {
-        //             continue;
-        //         }
-        //         let index = i / 2;
-        //         let mask = if i % 2 == 1 { 0xF0 } else { 0x0F };
-        //         chunk_light[index] |= mask;
-        //     }
-        //
-        //     lighting_subchunks.push(chunk_light);
-        // });
-
-        buf.put_var_int(&lighting_subchunks.len().into());
-        for subchunk in lighting_subchunks {
+        buf.put_var_int(&subchunks.len().into());
+        for subchunk in subchunks {
             buf.put_var_int(&VarInt(subchunk.len() as i32));
-            buf.put_slice(&subchunk);
+            buf.put_slice(&*subchunk);
         }
 
         // Block Lighting

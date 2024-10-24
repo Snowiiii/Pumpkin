@@ -28,6 +28,9 @@ impl Height {
 impl<T: PrimInt + Signed> From<T> for Height {
     fn from(height: T) -> Self {
         let height = height.to_i16().unwrap();
+        if height >= WORLD_MAX_Y {
+            println!("{height}");
+        }
 
         assert!(height <= WORLD_MAX_Y);
         assert!(height >= WORLD_LOWEST_Y);

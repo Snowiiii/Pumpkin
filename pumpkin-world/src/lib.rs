@@ -8,6 +8,7 @@ pub mod global_registry;
 pub mod item;
 pub mod level;
 pub mod lighting;
+pub mod lighting2;
 mod world_gen;
 
 pub const WORLD_HEIGHT: usize = 384;
