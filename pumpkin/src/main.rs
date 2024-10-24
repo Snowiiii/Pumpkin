@@ -87,13 +87,19 @@ const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> L
     }
 }
 
-#[tokio::main]
-async fn main() -> io::Result<()> {
+fn main() {
+    // ensure rayon is built outside of tokio scope
+    rayon::ThreadPoolBuilder::new().build_global().unwrap();
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(async_main())
+        .unwrap();
+}
+
+async fn async_main() -> io::Result<()> {
     init_logger();
-    // let rt = tokio::runtime::Builder::new_multi_thread()
-    //     .enable_all()
-    //     .build()
-    //     .unwrap();
     ctrlc::set_handler(|| {
         log::warn!(
             "{}",
@@ -104,8 +110,6 @@ async fn main() -> io::Result<()> {
         std::process::exit(0);
     })
     .unwrap();
-    // ensure rayon is built outside of tokio scope
-    rayon::ThreadPoolBuilder::new().build_global().unwrap();
     let default_panic = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         default_panic(info);
