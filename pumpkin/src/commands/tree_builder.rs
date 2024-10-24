@@ -40,9 +40,9 @@ impl<'a> CommandTree<'a> {
     /// desired type.
     ///
     /// Also see [`NonLeafNodeBuilder::execute`].
-    pub fn execute(mut self, run: &'a RunFunctionType) -> Self {
+    pub fn execute(mut self, executor: &'a dyn RunFunctionType) -> Self {
         let node = Node {
-            node_type: NodeType::ExecuteLeaf { run },
+            node_type: NodeType::ExecuteLeaf { executor },
             children: Vec::new(),
         };
 
@@ -113,9 +113,9 @@ impl<'a> NonLeafNodeBuilder<'a> {
     /// desired type.
     ///
     /// Also see [`CommandTree::execute`].
-    pub fn execute(mut self, run: &'a RunFunctionType) -> Self {
+    pub fn execute(mut self, executor: &'a dyn RunFunctionType) -> Self {
         self.leaf_nodes.push(LeafNodeBuilder {
-            node_type: NodeType::ExecuteLeaf { run },
+            node_type: NodeType::ExecuteLeaf { executor },
         });
 
         self

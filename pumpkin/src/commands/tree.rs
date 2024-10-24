@@ -20,7 +20,7 @@ pub struct Node<'a> {
 
 pub enum NodeType<'a> {
     ExecuteLeaf {
-        run: &'a RunFunctionType,
+        executor: &'a dyn RunFunctionType,
     },
     Literal {
         string: &'a str,
@@ -39,7 +39,6 @@ pub enum Command<'a> {
     Alias(&'a str),
 }
 
-#[expect(unused)]
 pub struct CommandTree<'a> {
     pub(crate) nodes: Vec<Node<'a>>,
     pub(crate) children: Vec<usize>,
