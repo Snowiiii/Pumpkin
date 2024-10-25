@@ -151,13 +151,6 @@ impl Client {
         };
 
         if BASIC_CONFIG.online_mode {
-            // Don't allow duplicate UUIDs
-            if let Some(online_player) = &server.get_player_by_uuid(profile.id).await {
-                log::debug!("Player (IP '{}', username '{}') tried to log in with the same UUID ('{}') as an online player (IP '{}', username '{}')", &self.address.lock().await.to_string(), &profile.name, &profile.id.to_string(), &online_player.client.address.lock().await.to_string(), &online_player.gameprofile.name);
-                self.kick("You are already connected to this server").await;
-                return;
-            }
-
             // Online mode auth
             match self
                 .authenticate(server, &shared_secret, &profile.name)
@@ -171,7 +164,14 @@ impl Client {
             }
         }
 
-        // don't allow a duplicate username
+        // Don't allow duplicate UUIDs
+        if let Some(online_player) = &server.get_player_by_uuid(profile.id).await {
+            log::debug!("Player (IP '{}', username '{}') tried to log in with the same UUID ('{}') as an online player (IP '{}', username '{}')", &self.address.lock().await.to_string(), &profile.name, &profile.id.to_string(), &online_player.client.address.lock().await.to_string(), &online_player.gameprofile.name);
+            self.kick("You are already connected to this server").await;
+            return;
+        }
+
+        // Don't allow a duplicate username
         if let Some(online_player) = &server.get_player_by_name(&profile.name).await {
             log::debug!("A player (IP '{}', attempted username '{}') tried to log in with the same username as an online player (UUID '{}', IP '{}', username '{}')", &self.address.lock().await.to_string(), &profile.name, &profile.id.to_string(), &online_player.client.address.lock().await.to_string(), &online_player.gameprofile.name);
             self.kick("A player with this username is already connected")
