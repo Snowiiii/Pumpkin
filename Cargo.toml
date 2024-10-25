@@ -30,6 +30,7 @@ tokio = { version = "1.41", features = [
     "rt-multi-thread",
     "sync",
     "io-std",
+    "signal",
 ] }
 
 thiserror = "1.0"

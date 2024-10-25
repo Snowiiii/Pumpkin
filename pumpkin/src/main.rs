@@ -23,8 +23,15 @@ use log::LevelFilter;
 
 use client::Client;
 use server::{ticker::Ticker, Server};
-use std::io::{self};
+use std::{
+    io::{self},
+    process,
+};
 use tokio::io::{AsyncBufReadExt, BufReader};
+// TODO: #[cfg(windows)]
+use tokio::signal::ctrl_c;
+#[cfg(unix)]
+use tokio::signal::unix::{signal, SignalKind};
 
 use std::sync::Arc;
 
@@ -95,17 +102,27 @@ async fn main() -> io::Result<()> {
     //     .build()
     //     .unwrap();
 
-    // handle Ctrl-C here - signals e.g., sigint, sigterm, ...
-    ctrlc::set_handler(|| {
-        log::warn!(
-            "{}",
-            TextComponent::text("Stopping Server")
-                .color_named(NamedColor::Red)
-                .to_pretty_console()
-        );
-        std::process::exit(0);
-    })
-    .expect("Unable to set ctrlc handler");
+    // Unix signal handling
+    if cfg!(unix) {
+        if signal(SignalKind::interrupt())?.recv().await.is_some() {
+            handle_interrupt();
+        }
+
+        if signal(SignalKind::hangup())?.recv().await.is_some() {
+            handle_interrupt();
+        }
+
+        if signal(SignalKind::terminate())?.recv().await.is_some() {
+            handle_interrupt();
+        }
+    }
+
+    // Windows Ctrl-C handling
+    if cfg!(windows) {
+        if ctrl_c().await.is_ok() {
+            handle_interrupt();
+        }
+    }
 
     // ensure rayon is built outside of tokio scope
     rayon::ThreadPoolBuilder::new().build_global().unwrap();
@@ -198,6 +215,16 @@ async fn main() -> io::Result<()> {
             }
         });
     }
+}
+
+fn handle_interrupt() {
+    log::warn!(
+        "{}",
+        TextComponent::text("Received interrupt; stopping server...")
+            .color_named(NamedColor::Red)
+            .to_pretty_console()
+    );
+    std::process::exit(0);
 }
 
 fn setup_console(server: Arc<Server>) {
