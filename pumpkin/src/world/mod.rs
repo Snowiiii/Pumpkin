@@ -384,12 +384,7 @@ impl World {
 
     /// Gets a Player by UUID
     pub async fn get_player_by_uuid(&self, id: uuid::Uuid) -> Option<Arc<Player>> {
-        for player in self.current_players.lock().await.values() {
-            if player.gameprofile.id == id {
-                return Some(player.clone());
-            }
-        }
-        None
+        return self.current_players.lock().await.get(&id).cloned();
     }
 
     pub async fn add_player(&self, uuid: uuid::Uuid, player: Arc<Player>) {
