@@ -153,6 +153,20 @@ pub enum PacketError {
     MalformedLength,
 }
 
+impl PacketError {
+    pub fn kickable(&self) -> bool {
+        // We no longer have a connection, so dont try to kick the player, just close
+        !matches!(
+            self,
+            Self::EncodeData
+                | Self::EncodeFailedWrite
+                | Self::FailedWrite(_)
+                | Self::FailedFinish
+                | Self::ConnectionWrite
+        )
+    }
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ConnectionState {
     HandShake,

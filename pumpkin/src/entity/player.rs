@@ -7,6 +7,7 @@ use std::{
 };
 
 use crossbeam::atomic::AtomicCell;
+use itertools::Itertools;
 use num_derive::FromPrimitive;
 use num_traits::{FromPrimitive, ToPrimitive};
 use pumpkin_core::{
@@ -37,7 +38,7 @@ use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
 
 use super::Entity;
 use crate::{
-    client::{authentication::GameProfile, Client, PlayerConfig},
+    client::{authentication::GameProfile, ChunkHandleWrapper, Client, PlayerConfig},
     server::Server,
     world::World,
 };
@@ -151,33 +152,141 @@ impl Player {
     }
 
     /// Removes the Player out of the current World
+    #[allow(unused_variables)]
     pub async fn remove(&self) {
         self.living_entity.entity.world.remove_player(self).await;
 
         let watched = self.watched_section.load();
         let view_distance = i32::from(get_view_distance(self).await);
         let cylindrical = Cylindrical::new(Vector2::new(watched.x, watched.z), view_distance);
-        let all_chunks = cylindrical.all_chunks_within();
+
+        // NOTE: This all must be synchronous to make sense! The chunks are handled asynhrously.
+        // Non-async code is atomic to async code
+
+        // Radial chunks are all of the chunks the player is theoretically viewing
+        // Giving enough time, all of these chunks will be in memory
+        let radial_chunks = cylindrical.all_chunks_within();
 
         log::debug!(
-            "Removing player id {}, unwatching {} chunks",
+            "Removing player {} ({}), unwatching {} chunks",
             self.gameprofile.name,
-            all_chunks.len()
+            self.client.id,
+            radial_chunks.len()
         );
+
+        let (watched_chunks, to_await) = {
+            let mut pending_chunks = self.client.pending_chunks.lock();
+
+            // Don't try to clean chunks that dont exist yet
+            // If they are still pending, we never sent the client the chunk,
+            // And the watcher value is not set
+            //
+            // The chunk may or may not be in the cache at this point
+            let watched_chunks = radial_chunks
+                .iter()
+                .filter(|chunk| !pending_chunks.contains_key(chunk))
+                .copied()
+                .collect::<Vec<_>>();
+
+            // Mark all pending chunks to be cancelled
+            // Cant use abort chunk because we use the lock for more
+            pending_chunks.iter_mut().for_each(|(chunk, handles)| {
+                handles.iter_mut().enumerate().for_each(|(count, handle)| {
+                    if !handle.aborted() {
+                        log::debug!("Aborting chunk {:?} ({}) (disconnect)", chunk, count);
+                        handle.abort();
+                    }
+                });
+            });
+
+            let to_await = pending_chunks
+                .iter_mut()
+                .map(|(chunk, pending)| {
+                    (
+                        *chunk,
+                        pending
+                            .iter_mut()
+                            .map(ChunkHandleWrapper::take_handle)
+                            .collect_vec(),
+                    )
+                })
+                .collect_vec();
+
+            // Return chunks to stop watching and what to wait for
+            (watched_chunks, to_await)
+        };
+
+        // Wait for individual chunks to finish after we cancel them
+        for (chunk, awaitables) in to_await {
+            for (count, handle) in awaitables.into_iter().enumerate() {
+                #[cfg(debug_assertions)]
+                log::debug!("Waiting for chunk {:?} ({})", chunk, count);
+                let _ = handle.await;
+            }
+        }
+
+        // Allow the batch jobs to properly cull stragglers before we do our clean up
+        log::debug!("Collecting chunk batches...");
+        let batches = {
+            let mut chunk_batches = self.client.pending_chunk_batch.lock();
+            let keys = chunk_batches.keys().copied().collect_vec();
+            let handles = keys
+                .iter()
+                .filter_map(|batch_id| {
+                    #[cfg(debug_assertions)]
+                    log::debug!("Batch id: {}", batch_id);
+                    chunk_batches.remove(batch_id)
+                })
+                .collect_vec();
+            assert!(chunk_batches.is_empty());
+            handles
+        };
+
+        log::debug!("Awaiting chunk batches ({})...", batches.len());
+
+        for (count, batch) in batches.into_iter().enumerate() {
+            #[cfg(debug_assertions)]
+            log::debug!("Awaiting batch {}", count);
+            let _ = batch.await;
+            #[cfg(debug_assertions)]
+            log::debug!("Done awaiting batch {}", count);
+        }
+        log::debug!("Done waiting for chunk batches");
+
+        // Decrement value of watched chunks
+        let chunks_to_clean = self
+            .living_entity
+            .entity
+            .world
+            .mark_chunks_as_not_watched(&watched_chunks);
+
+        // Remove chunks with no watchers from the cache
         self.living_entity
             .entity
             .world
-            .mark_chunks_as_not_watched(&all_chunks)
-            .await;
+            .clean_chunks(&chunks_to_clean);
+
+        // Remove left over entries from all possiblily loaded chunks
+        self.living_entity.entity.world.clean_memory(&radial_chunks);
 
         log::debug!(
-            "Removed player id {} ({} chunks remain cached)",
+            "Removed player id {} ({}) ({} chunks remain cached)",
             self.gameprofile.name,
-            self.living_entity.entity.world.get_cached_chunk_len().await
+            self.client.id,
+            self.living_entity.entity.world.get_cached_chunk_len()
         );
+
+        //self.living_entity.entity.world.level.list_cached();
     }
 
     pub async fn tick(&self) {
+        if self
+            .client
+            .closed
+            .load(std::sync::atomic::Ordering::Relaxed)
+        {
+            return;
+        }
         let now = Instant::now();
         self.last_attacked_ticks
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -283,18 +392,26 @@ impl Player {
 
     /// Kicks the Client with a reason depending on the connection state
     pub async fn kick<'a>(&self, reason: TextComponent<'a>) {
-        assert!(!self
+        if self
             .client
             .closed
-            .load(std::sync::atomic::Ordering::Relaxed));
+            .load(std::sync::atomic::Ordering::Relaxed)
+        {
+            log::debug!(
+                "Tried to kick id {} but connection is closed!",
+                self.client.id
+            );
+            return;
+        }
 
         self.client
             .try_send_packet(&CPlayDisconnect::new(&reason))
             .await
             .unwrap_or_else(|_| self.client.close());
         log::info!(
-            "Kicked Player {} for {}",
+            "Kicked Player {} ({}) for {}",
             self.gameprofile.name,
+            self.client.id,
             reason.to_pretty_console()
         );
         self.client.close();
@@ -349,22 +466,34 @@ impl Player {
     pub async fn process_packets(self: &Arc<Self>, server: &Arc<Server>) {
         let mut packets = self.client.client_packets_queue.lock().await;
         while let Some(mut packet) = packets.pop_back() {
-            match self.handle_play_packet(server, &mut packet).await {
-                Ok(()) => {}
-                Err(e) => {
-                    if e.is_kick() {
-                        if let Some(kick_reason) = e.client_kick_reason() {
-                            self.kick(TextComponent::text(&kick_reason)).await;
-                        } else {
-                            self.kick(TextComponent::text(&format!(
-                                "Error while reading incoming packet {e}"
-                            )))
-                            .await;
+            #[cfg(debug_assertions)]
+            let inst = std::time::Instant::now();
+            tokio::select! {
+                () = self.client.await_cancel() => {
+                    log::debug!("Canceling player packet processing");
+                    return;
+                },
+                packet_result = self.handle_play_packet(server, &mut packet) => {
+                    #[cfg(debug_assertions)]
+                    log::debug!("Handled play packet in {:?}", inst.elapsed());
+                    match packet_result {
+                        Ok(()) => {}
+                        Err(e) => {
+                            if e.is_kick() {
+                                if let Some(kick_reason) = e.client_kick_reason() {
+                                    self.kick(TextComponent::text(&kick_reason)).await;
+                                } else {
+                                    self.kick(TextComponent::text(&format!(
+                                        "Error while reading incoming packet {e}"
+                                    )))
+                                    .await;
+                                }
+                            }
+                            e.log();
                         }
-                    }
-                    e.log();
+                    };
                 }
-            };
+            }
         }
     }
 

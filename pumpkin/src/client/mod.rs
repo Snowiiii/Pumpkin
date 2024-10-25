@@ -1,5 +1,5 @@
 use std::{
-    collections::VecDeque,
+    collections::{HashMap, VecDeque},
     net::SocketAddr,
     sync::{
         atomic::{AtomicBool, AtomicI32},
@@ -16,7 +16,7 @@ use authentication::GameProfile;
 use crossbeam::atomic::AtomicCell;
 use num_traits::FromPrimitive;
 use pumpkin_config::compression::CompressionInfo;
-use pumpkin_core::text::TextComponent;
+use pumpkin_core::{math::vector2::Vector2, text::TextComponent};
 use pumpkin_protocol::{
     bytebuf::DeserializerError,
     client::{config::CConfigDisconnect, login::CLoginDisconnect, play::CPlayDisconnect},
@@ -36,8 +36,12 @@ use pumpkin_protocol::{
     },
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Mutex;
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    sync::Notify,
+    task::JoinHandle,
+};
 
 use thiserror::Error;
 
@@ -89,9 +93,48 @@ impl Default for PlayerConfig {
     }
 }
 
+pub struct ChunkHandleWrapper {
+    handle: Option<JoinHandle<()>>,
+    aborted: bool,
+}
+
+impl ChunkHandleWrapper {
+    #[must_use]
+    pub fn new(handle: JoinHandle<()>) -> Self {
+        Self {
+            handle: Some(handle),
+            aborted: false,
+        }
+    }
+
+    pub fn abort(&mut self) {
+        self.aborted = true;
+        if let Some(handle) = &self.handle {
+            handle.abort();
+        } else {
+            log::error!("Trying to abort without a handle!");
+        }
+    }
+
+    pub fn take_handle(&mut self) -> JoinHandle<()> {
+        self.handle.take().unwrap()
+    }
+
+    #[must_use]
+    pub fn aborted(&self) -> bool {
+        self.aborted
+    }
+}
+
+pub type PlayerPendingChunks =
+    Arc<parking_lot::Mutex<HashMap<Vector2<i32>, VecDeque<ChunkHandleWrapper>>>>;
+
 /// Everything which makes a Connection with our Server is a `Client`.
 /// Client will become Players when they reach the `Play` state
 pub struct Client {
+    /// The client id. This is good for coorelating a connection with a player
+    /// Only used for logging purposes
+    pub id: u16,
     /// The client's game profile information.
     pub gameprofile: Mutex<Option<GameProfile>>,
     /// The client's configuration settings, Optional
@@ -121,13 +164,26 @@ pub struct Client {
     pub client_packets_queue: Arc<Mutex<VecDeque<RawPacket>>>,
     /// Indicates whether the client should be converted into a player.
     pub make_player: AtomicBool,
+
+    //TODO: Is there a way to consolidate these two?
+    //Need to lookup by chunk, but also would be need to contain all the stuff
+    //In a PendingBatch struct. Is there a cheap way to map multiple keys to a single element?
+    //
+    /// Individual chunk tasks that this client is waiting for
+    pub pending_chunks: PlayerPendingChunks,
+    /// Chunk batches that this client is waiting for
+    pub pending_chunk_batch: parking_lot::Mutex<HashMap<uuid::Uuid, JoinHandle<()>>>,
+
+    /// Tell tasks to stop if we are closing
+    cancel_tasks: Notify,
 }
 
 impl Client {
     #[must_use]
-    pub fn new(connection: tokio::net::TcpStream, address: SocketAddr) -> Self {
+    pub fn new(connection: tokio::net::TcpStream, address: SocketAddr, id: u16) -> Self {
         let (connection_reader, connection_writer) = connection.into_split();
         Self {
+            id,
             protocol_version: AtomicI32::new(0),
             gameprofile: Mutex::new(None),
             config: Mutex::new(None),
@@ -143,6 +199,9 @@ impl Client {
             closed: AtomicBool::new(false),
             client_packets_queue: Arc::new(Mutex::new(VecDeque::new())),
             make_player: AtomicBool::new(false),
+            pending_chunks: Arc::new(parking_lot::Mutex::new(HashMap::new())),
+            pending_chunk_batch: parking_lot::Mutex::new(HashMap::new()),
+            cancel_tasks: Notify::new(),
         }
     }
 
@@ -184,7 +243,9 @@ impl Client {
         // assert!(!self.closed);
         let mut enc = self.enc.lock().await;
         if let Err(error) = enc.append_packet(packet) {
-            self.kick(&error.to_string()).await;
+            if error.kickable() {
+                self.kick(&error.to_string()).await;
+            }
             return;
         }
 
@@ -194,10 +255,20 @@ impl Client {
             .await
             .map_err(|_| PacketError::ConnectionWrite)
         {
-            self.kick(&error.to_string()).await;
-        } else if let Err(error) = writer.flush().await {
-            log::warn!("Failed to flush writer for: {}", error.to_string());
+            if error.kickable() {
+                self.kick(&error.to_string()).await;
+            }
         }
+
+        /*
+        else if let Err(error) = writer.flush().await {
+            log::warn!(
+                "Failed to flush writer for id {}: {}",
+                self.id,
+                error.to_string()
+            );
+        }
+        */
     }
 
     pub async fn try_send_packet<P: ClientPacket>(&self, packet: &P) -> Result<(), PacketError> {
@@ -219,26 +290,44 @@ impl Client {
             .await
             .map_err(|_| PacketError::ConnectionWrite)?;
 
+        /*
         writer
             .flush()
             .await
             .map_err(|_| PacketError::ConnectionWrite)?;
+        */
         Ok(())
+    }
+
+    pub async fn await_cancel(&self) {
+        self.cancel_tasks.notified().await;
     }
 
     /// Processes all packets send by the client
     pub async fn process_packets(&self, server: &Arc<Server>) {
         let mut packet_queue = self.client_packets_queue.lock().await;
         while let Some(mut packet) = packet_queue.pop_front() {
-            if let Err(error) = self.handle_packet(server, &mut packet).await {
-                let text = format!("Error while reading incoming packet {error}");
-                log::error!(
-                    "Failed to read incoming packet with id {}: {}",
-                    i32::from(packet.id),
-                    error
-                );
-                self.kick(&text).await;
-            };
+            if self.closed.load(std::sync::atomic::Ordering::Relaxed) {
+                log::debug!("Canceling client packet processing (pre)");
+                return;
+            }
+            tokio::select! {
+                () = self.cancel_tasks.notified() => {
+                    log::debug!("Canceling client packet processing (interrupt)");
+                    return;
+                },
+                packet_result = self.handle_packet(server, &mut packet) => {
+                    if let Err(error) = packet_result {
+                        let text = format!("Error while reading incoming packet {error}");
+                        log::error!(
+                            "Failed to read incoming packet with id {}: {}",
+                            i32::from(packet.id),
+                            error
+                        );
+                        self.kick(&text).await;
+                    };
+                }
+            }
         }
     }
 
@@ -400,6 +489,11 @@ impl Client {
     /// Returns if connection is still open
     pub async fn poll(&self) -> bool {
         loop {
+            if self.closed.load(std::sync::atomic::Ordering::Relaxed) {
+                // If we manually close (like a kick) we dont want to keep reading bytes
+                return false;
+            }
+
             let mut dec = self.dec.lock().await;
 
             match dec.decode() {
@@ -438,30 +532,29 @@ impl Client {
 
     /// Kicks the Client with a reason depending on the connection state
     pub async fn kick(&self, reason: &str) {
-        log::info!("Kicking Client for {}", reason);
-        match self.connection_state.load() {
+        log::info!("Kicking Client id {} for {}", self.id, reason);
+        let result = match self.connection_state.load() {
             ConnectionState::Login => {
                 self.try_send_packet(&CLoginDisconnect::new(
                     &serde_json::to_string_pretty(&reason).unwrap_or_else(|_| String::new()),
                 ))
                 .await
-                .unwrap_or_else(|_| self.close());
             }
-            ConnectionState::Config => {
-                self.try_send_packet(&CConfigDisconnect::new(reason))
-                    .await
-                    .unwrap_or_else(|_| self.close());
-            }
+            ConnectionState::Config => self.try_send_packet(&CConfigDisconnect::new(reason)).await,
             // This way players get kicked when players using client functions (e.g. poll, send_packet)
             ConnectionState::Play => {
                 self.try_send_packet(&CPlayDisconnect::new(&TextComponent::text(reason)))
                     .await
-                    .unwrap_or_else(|_| self.close());
             }
             _ => {
                 log::warn!("Can't kick in {:?} State", self.connection_state);
+                Ok(())
             }
+        };
+        if let Err(err) = result {
+            log::warn!("Failed to kick {}: {}", self.id, err.to_string());
         }
+        log::debug!("Closing connection for {}", self.id);
         self.close();
     }
 
@@ -469,6 +562,25 @@ impl Client {
     pub fn close(&self) {
         self.closed
             .store(true, std::sync::atomic::Ordering::Relaxed);
+
+        // Abort pending chunks here too because we might clean up before chunk tasks are done
+        self.abort_chunks("closed");
+
+        self.cancel_tasks.notify_waiters();
+
+        log::debug!("Closed connection for {}", self.id);
+    }
+
+    pub fn abort_chunks(&self, reason: &str) {
+        let mut pending_chunks = self.pending_chunks.lock();
+        pending_chunks.iter_mut().for_each(|(chunk, handles)| {
+            handles.iter_mut().enumerate().for_each(|(count, handle)| {
+                if !handle.aborted() {
+                    log::debug!("Aborting chunk {:?} ({}) ({})", chunk, count, reason);
+                    handle.abort();
+                }
+            });
+        });
     }
 }
 
