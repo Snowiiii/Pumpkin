@@ -94,6 +94,8 @@ async fn main() -> io::Result<()> {
     //     .enable_all()
     //     .build()
     //     .unwrap();
+
+    // handle Ctrl-C here - signals e.g., sigint, sigterm, ...
     ctrlc::set_handler(|| {
         log::warn!(
             "{}",
@@ -103,7 +105,8 @@ async fn main() -> io::Result<()> {
         );
         std::process::exit(0);
     })
-    .unwrap();
+    .expect("Unable to set ctrlc handler");
+
     // ensure rayon is built outside of tokio scope
     rayon::ThreadPoolBuilder::new().build_global().unwrap();
     let default_panic = std::panic::take_hook();
