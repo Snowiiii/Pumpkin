@@ -23,10 +23,7 @@ use log::LevelFilter;
 
 use client::Client;
 use server::{ticker::Ticker, Server};
-use std::{
-    io::{self},
-    process,
-};
+use std::io::{self};
 use tokio::io::{AsyncBufReadExt, BufReader};
 // TODO: #[cfg(windows)]
 use tokio::signal::ctrl_c;
@@ -118,10 +115,8 @@ async fn main() -> io::Result<()> {
     }
 
     // Windows Ctrl-C handling
-    if cfg!(windows) {
-        if ctrl_c().await.is_ok() {
-            handle_interrupt();
-        }
+    if cfg!(windows) && ctrl_c().await.is_ok() {
+        handle_interrupt();
     }
 
     // ensure rayon is built outside of tokio scope
