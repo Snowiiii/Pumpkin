@@ -25,8 +25,8 @@ use pumpkin_protocol::{
     server::play::{
         SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
         SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
-        SPlayerRotation, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
-        ServerboundPlayPackets,
+        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem,
+        SUseItemOn, ServerboundPlayPackets,
     },
     RawPacket, ServerPacket, VarInt,
 };
@@ -467,7 +467,10 @@ impl Player {
                 }
                 ServerboundPlayPackets::UpdateCommandBlock => {}
                 ServerboundPlayPackets::UpdateCommandBlockMinecart => {}
-                ServerboundPlayPackets::CreativeInventoryAction => {}
+                ServerboundPlayPackets::CreativeInventoryAction => {
+                    self.handle_set_creative_slot(SSetCreativeSlot::read(bytebuf)?)
+                        .await?;
+                }
                 ServerboundPlayPackets::UpdateJigsawBlock => {}
                 ServerboundPlayPackets::UpdateStructureBlock => {}
                 ServerboundPlayPackets::UpdateSign => {}
