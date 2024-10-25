@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use dispatcher::InvalidTreeError;
 use pumpkin_core::text::TextComponent;
 use tree::ConsumedArgs;
@@ -11,6 +12,8 @@ mod arg_player;
 mod cmd_echest;
 mod cmd_gamemode;
 mod cmd_help;
+mod cmd_kick;
+mod cmd_kill;
 mod cmd_pumpkin;
 mod cmd_stop;
 pub mod dispatcher;
@@ -19,55 +22,46 @@ mod tree_builder;
 mod tree_format;
 
 pub enum CommandSender<'a> {
-    Rcon(&'a mut Vec<String>),
+    Rcon(&'a tokio::sync::Mutex<Vec<String>>),
     Console,
-    Player(&'a Player),
+    Player(Arc<Player>),
 }
 
 impl<'a> CommandSender<'a> {
-    pub fn send_message(&mut self, text: TextComponent) {
+    pub async fn send_message(&self, text: TextComponent<'a>) {
         match self {
-            // TODO: add color and stuff to console
             CommandSender::Console => log::info!("{}", text.to_pretty_console()),
-            CommandSender::Player(c) => c.send_system_message(text),
-            CommandSender::Rcon(s) => s.push(text.to_pretty_console()),
+            CommandSender::Player(c) => c.send_system_message(&text).await,
+            CommandSender::Rcon(s) => s.lock().await.push(text.to_pretty_console()),
         }
     }
 
-    pub fn is_player(&self) -> bool {
-        match self {
-            CommandSender::Console => false,
-            CommandSender::Player(_) => true,
-            CommandSender::Rcon(_) => false,
-        }
+    #[must_use]
+    pub const fn is_player(&self) -> bool {
+        matches!(self, CommandSender::Player(_))
     }
 
-    pub fn is_console(&self) -> bool {
-        match self {
-            CommandSender::Console => true,
-            CommandSender::Player(_) => false,
-            CommandSender::Rcon(_) => true,
-        }
+    #[must_use]
+    pub const fn is_console(&self) -> bool {
+        matches!(self, CommandSender::Console)
     }
-    pub fn as_mut_player(&mut self) -> Option<&Player> {
+    #[must_use]
+    pub fn as_player(&self) -> Option<Arc<Player>> {
         match self {
-            CommandSender::Player(player) => Some(player),
-            CommandSender::Console => None,
-            CommandSender::Rcon(_) => None,
+            CommandSender::Player(player) => Some(player.clone()),
+            _ => None,
         }
     }
 
     /// todo: implement
-    pub fn permission_lvl(&self) -> i32 {
-        match self {
-            CommandSender::Rcon(_) => 4,
-            CommandSender::Console => 4,
-            CommandSender::Player(_) => 4,
-        }
+    #[must_use]
+    pub const fn permission_lvl(&self) -> i32 {
+        4
     }
 }
 
-pub fn default_dispatcher<'a>() -> CommandDispatcher<'a> {
+#[must_use]
+pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     let mut dispatcher = CommandDispatcher::default();
 
     dispatcher.register(cmd_pumpkin::init_command_tree());
@@ -75,9 +69,18 @@ pub fn default_dispatcher<'a>() -> CommandDispatcher<'a> {
     dispatcher.register(cmd_stop::init_command_tree());
     dispatcher.register(cmd_help::init_command_tree());
     dispatcher.register(cmd_echest::init_command_tree());
+    dispatcher.register(cmd_kill::init_command_tree());
+    dispatcher.register(cmd_kick::init_command_tree());
 
-    dispatcher
+    Arc::new(dispatcher)
 }
 
-type RunFunctionType = (dyn Fn(&mut CommandSender, &Arc<Server>, &ConsumedArgs) -> Result<(), InvalidTreeError>
-     + Sync);
+#[async_trait]
+pub(crate) trait CommandExecutor: Sync {
+    async fn execute(
+        &self,
+        sender: &mut CommandSender,
+        server: &Server,
+        args: &ConsumedArgs,
+    ) -> Result<(), InvalidTreeError>;
+}

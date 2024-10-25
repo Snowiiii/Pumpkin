@@ -1,10 +1,11 @@
 use noise::Perlin;
 use pumpkin_core::math::vector2::Vector2;
+use rand::Rng;
 
 use crate::{
     biome::Biome,
-    block::BlockId,
-    coordinates::{BlockCoordinates, XZBlockCoordinates},
+    chunk::ChunkBlocks,
+    coordinates::{BlockCoordinates, ChunkRelativeBlockCoordinates, XZBlockCoordinates},
     world_gen::{
         generator::{BiomeGenerator, GeneratorInit, PerlinTerrainGenerator},
         generic_generator::GenericGenerator,
@@ -40,21 +41,82 @@ impl GeneratorInit for PlainsTerrainGenerator {
 impl PerlinTerrainGenerator for PlainsTerrainGenerator {
     fn prepare_chunk(&self, _at: &Vector2<i32>, _perlin: &Perlin) {}
     // TODO allow specifying which blocks should be at which height in the config.
-    fn generate_block(&self, at: BlockCoordinates, chunk_height: i16, _: Biome) -> BlockId {
+    fn generate_block(
+        &self,
+        coordinates: ChunkRelativeBlockCoordinates,
+        at: BlockCoordinates,
+        blocks: &mut ChunkBlocks,
+        chunk_height: i16,
+        _: Biome,
+    ) {
         let begin_stone_height = chunk_height - 5;
-        let begin_dirt_height = chunk_height - 1;
+        let begin_dirt_height = chunk_height - 2;
 
         let y = *at.y;
         if y == -64 {
-            BlockId::from_id(79) // BEDROCK
+            blocks.set_block(
+                coordinates,
+                pumpkin_macros::block!("minecraft:bedrock").into(),
+            );
         } else if y >= -63 && y <= begin_stone_height {
-            return BlockId::from_id(1); // STONE
+            blocks.set_block(
+                coordinates,
+                pumpkin_macros::block!("minecraft:stone").into(),
+            );
         } else if y >= begin_stone_height && y < begin_dirt_height {
-            return BlockId::from_id(10); // DIRT;
+            blocks.set_block(coordinates, pumpkin_macros::block!("minecraft:dirt").into());
+        } else if y == chunk_height - 2 {
+            blocks.set_block(
+                coordinates,
+                pumpkin_macros::block!("minecraft:grass_block").into(),
+            );
         } else if y == chunk_height - 1 {
-            return BlockId::from_id(9); // GRASS BLOCK
-        } else {
-            BlockId::AIR
+            // TODO: generate flowers and grass
+            let grass: u8 = rand::thread_rng().gen_range(0..7);
+            if grass == 3 {
+                let flower: u8 = rand::thread_rng().gen_range(0..20);
+                if flower == 6 {
+                    match rand::thread_rng().gen_range(0..4) {
+                        0 => {
+                            blocks.set_block(
+                                coordinates,
+                                pumpkin_macros::block!("minecraft:dandelion").into(),
+                            );
+                        }
+                        1 => {
+                            blocks.set_block(
+                                coordinates,
+                                pumpkin_macros::block!("minecraft:oxeye_daisy").into(),
+                            );
+                        }
+                        2 => {
+                            blocks.set_block(
+                                coordinates,
+                                pumpkin_macros::block!("minecraft:cornflower").into(),
+                            );
+                        }
+                        3 => {
+                            blocks.set_block(
+                                coordinates,
+                                pumpkin_macros::block!("minecraft:poppy").into(),
+                            );
+                        }
+                        _ => {
+                            blocks.set_block(
+                                coordinates,
+                                pumpkin_macros::block!("minecraft:azure_bluet").into(),
+                            );
+                        }
+                    }
+                } else {
+                    // TODO: Tall grass, Tall grass data called `half`, There is `upper` and `lower`
+                    blocks.set_block(
+                        coordinates,
+                        pumpkin_macros::block!("minecraft:short_grass").into(),
+                    );
+                }
+            }
         }
+        //  BlockState::AIR
     }
 }

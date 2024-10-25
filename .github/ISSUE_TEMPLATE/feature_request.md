@@ -1,10 +1,9 @@
 ---
 name: Feature request
 about: Suggest an idea for this project
-title: ''
+title: ""
 labels: enhancement
 assignees: Snowiiii
-
 ---
 
 - [ ] I've searched existing issues and couldn't find a duplicate.

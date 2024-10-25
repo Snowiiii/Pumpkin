@@ -7,7 +7,6 @@ use crate::commands::tree::{Command, CommandTree, ConsumedArgs, NodeType, RawArg
 use crate::commands::CommandSender;
 use crate::server::Server;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 #[derive(Debug)]
 pub(crate) enum InvalidTreeError {
@@ -16,7 +15,7 @@ pub(crate) enum InvalidTreeError {
     /// never fail.
     InvalidConsumptionError(Option<String>),
 
-    /// Return this if a condition that a [Node::Require] should ensure is met is not met.
+    /// Return this if a condition that a [`Node::Require`] should ensure is met is not met.
     InvalidRequirementError,
 }
 
@@ -25,24 +24,33 @@ pub struct CommandDispatcher<'a> {
     pub(crate) commands: HashMap<&'a str, Command<'a>>,
 }
 
-/// Stores registered [CommandTree]s and dispatches commands to them.
+/// Stores registered [`CommandTree`]s and dispatches commands to them.
 impl<'a> CommandDispatcher<'a> {
-    pub fn handle_command(&self, sender: &mut CommandSender, server: &Arc<Server>, cmd: &str) {
-        if let Err(err) = self.dispatch(sender, server, cmd) {
-            sender.send_message(
-                TextComponent::text(&err).color_named(pumpkin_core::text::color::NamedColor::Red),
-            )
+    pub async fn handle_command(
+        &'a self,
+        sender: &mut CommandSender<'a>,
+        server: &Server,
+        cmd: &'a str,
+    ) {
+        if let Err(err) = self.dispatch(sender, server, cmd).await {
+            sender
+                .send_message(
+                    TextComponent::text_string(err)
+                        .color_named(pumpkin_core::text::color::NamedColor::Red),
+                )
+                .await;
         }
     }
 
-    /// Execute a command using its corresponding [CommandTree].
-    pub(crate) fn dispatch(
+    /// Execute a command using its corresponding [`CommandTree`].
+    pub(crate) async fn dispatch(
         &'a self,
-        src: &mut CommandSender,
-        server: &Arc<Server>,
-        cmd: &str,
+        src: &mut CommandSender<'a>,
+        server: &Server,
+        cmd: &'a str,
     ) -> Result<(), String> {
-        let mut parts = cmd.split_ascii_whitespace();
+        // Other languages dont use the ascii whitespace
+        let mut parts = cmd.split_whitespace();
         let key = parts.next().ok_or("Empty Command")?;
         let raw_args: Vec<&str> = parts.rev().collect();
 
@@ -50,7 +58,7 @@ impl<'a> CommandDispatcher<'a> {
 
         // try paths until fitting path is found
         for path in tree.iter_paths() {
-            match Self::try_is_fitting_path(src, server, path, tree, raw_args.clone()) {
+            match Self::try_is_fitting_path(src, server, &path, tree, raw_args.clone()).await {
                 Err(InvalidConsumptionError(s)) => {
                     println!("Error while parsing command \"{cmd}\": {s:?} was consumed, but couldn't be parsed");
                     return Err("Internal Error (See logs for details)".into());
@@ -59,15 +67,18 @@ impl<'a> CommandDispatcher<'a> {
                     println!("Error while parsing command \"{cmd}\": a requirement that was expected was not met.");
                     return Err("Internal Error (See logs for details)".into());
                 }
-                Ok(is_fitting_path) => {
-                    if is_fitting_path {
-                        return Ok(());
+                Ok(is_fitting_path) => match is_fitting_path {
+                    Ok(()) => return Ok(()),
+                    Err(error) => {
+                        // Custom error message or not ?
+                        if let Some(error) = error {
+                            return Err(error);
+                        }
                     }
-                }
+                },
             }
         }
-
-        Err(format!("Invalid Syntax. Usage: {}", tree))
+        Err(format!("Invalid Syntax. Usage: {tree}"))
     }
 
     pub(crate) fn get_tree(&'a self, key: &str) -> Result<&'a CommandTree<'a>, String> {
@@ -85,50 +96,51 @@ impl<'a> CommandDispatcher<'a> {
         }
     }
 
-    fn try_is_fitting_path(
-        src: &mut CommandSender,
-        server: &Arc<Server>,
-        path: Vec<usize>,
-        tree: &CommandTree,
-        mut raw_args: RawArgs,
-    ) -> Result<bool, InvalidTreeError> {
+    async fn try_is_fitting_path(
+        src: &mut CommandSender<'a>,
+        server: &Server,
+        path: &[usize],
+        tree: &CommandTree<'a>,
+        mut raw_args: RawArgs<'a>,
+    ) -> Result<Result<(), Option<String>>, InvalidTreeError> {
         let mut parsed_args: ConsumedArgs = HashMap::new();
 
         for node in path.iter().map(|&i| &tree.nodes[i]) {
             match node.node_type {
-                NodeType::ExecuteLeaf { run } => {
+                NodeType::ExecuteLeaf { executor } => {
                     return if raw_args.is_empty() {
-                        run(src, server, &parsed_args)?;
-                        Ok(true)
+                        executor.execute(src, server, &parsed_args).await?;
+                        Ok(Ok(()))
                     } else {
-                        Ok(false)
+                        Ok(Err(None))
                     };
                 }
                 NodeType::Literal { string, .. } => {
                     if raw_args.pop() != Some(string) {
-                        return Ok(false);
+                        return Ok(Err(None));
                     }
                 }
                 NodeType::Argument {
                     consumer: consume,
                     name,
                     ..
-                } => {
-                    if let Some(consumed) = consume(src, &mut raw_args) {
+                } => match consume(src, server, &mut raw_args) {
+                    Ok(consumed) => {
                         parsed_args.insert(name, consumed);
-                    } else {
-                        return Ok(false);
                     }
-                }
+                    Err(err) => {
+                        return Ok(Err(err));
+                    }
+                },
                 NodeType::Require { predicate, .. } => {
                     if !predicate(src) {
-                        return Ok(false);
+                        return Ok(Err(None));
                     }
                 }
             }
         }
 
-        Ok(false)
+        Ok(Err(None))
     }
 
     /// Register a command with the dispatcher.

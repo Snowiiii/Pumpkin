@@ -6,6 +6,7 @@
 
 # Allow the source code folders
 !/pumpkin*/
+!/assets
 
 # Dependencies
 !Cargo.lock

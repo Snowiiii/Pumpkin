@@ -1,10 +1,12 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x29)]
+#[client_packet(ClientboundPlayPackets::Particle as i32)]
 pub struct CParticle<'a> {
     /// If true, particle distance increases from 256 to 65536.
     long_distance: bool,

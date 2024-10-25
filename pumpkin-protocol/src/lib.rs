@@ -1,5 +1,6 @@
-use bytebuf::{packet_id::Packet, ByteBuffer, DeserializerError};
+use bytebuf::{packet_id::ClientPacketID, ByteBuffer, DeserializerError};
 use bytes::Buf;
+use pumpkin_core::text::{style::Style, TextComponent};
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
 use thiserror::Error;
@@ -13,7 +14,7 @@ pub mod slot;
 
 /// To current Minecraft protocol
 /// Don't forget to change this when porting
-pub const CURRENT_MC_PROTOCOL: u32 = 767;
+pub const CURRENT_MC_PROTOCOL: u32 = 768;
 
 pub const MAX_PACKET_SIZE: i32 = 2097152;
 
@@ -138,8 +139,8 @@ pub enum PacketError {
     EncodeData,
     #[error("failed to write encoded packet")]
     EncodeFailedWrite,
-    #[error("failed to write into decoder")]
-    FailedWrite,
+    #[error("failed to write into decoder: {0}")]
+    FailedWrite(String),
     #[error("failed to flush decoder")]
     FailedFinish,
     #[error("failed to write encoded packet to connection")]
@@ -176,16 +177,30 @@ impl From<VarInt> for ConnectionState {
         }
     }
 }
+
+pub enum SoundCategory {
+    Master,
+    Music,
+    Records,
+    Weather,
+    Blocks,
+    Hostile,
+    Neutral,
+    Players,
+    Ambient,
+    Voice,
+}
+
 pub struct RawPacket {
     pub id: VarInt,
     pub bytebuf: ByteBuffer,
 }
 
-pub trait ClientPacket: Packet {
+pub trait ClientPacket: ClientPacketID {
     fn write(&self, bytebuf: &mut ByteBuffer);
 }
 
-pub trait ServerPacket: Packet + Sized {
+pub trait ServerPacket: Sized {
     fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError>;
 }
 
@@ -193,18 +208,18 @@ pub trait ServerPacket: Packet + Sized {
 pub struct StatusResponse {
     /// The version on which the Server is running. Optional
     pub version: Option<Version>,
-    /// Informations about currently connected Players. Optional
+    /// Information about currently connected Players. Optional
     pub players: Option<Players>,
     /// The description displayed also called MOTD (Message of the day). Optional
     pub description: String,
     /// The icon displayed, Optional
     pub favicon: Option<String>,
     /// Players are forced to use Secure chat
-    pub enforece_secure_chat: bool,
+    pub enforce_secure_chat: bool,
 }
 #[derive(Serialize)]
 pub struct Version {
-    /// The current name of the Version (e.g. 1.21.1)
+    /// The current name of the Version (e.g. 1.21.3)
     pub name: String,
     /// The current Protocol Version (e.g. 767)
     pub protocol: u32,
@@ -216,7 +231,7 @@ pub struct Players {
     pub max: u32,
     /// The current online player count
     pub online: u32,
-    /// Informations about currently connected players.
+    /// Information about currently connected players.
     /// Note player can disable listing here.
     pub sample: Vec<Sample>,
 }
@@ -229,7 +244,7 @@ pub struct Sample {
     pub id: String,
 }
 
-// basicly game profile
+// basically game profile
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Property {
     pub name: String,
@@ -243,4 +258,47 @@ pub struct KnownPack<'a> {
     pub namespace: &'a str,
     pub id: &'a str,
     pub version: &'a str,
+}
+
+#[derive(Serialize)]
+pub enum NumberFormat<'a> {
+    /// Show nothing
+    Blank,
+    /// The styling to be used when formatting the score number
+    Styled(Style<'a>),
+    /// The text to be used as placeholder.
+    Fixed(TextComponent<'a>),
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub enum PositionFlag {
+    X,
+    Y,
+    Z,
+    YRot,
+    XRot,
+    DeltaX,
+    DeltaY,
+    DeltaZ,
+    RotateDelta,
+}
+
+impl PositionFlag {
+    fn get_mask(&self) -> i32 {
+        match self {
+            PositionFlag::X => 1 << 0,
+            PositionFlag::Y => 1 << 1,
+            PositionFlag::Z => 1 << 2,
+            PositionFlag::YRot => 1 << 3,
+            PositionFlag::XRot => 1 << 4,
+            PositionFlag::DeltaX => 1 << 5,
+            PositionFlag::DeltaY => 1 << 6,
+            PositionFlag::DeltaZ => 1 << 7,
+            PositionFlag::RotateDelta => 1 << 8,
+        }
+    }
+
+    pub fn get_bitfield(flags: &[PositionFlag]) -> i32 {
+        flags.iter().fold(0, |acc, flag| acc | flag.get_mask())
+    }
 }

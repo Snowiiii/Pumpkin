@@ -8,14 +8,16 @@ use pumpkin_core::math::{
 };
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
 use pumpkin_protocol::{
-    client::play::{CEntityStatus, CSetEntityMetadata, Metadata},
+    client::play::{CSetEntityMetadata, Metadata},
     VarInt,
 };
 
 use crate::world::World;
 
+pub mod living;
 pub mod player;
 
+/// Represents a not living Entity (e.g. Item, Egg, Snowball...)
 pub struct Entity {
     /// A unique identifier for the entity
     pub entity_id: EntityId,
@@ -24,7 +26,6 @@ pub struct Entity {
     /// The world in which the entity exists.
     pub world: Arc<World>,
     /// The entity's current health level.
-    pub health: AtomicCell<f32>,
 
     /// The entity's current position in the world
     pub pos: AtomicCell<Vector3<f64>>,
@@ -75,7 +76,6 @@ impl Entity {
             sneaking: AtomicBool::new(false),
             world,
             // TODO: Load this from previous instance
-            health: AtomicCell::new(20.0),
             sprinting: AtomicBool::new(false),
             fall_flying: AtomicBool::new(false),
             yaw: AtomicCell::new(0.0),
@@ -90,24 +90,31 @@ impl Entity {
     /// Updates the entity's position, block position, and chunk position.
     ///
     /// This function calculates the new position, block position, and chunk position based on the provided coordinates. If any of these values change, the corresponding fields are updated.
+    #[expect(clippy::float_cmp)]
     pub fn set_pos(&self, x: f64, y: f64, z: f64) {
         let pos = self.pos.load();
         if pos.x != x || pos.y != y || pos.z != z {
             self.pos.store(Vector3::new(x, y, z));
-            let i = x.floor() as i32;
-            let j = y.floor() as i32;
-            let k = z.floor() as i32;
+            let floor_x = x.floor() as i32;
+            let floor_y = y.floor() as i32;
+            let floor_z = z.floor() as i32;
 
             let block_pos = self.block_pos.load();
             let block_pos_vec = block_pos.0;
-            if i != block_pos_vec.x || j != block_pos_vec.y || k != block_pos_vec.z {
-                self.block_pos.store(WorldPosition(Vector3::new(i, j, k)));
+            if floor_x != block_pos_vec.x
+                || floor_y != block_pos_vec.y
+                || floor_z != block_pos_vec.z
+            {
+                let new_block_pos = Vector3::new(floor_x, floor_y, floor_z);
+                self.block_pos.store(WorldPosition(new_block_pos));
 
                 let chunk_pos = self.chunk_pos.load();
-                if get_section_cord(i) != chunk_pos.x || get_section_cord(k) != chunk_pos.z {
+                if get_section_cord(floor_x) != chunk_pos.x
+                    || get_section_cord(floor_z) != chunk_pos.z
+                {
                     self.chunk_pos.store(Vector2::new(
-                        get_section_cord(block_pos_vec.x),
-                        get_section_cord(block_pos_vec.z),
+                        get_section_cord(new_block_pos.x),
+                        get_section_cord(new_block_pos.z),
                     ));
                 }
             }
@@ -121,22 +128,9 @@ impl Entity {
         self.pitch.store(pitch);
     }
 
-    /// Kills the Entity
-    ///
-    /// This is simliar to `kill` but Spawn Particles, Animation and plays death sound
-    pub fn kill(&self) {
-        // Spawns death smoke particles
-        self.world
-            .broadcast_packet_all(&CEntityStatus::new(self.entity_id, 60));
-        // Plays the death sound and death animation
-        self.world
-            .broadcast_packet_all(&CEntityStatus::new(self.entity_id, 3));
-        self.remove();
-    }
-
     /// Removes the Entity from their current World
-    pub fn remove(&self) {
-        self.world.remove_entity(self);
+    pub async fn remove(&self) {
+        self.world.remove_entity(self).await;
     }
 
     /// Applies knockback to the entity, following vanilla Minecraft's mechanics.
@@ -146,7 +140,7 @@ impl Entity {
         // This has some vanilla magic
         let mut x = x;
         let mut z = z;
-        while x * x + z * z < 1.0E-5 {
+        while x.mul_add(x, z * z) < 1.0E-5 {
             x = (rand::random::<f64>() - rand::random::<f64>()) * 0.01;
             z = (rand::random::<f64>() - rand::random::<f64>()) * 0.01;
         }
@@ -203,7 +197,7 @@ impl Entity {
             b &= !(1 << index);
         }
         let packet = CSetEntityMetadata::new(self.entity_id.into(), Metadata::new(0, 0.into(), b));
-        self.world.broadcast_packet_all(&packet);
+        self.world.broadcast_packet_all(&packet).await;
     }
 
     pub async fn set_pose(&self, pose: EntityPose) {
@@ -213,7 +207,7 @@ impl Entity {
             self.entity_id.into(),
             Metadata::new(6, 20.into(), (pose).into()),
         );
-        self.world.broadcast_packet_all(&packet)
+        self.world.broadcast_packet_all(&packet).await;
     }
 }
 

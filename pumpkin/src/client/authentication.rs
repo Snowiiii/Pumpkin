@@ -1,4 +1,4 @@
-use std::{collections::HashMap, net::IpAddr, sync::Arc};
+use std::{collections::HashMap, net::IpAddr};
 
 use base64::{engine::general_purpose, Engine};
 use pumpkin_config::{auth::TextureConfig, ADVANCED_CONFIG};
@@ -6,10 +6,10 @@ use pumpkin_core::ProfileAction;
 use pumpkin_protocol::Property;
 use reqwest::{StatusCode, Url};
 use serde::Deserialize;
+use sha1::Digest;
+use sha2::Sha256;
 use thiserror::Error;
 use uuid::Uuid;
-
-use crate::server::Server;
 
 #[derive(Deserialize, Clone, Debug)]
 #[expect(dead_code)]
@@ -50,24 +50,28 @@ pub struct GameProfile {
 /// 2. Mojang's servers verify the client's credentials and add the player to the their Servers
 /// 3. Now our server will send a Request to the Session servers and check if the Player has joined the Session Server .
 ///
-/// **Note:** This process helps prevent unauthorized access to the server and ensures that only legitimate Minecraft accounts can connect.
+/// See <https://snowiiii.github.io/Pumpkin/developer/authentication.html>
 pub async fn authenticate(
     username: &str,
     server_hash: &str,
     ip: &IpAddr,
-    server: &Arc<Server>,
+    auth_client: &reqwest::Client,
 ) -> Result<GameProfile, AuthError> {
     assert!(ADVANCED_CONFIG.authentication.enabled);
-    assert!(server.auth_client.is_some());
     let address = if ADVANCED_CONFIG.authentication.prevent_proxy_connections {
-        format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}")
+        ADVANCED_CONFIG
+            .authentication
+            .auth_url
+            .replace("{username}", username)
+            .replace("{server_hash}", server_hash)
+            .replace("{}", &ip.to_string())
     } else {
-        format!("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}")
+        ADVANCED_CONFIG
+            .authentication
+            .auth_url
+            .replace("{username}", username)
+            .replace("{server_hash}", server_hash)
     };
-    let auth_client = server
-        .auth_client
-        .as_ref()
-        .ok_or(AuthError::MissingAuthClient)?;
 
     let response = auth_client
         .get(address)
@@ -77,36 +81,48 @@ pub async fn authenticate(
     match response.status() {
         StatusCode::OK => {}
         StatusCode::NO_CONTENT => Err(AuthError::UnverifiedUsername)?,
-        other => Err(AuthError::UnknownStatusCode(other.as_str().to_string()))?,
+        other => Err(AuthError::UnknownStatusCode(other))?,
     }
     let profile: GameProfile = response.json().await.map_err(|_| AuthError::FailedParse)?;
     Ok(profile)
 }
 
-pub fn unpack_textures(property: Property, config: &TextureConfig) -> Result<(), TextureError> {
+pub fn validate_textures(property: &Property, config: &TextureConfig) -> Result<(), TextureError> {
     let from64 = general_purpose::STANDARD
-        .decode(property.value)
+        .decode(&property.value)
         .map_err(|e| TextureError::DecodeError(e.to_string()))?;
     let textures: ProfileTextures =
         serde_json::from_slice(&from64).map_err(|e| TextureError::JSONError(e.to_string()))?;
     for texture in textures.textures {
         let url =
             Url::parse(&texture.1.url).map_err(|e| TextureError::InvalidURL(e.to_string()))?;
-        is_texture_url_valid(url, config)?
+        is_texture_url_valid(&url, config)?;
     }
     Ok(())
 }
 
-pub fn is_texture_url_valid(url: Url, config: &TextureConfig) -> Result<(), TextureError> {
+pub fn is_texture_url_valid(url: &Url, config: &TextureConfig) -> Result<(), TextureError> {
     let scheme = url.scheme();
-    if !config.allowed_url_schemes.contains(&scheme.to_string()) {
+    if !config
+        .allowed_url_schemes
+        .iter()
+        .any(|allowed_scheme| scheme.ends_with(allowed_scheme))
+    {
         return Err(TextureError::DisallowedUrlScheme(scheme.to_string()));
     }
     let domain = url.domain().unwrap_or("");
-    if !config.allowed_url_domains.contains(&domain.to_string()) {
+    if !config
+        .allowed_url_domains
+        .iter()
+        .any(|allowed_domain| domain.ends_with(allowed_domain))
+    {
         return Err(TextureError::DisallowedUrlDomain(domain.to_string()));
     }
     Ok(())
+}
+
+pub fn offline_uuid(username: &str) -> Result<Uuid, uuid::Error> {
+    Uuid::from_slice(&Sha256::digest(username)[..16])
 }
 
 #[derive(Error, Debug)]
@@ -117,10 +133,16 @@ pub enum AuthError {
     FailedResponse,
     #[error("Failed to verify username")]
     UnverifiedUsername,
+    #[error("You are banned from Authentication servers")]
+    Banned,
+    #[error("Texture Error {0}")]
+    TextureError(TextureError),
+    #[error("You have disallowed actions from Authentication servers")]
+    DisallowedAction,
     #[error("Failed to parse JSON into Game Profile")]
     FailedParse,
     #[error("Unknown Status Code")]
-    UnknownStatusCode(String),
+    UnknownStatusCode(StatusCode),
 }
 
 #[derive(Error, Debug)]

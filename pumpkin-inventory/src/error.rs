@@ -17,17 +17,3 @@ pub enum InventoryError {
     #[error("Player does not have enough permissions")]
     PermissionError,
 }
-
-impl InventoryError {
-    pub fn should_kick(&self) -> bool {
-        match self {
-            InventoryError::InvalidSlot
-            | InventoryError::ClosedContainerInteract(..)
-            | InventoryError::InvalidPacket
-            | InventoryError::PermissionError => true,
-            InventoryError::LockError
-            | InventoryError::OutOfOrderDragging
-            | InventoryError::MultiplePlayersDragging => false,
-        }
-    }
-}

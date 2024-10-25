@@ -1,24 +1,26 @@
-use super::RunFunctionType;
-use crate::commands::CommandSender;
+use super::CommandExecutor;
+use crate::{commands::CommandSender, server::Server};
 use std::collections::{HashMap, VecDeque};
 
-/// see [crate::commands::tree_builder::argument]
-pub(crate) type RawArgs<'a> = Vec<&'a str>;
+/// see [`crate::commands::tree_builder::argument`]
+pub type RawArgs<'a> = Vec<&'a str>;
 
-/// see [crate::commands::tree_builder::argument] and [CommandTree::execute]/[crate::commands::tree_builder::NonLeafNodeBuilder::execute]
-pub(crate) type ConsumedArgs<'a> = HashMap<&'a str, String>;
+/// see [`crate::commands::tree_builder::argument`] and [`CommandTree::execute`]/[`crate::commands::tree_builder::NonLeafNodeBuilder::execute`]
+pub type ConsumedArgs<'a> = HashMap<&'a str, String>;
 
-/// see [crate::commands::tree_builder::argument]
-pub(crate) type ArgumentConsumer<'a> = fn(&CommandSender, &mut RawArgs) -> Option<String>;
+/// see [`crate::commands::tree_builder::argument`]
+/// Provide value or an Optional error message, If no Error message provided the default will be used
+pub type ArgumentConsumer<'a> =
+    fn(&CommandSender, &Server, &mut RawArgs) -> Result<String, Option<String>>;
 
-pub(crate) struct Node<'a> {
+pub struct Node<'a> {
     pub(crate) children: Vec<usize>,
     pub(crate) node_type: NodeType<'a>,
 }
 
-pub(crate) enum NodeType<'a> {
+pub enum NodeType<'a> {
     ExecuteLeaf {
-        run: &'a RunFunctionType,
+        executor: &'a dyn CommandExecutor,
     },
     Literal {
         string: &'a str,
@@ -32,12 +34,12 @@ pub(crate) enum NodeType<'a> {
     },
 }
 
-pub(crate) enum Command<'a> {
+pub enum Command<'a> {
     Tree(CommandTree<'a>),
     Alias(&'a str),
 }
 
-pub(crate) struct CommandTree<'a> {
+pub struct CommandTree<'a> {
     pub(crate) nodes: Vec<Node<'a>>,
     pub(crate) children: Vec<usize>,
     pub(crate) names: Vec<&'a str>,
@@ -45,7 +47,7 @@ pub(crate) struct CommandTree<'a> {
 }
 
 impl<'a> CommandTree<'a> {
-    /// iterate over all possible paths that end in a [NodeType::ExecuteLeaf]
+    /// iterate over all possible paths that end in a [`NodeType::ExecuteLeaf`]
     pub(crate) fn iter_paths(&'a self) -> impl Iterator<Item = Vec<usize>> + 'a {
         let mut todo = VecDeque::<(usize, usize)>::new();
 

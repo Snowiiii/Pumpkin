@@ -1,10 +1,12 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x70)]
+#[client_packet(ClientboundPlayPackets::EntityTeleport as i32)]
 pub struct CTeleportEntitiy {
     entity_id: VarInt,
     x: f64,

@@ -3,6 +3,7 @@ use pumpkin_core::random::{legacy_rand::LegacyRand, RandomImpl};
 
 use super::{dot, GRADIENTS};
 
+#[derive(Clone)]
 pub struct SimplexNoiseSampler {
     permutation: Box<[u8]>,
     x_origin: f64,
@@ -70,8 +71,8 @@ impl SimplexNoiseSampler {
 
         let n = h - l as f64 + Self::UNSKEW_FACTOR_2D;
         let o = k - m as f64 + Self::UNSKEW_FACTOR_2D;
-        let p = h - 1f64 + 2f64 * Self::UNSKEW_FACTOR_2D;
-        let q = k - 1f64 + 2f64 * Self::UNSKEW_FACTOR_2D;
+        let p = 2f64.mul_add(Self::UNSKEW_FACTOR_2D, h - 1f64);
+        let q = 2f64.mul_add(Self::UNSKEW_FACTOR_2D, k - 1f64);
 
         let r = i & 0xFF;
         let s = j & 0xFF;
@@ -235,8 +236,8 @@ impl OctaveSimplexNoiseSampler {
         for sampler in self.octave_samplers.iter() {
             if let Some(sampler) = sampler {
                 d += sampler.sample_2d(
-                    x * e + if use_origin { sampler.x_origin } else { 0f64 },
-                    y * e + if use_origin { sampler.y_origin } else { 0f64 },
+                    x.mul_add(e, if use_origin { sampler.x_origin } else { 0f64 }),
+                    y.mul_add(e, if use_origin { sampler.y_origin } else { 0f64 }),
                 ) * f;
             }
 

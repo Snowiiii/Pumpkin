@@ -1,10 +1,12 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x42)]
+#[client_packet(ClientboundPlayPackets::DestroyEntities as i32)]
 pub struct CRemoveEntities<'a> {
     count: VarInt,
     entity_ids: &'a [VarInt],

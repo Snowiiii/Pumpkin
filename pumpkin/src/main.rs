@@ -1,46 +1,99 @@
-#![expect(clippy::await_holding_lock)]
+#![deny(clippy::all)]
+#![deny(clippy::pedantic)]
+// #![warn(clippy::restriction)]
+#![deny(clippy::cargo)]
+// REMOVE SOME WHEN RELEASE
+#![expect(clippy::cargo_common_metadata)]
+#![expect(clippy::multiple_crate_versions)]
+#![expect(clippy::significant_drop_in_scrutinee)]
+#![expect(clippy::significant_drop_tightening)]
+#![expect(clippy::single_call_fn)]
+#![expect(clippy::cast_sign_loss)]
+#![expect(clippy::cast_possible_truncation)]
+#![expect(clippy::cast_possible_wrap)]
+#![expect(clippy::missing_panics_doc)]
+#![expect(clippy::missing_errors_doc)]
+#![expect(clippy::module_name_repetitions)]
+#![expect(clippy::struct_excessive_bools)]
 
 #[cfg(target_os = "wasi")]
 compile_error!("Compiling for WASI targets is not supported!");
 
-use mio::net::TcpListener;
-use mio::{Events, Interest, Poll, Token};
+use log::LevelFilter;
 
-use std::collections::HashMap;
-use std::io::{self, Read};
+use client::Client;
+use server::{ticker::Ticker, Server};
+use std::io::{self};
+use tokio::io::{AsyncBufReadExt, BufReader};
 
-use client::{interrupted, Client};
-use server::Server;
+use std::sync::Arc;
+
+use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
+use pumpkin_core::text::{color::NamedColor, TextComponent};
+use rcon::RCONServer;
+use std::time::Instant;
 
 // Setup some tokens to allow us to identify which event is for which socket.
 
 pub mod client;
 pub mod commands;
 pub mod entity;
+pub mod error;
 pub mod proxy;
 pub mod rcon;
 pub mod server;
-pub mod util;
 pub mod world;
 
-fn main() -> io::Result<()> {
-    use std::sync::Arc;
+fn scrub_address(ip: &str) -> String {
+    use pumpkin_config::BASIC_CONFIG;
+    if BASIC_CONFIG.scrub_ips {
+        ip.chars()
+            .map(|ch| if ch == '.' || ch == ':' { ch } else { 'x' })
+            .collect()
+    } else {
+        ip.to_string()
+    }
+}
 
-    use entity::player::Player;
-    use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
-    use pumpkin_core::text::{color::NamedColor, TextComponent};
-    use rcon::RCONServer;
+fn init_logger() {
+    use pumpkin_config::ADVANCED_CONFIG;
+    if ADVANCED_CONFIG.logging.enabled {
+        let mut logger = simple_logger::SimpleLogger::new();
 
-    simple_logger::SimpleLogger::new()
-        .with_level(log::LevelFilter::Info)
-        .init()
-        .unwrap();
+        if !ADVANCED_CONFIG.logging.timestamp {
+            logger = logger.without_timestamps();
+        }
 
-    let rt = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .unwrap();
+        if ADVANCED_CONFIG.logging.env {
+            logger = logger.env();
+        }
 
+        logger = logger.with_level(convert_logger_filter(ADVANCED_CONFIG.logging.level));
+
+        logger = logger.with_colors(ADVANCED_CONFIG.logging.color);
+        logger = logger.with_threads(ADVANCED_CONFIG.logging.threads);
+        logger.init().unwrap();
+    }
+}
+
+const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> LevelFilter {
+    match level {
+        pumpkin_config::logging::LevelFilter::Off => LevelFilter::Off,
+        pumpkin_config::logging::LevelFilter::Error => LevelFilter::Error,
+        pumpkin_config::logging::LevelFilter::Warn => LevelFilter::Warn,
+        pumpkin_config::logging::LevelFilter::Info => LevelFilter::Info,
+        pumpkin_config::logging::LevelFilter::Debug => LevelFilter::Debug,
+        pumpkin_config::logging::LevelFilter::Trace => LevelFilter::Trace,
+    }
+}
+
+#[tokio::main]
+async fn main() -> io::Result<()> {
+    init_logger();
+    // let rt = tokio::runtime::Builder::new_multi_thread()
+    //     .enable_all()
+    //     .build()
+    //     .unwrap();
     ctrlc::set_handler(|| {
         log::warn!(
             "{}",
@@ -53,169 +106,115 @@ fn main() -> io::Result<()> {
     .unwrap();
     // ensure rayon is built outside of tokio scope
     rayon::ThreadPoolBuilder::new().build_global().unwrap();
-    rt.block_on(async {
-        const SERVER: Token = Token(0);
-        use std::time::Instant;
+    let default_panic = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        default_panic(info);
+        // TODO: Gracefully exit?
+        std::process::exit(1);
+    }));
 
-        let time = Instant::now();
+    let time = Instant::now();
 
-        // Create a poll instance.
-        let mut poll = Poll::new()?;
-        // Create storage for events.
-        let mut events = Events::with_capacity(128);
+    // Setup the TCP server socket.
+    let addr = BASIC_CONFIG.server_address;
+    let listener = tokio::net::TcpListener::bind(addr)
+        .await
+        .expect("Failed to start TcpListener");
 
-        // Setup the TCP server socket.
-        let addr = BASIC_CONFIG.server_address;
-        let mut listener = TcpListener::bind(addr)?;
+    let use_console = ADVANCED_CONFIG.commands.use_console;
+    let rcon = ADVANCED_CONFIG.rcon.clone();
 
-        // Register the server with poll we can receive events for it.
-        poll.registry()
-            .register(&mut listener, SERVER, Interest::READABLE)?;
+    let server = Arc::new(Server::new());
+    let mut ticker = Ticker::new(BASIC_CONFIG.tps);
 
-        // Unique token for each incoming connection.
-        let mut unique_token = Token(SERVER.0 + 1);
+    log::info!("Started Server took {}ms", time.elapsed().as_millis());
+    log::info!("You now can connect to the server, Listening on {}", addr);
 
-        let use_console = ADVANCED_CONFIG.commands.use_console;
-        let rcon = ADVANCED_CONFIG.rcon.clone();
+    if use_console {
+        setup_console(server.clone());
+    }
+    if rcon.enabled {
+        let server = server.clone();
+        tokio::spawn(async move {
+            RCONServer::new(&rcon, server).await.unwrap();
+        });
+    }
+    {
+        let server = server.clone();
+        tokio::spawn(async move {
+            ticker.run(&server).await;
+        });
+    }
 
-        let mut clients: HashMap<Token, Client> = HashMap::new();
-        let mut players: HashMap<Token, Arc<Player>> = HashMap::new();
+    loop {
+        // Asynchronously wait for an inbound socket.
+        let (connection, address) = listener.accept().await?;
 
-        let server = Arc::new(Server::new());
-        log::info!("Started Server took {}ms", time.elapsed().as_millis());
-        log::info!("You now can connect to the server, Listening on {}", addr);
-
-        if use_console {
-            let server = server.clone();
-            tokio::spawn(async move {
-                let stdin = std::io::stdin();
-                loop {
-                    let mut out = String::new();
-                    stdin
-                        .read_line(&mut out)
-                        .expect("Failed to read console line");
-
-                    if !out.is_empty() {
-                        let dispatcher = server.command_dispatcher.clone();
-                        dispatcher.handle_command(
-                            &mut commands::CommandSender::Console,
-                            &server,
-                            &out,
-                        );
-                    }
-                }
-            });
+        if let Err(e) = connection.set_nodelay(true) {
+            log::warn!("failed to set TCP_NODELAY {e}");
         }
-        if rcon.enabled {
-            let server = server.clone();
-            tokio::spawn(async move {
-                RCONServer::new(&rcon, server).await.unwrap();
-            });
-        }
-        loop {
-            if let Err(err) = poll.poll(&mut events, None) {
-                if interrupted(&err) {
-                    continue;
-                }
-                return Err(err);
+
+        log::info!(
+            "Accepted connection from: {} ",
+            scrub_address(&format!("{address}")),
+        );
+
+        let client = Arc::new(Client::new(connection, addr));
+
+        let server = server.clone();
+        tokio::spawn(async move {
+            while !client.closed.load(std::sync::atomic::Ordering::Relaxed)
+                && !client
+                    .make_player
+                    .load(std::sync::atomic::Ordering::Relaxed)
+            {
+                let open = client.poll().await;
+                if open {
+                    client.process_packets(&server).await;
+                };
             }
-
-            for event in events.iter() {
-                match event.token() {
-                    SERVER => loop {
-                        // Received an event for the TCP server socket, which
-                        // indicates we can accept an connection.
-                        let (mut connection, address) = match listener.accept() {
-                            Ok((connection, address)) => (connection, address),
-                            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
-                                // If we get a `WouldBlock` error we know our
-                                // listener has no more incoming connections queued,
-                                // so we can return to polling and wait for some
-                                // more.
-                                break;
-                            }
-                            Err(e) => {
-                                // If it was any other kind of error, something went
-                                // wrong and we terminate with an error.
-                                return Err(e);
-                            }
-                        };
-                        if let Err(e) = connection.set_nodelay(true) {
-                            log::warn!("failed to set TCP_NODELAY {e}");
-                        }
-
-                        log::info!("Accepted connection from: {}", address);
-
-                        let token = next(&mut unique_token);
-                        poll.registry().register(
-                            &mut connection,
-                            token,
-                            Interest::READABLE.add(Interest::WRITABLE),
-                        )?;
-                        let client = Client::new(token, connection, addr);
-                        clients.insert(token, client);
-                    },
-
-                    token => {
-                        // Poll Players
-                        if let Some(player) = players.get_mut(&token) {
-                            player.client.poll(event).await;
-                            let closed = player
-                                .client
-                                .closed
-                                .load(std::sync::atomic::Ordering::Relaxed);
-                            if !closed {
-                                player.process_packets(&server).await;
-                            }
-                            if closed {
-                                if let Some(player) = players.remove(&token) {
-                                    player.remove().await;
-                                    let connection = &mut player.client.connection.lock();
-                                    poll.registry().deregister(connection.by_ref())?;
-                                }
-                            }
-                        };
-
-                        // Poll current Clients (non players)
-                        // Maybe received an event for a TCP connection.
-                        let (done, make_player) = if let Some(client) = clients.get_mut(&token) {
-                            client.poll(event).await;
-                            let closed = client.closed.load(std::sync::atomic::Ordering::Relaxed);
-                            if !closed {
-                                client.process_packets(&server).await;
-                            }
-                            (
-                                closed,
-                                client
-                                    .make_player
-                                    .load(std::sync::atomic::Ordering::Relaxed),
-                            )
-                        } else {
-                            // Sporadic events happen, we can safely ignore them.
-                            (false, false)
-                        };
-                        if done || make_player {
-                            if let Some(client) = clients.remove(&token) {
-                                if done {
-                                    let connection = &mut client.connection.lock();
-                                    poll.registry().deregister(connection.by_ref())?;
-                                } else if make_player {
-                                    let token = client.token;
-                                    let (player, world) = server.add_player(token, client).await;
-                                    players.insert(token, player.clone());
-                                    world.spawn_player(&BASIC_CONFIG, player).await;
-                                }
-                            }
-                        }
-                    }
+            if client
+                .make_player
+                .load(std::sync::atomic::Ordering::Relaxed)
+            {
+                let (player, world) = server.add_player(client).await;
+                world.spawn_player(&BASIC_CONFIG, player.clone()).await;
+                // poll Player
+                while !player
+                    .client
+                    .closed
+                    .load(core::sync::atomic::Ordering::Relaxed)
+                {
+                    let open = player.client.poll().await;
+                    if open {
+                        player.process_packets(&server).await;
+                    };
                 }
+                player.remove().await;
+                server.remove_player().await;
             }
-        }
-    })
+        });
+    }
 }
 
-fn next(current: &mut Token) -> Token {
-    let next = current.0;
-    current.0 += 1;
-    Token(next)
+fn setup_console(server: Arc<Server>) {
+    tokio::spawn(async move {
+        let stdin = tokio::io::stdin();
+        let mut reader = BufReader::new(stdin);
+        loop {
+            let mut out = String::new();
+
+            reader
+                .read_line(&mut out)
+                .await
+                .expect("Failed to read console line");
+
+            if !out.is_empty() {
+                let dispatcher = server.command_dispatcher.clone();
+                dispatcher
+                    .handle_command(&mut commands::CommandSender::Console, &server, &out)
+                    .await;
+            }
+        }
+    });
 }

@@ -4,33 +4,36 @@ version = "0.1.0-dev"
 description = "Empowering everyone to host fast and efficient Minecraft servers."
 edition = "2021"
 
-[features]
-default = ["plugins"]
-plugins = ["pumpkin-plugin/plugins"]
-
 [dependencies]
 # pumpkin
-pumpkin-core = { path = "../pumpkin-core"}
+pumpkin-core = { path = "../pumpkin-core" }
 pumpkin-config = { path = "../pumpkin-config" }
-pumpkin-plugin = { path = "../pumpkin-plugin"}
-pumpkin-inventory = { path = "../pumpkin-inventory"}
-pumpkin-world = { path = "../pumpkin-world"}
-pumpkin-entity = { path = "../pumpkin-entity"}
-pumpkin-protocol = { path = "../pumpkin-protocol"}
-pumpkin-registry = { path = "../pumpkin-registry"}
+pumpkin-inventory = { path = "../pumpkin-inventory" }
+pumpkin-world = { path = "../pumpkin-world" }
+pumpkin-entity = { path = "../pumpkin-entity" }
+pumpkin-protocol = { path = "../pumpkin-protocol" }
+pumpkin-registry = { path = "../pumpkin-registry" }
+pumpkin-macros = { path = "../pumpkin-macros" }
 
-itertools = "0.13.0"
+itertools.workspace = true
+log.workspace = true
+crossbeam.workspace = true
+uuid.workspace = true
+tokio.workspace = true
+rayon.workspace = true
+thiserror.workspace = true
+
+num-traits.workspace = true
+num-derive.workspace = true
 
 # config
 serde.workspace = true
 serde_json = "1.0"
 
-bytes = "1.7"
+bytes = "1.8"
 
 rand = "0.8.5"
 
-num-traits = "0.2"
-num-derive = "0.4"
 num-bigint = "0.4"
 
 ctrlc = "3.4"
@@ -40,7 +43,12 @@ rsa = "0.9.6"
 rsa-der = "0.3.0"
 
 # authentication
-reqwest = { version = "0.12.7", default-features= false, features = ["json", "rustls-tls", "http2", "macos-system-configuration"]}
+reqwest = { version = "0.12.8", default-features = false, features = [
+    "http2",
+    "json",
+    "macos-system-configuration",
+    "rustls-tls",
+] }
 
 sha1 = "0.10.6"
 digest = "=0.11.0-pre.9"
@@ -49,21 +57,12 @@ digest = "=0.11.0-pre.9"
 hmac = "0.12.1"
 sha2 = "0.10.8"
 
-thiserror = "1.0"
-
 # icon loading
 base64 = "0.22.1"
-image = { version = "0.25", default-features = false, features = ["png"]}
+png = "0.17.14"
 
 # logging
-simple_logger = "5.0.0"
-log.workspace = true
+simple_logger = { version = "5.0.0", features = ["threads"] }
 
-# networking
-mio = { version = "1.0.2", features = ["os-poll", "net"]}
-
-parking_lot.workspace = true
-crossbeam.workspace = true
-uuid.workspace = true
-tokio.workspace = true
-rayon.workspace = true
+# commands
+async-trait = "0.1.83"

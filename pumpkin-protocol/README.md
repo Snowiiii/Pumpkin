@@ -1,6 +1,10 @@
 ### Pumpkin Protocol
 Contains all Serverbound(Client->Server) and Clientbound(Server->Client) Packets.
 
+### Features
+- [x] ZLib Compression
+- [x] AES/CFB8 Encryiption
+
 Packets in the Pumpkin protocol are organized by functionality and state.
 
 `server`: Contains definitions for serverbound packets.

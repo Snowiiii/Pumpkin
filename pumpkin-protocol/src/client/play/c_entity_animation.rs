@@ -1,11 +1,12 @@
-use num_derive::ToPrimitive;
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x03)]
+#[client_packet(ClientboundPlayPackets::EntityAnimation as i32)]
 pub struct CEntityAnimation {
     entity_id: VarInt,
     /// See `Animation`
@@ -21,7 +22,7 @@ impl CEntityAnimation {
     }
 }
 
-#[derive(ToPrimitive)]
+#[repr(u8)]
 pub enum Animation {
     SwingMainArm,
     LeaveBed,

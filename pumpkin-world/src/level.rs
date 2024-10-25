@@ -1,21 +1,14 @@
-use std::{
-    collections::HashMap,
-    fs::OpenOptions,
-    io::{Read, Seek},
-    path::PathBuf,
-    sync::Arc,
-};
+use std::{path::PathBuf, sync::Arc};
 
-use flate2::{bufread::ZlibDecoder, read::GzDecoder};
-use itertools::Itertools;
-use parking_lot::Mutex;
+use dashmap::{DashMap, Entry};
 use pumpkin_core::math::vector2::Vector2;
-use rayon::prelude::*;
-use thiserror::Error;
-use tokio::sync::mpsc;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use tokio::sync::{mpsc, RwLock};
 
 use crate::{
-    chunk::ChunkData,
+    chunk::{
+        anvil::AnvilChunkReader, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
+    },
     world_gen::{get_world_gen, Seed, WorldGenerator},
 };
 
@@ -23,90 +16,29 @@ use crate::{
 ///
 /// Key features include:
 ///
-/// - **Chunk Loading:** Efficiently loads chunks from disk (Anvil format).
+/// - **Chunk Loading:** Efficiently loads chunks from disk.
 /// - **Chunk Caching:** Stores accessed chunks in memory for faster access.
 /// - **Chunk Generation:** Generates new chunks on-demand using a specified `WorldGenerator`.
 ///
 /// For more details on world generation, refer to the `WorldGenerator` module.
 pub struct Level {
     save_file: Option<SaveFile>,
-    loaded_chunks: Arc<Mutex<HashMap<Vector2<i32>, Arc<ChunkData>>>>,
-    world_gen: Box<dyn WorldGenerator>,
+    loaded_chunks: Arc<DashMap<Vector2<i32>, Arc<RwLock<ChunkData>>>>,
+    chunk_watchers: Arc<DashMap<Vector2<i32>, usize>>,
+    chunk_reader: Arc<dyn ChunkReader>,
+    world_gen: Arc<dyn WorldGenerator>,
 }
 
-struct SaveFile {
+#[derive(Clone)]
+pub struct SaveFile {
     #[expect(dead_code)]
     root_folder: PathBuf,
-    region_folder: PathBuf,
-}
-
-#[derive(Error, Debug)]
-pub enum WorldError {
-    // using ErrorKind instead of Error, beacuse the function read_chunks and read_region_chunks is designed to return an error on a per-chunk basis, while std::io::Error does not implement Copy or Clone
-    #[error("Io error: {0}")]
-    IoError(std::io::ErrorKind),
-    #[error("Region is invalid")]
-    RegionIsInvalid,
-    #[error("The chunk isn't generated yet: {0}")]
-    ChunkNotGenerated(ChunkNotGeneratedError),
-    #[error("Compression Error")]
-    Compression(CompressionError),
-    #[error("Error deserializing chunk: {0}")]
-    ErrorDeserializingChunk(String),
-    #[error("The requested block identifier does not exist")]
-    BlockIdentifierNotFound,
-    #[error("The requested block state id does not exist")]
-    BlockStateIdNotFound,
-    #[error("The block is not inside of the chunk")]
-    BlockOutsideChunk,
-}
-
-#[derive(Error, Debug)]
-pub enum ChunkNotGeneratedError {
-    #[error("The region file does not exist.")]
-    RegionFileMissing,
-
-    #[error("The chunks generation is incomplete.")]
-    IncompleteGeneration,
-
-    #[error("Chunk not found.")]
-    NotFound,
-}
-
-#[derive(Error, Debug)]
-pub enum CompressionError {
-    #[error("Compression scheme not recognised")]
-    UnknownCompression,
-    #[error("Error while working with zlib compression: {0}")]
-    ZlibError(std::io::Error),
-    #[error("Error while working with Gzip compression: {0}")]
-    GZipError(std::io::Error),
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Compression {
-    Gzip,
-    Zlib,
-    None,
-    LZ4,
-}
-
-impl Compression {
-    pub fn from_byte(byte: u8) -> Option<Self> {
-        match byte {
-            1 => Some(Self::Gzip),
-            2 => Some(Self::Zlib),
-            3 => Some(Self::None),
-            4 => Some(Self::LZ4),
-            _ => None,
-        }
-    }
+    pub region_folder: PathBuf,
 }
 
 impl Level {
     pub fn from_root_folder(root_folder: PathBuf) -> Self {
-        let world_gen = get_world_gen(Seed(0)); // TODO Read Seed from config.
-
+        let world_gen = get_world_gen(Seed(0)).into(); // TODO Read Seed from config.
         if root_folder.exists() {
             let region_folder = root_folder.join("region");
             assert!(
@@ -120,7 +52,9 @@ impl Level {
                     root_folder,
                     region_folder,
                 }),
-                loaded_chunks: Arc::new(Mutex::new(HashMap::new())),
+                chunk_reader: Arc::new(AnvilChunkReader::new()),
+                loaded_chunks: Arc::new(DashMap::new()),
+                chunk_watchers: Arc::new(DashMap::new()),
             }
         } else {
             log::warn!(
@@ -130,8 +64,92 @@ impl Level {
             Self {
                 world_gen,
                 save_file: None,
-                loaded_chunks: Arc::new(Mutex::new(HashMap::new())),
+                chunk_reader: Arc::new(AnvilChunkReader::new()),
+                loaded_chunks: Arc::new(DashMap::new()),
+                chunk_watchers: Arc::new(DashMap::new()),
             }
+        }
+    }
+
+    pub fn get_block() {}
+
+    pub fn loaded_chunk_count(&self) -> usize {
+        self.loaded_chunks.len()
+    }
+
+    /// Marks chunks as "watched" by a unique player. When no players are watching a chunk,
+    /// it is removed from memory. Should only be called on chunks the player was not watching
+    /// before
+    pub fn mark_chunks_as_newly_watched(&self, chunks: &[Vector2<i32>]) {
+        chunks
+            .par_iter()
+            .for_each(|chunk| match self.chunk_watchers.entry(*chunk) {
+                Entry::Occupied(mut occupied) => {
+                    let value = occupied.get_mut();
+                    if let Some(new_value) = value.checked_add(1) {
+                        *value = new_value;
+                        //log::debug!("Watch value for {:?}: {}", chunk, value);
+                    } else {
+                        log::error!("Watching overflow on chunk {:?}", chunk);
+                    }
+                }
+                Entry::Vacant(vacant) => {
+                    vacant.insert(1);
+                }
+            });
+    }
+
+    /// Marks chunks no longer "watched" by a unique player. When no players are watching a chunk,
+    /// it is removed from memory. Should only be called on chunks the player was watching before
+    pub async fn mark_chunk_as_not_watched_and_clean(&self, chunks: &[Vector2<i32>]) {
+        chunks
+            .par_iter()
+            .filter(|chunk| match self.chunk_watchers.entry(**chunk) {
+                Entry::Occupied(mut occupied) => {
+                    let value = occupied.get_mut();
+                    *value = value.saturating_sub(1);
+                    if *value == 0 {
+                        occupied.remove_entry();
+                        true
+                    } else {
+                        false
+                    }
+                }
+                Entry::Vacant(_) => {
+                    log::error!(
+                        "Marking a chunk as not watched, but was vacant! ({:?})",
+                        chunk
+                    );
+                    false
+                }
+            })
+            .for_each(|chunk_pos| {
+                //log::debug!("Unloading {:?}", chunk_pos);
+                if let Some(data) = self.loaded_chunks.remove(chunk_pos) {
+                    self.write_chunk(data);
+                };
+            });
+    }
+
+    pub fn write_chunk(&self, _chunk_to_write: (Vector2<i32>, Arc<RwLock<ChunkData>>)) {
+        //TODO
+    }
+
+    fn load_chunk_from_save(
+        chunk_reader: Arc<dyn ChunkReader>,
+        save_file: SaveFile,
+        chunk_pos: Vector2<i32>,
+    ) -> Result<Option<Arc<RwLock<ChunkData>>>, ChunkReadingError> {
+        match chunk_reader.read_chunk(&save_file, &chunk_pos) {
+            Ok(data) => Ok(Some(Arc::new(RwLock::new(data)))),
+            Err(
+                ChunkReadingError::ChunkNotExist
+                | ChunkReadingError::ParsingError(ChunkParsingError::ChunkNotGenerated),
+            ) => {
+                // This chunk was not generated yet.
+                Ok(None)
+            }
+            Err(err) => Err(err),
         }
     }
 
@@ -139,165 +157,59 @@ impl Level {
     /// MUST be called from a tokio runtime thread
     ///
     /// Note: The order of the output chunks will almost never be in the same order as the order of input chunks
-    pub fn fetch_chunks(
+    pub async fn fetch_chunks(
         &self,
         chunks: &[Vector2<i32>],
-        channel: mpsc::Sender<Result<Arc<ChunkData>, WorldError>>,
-        is_alive: bool,
+        channel: mpsc::Sender<Arc<RwLock<ChunkData>>>,
     ) {
-        chunks.into_par_iter().for_each(|at| {
-            if is_alive {
-                dbg!("a");
-                return;
-            }
-            let mut loaded_chunks = self.loaded_chunks.lock();
+        chunks.iter().for_each(|at| {
             let channel = channel.clone();
+            let loaded_chunks = self.loaded_chunks.clone();
+            let chunk_reader = self.chunk_reader.clone();
+            let save_file = self.save_file.clone();
+            let world_gen = self.world_gen.clone();
+            let chunk_pos = *at;
 
-            // Check if chunks is already loaded
-            if loaded_chunks.contains_key(at) {
-                channel
-                    .blocking_send(Ok(loaded_chunks.get(at).unwrap().clone()))
-                    .expect("Failed sending ChunkData.");
-                return;
-            }
-            let at = *at;
-            let data = match &self.save_file {
-                Some(save_file) => {
-                    match Self::read_chunk(save_file, at) {
-                        Err(WorldError::ChunkNotGenerated(_)) => {
-                            // This chunk was not generated yet.
-                            Ok(self.world_gen.generate_chunk(at))
+            tokio::spawn(async move {
+                let chunk = loaded_chunks
+                    .get(&chunk_pos)
+                    .map(|entry| entry.value().clone())
+                    .unwrap_or_else(|| {
+                        let loaded_chunk = save_file
+                            .and_then(|save_file| {
+                                match Self::load_chunk_from_save(chunk_reader, save_file, chunk_pos)
+                                {
+                                    Ok(chunk) => chunk,
+                                    Err(err) => {
+                                        log::error!(
+                                            "Failed to read chunk (regenerating) {:?}: {:?}",
+                                            chunk_pos,
+                                            err
+                                        );
+                                        None
+                                    }
+                                }
+                            })
+                            .unwrap_or_else(|| {
+                                Arc::new(RwLock::new(world_gen.generate_chunk(chunk_pos)))
+                            });
+
+                        if let Some(data) = loaded_chunks.get(&chunk_pos) {
+                            // Another thread populated in between the previous check and now
+                            // We did work, but this is basically like a cache miss, not much we
+                            // can do about it
+                            data.value().clone()
+                        } else {
+                            loaded_chunks.insert(chunk_pos, loaded_chunk.clone());
+                            loaded_chunk
                         }
-                        // TODO this doesn't warn the user about the error. fix.
-                        result => result,
-                    }
-                }
-                None => {
-                    // There is no savefile yet -> generate the chunks
-                    Ok(self.world_gen.generate_chunk(at))
-                }
-            }
-            .unwrap();
-            let data = Arc::new(data);
-            channel
-                .blocking_send(Ok(data.clone()))
-                .expect("Failed sending ChunkData.");
-            loaded_chunks.insert(at, data);
+                    });
+
+                let _ = channel
+                    .send(chunk)
+                    .await
+                    .inspect_err(|err| log::error!("unable to send chunk to channel: {}", err));
+            });
         })
-    }
-
-    fn read_chunk(save_file: &SaveFile, at: Vector2<i32>) -> Result<ChunkData, WorldError> {
-        let region = (
-            ((at.x as f32) / 32.0).floor() as i32,
-            ((at.z as f32) / 32.0).floor() as i32,
-        );
-
-        let mut region_file = OpenOptions::new()
-            .read(true)
-            .open(
-                save_file
-                    .region_folder
-                    .join(format!("r.{}.{}.mca", region.0, region.1)),
-            )
-            .map_err(|err| match err.kind() {
-                std::io::ErrorKind::NotFound => {
-                    WorldError::ChunkNotGenerated(ChunkNotGeneratedError::RegionFileMissing)
-                }
-                kind => WorldError::IoError(kind),
-            })?;
-
-        let mut location_table: [u8; 4096] = [0; 4096];
-        let mut timestamp_table: [u8; 4096] = [0; 4096];
-
-        // fill the location and timestamp tables
-        region_file
-            .read_exact(&mut location_table)
-            .map_err(|err| WorldError::IoError(err.kind()))?;
-        region_file
-            .read_exact(&mut timestamp_table)
-            .map_err(|err| WorldError::IoError(err.kind()))?;
-
-        let modulus = |a: i32, b: i32| ((a % b) + b) % b;
-        let chunk_x = modulus(at.x, 32) as u32;
-        let chunk_z = modulus(at.z, 32) as u32;
-        let table_entry = (chunk_x + chunk_z * 32) * 4;
-
-        let mut offset = vec![0u8];
-        offset.extend_from_slice(&location_table[table_entry as usize..table_entry as usize + 3]);
-        let offset = u32::from_be_bytes(offset.try_into().unwrap()) as u64 * 4096;
-        let size = location_table[table_entry as usize + 3] as usize * 4096;
-
-        if offset == 0 && size == 0 {
-            return Err(WorldError::ChunkNotGenerated(
-                ChunkNotGeneratedError::NotFound,
-            ));
-        }
-
-        // Read the file using the offset and size
-        let mut file_buf = {
-            let seek_result = region_file.seek(std::io::SeekFrom::Start(offset));
-            if seek_result.is_err() {
-                return Err(WorldError::RegionIsInvalid);
-            }
-            let mut out = vec![0; size];
-            let read_result = region_file.read_exact(&mut out);
-            if read_result.is_err() {
-                return Err(WorldError::RegionIsInvalid);
-            }
-            out
-        };
-
-        // TODO: check checksum to make sure chunk is not corrupted
-        let header = file_buf.drain(0..5).collect_vec();
-
-        let compression = match Compression::from_byte(header[4]) {
-            Some(c) => c,
-            None => {
-                return Err(WorldError::Compression(
-                    CompressionError::UnknownCompression,
-                ))
-            }
-        };
-
-        let size = u32::from_be_bytes(header[..4].try_into().unwrap());
-
-        // size includes the compression scheme byte, so we need to subtract 1
-        let chunk_data = file_buf.drain(0..size as usize - 1).collect_vec();
-        let decompressed_chunk =
-            Self::decompress_data(compression, chunk_data).map_err(WorldError::Compression)?;
-
-        ChunkData::from_bytes(decompressed_chunk, at)
-    }
-
-    fn decompress_data(
-        compression: Compression,
-        compressed_data: Vec<u8>,
-    ) -> Result<Vec<u8>, CompressionError> {
-        match compression {
-            Compression::Gzip => {
-                let mut z = GzDecoder::new(&compressed_data[..]);
-                let mut chunk_data = Vec::with_capacity(compressed_data.len());
-                match z.read_to_end(&mut chunk_data) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        return Err(CompressionError::GZipError(e));
-                    }
-                }
-                Ok(chunk_data)
-            }
-            Compression::Zlib => {
-                let mut z = ZlibDecoder::new(&compressed_data[..]);
-                let mut chunk_data = Vec::with_capacity(compressed_data.len());
-                match z.read_to_end(&mut chunk_data) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        return Err(CompressionError::ZlibError(e));
-                    }
-                }
-                Ok(chunk_data)
-            }
-            Compression::None => Ok(compressed_data),
-            Compression::LZ4 => todo!(),
-        }
     }
 }

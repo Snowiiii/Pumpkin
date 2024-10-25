@@ -11,17 +11,17 @@ hero:
       text: Quick Start
       link: /about/quick-start
     - theme: alt
-      text: Documentation
-      link: /about/introduction
+      text: Configuration
+      link: /config/introduction
     - theme: alt
       text: For developers
-      link: /plugins/about
+      link: /developer/introduction
 
 features:
   - title: Written in Rust
     details: Pumpkin is written 100% in Rust, ensuring memory safety and unmatched performance.
   - title: Feature complete
     details: With all vanilla features supported, you will have no issues.
-  - title: Extensible
-    details: Using Extism you can extend Pumpkin to your needs. Play your way!
+  - title: Flexibility
+    details: Highly configurable, with the ability to disable unnecessary features.
 ---

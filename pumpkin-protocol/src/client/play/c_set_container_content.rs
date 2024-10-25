@@ -1,12 +1,15 @@
 use crate::slot::Slot;
 use crate::VarInt;
-use pumpkin_macros::packet;
+
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x13)]
+#[client_packet(ClientboundPlayPackets::WindowItems as i32)]
 pub struct CSetContainerContent<'a> {
-    window_id: u8,
+    window_id: VarInt,
     state_id: VarInt,
     count: VarInt,
     slot_data: &'a [Slot],
@@ -14,7 +17,12 @@ pub struct CSetContainerContent<'a> {
 }
 
 impl<'a> CSetContainerContent<'a> {
-    pub fn new(window_id: u8, state_id: VarInt, slots: &'a [Slot], carried_item: &'a Slot) -> Self {
+    pub fn new(
+        window_id: VarInt,
+        state_id: VarInt,
+        slots: &'a [Slot],
+        carried_item: &'a Slot,
+    ) -> Self {
         Self {
             window_id,
             state_id,

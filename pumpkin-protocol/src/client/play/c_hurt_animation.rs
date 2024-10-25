@@ -1,10 +1,12 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x24)]
+#[client_packet(ClientboundPlayPackets::HurtAnimation as i32)]
 pub struct CHurtAnimation<'a> {
     entity_id: &'a VarInt,
     yaw: f32,

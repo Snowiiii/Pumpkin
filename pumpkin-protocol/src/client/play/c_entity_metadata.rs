@@ -1,10 +1,12 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
+use super::ClientboundPlayPackets;
+
 #[derive(Serialize)]
-#[packet(0x58)]
+#[client_packet(ClientboundPlayPackets::EntityMetadata as i32)]
 pub struct CSetEntityMetadata<T> {
     entity_id: VarInt,
     metadata: Metadata<T>,

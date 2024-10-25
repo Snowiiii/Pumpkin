@@ -2,10 +2,13 @@ use std::collections::HashMap;
 
 use crate::{bytebuf::ByteBuffer, BitSet, ClientPacket, VarInt};
 use itertools::Itertools;
-use pumpkin_macros::packet;
+
+use pumpkin_macros::client_packet;
 use pumpkin_world::{chunk::ChunkData, DIRECT_PALETTE_BITS};
 
-#[packet(0x27)]
+use super::ClientboundPlayPackets;
+
+#[client_packet(ClientboundPlayPackets::ChunkData as i32)]
 pub struct CChunkData<'a>(pub &'a ChunkData);
 
 impl<'a> ClientPacket for CChunkData<'a> {
@@ -110,17 +113,40 @@ impl<'a> ClientPacket for CChunkData<'a> {
         // TODO: block entities
         buf.put_var_int(&VarInt(0));
 
-        // TODO
+        // Sky Light Mask
+        // All of the chunks, this is not optimal and uses way more data than needed but will be
+        // overhauled with full lighting system.
+        buf.put_bit_set(&BitSet(VarInt(1), &[0b01111111111111111111111110]));
+        // Block Light Mask
         buf.put_bit_set(&BitSet(VarInt(1), &[0]));
+        // Empty Sky Light Mask
+        buf.put_bit_set(&BitSet(VarInt(1), &[0b0]));
+        // Empty Block Light Mask
         buf.put_bit_set(&BitSet(VarInt(1), &[0]));
-        buf.put_bit_set(&BitSet(VarInt(1), &[0]));
-        buf.put_bit_set(&BitSet(VarInt(1), &[0]));
-        // buf.put_bit_set(&BitSet(VarInt(0), vec![]));
-        // buf.put_bit_set(&BitSet(VarInt(0), vec![]));
-        // buf.put_bit_set(&BitSet(VarInt(0), vec![]));
-        // buf.put_bit_set(&BitSet(VarInt(0), vec![]));
 
-        buf.put_var_int(&VarInt(0));
+        let mut lighting_subchunks = Vec::new();
+
+        self.0.blocks.iter_subchunks().for_each(|chunk| {
+            let mut chunk_light = [0u8; 2048];
+            for (i, block) in chunk.iter().enumerate() {
+                if !block.is_air() {
+                    continue;
+                }
+                let index = i / 2;
+                let mask = if i % 2 == 1 { 0xF0 } else { 0x0F };
+                chunk_light[index] |= mask;
+            }
+
+            lighting_subchunks.push(chunk_light);
+        });
+
+        buf.put_var_int(&lighting_subchunks.len().into());
+        for subchunk in lighting_subchunks {
+            buf.put_var_int(&VarInt(subchunk.len() as i32));
+            buf.put_slice(&subchunk);
+        }
+
+        // Block Lighting
         buf.put_var_int(&VarInt(0));
     }
 }
