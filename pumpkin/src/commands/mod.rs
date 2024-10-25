@@ -77,10 +77,10 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
 
 #[async_trait]
 pub(crate) trait CommandExecutor: Sync {
-    async fn execute(
+    async fn execute<'a>(
         &self,
-        sender: &mut CommandSender,
+        sender: &mut CommandSender<'a>,
         server: &Server,
-        args: &ConsumedArgs,
+        args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError>;
 }

@@ -14,11 +14,11 @@ struct PumpkinExecutor {}
 
 #[async_trait]
 impl CommandExecutor for PumpkinExecutor {
-    async fn execute(
+    async fn execute<'a>(
         &self,
-        sender: &mut super::CommandSender,
+        sender: &mut super::CommandSender<'a>,
         _server: &crate::server::Server,
-        _args: &super::tree::ConsumedArgs,
+        _args: &super::tree::ConsumedArgs<'a>,
     ) -> Result<(), super::dispatcher::InvalidTreeError> {
         let version = env!("CARGO_PKG_VERSION");
         let description = env!("CARGO_PKG_DESCRIPTION");

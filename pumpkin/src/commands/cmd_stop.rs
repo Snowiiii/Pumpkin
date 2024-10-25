@@ -15,11 +15,11 @@ struct StopExecutor {}
 
 #[async_trait]
 impl CommandExecutor for StopExecutor {
-    async fn execute(
+    async fn execute<'a>(
         &self,
-        sender: &mut super::CommandSender,
+        sender: &mut super::CommandSender<'a>,
         _server: &crate::server::Server,
-        _args: &super::tree::ConsumedArgs,
+        _args: &super::tree::ConsumedArgs<'a>,
     ) -> Result<(), super::dispatcher::InvalidTreeError> {
         sender
             .send_message(TextComponent::text("Stopping Server").color_named(NamedColor::Red))

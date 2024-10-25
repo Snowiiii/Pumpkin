@@ -120,18 +120,16 @@ impl<'a> CommandDispatcher<'a> {
                         return Ok(Err(None));
                     }
                 }
-                NodeType::Argument {
-                    consumer: consume,
-                    name,
-                    ..
-                } => match consume(src, server, &mut raw_args) {
-                    Ok(consumed) => {
-                        parsed_args.insert(name, consumed);
+                NodeType::Argument { consumer, name, .. } => {
+                    match consumer.consume(src, server, &mut raw_args).await {
+                        Ok(consumed) => {
+                            parsed_args.insert(name, consumed);
+                        }
+                        Err(err) => {
+                            return Ok(Err(err));
+                        }
                     }
-                    Err(err) => {
-                        return Ok(Err(err));
-                    }
-                },
+                }
                 NodeType::Require { predicate, .. } => {
                     if !predicate(src) {
                         return Ok(Err(None));
