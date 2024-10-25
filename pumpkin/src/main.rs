@@ -100,7 +100,9 @@ async fn main() -> io::Result<()> {
     //     .unwrap();
 
     tokio::spawn(async {
-        setup_sighandler().await.expect("Unable to setup signal handlers");
+        setup_sighandler()
+            .await
+            .expect("Unable to setup signal handlers");
     });
 
     // ensure rayon is built outside of tokio scope
