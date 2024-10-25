@@ -113,10 +113,18 @@ impl CachedStatus {
                     if io_err.kind() == std::io::ErrorKind::NotFound {
                         log::info!("Favicon '{}' not found; using default icon.", icon_path);
                     } else {
-                        log::error!("Unable to load favicon at '{}': I/O error - {}; using default icon.", icon_path, io_err);
+                        log::error!(
+                            "Unable to load favicon at '{}': I/O error - {}; using default icon.",
+                            icon_path,
+                            io_err
+                        );
                     }
                 } else {
-                    log::error!("Unable to load favicon at '{}': other error - {}; using default icon.", icon_path, err);
+                    log::error!(
+                        "Unable to load favicon at '{}': other error - {}; using default icon.",
+                        icon_path,
+                        err
+                    );
                 }
                 load_icon_from_bytes(DEFAULT_ICON)
             }) {
