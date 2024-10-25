@@ -215,7 +215,7 @@ async fn setup_sighandler() -> io::Result<()> {
         handle_interrupt();
     }
 
-    Ok(());
+    Ok(())
 }
 
 // Unix signal handling
