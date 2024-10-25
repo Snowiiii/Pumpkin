@@ -210,10 +210,12 @@ fn handle_interrupt() {
 
 // Windows Ctrl-C handling
 #[cfg(windows)]
-async fn setup_sighandler() {
+async fn setup_sighandler() -> io::Result<()> {
     if ctrl_c().await.is_ok() {
         handle_interrupt();
     }
+
+    Ok(());
 }
 
 // Unix signal handling
