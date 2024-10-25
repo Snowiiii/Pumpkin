@@ -386,11 +386,11 @@ impl Player {
                 ServerboundPlayPackets::SelectBundleItem => {}
                 ServerboundPlayPackets::SetDifficulty => {}
                 ServerboundPlayPackets::ChatAck => {}
-                ServerboundPlayPackets::ChatCommandUnsigned => {}
-                ServerboundPlayPackets::ChatCommand => {
+                ServerboundPlayPackets::ChatCommandUnsigned => {
                     self.handle_chat_command(server, SChatCommand::read(bytebuf)?)
                         .await;
                 }
+                ServerboundPlayPackets::ChatCommand => {}
                 ServerboundPlayPackets::ChatMessage => {
                     self.handle_chat_message(SChatMessage::read(bytebuf)?).await;
                 }

@@ -4,7 +4,7 @@ use pumpkin_protocol::CURRENT_MC_PROTOCOL;
 
 use crate::{commands::tree::CommandTree, server::CURRENT_MC_VERSION};
 
-use super::RunFunctionType;
+use super::CommandExecutor;
 
 const NAMES: [&str; 1] = ["pumpkin"];
 
@@ -13,7 +13,7 @@ const DESCRIPTION: &str = "Display information about Pumpkin.";
 struct PumpkinExecutor {}
 
 #[async_trait]
-impl RunFunctionType for PumpkinExecutor {
+impl CommandExecutor for PumpkinExecutor {
     async fn execute(
         &self,
         sender: &mut super::CommandSender,

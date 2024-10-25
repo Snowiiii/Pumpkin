@@ -3,7 +3,7 @@ use pumpkin_inventory::OpenContainer;
 
 use crate::commands::tree::CommandTree;
 
-use super::RunFunctionType;
+use super::CommandExecutor;
 
 const NAMES: [&str; 2] = ["echest", "enderchest"];
 
@@ -13,7 +13,7 @@ const DESCRIPTION: &str =
 struct EchestExecutor {}
 
 #[async_trait]
-impl RunFunctionType for EchestExecutor {
+impl CommandExecutor for EchestExecutor {
     async fn execute(
         &self,
         sender: &mut super::CommandSender,

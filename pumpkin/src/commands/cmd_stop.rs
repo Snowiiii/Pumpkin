@@ -5,7 +5,7 @@ use pumpkin_core::text::TextComponent;
 use crate::commands::tree::CommandTree;
 use crate::commands::tree_builder::require;
 
-use super::RunFunctionType;
+use super::CommandExecutor;
 
 const NAMES: [&str; 1] = ["stop"];
 
@@ -14,7 +14,7 @@ const DESCRIPTION: &str = "Stop the server.";
 struct StopExecutor {}
 
 #[async_trait]
-impl RunFunctionType for StopExecutor {
+impl CommandExecutor for StopExecutor {
     async fn execute(
         &self,
         sender: &mut super::CommandSender,

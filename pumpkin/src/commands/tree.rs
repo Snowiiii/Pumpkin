@@ -1,4 +1,4 @@
-use super::RunFunctionType;
+use super::CommandExecutor;
 use crate::{commands::CommandSender, server::Server};
 use std::collections::{HashMap, VecDeque};
 
@@ -20,7 +20,7 @@ pub struct Node<'a> {
 
 pub enum NodeType<'a> {
     ExecuteLeaf {
-        executor: &'a dyn RunFunctionType,
+        executor: &'a dyn CommandExecutor,
     },
     Literal {
         string: &'a str,

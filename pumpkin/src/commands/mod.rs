@@ -76,7 +76,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
 }
 
 #[async_trait]
-pub(crate) trait RunFunctionType: Sync {
+pub(crate) trait CommandExecutor: Sync {
     async fn execute(
         &self,
         sender: &mut CommandSender,

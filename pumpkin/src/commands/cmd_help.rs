@@ -8,7 +8,7 @@ use crate::commands::tree_builder::argument;
 use crate::commands::CommandSender;
 use crate::server::Server;
 
-use super::RunFunctionType;
+use super::CommandExecutor;
 
 const NAMES: [&str; 3] = ["help", "h", "?"];
 
@@ -44,7 +44,7 @@ fn parse_arg_command<'a>(
 struct BaseHelpExecutor {}
 
 #[async_trait]
-impl RunFunctionType for BaseHelpExecutor {
+impl CommandExecutor for BaseHelpExecutor {
     async fn execute(
         &self,
         sender: &mut CommandSender,
@@ -69,7 +69,7 @@ impl RunFunctionType for BaseHelpExecutor {
 struct CommandHelpExecutor {}
 
 #[async_trait]
-impl RunFunctionType for CommandHelpExecutor {
+impl CommandExecutor for CommandHelpExecutor {
     async fn execute(
         &self,
         sender: &mut CommandSender,

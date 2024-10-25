@@ -6,7 +6,7 @@ use crate::commands::arg_player::{consume_arg_player, parse_arg_player};
 use crate::commands::tree::CommandTree;
 use crate::commands::tree_builder::argument;
 
-use super::RunFunctionType;
+use super::CommandExecutor;
 
 const NAMES: [&str; 1] = ["kill"];
 const DESCRIPTION: &str = "Kills a target player.";
@@ -16,7 +16,7 @@ const ARG_TARGET: &str = "target";
 struct KillExecutor {}
 
 #[async_trait]
-impl RunFunctionType for KillExecutor {
+impl CommandExecutor for KillExecutor {
     async fn execute(
         &self,
         sender: &mut super::CommandSender,

@@ -1,7 +1,7 @@
 use crate::commands::tree::{ArgumentConsumer, CommandTree, Node, NodeType};
 use crate::commands::CommandSender;
 
-use super::RunFunctionType;
+use super::CommandExecutor;
 
 impl<'a> CommandTree<'a> {
     /// Add a child [Node] to the root of this [`CommandTree`].
@@ -40,7 +40,7 @@ impl<'a> CommandTree<'a> {
     /// desired type.
     ///
     /// Also see [`NonLeafNodeBuilder::execute`].
-    pub fn execute(mut self, executor: &'a dyn RunFunctionType) -> Self {
+    pub fn execute(mut self, executor: &'a dyn CommandExecutor) -> Self {
         let node = Node {
             node_type: NodeType::ExecuteLeaf { executor },
             children: Vec::new(),
@@ -113,7 +113,7 @@ impl<'a> NonLeafNodeBuilder<'a> {
     /// desired type.
     ///
     /// Also see [`CommandTree::execute`].
-    pub fn execute(mut self, executor: &'a dyn RunFunctionType) -> Self {
+    pub fn execute(mut self, executor: &'a dyn CommandExecutor) -> Self {
         self.leaf_nodes.push(LeafNodeBuilder {
             node_type: NodeType::ExecuteLeaf { executor },
         });

@@ -7,7 +7,7 @@ use crate::commands::tree::CommandTree;
 use crate::commands::tree_builder::argument;
 
 use super::arg_player::consume_arg_player;
-use super::RunFunctionType;
+use super::CommandExecutor;
 
 const NAMES: [&str; 1] = ["kick"];
 const DESCRIPTION: &str = "Kicks the target player from the server.";
@@ -17,7 +17,7 @@ const ARG_TARGET: &str = "target";
 struct KickExecutor {}
 
 #[async_trait]
-impl RunFunctionType for KickExecutor {
+impl CommandExecutor for KickExecutor {
     async fn execute(
         &self,
         sender: &mut super::CommandSender,

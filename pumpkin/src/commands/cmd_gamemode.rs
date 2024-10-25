@@ -18,7 +18,7 @@ use crate::commands::CommandSender;
 use crate::commands::CommandSender::Player;
 use crate::server::Server;
 
-use super::RunFunctionType;
+use super::CommandExecutor;
 
 const NAMES: [&str; 1] = ["gamemode"];
 
@@ -71,7 +71,7 @@ pub fn parse_arg_gamemode(consumed_args: &ConsumedArgs) -> Result<GameMode, Inva
 struct GamemodeTargetSelf {}
 
 #[async_trait]
-impl RunFunctionType for GamemodeTargetSelf {
+impl CommandExecutor for GamemodeTargetSelf {
     async fn execute(
         &self,
         sender: &mut CommandSender,
@@ -105,7 +105,7 @@ impl RunFunctionType for GamemodeTargetSelf {
 struct GamemodeTargetPlayer {}
 
 #[async_trait]
-impl RunFunctionType for GamemodeTargetPlayer {
+impl CommandExecutor for GamemodeTargetPlayer {
     async fn execute(
         &self,
         sender: &mut CommandSender,
