@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use dispatcher::InvalidTreeError;
 use pumpkin_core::text::TextComponent;
 use tree::ConsumedArgs;
@@ -60,7 +61,7 @@ impl<'a> CommandSender<'a> {
 }
 
 #[must_use]
-pub fn default_dispatcher<'a>() -> CommandDispatcher<'a> {
+pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     let mut dispatcher = CommandDispatcher::default();
 
     dispatcher.register(cmd_pumpkin::init_command_tree());
@@ -71,8 +72,15 @@ pub fn default_dispatcher<'a>() -> CommandDispatcher<'a> {
     dispatcher.register(cmd_kill::init_command_tree());
     dispatcher.register(cmd_kick::init_command_tree());
 
-    dispatcher
+    Arc::new(dispatcher)
 }
 
-type RunFunctionType =
-    (dyn Fn(&mut CommandSender, &Server, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync);
+#[async_trait]
+pub(crate) trait RunFunctionType: Sync {
+    async fn execute(
+        &self,
+        sender: &mut CommandSender,
+        server: &Server,
+        args: &ConsumedArgs,
+    ) -> Result<(), InvalidTreeError>;
+}

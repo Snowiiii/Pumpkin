@@ -1,9 +1,14 @@
+use async_trait::async_trait;
+use pumpkin_core::text::TextComponent;
+
 use crate::commands::dispatcher::InvalidTreeError::InvalidConsumptionError;
 use crate::commands::dispatcher::{CommandDispatcher, InvalidTreeError};
 use crate::commands::tree::{Command, CommandTree, ConsumedArgs, RawArgs};
 use crate::commands::tree_builder::argument;
 use crate::commands::CommandSender;
 use crate::server::Server;
+
+use super::RunFunctionType;
 
 const NAMES: [&str; 3] = ["help", "h", "?"];
 
@@ -36,41 +41,65 @@ fn parse_arg_command<'a>(
         .map_err(|_| InvalidConsumptionError(Some(command_name.into())))
 }
 
-#[allow(unused_variables)]
+struct BaseHelpExecutor {}
+
+#[async_trait]
+impl RunFunctionType for BaseHelpExecutor {
+    async fn execute(
+        &self,
+        sender: &mut CommandSender,
+        server: &Server,
+        args: &ConsumedArgs,
+    ) -> Result<(), InvalidTreeError> {
+        let tree = parse_arg_command(args, &server.command_dispatcher)?;
+
+        sender
+            .send_message(TextComponent::text(&format!(
+                "{} - {} Usage: {}",
+                tree.names.join("/"),
+                tree.description,
+                tree
+            )))
+            .await;
+
+        Ok(())
+    }
+}
+
+struct CommandHelpExecutor {}
+
+#[async_trait]
+impl RunFunctionType for CommandHelpExecutor {
+    async fn execute(
+        &self,
+        sender: &mut CommandSender,
+        server: &Server,
+        _args: &ConsumedArgs,
+    ) -> Result<(), InvalidTreeError> {
+        let mut keys: Vec<&str> = server.command_dispatcher.commands.keys().copied().collect();
+        keys.sort_unstable();
+
+        for key in keys {
+            let Command::Tree(tree) = &server.command_dispatcher.commands[key] else {
+                continue;
+            };
+
+            sender
+                .send_message(TextComponent::text(&format!(
+                    "{} - {} Usage: {}",
+                    tree.names.join("/"),
+                    tree.description,
+                    tree
+                )))
+                .await;
+        }
+
+        Ok(())
+    }
+}
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION)
-        .with_child(
-            argument(ARG_COMMAND, consume_arg_command).execute(&|sender, server, args| {
-                let tree = parse_arg_command(args, &server.command_dispatcher)?;
-
-                // sender.send_message(TextComponent::text(&format!(
-                //     "{} - {} Usage: {}",
-                //     tree.names.join("/"),
-                //     tree.description,
-                //     tree
-                // )));
-
-                Ok(())
-            }),
-        )
-        .execute(&|sender, server, _args| {
-            let mut keys: Vec<&str> = server.command_dispatcher.commands.keys().copied().collect();
-            keys.sort_unstable();
-
-            for key in keys {
-                let Command::Tree(tree) = &server.command_dispatcher.commands[key] else {
-                    continue;
-                };
-
-                // sender.send_message(TextComponent::text(&format!(
-                //     "{} - {} Usage: {}",
-                //     tree.names.join("/"),
-                //     tree.description,
-                //     tree
-                // )));
-            }
-
-            Ok(())
-        })
+        .with_child(argument(ARG_COMMAND, consume_arg_command).execute(&BaseHelpExecutor {}))
+        .execute(&CommandHelpExecutor {})
 }

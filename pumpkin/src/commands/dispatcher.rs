@@ -26,8 +26,13 @@ pub struct CommandDispatcher<'a> {
 
 /// Stores registered [`CommandTree`]s and dispatches commands to them.
 impl<'a> CommandDispatcher<'a> {
-    pub async fn handle_command(&self, sender: &mut CommandSender<'a>, server: &Server, cmd: &str) {
-        if let Err(err) = self.dispatch(sender, server, cmd) {
+    pub async fn handle_command(
+        &'a self,
+        sender: &mut CommandSender<'a>,
+        server: &Server,
+        cmd: &'a str,
+    ) {
+        if let Err(err) = self.dispatch(sender, server, cmd).await {
             sender
                 .send_message(
                     TextComponent::text_string(err)
@@ -38,13 +43,14 @@ impl<'a> CommandDispatcher<'a> {
     }
 
     /// Execute a command using its corresponding [`CommandTree`].
-    pub(crate) fn dispatch(
+    pub(crate) async fn dispatch(
         &'a self,
-        src: &mut CommandSender,
+        src: &mut CommandSender<'a>,
         server: &Server,
-        cmd: &str,
+        cmd: &'a str,
     ) -> Result<(), String> {
-        let mut parts = cmd.split_ascii_whitespace();
+        // Other languages dont use the ascii whitespace
+        let mut parts = cmd.split_whitespace();
         let key = parts.next().ok_or("Empty Command")?;
         let raw_args: Vec<&str> = parts.rev().collect();
 
@@ -52,7 +58,7 @@ impl<'a> CommandDispatcher<'a> {
 
         // try paths until fitting path is found
         for path in tree.iter_paths() {
-            match Self::try_is_fitting_path(src, server, &path, tree, raw_args.clone()) {
+            match Self::try_is_fitting_path(src, server, &path, tree, raw_args.clone()).await {
                 Err(InvalidConsumptionError(s)) => {
                     println!("Error while parsing command \"{cmd}\": {s:?} was consumed, but couldn't be parsed");
                     return Err("Internal Error (See logs for details)".into());
@@ -90,20 +96,20 @@ impl<'a> CommandDispatcher<'a> {
         }
     }
 
-    fn try_is_fitting_path(
-        src: &mut CommandSender,
+    async fn try_is_fitting_path(
+        src: &mut CommandSender<'a>,
         server: &Server,
         path: &[usize],
-        tree: &CommandTree,
-        mut raw_args: RawArgs,
+        tree: &CommandTree<'a>,
+        mut raw_args: RawArgs<'a>,
     ) -> Result<Result<(), Option<String>>, InvalidTreeError> {
         let mut parsed_args: ConsumedArgs = HashMap::new();
 
         for node in path.iter().map(|&i| &tree.nodes[i]) {
             match node.node_type {
-                NodeType::ExecuteLeaf { run } => {
+                NodeType::ExecuteLeaf { executor } => {
                     return if raw_args.is_empty() {
-                        run(src, server, &parsed_args)?;
+                        executor.execute(src, server, &parsed_args).await?;
                         Ok(Ok(()))
                     } else {
                         Ok(Err(None))
