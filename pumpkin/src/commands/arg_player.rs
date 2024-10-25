@@ -26,7 +26,7 @@ pub fn consume_arg_player(
             name => {
                 // todo: implement any other player than sender
                 for world in &server.worlds {
-                    if world.get_player_by_name(name).is_some() {
+                    if world.get_player_by_name_blocking(name).is_some() {
                         return Ok(name.into());
                     }
                 }
@@ -56,7 +56,7 @@ pub fn parse_arg_player(
         "@a" | "@e" => todo!(), // todo: implement all players target selector
         name => {
             for world in &server.worlds {
-                if let Some(player) = world.get_player_by_name(name) {
+                if let Some(player) = world.get_player_by_name_blocking(name) {
                     return Ok(player);
                 }
             }
