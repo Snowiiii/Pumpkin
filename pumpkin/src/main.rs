@@ -25,7 +25,7 @@ use client::Client;
 use server::{ticker::Ticker, Server};
 use std::io::{self};
 use tokio::io::{AsyncBufReadExt, BufReader};
-// TODO: #[cfg(windows)]
+#[cfg(windows)]
 use tokio::signal::ctrl_c;
 #[cfg(unix)]
 use tokio::signal::unix::{signal, SignalKind};
@@ -99,25 +99,9 @@ async fn main() -> io::Result<()> {
     //     .build()
     //     .unwrap();
 
-    // Unix signal handling
-    if cfg!(unix) {
-        if signal(SignalKind::interrupt())?.recv().await.is_some() {
-            handle_interrupt();
-        }
-
-        if signal(SignalKind::hangup())?.recv().await.is_some() {
-            handle_interrupt();
-        }
-
-        if signal(SignalKind::terminate())?.recv().await.is_some() {
-            handle_interrupt();
-        }
-    }
-
-    // Windows Ctrl-C handling
-    if cfg!(windows) && ctrl_c().await.is_ok() {
-        handle_interrupt();
-    }
+    tokio::spawn(async {
+        setup_sighandler().await.expect("Unable to setup signal handlers");
+    });
 
     // ensure rayon is built outside of tokio scope
     rayon::ThreadPoolBuilder::new().build_global().unwrap();
@@ -215,11 +199,37 @@ async fn main() -> io::Result<()> {
 fn handle_interrupt() {
     log::warn!(
         "{}",
-        TextComponent::text("Received interrupt; stopping server...")
+        TextComponent::text("Received interrupt signal; stopping server...")
             .color_named(NamedColor::Red)
             .to_pretty_console()
     );
     std::process::exit(0);
+}
+
+// Windows Ctrl-C handling
+#[cfg(windows)]
+async fn setup_sighandler() {
+    if ctrl_c().await.is_ok() {
+        handle_interrupt();
+    }
+}
+
+// Unix signal handling
+#[cfg(unix)]
+async fn setup_sighandler() -> io::Result<()> {
+    if signal(SignalKind::interrupt())?.recv().await.is_some() {
+        handle_interrupt();
+    }
+
+    if signal(SignalKind::hangup())?.recv().await.is_some() {
+        handle_interrupt();
+    }
+
+    if signal(SignalKind::terminate())?.recv().await.is_some() {
+        handle_interrupt();
+    }
+
+    Ok(())
 }
 
 fn setup_console(server: Arc<Server>) {
