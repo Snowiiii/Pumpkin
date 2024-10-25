@@ -14,11 +14,11 @@ struct EchestExecutor {}
 
 #[async_trait]
 impl CommandExecutor for EchestExecutor {
-    async fn execute(
+    async fn execute<'a>(
         &self,
-        sender: &mut super::CommandSender,
+        sender: &mut super::CommandSender<'a>,
         server: &crate::server::Server,
-        _args: &super::tree::ConsumedArgs,
+        _args: &super::tree::ConsumedArgs<'a>,
     ) -> Result<(), super::dispatcher::InvalidTreeError> {
         if let Some(player) = sender.as_player() {
             let entity_id = player.entity_id();

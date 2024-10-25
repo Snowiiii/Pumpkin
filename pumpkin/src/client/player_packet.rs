@@ -347,8 +347,6 @@ impl Player {
     }
 
     pub async fn handle_chat_message(&self, chat_message: SChatMessage) {
-        log::debug!("Received chat message");
-
         let message = chat_message.message;
         if message.len() > 256 {
             self.kick(TextComponent::text("Oversized message")).await;
@@ -357,6 +355,7 @@ impl Player {
 
         // TODO: filter message & validation
         let gameprofile = &self.gameprofile;
+        log::info!("<chat>{}: {}", gameprofile.name, message);
 
         let entity = &self.living_entity.entity;
         let world = &entity.world;

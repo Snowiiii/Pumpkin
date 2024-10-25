@@ -6,7 +6,7 @@ use pumpkin_core::GameMode;
 
 use crate::TextComponent;
 
-use crate::commands::arg_player::{consume_arg_player, parse_arg_player};
+use crate::commands::arg_player::parse_arg_player;
 
 use crate::commands::dispatcher::InvalidTreeError;
 use crate::commands::dispatcher::InvalidTreeError::{
@@ -18,6 +18,8 @@ use crate::commands::CommandSender;
 use crate::commands::CommandSender::Player;
 use crate::server::Server;
 
+use super::arg_player::PlayerArgumentConsumer;
+use super::tree::ArgumentConsumer;
 use super::CommandExecutor;
 
 const NAMES: [&str; 1] = ["gamemode"];
@@ -27,27 +29,33 @@ const DESCRIPTION: &str = "Change a player's gamemode.";
 const ARG_GAMEMODE: &str = "gamemode";
 const ARG_TARGET: &str = "target";
 
-pub fn consume_arg_gamemode(
-    _src: &CommandSender,
-    _server: &Server,
-    args: &mut RawArgs,
-) -> Result<String, Option<String>> {
-    if let Some(arg) = args.pop() {
-        if let Ok(id) = arg.parse::<u8>() {
-            match GameMode::from_u8(id) {
-                None | Some(GameMode::Undefined) => {}
-                Some(_) => return Ok(arg.into()),
-            };
-        };
+struct GamemodeArgumentConsumer {}
 
-        match GameMode::from_str(arg) {
-            Err(_) | Ok(GameMode::Undefined) => {
-                return Err(Some(format!("Gamemode not found: {arg}")))
+#[async_trait]
+impl ArgumentConsumer for GamemodeArgumentConsumer {
+    async fn consume<'a>(
+        &self,
+        _sender: &CommandSender<'a>,
+        _server: &Server,
+        args: &mut RawArgs<'a>,
+    ) -> Result<String, Option<String>> {
+        if let Some(arg) = args.pop() {
+            if let Ok(id) = arg.parse::<u8>() {
+                match GameMode::from_u8(id) {
+                    None | Some(GameMode::Undefined) => {}
+                    Some(_) => return Ok(arg.into()),
+                };
+            };
+
+            match GameMode::from_str(arg) {
+                Err(_) | Ok(GameMode::Undefined) => {
+                    return Err(Some(format!("Gamemode not found: {arg}")))
+                }
+                Ok(_) => return Ok(arg.into()),
             }
-            Ok(_) => return Ok(arg.into()),
         }
+        Err(None)
     }
-    Err(None)
 }
 
 pub fn parse_arg_gamemode(consumed_args: &ConsumedArgs) -> Result<GameMode, InvalidTreeError> {
@@ -72,11 +80,11 @@ struct GamemodeTargetSelf {}
 
 #[async_trait]
 impl CommandExecutor for GamemodeTargetSelf {
-    async fn execute(
+    async fn execute<'a>(
         &self,
-        sender: &mut CommandSender,
+        sender: &mut CommandSender<'a>,
         _server: &Server,
-        args: &ConsumedArgs,
+        args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
         let gamemode = parse_arg_gamemode(args)?;
 
@@ -106,14 +114,14 @@ struct GamemodeTargetPlayer {}
 
 #[async_trait]
 impl CommandExecutor for GamemodeTargetPlayer {
-    async fn execute(
+    async fn execute<'a>(
         &self,
-        sender: &mut CommandSender,
+        sender: &mut CommandSender<'a>,
         server: &Server,
-        args: &ConsumedArgs,
+        args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
         let gamemode = parse_arg_gamemode(args)?;
-        let target = parse_arg_player(sender, server, ARG_TARGET, args)?;
+        let target = parse_arg_player(sender, server, ARG_TARGET, args).await?;
 
         if target.gamemode.load() == gamemode {
             sender
@@ -140,10 +148,11 @@ impl CommandExecutor for GamemodeTargetPlayer {
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
         require(&|sender| sender.permission_lvl() >= 2).with_child(
-            argument(ARG_GAMEMODE, consume_arg_gamemode)
+            argument(ARG_GAMEMODE, &GamemodeArgumentConsumer {})
                 .with_child(require(&|sender| sender.is_player()).execute(&GamemodeTargetSelf {}))
                 .with_child(
-                    argument(ARG_TARGET, consume_arg_player).execute(&GamemodeTargetPlayer {}),
+                    argument(ARG_TARGET, &PlayerArgumentConsumer {})
+                        .execute(&GamemodeTargetPlayer {}),
                 ),
         ),
     )
