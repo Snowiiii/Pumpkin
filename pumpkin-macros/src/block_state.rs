@@ -6,49 +6,63 @@ use std::{
 use itertools::Itertools;
 use proc_macro::TokenStream;
 use quote::quote;
+use serde::Deserialize;
 use syn::parse::Parser;
 
-#[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
-struct RegistryBlockDefinition {
-    /// e.g. minecraft:door or minecraft:button
-    #[serde(rename = "type")]
-    pub category: String,
-
-    /// Specifies the variant of the blocks category.
-    /// e.g. minecraft:iron_door has the variant iron
-    #[serde(rename = "block_set_type")]
-    pub variant: Option<String>,
+#[derive(Deserialize, Clone, Debug)]
+struct TopLevel {
+    blocks: Vec<Block>,
+    shapes: Vec<Shape>,
+    block_entity_types: Vec<BlockEntityKind>,
 }
 
-/// One possible state of a Block.
-/// This could e.g. be an extended piston facing left.
-#[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
-struct RegistryBlockState {
-    pub id: i32,
-
-    /// Whether this is the default state of the Block
-    #[serde(default, rename = "default")]
-    pub is_default: bool,
-
-    /// The propertise active for this `BlockState`.
-    #[serde(default)]
-    pub properties: HashMap<String, String>,
+#[derive(Deserialize, Clone, Debug)]
+struct Block {
+    id: u16,
+    item_id: u16,
+    wall_variant_id: Option<u16>,
+    translation_key: String,
+    name: String,
+    properties: Vec<Property>,
+    default_state_id: u16,
+    states: Vec<State>,
 }
 
-/// A fully-fledged block definition.
-/// Stores the category, variant, all of the possible states and all of the possible properties.
-#[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
-struct RegistryBlockType {
-    pub definition: RegistryBlockDefinition,
-    pub states: Vec<RegistryBlockState>,
-
-    // TODO is this safe to remove? It's currently not used in the Project. @lukas0008 @Snowiiii
-    /// A list of valid property keys/values for a block.
-    #[serde(default, rename = "properties")]
-    valid_properties: HashMap<String, Vec<String>>,
+#[derive(Deserialize, Clone, Debug)]
+struct BlockEntityKind {
+    id: u32,
+    ident: String,
+    name: String,
 }
 
-static BLOCKS: LazyLock<HashMap<String, RegistryBlockType>> = LazyLock::new(|| {
+#[derive(Deserialize, Clone, Debug)]
+struct Property {
+    name: String,
+    values: Vec<String>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+struct State {
+    id: u16,
+    luminance: u8,
+    opaque: bool,
+    replaceable: bool,
+    blocks_motion: bool,
+    collision_shapes: Vec<u16>,
+    block_entity_type: Option<u32>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+struct Shape {
+    min_x: f64,
+    min_y: f64,
+    min_z: f64,
+    max_x: f64,
+    max_y: f64,
+    max_z: f64,
+}
+
+static BLOCKS: LazyLock<HashMap<String, Block>> = LazyLock::new(|| {
     serde_json::from_str(include_str!("../../assets/blocks.json"))
         .expect("Could not parse block.json registry.")
 });
@@ -70,10 +84,7 @@ fn pascal_case(original: &str) -> String {
 }
 
 pub fn block_type_enum_impl() -> TokenStream {
-    let categories: &HashSet<&str> = &BLOCKS
-        .values()
-        .map(|val| val.definition.category.as_str())
-        .collect();
+    let categories: &HashSet<&str> = &BLOCKS.values().map(|val| val.name.as_str()).collect();
 
     let original_and_converted_stream = categories.iter().map(|key| {
         (
@@ -211,39 +222,14 @@ pub fn block_state_impl(item: TokenStream) -> TokenStream {
         .get(&block_name)
         .expect("Block with that name does not exist");
 
-    let state = if properties.is_empty() {
-        block_info
-            .states
-            .iter()
-            .find(|state| state.is_default)
-            .expect(
-                "Error inside blocks.json file: Every Block should have at least 1 default state",
-            )
-    } else {
-        match block_info
-            .states
-            .iter()
-            .find(|state| state.properties == properties)
-        {
-            Some(state) => state,
-            None => panic!(
-                "Could not find block with these properties, the following are valid properties: \n{}",
-                block_info
-                    .valid_properties
-                    .iter()
-                    .map(|(name, values)| format!("{name} = {}", values.join(" | ")))
-                    .join("\n")
-            ),
-        }
-    };
+    let id = block_info.id;
 
-    let id = state.id;
     if std::env::var("CARGO_PKG_NAME").unwrap() == "pumpkin-world" {
         let category_name: proc_macro2::TokenStream = format!(
             "crate::block::BlockCategory::{}",
             &pascal_case(
                 block_info
-                    .definition
+                    .name
                     .category
                     .split_once(':')
                     .expect("Bad minecraft id")
@@ -252,12 +238,10 @@ pub fn block_state_impl(item: TokenStream) -> TokenStream {
         )
         .parse()
         .unwrap();
-        let block_name: proc_macro2::TokenStream = format!(
-            "crate::block::Block::{}",
-            &pascal_case(block_name.split_once(':').expect("Bad minecraft id").1,)
-        )
-        .parse()
-        .unwrap();
+        let block_name: proc_macro2::TokenStream =
+            format!("crate::block::Block::{}", &pascal_case(block_name.as_str()))
+                .parse()
+                .unwrap();
         quote! {
             crate::block::BlockState {
                 state_id: #id as u16,
@@ -269,14 +253,7 @@ pub fn block_state_impl(item: TokenStream) -> TokenStream {
     } else {
         let category_name: proc_macro2::TokenStream = format!(
             "pumpkin_world::block::BlockCategory::{}",
-            &pascal_case(
-                block_info
-                    .definition
-                    .category
-                    .split_once(':')
-                    .expect("Bad minecraft id")
-                    .1,
-            )
+            &pascal_case(block_info.name.split_once(':').expect("Bad minecraft id").1,)
         )
         .parse()
         .unwrap();
@@ -288,7 +265,7 @@ pub fn block_state_impl(item: TokenStream) -> TokenStream {
         .unwrap();
         quote! {
           pumpkin_world::block::BlockState {
-                state_id: #id as u16,
+                state_id: #id,
                 category: #category_name,
                 block: #block_name,
           }

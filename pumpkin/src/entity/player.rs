@@ -312,6 +312,20 @@ impl Player {
         }
     }
 
+    pub fn get_attack_cooldown_progress(&self, base_time: f32) -> f32 {
+        #[allow(clippy::cast_precision_loss)]
+        let x = self
+            .last_attacked_ticks
+            .load(std::sync::atomic::Ordering::Acquire) as f32
+            + base_time;
+        // TODO attack speed attribute
+        let attack_speed = 4.0;
+        let progress_per_tick = 1.0 / attack_speed * 20.0;
+
+        let progress = x / progress_per_tick;
+        progress.clamp(0.0, 1.0)
+    }
+
     pub const fn entity_id(&self) -> EntityId {
         self.living_entity.entity.entity_id
     }
