@@ -25,7 +25,7 @@ use client::Client;
 use server::{ticker::Ticker, Server};
 use std::io::{self};
 use tokio::io::{AsyncBufReadExt, BufReader};
-#[cfg(windows)]
+#[cfg(not(unix))]
 use tokio::signal::ctrl_c;
 #[cfg(unix)]
 use tokio::signal::unix::{signal, SignalKind};
@@ -208,8 +208,8 @@ fn handle_interrupt() {
     std::process::exit(0);
 }
 
-// Windows Ctrl-C handling
-#[cfg(windows)]
+// Non-UNIX Ctrl-C handling
+#[cfg(not(unix))]
 async fn setup_sighandler() -> io::Result<()> {
     if ctrl_c().await.is_ok() {
         handle_interrupt();
