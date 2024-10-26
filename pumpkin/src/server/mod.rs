@@ -176,7 +176,7 @@ impl Server {
                 .to_u32()
                 .expect("Unable to convert to u32");
         }
-        return count;
+        count
     }
 
     /// Generates a new entity id
