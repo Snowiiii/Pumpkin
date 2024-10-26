@@ -32,7 +32,7 @@ export default defineConfig({
           { text: "Networking", link: "/developer/networking" },
           { text: "Authentication", link: "/developer/authentication" },
           { text: "RCON", link: "/developer/rcon" },
-          
+          { text: "World", link: "developer/world"},
         ],
       },
       
