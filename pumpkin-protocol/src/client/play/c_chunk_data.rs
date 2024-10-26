@@ -3,7 +3,10 @@ use arrayvec::ArrayVec;
 use itertools::Itertools;
 
 use pumpkin_macros::client_packet;
-use pumpkin_world::{chunk::{ChunkData, TOTAL_SUBCHUNK}, DIRECT_PALETTE_BITS};
+use pumpkin_world::{
+    chunk::{ChunkData, TOTAL_SUBCHUNK},
+    DIRECT_PALETTE_BITS,
+};
 
 use super::ClientboundPlayPackets;
 
