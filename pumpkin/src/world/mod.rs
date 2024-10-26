@@ -74,7 +74,7 @@ impl World {
 
     /// Broadcasts a packet to all connected players within the world.
     ///
-    /// Sends the specified packet to every player currently logged in to the server.
+    /// Sends the specified packet to every player currently logged in to the world.
     ///
     /// **Note:** This function acquires a lock on the `current_players` map, ensuring thread safety.
     pub async fn broadcast_packet_all<P>(&self, packet: &P)
@@ -89,7 +89,7 @@ impl World {
 
     /// Broadcasts a packet to all connected players within the world, excluding the specified players.
     ///
-    /// Sends the specified packet to every player currently logged in to the server, excluding the players listed in the `except` parameter.
+    /// Sends the specified packet to every player currently logged in to the world, excluding the players listed in the `except` parameter.
     ///
     /// **Note:** This function acquires a lock on the `current_players` map, ensuring thread safety.
     pub async fn broadcast_packet_expect<P>(&self, except: &[uuid::Uuid], packet: &P)
