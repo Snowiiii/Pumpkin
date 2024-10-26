@@ -43,7 +43,7 @@ use pumpkin_protocol::{
 use tokio::sync::{Mutex, Notify};
 use tokio::task::JoinHandle;
 
-use pumpkin_protocol::server::play::SKeepAlive;
+use pumpkin_protocol::server::play::{SClickContainer, SKeepAlive};
 use pumpkin_world::{
     cylindrical_chunk_iterator::Cylindrical,
     item::{item_registry::Item, ItemStack},

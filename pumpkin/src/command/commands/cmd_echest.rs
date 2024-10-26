@@ -1,5 +1,5 @@
-use pumpkin_inventory::{Chest, OpenContainer};
 use async_trait::async_trait;
+use pumpkin_inventory::{Chest, OpenContainer};
 
 use crate::command::{
     args::ConsumedArgs, tree::CommandTree, CommandExecutor, CommandSender, InvalidTreeError,

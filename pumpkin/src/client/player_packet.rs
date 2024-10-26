@@ -645,7 +645,7 @@ impl Player {
         inventory.state_id = 0;
         let open_container = self.open_container.load();
         if let Some(id) = open_container {
-            let mut open_containers = server.open_containers.write().unwrap();
+            let mut open_containers = server.open_containers.write().await;
             if let Some(container) = open_containers.get_mut(&id) {
                 container.remove_player(self.entity_id());
             }
