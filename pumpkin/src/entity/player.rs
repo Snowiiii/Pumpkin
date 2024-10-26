@@ -12,10 +12,7 @@ use num_derive::FromPrimitive;
 use num_traits::{FromPrimitive, ToPrimitive};
 use pumpkin_core::{
     math::{boundingbox::BoundingBox, position::WorldPosition, vector2::Vector2, vector3::Vector3},
-    text::{
-        color::{Color::Named, NamedColor},
-        TextComponent,
-    },
+    text::{color::NamedColor, TextComponent},
     GameMode,
 };
 use pumpkin_entity::{entity_type::EntityType, EntityId};
@@ -276,9 +273,9 @@ impl Player {
 
         //self.living_entity.entity.world.level.list_cached();
 
-        // Send disconnect message to other players in the same world
+        // Send disconnect message / quit message to other players in the same world
         let msg_txt = format!("{} left the game.", self.gameprofile.name.as_str());
-        let msg_comp = TextComponent::text(msg_txt.as_str()).color(Named(NamedColor::Yellow));
+        let msg_comp = TextComponent::text(msg_txt.as_str()).color_named(NamedColor::Yellow);
         for entry in world.current_players.lock().await.iter() {
             let uuid = entry.0;
             let player = entry.1;
@@ -290,6 +287,7 @@ impl Player {
 
             player.send_system_message(&msg_comp).await;
         }
+        log::info!("{}", msg_comp.to_pretty_console());
     }
 
     pub async fn tick(&self) {

@@ -2,10 +2,7 @@ use connection_cache::{CachedBranding, CachedStatus};
 use key_store::KeyStore;
 use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::{
-    text::{
-        color::{Color::Named, NamedColor},
-        TextComponent,
-    },
+    text::{color::NamedColor, TextComponent},
     GameMode,
 };
 use pumpkin_entity::EntityId;
@@ -122,10 +119,11 @@ impl Server {
 
         // Handle join message
         let msg_txt = format!("{} joined the game.", player.gameprofile.name.as_str());
-        let msg_comp = TextComponent::text(msg_txt.as_str()).color(Named(NamedColor::Yellow));
+        let msg_comp = TextComponent::text(msg_txt.as_str()).color_named(NamedColor::Yellow);
         for player in world.current_players.lock().await.values() {
             player.send_system_message(&msg_comp).await;
         }
+        log::info!("{}", msg_comp.to_pretty_console());
 
         (player, world.clone())
     }
