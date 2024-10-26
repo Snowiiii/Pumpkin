@@ -20,6 +20,10 @@ edition = "2021"
 lto = true
 codegen-units = 1
 
+[profile.profiling]
+inherits = "release"
+debug = true
+
 [workspace.dependencies]
 log = "0.4"
 tokio = { version = "1.41", features = [
