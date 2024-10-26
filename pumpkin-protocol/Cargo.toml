@@ -19,6 +19,7 @@ num-traits.workspace = true
 num-derive.workspace = true
 
 bytes = "1.8"
+arrayvec = "0.7.6"
 
 flate2 = "1.0"
 

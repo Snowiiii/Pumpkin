@@ -1,10 +1,12 @@
-use std::collections::HashMap;
-
 use crate::{bytebuf::ByteBuffer, BitSet, ClientPacket, VarInt};
+use arrayvec::ArrayVec;
 use itertools::Itertools;
 
 use pumpkin_macros::client_packet;
-use pumpkin_world::{chunk::ChunkData, DIRECT_PALETTE_BITS};
+use pumpkin_world::{
+    chunk::{ChunkData, TOTAL_SUBCHUNK},
+    DIRECT_PALETTE_BITS,
+};
 
 use super::ClientboundPlayPackets;
 
@@ -25,8 +27,23 @@ impl<'a> ClientPacket for CChunkData<'a> {
         buf.put_slice(&heightmap_nbt);
 
         let mut data_buf = ByteBuffer::empty();
+        let mut palette_map = [0u16; 4096];
+        let mut lighting_subchunks = ArrayVec::<[u8; 2048], TOTAL_SUBCHUNK>::new();
         self.0.blocks.iter_subchunks().for_each(|chunk| {
-            let block_count = chunk.iter().filter(|block| !block.is_air()).count() as i16;
+            let mut block_count = 0;
+            let mut chunk_light = [0u8; 2048];
+            for (i, block) in chunk.iter().enumerate() {
+                if !block.is_air() {
+                    block_count += 1;
+                    continue;
+                }
+                let index = i / 2;
+                let mask = if i % 2 == 1 { 0xF0 } else { 0x0F };
+                chunk_light[index] |= mask;
+            }
+
+            lighting_subchunks.push(chunk_light);
+
             // Block count
             data_buf.put_i16(block_count);
             //// Block states
@@ -51,26 +68,28 @@ impl<'a> ClientPacket for CChunkData<'a> {
                 // PaletteType::Direct
             };
 
-            let mut block_data_array = Vec::new();
+            let chunk_size = match palette_type {
+                PaletteType::Indirect(block_size) => 64 / block_size as usize,
+                PaletteType::Direct => 64 / DIRECT_PALETTE_BITS as usize,
+            };
+
+            let mut block_data_array = ArrayVec::<i64, 1024>::new();
             match palette_type {
                 PaletteType::Indirect(block_size) => {
                     // Bits per entry
                     data_buf.put_u8(block_size as u8);
                     // Palette length
                     data_buf.put_var_int(&VarInt(palette.len() as i32));
-                    let mut palette_map = HashMap::new();
                     palette.iter().enumerate().for_each(|(i, id)| {
-                        palette_map.insert(*id, i);
+                        palette_map[id.data as usize] = i as u16;
                         // Palette
                         data_buf.put_var_int(&VarInt(id.get_id_mojang_repr()));
                     });
-                    for block_clump in chunk.chunks(64 / block_size as usize) {
+                    for block_clump in chunk.chunks(chunk_size) {
                         let mut out_long: i64 = 0;
                         for block in block_clump.iter().rev() {
-                            let index = palette_map
-                                .get(block)
-                                .expect("Its just got added, ofc it should be there");
-                            out_long = out_long << block_size | (*index as i64);
+                            let index = palette_map[block.data as usize];
+                            out_long = out_long << block_size | (index as i64);
                         }
                         block_data_array.push(out_long);
                     }
@@ -78,7 +97,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
                 PaletteType::Direct => {
                     // Bits per entry
                     data_buf.put_u8(DIRECT_PALETTE_BITS as u8);
-                    for block_clump in chunk.chunks(64 / DIRECT_PALETTE_BITS as usize) {
+                    for block_clump in chunk.chunks(chunk_size) {
                         let mut out_long: i64 = 0;
                         let mut shift = 0;
                         for block in block_clump {
@@ -94,6 +113,9 @@ impl<'a> ClientPacket for CChunkData<'a> {
             // TODO: precompute this and omit making the `block_data_array`
             data_buf.put_var_int(&VarInt(block_data_array.len() as i32));
             // Data array
+            let bytes = data_buf.buf();
+            bytes.reserve(block_data_array.len() * 8);
+
             for data_int in block_data_array {
                 data_buf.put_i64(data_int);
             }
@@ -123,22 +145,6 @@ impl<'a> ClientPacket for CChunkData<'a> {
         buf.put_bit_set(&BitSet(VarInt(1), &[0b0]));
         // Empty Block Light Mask
         buf.put_bit_set(&BitSet(VarInt(1), &[0]));
-
-        let mut lighting_subchunks = Vec::new();
-
-        self.0.blocks.iter_subchunks().for_each(|chunk| {
-            let mut chunk_light = [0u8; 2048];
-            for (i, block) in chunk.iter().enumerate() {
-                if !block.is_air() {
-                    continue;
-                }
-                let index = i / 2;
-                let mask = if i % 2 == 1 { 0xF0 } else { 0x0F };
-                chunk_light[index] |= mask;
-            }
-
-            lighting_subchunks.push(chunk_light);
-        });
 
         buf.put_var_int(&lighting_subchunks.len().into());
         for subchunk in lighting_subchunks {
