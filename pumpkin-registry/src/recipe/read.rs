@@ -207,6 +207,15 @@ pub enum RecipeResult {
     Special,
 }
 
+impl RecipeResult {
+    pub fn id(&self) -> &str {
+        match self {
+            Self::Many { id, .. } | Self::Single { id } => id,
+            Self::Special => "minecraft:air",
+        }
+    }
+}
+
 impl<'de> Deserialize<'de> for RecipeResult {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

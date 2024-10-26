@@ -13,7 +13,7 @@ use paint::Painting;
 use pumpkin_protocol::client::config::RegistryEntry;
 pub use recipe::{IngredientSlot, IngredientType, Recipe, RecipeResult, RECIPES};
 use serde::Serialize;
-pub use tags::ITEM_TAGS;
+pub use tags::{TagType, ITEM_TAGS};
 use serde::{Deserialize, Serialize};
 use trim_material::TrimMaterial;
 use trim_pattern::TrimPattern;

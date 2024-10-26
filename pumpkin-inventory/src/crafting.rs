@@ -1,25 +1,21 @@
-use itertools::Itertools;
 use pumpkin_registry::{IngredientSlot, IngredientType, RecipeResult, ITEM_TAGS, RECIPES};
 use pumpkin_world::item::{get_item_protocol_id, ItemStack};
 
 fn check_ingredient_type(ingredient_type: &IngredientType, input: ItemStack) -> bool {
     match ingredient_type {
         IngredientType::Tag(tag) => {
-            if let Some(tags) = ITEM_TAGS.get(tag) {
-                for tag in tags {
-                    if get_item_protocol_id(tag) == input.item_id {
-                        return true;
-                    }
-                }
-            }
-            false
+            let tag = tag.strip_prefix("minecraft:").unwrap();
+            dbg!(tag);
+            let items = ITEM_TAGS.get(tag).expect("tag to be a valid");
+            items
+                .iter()
+                .any(|tag| check_ingredient_type(&tag.to_ingredient_type(), input))
         }
         IngredientType::Item(item) => get_item_protocol_id(item) == input.item_id,
     }
 }
 
 pub fn check_if_matches_crafting(input: [[Option<ItemStack>; 3]; 3]) -> Option<ItemStack> {
-    dbg!(input.iter().flatten().collect_vec());
     for recipe in RECIPES.iter() {
         let patterns = recipe.pattern();
         if patterns
