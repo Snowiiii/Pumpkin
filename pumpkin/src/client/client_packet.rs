@@ -164,16 +164,25 @@ impl Client {
             }
         }
 
+        // Don't allow new logons when server is full.
+        // TODO: If client is an operator or otherwise suitable elevated permissions, allow client to bypass this requirement.
+        let player_count = server.get_player_count().await;
+        if player_count >= BASIC_CONFIG.max_players {
+            log::debug!("Player (IP '{}', username '{}') tried to log in, but the server is full ({}/{} players).", &self.address.lock().await, &profile.name, player_count, BASIC_CONFIG.max_players);
+            self.kick("The server is currently full, please try again later")
+                .await;
+        }
+
         // Don't allow duplicate UUIDs
         if let Some(online_player) = &server.get_player_by_uuid(profile.id).await {
-            log::debug!("Player (IP '{}', username '{}') tried to log in with the same UUID ('{}') as an online player (IP '{}', username '{}')", &self.address.lock().await.to_string(), &profile.name, &profile.id.to_string(), &online_player.client.address.lock().await.to_string(), &online_player.gameprofile.name);
+            log::debug!("Player (IP '{}', username '{}') tried to log in with the same UUID ('{}') as an online player (IP '{}', username '{}')", &self.address.lock().await, &profile.name, &profile.id, &online_player.client.address.lock().await, &online_player.gameprofile.name);
             self.kick("You are already connected to this server").await;
             return;
         }
 
         // Don't allow a duplicate username
         if let Some(online_player) = &server.get_player_by_name(&profile.name).await {
-            log::debug!("A player (IP '{}', attempted username '{}') tried to log in with the same username as an online player (UUID '{}', IP '{}', username '{}')", &self.address.lock().await.to_string(), &profile.name, &profile.id.to_string(), &online_player.client.address.lock().await.to_string(), &online_player.gameprofile.name);
+            log::debug!("A player (IP '{}', attempted username '{}') tried to log in with the same username as an online player (UUID '{}', IP '{}', username '{}')", &self.address.lock().await, &profile.name, &profile.id, &online_player.client.address.lock().await, &online_player.gameprofile.name);
             self.kick("A player with this username is already connected")
                 .await;
             return;

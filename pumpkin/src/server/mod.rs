@@ -1,5 +1,6 @@
 use connection_cache::{CachedBranding, CachedStatus};
 use key_store::KeyStore;
+use num_traits::ToPrimitive;
 use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
@@ -161,6 +162,21 @@ impl Server {
             }
         }
         None
+    }
+
+    /// Get the player count sum in all worlds
+    pub async fn get_player_count(&self) -> u32 {
+        let mut count = 0;
+        for world in &self.worlds {
+            count += world
+                .current_players
+                .lock()
+                .await
+                .len()
+                .to_u32()
+                .expect("Unable to convert to u32");
+        }
+        return count;
     }
 
     /// Generates a new entity id
