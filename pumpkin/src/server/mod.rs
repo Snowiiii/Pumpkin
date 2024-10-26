@@ -84,7 +84,7 @@ impl Server {
             // 0 is invalid
             entity_id: 2.into(),
             worlds: vec![Arc::new(world)],
-            command_dispatcher: Arc::new(command_dispatcher),
+            command_dispatcher,
             auth_client,
             key_store: KeyStore::new(),
             server_listing: Mutex::new(CachedStatus::new()),
@@ -143,10 +143,20 @@ impl Server {
         }
     }
 
-    /// Searches every world for a player by name
-    pub fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
+    /// Searches every world for a player by username
+    pub async fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
         for world in &self.worlds {
-            if let Some(player) = world.get_player_by_name(name) {
+            if let Some(player) = world.get_player_by_name(name).await {
+                return Some(player);
+            }
+        }
+        None
+    }
+
+    /// Searches every world for a player by UUID
+    pub async fn get_player_by_uuid(&self, id: uuid::Uuid) -> Option<Arc<Player>> {
+        for world in &self.worlds {
+            if let Some(player) = world.get_player_by_uuid(id).await {
                 return Some(player);
             }
         }

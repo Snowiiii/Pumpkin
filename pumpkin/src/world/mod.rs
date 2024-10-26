@@ -1,9 +1,12 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{hash_map::Entry, HashMap, VecDeque},
+    sync::Arc,
+};
 
 pub mod player_chunker;
 
 use crate::{
-    client::Client,
+    client::{ChunkHandleWrapper, Client},
     entity::{player::Player, Entity},
 };
 use num_traits::ToPrimitive;
@@ -28,10 +31,18 @@ use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
 use pumpkin_world::level::Level;
 use rand::{thread_rng, Rng};
 use scoreboard::Scoreboard;
-use tokio::sync::{mpsc, RwLock};
 use tokio::sync::{mpsc::Receiver, Mutex};
+use tokio::{
+    sync::{mpsc, RwLock},
+    task::JoinHandle,
+};
 
 pub mod scoreboard;
+
+type ChunkReceiver = (
+    Vec<(Vector2<i32>, JoinHandle<()>)>,
+    Receiver<Arc<RwLock<ChunkData>>>,
+);
 
 /// Represents a Minecraft world, containing entities, players, and the underlying level data.
 ///
@@ -44,7 +55,7 @@ pub mod scoreboard;
 /// - Provides a central hub for interacting with the world's entities and environment.
 pub struct World {
     /// The underlying level, responsible for chunk management and terrain generation.
-    pub level: Arc<Mutex<Level>>,
+    pub level: Arc<Level>,
     /// A map of active players within the world, keyed by their unique token.
     pub current_players: Arc<Mutex<HashMap<uuid::Uuid, Arc<Player>>>>,
     pub scoreboard: Mutex<Scoreboard>,
@@ -55,7 +66,7 @@ impl World {
     #[must_use]
     pub fn load(level: Level) -> Self {
         Self {
-            level: Arc::new(Mutex::new(level)),
+            level: Arc::new(level),
             current_players: Arc::new(Mutex::new(HashMap::new())),
             scoreboard: Mutex::new(Scoreboard::new()),
         }
@@ -63,7 +74,7 @@ impl World {
 
     /// Broadcasts a packet to all connected players within the world.
     ///
-    /// Sends the specified packet to every player currently logged in to the server.
+    /// Sends the specified packet to every player currently logged in to the world.
     ///
     /// **Note:** This function acquires a lock on the `current_players` map, ensuring thread safety.
     pub async fn broadcast_packet_all<P>(&self, packet: &P)
@@ -78,7 +89,7 @@ impl World {
 
     /// Broadcasts a packet to all connected players within the world, excluding the specified players.
     ///
-    /// Sends the specified packet to every player currently logged in to the server, excluding the players listed in the `except` parameter.
+    /// Sends the specified packet to every player currently logged in to the world, excluding the players listed in the `except` parameter.
     ///
     /// **Note:** This function acquires a lock on the `current_players` map, ensuring thread safety.
     pub async fn broadcast_packet_expect<P>(&self, except: &[uuid::Uuid], packet: &P)
@@ -299,30 +310,67 @@ impl World {
         player_chunker::player_join(self, player.clone()).await;
     }
 
-    pub async fn mark_chunks_as_not_watched(&self, chunks: &[Vector2<i32>]) {
-        let level = self.level.lock().await;
-        level.mark_chunk_as_not_watched_and_clean(chunks).await;
+    pub fn mark_chunks_as_not_watched(&self, chunks: &[Vector2<i32>]) -> Vec<Vector2<i32>> {
+        self.level.mark_chunks_as_not_watched(chunks)
     }
 
-    pub async fn mark_chunks_as_watched(&self, chunks: &[Vector2<i32>]) {
-        let level = self.level.lock().await;
-        level.mark_chunks_as_newly_watched(chunks);
+    pub fn clean_chunks(&self, chunks: &[Vector2<i32>]) {
+        self.level.clean_chunks(chunks);
     }
 
-    pub async fn get_cached_chunk_len(&self) -> usize {
-        let level = self.level.lock().await;
-        level.loaded_chunk_count()
+    pub fn clean_memory(&self, chunks_to_check: &[Vector2<i32>]) {
+        self.level.clean_memory(chunks_to_check);
     }
 
-    fn spawn_world_chunks(&self, client: Arc<Client>, chunks: Vec<Vector2<i32>>) {
+    pub fn get_cached_chunk_len(&self) -> usize {
+        self.level.loaded_chunk_count()
+    }
+
+    fn spawn_world_chunks(&self, client: Arc<Client>, chunks: &[Vector2<i32>]) {
         if client.closed.load(std::sync::atomic::Ordering::Relaxed) {
             log::info!("The connection has closed before world chunks were spawned",);
             return;
         }
+        #[cfg(debug_assertions)]
         let inst = std::time::Instant::now();
-        let mut receiver = self.receive_chunks(chunks);
+        // Unique id of this chunk batch for later removal
+        let id = uuid::Uuid::new_v4();
 
-        tokio::spawn(async move {
+        let (pending, mut receiver) = self.receive_chunks(chunks);
+        {
+            let mut pending_chunks = client.pending_chunks.lock();
+
+            for chunk in chunks {
+                if pending_chunks.contains_key(chunk) {
+                    log::debug!(
+                        "Client id {} is requesting chunk {:?} but its already pending!",
+                        client.id,
+                        chunk
+                    );
+                }
+            }
+
+            for (chunk, handle) in pending {
+                let entry = pending_chunks.entry(chunk);
+                let wrapper = ChunkHandleWrapper::new(handle);
+                match entry {
+                    Entry::Occupied(mut entry) => {
+                        entry.get_mut().push_back(wrapper);
+                    }
+                    Entry::Vacant(entry) => {
+                        let mut queue = VecDeque::new();
+                        queue.push_back(wrapper);
+                        entry.insert(queue);
+                    }
+                };
+            }
+        }
+        let pending_chunks = client.pending_chunks.clone();
+        let level = self.level.clone();
+        let retained_client = client.clone();
+        let batch_id = id;
+
+        let handle = tokio::spawn(async move {
             while let Some(chunk_data) = receiver.recv().await {
                 let chunk_data = chunk_data.read().await;
                 let packet = CChunkData(&chunk_data);
@@ -340,15 +388,62 @@ impl World {
                     );
                 }
 
-                // TODO: Queue player packs in a queue so we don't need to check if its closed before
-                // sending
+                {
+                    let mut pending_chunks = pending_chunks.lock();
+                    let handlers = pending_chunks
+                        .get_mut(&chunk_data.position)
+                        .expect("All chunks should be pending");
+                    let handler = handlers
+                        .pop_front()
+                        .expect("All chunks should have a handler");
+
+                    if handlers.is_empty() {
+                        pending_chunks.remove(&chunk_data.position);
+                    }
+
+                    // Chunk loading task was canceled after it was completed
+                    if handler.aborted() {
+                        // We never increment the watch value
+                        if level.should_pop_chunk(&chunk_data.position) {
+                            level.clean_chunks(&[chunk_data.position]);
+                        }
+                        // If ignored, dont send the packet
+                        let loaded_chunks = level.loaded_chunk_count();
+                        log::debug!(
+                            "Aborted chunk {:?} (post-process) {} cached",
+                            chunk_data.position,
+                            loaded_chunks
+                        );
+
+                        // We dont want to mark this chunk as watched or send it to the client
+                        continue;
+                    }
+
+                    // This must be locked with pending
+                    level.mark_chunk_as_newly_watched(chunk_data.position);
+                };
+
                 if !client.closed.load(std::sync::atomic::Ordering::Relaxed) {
                     client.send_packet(&packet).await;
                 }
             }
 
-            log::debug!("chunks sent after {}ms", inst.elapsed().as_millis());
+            {
+                let mut batch = client.pending_chunk_batch.lock();
+                batch.remove(&batch_id);
+            }
+            #[cfg(debug_assertions)]
+            log::debug!(
+                "chunks sent after {}ms (batch {})",
+                inst.elapsed().as_millis(),
+                batch_id
+            );
         });
+
+        {
+            let mut batch_handles = retained_client.pending_chunk_batch.lock();
+            batch_handles.insert(id, handle);
+        }
     }
 
     /// Gets a Player by entity id
@@ -361,15 +456,19 @@ impl World {
         None
     }
 
-    /// Gets a Player by name
-    pub fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
-        // not sure of blocking lock
-        for player in self.current_players.blocking_lock().values() {
+    /// Gets a Player by username
+    pub async fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
+        for player in self.current_players.lock().await.values() {
             if player.gameprofile.name == name {
                 return Some(player.clone());
             }
         }
         None
+    }
+
+    /// Gets a Player by UUID
+    pub async fn get_player_by_uuid(&self, id: uuid::Uuid) -> Option<Arc<Player>> {
+        return self.current_players.lock().await.get(&id).cloned();
     }
 
     pub async fn add_player(&self, uuid: uuid::Uuid, player: Arc<Player>) {
@@ -412,20 +511,14 @@ impl World {
     }
 
     // Stream the chunks (don't collect them and then do stuff with them)
-    pub fn receive_chunks(&self, chunks: Vec<Vector2<i32>>) -> Receiver<Arc<RwLock<ChunkData>>> {
+    pub fn receive_chunks(&self, chunks: &[Vector2<i32>]) -> ChunkReceiver {
         let (sender, receive) = mpsc::channel(chunks.len());
-        {
-            let level = self.level.clone();
-            tokio::spawn(async move {
-                let level = level.lock().await;
-                level.fetch_chunks(&chunks, sender).await;
-            });
-        }
-        receive
+        let pending_chunks = self.level.fetch_chunks(chunks, sender);
+        (pending_chunks, receive)
     }
 
     pub async fn receive_chunk(&self, chunk: Vector2<i32>) -> Arc<RwLock<ChunkData>> {
-        let mut receiver = self.receive_chunks(vec![chunk]);
+        let (_, mut receiver) = self.receive_chunks(&[chunk]);
         receiver
             .recv()
             .await
