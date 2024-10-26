@@ -28,7 +28,7 @@ class Blocks : Extractor.Extractor {
         for (block in Registries.BLOCK) {
             val blockJson = JsonObject()
             blockJson.addProperty("id", Registries.BLOCK.getRawId(block))
-            blockJson.addProperty("name", Registries.BLOCK.getId(block).path)
+            blockJson.addProperty("name", Registries.BLOCK.getId(block).toString())
             blockJson.addProperty("translation_key", block.translationKey)
             blockJson.addProperty("item_id", Registries.ITEM.getRawId(block.asItem()))
 
