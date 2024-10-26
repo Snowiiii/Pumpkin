@@ -12,7 +12,10 @@ use num_derive::FromPrimitive;
 use num_traits::{FromPrimitive, ToPrimitive};
 use pumpkin_core::{
     math::{boundingbox::BoundingBox, position::WorldPosition, vector2::Vector2, vector3::Vector3},
-    text::TextComponent,
+    text::{
+        color::{Color::Named, NamedColor},
+        TextComponent,
+    },
     GameMode,
 };
 use pumpkin_entity::{entity_type::EntityType, EntityId};
@@ -154,7 +157,9 @@ impl Player {
     /// Removes the Player out of the current World
     #[allow(unused_variables)]
     pub async fn remove(&self) {
-        self.living_entity.entity.world.remove_player(self).await;
+        let world = &self.living_entity.entity.world;
+
+        world.remove_player(self).await;
 
         let watched = self.watched_section.load();
         let view_distance = i32::from(get_view_distance(self).await);
@@ -254,20 +259,13 @@ impl Player {
         log::debug!("Done waiting for chunk batches");
 
         // Decrement value of watched chunks
-        let chunks_to_clean = self
-            .living_entity
-            .entity
-            .world
-            .mark_chunks_as_not_watched(&watched_chunks);
+        let chunks_to_clean = world.mark_chunks_as_not_watched(&watched_chunks);
 
         // Remove chunks with no watchers from the cache
-        self.living_entity
-            .entity
-            .world
-            .clean_chunks(&chunks_to_clean);
+        world.clean_chunks(&chunks_to_clean);
 
         // Remove left over entries from all possiblily loaded chunks
-        self.living_entity.entity.world.clean_memory(&radial_chunks);
+        world.clean_memory(&radial_chunks);
 
         log::debug!(
             "Removed player id {} ({}) ({} chunks remain cached)",
@@ -277,6 +275,21 @@ impl Player {
         );
 
         //self.living_entity.entity.world.level.list_cached();
+
+        // Send disconnect message to other players in the same world
+        let msg_txt = format!("{} left the game.", self.gameprofile.name.as_str());
+        let msg_comp = TextComponent::text(msg_txt.as_str()).color(Named(NamedColor::Yellow));
+        for entry in world.current_players.lock().await.iter() {
+            let uuid = entry.0;
+            let player = entry.1;
+
+            if uuid.eq(&self.gameprofile.id) {
+                // don't send disconnect message to yourself
+                continue;
+            }
+
+            player.send_system_message(&msg_comp).await;
+        }
     }
 
     pub async fn tick(&self) {

@@ -1,7 +1,13 @@
 use connection_cache::{CachedBranding, CachedStatus};
 use key_store::KeyStore;
 use pumpkin_config::BASIC_CONFIG;
-use pumpkin_core::GameMode;
+use pumpkin_core::{
+    text::{
+        color::{Color::Named, NamedColor},
+        TextComponent,
+    },
+    GameMode,
+};
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::{Container, OpenContainer};
@@ -113,6 +119,14 @@ impl Server {
                 self.server_listing.lock().await.add_player();
             }
         }
+
+        // Handle join message
+        let msg_txt = format!("{} joined the game.", player.gameprofile.name.as_str());
+        let msg_comp = TextComponent::text(msg_txt.as_str()).color(Named(NamedColor::Yellow));
+        for player in world.current_players.lock().await.values() {
+            player.send_system_message(&msg_comp).await;
+        }
+
         (player, world.clone())
     }
 
