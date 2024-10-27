@@ -104,7 +104,7 @@ impl World {
 
     pub async fn play_sound(
         &self,
-        sound_id: i32,
+        sound_id: u32,
         category: SoundCategory,
         posistion: &Vector3<f64>,
     ) {

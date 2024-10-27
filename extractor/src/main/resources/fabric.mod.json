@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "extractor",
+  "version": "${version}",
+  "name": "pumpkin-extractor",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "de.snowii.extractor.Extractor"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-language-kotlin": ">=${kotlin_loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
