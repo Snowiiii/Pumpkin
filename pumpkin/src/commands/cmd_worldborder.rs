@@ -1,11 +1,16 @@
 use async_trait::async_trait;
-use pumpkin_core::text::TextComponent;
+use pumpkin_core::text::{
+    color::{Color, NamedColor},
+    TextComponent,
+};
 
 use crate::server::Server;
 
 use super::{
+    arg_position::{parse_arg_position, PositionArgumentConsumer},
+    arg_simple::SimpleArgConsumer,
     dispatcher::InvalidTreeError,
-    tree::{ArgumentConsumer, CommandTree, ConsumedArgs, RawArgs},
+    tree::{CommandTree, ConsumedArgs},
     tree_builder::{argument, literal},
     CommandExecutor, CommandSender,
 };
@@ -24,14 +29,17 @@ impl CommandExecutor for WorldborderGetExecutor {
         server: &Server,
         _args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let world = server.worlds.first().expect("goofy");
+        let world = server
+            .worlds
+            .first()
+            .expect("There should always be atleast one world");
         let border = world.worldborder.lock().await;
 
         let diameter = border.new_diameter.round() as i32;
         sender
-            .send_message(TextComponent::text(
-                &format!("Border diameter: {diameter}",),
-            ))
+            .send_message(TextComponent::text(&format!(
+                "The world border is currently {diameter} block(s) wide"
+            )))
             .await;
         Ok(())
     }
@@ -43,15 +51,37 @@ struct WorldborderSetExecutor;
 impl CommandExecutor for WorldborderSetExecutor {
     async fn execute<'a>(
         &self,
-        _sender: &mut CommandSender<'a>,
+        sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let world = server.worlds.first().expect("goofy");
+        let world = server
+            .worlds
+            .first()
+            .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = args.get("distance").unwrap().parse::<f64>().unwrap();
+        let distance = args
+            .get("distance")
+            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
+            .parse::<f64>()
+            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
 
+        if (distance - border.new_diameter).abs() < f64::EPSILON {
+            sender
+                .send_message(
+                    TextComponent::text("Nothing changed. The world border is already that size")
+                        .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        }
+
+        sender
+            .send_message(TextComponent::text(&format!(
+                "Set the world border to {distance:.1} block(s) wide"
+            )))
+            .await;
         border.set_diameter(world, distance, None).await;
         Ok(())
     }
@@ -63,15 +93,50 @@ struct WorldborderSetTimeExecutor;
 impl CommandExecutor for WorldborderSetTimeExecutor {
     async fn execute<'a>(
         &self,
-        _sender: &mut CommandSender<'a>,
+        sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let world = server.worlds.first().expect("goofy");
+        let world = server
+            .worlds
+            .first()
+            .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = args.get("distance").unwrap().parse::<f64>().unwrap();
-        let time = args.get("time").unwrap().parse::<i32>().unwrap();
+        let distance = args
+            .get("distance")
+            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
+            .parse::<f64>()
+            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let time = args
+            .get("time")
+            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
+            .parse::<i32>()
+            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+
+        match distance.total_cmp(&border.new_diameter) {
+            std::cmp::Ordering::Equal => {
+                sender
+                    .send_message(
+                        TextComponent::text(
+                            "Nothing changed. The world border is already that size",
+                        )
+                        .color(Color::Named(NamedColor::Red)),
+                    )
+                    .await;
+                return Ok(());
+            }
+            std::cmp::Ordering::Less => {
+                sender.send_message(TextComponent::text(&format!("Shrinking the world border to {distance:.2} blocks wide over {time} second(s)"))).await;
+            }
+            std::cmp::Ordering::Greater => {
+                sender
+                    .send_message(TextComponent::text(&format!(
+                        "Growing the world border to {distance:.2} blocks wide over {time} seconds"
+                    )))
+                    .await;
+            }
+        }
 
         border
             .set_diameter(world, distance, Some(i64::from(time) * 1000))
@@ -86,15 +151,39 @@ struct WorldborderAddExecutor;
 impl CommandExecutor for WorldborderAddExecutor {
     async fn execute<'a>(
         &self,
-        _sender: &mut CommandSender<'a>,
+        sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let world = server.worlds.first().expect("goofy");
+        let world = server
+            .worlds
+            .first()
+            .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = args.get("distance").unwrap().parse::<f64>().unwrap();
+        let distance = args
+            .get("distance")
+            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
+            .parse::<f64>()
+            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
 
+        if distance == 0.0 {
+            sender
+                .send_message(
+                    TextComponent::text("Nothing changed. The world border is already that size")
+                        .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        }
+
+        let distance = border.new_diameter + distance;
+
+        sender
+            .send_message(TextComponent::text(&format!(
+                "Set the world border to {distance:.1} block(s) wide"
+            )))
+            .await;
         border.add_diameter(world, distance, None).await;
         Ok(())
     }
@@ -106,15 +195,52 @@ struct WorldborderAddTimeExecutor;
 impl CommandExecutor for WorldborderAddTimeExecutor {
     async fn execute<'a>(
         &self,
-        _sender: &mut CommandSender<'a>,
+        sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let world = server.worlds.first().expect("goofy");
+        let world = server
+            .worlds
+            .first()
+            .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = args.get("distance").unwrap().parse::<f64>().unwrap();
-        let time = args.get("time").unwrap().parse::<i32>().unwrap();
+        let distance = args
+            .get("distance")
+            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
+            .parse::<f64>()
+            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let time = args
+            .get("time")
+            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
+            .parse::<i32>()
+            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+
+        let distance = distance + border.new_diameter;
+
+        match distance.total_cmp(&border.new_diameter) {
+            std::cmp::Ordering::Equal => {
+                sender
+                    .send_message(
+                        TextComponent::text(
+                            "Nothing changed. The world border is already that size",
+                        )
+                        .color(Color::Named(NamedColor::Red)),
+                    )
+                    .await;
+                return Ok(());
+            }
+            std::cmp::Ordering::Less => {
+                sender.send_message(TextComponent::text(&format!("Shrinking the world border to {distance:.2} blocks wide over {time} second(s)"))).await;
+            }
+            std::cmp::Ordering::Greater => {
+                sender
+                    .send_message(TextComponent::text(&format!(
+                        "Growing the world border to {distance:.2} blocks wide over {time} seconds"
+                    )))
+                    .await;
+            }
+        }
 
         border
             .add_diameter(world, distance, Some(i64::from(time) * 1000))
@@ -129,16 +255,24 @@ struct WorldborderCenterExecutor;
 impl CommandExecutor for WorldborderCenterExecutor {
     async fn execute<'a>(
         &self,
-        _sender: &mut CommandSender<'a>,
+        sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let world = server.worlds.first().expect("goofy");
+        let world = server
+            .worlds
+            .first()
+            .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let x = args.get("x").unwrap().parse::<f64>().unwrap();
-        let z = args.get("z").unwrap().parse::<f64>().unwrap();
+        let x = parse_arg_position("x", args)?;
+        let z = parse_arg_position("z", args)?;
 
+        sender
+            .send_message(TextComponent::text(&format!(
+                "Set the center of world border to {x:.2}, {z:.2}"
+            )))
+            .await;
         border.set_center(world, x, z).await;
         Ok(())
     }
@@ -154,16 +288,36 @@ impl CommandExecutor for WorldborderDamageAmountExecutor {
         server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let _world = server.worlds.first().expect("goofy");
-        // let mut border = world.worldborder.lock().await;
+        let world = server
+            .worlds
+            .first()
+            .expect("There should always be atleast one world");
+        let mut border = world.worldborder.lock().await;
 
-        let _damage_per_block = args
+        let damage_per_block = args
             .get("damage_per_block")
-            .unwrap()
+            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
             .parse::<f32>()
-            .unwrap();
+            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
 
-        sender.send_message(TextComponent::text("todo")).await;
+        if (damage_per_block - border.damage_per_block).abs() < f32::EPSILON {
+            sender
+                .send_message(
+                    TextComponent::text(
+                        "Nothing changed. The world border damage is already that amount",
+                    )
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        }
+
+        sender
+            .send_message(TextComponent::text(&format!(
+                "Set the world border damage to {damage_per_block:.2} per block each second"
+            )))
+            .await;
+        border.damage_per_block = damage_per_block;
         Ok(())
     }
 }
@@ -178,12 +332,36 @@ impl CommandExecutor for WorldborderDamageBufferExecutor {
         server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let _world = server.worlds.first().expect("goofy");
-        // let mut border = world.worldborder.lock().await;
+        let world = server
+            .worlds
+            .first()
+            .expect("There should always be atleast one world");
+        let mut border = world.worldborder.lock().await;
 
-        let _buffer = args.get("distance").unwrap().parse::<f32>().unwrap();
+        let buffer = args
+            .get("distance")
+            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
+            .parse::<f32>()
+            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
 
-        sender.send_message(TextComponent::text("todo")).await;
+        if (buffer - border.buffer).abs() < f32::EPSILON {
+            sender
+                .send_message(
+                    TextComponent::text(
+                        "Nothing changed. The world border damage buffer is already that distance",
+                    )
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        }
+
+        sender
+            .send_message(TextComponent::text(&format!(
+                "Set the world border damage buffer to {buffer:.2} block(s)"
+            )))
+            .await;
+        border.buffer = buffer;
         Ok(())
     }
 }
@@ -194,15 +372,39 @@ struct WorldborderWarningDistanceExecutor;
 impl CommandExecutor for WorldborderWarningDistanceExecutor {
     async fn execute<'a>(
         &self,
-        _sender: &mut CommandSender<'a>,
+        sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let world = server.worlds.first().expect("goofy");
+        let world = server
+            .worlds
+            .first()
+            .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = args.get("distance").unwrap().parse::<i32>().unwrap();
+        let distance = args
+            .get("distance")
+            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
+            .parse::<i32>()
+            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
 
+        if distance == border.warning_blocks {
+            sender
+                .send_message(
+                    TextComponent::text(
+                        "Nothing changed. The world border warning is already that distance",
+                    )
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        }
+
+        sender
+            .send_message(TextComponent::text(&format!(
+                "Set the world border warning distance to {distance} block(s)"
+            )))
+            .await;
         border.set_warning_distance(world, distance).await;
         Ok(())
     }
@@ -214,31 +416,41 @@ struct WorldborderWarningTimeExecutor;
 impl CommandExecutor for WorldborderWarningTimeExecutor {
     async fn execute<'a>(
         &self,
-        _sender: &mut CommandSender<'a>,
+        sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let world = server.worlds.first().expect("goofy");
+        let world = server
+            .worlds
+            .first()
+            .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let time = args.get("time").unwrap().parse::<i32>().unwrap();
+        let time = args
+            .get("time")
+            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
+            .parse::<i32>()
+            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
 
+        if time == border.warning_time {
+            sender
+                .send_message(
+                    TextComponent::text(
+                        "Nothing changed. The world border warning is already that amount of time",
+                    )
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        }
+
+        sender
+            .send_message(TextComponent::text(&format!(
+                "Set the world border warning time to {time} second(s)"
+            )))
+            .await;
         border.set_warning_delay(world, time).await;
         Ok(())
-    }
-}
-
-pub struct SimpleArgConsumer;
-
-#[async_trait]
-impl ArgumentConsumer for SimpleArgConsumer {
-    async fn consume<'a>(
-        &self,
-        _sender: &CommandSender<'a>,
-        _server: &Server,
-        args: &mut RawArgs<'a>,
-    ) -> Result<String, Option<String>> {
-        args.pop().ok_or(None).map(ToString::to_string)
     }
 }
 
@@ -253,13 +465,11 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
                     ),
             ),
         )
-        .with_child(
-            literal("center").with_child(
-                argument("x", &SimpleArgConsumer).with_child(
-                    argument("z", &SimpleArgConsumer).execute(&WorldborderCenterExecutor),
-                ),
+        .with_child(literal("center").with_child(
+            argument("x", &PositionArgumentConsumer).with_child(
+                argument("z", &PositionArgumentConsumer).execute(&WorldborderCenterExecutor),
             ),
-        )
+        ))
         .with_child(
             literal("damage")
                 .with_child(

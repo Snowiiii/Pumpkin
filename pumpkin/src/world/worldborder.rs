@@ -16,6 +16,8 @@ pub struct Worldborder {
     pub portal_teleport_boundary: i32,
     pub warning_blocks: i32,
     pub warning_time: i32,
+    pub damage_per_block: f32,
+    pub buffer: f32,
 }
 
 impl Worldborder {
@@ -37,6 +39,8 @@ impl Worldborder {
             portal_teleport_boundary: 29_999_984,
             warning_blocks,
             warning_time,
+            damage_per_block: 0.0,
+            buffer: 0.0,
         }
     }
 

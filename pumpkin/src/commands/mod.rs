@@ -10,6 +10,8 @@ use crate::entity::player::Player;
 use crate::server::Server;
 
 mod arg_player;
+mod arg_position;
+mod arg_simple;
 
 mod cmd_echest;
 mod cmd_gamemode;
