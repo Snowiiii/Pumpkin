@@ -16,10 +16,9 @@ use crate::{
 
 pub mod anvil;
 
-pub const CHUNK_AREA: usize = 16 * 16;
-pub const SUBCHUNK_VOLUME: usize = CHUNK_AREA * 16;
-pub const CHUNK_VOLUME: usize = CHUNK_AREA * WORLD_HEIGHT;
-pub const TOTAL_SUBCHUNK: usize = CHUNK_VOLUME / SUBCHUNK_VOLUME;
+const CHUNK_AREA: usize = 16 * 16;
+const SUBCHUNK_VOLUME: usize = CHUNK_AREA * 16;
+const CHUNK_VOLUME: usize = CHUNK_AREA * WORLD_HEIGHT;
 
 pub trait ChunkReader: Sync + Send {
     fn read_chunk(
@@ -74,7 +73,7 @@ pub struct ChunkBlocks {
 #[serde(rename_all = "PascalCase")]
 struct PaletteEntry {
     name: String,
-    properties: Option<HashMap<String, String>>,
+    _properties: Option<HashMap<String, String>>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -248,12 +247,10 @@ impl ChunkData {
             let palette = block_states
                 .palette
                 .iter()
-                .map(
-                    |entry| match BlockState::new(&entry.name, entry.properties.as_ref()) {
-                        Err(e) => Err(e),
-                        Ok(state) => Ok(state.into()),
-                    },
-                )
+                .map(|entry| match BlockState::new(&entry.name) {
+                    Err(e) => Err(e),
+                    Ok(state) => Ok(state.into()),
+                })
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(ChunkParsingError::BlockStateError)?;
 

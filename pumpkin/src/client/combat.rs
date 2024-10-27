@@ -117,7 +117,7 @@ pub(super) async fn spawn_sweep_particle(
             0.0,
             0.0,
             0,
-            VarInt(particle!("minecraft:sweep_attack")), // sweep
+            VarInt(particle!("minecraft:sweep_attack") as i32), // sweep
             &[],
         ))
         .await;
