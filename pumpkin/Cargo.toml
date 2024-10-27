@@ -37,8 +37,6 @@ rand = "0.8.5"
 
 num-bigint = "0.4"
 
-ctrlc = "3.4"
-
 # encryption
 rsa = "0.9.6"
 rsa-der = "0.3.0"
