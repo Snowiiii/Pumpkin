@@ -621,9 +621,7 @@ impl Player {
                 world
                     .set_block(
                         WorldPosition(location.0 + face.to_offset()),
-                        BlockId {
-                            data: block.default_state_id,
-                        },
+                        BlockId(block.default_state_id),
                     )
                     .await;
             }

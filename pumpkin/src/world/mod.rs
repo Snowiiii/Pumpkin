@@ -534,11 +534,8 @@ impl World {
         let chunk = self.receive_chunk(chunk_coordinate).await;
         chunk.write().await.blocks.set_block(relative, block_id);
 
-        self.broadcast_packet_all(&CBlockUpdate::new(
-            &position,
-            i32::from(block_id.data).into(),
-        ))
-        .await;
+        self.broadcast_packet_all(&CBlockUpdate::new(&position, i32::from(block_id.0).into()))
+            .await;
     }
 
     // Stream the chunks (don't collect them and then do stuff with them)
@@ -557,7 +554,7 @@ impl World {
     }
 
     pub async fn break_block(&self, position: WorldPosition) {
-        self.set_block(position, BlockId { data: 0 }).await;
+        self.set_block(position, BlockId(0)).await;
 
         self.broadcast_packet_all(&CWorldEvent::new(2001, &position, 11, false))
             .await;

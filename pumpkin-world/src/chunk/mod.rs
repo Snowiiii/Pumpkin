@@ -246,11 +246,11 @@ impl ChunkData {
                 .palette
                 .iter()
                 .map(|entry| match BlockState::new(&entry.name) {
-                    Err(e) => Err(e),
-                    Ok(state) => Ok(state.into()),
+                    // Block not found, Often the case when World has an newer or older version then block registry
+                    Err(_) => BlockState::AIR,
+                    Ok(state) => state,
                 })
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(ChunkParsingError::BlockStateError)?;
+                .collect::<Vec<_>>();
 
             let block_data = match block_states.data {
                 None => {
@@ -275,7 +275,7 @@ impl ChunkData {
             'block_loop: for block in block_data.iter() {
                 for i in 0..blocks_in_pallete {
                     let index = (block >> (i * block_bit_size)) & mask;
-                    let block = palette[index as usize];
+                    let block = &palette[index as usize];
 
                     // TODO allow indexing blocks directly so we can just use block_index and save some time?
                     // this is fine because we initalized the heightmap of `blocks`
@@ -286,7 +286,7 @@ impl ChunkData {
                             y: Height::from_absolute((block_index / CHUNK_AREA) as u16),
                             x: (block_index % 16).into(),
                         },
-                        block,
+                        BlockId(block.get_id()),
                     );
 
                     block_index += 1;

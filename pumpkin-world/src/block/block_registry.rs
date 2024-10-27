@@ -74,28 +74,24 @@ struct Shape {
 
 #[derive(Default, Copy, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(transparent)]
-pub struct BlockId {
-    pub data: u16,
-}
+pub struct BlockId(pub u16);
 
 impl BlockId {
     pub fn is_air(&self) -> bool {
-        self.data == 0 || self.data == 12959 || self.data == 12958
+        self.0 == 0 || self.0 == 12959 || self.0 == 12958
     }
 
     pub fn get_id_mojang_repr(&self) -> i32 {
-        self.data as i32
+        self.0 as i32
     }
 
     pub fn get_id(&self) -> u16 {
-        self.data
+        self.0
     }
 }
 
 impl From<BlockState> for BlockId {
     fn from(value: BlockState) -> Self {
-        Self {
-            data: value.get_id(),
-        }
+        Self(value.get_id())
     }
 }

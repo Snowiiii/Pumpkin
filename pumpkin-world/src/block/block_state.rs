@@ -11,8 +11,9 @@ impl BlockState {
     pub const AIR: BlockState = BlockState { state_id: 0 };
 
     pub fn new(registry_id: &str) -> Result<Self, BlockStateError> {
-        let block_registry =
-            get_block(registry_id).ok_or(BlockStateError::BlockIdentifierNotFound)?;
+        let block_registry = get_block(registry_id).ok_or(
+            BlockStateError::BlockIdentifierNotFound(registry_id.to_string()),
+        )?;
         Ok(Self {
             state_id: block_registry.default_state_id,
         })
@@ -29,8 +30,6 @@ impl BlockState {
 
 #[derive(Error, Debug)]
 pub enum BlockStateError {
-    #[error("The requested block identifier does not exist")]
-    BlockIdentifierNotFound,
-    #[error("The requested block state id does not exist")]
-    BlockStateIdNotFound,
+    #[error("The requested block identifier does not exist {0}")]
+    BlockIdentifierNotFound(String),
 }
