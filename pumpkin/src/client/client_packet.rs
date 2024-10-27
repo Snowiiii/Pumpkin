@@ -78,6 +78,13 @@ impl Client {
     pub async fn handle_login_start(&self, server: &Server, login_start: SLoginStart) {
         log::debug!("login start");
 
+        // Don't allow new logons when server is full.
+        // TODO: If client is an operator or otherwise suitable elevated permissions, allow client to bypass this requirement.
+        if server.get_player_count().await >= BASIC_CONFIG.max_players {
+            self.kick("The server is currently full, please try again later")
+                .await;
+        }
+
         if !Self::is_valid_player_name(&login_start.name) {
             self.kick("Invalid characters in username").await;
             return;
@@ -162,15 +169,6 @@ impl Client {
                     return;
                 }
             }
-        }
-
-        // Don't allow new logons when server is full.
-        // TODO: If client is an operator or otherwise suitable elevated permissions, allow client to bypass this requirement.
-        let player_count = server.get_player_count().await;
-        if player_count >= BASIC_CONFIG.max_players {
-            log::debug!("Player (IP '{}', username '{}') tried to log in, but the server is full ({}/{} players).", &self.address.lock().await, &profile.name, player_count, BASIC_CONFIG.max_players);
-            self.kick("The server is currently full, please try again later")
-                .await;
         }
 
         // Don't allow duplicate UUIDs
