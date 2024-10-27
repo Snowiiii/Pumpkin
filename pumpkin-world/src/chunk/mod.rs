@@ -126,16 +126,14 @@ enum ChunkStatus {
     Surface,
     #[serde(rename = "minecraft:carvers")]
     Carvers,
-    #[serde(rename = "minecraft:liquid_carvers")]
-    LiquidCarvers,
     #[serde(rename = "minecraft:features")]
     Features,
     #[serde(rename = "minecraft:initialize_light")]
+    InitLight,
+    #[serde(rename = "minecraft:light")]
     Light,
     #[serde(rename = "minecraft:spawn")]
     Spawn,
-    #[serde(rename = "minecraft:heightmaps")]
-    Heightmaps,
     #[serde(rename = "minecraft:full")]
     Full,
 }
