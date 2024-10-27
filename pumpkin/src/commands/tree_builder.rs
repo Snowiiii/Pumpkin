@@ -123,7 +123,6 @@ impl<'a> NonLeafNodeBuilder<'a> {
 }
 
 /// Matches a sting literal.
-#[expect(dead_code)] // todo: remove (so far no commands requiring this are implemented)
 pub const fn literal(string: &str) -> NonLeafNodeBuilder {
     NonLeafNodeBuilder {
         node_type: NodeType::Literal { string },

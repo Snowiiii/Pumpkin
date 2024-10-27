@@ -36,8 +36,10 @@ use tokio::{
     sync::{mpsc, RwLock},
     task::JoinHandle,
 };
+use worldborder::Worldborder;
 
 pub mod scoreboard;
+pub mod worldborder;
 
 type ChunkReceiver = (
     Vec<(Vector2<i32>, JoinHandle<()>)>,
@@ -59,6 +61,7 @@ pub struct World {
     /// A map of active players within the world, keyed by their unique token.
     pub current_players: Arc<Mutex<HashMap<uuid::Uuid, Arc<Player>>>>,
     pub scoreboard: Mutex<Scoreboard>,
+    pub worldborder: Mutex<Worldborder>,
     // TODO: entities
 }
 
@@ -69,6 +72,7 @@ impl World {
             level: Arc::new(level),
             current_players: Arc::new(Mutex::new(HashMap::new())),
             scoreboard: Mutex::new(Scoreboard::new()),
+            worldborder: Mutex::new(Worldborder::new(0.0, 0.0, 29_999_984.0, 0, 0, 0)),
         }
     }
 
@@ -304,6 +308,12 @@ impl World {
         player
             .client
             .send_packet(&CGameEvent::new(GameEvent::StartWaitingChunks, 0.0))
+            .await;
+
+        self.worldborder
+            .lock()
+            .await
+            .init_client(&player.client)
             .await;
 
         // Spawn in initial chunks
