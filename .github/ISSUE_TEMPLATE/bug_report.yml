@@ -1,7 +1,7 @@
 name: Bug report
-about: Create a bug report to help us improve
-title: ""
-labels: bug
+description: Create a bug report to help us improve
+title: "[Bug]"
+labels: ["bug"]
 assignees: Snowiiii
 body:
   - type: checkboxes
@@ -9,8 +9,9 @@ body:
     attributes:
       label: I've searched existing issues and couldn't find a duplicate.
       description: I confirm this is not a duplicate.
-    validations:
-      required: true
+      options:
+        - label: I confirm this is not a duplicate.
+          required: true
   - type: input
     id: os
     attributes:
@@ -38,7 +39,7 @@ body:
     id: to-reproduce
     attributes:
       label: To Reproduce
-      description: Steps to reproduce the behavior:
+      description: Steps to reproduce the behavior
     validations:
       required: true
   - type: textarea
