@@ -167,7 +167,7 @@ impl Server {
     pub async fn get_player_count(&self) -> usize {
         let mut count = 0;
         for world in &self.worlds {
-            count += world.current_players.lock().await.len()
+            count += world.current_players.lock().await.len();
         }
         count
     }
