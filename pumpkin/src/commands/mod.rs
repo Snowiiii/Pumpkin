@@ -8,7 +8,9 @@ use tree::ConsumedArgs;
 use crate::commands::dispatcher::CommandDispatcher;
 use crate::entity::player::Player;
 use crate::server::Server;
+
 mod arg_player;
+
 mod cmd_echest;
 mod cmd_gamemode;
 mod cmd_help;
@@ -16,6 +18,8 @@ mod cmd_kick;
 mod cmd_kill;
 mod cmd_pumpkin;
 mod cmd_stop;
+mod cmd_worldborder;
+
 pub mod dispatcher;
 mod tree;
 mod tree_builder;
@@ -71,6 +75,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_echest::init_command_tree());
     dispatcher.register(cmd_kill::init_command_tree());
     dispatcher.register(cmd_kick::init_command_tree());
+    dispatcher.register(cmd_worldborder::init_command_tree());
 
     Arc::new(dispatcher)
 }
