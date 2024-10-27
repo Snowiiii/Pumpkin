@@ -164,6 +164,15 @@ impl Server {
         None
     }
 
+    /// Get the player count sum in all worlds
+    pub async fn get_player_count(&self) -> usize {
+        let mut count = 0;
+        for world in &self.worlds {
+            count += world.current_players.lock().await.len();
+        }
+        count
+    }
+
     /// Generates a new entity id
     /// This should be global
     pub fn new_entity_id(&self) -> EntityId {
