@@ -113,6 +113,7 @@ impl Server {
                 self.server_listing.lock().await.add_player();
             }
         }
+
         (player, world.clone())
     }
 

@@ -154,7 +154,9 @@ impl Player {
     /// Removes the Player out of the current World
     #[allow(unused_variables)]
     pub async fn remove(&self) {
-        self.living_entity.entity.world.remove_player(self).await;
+        let world = &self.living_entity.entity.world;
+
+        world.remove_player(self).await;
 
         let watched = self.watched_section.load();
         let view_distance = i32::from(get_view_distance(self).await);
@@ -254,20 +256,13 @@ impl Player {
         log::debug!("Done waiting for chunk batches");
 
         // Decrement value of watched chunks
-        let chunks_to_clean = self
-            .living_entity
-            .entity
-            .world
-            .mark_chunks_as_not_watched(&watched_chunks);
+        let chunks_to_clean = world.mark_chunks_as_not_watched(&watched_chunks);
 
         // Remove chunks with no watchers from the cache
-        self.living_entity
-            .entity
-            .world
-            .clean_chunks(&chunks_to_clean);
+        world.clean_chunks(&chunks_to_clean);
 
         // Remove left over entries from all possiblily loaded chunks
-        self.living_entity.entity.world.clean_memory(&radial_chunks);
+        world.clean_memory(&radial_chunks);
 
         log::debug!(
             "Removed player id {} ({}) ({} chunks remain cached)",
