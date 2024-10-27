@@ -24,18 +24,14 @@ export default defineConfig({
       {
         text: "Developers",
         items: [
-          {
-            text: "Contributing",
-            link: "https://github.com/Snowiiii/Pumpkin/blob/master/CONTRIBUTING.md",
-          },
+          { text: "Contributing", link: "/developer/contributing", },
           { text: "Introduction", link: "/developer/introduction" },
           { text: "Networking", link: "/developer/networking" },
           { text: "Authentication", link: "/developer/authentication" },
           { text: "RCON", link: "/developer/rcon" },
           { text: "World", link: "developer/world"},
         ],
-      },
-      
+      },      
       {
         text: "Configuration",
         items: [
