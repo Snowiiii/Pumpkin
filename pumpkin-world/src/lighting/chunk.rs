@@ -485,7 +485,7 @@ impl ChunkLightData {
             };
             let direction: ChunkDirection = i.into();
             let chunk = chunk.read().await;
-            for y in 0..384 {
+            for y in -64..320 {
                 for other_coord in 0..16 {
                     let (local_chunk_coord, neighbor_chunk_coord) =
                         Self::edge_locations(y, other_coord, direction);
@@ -506,7 +506,7 @@ impl ChunkLightData {
                         15
                     };
 
-                    if neighbor_light_level - 1 > local_light_level + opacity {
+                    if neighbor_light_level > local_light_level + opacity + 1 {
                         // Queue for increase
                         self.set_light_level(
                             local_chunk_coord.clone(),

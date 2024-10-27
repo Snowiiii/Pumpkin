@@ -182,8 +182,10 @@ impl Level {
             tokio::spawn(async move {
                 let chunk = loaded_chunks
                     .get(&chunk_pos)
-                    .map(|entry| entry.value().clone())
-                    .unwrap_or_else(|| {
+                    .map(|entry| entry.value().clone());
+                let chunk = match chunk {
+                    Some(chunk) => chunk,
+                    None => {
                         let loaded_chunk = save_file
                             .and_then(|save_file| {
                                 match Self::load_chunk_from_save(chunk_reader, save_file, chunk_pos)
@@ -214,7 +216,8 @@ impl Level {
                             light_manager.initialize_lighting(chunk_pos).await;
                             loaded_chunk
                         }
-                    });
+                    }
+                };
 
                 let _ = channel
                     .send(chunk)
