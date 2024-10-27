@@ -54,8 +54,24 @@ impl LevelLightManager {
         ]
     }
 
-    pub fn initialize_lighting(&self, chunk_coordinates: Vector2<i32>) {
-        let surrounding_chunks = Self::surrounding_chunk_coordinates(&chunk_coordinates)
-            .map(|coordinates| self.loaded_chunks.get(&coordinates));
+    pub async fn initialize_lighting(&self, chunk_coordinates: Vector2<i32>) {
+        let surrounding_chunks =
+            Self::surrounding_chunk_coordinates(&chunk_coordinates).map(|coordinates| {
+                self.loaded_chunks
+                    .get(&coordinates)
+                    .map(|chunk| chunk.clone())
+            });
+
+        let chunk = self
+            .loaded_chunks
+            .get(&chunk_coordinates)
+            .expect("chunk to exist");
+        let mut chunk = chunk.write().await;
+        // TODO: This is a temporary clone to just get things working before trying to work out how
+        // to do this.
+        let blocks = chunk.blocks.clone();
+        let light = &mut chunk.light;
+        // TODO: Propagate this to the chunks listed
+        let to_propagate = light.initialize(&blocks, surrounding_chunks).await;
     }
 }

@@ -176,6 +176,7 @@ impl Level {
             let chunk_reader = self.chunk_reader.clone();
             let save_file = self.save_file.clone();
             let world_gen = self.world_gen.clone();
+            let light_manager = self.light_manager.clone();
             let chunk_pos = *at;
 
             tokio::spawn(async move {
@@ -209,6 +210,8 @@ impl Level {
                             data.value().clone()
                         } else {
                             loaded_chunks.insert(chunk_pos, loaded_chunk.clone());
+
+                            light_manager.initialize_lighting(chunk_pos).await;
                             loaded_chunk
                         }
                     });

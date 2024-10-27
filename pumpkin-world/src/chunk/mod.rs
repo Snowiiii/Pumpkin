@@ -60,6 +60,7 @@ pub struct ChunkData {
     pub position: Vector2<i32>,
     pub light: ChunkLightData,
 }
+#[derive(Clone)]
 pub struct ChunkBlocks {
     // TODO make this a Vec that doesn't store the upper layers that only contain air
 
