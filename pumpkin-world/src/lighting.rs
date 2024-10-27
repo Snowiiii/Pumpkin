@@ -4,7 +4,7 @@ use pumpkin_core::math::vector2::Vector2;
 
 use crate::{
     block::{Block, BlockCategory, BlockId},
-    chunk::ChunkBlocks,
+    chunk::{self, ChunkBlocks},
 };
 
 fn div_16_floor(y: i32) -> i32 {
@@ -100,6 +100,7 @@ const MIN_LIGHT_SUBCHUNK: i32 = -5;
 const TOTAL_LIGHT_SUBCHUNKS: usize = (MAX_LIGHT_SUBCHUNK - MIN_LIGHT_SUBCHUNK) as usize + 1;
 const MAX_BLOCK_SUBCHUNK: i32 = 19;
 const MIN_BLOCK_SUBCHUNK: i32 = -4;
+const TOTAL_BLOCK_SUBCHUNKS: usize = (MAX_BLOCK_SUBCHUNK - MIN_BLOCK_SUBCHUNK) as usize + 1;
 
 const CHUNK_AREA: usize = 16 * 16;
 const SUBCHUNK_VOLUME: usize = CHUNK_AREA * 16;
@@ -376,9 +377,22 @@ impl ChunkLightData {
     }
 
     pub fn initialize(chunk_coordinates: Vector2<i32>, blocks: &ChunkBlocks) -> Self {
-        // This should use heightmaps but they aren't always updated atm, or I don't know how they
-        // work
-        // Easy fix though
+        const BITS_PER_ENTRY: usize = 9;
+        const ENTRIES_PER_LONG: usize = 64 / BITS_PER_ENTRY;
+
+        let mut column_heights = Vec::new();
+
+        for value in blocks.heightmap.world_surface.iter() {
+            for i in 0..ENTRIES_PER_LONG {
+                // Get last 9 bits
+                let foo = (value >> (BITS_PER_ENTRY * i)) & 0b111111111;
+                column_heights.push(foo as i32);
+            }
+        }
+
+        // -65 because the column heights tracks total height, 0 should be -65 as if there is no
+        // height it should be below the height of the world
+        let highest_block_y = column_heights.iter().max().unwrap_or(&0) - 65;
 
         let mut chunk_light_data = Self {
             chunk_coordinates: ChunkCoordinates {
@@ -390,7 +404,7 @@ impl ChunkLightData {
         };
 
         let subchunks_with_blocks: Vec<_> = (MIN_LIGHT_SUBCHUNK..=MAX_LIGHT_SUBCHUNK)
-            .map(|i| !Self::subchunk_empty(blocks, i))
+            .map(|i| i * 16 <= highest_block_y && !Self::subchunk_empty(blocks, i))
             .collect();
 
         for subchunk_y in MIN_LIGHT_SUBCHUNK..=MAX_LIGHT_SUBCHUNK {
@@ -406,6 +420,9 @@ impl ChunkLightData {
         // Sky Light Columns
         for z in 0u8..16 {
             for x in 0u8..16 {
+                let column_index = (z as usize) * 16 + x as usize;
+                let column_height = column_heights[column_index];
+
                 let mut light_level = 15;
                 // Start from the top down
                 'column: for (subchunk_index, subchunk) in
@@ -423,6 +440,11 @@ impl ChunkLightData {
                             .set_level_at(SubChunkRelativeCoordinates { x, y, z }, light_level);
 
                         let current_block_y = (subchunk_y * 16) + y as i32;
+                        if current_block_y > (column_height - 64) {
+                            // Is guaranteed that the next block is air
+                            continue;
+                        }
+
                         let next_block_y = (subchunk_y * 16) + (y as i32) - 1;
 
                         let light_reduction = if next_block_y < MAX_BLOCK_SUBCHUNK * 16
