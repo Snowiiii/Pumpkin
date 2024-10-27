@@ -307,7 +307,7 @@ impl ChunkData {
         }
 
         Ok(ChunkData {
-            light: ChunkLightData::initialize(at, &blocks),
+            light: ChunkLightData::new(),
             blocks,
             position: at,
         })

@@ -9,6 +9,7 @@ use crate::{
     chunk::{
         anvil::AnvilChunkReader, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
     },
+    lighting::manager::LevelLightManager,
     world_gen::{get_world_gen, Seed, WorldGenerator},
 };
 
@@ -27,6 +28,7 @@ pub struct Level {
     chunk_watchers: Arc<DashMap<Vector2<i32>, usize>>,
     chunk_reader: Arc<dyn ChunkReader>,
     world_gen: Arc<dyn WorldGenerator>,
+    light_manager: Arc<LevelLightManager>,
 }
 
 #[derive(Clone)]
@@ -46,6 +48,8 @@ impl Level {
                 "World region folder does not exist, despite there being a root folder."
             );
 
+            let loaded_chunks = Arc::new(DashMap::new());
+
             Self {
                 world_gen,
                 save_file: Some(SaveFile {
@@ -53,20 +57,24 @@ impl Level {
                     region_folder,
                 }),
                 chunk_reader: Arc::new(AnvilChunkReader::new()),
-                loaded_chunks: Arc::new(DashMap::new()),
                 chunk_watchers: Arc::new(DashMap::new()),
+                light_manager: Arc::new(LevelLightManager::new(loaded_chunks.clone())),
+                loaded_chunks,
             }
         } else {
             log::warn!(
                 "Pumpkin currently only supports Superflat World generation. Use a vanilla ./world folder to play in a normal world."
             );
 
+            let loaded_chunks = Arc::new(DashMap::new());
+
             Self {
                 world_gen,
                 save_file: None,
                 chunk_reader: Arc::new(AnvilChunkReader::new()),
-                loaded_chunks: Arc::new(DashMap::new()),
                 chunk_watchers: Arc::new(DashMap::new()),
+                light_manager: Arc::new(LevelLightManager::new(loaded_chunks.clone())),
+                loaded_chunks,
             }
         }
     }
