@@ -8,8 +8,9 @@ pub static ITEMS: LazyLock<HashMap<String, Item>> = LazyLock::new(|| {
     serde_json::from_str(ITEMS_JSON).expect("Could not parse items.json registry.")
 });
 
+#[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
-struct Item {
+pub struct Item {
     id: u16,
     name: String,
     translation_key: String,
@@ -19,6 +20,7 @@ struct Item {
     food: Option<FoodComponent>,
 }
 
+#[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
 struct FoodComponent {
     hunger: u16,

@@ -34,11 +34,8 @@ use pumpkin_protocol::{
     server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem},
     VarInt,
 };
-use pumpkin_world::block::BlockFace;
-use pumpkin_world::{
-    block::{BlockId, BlockState},
-    global_registry,
-};
+use pumpkin_world::block::BlockId;
+use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
 
 use super::{
     combat::{self, player_attack_sound, AttackType},
@@ -616,24 +613,19 @@ impl Player {
 
         if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
             if let Some(item) = self.inventory.lock().await.held_item() {
-                let minecraft_id = global_registry::find_minecraft_id(
-                    global_registry::ITEM_REGISTRY,
-                    item.item_id,
-                )
-                .expect("All item ids are in the global registry");
-                if let Ok(block_state_id) = BlockState::new(minecraft_id, None) {
-                    let entity = &self.living_entity.entity;
-                    let world = &entity.world;
+                let block = get_block_by_item(item.item_id)
+                    .expect("No item found, TODO Better error handling");
+                let entity = &self.living_entity.entity;
+                let world = &entity.world;
 
-                    world
-                        .set_block(
-                            WorldPosition(location.0 + face.to_offset()),
-                            BlockId {
-                                data: block_state_id.get_id_mojang_repr() as u16,
-                            },
-                        )
-                        .await;
-                }
+                world
+                    .set_block(
+                        WorldPosition(location.0 + face.to_offset()),
+                        BlockId {
+                            data: block.default_state_id,
+                        },
+                    )
+                    .await;
             }
             self.client
                 .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
