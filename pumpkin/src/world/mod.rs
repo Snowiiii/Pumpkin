@@ -473,7 +473,18 @@ impl World {
     }
 
     pub async fn add_player(&self, uuid: uuid::Uuid, player: Arc<Player>) {
-        self.current_players.lock().await.insert(uuid, player);
+        self.current_players
+            .lock()
+            .await
+            .insert(uuid, player.clone());
+
+        // Handle join message
+        let msg_txt = format!("{} joined the game.", player.gameprofile.name.as_str());
+        let msg_comp = TextComponent::text(msg_txt.as_str()).color_named(NamedColor::Yellow);
+        for player in self.current_players.lock().await.values() {
+            player.send_system_message(&msg_comp).await;
+        }
+        log::info!("{}", msg_comp.to_pretty_console());
     }
 
     pub async fn remove_player(&self, player: &Player) {
