@@ -5,10 +5,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::BlockChange as i32)]
+#[client_packet("play:block_update")]
 pub struct CBlockUpdate<'a> {
     location: &'a WorldPosition,
     block_id: VarInt,

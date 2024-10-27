@@ -5,9 +5,8 @@ use serde::Serialize;
 
 use crate::{BitSet, VarInt};
 
-use super::ClientboundPlayPackets;
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::ChatMessage as i32)]
+#[client_packet("play:player_chat")]
 pub struct CPlayerChatMessage<'a> {
     #[serde(with = "uuid::serde::compact")]
     sender: uuid::Uuid,

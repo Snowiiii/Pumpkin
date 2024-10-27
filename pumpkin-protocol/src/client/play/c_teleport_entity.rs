@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::EntityTeleport as i32)]
+#[client_packet("play:teleport_entity")]
 pub struct CTeleportEntitiy {
     entity_id: VarInt,
     x: f64,

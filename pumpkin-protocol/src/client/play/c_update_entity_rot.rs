@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::EntityRotation as i32)]
+#[client_packet("play:move_entity_rot")]
 pub struct CUpdateEntityRot {
     entity_id: VarInt,
     yaw: u8,

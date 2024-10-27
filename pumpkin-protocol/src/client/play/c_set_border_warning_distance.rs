@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::WorldBorderWarningReach as i32)]
+#[client_packet("play:set_border_warning_distance")]
 pub struct CSetBorderWarningDistance {
     warning_blocks: VarInt,
 }

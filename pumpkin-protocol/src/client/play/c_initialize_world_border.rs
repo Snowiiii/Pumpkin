@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::{VarInt, VarLong};
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::InitializeWorldBorder as i32)]
+#[client_packet("play:initialize_border")]
 pub struct CInitializeWorldBorder {
     x: f64,
     z: f64,

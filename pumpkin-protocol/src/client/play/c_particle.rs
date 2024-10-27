@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::Particle as i32)]
+#[client_packet("play:level_particles")]
 pub struct CParticle<'a> {
     /// If true, particle distance increases from 256 to 65536.
     long_distance: bool,

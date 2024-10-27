@@ -1,10 +1,8 @@
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::WorldBorderCenter as i32)]
+#[client_packet("play:set_border_center")]
 pub struct CSetBorderCenter {
     x: f64,
     z: f64,

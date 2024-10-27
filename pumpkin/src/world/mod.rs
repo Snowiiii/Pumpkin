@@ -108,13 +108,13 @@ impl World {
 
     pub async fn play_sound(
         &self,
-        sound_id: u32,
+        sound_id: u16,
         category: SoundCategory,
         posistion: &Vector3<f64>,
     ) {
         let seed = thread_rng().gen::<f64>();
         self.broadcast_packet_all(&CSoundEffect::new(
-            sound_id.into(),
+            VarInt(i32::from(sound_id)),
             category,
             posistion.x,
             posistion.y,

@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarLong;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::WorldBorderLerpSize as i32)]
+#[client_packet("play:set_border_lerp_size")]
 pub struct CSetBorderLerpSize {
     old_diameter: f64,
     new_diameter: f64,

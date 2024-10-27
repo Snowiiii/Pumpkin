@@ -1,10 +1,8 @@
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::WorldBorderSize as i32)]
+#[client_packet("play:set_border_size")]
 pub struct CSetBorderSize {
     diameter: f64,
 }

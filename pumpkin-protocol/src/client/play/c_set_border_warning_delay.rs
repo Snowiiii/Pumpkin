@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::WorldBorderWarningDelay as i32)]
+#[client_packet("play:set_border_warning_delay")]
 pub struct CSetBorderWarningDelay {
     warning_time: VarInt,
 }

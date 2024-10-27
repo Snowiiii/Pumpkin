@@ -6,9 +6,7 @@ use itertools::Itertools;
 use pumpkin_macros::client_packet;
 use pumpkin_world::{chunk::ChunkData, DIRECT_PALETTE_BITS};
 
-use super::ClientboundPlayPackets;
-
-#[client_packet(ClientboundPlayPackets::ChunkData as i32)]
+#[client_packet("play:level_chunk_with_light")]
 pub struct CChunkData<'a>(pub &'a ChunkData);
 
 impl<'a> ClientPacket for CChunkData<'a> {

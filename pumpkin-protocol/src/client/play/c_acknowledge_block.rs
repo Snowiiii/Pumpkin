@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::AcknowledgeBlockChanges as i32)]
+#[client_packet("play:block_changed_ack")]
 pub struct CAcknowledgeBlockChange {
     sequence_id: VarInt,
 }
