@@ -184,7 +184,7 @@ impl CommandExecutor for WorldborderAddExecutor {
                 "Set the world border to {distance:.1} block(s) wide"
             )))
             .await;
-        border.add_diameter(world, distance, None).await;
+        border.set_diameter(world, distance, None).await;
         Ok(())
     }
 }
@@ -243,7 +243,7 @@ impl CommandExecutor for WorldborderAddTimeExecutor {
         }
 
         border
-            .add_diameter(world, distance, Some(i64::from(time) * 1000))
+            .set_diameter(world, distance, Some(i64::from(time) * 1000))
             .await;
         Ok(())
     }
