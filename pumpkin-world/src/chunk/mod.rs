@@ -11,7 +11,7 @@ use crate::{
     block::{block_state::BlockStateError, BlockId, BlockState},
     coordinates::{ChunkRelativeBlockCoordinates, Height},
     level::SaveFile,
-    lighting::ChunkLightData,
+    lighting::chunk::ChunkLightData,
     WORLD_HEIGHT,
 };
 

@@ -2,10 +2,7 @@ use std::{collections::VecDeque, time::Instant};
 
 use pumpkin_core::math::vector2::Vector2;
 
-use crate::{
-    block::{Block, BlockCategory, BlockId},
-    chunk::{self, ChunkBlocks},
-};
+use crate::{block::BlockId, chunk::ChunkBlocks};
 
 fn div_16_floor(y: i32) -> i32 {
     if y >= 0 {
