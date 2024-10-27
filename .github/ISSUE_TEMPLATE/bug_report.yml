@@ -1,0 +1,50 @@
+name: Bug report
+about: Create a bug report to help us improve
+title: ""
+labels: bug
+assignees: Snowiiii
+body:
+  - type: checkboxes
+    id: duplicate
+    attributes:
+      label: I've searched existing issues and couldn't find a duplicate.
+      description: I confirm this is not a duplicate.
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      description: What operating system are you using?
+      placeholder: "Example: macOS Big Sur"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Server Software Version/Commit
+      description: What Server Software Version/Commit are you using?
+      placeholder: "Example: 1.0.0/39b4cb3"
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: to-reproduce
+    attributes:
+      label: To Reproduce
+      description: Steps to reproduce the behavior:
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
