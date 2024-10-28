@@ -159,6 +159,14 @@ impl Default for ChunkBlocks {
 }
 
 impl ChunkBlocks {
+    pub const fn len(&self) -> usize {
+        self.blocks.len()
+    }
+
+    pub const fn subchunks_len(&self) -> usize {
+        self.blocks.len().div_ceil(SUBCHUNK_VOLUME)
+    }
+
     pub fn empty_with_heightmap(heightmap: ChunkHeightmaps) -> Self {
         Self {
             blocks: Box::new([BlockId::default(); CHUNK_VOLUME]),
