@@ -5,9 +5,9 @@ use std::{
 
 pub mod player_chunker;
 
-use crate::{
-    client::{ChunkHandleWrapper, Client},
-    entity::{player::Player, Entity},
+use crate::entity::{
+    player::{ChunkHandleWrapper, Player},
+    Entity,
 };
 use num_traits::ToPrimitive;
 use pumpkin_config::BasicConfiguration;
@@ -337,8 +337,13 @@ impl World {
         self.level.loaded_chunk_count()
     }
 
-    fn spawn_world_chunks(&self, client: Arc<Client>, chunks: &[Vector2<i32>]) {
-        if client.closed.load(std::sync::atomic::Ordering::Relaxed) {
+    #[expect(clippy::too_many_lines)]
+    fn spawn_world_chunks(&self, player: Arc<Player>, chunks: &[Vector2<i32>]) {
+        if player
+            .client
+            .closed
+            .load(std::sync::atomic::Ordering::Relaxed)
+        {
             log::info!("The connection has closed before world chunks were spawned",);
             return;
         }
@@ -349,13 +354,13 @@ impl World {
 
         let (pending, mut receiver) = self.receive_chunks(chunks);
         {
-            let mut pending_chunks = client.pending_chunks.lock();
+            let mut pending_chunks = player.pending_chunks.lock();
 
             for chunk in chunks {
                 if pending_chunks.contains_key(chunk) {
                     log::debug!(
                         "Client id {} is requesting chunk {:?} but its already pending!",
-                        client.id,
+                        player.client.id,
                         chunk
                     );
                 }
@@ -376,9 +381,9 @@ impl World {
                 };
             }
         }
-        let pending_chunks = client.pending_chunks.clone();
+        let pending_chunks = player.pending_chunks.clone();
         let level = self.level.clone();
-        let retained_client = client.clone();
+        let retained_player = player.clone();
         let batch_id = id;
 
         let handle = tokio::spawn(async move {
@@ -434,13 +439,17 @@ impl World {
                     level.mark_chunk_as_newly_watched(chunk_data.position);
                 };
 
-                if !client.closed.load(std::sync::atomic::Ordering::Relaxed) {
-                    client.send_packet(&packet).await;
+                if !player
+                    .client
+                    .closed
+                    .load(std::sync::atomic::Ordering::Relaxed)
+                {
+                    player.client.send_packet(&packet).await;
                 }
             }
 
             {
-                let mut batch = client.pending_chunk_batch.lock();
+                let mut batch = player.pending_chunk_batch.lock();
                 batch.remove(&batch_id);
             }
             #[cfg(debug_assertions)]
@@ -452,7 +461,7 @@ impl World {
         });
 
         {
-            let mut batch_handles = retained_client.pending_chunk_batch.lock();
+            let mut batch_handles = retained_player.pending_chunk_batch.lock();
             batch_handles.insert(id, handle);
         }
     }

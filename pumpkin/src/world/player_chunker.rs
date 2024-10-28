@@ -47,10 +47,10 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
     let new_cylindrical = Cylindrical::new(Vector2::new(chunk_pos.x, chunk_pos.z), view_distance);
     let loading_chunks = new_cylindrical.all_chunks_within();
 
-    world.spawn_world_chunks(player.client.clone(), &loading_chunks);
+    world.spawn_world_chunks(player, &loading_chunks);
 }
 
-pub async fn update_position(player: &Player) {
+pub async fn update_position(player: &Arc<Player>) {
     let entity = &player.living_entity.entity;
     let current_watched = player.watched_section.load();
     let new_watched = chunk_section_from_pos(&entity.block_pos.load());
@@ -93,7 +93,7 @@ pub async fn update_position(player: &Player) {
             //let inst = std::time::Instant::now();
             entity
                 .world
-                .spawn_world_chunks(player.client.clone(), &loading_chunks);
+                .spawn_world_chunks(player.clone(), &loading_chunks);
             //log::debug!("Loading chunks took {:?}", inst.elapsed());
         }
 
@@ -104,7 +104,7 @@ pub async fn update_position(player: &Player) {
             //let inst = std::time::Instant::now();
 
             let watched_chunks: Vec<_> = {
-                let mut pending_chunks = player.client.pending_chunks.lock();
+                let mut pending_chunks = player.pending_chunks.lock();
                 unloading_chunks
                     .into_iter()
                     .filter(|chunk| {

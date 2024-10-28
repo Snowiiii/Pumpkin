@@ -42,7 +42,7 @@ rsa = "0.9.6"
 rsa-der = "0.3.0"
 
 # authentication
-reqwest = { version = "0.12.8", default-features = false, features = [
+reqwest = { version = "0.12.9", default-features = false, features = [
     "http2",
     "json",
     "macos-system-configuration",

@@ -91,10 +91,7 @@ impl ChunkReader for AnvilChunkReader {
         save_file: &SaveFile,
         at: &pumpkin_core::math::vector2::Vector2<i32>,
     ) -> Result<super::ChunkData, ChunkReadingError> {
-        let region = (
-            ((at.x as f32) / 32.0).floor() as i32,
-            ((at.z as f32) / 32.0).floor() as i32,
-        );
+        let region = (at.x >> 5, at.z >> 5);
 
         let mut region_file = OpenOptions::new()
             .read(true)
@@ -160,5 +157,30 @@ impl ChunkReader for AnvilChunkReader {
             .map_err(ChunkReadingError::Compression)?;
 
         ChunkData::from_bytes(decompressed_chunk, *at).map_err(ChunkReadingError::ParsingError)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use pumpkin_core::math::vector2::Vector2;
+
+    use crate::{
+        chunk::{anvil::AnvilChunkReader, ChunkReader, ChunkReadingError},
+        level::SaveFile,
+    };
+
+    #[test]
+    fn not_existing() {
+        let region_path = PathBuf::from("not_existing");
+        let result = AnvilChunkReader::new().read_chunk(
+            &SaveFile {
+                root_folder: PathBuf::from(""),
+                region_folder: region_path,
+            },
+            &Vector2::new(0, 0),
+        );
+        assert!(matches!(result, Err(ChunkReadingError::ChunkNotExist)));
     }
 }
