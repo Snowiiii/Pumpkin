@@ -163,6 +163,10 @@ impl ChunkBlocks {
         self.blocks.len()
     }
 
+    pub const fn is_empty(&self) -> bool {
+        self.blocks.is_empty()
+    }
+
     pub const fn subchunks_len(&self) -> usize {
         self.blocks.len().div_ceil(SUBCHUNK_VOLUME)
     }
