@@ -62,7 +62,9 @@ impl<'a> ClientPacket for CChunkData<'a> {
                         data_buf.put_var_int(&VarInt(id.get_id_mojang_repr()));
                     });
                     // Data array length
-                    data_buf.put_var_int(&VarInt(chunk.len().div_ceil(64 / block_size as usize) as i32));
+                    data_buf.put_var_int(&VarInt(
+                        chunk.len().div_ceil(64 / block_size as usize) as i32
+                    ));
                     for block_clump in chunk.chunks(64 / block_size as usize) {
                         let mut out_long: i64 = 0;
                         for block in block_clump.iter().rev() {
@@ -78,7 +80,9 @@ impl<'a> ClientPacket for CChunkData<'a> {
                     // Bits per entry
                     data_buf.put_u8(DIRECT_PALETTE_BITS as u8);
                     // Data array length
-                    data_buf.put_var_int(&VarInt(chunk.len().div_ceil(64 / DIRECT_PALETTE_BITS as usize) as i32));
+                    data_buf.put_var_int(&VarInt(
+                        chunk.len().div_ceil(64 / DIRECT_PALETTE_BITS as usize) as i32,
+                    ));
                     for block_clump in chunk.chunks(64 / DIRECT_PALETTE_BITS as usize) {
                         let mut out_long: i64 = 0;
                         let mut shift = 0;
