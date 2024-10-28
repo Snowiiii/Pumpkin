@@ -117,8 +117,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
         // Empty Block Light Mask
         buf.put_bit_set(&BitSet(VarInt(1), &[0]));
 
-        let mut lighting_subchunks = Vec::new();
-
+        buf.put_var_int(&VarInt(self.0.blocks.subchunks_len() as i32));
         self.0.blocks.iter_subchunks().for_each(|chunk| {
             let mut chunk_light = [0u8; 2048];
             for (i, block) in chunk.iter().enumerate() {
@@ -130,14 +129,9 @@ impl<'a> ClientPacket for CChunkData<'a> {
                 chunk_light[index] |= mask;
             }
 
-            lighting_subchunks.push(chunk_light);
+            buf.put_var_int(&VarInt(chunk_light.len() as i32));
+            buf.put_slice(&chunk_light);
         });
-
-        buf.put_var_int(&lighting_subchunks.len().into());
-        for subchunk in lighting_subchunks {
-            buf.put_var_int(&VarInt(subchunk.len() as i32));
-            buf.put_slice(&subchunk);
-        }
 
         // Block Lighting
         buf.put_var_int(&VarInt(0));
