@@ -20,7 +20,6 @@ mod cmd_kick;
 mod cmd_kill;
 mod cmd_pumpkin;
 mod cmd_stop;
-mod cmd_time;
 mod cmd_worldborder;
 
 pub mod dispatcher;
