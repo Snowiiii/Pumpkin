@@ -1,10 +1,11 @@
-
-use std::{io, sync::Arc};
+use std::{io, sync::{Arc, LazyLock}};
 
 use egui::mutex::Mutex;
-use pumpkin::server::Server;
+use pumpkin::{commands::CommandSender, server::Server};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use tokio::{runtime, task::JoinHandle};
+
+static SERVER: LazyLock<Mutex<Option<Arc<Server>>>> = LazyLock::new(|| Mutex::new(None));
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -16,11 +17,8 @@ pub struct TemplateApp {
     started: bool,
     #[serde(skip)]
     server_handle: Option<JoinHandle<io::Result<()>>>,
-    // Example stuff:
-    label: String,
 
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
+    command: String,
 }
 
 impl Default for TemplateApp {
@@ -32,8 +30,7 @@ impl Default for TemplateApp {
                 .unwrap(),
             started: false,
             server_handle: None,
-            label: "Hello World!".to_owned(),
-            value: 2.7,
+            command: String::new()
         }
     }
 }
@@ -84,25 +81,55 @@ impl eframe::App for TemplateApp {
             ui.horizontal(|ui| {
                 if ui.add_enabled(!self.started, egui::Button::new("Start")).clicked() {
                     self.server_handle = Some(self.rt.spawn(pumpkin::server_start(|server| {
-                        // todo
+                        *SERVER.lock() = Some(server.clone())
                     })));
                     self.started = !self.started;
                 }
                 if ui.add_enabled(self.started, egui::Button::new("Stop")).clicked() {
+                    log::warn!(
+                        "{}",
+                        TextComponent::text("Stop button pressed; stopping server...")
+                            .color_named(NamedColor::Red)
+                            .to_pretty_console()
+                    );
+                    *SERVER.lock() = None;
+                    self.rt = runtime::Builder::new_multi_thread()
+                        .enable_all()
+                        .build()
+                        .unwrap();
+                    self.started = !self.started;
+                }
+
+                if self.started {
                     if let Some(handle) = &self.server_handle {
-                        log::warn!(
-                            "{}",
-                            TextComponent::text("Stop button pressed; stopping server...")
-                                .color_named(NamedColor::Red)
-                                .to_pretty_console()
-                        );
-                        handle.abort();
-                        self.started = !self.started;
+                        if handle.is_finished() {
+                            self.started = !self.started
+                        }
+                    }
+                }
+            });
+            egui_logger::logger_ui().show(ui);
+            ui.horizontal(|ui| {
+                ui.text_edit_singleline(&mut self.command);
+                if ui.button("Send").clicked() {
+                    if self.started {
+                        if !self.command.is_empty() {
+                            let cmd = self.command.clone();
+                            self.rt.spawn(async move {
+                                if let Some(server) = SERVER.lock().as_ref() {
+                                    server.command_dispatcher.handle_command(&mut CommandSender::Console, &server, &cmd).await;
+                                } else {
+                                    panic!("Command send, but server not found");
+                                }
+                            });
+                            self.command = String::new()
+                        }
+                    } else {
+                        log::warn!("[GUI Client] Server not started for sending commands")
                     }
                 }
             });
 
-            egui_logger::logger_ui().show(ui);
             powered_by_egui_and_eframe(ui);
         });
     }
