@@ -2,6 +2,7 @@ use super::super::recipe::RecipeType;
 use super::read::{
     ingredients::IngredientSlot, CraftingType, RecipeKeys, RecipeResult, RecipeTrait,
 };
+use crate::flatten_3x3;
 use itertools::Itertools;
 
 pub struct ShapedCrafting {
@@ -18,20 +19,11 @@ impl RecipeKeys {
             .map(|row| row.map(|maybe_char| maybe_char.and_then(|char| self.0.get(&char).cloned())))
     }
 }
-pub struct ShapelessCrafting {
-    ingredients: Vec<IngredientSlot>,
-    output: RecipeResult,
-}
-
 impl ShapedCrafting {
-    pub const fn new(
-        keys: RecipeKeys,
-        pattern: [[Option<char>; 3]; 3],
-        output: RecipeResult,
-    ) -> Self {
+    pub fn new(keys: RecipeKeys, pattern: [[Option<char>; 3]; 3], output: RecipeResult) -> Self {
         Self {
             keys,
-            pattern,
+            pattern: flatten_3x3(pattern),
             output,
         }
     }
@@ -51,11 +43,28 @@ impl RecipeTrait for ShapedCrafting {
     }
 }
 
+pub struct ShapelessCrafting {
+    ingredients: Vec<IngredientSlot>,
+    output: RecipeResult,
+}
+
+impl ShapelessCrafting {
+    pub(crate) fn new(ingredients: Vec<IngredientSlot>, output: RecipeResult) -> Self {
+        Self {
+            ingredients,
+            output,
+        }
+    }
+}
+
 impl RecipeTrait for ShapelessCrafting {
     fn recipe_type(&self) -> RecipeType {
         RecipeType::Crafting(CraftingType::Shapeless)
     }
 
+    // Iterating over all permutations is cheaper than resolving and iterating over all tags when trying to check if recipe
+    // is correct. Otherwise, we would have to backtrack and check for each item in the recipe input, which tags they are inside,
+    // and then sort those permutations
     fn pattern(&self) -> Vec<[[std::option::Option<IngredientSlot>; 3]; 3]> {
         self.ingredients
             .iter()

@@ -1,4 +1,6 @@
-use pumpkin_registry::{IngredientSlot, IngredientType, RecipeResult, ITEM_TAGS, RECIPES};
+use pumpkin_registry::{
+    flatten_3x3, IngredientSlot, IngredientType, RecipeResult, ITEM_TAGS, RECIPES,
+};
 use pumpkin_world::item::{get_item_protocol_id, ItemStack};
 
 fn check_ingredient_type(ingredient_type: &IngredientType, input: ItemStack) -> bool {
@@ -16,11 +18,14 @@ fn check_ingredient_type(ingredient_type: &IngredientType, input: ItemStack) -> 
 }
 
 pub fn check_if_matches_crafting(input: [[Option<ItemStack>; 3]; 3]) -> Option<ItemStack> {
+    let input = flatten_3x3(input);
     for recipe in RECIPES.iter() {
         let patterns = recipe.pattern();
         if patterns
             .iter()
-            .all(|pattern| pattern.iter().flatten().all(|slot| slot.is_none()))
+            .flatten()
+            .flatten()
+            .all(|slot| slot.is_none())
         {
             continue;
         }
