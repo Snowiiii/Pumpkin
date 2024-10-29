@@ -4,6 +4,7 @@ use client::Client;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use rcon::RCONServer;
 use server::{ticker::Ticker, Server};
+use tokio::io::{AsyncBufReadExt, BufReader};
 use std::time::Instant;
 
 pub mod client;
@@ -15,7 +16,7 @@ pub mod rcon;
 pub mod server;
 pub mod world;
 
-pub async fn server_start() -> io::Result<()> {
+pub async fn server_start(setup_console: impl FnOnce(Arc<Server>)) -> io::Result<()> {
     let default_panic = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         default_panic(info);
@@ -41,8 +42,9 @@ pub async fn server_start() -> io::Result<()> {
     log::info!("You now can connect to the server, Listening on {}", addr);
 
     if use_console {
-        //setup_console(server.clone());
+        setup_console(server.clone());
     }
+    
     if rcon.enabled {
         let server = server.clone();
         tokio::spawn(async move {

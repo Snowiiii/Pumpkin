@@ -67,7 +67,6 @@ const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> L
 #[tokio::main]
 async fn main() -> io::Result<()> {
     init_logger();
-    
     // ensure rayon is built outside of tokio scope
     rayon::ThreadPoolBuilder::new().build_global().unwrap();
 
@@ -81,7 +80,7 @@ async fn main() -> io::Result<()> {
     //     .build()
     //     .unwrap();
 
-    server_start().await
+    server_start(|server| setup_console(server)).await
 }
 
 fn handle_interrupt() {

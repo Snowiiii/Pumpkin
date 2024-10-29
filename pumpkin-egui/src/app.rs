@@ -81,7 +81,9 @@ impl eframe::App for TemplateApp {
             ui.separator();
             ui.horizontal(|ui| {
                 if ui.add_enabled(!self.started, egui::Button::new("Start")).clicked() {
-                    self.server_handle = Some(self.rt.spawn(pumpkin::server_start()));
+                    self.server_handle = Some(self.rt.spawn(pumpkin::server_start(|server| {
+                        
+                    })));
                     self.started = !self.started;
                 }
                 if ui.add_enabled(self.started, egui::Button::new("Stop")).clicked() {
@@ -99,6 +101,7 @@ impl eframe::App for TemplateApp {
             });
 
             egui_logger::logger_ui().show(ui);
+            powered_by_egui_and_eframe(ui);
         });
     }
 }
