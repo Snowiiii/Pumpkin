@@ -3,7 +3,7 @@ use crate::recipe::read::SpecialCraftingType::{
     ArmorDye, BannerDuplicate, BookCloning, Firework, RepairItem, ShieldDecoration,
     ShulkerboxColoring, SuspiciousStew, TippedArrow,
 };
-use crate::recipe::recipe_formats::ShapedCrafting;
+use crate::recipe::recipe_formats::{ShapedCrafting, ShapelessCrafting};
 use serde::de::{Error, MapAccess, Visitor};
 use serde::{de, Deserialize, Deserializer};
 use std::collections::HashMap;
@@ -406,10 +406,14 @@ impl<'de> Deserialize<'de> for Recipe {
                         let keys = keys.ok_or_else(|| de::Error::missing_field("keys"))?;
                         Ok(Recipe::from(ShapedCrafting::new(keys, rows, result)))
                     }
-                    RecipeType::Crafting(CraftingType::Shapeless) => Ok(Recipe(Box::new(Test {
-                        recipe_type,
-                        result,
-                    }))),
+                    RecipeType::Crafting(CraftingType::Shapeless) => {
+                        let ingredients =
+                            ingredients.ok_or_else(|| de::Error::missing_field("ingredients"))?;
+                        Ok(Recipe(Box::new(ShapelessCrafting::new(
+                            ingredients.0,
+                            result,
+                        ))))
+                    }
                     RecipeType::Crafting(CraftingType::Special(_)) => Ok(Recipe(Box::new(Test {
                         recipe_type,
                         result,
@@ -480,11 +484,7 @@ impl RecipeTrait for Test {
     }
 
     fn pattern(&self) -> Vec<[[Option<IngredientSlot>; 3]; 3]> {
-        vec![[
-            [const { None }; 3],
-            [const { None }; 3],
-            [const { None }; 3],
-        ]]
+        vec![[const { [const { None }; 3] }; 3]]
     }
 
     fn result(&self) -> &RecipeResult {
