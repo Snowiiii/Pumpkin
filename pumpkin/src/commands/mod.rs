@@ -19,6 +19,7 @@ mod cmd_help;
 mod cmd_kick;
 mod cmd_kill;
 mod cmd_pumpkin;
+mod cmd_say;
 mod cmd_stop;
 mod cmd_worldborder;
 
@@ -71,6 +72,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     let mut dispatcher = CommandDispatcher::default();
 
     dispatcher.register(cmd_pumpkin::init_command_tree());
+    dispatcher.register(cmd_say::init_command_tree());
     dispatcher.register(cmd_gamemode::init_command_tree());
     dispatcher.register(cmd_stop::init_command_tree());
     dispatcher.register(cmd_help::init_command_tree());
