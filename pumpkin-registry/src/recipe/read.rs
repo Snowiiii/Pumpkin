@@ -1,3 +1,4 @@
+use crate::flatten_3x3;
 use crate::recipe::read::ingredients::{IngredientSlot, Ingredients};
 use crate::recipe::read::SpecialCraftingType::{
     ArmorDye, BannerDuplicate, BookCloning, Firework, RepairItem, ShieldDecoration,
@@ -8,7 +9,6 @@ use serde::de::{Error, MapAccess, Visitor};
 use serde::{de, Deserialize, Deserializer};
 use std::collections::HashMap;
 use std::fmt::Formatter;
-use std::ops::Deref;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq)]

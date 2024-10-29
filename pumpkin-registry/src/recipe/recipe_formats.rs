@@ -23,7 +23,7 @@ impl ShapedCrafting {
     pub fn new(keys: RecipeKeys, pattern: [[Option<char>; 3]; 3], output: RecipeResult) -> Self {
         Self {
             keys,
-            pattern: flatten_3x3(pattern),
+            pattern,
             output,
         }
     }
