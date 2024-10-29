@@ -7,13 +7,12 @@ use std::{
 };
 
 use pumpkin_config::TranslationConfig;
+use pumpkin_core::text::{style::Style, TextComponent, TextContent};
 use serde_json::Value;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum TranslationError {
-    #[error("Translations not turned on")]
-    NotEnabled,
     #[error("File cannot be opened.")]
     InvalidFile,
     #[error("Failed to read file. Error: {0}")]
@@ -22,33 +21,62 @@ pub enum TranslationError {
     JsonParse,
 }
 
-pub fn translate(
-    config: TranslationConfig,
-    message: &str,
-) -> Result<HashMap<String, String>, TranslationError> {
+pub enum Translations<'a> {
+    Untranslated(TextComponent<'a>),
+    Translated(HashMap<String, TextComponent<'a>>),
+}
+
+pub fn translate<'a>(
+    config: &TranslationConfig,
+    message: &'a str,
+) -> Result<Translations<'a>, TranslationError> {
     if !config.enabled {
-        return Err(TranslationError::NotEnabled);
+        return Ok(Translations::Untranslated(TextComponent::text(message)));
     }
 
     if config.client_translations {
-        return Ok(HashMap::from([(message.to_owned(), message.to_owned())]));
+        return Ok(Translations::Untranslated(TextComponent {
+            content: TextContent::Translate {
+                translate: std::borrow::Cow::Borrowed(message),
+                with: vec![],
+            },
+
+            style: Style::default(),
+        }));
     }
 
-    if let Some(path) = config.translation_file_path {
-        let file = File::open(path).map_err(|_| TranslationError::InvalidFile)?;
-        let mut bufreader = BufReader::new(file);
+    let path = "";
+    let translations = get_translations(path, message)?;
 
-        let translations = fetch_translations(&mut bufreader, message)?;
-        let results = make_hashmap(translations);
-
-        Ok(results)
-    } else {
-        Err(TranslationError::InvalidFile)
-    }
+    Ok(Translations::Translated(translations))
 }
 
+fn get_translations<'a>(
+    path: &str,
+    message: &'a str,
+) -> Result<HashMap<String, TextComponent<'a>>, TranslationError> {
+    let translation_file = File::open(path).map_err(|_| TranslationError::InvalidFile)?;
+    let reader = BufReader::new(translation_file);
+
+    let json_results = read_translation_file(reader, message)?;
+    let hashmap_results = make_hashmap(json_results);
+    let mut text_hashmap = HashMap::new();
+
+    for (original, translation) in hashmap_results {
+        text_hashmap.insert(
+            original,
+            TextComponent {
+                content: TextContent::Text {
+                    text: std::borrow::Cow::Owned(translation),
+                },
+                style: Style::default(),
+            },
+        );
+    }
+    Ok(text_hashmap)
+}
 ///Read a huge object line by line and tricking `serde_json` into thinking they are individual objects
-fn fetch_translations(
+fn read_translation_file(
     mut reader: impl BufRead,
     message: &str,
 ) -> Result<Vec<Value>, TranslationError> {
@@ -103,7 +131,7 @@ fn make_hashmap(vec: Vec<Value>) -> HashMap<String, String> {
 mod test {
     use std::collections::HashMap;
 
-    use super::{fetch_translations, make_hashmap};
+    use super::{make_hashmap, read_translation_file};
 
     #[test]
     fn test_lang_ja_jp() {
@@ -130,7 +158,7 @@ mod test {
 
         assert_eq!(
             intended_result,
-            make_hashmap(fetch_translations(reader, "advancement.advancementNotFound").unwrap())
+            make_hashmap(read_translation_file(reader, "advancement.advancementNotFound").unwrap())
         );
     }
 
@@ -154,7 +182,7 @@ mod test {
 
         assert_eq!(
             intended_result,
-            make_hashmap(fetch_translations(reader, "advancement.advancementNotFound").unwrap())
+            make_hashmap(read_translation_file(reader, "advancement.advancementNotFound").unwrap())
         );
     }
 
@@ -174,7 +202,7 @@ mod test {
 
         assert_eq!(
             intended_result,
-            make_hashmap(fetch_translations(reader, "advancement.advancementNotFound").unwrap())
+            make_hashmap(read_translation_file(reader, "advancement.advancementNotFound").unwrap())
         );
     }
 }

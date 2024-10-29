@@ -7,7 +7,7 @@ use serde_inline_default::serde_inline_default;
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
 pub struct TranslationConfig {
-    #[serde_inline_default(false)]
+    #[serde_inline_default(true)]
     pub enabled: bool,
     #[serde_inline_default(true)]
     pub client_translations: bool,
