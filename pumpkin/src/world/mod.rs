@@ -352,7 +352,8 @@ impl World {
         let id = uuid::Uuid::new_v4();
 
         let (chunks, handles, mut receiver) = self.receive_chunks(chunks);
-        {
+
+        let ids = {
             let mut pending_chunks = player.pending_chunks.lock();
 
             for chunk in &chunks {
@@ -367,7 +368,7 @@ impl World {
 
             let ids = player.client.watch_expensive_tasks(handles);
 
-            for (chunk, task_id) in chunks.into_iter().zip(ids.into_iter()) {
+            for (chunk, task_id) in chunks.into_iter().zip(ids.iter().copied()) {
                 let entry = pending_chunks.entry(chunk);
                 match entry {
                     Entry::Occupied(mut entry) => {
@@ -380,7 +381,10 @@ impl World {
                     }
                 };
             }
-        }
+
+            ids
+        };
+
         let pending_chunks = player.pending_chunks.clone();
         let level = self.level.clone();
         let retained_player = player.clone();
@@ -452,6 +456,12 @@ impl World {
                 {
                     player.client.send_packet(&packet).await;
                 }
+            }
+
+            // Remove all canceled chunks
+            for task_id in ids {
+                player.client.stop_watching_expensive_task(&task_id);
+                log::debug!("Aborted task {} (pre-process)", task_id,);
             }
 
             {
