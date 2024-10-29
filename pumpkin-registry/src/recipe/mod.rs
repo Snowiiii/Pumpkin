@@ -1,18 +1,18 @@
 mod read;
 mod recipe_formats;
 
+pub use rayon::prelude::*;
 pub use read::{
     ingredients::IngredientSlot, ingredients::IngredientType, Recipe, RecipeResult, RecipeType,
 };
-use std::sync::LazyLock;
-
+use std::sync::{LazyLock, Mutex};
 pub fn flatten_3x3<T: Clone>(input: [[Option<T>; 3]; 3]) -> [[Option<T>; 3]; 3] {
     let mut final_output = [const { [const { None }; 3] }; 3];
 
     let mut row_alignment = 0;
     let mut column_alignment = 2;
 
-    for row in &input {
+    for (i, row) in input.iter().enumerate() {
         let mut row_values = [false; 3];
         for (i, item) in row.iter().enumerate().take(column_alignment + 1) {
             if item.is_some() {
@@ -22,7 +22,7 @@ pub fn flatten_3x3<T: Clone>(input: [[Option<T>; 3]; 3]) -> [[Option<T>; 3]; 3] 
                 }
             }
         }
-        if row_values.iter().all(|val| !val) {
+        if i == row_alignment && row_values.iter().all(|val| !val) {
             row_alignment += 1;
         }
     }
@@ -42,15 +42,18 @@ pub fn flatten_3x3<T: Clone>(input: [[Option<T>; 3]; 3]) -> [[Option<T>; 3]; 3] 
     final_output
 }
 pub static RECIPES: LazyLock<Vec<Recipe>> = LazyLock::new(|| {
-    let mut recipes = vec![];
-    for recipe in std::fs::read_dir("assets/recipes").unwrap() {
-        let r = recipe.unwrap();
-        let s = std::fs::read_to_string(r.path()).unwrap();
-        let recipe = serde_json::from_str::<Recipe>(&s).unwrap();
-        recipes.push(recipe);
-    }
+    let recipes = Mutex::new(vec![]);
+    std::fs::read_dir("assets/recipes")
+        .unwrap()
+        .par_bridge()
+        .for_each(|recipe| {
+            let r = recipe.unwrap();
+            let s = std::fs::read_to_string(r.path()).unwrap();
+            let recipe = serde_json::from_str::<Recipe>(&s).unwrap();
+            recipes.lock().unwrap().push(recipe);
+        });
 
-    recipes
+    recipes.into_inner().unwrap()
 });
 
 #[cfg(test)]
@@ -75,8 +78,21 @@ mod test {
 
     #[test]
     fn full_flatten() {
-        let input = [[None; 3], [None; 3], [None, None, Some(())]];
-        let output = [[Some(()), None, None], [None; 3], [None; 3]];
-        assert_eq!(flatten_3x3(input), output)
+        let input_1 = [[None; 3], [None; 3], [None, None, Some(())]];
+        let output_1 = [[Some(()), None, None], [None; 3], [None; 3]];
+        let input_2 = [
+            [None; 3],
+            [None, None, Some(())],
+            [None, Some(()), Some(())],
+        ];
+        let output_2 = [
+            [None, Some(()), None],
+            [Some(()), Some(()), None],
+            [None; 3],
+        ];
+        let input_3 = [[Some(()), None, None], [Some(()), None, None], [None; 3]];
+        assert_eq!(flatten_3x3(input_1), output_1);
+        assert_eq!(flatten_3x3(input_2), output_2);
+        assert_eq!(flatten_3x3(input_3), input_3);
     }
 }
