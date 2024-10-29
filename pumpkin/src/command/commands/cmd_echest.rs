@@ -1,9 +1,9 @@
 use async_trait::async_trait;
 use pumpkin_inventory::OpenContainer;
 
-use crate::commands::tree::CommandTree;
-
-use super::CommandExecutor;
+use crate::command::{
+    tree::CommandTree, tree::ConsumedArgs, CommandExecutor, CommandSender, InvalidTreeError,
+};
 
 const NAMES: [&str; 2] = ["echest", "enderchest"];
 
@@ -16,10 +16,10 @@ struct EchestExecutor {}
 impl CommandExecutor for EchestExecutor {
     async fn execute<'a>(
         &self,
-        sender: &mut super::CommandSender<'a>,
+        sender: &mut CommandSender<'a>,
         server: &crate::server::Server,
-        _args: &super::tree::ConsumedArgs<'a>,
-    ) -> Result<(), super::dispatcher::InvalidTreeError> {
+        _args: &ConsumedArgs<'a>,
+    ) -> Result<(), InvalidTreeError> {
         if let Some(player) = sender.as_player() {
             let entity_id = player.entity_id();
             player.open_container.store(Some(0));

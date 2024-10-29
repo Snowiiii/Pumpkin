@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    commands::CommandSender,
+    command::CommandSender,
     entity::player::{ChatMode, Hand, Player},
     server::Server,
     world::player_chunker,

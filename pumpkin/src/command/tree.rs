@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 
 use super::CommandExecutor;
-use crate::{commands::CommandSender, server::Server};
+use crate::{command::CommandSender, server::Server};
 use std::collections::{HashMap, VecDeque};
 
 /// see [`crate::commands::tree_builder::argument`]

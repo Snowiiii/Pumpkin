@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use crate::commands::dispatcher::InvalidTreeError;
-use crate::commands::dispatcher::InvalidTreeError::InvalidConsumptionError;
-use crate::commands::tree::{ConsumedArgs, RawArgs};
-use crate::commands::CommandSender;
+use crate::command::dispatcher::InvalidTreeError;
+use crate::command::dispatcher::InvalidTreeError::InvalidConsumptionError;
+use crate::command::tree::{ConsumedArgs, RawArgs};
+use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::tree::ArgumentConsumer;

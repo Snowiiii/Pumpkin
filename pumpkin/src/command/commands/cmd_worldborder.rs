@@ -4,15 +4,15 @@ use pumpkin_core::text::{
     TextComponent,
 };
 
-use crate::server::Server;
-
-use super::{
-    arg_position::{parse_arg_position, PositionArgumentConsumer},
-    arg_simple::SimpleArgConsumer,
-    dispatcher::InvalidTreeError,
-    tree::{CommandTree, ConsumedArgs},
-    tree_builder::{argument, literal},
-    CommandExecutor, CommandSender,
+use crate::{
+    command::{
+        arg_position::{parse_arg_position, PositionArgumentConsumer},
+        arg_simple::SimpleArgConsumer,
+        tree::{CommandTree, ConsumedArgs},
+        tree_builder::{argument, literal},
+        CommandExecutor, CommandSender, InvalidTreeError,
+    },
+    server::Server,
 };
 
 const NAMES: [&str; 1] = ["worldborder"];

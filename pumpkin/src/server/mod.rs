@@ -23,7 +23,7 @@ use tokio::sync::RwLock;
 use crate::client::EncryptionError;
 use crate::{
     client::Client,
-    commands::{default_dispatcher, dispatcher::CommandDispatcher},
+    command::{default_dispatcher, dispatcher::CommandDispatcher},
     entity::player::Player,
     world::World,
 };

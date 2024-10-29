@@ -6,21 +6,17 @@ use pumpkin_core::GameMode;
 
 use crate::TextComponent;
 
-use crate::commands::arg_player::parse_arg_player;
+use crate::command::arg_player::{parse_arg_player, PlayerArgumentConsumer};
 
-use crate::commands::dispatcher::InvalidTreeError;
-use crate::commands::dispatcher::InvalidTreeError::{
+use crate::command::dispatcher::InvalidTreeError;
+use crate::command::dispatcher::InvalidTreeError::{
     InvalidConsumptionError, InvalidRequirementError,
 };
-use crate::commands::tree::{CommandTree, ConsumedArgs, RawArgs};
-use crate::commands::tree_builder::{argument, require};
-use crate::commands::CommandSender;
-use crate::commands::CommandSender::Player;
+use crate::command::tree::{ArgumentConsumer, CommandTree, ConsumedArgs, RawArgs};
+use crate::command::tree_builder::{argument, require};
+use crate::command::CommandSender::Player;
+use crate::command::{CommandExecutor, CommandSender};
 use crate::server::Server;
-
-use super::arg_player::PlayerArgumentConsumer;
-use super::tree::ArgumentConsumer;
-use super::CommandExecutor;
 
 const NAMES: [&str; 1] = ["gamemode"];
 

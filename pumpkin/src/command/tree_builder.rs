@@ -1,5 +1,5 @@
-use crate::commands::tree::{ArgumentConsumer, CommandTree, Node, NodeType};
-use crate::commands::CommandSender;
+use crate::command::tree::{ArgumentConsumer, CommandTree, Node, NodeType};
+use crate::command::CommandSender;
 
 use super::CommandExecutor;
 

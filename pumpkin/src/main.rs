@@ -40,7 +40,7 @@ use std::time::Instant;
 // Setup some tokens to allow us to identify which event is for which socket.
 
 pub mod client;
-pub mod commands;
+pub mod command;
 pub mod entity;
 pub mod error;
 pub mod proxy;
@@ -257,7 +257,7 @@ fn setup_console(server: Arc<Server>) {
             if !out.is_empty() {
                 let dispatcher = server.command_dispatcher.clone();
                 dispatcher
-                    .handle_command(&mut commands::CommandSender::Console, &server, &out)
+                    .handle_command(&mut command::CommandSender::Console, &server, &out)
                     .await;
             }
         }

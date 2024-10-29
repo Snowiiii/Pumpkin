@@ -1,11 +1,15 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use commands::{
+    cmd_echest, cmd_gamemode, cmd_help, cmd_kick, cmd_kill, cmd_pumpkin, cmd_say, cmd_stop,
+    cmd_worldborder,
+};
 use dispatcher::InvalidTreeError;
 use pumpkin_core::text::TextComponent;
 use tree::ConsumedArgs;
 
-use crate::commands::dispatcher::CommandDispatcher;
+use crate::command::dispatcher::CommandDispatcher;
 use crate::entity::player::Player;
 use crate::server::Server;
 
@@ -13,16 +17,7 @@ mod arg_player;
 mod arg_position;
 mod arg_simple;
 
-mod cmd_echest;
-mod cmd_gamemode;
-mod cmd_help;
-mod cmd_kick;
-mod cmd_kill;
-mod cmd_pumpkin;
-mod cmd_say;
-mod cmd_stop;
-mod cmd_worldborder;
-
+mod commands;
 pub mod dispatcher;
 mod tree;
 mod tree_builder;

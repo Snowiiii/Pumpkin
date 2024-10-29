@@ -39,10 +39,10 @@ You can also can see all the information the Packets have, which we can either W
 #[derive(Serialize)]
 ```
 
-2. Next, you have set the packet using the packet macro, This uses the Packet ID from the enum order
+2. Next, you have set the packet using the client_packet macro, This uses the Packet ID automatically sets the Packet ID from the JSON packets file
 
 ```rust
-#[client_packet(ClientboundPlayPackets::Disconnect as i32)]
+#[client_packet("play:disconnect")]
 ```
 
 3. Now you can create the Struct.
@@ -85,7 +85,7 @@ impl CPlayDisconnect {
 
 ```rust
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::Disconnect as i32)]
+#[client_packet("play:disconnect")]
 pub struct CPlayDisconnect {
     reason: TextComponent,
 }

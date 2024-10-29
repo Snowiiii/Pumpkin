@@ -18,7 +18,7 @@ import java.nio.file.Paths
 
 
 class Extractor : ModInitializer {
-    val MOD_ID: String = "valence_extractor"
+    val MOD_ID: String = "pumpkin_extractor"
     val LOGGER: Logger = LoggerFactory.getLogger(MOD_ID)
 
     override fun onInitialize() {

@@ -2,12 +2,10 @@ use async_trait::async_trait;
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
 
-use crate::commands::arg_player::parse_arg_player;
-use crate::commands::tree::CommandTree;
-use crate::commands::tree_builder::argument;
-
-use super::arg_player::PlayerArgumentConsumer;
-use super::CommandExecutor;
+use crate::command::arg_player::{parse_arg_player, PlayerArgumentConsumer};
+use crate::command::tree::CommandTree;
+use crate::command::tree_builder::argument;
+use crate::command::{tree::ConsumedArgs, CommandExecutor, CommandSender, InvalidTreeError};
 
 const NAMES: [&str; 1] = ["kill"];
 const DESCRIPTION: &str = "Kills a target player.";
@@ -20,10 +18,10 @@ struct KillExecutor {}
 impl CommandExecutor for KillExecutor {
     async fn execute<'a>(
         &self,
-        sender: &mut super::CommandSender<'a>,
+        sender: &mut CommandSender<'a>,
         server: &crate::server::Server,
-        args: &super::tree::ConsumedArgs<'a>,
-    ) -> Result<(), super::dispatcher::InvalidTreeError> {
+        args: &ConsumedArgs<'a>,
+    ) -> Result<(), InvalidTreeError> {
         // TODO parse entities not only players
         let target = parse_arg_player(sender, server, ARG_TARGET, args).await?;
         target.living_entity.kill().await;

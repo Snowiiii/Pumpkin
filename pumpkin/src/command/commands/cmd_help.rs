@@ -1,15 +1,12 @@
 use async_trait::async_trait;
 use pumpkin_core::text::TextComponent;
 
-use crate::commands::dispatcher::InvalidTreeError::InvalidConsumptionError;
-use crate::commands::dispatcher::{CommandDispatcher, InvalidTreeError};
-use crate::commands::tree::{Command, CommandTree, ConsumedArgs, RawArgs};
-use crate::commands::tree_builder::argument;
-use crate::commands::CommandSender;
+use crate::command::dispatcher::InvalidTreeError::InvalidConsumptionError;
+use crate::command::dispatcher::{CommandDispatcher, InvalidTreeError};
+use crate::command::tree::{ArgumentConsumer, Command, CommandTree, ConsumedArgs, RawArgs};
+use crate::command::tree_builder::argument;
+use crate::command::{CommandExecutor, CommandSender};
 use crate::server::Server;
-
-use super::tree::ArgumentConsumer;
-use super::CommandExecutor;
 
 const NAMES: [&str; 3] = ["help", "h", "?"];
 

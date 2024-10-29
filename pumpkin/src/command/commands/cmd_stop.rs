@@ -2,10 +2,9 @@ use async_trait::async_trait;
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
 
-use crate::commands::tree::CommandTree;
-use crate::commands::tree_builder::require;
-
-use super::CommandExecutor;
+use crate::command::tree::CommandTree;
+use crate::command::tree_builder::require;
+use crate::command::{tree::ConsumedArgs, CommandExecutor, CommandSender, InvalidTreeError};
 
 const NAMES: [&str; 1] = ["stop"];
 
@@ -17,10 +16,10 @@ struct StopExecutor {}
 impl CommandExecutor for StopExecutor {
     async fn execute<'a>(
         &self,
-        sender: &mut super::CommandSender<'a>,
+        sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
-        _args: &super::tree::ConsumedArgs<'a>,
-    ) -> Result<(), super::dispatcher::InvalidTreeError> {
+        _args: &ConsumedArgs<'a>,
+    ) -> Result<(), InvalidTreeError> {
         sender
             .send_message(TextComponent::text("Stopping Server").color_named(NamedColor::Red))
             .await;

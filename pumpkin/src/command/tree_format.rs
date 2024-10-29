@@ -1,4 +1,4 @@
-use crate::commands::tree::{CommandTree, Node, NodeType};
+use crate::command::tree::{CommandTree, Node, NodeType};
 use std::collections::VecDeque;
 use std::fmt::{Display, Formatter, Write};
 

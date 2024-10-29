@@ -2,9 +2,12 @@ use async_trait::async_trait;
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_protocol::CURRENT_MC_PROTOCOL;
 
-use crate::{commands::tree::CommandTree, server::CURRENT_MC_VERSION};
-
-use super::CommandExecutor;
+use crate::{
+    command::{
+        tree::CommandTree, tree::ConsumedArgs, CommandExecutor, CommandSender, InvalidTreeError,
+    },
+    server::CURRENT_MC_VERSION,
+};
 
 const NAMES: [&str; 1] = ["pumpkin"];
 
@@ -16,10 +19,10 @@ struct PumpkinExecutor {}
 impl CommandExecutor for PumpkinExecutor {
     async fn execute<'a>(
         &self,
-        sender: &mut super::CommandSender<'a>,
+        sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
-        _args: &super::tree::ConsumedArgs<'a>,
-    ) -> Result<(), super::dispatcher::InvalidTreeError> {
+        _args: &ConsumedArgs<'a>,
+    ) -> Result<(), InvalidTreeError> {
         let version = env!("CARGO_PKG_VERSION");
         let description = env!("CARGO_PKG_DESCRIPTION");
 

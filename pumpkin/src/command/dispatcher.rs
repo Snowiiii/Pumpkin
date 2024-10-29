@@ -1,10 +1,10 @@
 use pumpkin_core::text::TextComponent;
 
-use crate::commands::dispatcher::InvalidTreeError::{
+use crate::command::dispatcher::InvalidTreeError::{
     InvalidConsumptionError, InvalidRequirementError,
 };
-use crate::commands::tree::{Command, CommandTree, ConsumedArgs, NodeType, RawArgs};
-use crate::commands::CommandSender;
+use crate::command::tree::{Command, CommandTree, ConsumedArgs, NodeType, RawArgs};
+use crate::command::CommandSender;
 use crate::server::Server;
 use std::collections::HashMap;
 

@@ -1,12 +1,13 @@
-use super::{
-    arg_simple::SimpleArgConsumer,
-    tree::CommandTree,
-    tree_builder::{argument, require},
-    CommandExecutor, CommandSender,
-};
 use async_trait::async_trait;
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::client::play::CSystemChatMessage;
+
+use crate::command::{
+    arg_simple::SimpleArgConsumer,
+    tree::{CommandTree, ConsumedArgs},
+    tree_builder::{argument, require},
+    CommandExecutor, CommandSender, InvalidTreeError,
+};
 
 const NAMES: [&str; 1] = ["say"];
 
@@ -20,10 +21,10 @@ struct SayExecutor {}
 impl CommandExecutor for SayExecutor {
     async fn execute<'a>(
         &self,
-        sender: &mut super::CommandSender<'a>,
+        sender: &mut CommandSender<'a>,
         server: &crate::server::Server,
-        args: &super::tree::ConsumedArgs<'a>,
-    ) -> Result<(), super::dispatcher::InvalidTreeError> {
+        args: &ConsumedArgs<'a>,
+    ) -> Result<(), InvalidTreeError> {
         let sender = match sender {
             CommandSender::Console => "Console",
             CommandSender::Rcon(_) => "Rcon",
