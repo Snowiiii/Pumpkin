@@ -78,7 +78,7 @@ impl Player {
         pos.clamp(-2.0E7, 2.0E7)
     }
 
-    pub async fn handle_position(&self, position: SPlayerPosition) {
+    pub async fn handle_position(self: &Arc<Self>, position: SPlayerPosition) {
         if position.x.is_nan() || position.feet_y.is_nan() || position.z.is_nan() {
             self.kick(TextComponent::text("Invalid movement")).await;
             return;
@@ -133,7 +133,10 @@ impl Player {
         player_chunker::update_position(self).await;
     }
 
-    pub async fn handle_position_rotation(&self, position_rotation: SPlayerPositionRotation) {
+    pub async fn handle_position_rotation(
+        self: &Arc<Self>,
+        position_rotation: SPlayerPositionRotation,
+    ) {
         if position_rotation.x.is_nan()
             || position_rotation.feet_y.is_nan()
             || position_rotation.z.is_nan()

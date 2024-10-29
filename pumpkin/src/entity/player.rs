@@ -1,4 +1,5 @@
 use std::{
+    collections::{HashMap, VecDeque},
     sync::{
         atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU32, AtomicU8},
         Arc,
@@ -31,20 +32,57 @@ use pumpkin_protocol::{
     },
     RawPacket, ServerPacket, VarInt,
 };
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Notify};
+use tokio::task::JoinHandle;
 
 use pumpkin_protocol::server::play::SKeepAlive;
 use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
 
 use super::Entity;
 use crate::{
-    client::{authentication::GameProfile, ChunkHandleWrapper, Client, PlayerConfig},
+    client::{authentication::GameProfile, Client, PlayerConfig},
     server::Server,
     world::World,
 };
 use crate::{error::PumpkinError, world::player_chunker::get_view_distance};
 
 use super::living::LivingEntity;
+
+pub struct ChunkHandleWrapper {
+    handle: Option<JoinHandle<()>>,
+    aborted: bool,
+}
+
+impl ChunkHandleWrapper {
+    #[must_use]
+    pub fn new(handle: JoinHandle<()>) -> Self {
+        Self {
+            handle: Some(handle),
+            aborted: false,
+        }
+    }
+
+    pub fn abort(&mut self) {
+        self.aborted = true;
+        if let Some(handle) = &self.handle {
+            handle.abort();
+        } else {
+            log::error!("Trying to abort without a handle!");
+        }
+    }
+
+    pub fn take_handle(&mut self) -> JoinHandle<()> {
+        self.handle.take().unwrap()
+    }
+
+    #[must_use]
+    pub fn aborted(&self) -> bool {
+        self.aborted
+    }
+}
+
+pub type PlayerPendingChunks =
+    Arc<parking_lot::Mutex<HashMap<Vector2<i32>, VecDeque<ChunkHandleWrapper>>>>;
 
 /// Represents a Minecraft player entity.
 ///
@@ -99,6 +137,18 @@ pub struct Player {
     pub last_keep_alive_time: AtomicCell<Instant>,
     /// Amount of ticks since last attack
     pub last_attacked_ticks: AtomicU32,
+
+    //TODO: Is there a way to consolidate these two?
+    //Need to lookup by chunk, but also would be need to contain all the stuff
+    //In a PendingBatch struct. Is there a cheap way to map multiple keys to a single element?
+    //
+    /// Individual chunk tasks that this client is waiting for
+    pub pending_chunks: PlayerPendingChunks,
+    /// Chunk batches that this client is waiting for
+    pub pending_chunk_batch: parking_lot::Mutex<HashMap<uuid::Uuid, JoinHandle<()>>>,
+
+    /// Tell tasks to stop if we are closing
+    cancel_tasks: Notify,
 }
 
 impl Player {
@@ -148,6 +198,9 @@ impl Player {
             keep_alive_id: AtomicI64::new(0),
             last_keep_alive_time: AtomicCell::new(std::time::Instant::now()),
             last_attacked_ticks: AtomicU32::new(0),
+            pending_chunks: Arc::new(parking_lot::Mutex::new(HashMap::new())),
+            pending_chunk_batch: parking_lot::Mutex::new(HashMap::new()),
+            cancel_tasks: Notify::new(),
         }
     }
 
@@ -155,6 +208,10 @@ impl Player {
     #[allow(unused_variables)]
     pub async fn remove(&self) {
         let world = &self.living_entity.entity.world;
+        // Abort pending chunks here too because we might clean up before chunk tasks are done
+        self.abort_chunks("closed");
+
+        self.cancel_tasks.notify_waiters();
 
         world.remove_player(self).await;
 
@@ -177,7 +234,7 @@ impl Player {
         );
 
         let (watched_chunks, to_await) = {
-            let mut pending_chunks = self.client.pending_chunks.lock();
+            let mut pending_chunks = self.pending_chunks.lock();
 
             // Don't try to clean chunks that dont exist yet
             // If they are still pending, we never sent the client the chunk,
@@ -230,7 +287,7 @@ impl Player {
         // Allow the batch jobs to properly cull stragglers before we do our clean up
         log::debug!("Collecting chunk batches...");
         let batches = {
-            let mut chunk_batches = self.client.pending_chunk_batch.lock();
+            let mut chunk_batches = self.pending_chunk_batch.lock();
             let keys = chunk_batches.keys().copied().collect_vec();
             let handles = keys
                 .iter()
@@ -272,6 +329,10 @@ impl Player {
         );
 
         //self.living_entity.entity.world.level.list_cached();
+    }
+
+    pub async fn await_cancel(&self) {
+        self.cancel_tasks.notified().await;
     }
 
     pub async fn tick(&self) {
@@ -469,6 +530,18 @@ impl Player {
             .send_packet(&CSystemChatMessage::new(text, false))
             .await;
     }
+
+    pub fn abort_chunks(&self, reason: &str) {
+        let mut pending_chunks = self.pending_chunks.lock();
+        pending_chunks.iter_mut().for_each(|(chunk, handles)| {
+            handles.iter_mut().enumerate().for_each(|(count, handle)| {
+                if !handle.aborted() {
+                    log::debug!("Aborting chunk {:?} ({}) ({})", chunk, count, reason);
+                    handle.abort();
+                }
+            });
+        });
+    }
 }
 
 impl Player {
@@ -478,7 +551,7 @@ impl Player {
             #[cfg(debug_assertions)]
             let inst = std::time::Instant::now();
             tokio::select! {
-                () = self.client.await_cancel() => {
+                () = self.await_cancel() => {
                     log::debug!("Canceling player packet processing");
                     return;
                 },
