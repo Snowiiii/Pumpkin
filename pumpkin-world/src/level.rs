@@ -37,8 +37,7 @@ pub struct Level {
 
 #[derive(Clone)]
 pub struct SaveFile {
-    #[expect(dead_code)]
-    root_folder: PathBuf,
+    pub root_folder: PathBuf,
     pub region_folder: PathBuf,
 }
 
@@ -63,10 +62,6 @@ impl Level {
                 chunk_watchers: Arc::new(DashMap::new()),
             }
         } else {
-            log::warn!(
-                "Pumpkin currently only supports Superflat World generation. Use a vanilla ./world folder to play in a normal world."
-            );
-
             Self {
                 world_gen,
                 save_file: None,

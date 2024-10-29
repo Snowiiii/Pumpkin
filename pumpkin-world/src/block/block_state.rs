@@ -1,5 +1,3 @@
-use thiserror::Error;
-
 use super::block_registry::get_block;
 
 #[derive(Clone)]
@@ -10,26 +8,32 @@ pub struct BlockState {
 impl BlockState {
     pub const AIR: BlockState = BlockState { state_id: 0 };
 
-    pub fn new(registry_id: &str) -> Result<Self, BlockStateError> {
-        let block_registry = get_block(registry_id).ok_or(
-            BlockStateError::BlockIdentifierNotFound(registry_id.to_string()),
-        )?;
-        Ok(Self {
-            state_id: block_registry.default_state_id,
+    /// Get a Block from the Vanilla Block registry at Runtime
+    pub fn new(registry_id: &str) -> Option<Self> {
+        let block = get_block(registry_id);
+        block.map(|block| Self {
+            state_id: block.default_state_id,
         })
     }
 
     pub fn get_id(&self) -> u16 {
         self.state_id
     }
-
-    pub fn get_id_mojang_repr(&self) -> i32 {
-        self.state_id as i32
-    }
 }
 
-#[derive(Error, Debug)]
-pub enum BlockStateError {
-    #[error("The requested block identifier does not exist {0}")]
-    BlockIdentifierNotFound(String),
+#[cfg(test)]
+mod tests {
+    use super::BlockState;
+
+    #[test]
+    fn not_existing() {
+        let result = BlockState::new("this_block_does_not_exist");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn does_exist() {
+        let result = BlockState::new("minecraft:dirt");
+        assert!(result.is_some());
+    }
 }

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    block::{block_state::BlockStateError, BlockId, BlockState},
+    block::{BlockId, BlockState},
     coordinates::{ChunkRelativeBlockCoordinates, Height},
     level::SaveFile,
     WORLD_HEIGHT,
@@ -235,7 +235,8 @@ impl Index<ChunkRelativeBlockCoordinates> for ChunkBlocks {
 
 impl ChunkData {
     pub fn from_bytes(chunk_data: Vec<u8>, at: Vector2<i32>) -> Result<Self, ChunkParsingError> {
-        if fastnbt::from_bytes::<ChunkStatus>(&chunk_data).expect("Failed reading chunk status.")
+        if fastnbt::from_bytes::<ChunkStatus>(&chunk_data)
+            .map_err(|_| ChunkParsingError::FailedReadStatus)?
             != ChunkStatus::Full
         {
             return Err(ChunkParsingError::ChunkNotGenerated);
@@ -259,8 +260,8 @@ impl ChunkData {
                 .iter()
                 .map(|entry| match BlockState::new(&entry.name) {
                     // Block not found, Often the case when World has an newer or older version then block registry
-                    Err(_) => BlockState::AIR,
-                    Ok(state) => state,
+                    None => BlockState::AIR,
+                    Some(state) => state,
                 })
                 .collect::<Vec<_>>();
 
@@ -321,8 +322,8 @@ impl ChunkData {
 
 #[derive(Error, Debug)]
 pub enum ChunkParsingError {
-    #[error("BlockState error: {0}")]
-    BlockStateError(BlockStateError),
+    #[error("Failed reading chunk status")]
+    FailedReadStatus,
     #[error("The chunk isn't generated yet")]
     ChunkNotGenerated,
     #[error("Error deserializing chunk: {0}")]

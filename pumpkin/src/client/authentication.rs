@@ -141,7 +141,7 @@ pub enum AuthError {
     DisallowedAction,
     #[error("Failed to parse JSON into Game Profile")]
     FailedParse,
-    #[error("Unknown Status Code")]
+    #[error("Unknown Status Code {0}")]
     UnknownStatusCode(StatusCode),
 }
 
