@@ -11,22 +11,6 @@ body:
       options:
         - label: I confirm this is not a duplicate.
           required: true
-  - type: input
-    id: os
-    attributes:
-      label: Operating System
-      description: What operating system are you using?
-      placeholder: "Example: macOS Big Sur"
-    validations:
-      required: true
-  - type: input
-    id: version
-    attributes:
-      label: Server Software Version/Commit
-      description: What Server Software Version/Commit are you using?
-      placeholder: "Example: 1.0.0/39b4cb3"
-    validations:
-      required: true
   - type: textarea
     id: problem
     attributes:
