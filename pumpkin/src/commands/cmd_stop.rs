@@ -24,7 +24,7 @@ impl CommandExecutor for StopExecutor {
         sender
             .send_message(TextComponent::text("Stopping Server").color_named(NamedColor::Red))
             .await;
-        
+
         // TODO: Gracefully stop
         std::process::exit(0)
     }
