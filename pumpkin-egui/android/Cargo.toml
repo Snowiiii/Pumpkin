@@ -1,0 +1,27 @@
+[package]
+name = "eframe_template_android"
+version = "0.1.0"
+edition = "2021"
+include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
+rust-version = "1.76"
+
+[dependencies]
+eframe = { version = "0.28", default-features = false, features = [
+    "accesskit",     # Make egui compatible with screen readers. NOTE: adds a lot of dependencies.
+    "default_fonts", # Embed the default egui fonts.
+    "glow",          # Use the glow rendering backend. Alternative: "wgpu".
+    "persistence",   # Enable restoring app state when restarting the app.
+] }
+android_logger = "0.14"
+jni = "*"
+egui-winit = "0.28"
+ndk-context = "*"
+thiserror = "1.0.40"
+android-activity = { version = "0.5", features = ["game-activity"] }
+eframe_template = { path = "../" }
+log = "0.4"
+
+
+[lib]
+name = "eframe_template_android"
+crate_type = ["cdylib"]

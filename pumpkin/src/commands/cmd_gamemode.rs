@@ -2,9 +2,8 @@ use std::str::FromStr;
 
 use async_trait::async_trait;
 use num_traits::FromPrimitive;
+use pumpkin_core::text::TextComponent;
 use pumpkin_core::GameMode;
-
-use crate::TextComponent;
 
 use crate::commands::arg_player::parse_arg_player;
 
