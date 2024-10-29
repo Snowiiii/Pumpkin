@@ -32,9 +32,7 @@ impl CommandExecutor for SayExecutor {
 
         server
             .broadcast_packet_all(&CSystemChatMessage::new(
-                &TextComponent::text(
-                    &("[".to_string() + sender + "] " + args.get("message").unwrap()),
-                ),
+                &TextComponent::text(&format!("[{}] {}", sender, args.get("message").unwrap())),
                 false,
             ))
             .await;
