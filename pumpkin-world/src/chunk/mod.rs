@@ -1,5 +1,4 @@
 use std::cmp::max;
-use std::collections::HashMap;
 use std::ops::Index;
 
 use fastnbt::LongArray;
@@ -10,7 +9,7 @@ use thiserror::Error;
 use crate::{
     block::{BlockId, BlockState},
     coordinates::{ChunkRelativeBlockCoordinates, Height},
-    level::SaveFile,
+    level::LevelFolder,
     WORLD_HEIGHT,
 };
 
@@ -23,7 +22,7 @@ const CHUNK_VOLUME: usize = CHUNK_AREA * WORLD_HEIGHT;
 pub trait ChunkReader: Sync + Send {
     fn read_chunk(
         &self,
-        save_file: &SaveFile,
+        level_folder: &LevelFolder,
         at: &Vector2<i32>,
     ) -> Result<ChunkData, ChunkReadingError>;
 }
@@ -32,8 +31,8 @@ pub trait ChunkWriter: Send + Sync {
     fn write_chunk(
         &self,
         chunk: &ChunkData,
-        save_file: &SaveFile,
-        at: Vector2<i32>,
+        level_folder: &LevelFolder,
+        at: &Vector2<i32>,
     ) -> Result<(), ChunkWritingError>;
 }
 
@@ -92,7 +91,6 @@ pub struct ChunkBlocks {
 #[serde(rename_all = "PascalCase")]
 struct PaletteEntry {
     name: String,
-    _properties: Option<HashMap<String, String>>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
