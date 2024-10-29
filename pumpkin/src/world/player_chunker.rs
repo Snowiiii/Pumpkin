@@ -104,22 +104,25 @@ pub async fn update_position(player: &Arc<Player>) {
             //let inst = std::time::Instant::now();
 
             let watched_chunks: Vec<_> = {
-                let mut pending_chunks = player.pending_chunks.lock();
+                let pending_chunks = player.pending_chunks.lock();
                 unloading_chunks
                     .into_iter()
                     .filter(|chunk| {
-                        if let Some(handles) = pending_chunks.get_mut(chunk) {
-                            if let Some((count, handle)) = handles
-                                .iter_mut()
+                        if let Some(handles) = pending_chunks.get(chunk) {
+                            if let Some((_count, task_id)) = handles
+                                .iter()
                                 .rev()
                                 .enumerate()
-                                .find(|(_, handle)| !handle.aborted())
+                                .find(|(_, id)| !player.client.is_expensive_task_cancelled(id))
                             {
-                                log::debug!("Aborting chunk {:?} ({}) (unload)", chunk, count);
+                                //log::debug!("Aborting chunk {:?} ({}) (unload)", chunk, count);
+
                                 // We want to abort the last queued chunk, that we if a client still
                                 // has a pending request for this chunk, we dont need to do the work
                                 // twice
-                                handle.abort();
+                                player
+                                    .client
+                                    .cancel_expensive_task(task_id, "unloaded chunk");
                             } else {
                                 log::warn!(
                                     "Aborting chunk {:?} but all were already aborted!",

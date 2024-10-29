@@ -1,5 +1,5 @@
 use std::{
-    collections::VecDeque,
+    collections::{HashMap, VecDeque},
     net::SocketAddr,
     sync::{
         atomic::{AtomicBool, AtomicI32},
@@ -36,8 +36,11 @@ use pumpkin_protocol::{
     },
     ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
 };
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Notify};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    task::JoinHandle,
+};
 
 use thiserror::Error;
 
@@ -89,6 +92,132 @@ impl Default for PlayerConfig {
     }
 }
 
+pub struct HandleWrapper {
+    handle: Option<JoinHandle<()>>,
+    aborted: bool,
+}
+
+impl HandleWrapper {
+    #[must_use]
+    pub fn new(handle: JoinHandle<()>) -> Self {
+        Self {
+            handle: Some(handle),
+            aborted: false,
+        }
+    }
+
+    pub fn abort(&mut self) {
+        self.aborted = true;
+        if let Some(handle) = &self.handle {
+            handle.abort();
+        } else {
+            log::error!("Trying to abort without a handle!");
+        }
+    }
+
+    pub fn take_handle(&mut self) -> JoinHandle<()> {
+        self.handle.take().unwrap()
+    }
+
+    #[must_use]
+    pub fn aborted(&self) -> bool {
+        self.aborted
+    }
+}
+
+pub type TaskId = usize;
+
+pub struct ExpensiveTaskWatcher {
+    tasks: HashMap<TaskId, HandleWrapper>,
+    // usize is the greatest we can realistically index anything by so this should be fine
+    unique_index: TaskId,
+}
+
+impl ExpensiveTaskWatcher {
+    fn new() -> Self {
+        Self {
+            tasks: HashMap::new(),
+            unique_index: 0,
+        }
+    }
+
+    /// Returns the task id of the handle being watched
+    pub fn add_handle(&mut self, handle: JoinHandle<()>) -> TaskId {
+        let new_index = self.unique_index;
+
+        // Ensure our next key isn't already in use
+        for added in 1..usize::MAX {
+            let next_index = self.unique_index.wrapping_add(added);
+
+            if next_index == new_index {
+                break;
+            }
+
+            if !self.tasks.contains_key(&next_index) {
+                self.unique_index = next_index;
+                break;
+            }
+        }
+
+        if self.unique_index == new_index {
+            // Not a death sentence, just cant await / cancel some tasks
+            log::error!("Used all indices in the expensive task watcher!");
+        }
+
+        let wrapped_handle = HandleWrapper::new(handle);
+        self.tasks.insert(new_index, wrapped_handle);
+        new_index
+    }
+
+    /// If the id exists, remove the task without canceling it and return the wrapper if it exists
+    pub fn remove_task(&mut self, id: &TaskId) -> Option<HandleWrapper> {
+        if let Some(wrapper) = self.tasks.remove(id) {
+            return Some(wrapper);
+        }
+        None
+    }
+
+    /// If the id exists, return if the task was aborted, otherwise return false
+    #[must_use]
+    pub fn is_aborted(&self, id: &TaskId) -> bool {
+        if let Some(wrapper) = self.tasks.get(id) {
+            return wrapper.aborted();
+        }
+        false
+    }
+
+    /// If the id exists, cancel the task and return if the operation was successful
+    pub fn cancel_task(&mut self, id: &TaskId, reason: &str) -> bool {
+        if let Some(wrapper) = self.tasks.get_mut(id) {
+            if !wrapper.aborted() {
+                log::debug!("Canceling task {}: {}", id, reason);
+                wrapper.abort();
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Cancel all tasks currently being watched
+    pub fn cancel_all_tasks(&mut self, reason: &str) {
+        self.tasks.iter_mut().for_each(|(id, task)| {
+            if !task.aborted() {
+                log::debug!("Canceling task {}: {}", id, reason);
+                task.abort();
+            }
+        });
+    }
+
+    /// Return all handles currently being watched. ``Self::cancel_all_tasks`` should not be called after
+    /// this
+    pub fn dump_all_tasks(&mut self) -> Vec<JoinHandle<()>> {
+        self.tasks
+            .values_mut()
+            .map(HandleWrapper::take_handle)
+            .collect()
+    }
+}
+
 /// Everything which makes a Connection with our Server is a `Client`.
 /// Client will become Players when they reach the `Play` state
 pub struct Client {
@@ -124,6 +253,11 @@ pub struct Client {
     pub client_packets_queue: Arc<Mutex<VecDeque<RawPacket>>>,
     /// Indicates whether the client should be converted into a player.
     pub make_player: AtomicBool,
+
+    /// Tell tasks to stop if we are closing
+    cancel_tasks: Notify,
+    /// Tasks that make sense to cancel if a connection closes/will close
+    expensive_tasks: parking_lot::RwLock<ExpensiveTaskWatcher>,
 }
 
 impl Client {
@@ -147,7 +281,59 @@ impl Client {
             closed: AtomicBool::new(false),
             client_packets_queue: Arc::new(Mutex::new(VecDeque::new())),
             make_player: AtomicBool::new(false),
+            cancel_tasks: Notify::new(),
+            expensive_tasks: parking_lot::RwLock::new(ExpensiveTaskWatcher::new()),
         }
+    }
+
+    pub fn watch_expensive_tasks(&self, tasks: Vec<JoinHandle<()>>) -> Vec<TaskId> {
+        let mut expensive_tasks = self.expensive_tasks.write();
+        tasks
+            .into_iter()
+            .map(|task| expensive_tasks.add_handle(task))
+            .collect()
+    }
+
+    pub fn cancel_expensive_task(&self, id: &TaskId, reason: &str) -> bool {
+        let mut expensive_tasks = self.expensive_tasks.write();
+        expensive_tasks.cancel_task(id, reason)
+    }
+
+    pub fn is_expensive_task_cancelled(&self, id: &TaskId) -> bool {
+        let expensive_tasks = self.expensive_tasks.read();
+        expensive_tasks.is_aborted(id)
+    }
+
+    pub fn watch_expensive_task(&self, task: JoinHandle<()>) -> TaskId {
+        let mut expensive_tasks = self.expensive_tasks.write();
+        expensive_tasks.add_handle(task)
+    }
+
+    pub fn stop_watching_expensive_task(&self, id: &TaskId) -> Option<HandleWrapper> {
+        let mut expensive_tasks = self.expensive_tasks.write();
+        expensive_tasks.remove_task(id)
+    }
+
+    pub fn cancel_expensive_tasks(&self, reason: &str) {
+        let mut expensive_tasks = self.expensive_tasks.write();
+        expensive_tasks.cancel_all_tasks(reason);
+    }
+
+    pub async fn await_expensive_tasks(&self, reason: &str) {
+        let handles = {
+            let mut expensive_tasks = self.expensive_tasks.write();
+            expensive_tasks.dump_all_tasks()
+        };
+
+        log::debug!("Awaiting all watched tasks: {}", reason);
+        for handle in handles {
+            let _ = handle.await;
+        }
+        log::debug!("Done awaiting all watched tasks: {}", reason);
+    }
+
+    pub async fn await_cancel_notify(&self) {
+        self.cancel_tasks.notified().await;
     }
 
     /// Adds a Incoming packet to the queue
@@ -252,15 +438,24 @@ impl Client {
                 log::debug!("Canceling client packet processing (pre)");
                 return;
             }
-            if let Err(error) = self.handle_packet(server, &mut packet).await {
-                let text = format!("Error while reading incoming packet {error}");
-                log::error!(
-                    "Failed to read incoming packet with id {}: {}",
-                    i32::from(packet.id),
-                    error
-                );
-                self.kick(&text).await;
-            };
+
+            tokio::select! {
+                () = self.cancel_tasks.notified() => {
+                    log::debug!("Canceling client packet processing (interrupt)");
+                    return;
+                },
+                packet_result = self.handle_packet(server, &mut packet) => {
+                    if let Err(error) = packet_result {
+                        let text = format!("Error while reading incoming packet {error}");
+                        log::error!(
+                            "Failed to read incoming packet with id {}: {}",
+                            i32::from(packet.id),
+                            error
+                        );
+                        self.kick(&text).await;
+                    };
+                }
+            }
         }
     }
 
@@ -495,6 +690,13 @@ impl Client {
     pub fn close(&self) {
         self.closed
             .store(true, std::sync::atomic::Ordering::Relaxed);
+
+        // This only truely stops handling packets after we mark closed to be true
+        self.cancel_tasks.notify_waiters();
+        // Cancel tasks ASAP, Clean up any work we picked up between the caller and now (if not
+        // called directly)
+        self.cancel_expensive_tasks("Closing client");
+
         log::debug!("Closed connection for {}", self.id);
     }
 }

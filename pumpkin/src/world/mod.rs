@@ -5,10 +5,7 @@ use std::{
 
 pub mod player_chunker;
 
-use crate::entity::{
-    player::{ChunkHandleWrapper, Player},
-    Entity,
-};
+use crate::entity::{player::Player, Entity};
 use num_traits::ToPrimitive;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
@@ -43,7 +40,8 @@ pub mod scoreboard;
 pub mod worldborder;
 
 type ChunkReceiver = (
-    Vec<(Vector2<i32>, JoinHandle<()>)>,
+    Vec<Vector2<i32>>,
+    Vec<JoinHandle<()>>,
     Receiver<Arc<RwLock<ChunkData>>>,
 );
 
@@ -352,11 +350,11 @@ impl World {
         // Unique id of this chunk batch for later removal
         let id = uuid::Uuid::new_v4();
 
-        let (pending, mut receiver) = self.receive_chunks(chunks);
+        let (chunks, handles, mut receiver) = self.receive_chunks(chunks);
         {
             let mut pending_chunks = player.pending_chunks.lock();
 
-            for chunk in chunks {
+            for chunk in &chunks {
                 if pending_chunks.contains_key(chunk) {
                     log::debug!(
                         "Client id {} is requesting chunk {:?} but its already pending!",
@@ -366,16 +364,17 @@ impl World {
                 }
             }
 
-            for (chunk, handle) in pending {
+            let ids = player.client.watch_expensive_tasks(handles);
+
+            for (chunk, task_id) in chunks.into_iter().zip(ids.into_iter()) {
                 let entry = pending_chunks.entry(chunk);
-                let wrapper = ChunkHandleWrapper::new(handle);
                 match entry {
                     Entry::Occupied(mut entry) => {
-                        entry.get_mut().push_back(wrapper);
+                        entry.get_mut().push_back(task_id);
                     }
                     Entry::Vacant(entry) => {
                         let mut queue = VecDeque::new();
-                        queue.push_back(wrapper);
+                        queue.push_back(task_id);
                         entry.insert(queue);
                     }
                 };
@@ -406,19 +405,24 @@ impl World {
 
                 {
                     let mut pending_chunks = pending_chunks.lock();
-                    let handlers = pending_chunks
+                    let task_ids = pending_chunks
                         .get_mut(&chunk_data.position)
                         .expect("All chunks should be pending");
-                    let handler = handlers
+                    let task_id = task_ids
                         .pop_front()
                         .expect("All chunks should have a handler");
 
-                    if handlers.is_empty() {
+                    if task_ids.is_empty() {
                         pending_chunks.remove(&chunk_data.position);
                     }
 
+                    let is_cancelled = player
+                        .client
+                        .stop_watching_expensive_task(&task_id)
+                        .is_some_and(|task| task.aborted());
+
                     // Chunk loading task was canceled after it was completed
-                    if handler.aborted() {
+                    if is_cancelled {
                         // We never increment the watch value
                         if level.should_pop_chunk(&chunk_data.position) {
                             level.clean_chunks(&[chunk_data.position]);
@@ -426,8 +430,9 @@ impl World {
                         // If ignored, dont send the packet
                         let loaded_chunks = level.loaded_chunk_count();
                         log::debug!(
-                            "Aborted chunk {:?} (post-process) {} cached",
+                            "Aborted chunk {:?} ({}) (post-process) {} cached",
                             chunk_data.position,
+                            task_id,
                             loaded_chunks
                         );
 
@@ -550,12 +555,12 @@ impl World {
     // Stream the chunks (don't collect them and then do stuff with them)
     pub fn receive_chunks(&self, chunks: &[Vector2<i32>]) -> ChunkReceiver {
         let (sender, receive) = mpsc::channel(chunks.len());
-        let pending_chunks = self.level.fetch_chunks(chunks, sender);
-        (pending_chunks, receive)
+        let (chunks, handles) = self.level.fetch_chunks(chunks, sender);
+        (chunks, handles, receive)
     }
 
     pub async fn receive_chunk(&self, chunk: Vector2<i32>) -> Arc<RwLock<ChunkData>> {
-        let (_, mut receiver) = self.receive_chunks(&[chunk]);
+        let (_, _, mut receiver) = self.receive_chunks(&[chunk]);
         receiver
             .recv()
             .await

@@ -32,7 +32,7 @@ use pumpkin_protocol::{
     },
     RawPacket, ServerPacket, VarInt,
 };
-use tokio::sync::{Mutex, Notify};
+use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
 use pumpkin_protocol::server::play::SKeepAlive;
@@ -40,7 +40,7 @@ use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
 
 use super::Entity;
 use crate::{
-    client::{authentication::GameProfile, Client, PlayerConfig},
+    client::{authentication::GameProfile, Client, PlayerConfig, TaskId},
     server::Server,
     world::World,
 };
@@ -48,41 +48,7 @@ use crate::{error::PumpkinError, world::player_chunker::get_view_distance};
 
 use super::living::LivingEntity;
 
-pub struct ChunkHandleWrapper {
-    handle: Option<JoinHandle<()>>,
-    aborted: bool,
-}
-
-impl ChunkHandleWrapper {
-    #[must_use]
-    pub fn new(handle: JoinHandle<()>) -> Self {
-        Self {
-            handle: Some(handle),
-            aborted: false,
-        }
-    }
-
-    pub fn abort(&mut self) {
-        self.aborted = true;
-        if let Some(handle) = &self.handle {
-            handle.abort();
-        } else {
-            log::error!("Trying to abort without a handle!");
-        }
-    }
-
-    pub fn take_handle(&mut self) -> JoinHandle<()> {
-        self.handle.take().unwrap()
-    }
-
-    #[must_use]
-    pub fn aborted(&self) -> bool {
-        self.aborted
-    }
-}
-
-pub type PlayerPendingChunks =
-    Arc<parking_lot::Mutex<HashMap<Vector2<i32>, VecDeque<ChunkHandleWrapper>>>>;
+pub type PlayerPendingChunks = Arc<parking_lot::Mutex<HashMap<Vector2<i32>, VecDeque<TaskId>>>>;
 
 /// Represents a Minecraft player entity.
 ///
@@ -146,9 +112,6 @@ pub struct Player {
     pub pending_chunks: PlayerPendingChunks,
     /// Chunk batches that this client is waiting for
     pub pending_chunk_batch: parking_lot::Mutex<HashMap<uuid::Uuid, JoinHandle<()>>>,
-
-    /// Tell tasks to stop if we are closing
-    cancel_tasks: Notify,
 }
 
 impl Player {
@@ -200,7 +163,6 @@ impl Player {
             last_attacked_ticks: AtomicU32::new(0),
             pending_chunks: Arc::new(parking_lot::Mutex::new(HashMap::new())),
             pending_chunk_batch: parking_lot::Mutex::new(HashMap::new()),
-            cancel_tasks: Notify::new(),
         }
     }
 
@@ -208,10 +170,6 @@ impl Player {
     #[allow(unused_variables)]
     pub async fn remove(&self) {
         let world = &self.living_entity.entity.world;
-        // Abort pending chunks here too because we might clean up before chunk tasks are done
-        self.abort_chunks("closed");
-
-        self.cancel_tasks.notify_waiters();
 
         world.remove_player(self).await;
 
@@ -233,8 +191,8 @@ impl Player {
             radial_chunks.len()
         );
 
-        let (watched_chunks, to_await) = {
-            let mut pending_chunks = self.pending_chunks.lock();
+        let watched_chunks = {
+            let pending_chunks = self.pending_chunks.lock();
 
             // Don't try to clean chunks that dont exist yet
             // If they are still pending, we never sent the client the chunk,
@@ -247,42 +205,12 @@ impl Player {
                 .copied()
                 .collect::<Vec<_>>();
 
-            // Mark all pending chunks to be cancelled
-            // Cant use abort chunk because we use the lock for more
-            pending_chunks.iter_mut().for_each(|(chunk, handles)| {
-                handles.iter_mut().enumerate().for_each(|(count, handle)| {
-                    if !handle.aborted() {
-                        log::debug!("Aborting chunk {:?} ({}) (disconnect)", chunk, count);
-                        handle.abort();
-                    }
-                });
-            });
-
-            let to_await = pending_chunks
-                .iter_mut()
-                .map(|(chunk, pending)| {
-                    (
-                        *chunk,
-                        pending
-                            .iter_mut()
-                            .map(ChunkHandleWrapper::take_handle)
-                            .collect_vec(),
-                    )
-                })
-                .collect_vec();
-
             // Return chunks to stop watching and what to wait for
-            (watched_chunks, to_await)
+            watched_chunks
         };
 
-        // Wait for individual chunks to finish after we cancel them
-        for (chunk, awaitables) in to_await {
-            for (count, handle) in awaitables.into_iter().enumerate() {
-                #[cfg(debug_assertions)]
-                log::debug!("Waiting for chunk {:?} ({})", chunk, count);
-                let _ = handle.await;
-            }
-        }
+        // Wait for tasks to finish
+        self.client.await_expensive_tasks("Removing player").await;
 
         // Allow the batch jobs to properly cull stragglers before we do our clean up
         log::debug!("Collecting chunk batches...");
@@ -329,10 +257,6 @@ impl Player {
         );
 
         //self.living_entity.entity.world.level.list_cached();
-    }
-
-    pub async fn await_cancel(&self) {
-        self.cancel_tasks.notified().await;
     }
 
     pub async fn tick(&self) {
@@ -462,6 +386,9 @@ impl Player {
 
     /// Kicks the Client with a reason depending on the connection state
     pub async fn kick<'a>(&self, reason: TextComponent<'a>) {
+        // Cancel tasks ASAP
+        self.client.cancel_expensive_tasks("Kicking player");
+
         if self
             .client
             .closed
@@ -530,34 +457,22 @@ impl Player {
             .send_packet(&CSystemChatMessage::new(text, false))
             .await;
     }
-
-    pub fn abort_chunks(&self, reason: &str) {
-        let mut pending_chunks = self.pending_chunks.lock();
-        pending_chunks.iter_mut().for_each(|(chunk, handles)| {
-            handles.iter_mut().enumerate().for_each(|(count, handle)| {
-                if !handle.aborted() {
-                    log::debug!("Aborting chunk {:?} ({}) ({})", chunk, count, reason);
-                    handle.abort();
-                }
-            });
-        });
-    }
 }
 
 impl Player {
     pub async fn process_packets(self: &Arc<Self>, server: &Arc<Server>) {
         let mut packets = self.client.client_packets_queue.lock().await;
         while let Some(mut packet) = packets.pop_back() {
-            #[cfg(debug_assertions)]
-            let inst = std::time::Instant::now();
+            //#[cfg(debug_assertions)]
+            //let inst = std::time::Instant::now();
             tokio::select! {
-                () = self.await_cancel() => {
+                () = self.client.await_cancel_notify() => {
                     log::debug!("Canceling player packet processing");
                     return;
                 },
                 packet_result = self.handle_play_packet(server, &mut packet) => {
-                    #[cfg(debug_assertions)]
-                    log::debug!("Handled play packet in {:?}", inst.elapsed());
+                    //#[cfg(debug_assertions)]
+                    //log::debug!("Handled play packet in {:?}", inst.elapsed());
                     match packet_result {
                         Ok(()) => {}
                         Err(e) => {

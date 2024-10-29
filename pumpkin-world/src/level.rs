@@ -16,7 +16,7 @@ use crate::{
     world_gen::{get_world_gen, Seed, WorldGenerator},
 };
 
-pub type ConcurrentChunkResult = Vec<(Vector2<i32>, JoinHandle<()>)>;
+pub type ConcurrentChunkResult = (Vec<Vector2<i32>>, Vec<JoinHandle<()>>);
 
 /// The `Level` module provides functionality for working with chunks within or outside a Minecraft world.
 ///
