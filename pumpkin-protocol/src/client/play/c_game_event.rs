@@ -1,10 +1,8 @@
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::ChangeGameState as i32)]
+#[client_packet("play:game_event")]
 pub struct CGameEvent {
     event: u8,
     value: f32,

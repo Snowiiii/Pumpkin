@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::{SoundCategory, VarInt};
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::SoundEffect as i32)]
+#[client_packet("play:sound")]
 pub struct CSoundEffect {
     sound_id: VarInt,
     // TODO: add sound from name

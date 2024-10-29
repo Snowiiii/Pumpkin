@@ -64,7 +64,7 @@ pub struct BasicConfiguration {
     /// The seed for world generation.
     #[serde(default = "String::new")]
     pub seed: String,
-    /// The maximum number of players allowed on the server.
+    /// The maximum number of players allowed on the server. Specifying `0` disables the limit.
     #[serde_inline_default(10000)]
     pub max_players: u32,
     /// The maximum view distance for players.

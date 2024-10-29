@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::HurtAnimation as i32)]
+#[client_packet("play:hurt_animation")]
 pub struct CHurtAnimation<'a> {
     entity_id: &'a VarInt,
     yaw: f32,

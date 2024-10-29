@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::EntityRelativeMove as i32)]
+#[client_packet("play:move_entity_pos")]
 pub struct CUpdateEntityPos {
     entity_id: VarInt,
     delta_x: i16,

@@ -1,10 +1,8 @@
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::ServerDifficulty as i32)]
+#[client_packet("play:change_difficulty")]
 pub struct CChangeDifficulty {
     difficulty: u8,
     locked: bool,

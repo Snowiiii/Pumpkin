@@ -107,9 +107,25 @@ impl CachedStatus {
     pub fn build_response(config: &BasicConfiguration) -> StatusResponse {
         let icon = if config.use_favicon {
             let icon_path = &config.favicon_path;
-            log::info!("Loading server favicon from '{}'", icon_path);
+            log::debug!("Loading server favicon from '{}'", icon_path);
             match load_icon_from_file(icon_path).or_else(|err| {
-                log::warn!("Failed to load icon from '{}': {}", icon_path, err);
+                if let Some(io_err) = err.downcast_ref::<std::io::Error>() {
+                    if io_err.kind() == std::io::ErrorKind::NotFound {
+                        log::info!("Favicon '{}' not found; using default icon.", icon_path);
+                    } else {
+                        log::error!(
+                            "Unable to load favicon at '{}': I/O error - {}; using default icon.",
+                            icon_path,
+                            io_err
+                        );
+                    }
+                } else {
+                    log::error!(
+                        "Unable to load favicon at '{}': other error - {}; using default icon.",
+                        icon_path,
+                        err
+                    );
+                }
                 load_icon_from_bytes(DEFAULT_ICON)
             }) {
                 Ok(result) => Some(result),

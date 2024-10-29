@@ -15,6 +15,7 @@ use pumpkin_protocol::client::play::{
 };
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
+use pumpkin_protocol::VarInt;
 use pumpkin_world::item::ItemStack;
 use std::sync::Arc;
 
@@ -29,15 +30,17 @@ impl Player {
         let total_opened_containers = inventory.total_opened_containers;
         let container = self.get_open_container(server);
         let container = container.as_ref().map(|container| container.lock());
-        let menu_protocol_id = (*pumpkin_world::global_registry::REGISTRY
-            .get("minecraft:menu")
-            .unwrap()
-            .entries
-            .get(minecraft_menu_id)
-            .expect("Should be a valid menu id")
-            .get("protocol_id")
-            .unwrap())
-        .into();
+        // let menu_protocol_id = (*pumpkin_world::global_registry::REGISTRY
+        //     .get("minecraft:menu")
+        //     .unwrap()
+        //     .entries
+        //     .get(minecraft_menu_id)
+        //     .expect("Should be a valid menu id")
+        //     .get("protocol_id")
+        //     .unwrap())
+        // .into();
+        // TODO
+        let menu_protocol_id = VarInt(0);
         let window_title = match container {
             Some(container) => container.await.window_name(),
             None => inventory.window_name(),

@@ -1,5 +1,4 @@
 use pumpkin_core::math::vector2::Vector2;
-use pumpkin_macros::block;
 
 use crate::{
     biome::Biome,
@@ -43,9 +42,9 @@ impl TerrainGenerator for SuperflatTerrainGenerator {
     // TODO allow specifying which blocks should be at which height in the config.
     fn generate_block(&self, at: BlockCoordinates, _: Biome) -> BlockState {
         match *at.y {
-            -64 => block!("minecraft:bedrock"),
-            -63..=-62 => block!("minecraft:dirt"),
-            -61 => block!("minecraft:grass_block"),
+            -64 => BlockState::new("minecraft:bedrock").unwrap(),
+            -63..=-62 => BlockState::new("minecraft:dirt").unwrap(),
+            -61 => BlockState::new("minecraft:grass_block").unwrap(),
             _ => BlockState::AIR,
         }
     }

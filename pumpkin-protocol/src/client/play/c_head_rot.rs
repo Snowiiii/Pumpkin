@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::EntityHeadLook as i32)]
+#[client_packet("play:rotate_head")]
 pub struct CHeadRot {
     entity_id: VarInt,
     head_yaw: u8,

@@ -25,6 +25,7 @@ thiserror.workspace = true
 
 num-traits.workspace = true
 num-derive.workspace = true
+parking_lot.workspace = true
 
 # config
 serde.workspace = true
@@ -36,14 +37,12 @@ rand = "0.8.5"
 
 num-bigint = "0.4"
 
-ctrlc = "3.4"
-
 # encryption
 rsa = "0.9.6"
 rsa-der = "0.3.0"
 
 # authentication
-reqwest = { version = "0.12.8", default-features = false, features = [
+reqwest = { version = "0.12.9", default-features = false, features = [
     "http2",
     "json",
     "macos-system-configuration",
@@ -63,3 +62,6 @@ png = "0.17.14"
 
 # logging
 simple_logger = { version = "5.0.0", features = ["threads"] }
+
+# commands
+async-trait = "0.1.83"

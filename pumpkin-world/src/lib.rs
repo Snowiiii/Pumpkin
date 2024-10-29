@@ -4,7 +4,6 @@ pub mod chunk;
 pub mod coordinates;
 pub mod cylindrical_chunk_iterator;
 pub mod dimension;
-pub mod global_registry;
 pub mod item;
 pub mod level;
 mod world_gen;

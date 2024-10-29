@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::EntityAnimation as i32)]
+#[client_packet("play:animate")]
 pub struct CEntityAnimation {
     entity_id: VarInt,
     /// See `Animation`

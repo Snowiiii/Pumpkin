@@ -1,4 +1,6 @@
-use super::RunFunctionType;
+use async_trait::async_trait;
+
+use super::CommandExecutor;
 use crate::{commands::CommandSender, server::Server};
 use std::collections::{HashMap, VecDeque};
 
@@ -10,8 +12,15 @@ pub type ConsumedArgs<'a> = HashMap<&'a str, String>;
 
 /// see [`crate::commands::tree_builder::argument`]
 /// Provide value or an Optional error message, If no Error message provided the default will be used
-pub type ArgumentConsumer<'a> =
-    fn(&CommandSender, &Server, &mut RawArgs) -> Result<String, Option<String>>;
+#[async_trait]
+pub(crate) trait ArgumentConsumer: Sync {
+    async fn consume<'a>(
+        &self,
+        sender: &CommandSender<'a>,
+        server: &Server,
+        args: &mut RawArgs<'a>,
+    ) -> Result<String, Option<String>>;
+}
 
 pub struct Node<'a> {
     pub(crate) children: Vec<usize>,
@@ -20,14 +29,14 @@ pub struct Node<'a> {
 
 pub enum NodeType<'a> {
     ExecuteLeaf {
-        run: &'a RunFunctionType,
+        executor: &'a dyn CommandExecutor,
     },
     Literal {
         string: &'a str,
     },
     Argument {
         name: &'a str,
-        consumer: ArgumentConsumer<'a>,
+        consumer: &'a dyn ArgumentConsumer,
     },
     Require {
         predicate: &'a (dyn Fn(&CommandSender) -> bool + Sync),
@@ -39,7 +48,6 @@ pub enum Command<'a> {
     Alias(&'a str),
 }
 
-#[expect(unused)]
 pub struct CommandTree<'a> {
     pub(crate) nodes: Vec<Node<'a>>,
     pub(crate) children: Vec<usize>,

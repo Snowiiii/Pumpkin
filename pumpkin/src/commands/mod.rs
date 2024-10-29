@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use dispatcher::InvalidTreeError;
 use pumpkin_core::text::TextComponent;
 use tree::ConsumedArgs;
@@ -7,14 +8,21 @@ use tree::ConsumedArgs;
 use crate::commands::dispatcher::CommandDispatcher;
 use crate::entity::player::Player;
 use crate::server::Server;
+
 mod arg_player;
+mod arg_position;
+mod arg_simple;
+
 mod cmd_echest;
 mod cmd_gamemode;
 mod cmd_help;
 mod cmd_kick;
 mod cmd_kill;
 mod cmd_pumpkin;
+mod cmd_say;
 mod cmd_stop;
+mod cmd_worldborder;
+
 pub mod dispatcher;
 mod tree;
 mod tree_builder;
@@ -60,19 +68,28 @@ impl<'a> CommandSender<'a> {
 }
 
 #[must_use]
-pub fn default_dispatcher<'a>() -> CommandDispatcher<'a> {
+pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     let mut dispatcher = CommandDispatcher::default();
 
     dispatcher.register(cmd_pumpkin::init_command_tree());
+    dispatcher.register(cmd_say::init_command_tree());
     dispatcher.register(cmd_gamemode::init_command_tree());
     dispatcher.register(cmd_stop::init_command_tree());
     dispatcher.register(cmd_help::init_command_tree());
     dispatcher.register(cmd_echest::init_command_tree());
     dispatcher.register(cmd_kill::init_command_tree());
     dispatcher.register(cmd_kick::init_command_tree());
+    dispatcher.register(cmd_worldborder::init_command_tree());
 
-    dispatcher
+    Arc::new(dispatcher)
 }
 
-type RunFunctionType =
-    (dyn Fn(&mut CommandSender, &Server, &ConsumedArgs) -> Result<(), InvalidTreeError> + Sync);
+#[async_trait]
+pub(crate) trait CommandExecutor: Sync {
+    async fn execute<'a>(
+        &self,
+        sender: &mut CommandSender<'a>,
+        server: &Server,
+        args: &ConsumedArgs<'a>,
+    ) -> Result<(), InvalidTreeError>;
+}

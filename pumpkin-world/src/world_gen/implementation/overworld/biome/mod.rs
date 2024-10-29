@@ -27,7 +27,7 @@ pub fn generate_tree(
                 };
                 tree_blocks.push((
                     block_coordinates,
-                    pumpkin_macros::block!("minecraft:oak_log"),
+                    BlockState::new("minecraft:oak_log").unwrap(),
                 ));
             }
         }
@@ -45,7 +45,7 @@ pub fn generate_tree(
                 };
                 tree_blocks.push((
                     block_coordinates,
-                    pumpkin_macros::block!("minecraft:oak_leaves"),
+                    BlockState::new("minecraft:oak_leaves").unwrap(),
                 ));
             }
         }
