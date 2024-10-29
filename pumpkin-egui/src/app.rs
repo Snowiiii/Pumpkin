@@ -1,6 +1,8 @@
 
-use std::io;
+use std::{io, sync::Arc};
 
+use egui::mutex::Mutex;
+use pumpkin::server::Server;
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use tokio::{runtime, task::JoinHandle};
 
@@ -82,7 +84,7 @@ impl eframe::App for TemplateApp {
             ui.horizontal(|ui| {
                 if ui.add_enabled(!self.started, egui::Button::new("Start")).clicked() {
                     self.server_handle = Some(self.rt.spawn(pumpkin::server_start(|server| {
-                        
+                        // todo
                     })));
                     self.started = !self.started;
                 }
