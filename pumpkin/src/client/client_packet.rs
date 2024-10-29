@@ -56,13 +56,13 @@ impl Client {
     }
 
     pub async fn handle_status_request(&self, server: &Server, _status_request: SStatusRequest) {
-        log::debug!("Handling status request for id");
+        log::debug!("Handling status request for {}", self.id);
         let status = server.get_status();
         self.send_packet(&status.lock().await.get_status()).await;
     }
 
     pub async fn handle_ping_request(&self, ping_request: SStatusPingRequest) {
-        log::debug!("Handling ping request for id");
+        log::debug!("Handling ping request for {}", self.id);
         self.send_packet(&CPingResponse::new(ping_request.payload))
             .await;
         self.close();
@@ -147,7 +147,7 @@ impl Client {
         server: &Server,
         encryption_response: SEncryptionResponse,
     ) {
-        log::debug!("Handling encryption for id");
+        log::debug!("Handling encryption for {}", self.id);
         let shared_secret = server.decrypt(&encryption_response.shared_secret).unwrap();
 
         if let Err(error) = self.set_encryption(Some(&shared_secret)).await {
@@ -254,7 +254,7 @@ impl Client {
     }
 
     pub async fn handle_plugin_response(&self, plugin_response: SLoginPluginResponse) {
-        log::debug!("Handling plugin for id");
+        log::debug!("Handling plugin for {}", self.id);
         let velocity_config = &ADVANCED_CONFIG.proxy.velocity;
         if velocity_config.enabled {
             let mut address = self.address.lock().await;
@@ -278,7 +278,7 @@ impl Client {
         server: &Server,
         _login_acknowledged: SLoginAcknowledged,
     ) {
-        log::debug!("Handling login acknowledged for id");
+        log::debug!("Handling login acknowledged for {}", self.id);
         self.connection_state.store(ConnectionState::Config);
         self.send_packet(&server.get_branding()).await;
 
@@ -315,7 +315,7 @@ impl Client {
         &self,
         client_information: SClientInformationConfig,
     ) {
-        log::debug!("Handling client settings for id");
+        log::debug!("Handling client settings for {}", self.id);
         if let (Some(main_hand), Some(chat_mode)) = (
             Hand::from_i32(client_information.main_hand.into()),
             ChatMode::from_i32(client_information.chat_mode.into()),
@@ -336,7 +336,7 @@ impl Client {
     }
 
     pub async fn handle_plugin_message(&self, plugin_message: SPluginMessage) {
-        log::debug!("Handling plugin message for id");
+        log::debug!("Handling plugin message for {}", self.id);
         if plugin_message.channel.starts_with("minecraft:brand")
             || plugin_message.channel.starts_with("MC|Brand")
         {
@@ -349,7 +349,7 @@ impl Client {
     }
 
     pub async fn handle_known_packs(&self, server: &Server, _config_acknowledged: SKnownPacks) {
-        log::debug!("Handling known packs for id");
+        log::debug!("Handling known packs for {}", self.id);
         for registry in &server.cached_registry {
             self.send_packet(&CRegistryData::new(
                 &registry.registry_id,
@@ -364,7 +364,7 @@ impl Client {
     }
 
     pub fn handle_config_acknowledged(&self, _config_acknowledged: &SAcknowledgeFinishConfig) {
-        log::debug!("Handling config acknowledge for id");
+        log::debug!("Handling config acknowledge for {}", self.id);
         self.connection_state.store(ConnectionState::Play);
         self.make_player
             .store(true, std::sync::atomic::Ordering::Relaxed);

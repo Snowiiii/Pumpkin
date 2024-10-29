@@ -138,8 +138,9 @@ impl World {
         let entity_id = player.entity_id();
         let gamemode = player.gamemode.load();
         log::debug!(
-            "spawning player {}, entity id {}",
+            "spawning player {} ({}), entity id {}",
             player.gameprofile.name,
+            player.client.id,
             entity_id
         );
 

@@ -540,7 +540,7 @@ impl Client {
         server: &Arc<Server>,
         packet: &mut RawPacket,
     ) -> Result<(), DeserializerError> {
-        log::debug!("Handling login group for id");
+        log::debug!("Handling login group for {}", self.id);
         let bytebuf = &mut packet.bytebuf;
         if let Some(packet) = ServerboundLoginPackets::from_i32(packet.id.0) {
             match packet {
