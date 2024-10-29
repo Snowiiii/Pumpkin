@@ -23,7 +23,7 @@ pub struct Item {
     break_sound: String,
     food: Option<FoodComponent>,
 }
-
+#[inline(always)]
 pub fn get_item_protocol_id(item_id: &str) -> u32 {
     global_registry::get_protocol_id(ITEM_REGISTRY, item_id)
 }

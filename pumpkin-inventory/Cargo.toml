@@ -10,6 +10,7 @@ pumpkin-registry = {path = "../pumpkin-registry"}
 pumpkin-macros = { path = "../pumpkin-macros" }
 
 log.workspace = true
+rayon.workspace = true
 itertools.workspace = true
 crossbeam.workspace = true
 tokio.workspace = true

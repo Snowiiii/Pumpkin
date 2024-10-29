@@ -2,7 +2,6 @@ use super::super::recipe::RecipeType;
 use super::read::{
     ingredients::IngredientSlot, CraftingType, RecipeKeys, RecipeResult, RecipeTrait,
 };
-use crate::flatten_3x3;
 use itertools::Itertools;
 
 pub struct ShapedCrafting {
@@ -38,8 +37,8 @@ impl RecipeTrait for ShapedCrafting {
         vec![self.keys.pattern_to_thing(self.pattern)]
     }
 
-    fn result(&self) -> &RecipeResult {
-        &self.output
+    fn result(self) -> RecipeResult {
+        self.output
     }
 }
 
@@ -89,7 +88,7 @@ impl RecipeTrait for ShapelessCrafting {
             .collect()
     }
 
-    fn result(&self) -> &RecipeResult {
-        &self.output
+    fn result(self) -> RecipeResult {
+        self.output
     }
 }

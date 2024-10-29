@@ -169,7 +169,6 @@ pub mod ingredients {
         }
     }
 
-    #[expect(unused)]
     pub struct Ingredients(pub Vec<IngredientSlot>);
     impl<'de> Deserialize<'de> for Ingredients {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -200,7 +199,7 @@ pub mod ingredients {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum RecipeResult {
     Many { count: u8, id: String },
     Single { id: String },
@@ -409,29 +408,24 @@ impl<'de> Deserialize<'de> for Recipe {
                     RecipeType::Crafting(CraftingType::Shapeless) => {
                         let ingredients =
                             ingredients.ok_or_else(|| de::Error::missing_field("ingredients"))?;
-                        Ok(Recipe(Box::new(ShapelessCrafting::new(
-                            ingredients.0,
-                            result,
-                        ))))
+                        Ok(Recipe::from(ShapelessCrafting::new(ingredients.0, result)))
                     }
-                    RecipeType::Crafting(CraftingType::Special(_)) => Ok(Recipe(Box::new(Test {
+                    RecipeType::Crafting(CraftingType::Special(_)) => Ok(Recipe::from(Test {
                         recipe_type,
                         result,
-                    }))),
-                    RecipeType::Crafting(CraftingType::DecoratedPot) => {
-                        Ok(Recipe(Box::new(Test {
-                            recipe_type,
-                            result,
-                        })))
-                    }
-                    RecipeType::Smithing(_) => Ok(Recipe(Box::new(Test {
+                    })),
+                    RecipeType::Crafting(CraftingType::DecoratedPot) => Ok(Recipe::from(Test {
+                        recipe_type,
+                        result,
+                    })),
+                    RecipeType::Smithing(_) => Ok(Recipe::from(Test {
                         recipe_type,
                         result: RecipeResult::Special,
-                    }))),
-                    _ => Ok(Recipe(Box::new(Test {
+                    })),
+                    _ => Ok(Recipe::from(Test {
                         recipe_type,
                         result,
-                    }))),
+                    })),
                 }
             }
         }
@@ -472,7 +466,33 @@ fn visit_option<'de, T: Deserialize<'de>, Map: MapAccess<'de>>(
     }
 }
 
-pub struct Recipe(Box<dyn RecipeTrait + 'static + Send + Sync>);
+pub struct Recipe {
+    pub recipe_type: RecipeType,
+    pattern: Vec<[[Option<IngredientSlot>; 3]; 3]>,
+    result: RecipeResult,
+}
+
+impl Recipe {
+    pub fn pattern(&self) -> &[[[Option<IngredientSlot>; 3]; 3]] {
+        &self.pattern
+    }
+
+    pub fn result(&self) -> &RecipeResult {
+        &self.result
+    }
+
+    pub fn implemented(&self) -> bool {
+        match self.recipe_type {
+            RecipeType::Crafting(crafting_type) => {
+                matches!(
+                    crafting_type,
+                    CraftingType::Shapeless | CraftingType::Shaped
+                )
+            }
+            _ => false,
+        }
+    }
+}
 
 struct Test {
     recipe_type: RecipeType,
@@ -487,54 +507,29 @@ impl RecipeTrait for Test {
         vec![[const { [const { None }; 3] }; 3]]
     }
 
-    fn result(&self) -> &RecipeResult {
-        &self.result
+    fn result(self) -> RecipeResult {
+        self.result
     }
 }
-impl<T: RecipeTrait + 'static + Sync + Send> From<T> for Recipe {
-    fn from(value: T) -> Self {
-        Recipe(Box::new(value))
+impl<T: RecipeTrait> From<T> for Recipe {
+    fn from(recipe_type: T) -> Self {
+        recipe_type.to_recipe()
     }
 }
 
-pub trait RecipeTrait {
+pub trait RecipeTrait: Sized {
     fn recipe_type(&self) -> RecipeType;
 
     fn pattern(&self) -> Vec<[[Option<IngredientSlot>; 3]; 3]>;
-    /*fn take_items(&self, input: [[&mut Option<IngredientType>;3];3]) {
-        for pattern in self.pattern() {
 
-            if pattern.iter().enumerate().all(|(i,pattern)|{
-              pattern.iter().enumerate().all(|(j,pattern)|{
-                  match (pattern, &input[i][j]) {
-                      (None, None) => true,
-                      (Some(p), Some(i)) => p==i,
-                      _ => false
-                  }
-              })
-            }) {
-                input.into_iter().for_each(|row|{
-                    row.into_iter().for_each(|slot|{
-                        match slot {
-                            None => (),
-                            Some(item) => {
+    fn result(self) -> RecipeResult;
 
-                            }
-                        }
-                    })
-                })
-            }
+    fn to_recipe(self) -> Recipe {
+        Recipe {
+            recipe_type: self.recipe_type(),
+            pattern: self.pattern().into_iter().map(flatten_3x3).collect(),
+            result: self.result(),
         }
-    }*/
-
-    fn result(&self) -> &RecipeResult;
-}
-
-impl Deref for Recipe {
-    type Target = Box<dyn RecipeTrait + 'static + Send + Sync>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
     }
 }
 
@@ -589,7 +584,7 @@ mod test {
             let r = recipe.unwrap();
             let s = std::fs::read_to_string(r.path()).unwrap();
             let recipe = serde_json::from_str::<Recipe>(&s).unwrap();
-            if recipe.recipe_type() == RecipeType::Crafting(CraftingType::Shaped) {}
+            if recipe.recipe_type == RecipeType::Crafting(CraftingType::Shaped) {}
         }
     }
 }
