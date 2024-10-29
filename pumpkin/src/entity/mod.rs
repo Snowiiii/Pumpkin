@@ -26,27 +26,22 @@ pub struct Entity {
     /// The world in which the entity exists.
     pub world: Arc<World>,
     /// The entity's current health level.
-
     /// The entity's current position in the world
     pub pos: AtomicCell<Vector3<f64>>,
     /// The entity's position rounded to the nearest block coordinates
     pub block_pos: AtomicCell<WorldPosition>,
     /// The chunk coordinates of the entity's current position
     pub chunk_pos: AtomicCell<Vector2<i32>>,
-
     /// Indicates whether the entity is sneaking
     pub sneaking: AtomicBool,
     /// Indicates whether the entity is sprinting
     pub sprinting: AtomicBool,
     /// Indicates whether the entity is flying due to a fall
     pub fall_flying: AtomicBool,
-
     /// The entity's current velocity vector, aka Knockback
     pub velocity: AtomicCell<Vector3<f64>>,
-
     /// Indicates whether the entity is on the ground (may not always be accurate).
     pub on_ground: AtomicBool,
-
     /// The entity's yaw rotation (horizontal rotation) ← →
     pub yaw: AtomicCell<f32>,
     /// The entity's head yaw rotation (horizontal rotation of the head)
