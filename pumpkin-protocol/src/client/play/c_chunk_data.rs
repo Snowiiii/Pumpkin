@@ -54,9 +54,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
                     // Palette length
                     data_buf.put_var_int(&VarInt(palette.len() as i32));
 
-                    let mut palette_ids = Vec::with_capacity(palette.len());
                     palette.iter().for_each(|id| {
-                        palette_ids.push(*id);
                         // Palette
                         data_buf.put_var_int(&VarInt(id.get_id_mojang_repr()));
                     });
@@ -68,7 +66,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
                     for block_clump in chunk.chunks(64 / block_size as usize) {
                         let mut out_long: i64 = 0;
                         for block in block_clump.iter().rev() {
-                            let index = palette_ids
+                            let index = palette
                                 .iter()
                                 .position(|b| *b == block)
                                 .expect("Its just got added, ofc it should be there");
