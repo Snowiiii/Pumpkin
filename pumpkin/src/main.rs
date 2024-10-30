@@ -1,25 +1,20 @@
 #![deny(clippy::all)]
-#![warn(clippy::pedantic)]
+#![deny(clippy::pedantic)]
 // #![warn(clippy::restriction)]
-#![warn(clippy::cargo)]
+#![deny(clippy::cargo)]
 // REMOVE SOME WHEN RELEASE
 #![expect(clippy::cargo_common_metadata)]
 #![expect(clippy::multiple_crate_versions)]
-#![expect(clippy::while_float)]
 #![expect(clippy::significant_drop_in_scrutinee)]
 #![expect(clippy::significant_drop_tightening)]
-#![expect(clippy::future_not_send)]
 #![expect(clippy::single_call_fn)]
 #![expect(clippy::cast_sign_loss)]
 #![expect(clippy::cast_possible_truncation)]
 #![expect(clippy::cast_possible_wrap)]
-#![expect(clippy::too_many_lines)]
 #![expect(clippy::missing_panics_doc)]
 #![expect(clippy::missing_errors_doc)]
 #![expect(clippy::module_name_repetitions)]
 #![expect(clippy::struct_excessive_bools)]
-#![expect(clippy::many_single_char_names)]
-#![expect(clippy::float_cmp)]
 
 #[cfg(target_os = "wasi")]
 compile_error!("Compiling for WASI targets is not supported!");
@@ -30,11 +25,22 @@ use client::Client;
 use server::{ticker::Ticker, Server};
 use std::io::{self};
 use tokio::io::{AsyncBufReadExt, BufReader};
+#[cfg(not(unix))]
+use tokio::signal::ctrl_c;
+#[cfg(unix)]
+use tokio::signal::unix::{signal, SignalKind};
+
+use std::sync::Arc;
+
+use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
+use pumpkin_core::text::{color::NamedColor, TextComponent};
+use rcon::RCONServer;
+use std::time::Instant;
 
 // Setup some tokens to allow us to identify which event is for which socket.
 
 pub mod client;
-pub mod commands;
+pub mod command;
 pub mod entity;
 pub mod error;
 pub mod proxy;
@@ -87,30 +93,18 @@ const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> L
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
-    use std::sync::Arc;
-
-    use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
-    use pumpkin_core::text::{color::NamedColor, TextComponent};
-    use rcon::RCONServer;
-    use std::time::Instant;
-
     init_logger();
-
     // let rt = tokio::runtime::Builder::new_multi_thread()
     //     .enable_all()
     //     .build()
     //     .unwrap();
 
-    ctrlc::set_handler(|| {
-        log::warn!(
-            "{}",
-            TextComponent::text("Stopping Server")
-                .color_named(NamedColor::Red)
-                .to_pretty_console()
-        );
-        std::process::exit(0);
-    })
-    .unwrap();
+    tokio::spawn(async {
+        setup_sighandler()
+            .await
+            .expect("Unable to setup signal handlers");
+    });
+
     // ensure rayon is built outside of tokio scope
     rayon::ThreadPoolBuilder::new().build_global().unwrap();
     let default_panic = std::panic::take_hook();
@@ -138,26 +132,7 @@ async fn main() -> io::Result<()> {
     log::info!("You now can connect to the server, Listening on {}", addr);
 
     if use_console {
-        let server = server.clone();
-        tokio::spawn(async move {
-            let stdin = tokio::io::stdin();
-            let mut reader = BufReader::new(stdin);
-            loop {
-                let mut out = String::new();
-
-                reader
-                    .read_line(&mut out)
-                    .await
-                    .expect("Failed to read console line");
-
-                if !out.is_empty() {
-                    let dispatcher = server.command_dispatcher.clone();
-                    dispatcher
-                        .handle_command(&mut commands::CommandSender::Console, &server, &out)
-                        .await;
-                }
-            }
-        });
+        setup_console(server.clone());
     }
     if rcon.enabled {
         let server = server.clone();
@@ -171,6 +146,8 @@ async fn main() -> io::Result<()> {
             ticker.run(&server).await;
         });
     }
+
+    let mut master_client_id: u16 = 0;
     loop {
         // Asynchronously wait for an inbound socket.
         let (connection, address) = listener.accept().await?;
@@ -179,12 +156,16 @@ async fn main() -> io::Result<()> {
             log::warn!("failed to set TCP_NODELAY {e}");
         }
 
+        let id = master_client_id;
+        master_client_id = master_client_id.wrapping_add(1);
+
         log::info!(
-            "Accepted connection from: {} ",
+            "Accepted connection from: {} (id {})",
             scrub_address(&format!("{address}")),
+            id
         );
 
-        let client = Arc::new(Client::new(connection, addr));
+        let client = Arc::new(Client::new(connection, addr, id));
 
         let server = server.clone();
         tokio::spawn(async move {
@@ -208,16 +189,77 @@ async fn main() -> io::Result<()> {
                 while !player
                     .client
                     .closed
-                    .load(std::sync::atomic::Ordering::Relaxed)
+                    .load(core::sync::atomic::Ordering::Relaxed)
                 {
                     let open = player.client.poll().await;
                     if open {
                         player.process_packets(&server).await;
                     };
                 }
+                log::debug!("Cleaning up player for id {}", id);
                 player.remove().await;
                 server.remove_player().await;
             }
         });
     }
+}
+
+fn handle_interrupt() {
+    log::warn!(
+        "{}",
+        TextComponent::text("Received interrupt signal; stopping server...")
+            .color_named(NamedColor::Red)
+            .to_pretty_console()
+    );
+    std::process::exit(0);
+}
+
+// Non-UNIX Ctrl-C handling
+#[cfg(not(unix))]
+async fn setup_sighandler() -> io::Result<()> {
+    if ctrl_c().await.is_ok() {
+        handle_interrupt();
+    }
+
+    Ok(())
+}
+
+// Unix signal handling
+#[cfg(unix)]
+async fn setup_sighandler() -> io::Result<()> {
+    if signal(SignalKind::interrupt())?.recv().await.is_some() {
+        handle_interrupt();
+    }
+
+    if signal(SignalKind::hangup())?.recv().await.is_some() {
+        handle_interrupt();
+    }
+
+    if signal(SignalKind::terminate())?.recv().await.is_some() {
+        handle_interrupt();
+    }
+
+    Ok(())
+}
+
+fn setup_console(server: Arc<Server>) {
+    tokio::spawn(async move {
+        let stdin = tokio::io::stdin();
+        let mut reader = BufReader::new(stdin);
+        loop {
+            let mut out = String::new();
+
+            reader
+                .read_line(&mut out)
+                .await
+                .expect("Failed to read console line");
+
+            if !out.is_empty() {
+                let dispatcher = server.command_dispatcher.clone();
+                dispatcher
+                    .handle_command(&mut command::CommandSender::Console, &server, &out)
+                    .await;
+            }
+        }
+    });
 }

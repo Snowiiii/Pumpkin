@@ -1,9 +1,7 @@
 use pumpkin_macros::client_packet;
 
-use super::ClientboundConfigPackets;
-
 #[derive(serde::Serialize)]
-#[client_packet(ClientboundConfigPackets::Finish as i32)]
+#[client_packet("configuration:finish_configuration")]
 pub struct CFinishConfig {}
 
 impl Default for CFinishConfig {

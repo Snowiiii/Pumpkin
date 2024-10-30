@@ -3,10 +3,8 @@ use pumpkin_core::text::TextComponent;
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::SetTitleText as i32)]
+#[client_packet("play:set_title_text")]
 pub struct CTitleText<'a> {
     title: TextComponent<'a>,
 }

@@ -5,10 +5,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::OpenWindow as i32)]
+#[client_packet("play:open_screen")]
 pub struct COpenScreen<'a> {
     window_id: VarInt,
     window_type: VarInt,

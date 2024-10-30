@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::CloseWindow as i32)]
+#[client_packet("play:container_close")]
 pub struct CCloseContainer {
     window_id: VarInt,
 }

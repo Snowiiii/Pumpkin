@@ -3,9 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::WindowProperty as i32)]
+#[client_packet("play:container_set_data")]
 pub struct CSetContainerProperty {
     window_id: VarInt,
     property: i16,

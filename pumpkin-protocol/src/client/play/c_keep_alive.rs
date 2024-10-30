@@ -1,10 +1,8 @@
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::KeepAlive as i32)]
+#[client_packet("play:keep_alive")]
 pub struct CKeepAlive {
     keep_alive_id: i64,
 }

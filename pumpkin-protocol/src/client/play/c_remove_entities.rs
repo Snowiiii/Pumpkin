@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::DestroyEntities as i32)]
+#[client_packet("play:remove_entities")]
 pub struct CRemoveEntities<'a> {
     count: VarInt,
     entity_ids: &'a [VarInt],

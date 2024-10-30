@@ -1,7 +1,4 @@
-use std::{
-    io::{self},
-    net::SocketAddr,
-};
+use std::net::SocketAddr;
 
 use packet::{ClientboundPacket, Packet, PacketError, ServerboundPacket};
 use pumpkin_config::{RCONConfig, ADVANCED_CONFIG};
@@ -20,13 +17,13 @@ pub enum RCONError {
     #[error("command exceeds the maximum length")]
     CommandTooLong,
     #[error("{}", _0)]
-    Io(io::Error),
+    Io(std::io::Error),
 }
 
 pub struct RCONServer;
 
 impl RCONServer {
-    pub async fn new(config: &RCONConfig, server: Arc<Server>) -> Result<Self, io::Error> {
+    pub async fn new(config: &RCONConfig, server: Arc<Server>) -> Result<Self, std::io::Error> {
         assert!(config.enabled, "RCON is not enabled");
         let listener = tokio::net::TcpListener::bind(config.address).await.unwrap();
 
@@ -122,7 +119,7 @@ impl RCONClient {
                     let dispatcher = server.command_dispatcher.clone();
                     dispatcher
                         .handle_command(
-                            &mut crate::commands::CommandSender::Rcon(&output),
+                            &mut crate::command::CommandSender::Rcon(&output),
                             server,
                             packet.get_body(),
                         )
@@ -141,7 +138,7 @@ impl RCONClient {
         Ok(())
     }
 
-    async fn read_bytes(&mut self) -> io::Result<bool> {
+    async fn read_bytes(&mut self) -> std::io::Result<bool> {
         let mut buf = [0; 1460];
         let n = self.connection.read(&mut buf).await?;
         if n == 0 {

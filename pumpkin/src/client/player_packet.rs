@@ -1,27 +1,26 @@
-use std::{f32::consts::PI, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
-    commands::CommandSender,
+    command::CommandSender,
     entity::player::{ChatMode, Hand, Player},
     server::Server,
     world::player_chunker,
 };
 use num_traits::FromPrimitive;
-use pumpkin_config::ADVANCED_CONFIG;
+use pumpkin_config::{PVPConfig, ADVANCED_CONFIG};
 use pumpkin_core::math::position::WorldPosition;
 use pumpkin_core::{
     math::{vector3::Vector3, wrap_degrees},
     text::TextComponent,
     GameMode,
 };
-use pumpkin_entity::EntityId;
 use pumpkin_inventory::{InventoryError, WindowType};
-use pumpkin_protocol::server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem};
+use pumpkin_macros::sound;
 use pumpkin_protocol::{
     client::play::{
-        Animation, CAcknowledgeBlockChange, CEntityAnimation, CEntityVelocity, CHeadRot,
-        CHurtAnimation, CPingResponse, CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot,
-        CUpdateEntityRot, FilterType,
+        Animation, CAcknowledgeBlockChange, CEntityAnimation, CHeadRot, CHurtAnimation,
+        CPingResponse, CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot,
+        FilterType,
     },
     server::play::{
         Action, ActionType, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport,
@@ -29,11 +28,19 @@ use pumpkin_protocol::{
         SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
         SSwingArm, SUseItemOn, Status,
     },
+    SoundCategory,
 };
-use pumpkin_world::block::{BlockFace, BlockId, BlockState};
-use pumpkin_world::global_registry;
+use pumpkin_protocol::{
+    server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem},
+    VarInt,
+};
+use pumpkin_world::block::BlockId;
+use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
 
-use super::PlayerConfig;
+use super::{
+    combat::{self, player_attack_sound, AttackType},
+    PlayerConfig,
+};
 
 fn modulus(a: f32, b: f32) -> f32 {
     ((a % b) + b) % b
@@ -71,7 +78,7 @@ impl Player {
         pos.clamp(-2.0E7, 2.0E7)
     }
 
-    pub async fn handle_position(&self, position: SPlayerPosition) {
+    pub async fn handle_position(self: &Arc<Self>, position: SPlayerPosition) {
         if position.x.is_nan() || position.feet_y.is_nan() || position.z.is_nan() {
             self.kick(TextComponent::text("Invalid movement")).await;
             return;
@@ -126,7 +133,10 @@ impl Player {
         player_chunker::update_position(self).await;
     }
 
-    pub async fn handle_position_rotation(&self, position_rotation: SPlayerPositionRotation) {
+    pub async fn handle_position_rotation(
+        self: &Arc<Self>,
+        position_rotation: SPlayerPositionRotation,
+    ) {
         if position_rotation.x.is_nan()
             || position_rotation.feet_y.is_nan()
             || position_rotation.z.is_nan()
@@ -337,8 +347,6 @@ impl Player {
     }
 
     pub async fn handle_chat_message(&self, chat_message: SChatMessage) {
-        log::debug!("Received chat message");
-
         let message = chat_message.message;
         if message.len() > 256 {
             self.kick(TextComponent::text("Oversized message")).await;
@@ -347,6 +355,7 @@ impl Player {
 
         // TODO: filter message & validation
         let gameprofile = &self.gameprofile;
+        log::info!("<chat>{}: {}", gameprofile.name, message);
 
         let entity = &self.living_entity.entity;
         let world = &entity.world;
@@ -405,66 +414,100 @@ impl Player {
         if entity.sneaking.load(std::sync::atomic::Ordering::Relaxed) != sneaking {
             entity.set_sneaking(sneaking).await;
         }
-        match ActionType::from_i32(interact.typ.0) {
-            Some(action) => match action {
-                ActionType::Attack => {
-                    let entity_id = interact.entity_id;
-                    // TODO: do validation and stuff
-                    let config = &ADVANCED_CONFIG.pvp;
-                    if config.enabled {
-                        let world = &entity.world;
-                        let attacked_player =
-                            world.get_player_by_entityid(entity_id.0 as EntityId).await;
-                        if let Some(player) = attacked_player {
-                            let victem_entity = &player.living_entity.entity;
-                            if config.protect_creative
-                                && player.gamemode.load() == GameMode::Creative
-                            {
-                                return;
-                            }
-                            if config.knockback {
-                                let yaw = entity.yaw.load();
-                                let strength = 1.0;
-                                let saved_velo = victem_entity.velocity.load();
-                                victem_entity.knockback(
-                                    strength * 0.5,
-                                    f64::from((yaw * (PI / 180.0)).sin()),
-                                    f64::from(-(yaw * (PI / 180.0)).cos()),
-                                );
-                                let victem_velocity = victem_entity.velocity.load();
-                                let packet = &CEntityVelocity::new(
-                                    &entity_id,
-                                    victem_velocity.x as f32,
-                                    victem_velocity.y as f32,
-                                    victem_velocity.z as f32,
-                                );
-                                let velocity = entity.velocity.load();
-                                entity.velocity.store(velocity.multiply(0.6, 1.0, 0.6));
+        let Some(action) = ActionType::from_i32(interact.typ.0) else {
+            self.kick(TextComponent::text("Invalid action type")).await;
+            return;
+        };
 
-                                victem_entity.velocity.store(saved_velo);
-                                player.client.send_packet(packet).await;
-                            }
-                            if config.hurt_animation {
-                                world
-                                    .broadcast_packet_all(&CHurtAnimation::new(
-                                        &entity_id,
-                                        entity.yaw.load(),
-                                    ))
-                                    .await;
-                            }
-                            if config.swing {}
-                        } else {
-                            self.kick(TextComponent::text("Interacted with invalid entity id"))
-                                .await;
-                        }
-                    }
+        match action {
+            ActionType::Attack => {
+                let entity_id = interact.entity_id;
+                let config = &ADVANCED_CONFIG.pvp;
+                // TODO: do validation and stuff
+                if !config.enabled {
+                    return;
                 }
-                ActionType::Interact | ActionType::InteractAt => {
-                    log::debug!("todo");
-                }
-            },
-            None => self.kick(TextComponent::text("Invalid action type")).await,
+
+                let world = &entity.world;
+                let victim = world.get_player_by_entityid(entity_id.0).await;
+                let Some(victim) = victim else {
+                    self.kick(TextComponent::text("Interacted with invalid entity id"))
+                        .await;
+                    return;
+                };
+
+                self.attack(&victim, config).await;
+            }
+            ActionType::Interact | ActionType::InteractAt => {
+                log::debug!("todo");
+            }
         }
+    }
+
+    pub async fn attack(&self, victim: &Arc<Self>, config: &PVPConfig) {
+        let world = &self.living_entity.entity.world;
+        let victim_entity = &victim.living_entity.entity;
+        let attacker_entity = &self.living_entity.entity;
+
+        let pos = victim_entity.pos.load();
+
+        let attack_cooldown_progress = self.get_attack_cooldown_progress(0.5);
+        self.last_attacked_ticks
+            .store(0, std::sync::atomic::Ordering::Relaxed);
+
+        // TODO: attack damage attribute and deal damage
+        let damage = 2.0;
+        if !victim.living_entity.damage(damage)
+            || (config.protect_creative && victim.gamemode.load() == GameMode::Creative)
+        {
+            world
+                .play_sound(
+                    sound!("minecraft:entity.player.attack.nodamage"),
+                    SoundCategory::Players,
+                    &pos,
+                )
+                .await;
+            return;
+        }
+
+        world
+            .play_sound(
+                sound!("minecraft:entity.player.hurt"),
+                SoundCategory::Players,
+                &pos,
+            )
+            .await;
+
+        let attack_type = AttackType::new(self, attack_cooldown_progress).await;
+
+        player_attack_sound(&pos, world, attack_type).await;
+
+        // if is_crit {
+        //     damage *= 1.5;
+        // }
+
+        let mut knockback_strength = 1.0;
+        match attack_type {
+            AttackType::Knockback => knockback_strength += 1.0,
+            AttackType::Sweeping => {
+                combat::spawn_sweep_particle(attacker_entity, world, &pos).await;
+            }
+            _ => {}
+        };
+
+        if config.knockback {
+            combat::handle_knockback(attacker_entity, victim, victim_entity, knockback_strength)
+                .await;
+        }
+
+        if config.hurt_animation {
+            let entity_id = VarInt(victim_entity.entity_id);
+            world
+                .broadcast_packet_all(&CHurtAnimation::new(&entity_id, attacker_entity.yaw.load()))
+                .await;
+        }
+
+        if config.swing {}
     }
 
     pub async fn handle_player_action(&self, player_action: SPlayerAction) {
@@ -573,24 +616,17 @@ impl Player {
 
         if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
             if let Some(item) = self.inventory.lock().await.held_item() {
-                let minecraft_id = global_registry::find_minecraft_id(
-                    global_registry::ITEM_REGISTRY,
-                    item.item_id,
-                )
-                .expect("All item ids are in the global registry");
-                if let Ok(block_state_id) = BlockState::new(minecraft_id, None) {
-                    let entity = &self.living_entity.entity;
-                    let world = &entity.world;
+                let block = get_block_by_item(item.item_id)
+                    .expect("No item found, TODO Better error handling");
+                let entity = &self.living_entity.entity;
+                let world = &entity.world;
 
-                    world
-                        .set_block(
-                            WorldPosition(location.0 + face.to_offset()),
-                            BlockId {
-                                data: block_state_id.get_id_mojang_repr() as u16,
-                            },
-                        )
-                        .await;
-                }
+                world
+                    .set_block(
+                        WorldPosition(location.0 + face.to_offset()),
+                        BlockId(block.default_state_id),
+                    )
+                    .await;
             }
             self.client
                 .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
@@ -621,11 +657,16 @@ impl Player {
         if self.gamemode.load() != GameMode::Creative {
             return Err(InventoryError::PermissionError);
         }
-        self.inventory.lock().await.set_slot(
-            packet.slot as usize,
-            packet.clicked_item.to_item(),
-            false,
-        )
+        let valid_slot = packet.slot >= 1 && packet.slot <= 45;
+        if valid_slot {
+            self.inventory.lock().await.set_slot(
+                packet.slot as usize,
+                packet.clicked_item.to_item(),
+                false,
+            )?;
+        };
+        // TODO: The Item was droped per drag and drop,
+        Ok(())
     }
 
     // TODO:

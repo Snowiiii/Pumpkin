@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundLoginPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundLoginPackets::LoginPluginRequest as i32)]
+#[client_packet("login:custom_query")]
 pub struct CLoginPluginRequest<'a> {
     message_id: VarInt,
     channel: &'a str,

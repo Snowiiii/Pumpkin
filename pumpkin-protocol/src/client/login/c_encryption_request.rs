@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundLoginPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundLoginPackets::EncryptionRequest as i32)]
+#[client_packet("login:hello")]
 pub struct CEncryptionRequest<'a> {
     server_id: &'a str, // 20
     public_key_length: VarInt,

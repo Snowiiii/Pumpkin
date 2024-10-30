@@ -3,10 +3,8 @@ use serde::{ser::SerializeSeq, Serialize};
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::PlayerInfoRemove as i32)]
+#[client_packet("play:player_info_remove")]
 pub struct CRemovePlayerInfo<'a> {
     players_count: VarInt,
     #[serde(serialize_with = "serialize_slice_uuids")]

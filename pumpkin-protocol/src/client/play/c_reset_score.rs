@@ -1,10 +1,8 @@
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::ResetScore as i32)]
+#[client_packet("play:reset_score")]
 pub struct CResetScore {
     entity_name: String,
     objective_name: Option<String>,
