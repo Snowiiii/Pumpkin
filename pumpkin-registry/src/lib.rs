@@ -6,6 +6,8 @@ use paint::Painting;
 use pumpkin_protocol::client::config::RegistryEntry;
 use wolf::WolfVariant;
 
+pub use damage_type::DamageType;
+
 mod biomes;
 mod chat_type;
 mod damage_type;
