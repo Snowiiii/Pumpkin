@@ -1,4 +1,4 @@
-package local.eframe_template;
+package local.pumpkin_egui_android;
 
 import android.os.Bundle;
 import android.util.Log;

@@ -1,8 +1,8 @@
 # eframe in android
 
-This part of the repo will build an android app using a `cdylib` named `eframe_template_android`. This `cdylib` will be used by the android app to render the UI.
+This part of the repo will build an android app using a `cdylib` named `pumpkin_egui_android`. This `cdylib` will be used by the android app to render the UI.
 
-The chain is: `eframe_template` used in `eframe_template_android` used in `eframe_template` (android app)
+The chain is: `pumpkin_egui` used in `pumpkin_egui_android` used in `pumpkin_egui_android` (android app)
 
 ## Building the android app
 

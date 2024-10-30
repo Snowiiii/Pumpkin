@@ -9,14 +9,14 @@ jni:
 	cargo ndk --target x86_64-linux-android -o ./java/app/src/main/jniLibs/ build --profile release
 
 apk: jni
-	cd java && ./gradlew build --stacktrace
+	cd java && gradle wrapper
 
 run-on-device: jni
-	adb uninstall local.eframe_template || true
+	adb uninstall local.pumpkin_egui_android || true
 
 	cd java && ./gradlew installDebug
-	adb shell am start -n local.eframe_template/.MainActivity
-	adb logcat -v color -s eframe_template *:e
+	adb shell am start -n local.pumpkin_egui_android/.MainActivity
+	adb logcat -v color -s pumpkin_egui_android *:e
 
 clean:
 	rm -rf java/app/src/main/jniLibs/

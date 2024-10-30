@@ -8,6 +8,11 @@ pub fn android_main(
 ) -> Result<(), Box<dyn std::error::Error>> {
     use egui_winit::winit::platform::android::EventLoopBuilderExtAndroid;
     egui_logger::builder().init().unwrap();
+    /*android_logger::init_once(
+        android_logger::Config::default()
+            .with_tag("pumpkin_egui_android")
+            .with_max_level(log::LevelFilter::Info),
+    );*/
 
     let mut options = eframe::NativeOptions::default();
     options.renderer = eframe::Renderer::Glow;
@@ -15,7 +20,7 @@ pub fn android_main(
         builder.with_android_app(app);
     }));
     eframe::run_native(
-        "eframe_template",
+        "pumpkin_egui_android",
         options,
         Box::new(|cc| Ok(Box::new(TemplateApp::new(cc)))),
     )?;

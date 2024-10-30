@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace "local.eframe_template"
+    namespace "local.pumpkin_egui_android"
     compileSdk 33
 
     defaultConfig {

@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
         android:allowBackup="true"
-        android:label="eframe_template"
+        android:label="pumpkin_egui_android"
         android:supportsRtl="true"
         android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
         <activity
@@ -18,7 +18,7 @@
 
             <meta-data
                 android:name="android.app.lib_name"
-                android:value="eframe_template_lib" />
+                android:value="pumpkin_egui_android" />
         </activity>
     </application>
 
