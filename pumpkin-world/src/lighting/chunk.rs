@@ -9,13 +9,6 @@ use crate::{
 
 use super::manager::{ChunkBoundaryPropagation, ChunkDirection};
 
-#[derive(Debug, Clone)]
-struct Coordinates {
-    x: i32,
-    y: i32,
-    z: i32,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChunkCoordinates {
     pub x: i32,
@@ -34,26 +27,6 @@ struct SubChunkRelativeCoordinates {
     x: u8,
     y: u8,
     z: u8,
-}
-
-impl From<Coordinates> for ChunkRelativeCoordinates {
-    fn from(value: Coordinates) -> Self {
-        ChunkRelativeCoordinates {
-            x: value.x.rem_euclid(16) as u8,
-            y: value.y,
-            z: value.z.rem_euclid(16) as u8,
-        }
-    }
-}
-
-impl From<Coordinates> for SubChunkRelativeCoordinates {
-    fn from(value: Coordinates) -> Self {
-        SubChunkRelativeCoordinates {
-            x: value.x.rem_euclid(16) as u8,
-            y: value.y.rem_euclid(16) as u8,
-            z: value.z.rem_euclid(16) as u8,
-        }
-    }
 }
 
 impl From<ChunkRelativeCoordinates> for SubChunkRelativeCoordinates {
