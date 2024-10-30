@@ -1,17 +1,11 @@
-use std::{
-    collections::HashMap,
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
 use dashmap::{DashMap, DashSet};
 use itertools::Itertools;
 use pumpkin_core::math::vector2::Vector2;
 use tokio::sync::RwLock;
 
-use crate::{
-    chunk::ChunkData,
-    lighting::chunk::ChunkLightData,
-};
+use crate::{chunk::ChunkData, lighting::chunk::ChunkLightData};
 
 use super::chunk::ChunkRelativeCoordinates;
 
