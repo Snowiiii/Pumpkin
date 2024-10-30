@@ -3,7 +3,7 @@ use std::{path::PathBuf, sync::Arc};
 use dashmap::{DashMap, Entry};
 use pumpkin_core::math::vector2::Vector2;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::{mpsc, Mutex, RwLock};
 
 use crate::{
     chunk::{
@@ -24,11 +24,11 @@ use crate::{
 /// For more details on world generation, refer to the `WorldGenerator` module.
 pub struct Level {
     save_file: Option<SaveFile>,
-    loaded_chunks: Arc<DashMap<Vector2<i32>, Arc<RwLock<ChunkData>>>>,
+    pub loaded_chunks: Arc<DashMap<Vector2<i32>, Arc<RwLock<ChunkData>>>>,
     chunk_watchers: Arc<DashMap<Vector2<i32>, usize>>,
     chunk_reader: Arc<dyn ChunkReader>,
     world_gen: Arc<dyn WorldGenerator>,
-    light_manager: Arc<LevelLightManager>,
+    pub light_manager: Arc<Mutex<LevelLightManager>>,
 }
 
 #[derive(Clone)]
@@ -49,6 +49,7 @@ impl Level {
             );
 
             let loaded_chunks = Arc::new(DashMap::new());
+            let light_manager = Arc::new(Mutex::new(LevelLightManager::new(loaded_chunks.clone())));
 
             Self {
                 world_gen,
@@ -58,7 +59,7 @@ impl Level {
                 }),
                 chunk_reader: Arc::new(AnvilChunkReader::new()),
                 chunk_watchers: Arc::new(DashMap::new()),
-                light_manager: Arc::new(LevelLightManager::new(loaded_chunks.clone())),
+                light_manager,
                 loaded_chunks,
             }
         } else {
@@ -73,7 +74,7 @@ impl Level {
                 save_file: None,
                 chunk_reader: Arc::new(AnvilChunkReader::new()),
                 chunk_watchers: Arc::new(DashMap::new()),
-                light_manager: Arc::new(LevelLightManager::new(loaded_chunks.clone())),
+                light_manager: Arc::new(Mutex::new(LevelLightManager::new(loaded_chunks.clone()))),
                 loaded_chunks,
             }
         }
@@ -213,7 +214,10 @@ impl Level {
                         } else {
                             loaded_chunks.insert(chunk_pos, loaded_chunk.clone());
 
-                            light_manager.initialize_lighting(chunk_pos).await;
+                            let light_manager = light_manager.lock().await;
+                            light_manager
+                                .initialize_lighting(&chunk_pos, loaded_chunk.clone())
+                                .await;
                             loaded_chunk
                         }
                     }

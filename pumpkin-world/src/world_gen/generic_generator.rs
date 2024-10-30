@@ -74,7 +74,7 @@ impl<B: BiomeGenerator, T: PerlinTerrainGenerator> WorldGenerator for GenericGen
         }
 
         ChunkData {
-            light: ChunkLightData::new(),
+            light: None,
             blocks,
             position: at,
         }

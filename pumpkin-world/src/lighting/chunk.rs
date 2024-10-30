@@ -9,14 +9,6 @@ use crate::{
 
 use super::manager::{ChunkBoundaryPropagation, ChunkDirection};
 
-fn div_16_floor(y: i32) -> i32 {
-    if y >= 0 {
-        y / 16
-    } else {
-        (y / 16) - 1
-    }
-}
-
 #[derive(Debug, Clone)]
 struct Coordinates {
     x: i32,
@@ -70,24 +62,6 @@ impl From<ChunkRelativeCoordinates> for SubChunkRelativeCoordinates {
             x: value.x,
             y: value.y.rem_euclid(16) as u8,
             z: value.z,
-        }
-    }
-}
-
-impl Coordinates {
-    fn chunk_coordinates(&self) -> ChunkCoordinates {
-        ChunkCoordinates {
-            x: div_16_floor(self.x),
-            z: div_16_floor(self.z),
-        }
-    }
-}
-impl ChunkRelativeCoordinates {
-    fn with_chunk_coordinates(&self, chunk_coordinates: &ChunkCoordinates) -> Coordinates {
-        Coordinates {
-            x: chunk_coordinates.x * 16 + self.x as i32,
-            y: self.y,
-            z: chunk_coordinates.z * 16 + self.z as i32,
         }
     }
 }
@@ -334,7 +308,7 @@ impl ChunkLightData {
     }
 
     fn get_light_level(&self, coordinates: ChunkRelativeCoordinates) -> u8 {
-        let subchunk_y = std::cmp::max(div_16_floor(coordinates.y), MIN_LIGHT_SUBCHUNK);
+        let subchunk_y = std::cmp::max(coordinates.y.div_euclid(16), MIN_LIGHT_SUBCHUNK);
 
         if subchunk_y > MAX_LIGHT_SUBCHUNK {
             return 15;
@@ -352,7 +326,7 @@ impl ChunkLightData {
     }
 
     fn set_light_level(&mut self, coordinates: ChunkRelativeCoordinates, level: u8) {
-        let subchunk_y = div_16_floor(coordinates.y);
+        let subchunk_y = coordinates.y.div_euclid(16);
 
         let subchunk = self.get_subchunk_mut(subchunk_y);
         match subchunk {
@@ -363,8 +337,9 @@ impl ChunkLightData {
         }
     }
 
-    fn propogate_increase(&mut self, blocks: &ChunkBlocks) -> Vec<ChunkBoundaryPropagation> {
+    fn propagate_increase(&mut self, blocks: &ChunkBlocks) -> Vec<ChunkBoundaryPropagation> {
         let mut chunk_boundary_propagations = Vec::new();
+
         while let Some(item) = self.increase_queue.pop_front() {
             for direction in Self::directions(item.coordinates) {
                 match direction {
@@ -373,7 +348,7 @@ impl ChunkLightData {
                     }
                     InDirection::ChunkBoundary(direction, coordinates) => {
                         chunk_boundary_propagations.push(ChunkBoundaryPropagation {
-                            level: item.level,
+                            level: item.level - 1,
                             direction,
                             coordinates,
                         });
@@ -485,12 +460,16 @@ impl ChunkLightData {
             };
             let direction: ChunkDirection = i.into();
             let chunk = chunk.read().await;
+            let Some(ref chunk_light) = chunk.light else {
+                continue;
+            };
+
             for y in -64..320 {
                 for other_coord in 0..16 {
                     let (local_chunk_coord, neighbor_chunk_coord) =
                         Self::edge_locations(y, other_coord, direction);
                     let local_light_level = self.get_light_level(local_chunk_coord.clone());
-                    let neighbor_light_level = chunk.light.get_light_level(neighbor_chunk_coord);
+                    let neighbor_light_level = chunk_light.get_light_level(neighbor_chunk_coord);
 
                     // TODO: Handle transparency
                     let opacity = if blocks
@@ -626,9 +605,31 @@ impl ChunkLightData {
 
         self.edge_lighting(blocks, surrounding_chunks).await;
 
-        let neighbor_chunk_propagations = self.propogate_increase(&blocks);
+        let neighbor_chunk_propagations = self.propagate_increase(&blocks);
 
         neighbor_chunk_propagations
+    }
+
+    pub async fn increase_light_levels(
+        &mut self,
+        blocks: &ChunkBlocks,
+        changes: Vec<(ChunkRelativeCoordinates, u8)>,
+    ) -> (bool, Vec<ChunkBoundaryPropagation>) {
+        let mut light_changed = false;
+        for (coordinates, level) in changes {
+            assert!(level < 16);
+
+            let current_light_level = self.get_light_level(coordinates.clone());
+            if level > current_light_level {
+                light_changed = true;
+
+                self.set_light_level(coordinates.clone(), level);
+                self.increase_queue
+                    .push_back(LightChangeQueueItem { level, coordinates })
+            }
+        }
+
+        (light_changed, self.propagate_increase(blocks))
     }
 
     pub fn packet_data(&self) -> (i64, i64, Vec<&Box<[u8; 2048]>>) {
@@ -659,12 +660,6 @@ impl ChunkLightData {
     }
 }
 
-// TODO: Chunk Lighting
-// This is going to requie access to the rest of the chunks, not sure on how to do this atm.
-// Upon initial chunk initialization, pull values from edges of chunk
-// Upon lighting propogation, queue changes into the new chunk as they leave the border. If those
-// aren't initialized yet, don't do anything, the value will be pulled upon that chunk initializing.
-//
 // TODO: Subchunk Initialization
 // Only subchunks that are adjacent (including diagonals) to a subchunk with blocks should be
 // initialized.

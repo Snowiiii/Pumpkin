@@ -58,7 +58,7 @@ pub enum CompressionError {
 pub struct ChunkData {
     pub blocks: ChunkBlocks,
     pub position: Vector2<i32>,
-    pub light: ChunkLightData,
+    pub light: Option<ChunkLightData>,
 }
 #[derive(Clone)]
 pub struct ChunkBlocks {
@@ -308,7 +308,7 @@ impl ChunkData {
         }
 
         Ok(ChunkData {
-            light: ChunkLightData::new(),
+            light: None,
             blocks,
             position: at,
         })
