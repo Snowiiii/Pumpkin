@@ -16,7 +16,7 @@ import com.google.androidgamesdk.GameActivity;
 
 public class MainActivity extends GameActivity {
   static {
-    System.loadLibrary("eframe_template_android");
+    System.loadLibrary("pumpkin_egui_android");
   }
 
   @Override

@@ -1,4 +1,5 @@
-use eframe_template::TemplateApp;
+use pumpkin_egui::TemplateApp;
+
 
 #[cfg(target_os = "android")]
 #[no_mangle]
