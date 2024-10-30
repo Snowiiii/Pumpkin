@@ -126,7 +126,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
             buf.put_var_int(&subchunks.len().into());
             for subchunk in subchunks.into_iter() {
                 buf.put_var_int(&VarInt(subchunk.len() as i32));
-                buf.put_slice(&**subchunk);
+                buf.put_slice(subchunk);
             }
 
             // Block Lighting
