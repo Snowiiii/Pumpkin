@@ -52,10 +52,14 @@ class Blocks : Extractor.Extractor {
             for (state in block.stateManager.states) {
                 val stateJson = JsonObject()
                 val id = stateIdCounter
+
                 stateIdCounter++
+
                 stateJson.addProperty("id", id)
                 stateJson.addProperty("luminance", state.luminance)
+                stateJson.addProperty("opacity", state.opacity)
                 stateJson.addProperty("opaque", state.isOpaque)
+                stateJson.addProperty("has_sided_transparency", state.hasSidedTransparency())
                 stateJson.addProperty("replaceable", state.isReplaceable)
 
                 if (block.defaultState == state) {

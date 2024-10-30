@@ -16,6 +16,15 @@ pub fn get_block(registry_id: &str) -> Option<&Block> {
         .find(|&block| block.name == registry_id)
 }
 
+// These functions cannot be the most efficient way to do this
+pub fn get_state(state_id: u16) -> Option<&'static State> {
+    BLOCKS
+        .blocks
+        .iter()
+        .flat_map(|block| &block.states)
+        .find(|state| state.id == state_id)
+}
+
 pub fn get_block_by_item<'a>(item_id: u16) -> Option<&'a Block> {
     BLOCKS.blocks.iter().find(|&block| block.item_id == item_id)
 }
@@ -51,16 +60,18 @@ struct Property {
     name: String,
     values: Vec<String>,
 }
-#[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
-struct State {
-    id: u16,
-    luminance: u8,
-    opaque: bool,
-    replaceable: bool,
-    collision_shapes: Vec<u16>,
-    block_entity_type: Option<u32>,
+pub struct State {
+    pub id: u16,
+    pub luminance: u8,
+    pub opacity: u8,
+    pub opaque: bool,
+    pub has_sided_transparency: bool,
+    pub replaceable: bool,
+    pub collision_shapes: Vec<u16>,
+    pub block_entity_type: Option<u32>,
 }
+
 #[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
 struct Shape {

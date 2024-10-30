@@ -8,7 +8,11 @@ use itertools::Itertools;
 use pumpkin_core::math::vector2::Vector2;
 use tokio::sync::RwLock;
 
-use crate::{chunk::ChunkData, lighting::chunk::ChunkLightData};
+use crate::{
+    block::{block_registry::State, BlockId},
+    chunk::ChunkData,
+    lighting::chunk::ChunkLightData,
+};
 
 use super::chunk::ChunkRelativeCoordinates;
 
@@ -111,6 +115,9 @@ impl LevelLightManager {
                 self.modified_chunks.insert(*chunk_coordinates);
             }
 
+            // TODO: Implement a proper system in the chunk to disable certian directions of
+            // propagation. Can be used for not double checking other sky source blocks, not
+            // rechecking the input for the source etc.
             neighbor_changes
                 .into_iter()
                 .filter(|change| {

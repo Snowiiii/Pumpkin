@@ -3,7 +3,10 @@ use std::{collections::VecDeque, sync::Arc};
 use tokio::sync::RwLock;
 
 use crate::{
-    block::BlockId,
+    block::{
+        block_registry::{get_state, State},
+        BlockId,
+    },
     chunk::{ChunkBlocks, ChunkData},
 };
 
@@ -271,11 +274,13 @@ impl ChunkLightData {
     }
 
     fn block_light_filtering(block: BlockId) -> u8 {
-        if block.is_air() {
-            0
-        } else {
-            15
-        }
+        get_state(block.0).unwrap().opacity
+    }
+
+    // TODO: Implement side transparency (decently large task)
+    fn block_opaque(block: &BlockId) -> bool {
+        // Checking air first manually because the get_state is horrifically unoptomised
+        !block.is_air() && get_state(block.0).unwrap().opaque
     }
 
     fn subchunk_empty(blocks: &ChunkBlocks, i: i32) -> bool {
@@ -373,8 +378,7 @@ impl ChunkLightData {
                                 },
                             );
 
-                            // TODO: Handle other transparent blocks
-                            if !block.is_air() {
+                            if Self::block_opaque(&block) {
                                 continue;
                             }
                         }
@@ -471,29 +475,22 @@ impl ChunkLightData {
                     let local_light_level = self.get_light_level(local_chunk_coord.clone());
                     let neighbor_light_level = chunk_light.get_light_level(neighbor_chunk_coord);
 
-                    // TODO: Handle transparency
-                    let opacity = if blocks
-                        .get_block(crate::coordinates::ChunkRelativeBlockCoordinates {
+                    if Self::block_opaque(&blocks.get_block(
+                        crate::coordinates::ChunkRelativeBlockCoordinates {
                             x: local_chunk_coord.x.into(),
                             y: local_chunk_coord.y.into(),
                             z: local_chunk_coord.z.into(),
-                        })
-                        .is_air()
-                    {
-                        0
-                    } else {
-                        15
-                    };
+                        },
+                    )) {
+                        continue;
+                    }
 
-                    if neighbor_light_level > local_light_level + opacity + 1 {
+                    if neighbor_light_level > local_light_level + 1 {
                         // Queue for increase
-                        self.set_light_level(
-                            local_chunk_coord.clone(),
-                            neighbor_light_level - 1 - opacity,
-                        );
+                        self.set_light_level(local_chunk_coord.clone(), neighbor_light_level - 1);
                         self.increase_queue.push_back(LightChangeQueueItem {
                             coordinates: local_chunk_coord,
-                            level: neighbor_light_level - 1 - opacity,
+                            level: neighbor_light_level - 1,
                         });
                     }
                 }
@@ -531,7 +528,7 @@ impl ChunkLightData {
             let i = (subchunk_y - MIN_LIGHT_SUBCHUNK) as usize;
             if *subchunks_with_blocks.get(i).unwrap_or(&false)
                 || *subchunks_with_blocks.get(i + 1).unwrap_or(&false)
-                || *subchunks_with_blocks.get(i - 1).unwrap_or(&false)
+                || (i > 0 && *subchunks_with_blocks.get(i - 1).unwrap_or(&false))
             {
                 self.set_subchunk(subchunk_y, SubChunkLighting::initialized());
             }
@@ -556,6 +553,10 @@ impl ChunkLightData {
                     // First block is guaranteed to not be filled because if the entire world is
                     // filled, the first subchunk will be above the world
                     for y in (0..16).rev() {
+                        if light_level < 15 {
+                            break 'column;
+                        }
+
                         lighting_data
                             .set_level_at(SubChunkRelativeCoordinates { x, y, z }, light_level);
 
@@ -567,7 +568,6 @@ impl ChunkLightData {
 
                         let next_block_y = (subchunk_y * 16) + (y as i32) - 1;
 
-                        // Handle light filtering from blocks like leaves and water
                         let light_reduction = if next_block_y < MAX_BLOCK_SUBCHUNK * 16
                             && next_block_y >= MIN_BLOCK_SUBCHUNK * 16
                         {
@@ -584,6 +584,10 @@ impl ChunkLightData {
                             0
                         };
 
+                        if light_level == 0 {
+                            break 'column;
+                        }
+
                         self.increase_queue.push_back(LightChangeQueueItem {
                             level: light_level,
                             coordinates: ChunkRelativeCoordinates {
@@ -593,11 +597,7 @@ impl ChunkLightData {
                             },
                         });
 
-                        light_level = std::cmp::max(0, light_level - light_reduction);
-
-                        if light_level == 0 {
-                            break 'column;
-                        }
+                        light_level = light_level - light_reduction;
                     }
                 }
             }
