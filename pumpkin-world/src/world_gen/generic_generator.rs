@@ -4,7 +4,6 @@ use pumpkin_core::math::vector2::Vector2;
 use crate::{
     chunk::{ChunkBlocks, ChunkData},
     coordinates::{ChunkRelativeBlockCoordinates, ChunkRelativeXZBlockCoordinates},
-    lighting::chunk::ChunkLightData,
     WORLD_LOWEST_Y,
 };
 

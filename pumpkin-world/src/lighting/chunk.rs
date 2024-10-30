@@ -3,10 +3,7 @@ use std::{collections::VecDeque, sync::Arc};
 use tokio::sync::RwLock;
 
 use crate::{
-    block::{
-        block_registry::{get_state, State},
-        BlockId,
-    },
+    block::{block_registry::get_state, BlockId},
     chunk::{ChunkBlocks, ChunkData},
 };
 
@@ -130,9 +127,7 @@ pub enum SubChunkLighting {
 
 impl SubChunkLighting {
     fn initialized() -> Self {
-        Self::Initialized(SubChunkLightData {
-            0: Box::new([0; SUBCHUNK_VOLUME / 2]),
-        })
+        Self::Initialized(SubChunkLightData(Box::new([0; SUBCHUNK_VOLUME / 2])))
     }
 }
 
@@ -265,6 +260,12 @@ impl ChunkRelativeCoordinates {
     }
 }
 
+impl Default for ChunkLightData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ChunkLightData {
     pub fn new() -> Self {
         Self {
@@ -284,7 +285,7 @@ impl ChunkLightData {
     }
 
     fn subchunk_empty(blocks: &ChunkBlocks, i: i32) -> bool {
-        if i < MIN_BLOCK_SUBCHUNK || i > MAX_BLOCK_SUBCHUNK {
+        if !(MIN_BLOCK_SUBCHUNK..=MAX_BLOCK_SUBCHUNK).contains(&i) {
             return true;
         }
 
@@ -511,8 +512,8 @@ impl ChunkLightData {
         for value in blocks.heightmap.world_surface.iter() {
             for i in 0..ENTRIES_PER_LONG {
                 // Get last 9 bits
-                let foo = (value >> (BITS_PER_ENTRY * i)) & 0b111111111;
-                column_heights.push(foo as i32);
+                let value = (value >> (BITS_PER_ENTRY * i)) & 0b111111111;
+                column_heights.push(value as i32);
             }
         }
 
@@ -568,8 +569,8 @@ impl ChunkLightData {
 
                         let next_block_y = (subchunk_y * 16) + (y as i32) - 1;
 
-                        let light_reduction = if next_block_y < MAX_BLOCK_SUBCHUNK * 16
-                            && next_block_y >= MIN_BLOCK_SUBCHUNK * 16
+                        let light_reduction = if (MIN_BLOCK_SUBCHUNK * 16..MAX_BLOCK_SUBCHUNK * 16)
+                            .contains(&next_block_y)
                         {
                             let next_block = blocks.get_block(
                                 crate::coordinates::ChunkRelativeBlockCoordinates {
@@ -597,7 +598,7 @@ impl ChunkLightData {
                             },
                         });
 
-                        light_level = light_level - light_reduction;
+                        light_level -= light_reduction;
                     }
                 }
             }
@@ -605,9 +606,7 @@ impl ChunkLightData {
 
         self.edge_lighting(blocks, surrounding_chunks).await;
 
-        let neighbor_chunk_propagations = self.propagate_increase(&blocks);
-
-        neighbor_chunk_propagations
+        self.propagate_increase(blocks)
     }
 
     pub async fn increase_light_levels(
@@ -632,10 +631,10 @@ impl ChunkLightData {
         (light_changed, self.propagate_increase(blocks))
     }
 
-    pub fn packet_data(&self) -> (i64, i64, Vec<&Box<[u8; 2048]>>) {
+    pub fn packet_data(&self) -> (i64, i64, Vec<&[u8; 2048]>) {
         let mut empty_mask = 0;
         let mut set_mask = 0;
-        let mut things = Vec::new();
+        let mut subchunks = Vec::new();
 
         for (i, subchunk) in self.subchunks.iter().enumerate() {
             match subchunk {
@@ -645,7 +644,7 @@ impl ChunkLightData {
                     empty_mask |= 1 << i;
                     for level in light_data.0.iter() {
                         if *level != 0 {
-                            things.push(&light_data.0);
+                            subchunks.push(&*light_data.0);
                             set_mask |= 1 << i;
                             // Remove from empty
                             empty_mask ^= 1 << i;
@@ -656,7 +655,7 @@ impl ChunkLightData {
             }
         }
 
-        (set_mask, empty_mask, things)
+        (set_mask, empty_mask, subchunks)
     }
 }
 

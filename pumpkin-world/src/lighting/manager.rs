@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     sync::Arc,
 };
 
@@ -9,7 +9,6 @@ use pumpkin_core::math::vector2::Vector2;
 use tokio::sync::RwLock;
 
 use crate::{
-    block::{block_registry::State, BlockId},
     chunk::ChunkData,
     lighting::chunk::ChunkLightData,
 };
@@ -73,7 +72,7 @@ impl LevelLightManager {
         let modified_chunks: Vec<_> = self
             .modified_chunks
             .iter()
-            .map(|value| value.key().clone())
+            .map(|value| *value.key())
             .collect();
         self.modified_chunks.clear();
 
@@ -142,7 +141,7 @@ impl LevelLightManager {
                 .into_group_map();
 
         for (dir, increases) in changes {
-            let to_chunk_coordinates = dir.apply(&chunk_coordinates);
+            let to_chunk_coordinates = dir.apply(chunk_coordinates);
             Box::pin(self.increase_light_levels(
                 &to_chunk_coordinates,
                 chunk_coordinates,
@@ -159,7 +158,7 @@ impl LevelLightManager {
     ) {
         let neighbor_changes = {
             let surrounding_chunks =
-                Self::surrounding_chunk_coordinates(&chunk_coordinates).map(|coordinates| {
+                Self::surrounding_chunk_coordinates(chunk_coordinates).map(|coordinates| {
                     self.loaded_chunks
                         .get(&coordinates)
                         .map(|chunk| chunk.clone())
