@@ -5,7 +5,7 @@ use num_traits::Zero;
 use pumpkin_core::math::vector2::Vector2;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use tokio::{
-    sync::{mpsc, RwLock},
+    sync::{mpsc, Mutex, RwLock},
     task::JoinHandle,
 };
 
@@ -235,8 +235,10 @@ impl Level {
                 let join_handle = tokio::spawn(async move {
                     let chunk = loaded_chunks
                         .get(&chunk_pos)
-                        .map(|entry| entry.value().clone())
-                        .unwrap_or_else(|| {
+                        .map(|entry| entry.value().clone());
+                    let chunk = match chunk {
+                        Some(chunk) => chunk,
+                        None => {
                             let loaded_chunk = save_file
                                 .and_then(|save_file| {
                                     match Self::load_chunk_from_save(
@@ -273,7 +275,8 @@ impl Level {
                                     .await;
                                 loaded_chunk
                             }
-                        });
+                        }
+                    };
 
                     let _ = channel
                         .send(chunk)
