@@ -1,7 +1,6 @@
 #![expect(dead_code)]
 
 use std::{
-    collections::HashMap,
     fs::File,
     io::{BufRead, BufReader},
 };
@@ -21,59 +20,48 @@ pub enum TranslationError {
     JsonParse,
 }
 
-pub enum Translations<'a> {
-    Untranslated(TextComponent<'a>),
-    Translated(HashMap<String, TextComponent<'a>>),
-}
-
 pub fn translate<'a>(
     config: &TranslationConfig,
     message: &'a str,
-) -> Result<Translations<'a>, TranslationError> {
+) -> Result<TextComponent<'a>, TranslationError> {
     if !config.enabled {
-        return Ok(Translations::Untranslated(TextComponent::text(message)));
+        return Ok(TextComponent::text(message));
     }
 
     if config.client_translations {
-        return Ok(Translations::Untranslated(TextComponent {
+        return Ok(TextComponent {
             content: TextContent::Translate {
                 translate: std::borrow::Cow::Borrowed(message),
                 with: vec![],
             },
 
             style: Style::default(),
-        }));
+        });
     }
 
-    let path = "";
+    let path = ""; //Empty path until I figure out the file handling
     let translations = get_translations(path, message)?;
 
-    Ok(Translations::Translated(translations))
+    Ok(translations)
 }
 
 fn get_translations<'a>(
     path: &str,
     message: &'a str,
-) -> Result<HashMap<String, TextComponent<'a>>, TranslationError> {
+) -> Result<TextComponent<'a>, TranslationError> {
     let translation_file = File::open(path).map_err(|_| TranslationError::InvalidFile)?;
     let reader = BufReader::new(translation_file);
 
     let json_results = read_translation_file(reader, message)?;
-    let hashmap_results = make_hashmap(json_results);
-    let mut text_hashmap = HashMap::new();
+    let parsed_results = parse_json_object(json_results, message);
+    let text_components = TextComponent {
+        content: TextContent::Text {
+            text: std::borrow::Cow::Owned(parsed_results),
+        },
+        style: Style::default(),
+    };
 
-    for (original, translation) in hashmap_results {
-        text_hashmap.insert(
-            original,
-            TextComponent {
-                content: TextContent::Text {
-                    text: std::borrow::Cow::Owned(translation),
-                },
-                style: Style::default(),
-            },
-        );
-    }
-    Ok(text_hashmap)
+    Ok(text_components)
 }
 ///Read a huge object line by line and tricking `serde_json` into thinking they are individual objects
 fn read_translation_file(
@@ -111,27 +99,27 @@ fn read_translation_file(
     Ok(results)
 }
 
-fn make_hashmap(vec: Vec<Value>) -> HashMap<String, String> {
-    let mut hashmap: HashMap<String, String> = HashMap::new();
-
+fn parse_json_object(vec: Vec<Value>, message: &str) -> String {
     for value in vec {
+        //breaking up a serde_json object, looks really ugly not gonna lie
         if let Value::Object(map) = value {
             if let Some(text) = map.keys().next() {
-                if let Some(Value::String(translation)) = map.values().next() {
-                    hashmap.insert(text.to_owned(), translation.to_owned());
+                if text.trim() == message {
+                    if let Some(Value::String(translation)) = map.values().next() {
+                        return translation.to_owned();
+                    }
                 }
             }
         }
     }
 
-    hashmap
+    String::default()
 }
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
 
-    use super::{make_hashmap, read_translation_file};
+    use super::{parse_json_object, read_translation_file};
 
     #[test]
     fn test_lang_ja_jp() {
@@ -145,20 +133,15 @@ mod test {
         }"#.as_bytes()
         );
 
-        let intended_result = HashMap::from([
-            (
-                "commands.advancement.advancementNotFound".to_owned(),
-                "「%s」という名前の進捗は見つかりませんでした".to_owned(),
-            ),
-            (
-                "advancement.advancementNotFound".to_owned(),
-                "\u{4e0d}\u{660e}\u{306a}\u{9032}\u{6357}\u{3067}\u{3059}\u{ff1a}%s".to_owned(),
-            ),
-        ]);
+        let intended_result =
+            "\u{4e0d}\u{660e}\u{306a}\u{9032}\u{6357}\u{3067}\u{3059}\u{ff1a}%s".to_owned();
 
         assert_eq!(
             intended_result,
-            make_hashmap(read_translation_file(reader, "advancement.advancementNotFound").unwrap())
+            parse_json_object(
+                read_translation_file(reader, "advancement.advancementNotFound").unwrap(),
+                "advancement.advancementNotFound"
+            )
         );
     }
 
@@ -175,14 +158,14 @@ mod test {
             .as_bytes(),
         );
 
-        let intended_result = HashMap::from([(
-            "advancement.advancementNotFound".to_owned(),
-            "Progresso sconosciuto: %s".to_owned(),
-        )]);
+        let intended_result = "Progresso sconosciuto: %s".to_owned();
 
         assert_eq!(
             intended_result,
-            make_hashmap(read_translation_file(reader, "advancement.advancementNotFound").unwrap())
+            parse_json_object(
+                read_translation_file(reader, "advancement.advancementNotFound").unwrap(),
+                "advancement.advancementNotFound"
+            )
         );
     }
 
@@ -198,11 +181,14 @@ mod test {
         }"#.as_bytes()
         );
 
-        let intended_result = HashMap::new();
+        let intended_result = String::default();
 
         assert_eq!(
             intended_result,
-            make_hashmap(read_translation_file(reader, "advancement.advancementNotFound").unwrap())
+            parse_json_object(
+                read_translation_file(reader, "advancement.advancementNotFound").unwrap(),
+                "advancement.advancementNotFound"
+            )
         );
     }
 }
