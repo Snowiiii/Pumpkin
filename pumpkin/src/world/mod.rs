@@ -460,8 +460,11 @@ impl World {
 
             // Remove all canceled chunks
             for task_id in ids {
-                player.client.stop_watching_expensive_task(&task_id);
-                log::debug!("Aborted task {} (pre-process)", task_id,);
+                if let Some(task) = player.client.stop_watching_expensive_task(&task_id) {
+                    if task.aborted() {
+                        log::debug!("Aborted task {} (pre-process)", task_id);
+                    }
+                }
             }
 
             {
