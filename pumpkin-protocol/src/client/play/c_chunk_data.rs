@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{bytebuf::ByteBuffer, BitSet, ClientPacket, VarInt};
 use itertools::Itertools;
 
@@ -55,23 +53,24 @@ impl<'a> ClientPacket for CChunkData<'a> {
                     data_buf.put_u8(block_size as u8);
                     // Palette length
                     data_buf.put_var_int(&VarInt(palette.len() as i32));
-                    let mut palette_map = HashMap::new();
-                    palette.iter().enumerate().for_each(|(i, id)| {
-                        palette_map.insert(*id, i);
+
+                    palette.iter().for_each(|id| {
                         // Palette
                         data_buf.put_var_int(&VarInt(id.get_id_mojang_repr()));
                     });
                     // Data array length
-                    data_buf.put_var_int(&VarInt(
-                        chunk.len().div_ceil(64 / block_size as usize) as i32
-                    ));
+                    let data_array_len = chunk.len().div_ceil(64 / block_size as usize);
+                    data_buf.put_var_int(&VarInt(data_array_len as i32));
+
+                    data_buf.reserve(data_array_len * 8);
                     for block_clump in chunk.chunks(64 / block_size as usize) {
                         let mut out_long: i64 = 0;
                         for block in block_clump.iter().rev() {
-                            let index = palette_map
-                                .get(block)
+                            let index = palette
+                                .iter()
+                                .position(|b| *b == block)
                                 .expect("Its just got added, ofc it should be there");
-                            out_long = out_long << block_size | (*index as i64);
+                            out_long = out_long << block_size | (index as i64);
                         }
                         data_buf.put_i64(out_long);
                     }
@@ -80,9 +79,10 @@ impl<'a> ClientPacket for CChunkData<'a> {
                     // Bits per entry
                     data_buf.put_u8(DIRECT_PALETTE_BITS as u8);
                     // Data array length
-                    data_buf.put_var_int(&VarInt(
-                        chunk.len().div_ceil(64 / DIRECT_PALETTE_BITS as usize) as i32,
-                    ));
+                    let data_array_len = chunk.len().div_ceil(64 / DIRECT_PALETTE_BITS as usize);
+                    data_buf.put_var_int(&VarInt(data_array_len as i32));
+
+                    data_buf.reserve(data_array_len * 8);
                     for block_clump in chunk.chunks(64 / DIRECT_PALETTE_BITS as usize) {
                         let mut out_long: i64 = 0;
                         let mut shift = 0;
