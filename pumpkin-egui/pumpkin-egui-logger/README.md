@@ -14,10 +14,7 @@ There is also advanced search via regex.
 
 ### initilazing:
 ```rust
-fn main() {
-  // Should be called very early in the program.
-  pumpkin_egui_logger::builder().init().unwrap();
-}
+pumpkin_egui_logger::builder().init().unwrap();
 ```
 
 ### inside your ui logic:
