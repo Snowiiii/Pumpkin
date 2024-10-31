@@ -1,0 +1,14 @@
+[package]
+name = "pumpkin-console"
+edition = "2021"
+
+[dependencies]
+pumpkin = { path = "../pumpkin" }
+pumpkin-core = { path = "../pumpkin-core" }
+pumpkin-config = { path = "../pumpkin-config" }
+tokio.workspace = true
+rayon.workspace = true
+
+# logging
+simple_logger = { version = "5.0.0", features = ["threads"] }
+log = "0.4"

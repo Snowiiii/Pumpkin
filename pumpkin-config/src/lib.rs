@@ -175,8 +175,14 @@ trait LoadConfiguration {
 }
 
 impl LoadConfiguration for AdvancedConfiguration {
+    #[cfg(not(target_os = "android"))]
     fn get_path() -> &'static Path {
         Path::new("features.toml")
+    }
+
+    #[cfg(target_os = "android")]
+    fn get_path() -> &'static Path {
+        Path::new("/storage/emulated/0/Documents/Pumpkin/features.toml")
     }
 
     fn validate(&self) {
@@ -185,8 +191,14 @@ impl LoadConfiguration for AdvancedConfiguration {
 }
 
 impl LoadConfiguration for BasicConfiguration {
+    #[cfg(not(target_os = "android"))]
     fn get_path() -> &'static Path {
         Path::new("configuration.toml")
+    }
+
+    #[cfg(target_os = "android")]
+    fn get_path() -> &'static Path {
+        Path::new("/storage/emulated/0/Documents/Pumpkin/configuration.toml")
     }
 
     fn validate(&self) {

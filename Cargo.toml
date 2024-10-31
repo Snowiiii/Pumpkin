@@ -4,6 +4,7 @@ members = [
     "pumpkin-egui",
     "pumpkin-egui/pumpkin-egui-android",
     "pumpkin-egui/pumpkin-egui-logger",
+    "pumpkin-console",
     "pumpkin-config",
     "pumpkin-core",
     "pumpkin-entity",

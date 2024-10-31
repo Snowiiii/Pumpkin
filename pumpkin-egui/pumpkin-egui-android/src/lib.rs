@@ -1,4 +1,9 @@
+use std::{fs::{self, File}, io::Write, path::Path};
+
 use pumpkin_egui::TemplateApp;
+
+const DEFAULT_CONF: &str = include_str!("../../../configuration.toml");
+const DEFAULT_ADV_CONF: &str = include_str!("../../../features.toml");
 
 #[cfg(target_os = "android")]
 #[no_mangle]
@@ -12,6 +17,14 @@ pub fn android_main(
             .with_tag("pumpkin_egui_android")
             .with_max_level(log::LevelFilter::Info),
     );*/
+
+    if !Path::new("/storage/emulated/0/Documents/Pumpkin").exists() {
+        fs::create_dir("/storage/emulated/0/Documents/Pumpkin").unwrap();
+        let mut f = File::create("/storage/emulated/0/Documents/Pumpkin/configuration.toml").unwrap();
+        f.write_all(DEFAULT_CONF.as_bytes()).unwrap();
+        let mut f = File::create("/storage/emulated/0/Documents/Pumpkin/features.toml").unwrap();
+        f.write_all(DEFAULT_ADV_CONF.as_bytes()).unwrap();
+    }
 
     let mut options = eframe::NativeOptions::default();
     options.renderer = eframe::Renderer::Glow;
