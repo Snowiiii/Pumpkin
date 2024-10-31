@@ -16,7 +16,7 @@ There is also advanced search via regex.
 ```rust
 fn main() {
   // Should be called very early in the program.
-  egui_logger::builder().init().unwrap();
+  pumpkin_egui_logger::builder().init().unwrap();
 }
 ```
 
@@ -26,7 +26,7 @@ fn main() {
 fn ui(ctx: &egui::Context) {
     egui::Window::new("Log").show(ctx, |ui| {
         // draws the logger ui.
-        egui_logger::logger_ui().show(ui);
+        pumpkin_egui_logger::logger_ui().show(ui);
     });
 }
 ```

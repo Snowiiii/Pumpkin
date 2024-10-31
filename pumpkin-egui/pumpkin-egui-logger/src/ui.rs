@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use egui::{text::LayoutJob, Align, Color32, FontSelection, RichText, Style, Widget};
+use egui::{text::LayoutJob, Align, Color32, FontSelection, RichText, Style};
 use regex::{Regex, RegexBuilder};
 
 use crate::{Logger, Record, LEVELS, LOGGER};
