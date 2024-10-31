@@ -4,7 +4,7 @@
 > Minecraft. There is planned support for other world formats in the future though, as listed below. 
 
 #### Region File Format
-Minecraft Beta 1.3 to Relase 1.2 used a Minecraft format known as "Region file format".
+Minecraft Beta 1.3 to Release 1.2 used a Minecraft format known as "Region file format".
 
 The files stored in this format are .mcr files, each storing a group of 32x32 chunks called a region.
 
