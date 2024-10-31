@@ -660,9 +660,9 @@ impl Player {
         let valid_slot = packet.slot >= 1 && packet.slot <= 45;
         if valid_slot {
             self.inventory.lock().await.set_slot(
-                packet.slot as usize,
+                packet.slot as u16,
                 packet.clicked_item.to_item(),
-                false,
+                true,
             )?;
         };
         // TODO: The Item was droped per drag and drop,
