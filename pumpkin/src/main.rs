@@ -47,6 +47,7 @@ pub mod proxy;
 pub mod rcon;
 pub mod server;
 pub mod world;
+pub mod query;
 
 fn scrub_address(ip: &str) -> String {
     use pumpkin_config::BASIC_CONFIG;
@@ -140,6 +141,13 @@ async fn main() -> io::Result<()> {
             RCONServer::new(&rcon, server).await.unwrap();
         });
     }
+
+    if ADVANCED_CONFIG.query.enabled {
+        let server = server.clone();
+        log::info!("Query protocol enabled. Starting...");
+        tokio::spawn(query::start_query_handler());
+    }
+
     {
         let server = server.clone();
         tokio::spawn(async move {

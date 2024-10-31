@@ -1,6 +1,7 @@
 use log::warn;
 use logging::LoggingConfig;
 use pumpkin_core::{Difficulty, GameMode};
+use query::QueryConfig;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 // TODO: when https://github.com/rust-lang/rfcs/pull/3681 gets merged, replace serde-inline-default with native syntax
@@ -17,6 +18,7 @@ pub mod auth;
 pub mod logging;
 pub mod proxy;
 pub mod resource_pack;
+pub mod query;
 
 pub use auth::AuthenticationConfig;
 pub use commands::CommandsConfig;
@@ -53,6 +55,7 @@ pub struct AdvancedConfiguration {
     pub rcon: RCONConfig,
     pub pvp: PVPConfig,
     pub logging: LoggingConfig,
+    pub query: QueryConfig,
 }
 
 #[serde_inline_default]
