@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use egui::{text::LayoutJob, Align, Color32, FontSelection, RichText, Style, Vec2, Widget};
+use egui::{text::LayoutJob, Align, Color32, FontSelection, RichText, Style, Widget};
 use regex::{Regex, RegexBuilder};
 
 use crate::{Logger, Record, LEVELS, LOGGER};
@@ -421,17 +421,16 @@ fn format_record(
     text_size: f32,
     perfecto: bool,
 ) -> LayoutJob {
-    let mut level_target = String::new();
-    if perfecto {
-        level_target = format!(
+    let level_target = match perfecto {
+        true => format!(
             "[{:5}] {: <width$}: ",
             record.level,
             record.target,
             width = logger.max_category_length
-        );
-    } else {
-        level_target = format!("[{:5}] {}: ", record.level, record.target);
-    }
+        ),
+        false => format!("[{:5}] {}: ", record.level, record.target)
+    };
+
     let mut layout_job = LayoutJob::default();
     let style = Style::default();
 
