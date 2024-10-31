@@ -17,8 +17,8 @@ use std::{
 pub mod auth;
 pub mod logging;
 pub mod proxy;
-pub mod resource_pack;
 pub mod query;
+pub mod resource_pack;
 
 pub use auth::AuthenticationConfig;
 pub use commands::CommandsConfig;

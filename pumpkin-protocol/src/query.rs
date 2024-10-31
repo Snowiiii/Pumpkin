@@ -31,7 +31,7 @@ impl SBasePacket {
                 magic,
                 packet_type: PacketType::Handshake,
                 session_id: reader.read_i32().await.unwrap(),
-                payload: SBasePayload::Handshake, 
+                payload: SBasePayload::Handshake,
             },
             _ => todo!(),
         }
@@ -39,7 +39,7 @@ impl SBasePacket {
 }
 
 pub struct CBasePacket {
-    pub packet_type: PacketType, 
+    pub packet_type: PacketType,
     pub session_id: i32,
     pub payload: CBasePayload,
 }
@@ -49,7 +49,7 @@ pub enum CBasePayload {
         // For simplicity use a number type
         // Should be encoded as string here
         // Will be converted in encoding
-        challange_token: i32
+        challange_token: i32,
     },
     BasicInfo {
         // Use CString as protocol requires nul terminated strings
@@ -73,7 +73,7 @@ pub enum CBasePayload {
         host_port: u16,
         host_ip: String,
         players: Vec<String>,
-    }
+    },
 }
 
 impl CBasePacket {
@@ -82,8 +82,26 @@ impl CBasePacket {
 
         match &self.payload {
             CBasePayload::Handshake { challange_token } => todo!(),
-            CBasePayload::BasicInfo { motd, gametype, map, num_players, max_players, host_port, host_ip } => todo!(),
-            CBasePayload::FullInfo { hostname, version, plugins, map, num_players, max_players, host_port, host_ip, players } => todo!(),
+            CBasePayload::BasicInfo {
+                motd,
+                gametype,
+                map,
+                num_players,
+                max_players,
+                host_port,
+                host_ip,
+            } => todo!(),
+            CBasePayload::FullInfo {
+                hostname,
+                version,
+                plugins,
+                map,
+                num_players,
+                max_players,
+                host_port,
+                host_ip,
+                players,
+            } => todo!(),
         }
     }
 }

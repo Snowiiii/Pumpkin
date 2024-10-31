@@ -7,9 +7,9 @@ pub mod bytebuf;
 pub mod client;
 pub mod packet_decoder;
 pub mod packet_encoder;
+pub mod query;
 pub mod server;
 pub mod slot;
-pub mod query;
 
 mod var_int;
 pub use var_int::*;

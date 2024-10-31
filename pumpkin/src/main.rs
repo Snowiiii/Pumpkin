@@ -44,10 +44,10 @@ pub mod command;
 pub mod entity;
 pub mod error;
 pub mod proxy;
+pub mod query;
 pub mod rcon;
 pub mod server;
 pub mod world;
-pub mod query;
 
 fn scrub_address(ip: &str) -> String {
     use pumpkin_config::BASIC_CONFIG;
