@@ -20,6 +20,7 @@ eframe = { version = "0.29", default-features = false, features = [
     "persistence",   # Enable restoring app state when restarting the app.
 ] }
 log = "0.4"
+j4rs = "0.20"
 
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }

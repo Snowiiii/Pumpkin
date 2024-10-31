@@ -17,7 +17,7 @@ thiserror = "1"
 android-activity = { version = "0.6", features = ["game-activity"] }
 pumpkin-egui = { path = "../" }
 log = "0.4"
-
+j4rs = "0.20"
 
 [lib]
 name = "pumpkin_egui_android"

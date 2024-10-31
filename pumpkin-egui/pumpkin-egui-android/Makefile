@@ -6,7 +6,7 @@ gradle:
 
 jni:
 	cargo ndk --target arm64-v8a -o ./java/app/src/main/jniLibs/ build --profile release
-	cargo ndk --target x86_64-linux-android -o ./java/app/src/main/jniLibs/ build --profile release
+	echo cargo ndk --target x86_64-linux-android -o ./java/app/src/main/jniLibs/ build --profile release
 
 apk: jni
 	cd java && ./gradlew build --stacktrace

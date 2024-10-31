@@ -5,6 +5,16 @@ use pumpkin_egui::TemplateApp;
 const DEFAULT_CONF: &str = include_str!("../../../configuration.toml");
 const DEFAULT_ADV_CONF: &str = include_str!("../../../features.toml");
 
+use j4rs::{jni_sys::{jint, JavaVM, JNI_VERSION_1_6}, prelude::jobject};
+
+#[cfg(target_os = "android")]
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern fn JNI_OnLoad(env: *mut JavaVM, _reserved: jobject) -> jint {
+    j4rs::set_java_vm(env);
+    JNI_VERSION_1_6
+}
+
 #[cfg(target_os = "android")]
 #[no_mangle]
 pub fn android_main(

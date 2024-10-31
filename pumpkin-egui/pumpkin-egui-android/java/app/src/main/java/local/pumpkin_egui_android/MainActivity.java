@@ -1,10 +1,12 @@
 package local.pumpkin_egui_android;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 
 import androidx.core.graphics.Insets;
 import androidx.core.view.DisplayCutoutCompat;
@@ -50,5 +52,13 @@ public class MainActivity extends GameActivity {
     findViewById(android.R.id.content).getLocationOnScreen(location);
     event.offsetLocation(-location[0], -location[1]);
     return super.onTouchEvent(event);
+  }
+
+  public void openKeyboard() {
+    InputMethodManager imm =
+            (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+    if (imm != null) {
+        imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+    }
   }
 }
