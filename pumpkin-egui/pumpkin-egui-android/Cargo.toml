@@ -21,4 +21,4 @@ log = "0.4"
 
 [lib]
 name = "pumpkin_egui_android"
-crate_type = ["cdylib"]
+crate-type = ["cdylib"]

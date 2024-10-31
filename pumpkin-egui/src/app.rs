@@ -1,4 +1,7 @@
-use std::{io, sync::{Arc, LazyLock}};
+use std::{
+    io,
+    sync::{Arc, LazyLock},
+};
 
 use egui::mutex::Mutex;
 use pumpkin::{commands::CommandSender, server::Server};
@@ -30,7 +33,7 @@ impl Default for TemplateApp {
                 .unwrap(),
             started: false,
             server_handle: None,
-            command: String::new()
+            command: String::new(),
         }
     }
 }
@@ -54,8 +57,6 @@ impl TemplateApp {
 }
 
 impl eframe::App for TemplateApp {
-        
-
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
@@ -79,13 +80,19 @@ impl eframe::App for TemplateApp {
             ui.heading("Pumpkin server");
             ui.separator();
             ui.horizontal(|ui| {
-                if ui.add_enabled(!self.started, egui::Button::new("Start")).clicked() {
+                if ui
+                    .add_enabled(!self.started, egui::Button::new("Start"))
+                    .clicked()
+                {
                     self.server_handle = Some(self.rt.spawn(pumpkin::server_start(|server| {
                         *SERVER.lock() = Some(server.clone())
                     })));
                     self.started = !self.started;
                 }
-                if ui.add_enabled(self.started, egui::Button::new("Stop")).clicked() {
+                if ui
+                    .add_enabled(self.started, egui::Button::new("Stop"))
+                    .clicked()
+                {
                     log::warn!(
                         "{}",
                         TextComponent::text("Stop button pressed; stopping server...")
@@ -110,15 +117,20 @@ impl eframe::App for TemplateApp {
             });
             pumpkin_egui_logger::logger_ui().show(ui);
             ui.horizontal(|ui| {
-                ui.add_sized(ui.available_size() - egui::vec2(43.0,0.0), 
-                egui::TextEdit::singleline(&mut self.command));
+                ui.add_sized(
+                    ui.available_size() - egui::vec2(43.0, 0.0),
+                    egui::TextEdit::singleline(&mut self.command),
+                );
                 if ui.button("Send").clicked() {
                     if self.started {
                         if !self.command.is_empty() {
                             let cmd = self.command.clone();
                             self.rt.spawn(async move {
                                 if let Some(server) = SERVER.lock().as_ref() {
-                                    server.command_dispatcher.handle_command(&mut CommandSender::Console, &server, &cmd).await;
+                                    server
+                                        .command_dispatcher
+                                        .handle_command(&mut CommandSender::Console, &server, &cmd)
+                                        .await;
                                 } else {
                                     panic!("Command send, but server not found");
                                 }

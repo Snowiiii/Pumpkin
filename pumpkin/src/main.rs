@@ -21,9 +21,12 @@ compile_error!("Compiling for WASI targets is not supported!");
 
 use log::LevelFilter;
 
-use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin::{commands, server::Server, server_start};
-use std::{io::{self}, sync::Arc};
+use pumpkin_core::text::{color::NamedColor, TextComponent};
+use std::{
+    io::{self},
+    sync::Arc,
+};
 use tokio::io::{AsyncBufReadExt, BufReader};
 #[cfg(not(unix))]
 use tokio::signal::ctrl_c;

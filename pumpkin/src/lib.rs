@@ -1,11 +1,11 @@
-use std::io;
-use std::sync::Arc;
 use client::Client;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use rcon::RCONServer;
 use server::{ticker::Ticker, Server};
-use tokio::io::{AsyncBufReadExt, BufReader};
+use std::io;
+use std::sync::Arc;
 use std::time::Instant;
+use tokio::io::{AsyncBufReadExt, BufReader};
 
 pub mod client;
 pub mod commands;
@@ -44,7 +44,7 @@ pub async fn server_start(setup_console: impl FnOnce(Arc<Server>)) -> io::Result
     if use_console {
         setup_console(server.clone());
     }
-    
+
     if rcon.enabled {
         let server = server.clone();
         tokio::spawn(async move {

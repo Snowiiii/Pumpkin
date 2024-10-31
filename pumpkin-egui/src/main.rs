@@ -5,7 +5,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
     pumpkin_egui_logger::builder().init().unwrap();
-    
+
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([400.0, 300.0])
@@ -28,7 +28,7 @@ fn main() -> eframe::Result {
 #[cfg(target_arch = "wasm32")]
 fn main() {
     egui_logger::builder().init().unwrap();
-    
+
     let web_options = eframe::WebOptions::default();
 
     wasm_bindgen_futures::spawn_local(async {

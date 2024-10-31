@@ -56,7 +56,7 @@ pub struct LoggerUi {
     max_log_length: usize,
     style: LoggerStyle,
     text_size: f32,
-    perfecto: bool
+    perfecto: bool,
 }
 
 impl Default for LoggerUi {
@@ -70,7 +70,7 @@ impl Default for LoggerUi {
             max_log_length: 1000,
             style: LoggerStyle::default(),
             text_size: 10.0,
-            perfecto: true
+            perfecto: true,
         }
     }
 }
@@ -214,8 +214,10 @@ impl LoggerUi {
 
         ui.horizontal(|ui| {
             ui.label("Search: ");
-            let response = ui.add_sized(ui.available_size() - egui::vec2(50.0,0.0), 
-                egui::TextEdit::singleline(&mut self.search_term));
+            let response = ui.add_sized(
+                ui.available_size() - egui::vec2(50.0, 0.0),
+                egui::TextEdit::singleline(&mut self.search_term),
+            );
 
             let mut config_changed = false;
             if ui
@@ -272,7 +274,14 @@ impl LoggerUi {
                         return;
                     }
 
-                    let layout_job = format_record(logger, &self.style, record, time_padding, self.text_size, self.perfecto);
+                    let layout_job = format_record(
+                        logger,
+                        &self.style,
+                        record,
+                        time_padding,
+                        self.text_size,
+                        self.perfecto,
+                    );
 
                     let raw_text = layout_job.text.clone();
 
@@ -321,7 +330,15 @@ impl LoggerUi {
                             .take(self.max_log_length)
                             .for_each(|record| {
                                 out_string.push_str(
-                                    &format_record(logger, &self.style, record, time_padding, self.text_size, self.perfecto).text,
+                                    &format_record(
+                                        logger,
+                                        &self.style,
+                                        record,
+                                        time_padding,
+                                        self.text_size,
+                                        self.perfecto,
+                                    )
+                                    .text,
                                 );
                                 out_string.push_str(" \n");
                             });
@@ -402,7 +419,7 @@ fn format_record(
     record: &Record,
     time_padding: usize,
     text_size: f32,
-    perfecto: bool
+    perfecto: bool,
 ) -> LayoutJob {
     let mut level_target = String::new();
     if perfecto {
@@ -413,11 +430,7 @@ fn format_record(
             width = logger.max_category_length
         );
     } else {
-        level_target = format!(
-            "[{:5}] {}: ",
-            record.level,
-            record.target
-        );
+        level_target = format!("[{:5}] {}: ", record.level, record.target);
     }
     let mut layout_job = LayoutJob::default();
     let style = Style::default();
