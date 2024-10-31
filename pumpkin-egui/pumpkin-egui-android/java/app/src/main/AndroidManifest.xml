@@ -3,6 +3,7 @@
     <application
         android:allowBackup="true"
         android:label="Pumpkin server"
+        android:icon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
         <activity
