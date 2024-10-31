@@ -12,7 +12,7 @@ pumpkin-core = { path = "../pumpkin-core" }
 tokio.workspace = true
 rayon.workspace = true
 egui = "0.29"
-egui_logger = "0.6"
+pumpkin-egui-logger = { path = "pumpkin-egui-logger" }
 eframe = { version = "0.29", default-features = false, features = [
     "accesskit",     # Make egui compatible with screen readers. NOTE: adds a lot of dependencies.
     "default_fonts", # Embed the default egui fonts.

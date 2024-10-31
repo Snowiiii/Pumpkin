@@ -108,9 +108,10 @@ impl eframe::App for TemplateApp {
                     }
                 }
             });
-            egui_logger::logger_ui().show(ui);
+            pumpkin_egui_logger::logger_ui().show(ui);
             ui.horizontal(|ui| {
-                ui.text_edit_singleline(&mut self.command);
+                ui.add_sized(ui.available_size() - egui::vec2(43.0,0.0), 
+                egui::TextEdit::singleline(&mut self.command));
                 if ui.button("Send").clicked() {
                     if self.started {
                         if !self.command.is_empty() {

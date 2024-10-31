@@ -46,11 +46,9 @@ public class MainActivity extends GameActivity {
   @Override
   public boolean onTouchEvent(MotionEvent event) {
     // Offset the location so it fits the view with margins caused by insets.
-    Log.e("TAG", "onTouchEvent");
     int[] location = new int[2];
     findViewById(android.R.id.content).getLocationOnScreen(location);
     event.offsetLocation(-location[0], -location[1]);
-    Log.e("TAG", event.toString());
     return super.onTouchEvent(event);
   }
 }

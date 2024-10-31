@@ -1,0 +1,25 @@
+[package]
+name = "pumpkin-egui-logger"
+edition = "2021"
+authors = ["Jacob <RegenJacob@gmx.de>"]
+license = "MIT"
+include = ["src/*.rs", "Cargo.toml", "LICENSE"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4"
+egui = "0.29"
+regex = "1.10"
+hashbrown = "0.15"
+
+[dev-dependencies]
+eframe = "0.29"
+multi_log = "0.1"
+env_logger = "0.11"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+chrono = { version = "0.4", default-features = false, features = ["alloc", "clock"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+chrono = { version = "0.4", default-features = false, features = ["alloc", "clock", "wasmbind"] }

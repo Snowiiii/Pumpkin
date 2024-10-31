@@ -2,7 +2,8 @@
 resolver = "2"
 members = [
     "pumpkin-egui",
-    "pumpkin-egui/android",
+    "pumpkin-egui/pumpkin-egui-android",
+    "pumpkin-egui/pumpkin-egui-logger",
     "pumpkin-config",
     "pumpkin-core",
     "pumpkin-entity",

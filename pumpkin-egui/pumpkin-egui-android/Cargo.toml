@@ -9,7 +9,7 @@ eframe = { version = "0.29", default-features = false, features = [
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
     "persistence",   # Enable restoring app state when restarting the app.
 ] }
-egui_logger = "0.6"
+pumpkin-egui-logger = { path = "../pumpkin-egui-logger" }
 jni = "*"
 egui-winit = "0.29"
 ndk-context = "*"

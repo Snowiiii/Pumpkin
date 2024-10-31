@@ -4,7 +4,7 @@
 // When compiling natively:
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
-    egui_logger::builder().init().unwrap();
+    pumpkin_egui_logger::builder().init().unwrap();
     
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()

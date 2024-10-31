@@ -7,7 +7,7 @@ pub fn android_main(
     app: egui_winit::winit::platform::android::activity::AndroidApp,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use egui_winit::winit::platform::android::EventLoopBuilderExtAndroid;
-    egui_logger::builder().init().unwrap();
+    pumpkin_egui_logger::builder().init().unwrap();
     /*android_logger::init_once(
         android_logger::Config::default()
             .with_tag("pumpkin_egui_android")
