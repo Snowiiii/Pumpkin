@@ -547,8 +547,11 @@ impl World {
     /// - This function assumes `broadcast_packet_expect` and `remove_entity` are defined elsewhere.
     /// - The disconnect message sending is currently optional. Consider making it a configurable option.
     pub async fn remove_player(&self, player: &Player) {
-        let mut current_players = self.current_players.lock().await;
-        current_players.remove(&player.gameprofile.id).unwrap();
+        self.current_players
+            .lock()
+            .await
+            .remove(&player.gameprofile.id)
+            .unwrap();
         let uuid = player.gameprofile.id;
         self.broadcast_packet_expect(
             &[player.gameprofile.id],
@@ -562,7 +565,7 @@ impl World {
         let disconn_msg_txt = format!("{} left the game.", player.gameprofile.name.as_str());
         let disconn_msg_cmp =
             TextComponent::text(disconn_msg_txt.as_str()).color_named(NamedColor::Yellow);
-        for player in current_players.values() {
+        for player in self.current_players.lock().await.values() {
             player.send_system_message(&disconn_msg_cmp).await;
         }
         log::info!("{}", disconn_msg_cmp.to_pretty_console());
