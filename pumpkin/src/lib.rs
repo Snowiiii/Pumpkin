@@ -5,7 +5,6 @@ use server::{ticker::Ticker, Server};
 use std::io;
 use std::sync::Arc;
 use std::time::Instant;
-use tokio::io::{AsyncBufReadExt, BufReader};
 
 pub mod client;
 pub mod commands;

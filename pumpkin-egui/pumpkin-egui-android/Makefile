@@ -9,7 +9,7 @@ jni:
 	cargo ndk --target x86_64-linux-android -o ./java/app/src/main/jniLibs/ build --profile release
 
 apk: jni
-	cd java && gradle wrapper
+	cd java && ./gradlew build --stacktrace
 
 run-on-device: jni
 	adb uninstall local.pumpkin_egui_android || true
