@@ -1,3 +1,0 @@
-[toolchain]
-# Anything in the latest stable version of rust is fine to use.
-channel = "stable"

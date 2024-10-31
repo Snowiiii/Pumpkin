@@ -1,6 +1,0 @@
-[package]
-name = "pumpkin-entity"
-version.workspace = true
-edition.workspace = true
-
-[dependencies]
