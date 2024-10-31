@@ -1,6 +1,7 @@
 use tokio::io::AsyncReadExt;
 
 #[derive(Debug)]
+#[repr(u8)]
 pub enum PacketType {
     Handshake = 9,
     Stat = 0,
