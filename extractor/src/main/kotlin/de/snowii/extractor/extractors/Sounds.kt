@@ -6,6 +6,7 @@ import com.google.gson.JsonObject
 import de.snowii.extractor.Extractor
 import net.minecraft.registry.DynamicRegistryManager
 import net.minecraft.registry.Registries
+import net.minecraft.server.MinecraftServer
 
 
 class Sounds : Extractor.Extractor {
@@ -13,7 +14,7 @@ class Sounds : Extractor.Extractor {
         return "sounds.json"
     }
 
-    override fun extract(registryManager: DynamicRegistryManager.Immutable): JsonElement {
+    override fun extract(server: MinecraftServer): JsonElement {
         val itemsJson = JsonArray()
 
         for (sound in Registries.SOUND_EVENT) {

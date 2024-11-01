@@ -7,9 +7,9 @@ import com.mojang.serialization.JsonOps
 import de.snowii.extractor.Extractor
 import net.minecraft.component.ComponentMap
 import net.minecraft.item.Item
-import net.minecraft.registry.DynamicRegistryManager
 import net.minecraft.registry.RegistryKeys
 import net.minecraft.registry.RegistryOps
+import net.minecraft.server.MinecraftServer
 
 
 class Items : Extractor.Extractor {
@@ -18,10 +18,10 @@ class Items : Extractor.Extractor {
     }
 
 
-    override fun extract(registryManager: DynamicRegistryManager.Immutable): JsonElement {
+    override fun extract(server: MinecraftServer): JsonElement {
         val itemsJson = JsonArray()
 
-        for (item in registryManager.getOrThrow(RegistryKeys.ITEM).streamEntries().toList()) {
+        for (item in server.registryManager.getOrThrow(RegistryKeys.ITEM).streamEntries().toList()) {
             val itemJson = JsonObject()
 
             itemJson.addProperty("id", item.key.orElseThrow().value.toString())
@@ -35,7 +35,7 @@ class Items : Extractor.Extractor {
             itemJson.add(
                 "components",
                 ComponentMap.CODEC.encodeStart(
-                    RegistryOps.of(JsonOps.INSTANCE, registryManager),
+                    RegistryOps.of(JsonOps.INSTANCE, server.registryManager),
                     realItem.components
                 ).getOrThrow()
             )
