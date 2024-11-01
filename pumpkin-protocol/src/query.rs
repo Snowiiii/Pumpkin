@@ -138,7 +138,9 @@ impl CBasePacket {
                 max_players,
                 host_port,
                 host_ip,
-            } => todo!(),
+            } => {
+                
+            },
             CBasePayload::FullInfo {
                 hostname,
                 version,
