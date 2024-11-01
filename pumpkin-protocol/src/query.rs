@@ -183,6 +183,15 @@ impl CBasePacket {
                 buf.extend_from_slice(CString::new("hostname").unwrap().as_bytes_with_nul());
                 buf.extend_from_slice(hostname.as_bytes_with_nul());
 
+                // Game type and game id are hardcoded into protocol, these are not changeable
+                // No idea why game type has a space in between, but it does apparently
+                buf.extend_from_slice(CString::new("game type").unwrap().as_bytes_with_nul());
+                buf.extend_from_slice(CString::new("SMP").unwrap().as_bytes_with_nul());
+
+                // No idea why there is a underscore here, but it does apparently
+                buf.extend_from_slice(CString::new("game_id").unwrap().as_bytes_with_nul());
+                buf.extend_from_slice(CString::new("MINECRAFT").unwrap().as_bytes_with_nul());
+
                 buf.extend_from_slice(CString::new("version").unwrap().as_bytes_with_nul());
                 buf.extend_from_slice(version.as_bytes_with_nul());
 
