@@ -91,26 +91,26 @@ pub enum CBasePayload {
     },
     BasicInfo {
         // Use CString as protocol requires nul terminated strings
-        motd: String,
-        gametype: String,
-        map: String,
-        num_players: String,
-        max_players: String,
+        motd: CString,
+        // Game type is hardcoded
+        map: CString,
+        num_players: usize,
+        max_players: usize,
         host_port: u16,
-        host_ip: String,
+        host_ip: CString,
     },
     FullInfo {
-        hostname: String,
+        hostname: CString,
         // Game type and game id are hardcoded into protocol
         // They are not here as they cannot be changed
-        version: String,
-        plugins: String,
-        map: String,
+        version: CString,
+        plugins: CString,
+        map: CString,
         num_players: u16,
         max_players: u16,
         host_port: u16,
-        host_ip: String,
-        players: Vec<String>,
+        host_ip: CString,
+        players: Vec<CString>,
     },
 }
 
@@ -132,14 +132,34 @@ impl CBasePacket {
             }
             CBasePayload::BasicInfo {
                 motd,
-                gametype,
                 map,
                 num_players,
                 max_players,
                 host_port,
                 host_ip,
             } => {
-                
+                // Packet Type
+                buf.write_u8(0).await.unwrap();
+                // Session ID
+                buf.write_i32(self.session_id).await.unwrap();
+                // MOTD
+                buf.extend_from_slice(motd.as_bytes_with_nul());
+                // Game Type
+                let game_type = CString::new("SMP").unwrap();
+                buf.extend_from_slice(game_type.as_bytes_with_nul());
+                // Map
+                buf.extend_from_slice(map.as_bytes_with_nul());
+                // Num players
+                let num_players = CString::new(num_players.to_string()).unwrap();
+                buf.extend_from_slice(num_players.as_bytes_with_nul());
+                // Max players
+                let max_players = CString::new(max_players.to_string()).unwrap();
+                buf.extend_from_slice(max_players.as_bytes_with_nul());
+                // Port
+                // No idea why the port needs to be in little endian
+                buf.write_u16_le(*host_port).await.unwrap();
+                // IP
+                buf.extend_from_slice(host_ip.as_bytes_with_nul());
             },
             CBasePayload::FullInfo {
                 hostname,
