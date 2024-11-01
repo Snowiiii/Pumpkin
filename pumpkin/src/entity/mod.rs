@@ -90,8 +90,8 @@ impl Entity {
     #[expect(clippy::float_cmp)]
     pub fn set_pos(&self, x: f64, y: f64, z: f64) {
         let pos = self.pos.load();
+        self.last_pos.store(pos);
         if pos.x != x || pos.y != y || pos.z != z {
-            self.last_pos.store(pos);
             self.pos.store(Vector3::new(x, y, z));
 
             let floor_x = x.floor() as i32;
