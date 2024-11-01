@@ -1,4 +1,6 @@
-use tokio::io::AsyncReadExt;
+use std::ffi::CString;
+
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Debug)]
 #[repr(u8)]
@@ -78,11 +80,21 @@ pub enum CBasePayload {
 }
 
 impl CBasePacket {
-    fn encode(&self) -> Vec<u8> {
-        // let buf = Vec::new();
+    pub async fn encode(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
 
         match &self.payload {
-            CBasePayload::Handshake { challange_token } => todo!(),
+            CBasePayload::Handshake { challange_token } => {
+                // Packet Type
+                buf.write_u8(9).await.unwrap();
+                // Session ID
+                buf.write_i32(self.session_id).await.unwrap();
+                // Challange token
+                // Use CString to add null terminator and ensure no null bytes in the middle of data
+                // Unwrap here since there should be no errors with nulls in the middle of data
+                let token = CString::new(challange_token.to_string()).unwrap();
+                buf.extend_from_slice(token.as_bytes_with_nul());
+            }
             CBasePayload::BasicInfo {
                 motd,
                 gametype,
@@ -104,5 +116,7 @@ impl CBasePacket {
                 players,
             } => todo!(),
         }
+
+        buf
     }
 }
