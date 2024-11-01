@@ -1,7 +1,8 @@
 use std::sync::atomic::AtomicI32;
 
 use crossbeam::atomic::AtomicCell;
-use pumpkin_protocol::client::play::{CEntityStatus, CSetEntityMetadata, Metadata};
+use pumpkin_protocol::client::play::{CDamageEvent, CEntityStatus, CSetEntityMetadata, Metadata};
+use pumpkin_registry::DamageType;
 
 use super::Entity;
 
@@ -17,6 +18,8 @@ pub struct LivingEntity {
     pub last_damage_taken: AtomicCell<f32>,
     /// The current health level of the entity.
     pub health: AtomicCell<f32>,
+    /// The distance the entity has been falling
+    pub fall_distance: AtomicCell<f64>,
 }
 
 impl LivingEntity {
@@ -26,6 +29,7 @@ impl LivingEntity {
             time_until_regen: AtomicI32::new(0),
             last_damage_taken: AtomicCell::new(0.0),
             health: AtomicCell::new(20.0),
+            fall_distance: AtomicCell::new(0.0),
         }
     }
 
@@ -52,11 +56,32 @@ impl LivingEntity {
             .await;
     }
 
+    pub async fn damage(&self, amount: f32, damage_type: DamageType) {
+        self.entity
+            .world
+            .broadcast_packet_all(&CDamageEvent::new(
+                self.entity.entity_id.into(),
+                (damage_type as i32).into(),
+                None,
+                None,
+                None,
+            ))
+            .await;
+
+        let new_health = (self.health.load() - amount).max(0.0);
+        self.set_health(new_health).await;
+
+        if new_health == 0.0 {
+            self.kill().await;
+        }
+    }
+
     /// Returns if the entity was damaged or not
-    pub fn damage(&self, amount: f32) -> bool {
+    pub fn check_damage(&self, amount: f32) -> bool {
         let regen = self
             .time_until_regen
             .load(std::sync::atomic::Ordering::Relaxed);
+
         let last_damage = self.last_damage_taken.load();
         // TODO: check if bypasses iframe
         if regen > 10 {
@@ -70,6 +95,38 @@ impl LivingEntity {
 
         self.last_damage_taken.store(amount);
         amount > 0.0
+    }
+
+    pub async fn update_fall_distance(&self, dont_damage: bool) {
+        let y = self.entity.pos.load().y;
+        let last_y = self.entity.last_pos.load().y;
+        let grounded = self
+            .entity
+            .on_ground
+            .load(std::sync::atomic::Ordering::Relaxed);
+
+        // + => falling, - => up
+        let y_diff = last_y - y;
+
+        if grounded {
+            let fall_distance = self.fall_distance.swap(0.0);
+            if dont_damage {
+                return;
+            }
+
+            let mut damage = (fall_distance - 3.0).max(0.0) as f32;
+            damage = (damage * 2.0).round() / 2.0;
+            if !self.check_damage(damage) {
+                return;
+            }
+
+            self.damage(damage, DamageType::Fall).await;
+        } else if y_diff < 0.0 {
+            self.fall_distance.store(0.0);
+        } else {
+            let fall_distance = self.fall_distance.load();
+            self.fall_distance.store(fall_distance + y_diff);
+        }
     }
 
     /// Kills the Entity
@@ -86,6 +143,5 @@ impl LivingEntity {
             .world
             .broadcast_packet_all(&CEntityStatus::new(self.entity.entity_id, 3))
             .await;
-        self.entity.remove().await;
     }
 }

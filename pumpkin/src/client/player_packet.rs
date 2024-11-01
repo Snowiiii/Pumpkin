@@ -23,10 +23,10 @@ use pumpkin_protocol::{
         FilterType,
     },
     server::play::{
-        Action, ActionType, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport,
-        SInteract, SPlayPingRequest, SPlayerAbilities, SPlayerAction, SPlayerCommand,
-        SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
-        SSwingArm, SUseItemOn, Status,
+        Action, ActionType, SChatCommand, SChatMessage, SClientInformationPlay, SClientStatus,
+        SConfirmTeleport, SInteract, SPlayPingRequest, SPlayerAbilities, SPlayerAction,
+        SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
+        SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status,
     },
     SoundCategory,
 };
@@ -91,9 +91,7 @@ impl Player {
         );
 
         let pos = entity.pos.load();
-        let last_position = self.last_position.load();
-
-        self.last_position.store(pos);
+        let last_pos = entity.last_pos.load();
 
         entity
             .on_ground
@@ -101,7 +99,7 @@ impl Player {
 
         let entity_id = entity.entity_id;
         let Vector3 { x, y, z } = pos;
-        let (last_x, last_y, last_z) = (last_position.x, last_position.y, last_position.z);
+        let (last_x, last_y, last_z) = (last_pos.x, last_pos.y, last_pos.z);
         let world = &entity.world;
 
         // let delta = Vector3::new(x - lastx, y - lasty, z - lastz);
@@ -118,7 +116,7 @@ impl Player {
         // }
         // send new position to all other players
         world
-            .broadcast_packet_expect(
+            .broadcast_packet_except(
                 &[self.gameprofile.id],
                 &CUpdateEntityPos::new(
                     entity_id.into(),
@@ -157,9 +155,8 @@ impl Player {
         );
 
         let pos = entity.pos.load();
-        let last_position = self.last_position.load();
+        let last_pos = entity.last_pos.load();
 
-        self.last_position.store(pos);
         entity.on_ground.store(
             position_rotation.ground,
             std::sync::atomic::Ordering::Relaxed,
@@ -172,7 +169,7 @@ impl Player {
 
         let entity_id = entity.entity_id;
         let Vector3 { x, y, z } = pos;
-        let (last_x, last_y, last_z) = (last_position.x, last_position.y, last_position.z);
+        let (last_x, last_y, last_z) = (last_pos.x, last_pos.y, last_pos.z);
 
         let yaw = modulus(entity.yaw.load() * 256.0 / 360.0, 256.0);
         let pitch = modulus(entity.pitch.load() * 256.0 / 360.0, 256.0);
@@ -194,7 +191,7 @@ impl Player {
         // send new position to all other players
 
         world
-            .broadcast_packet_expect(
+            .broadcast_packet_except(
                 &[self.gameprofile.id],
                 &CUpdateEntityPosRot::new(
                     entity_id.into(),
@@ -208,7 +205,7 @@ impl Player {
             )
             .await;
         world
-            .broadcast_packet_expect(
+            .broadcast_packet_except(
                 &[self.gameprofile.id],
                 &CHeadRot::new(entity_id.into(), yaw as u8),
             )
@@ -239,11 +236,11 @@ impl Player {
         let packet =
             CUpdateEntityRot::new(entity_id.into(), yaw as u8, pitch as u8, rotation.ground);
         world
-            .broadcast_packet_expect(&[self.gameprofile.id], &packet)
+            .broadcast_packet_except(&[self.gameprofile.id], &packet)
             .await;
         let packet = CHeadRot::new(entity_id.into(), yaw as u8);
         world
-            .broadcast_packet_expect(&[self.gameprofile.id], &packet)
+            .broadcast_packet_except(&[self.gameprofile.id], &packet)
             .await;
     }
 
@@ -333,7 +330,7 @@ impl Player {
                 let id = self.entity_id();
                 let world = &self.living_entity.entity.world;
                 world
-                    .broadcast_packet_expect(
+                    .broadcast_packet_except(
                         &[self.gameprofile.id],
                         &CEntityAnimation::new(id.into(), animation as u8),
                     )
@@ -407,6 +404,26 @@ impl Player {
         }
     }
 
+    pub async fn handle_client_status(self: &Arc<Self>, client_status: SClientStatus) {
+        match client_status.action_id.0 {
+            0 => {
+                if self.living_entity.health.load() > 0.0 {
+                    return;
+                }
+                self.respawn(false).await;
+                // TODO: hardcore set spectator
+            }
+            1 => {
+                // request stats
+                log::debug!("todo");
+            }
+            _ => {
+                self.kick(TextComponent::text("Invalid client status"))
+                    .await;
+            }
+        };
+    }
+
     pub async fn handle_interact(&self, _: &Server, interact: SInteract) {
         let sneaking = interact.sneaking;
         let entity = &self.living_entity.entity;
@@ -455,9 +472,9 @@ impl Player {
             .store(0, std::sync::atomic::Ordering::Relaxed);
 
         // TODO: attack damage attribute and deal damage
-        let damage = 2.0;
-        if !victim.living_entity.damage(damage)
-            || (config.protect_creative && victim.gamemode.load() == GameMode::Creative)
+        let mut damage = 1.0;
+        if (config.protect_creative && victim.gamemode.load() == GameMode::Creative)
+            || !victim.living_entity.check_damage(damage)
         {
             world
                 .play_sound(
@@ -481,9 +498,14 @@ impl Player {
 
         player_attack_sound(&pos, world, attack_type).await;
 
-        // if is_crit {
-        //     damage *= 1.5;
-        // }
+        if matches!(attack_type, AttackType::Critical) {
+            damage *= 1.5;
+        }
+
+        victim
+            .living_entity
+            .damage(damage, pumpkin_registry::DamageType::PlayerAttack)
+            .await;
 
         let mut knockback_strength = 1.0;
         match attack_type {
@@ -596,7 +618,11 @@ impl Player {
         let mut abilities = self.abilities.lock().await;
 
         // Set the flying ability
-        abilities.flying = player_abilities.flags & 0x02 != 0 && abilities.allow_flying;
+        let flying = player_abilities.flags & 0x02 != 0 && abilities.allow_flying;
+        if flying {
+            self.living_entity.fall_distance.store(0.0);
+        }
+        abilities.flying = flying;
     }
 
     pub async fn handle_play_ping_request(&self, request: SPlayPingRequest) {

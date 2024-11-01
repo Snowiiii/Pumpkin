@@ -25,7 +25,8 @@ pub struct Entity {
     pub entity_type: EntityType,
     /// The world in which the entity exists.
     pub world: Arc<World>,
-    /// The entity's current health level.
+    /// Previously last known position of the entity
+    pub last_pos: AtomicCell<Vector3<f64>>,
     /// The entity's current position in the world
     pub pos: AtomicCell<Vector3<f64>>,
     /// The entity's position rounded to the nearest block coordinates
@@ -65,6 +66,7 @@ impl Entity {
             entity_id,
             entity_type,
             on_ground: AtomicBool::new(false),
+            last_pos: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
             pos: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
             block_pos: AtomicCell::new(WorldPosition(Vector3::new(0, 0, 0))),
             chunk_pos: AtomicCell::new(Vector2::new(0, 0)),
@@ -89,7 +91,9 @@ impl Entity {
     pub fn set_pos(&self, x: f64, y: f64, z: f64) {
         let pos = self.pos.load();
         if pos.x != x || pos.y != y || pos.z != z {
+            self.last_pos.store(pos);
             self.pos.store(Vector3::new(x, y, z));
+
             let floor_x = x.floor() as i32;
             let floor_y = y.floor() as i32;
             let floor_z = z.floor() as i32;

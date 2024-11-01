@@ -21,14 +21,15 @@ use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_protocol::{
     bytebuf::DeserializerError,
     client::play::{
-        CGameEvent, CKeepAlive, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSetHealth,
-        CSyncPlayerPosition, CSystemChatMessage, GameEvent, PlayerAction,
+        CCombatDeath, CGameEvent, CKeepAlive, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate,
+        CRespawn, CSetHealth, CSpawnEntity, CSyncPlayerPosition, CSystemChatMessage, GameEvent,
+        PlayerAction,
     },
     server::play::{
-        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
-        SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
-        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem,
-        SUseItemOn, ServerboundPlayPackets,
+        SChatCommand, SChatMessage, SClientInformationPlay, SClientStatus, SConfirmTeleport,
+        SInteract, SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerPosition,
+        SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround,
+        SSwingArm, SUseItem, SUseItemOn, ServerboundPlayPackets,
     },
     RawPacket, ServerPacket, VarInt,
 };
@@ -42,7 +43,7 @@ use super::Entity;
 use crate::{
     client::{authentication::GameProfile, Client, PlayerConfig},
     server::Server,
-    world::World,
+    world::{player_chunker, World},
 };
 use crate::{error::PumpkinError, world::player_chunker::get_view_distance};
 
@@ -116,10 +117,6 @@ pub struct Player {
     ///
     /// **Note:** When the `abilities` field is updated, the server should send a `send_abilities_update` packet to the client to notify them of the changes.
     pub abilities: Mutex<Abilities>,
-    /// The player's last known position.
-    ///
-    /// This field is used to calculate the player's movement delta for network synchronization and other purposes.
-    pub last_position: AtomicCell<Vector3<f64>>,
 
     /// The current stage of the block the player is breaking.
     pub current_block_destroy_stage: AtomicU8,
@@ -193,7 +190,6 @@ impl Player {
             abilities: Mutex::new(Abilities::default()),
             gamemode: AtomicCell::new(gamemode),
             watched_section: AtomicCell::new(Vector3::new(0, 0, 0)),
-            last_position: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
             wait_for_keep_alive: AtomicBool::new(false),
             keep_alive_id: AtomicI64::new(0),
             last_keep_alive_time: AtomicCell::new(std::time::Instant::now()),
@@ -387,7 +383,7 @@ impl Player {
     }
 
     /// Updates the current abilities the Player has
-    pub async fn send_abilties_update(&mut self) {
+    pub async fn send_abilties_update(&self) {
         let mut b = 0i8;
         let abilities = &self.abilities.lock().await;
 
@@ -410,6 +406,91 @@ impl Player {
                 abilities.walk_speed_fov,
             ))
             .await;
+    }
+
+    pub async fn respawn(self: &Arc<Self>, alive: bool) {
+        let last_pos = self.living_entity.entity.last_pos.load();
+        let death_location = WorldPosition(Vector3::new(
+            last_pos.x.round() as i32,
+            last_pos.y.round() as i32,
+            last_pos.z.round() as i32,
+        ));
+
+        let data_kept = u8::from(alive);
+
+        self.client
+            .send_packet(&CRespawn::new(
+                0.into(),
+                "minecraft:overworld",
+                0, // seed
+                self.gamemode.load().to_u8().unwrap(),
+                self.gamemode.load().to_i8().unwrap(),
+                false,
+                false,
+                Some(("minecraft:overworld", death_location)),
+                0.into(),
+                0.into(),
+                data_kept,
+            ))
+            .await;
+
+        log::debug!("Sending player abilities to {}", self.gameprofile.name);
+        self.send_abilties_update().await;
+
+        // teleport
+        let position = Vector3::new(10.0, 120.0, 10.0);
+        let yaw = 10.0;
+        let pitch = 10.0;
+
+        log::debug!("Sending player teleport to {}", self.gameprofile.name);
+        self.teleport(position, yaw, pitch).await;
+
+        self.living_entity.entity.last_pos.store(position);
+
+        // TODO: difficulty, exp bar, status effect
+
+        let world = &self.living_entity.entity.world;
+        world
+            .worldborder
+            .lock()
+            .await
+            .init_client(&self.client)
+            .await;
+
+        // TODO: world spawn (compass stuff)
+
+        self.client
+            .send_packet(&CGameEvent::new(GameEvent::StartWaitingChunks, 0.0))
+            .await;
+
+        let entity = &self.living_entity.entity;
+        world
+            .broadcast_packet_except(
+                &[self.gameprofile.id],
+                // TODO: add velo
+                &CSpawnEntity::new(
+                    entity.entity_id.into(),
+                    self.gameprofile.id,
+                    (EntityType::Player as i32).into(),
+                    position.x,
+                    position.y,
+                    position.z,
+                    pitch,
+                    yaw,
+                    yaw,
+                    0.into(),
+                    0.0,
+                    0.0,
+                    0.0,
+                ),
+            )
+            .await;
+
+        player_chunker::player_join(world, self.clone()).await;
+
+        // update commands
+
+        self.set_health(20.0, 20, 20.0).await;
     }
 
     /// yaw and pitch in degrees
@@ -493,6 +574,17 @@ impl Player {
         self.food_saturation.store(food_saturation);
         self.client
             .send_packet(&CSetHealth::new(health, food.into(), food_saturation))
+            .await;
+    }
+
+    pub async fn kill(&self) {
+        self.living_entity.kill().await;
+
+        self.client
+            .send_packet(&CCombatDeath::new(
+                self.entity_id().into(),
+                TextComponent::text("noob"),
+            ))
             .await;
     }
 
@@ -607,7 +699,10 @@ impl Player {
                 }
                 ServerboundPlayPackets::ChatSessionUpdate => {}
                 ServerboundPlayPackets::ChunkBatchAck => {}
-                ServerboundPlayPackets::ClientStatus => {}
+                ServerboundPlayPackets::ClientStatus => {
+                    self.handle_client_status(SClientStatus::read(bytebuf)?)
+                        .await;
+                }
                 ServerboundPlayPackets::ClientTickEnd => {}
                 ServerboundPlayPackets::ClientSettings => {
                     self.handle_client_information(SClientInformationPlay::read(bytebuf)?)
@@ -727,7 +822,7 @@ impl Default for Abilities {
             flying: false,
             allow_flying: false,
             creative: false,
-            fly_speed: 0.5,
+            fly_speed: 0.4,
             walk_speed_fov: 0.1,
         }
     }

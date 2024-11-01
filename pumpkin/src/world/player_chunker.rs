@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use pumpkin_config::BASIC_CONFIG;
-use pumpkin_core::math::{
-    get_section_cord, position::WorldPosition, vector2::Vector2, vector3::Vector3,
+use pumpkin_core::{
+    math::{get_section_cord, position::WorldPosition, vector2::Vector2, vector3::Vector3},
+    GameMode,
 };
 use pumpkin_protocol::client::play::{CCenterChunk, CUnloadChunk};
 use pumpkin_world::cylindrical_chunk_iterator::Cylindrical;
@@ -51,6 +52,13 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
 }
 
 pub async fn update_position(player: &Arc<Player>) {
+    if !player.abilities.lock().await.flying {
+        player
+            .living_entity
+            .update_fall_distance(player.gamemode.load() == GameMode::Creative)
+            .await;
+    }
+
     let entity = &player.living_entity.entity;
     let current_watched = player.watched_section.load();
     let new_watched = chunk_section_from_pos(&entity.block_pos.load());
