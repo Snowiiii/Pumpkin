@@ -7,6 +7,7 @@ import de.snowii.extractor.Extractor
 import net.minecraft.registry.DynamicRegistryManager
 import net.minecraft.registry.Registries
 import net.minecraft.registry.RegistryKeys
+import net.minecraft.server.MinecraftServer
 
 
 class Particles : Extractor.Extractor {
@@ -14,7 +15,7 @@ class Particles : Extractor.Extractor {
         return "particles.json"
     }
 
-    override fun extract(registryManager: DynamicRegistryManager.Immutable): JsonElement {
+    override fun extract(server: MinecraftServer): JsonElement {
         val particlesJson = JsonArray()
 
         for (particle in Registries.PARTICLE_TYPE) {
