@@ -1,4 +1,4 @@
-use std::ffi::CString;
+use std::{ffi::CString, iter};
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -171,7 +171,52 @@ impl CBasePacket {
                 host_port,
                 host_ip,
                 players,
-            } => todo!(),
+            } => {
+                // Packet type
+                buf.write_u8(0).await.unwrap();
+                // Session ID
+                buf.write_i32(self.session_id).await.unwrap();
+                // Padding (11 bytes, meaningless)
+                buf.extend(iter::repeat(0).take(11));
+
+                // Key value section
+                buf.extend_from_slice(CString::new("hostname").unwrap().as_bytes_with_nul());
+                buf.extend_from_slice(hostname.as_bytes_with_nul());
+
+                buf.extend_from_slice(CString::new("version").unwrap().as_bytes_with_nul());
+                buf.extend_from_slice(version.as_bytes_with_nul());
+
+                buf.extend_from_slice(CString::new("plugins").unwrap().as_bytes_with_nul());
+                buf.extend_from_slice(plugins.as_bytes_with_nul());
+
+                buf.extend_from_slice(CString::new("map").unwrap().as_bytes_with_nul());
+                buf.extend_from_slice(map.as_bytes_with_nul());
+
+                buf.extend_from_slice(CString::new("numplayers").unwrap().as_bytes_with_nul());
+                let num_players = CString::new(num_players.to_string()).unwrap();
+                buf.extend_from_slice(num_players.as_bytes_with_nul());
+
+                buf.extend_from_slice(CString::new("maxplayers").unwrap().as_bytes_with_nul());
+                let max_players = CString::new(max_players.to_string()).unwrap();
+                buf.extend_from_slice(max_players.as_bytes_with_nul());
+
+                buf.extend_from_slice(CString::new("hostport").unwrap().as_bytes_with_nul());
+                let host_port = CString::new(host_port.to_string()).unwrap();
+                buf.extend_from_slice(host_port.as_bytes_with_nul());
+
+                buf.extend_from_slice(CString::new("hostip").unwrap().as_bytes_with_nul());
+                buf.extend_from_slice(host_ip.as_bytes_with_nul());
+
+                // Padding (10 bytes, meaningless), with one extra 0x00 for the extra required null terminator
+                buf.extend(iter::repeat(0).take(11));
+
+                // Players
+                for player in players {
+                    buf.extend_from_slice(player.as_bytes_with_nul());
+                }
+
+                buf.write_u8(0).await.unwrap();
+            },
         }
 
         buf
