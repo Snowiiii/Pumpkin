@@ -25,28 +25,63 @@ pub enum SBasePayload {
 }
 
 impl SBasePacket {
-    pub async fn decode(mut reader: impl AsyncReadExt + Unpin) -> Self {
-        let magic = reader.read_u16().await.unwrap();
-        match reader.read_u8().await.unwrap() {
-            0 => todo!(),
+    // We don't care what error it is as any packet with errors will be ingnored
+    pub async fn decode(mut reader: impl AsyncReadExt + Unpin) -> Result<Self, ()> {
+        let magic = reader.read_u16().await.map_err(|_| ())?;
+        let packet_type = reader.read_u8().await.map_err(|_| ())?;
+        let session_id = reader.read_i32().await.map_err(|_| ())?;
+
+        match packet_type {
+            // Status
+            0 => {
+                let challange_token = reader.read_i32().await.map_err(|_| ())?;
+                let mut buf = [0; 4];
+
+                // If payload is padded to 8 bytes, the client is requesting full status response
+                // In other terms, check if there are 4 extra bytes at the end
+                // The extra bytes should be meaningless
+                // Otherwise the client is requesting basic status response
+                match reader.read(&mut buf).await {
+                    Ok(0) => Ok(Self {
+                        magic,
+                        packet_type: PacketType::Stat,
+                        session_id,
+                        payload: SBasePayload::BasicInfo(challange_token),
+                    }),
+                    Ok(4) => Ok(Self {
+                        magic,
+                        packet_type: PacketType::Stat,
+                        session_id,
+                        payload: SBasePayload::FullInfo(challange_token),
+                    }),
+                    _ => {
+                        // Just ingnore malformed packets or errors
+                        Err(())
+                    }
+                }
+            }
+
             // Handshake
-            9 => Self {
+            9 => Ok(Self {
                 magic,
                 packet_type: PacketType::Handshake,
-                session_id: reader.read_i32().await.unwrap(),
+                session_id,
                 payload: SBasePayload::Handshake,
-            },
-            _ => todo!(),
+            }),
+
+            _ => Err(()),
         }
     }
 }
 
+#[derive(Debug)]
 pub struct CBasePacket {
     pub packet_type: PacketType,
     pub session_id: i32,
     pub payload: CBasePayload,
 }
 
+#[derive(Debug)]
 pub enum CBasePayload {
     Handshake {
         // For simplicity use a number type

@@ -12,34 +12,41 @@ pub async fn start_query_handler() {
             .await
             .expect("Unable to bind to address"),
     );
-    log::info!("Query socket created");
+    log::info!("Server querying ready!");
 
     loop {
         let socket = socket.clone();
         let mut buf = vec![0; 1024];
-        log::info!("Waiting for requests");
-        let (len, addr) = socket.recv_from(&mut buf).await.unwrap();
+        let (_, addr) = socket.recv_from(&mut buf).await.unwrap();
 
         tokio::spawn(async move {
             let cursor = Cursor::new(buf);
-            let packet = SBasePacket::decode(cursor).await;
 
-            match packet.packet_type {
-                PacketType::Handshake => {
-                    let response = CBasePacket {
-                        packet_type: PacketType::Handshake,
-                        session_id: packet.session_id,
-                        payload: CBasePayload::Handshake {
-                            challange_token: rand::thread_rng().gen_range(1..=i32::MAX),
-                        },
-                    };
+            if let Ok(packet) = SBasePacket::decode(cursor).await {
+                println!("{packet:#?}");
 
-                    let _len = socket
-                        .send_to(response.encode().await.as_slice(), addr)
-                        .await
-                        .unwrap();
+                match packet.packet_type {
+                    PacketType::Handshake => {
+                        let response = CBasePacket {
+                            packet_type: PacketType::Handshake,
+                            session_id: packet.session_id,
+                            payload: CBasePayload::Handshake {
+                                // Create challange token
+                                challange_token: rand::thread_rng().gen_range(1..=i32::MAX),
+                            },
+                        };
+
+                        println!("{response:#?}");
+
+                        socket
+                            .send_to(response.encode().await.as_slice(), addr)
+                            .await
+                            .unwrap();
+                    }
+                    PacketType::Stat => {
+                        // println!("{packet:#?}");
+                    }
                 }
-                PacketType::Stat => todo!(),
             }
         });
     }
