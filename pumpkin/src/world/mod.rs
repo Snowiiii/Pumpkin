@@ -26,7 +26,6 @@ use pumpkin_protocol::{
     },
     ClientPacket, VarInt,
 };
-use pumpkin_world::block::BlockId;
 use pumpkin_world::chunk::ChunkData;
 use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
 use pumpkin_world::level::Level;
@@ -575,7 +574,7 @@ impl World {
         self.broadcast_packet_all(&CRemoveEntities::new(&[entity.entity_id.into()]))
             .await;
     }
-    pub async fn set_block(&self, position: WorldPosition, block_id: BlockId) {
+    pub async fn set_block(&self, position: WorldPosition, block_id: u16) {
         let (chunk_coordinate, relative_coordinates) = position.chunk_and_chunk_relative_position();
 
         // Since we divide by 16 remnant can never exceed u8
@@ -584,7 +583,7 @@ impl World {
         let chunk = self.receive_chunk(chunk_coordinate).await;
         chunk.write().await.blocks.set_block(relative, block_id);
 
-        self.broadcast_packet_all(&CBlockUpdate::new(&position, i32::from(block_id.0).into()))
+        self.broadcast_packet_all(&CBlockUpdate::new(&position, i32::from(block_id).into()))
             .await;
     }
 
@@ -604,13 +603,13 @@ impl World {
     }
 
     pub async fn break_block(&self, position: WorldPosition) {
-        self.set_block(position, BlockId(0)).await;
+        self.set_block(position, 0).await;
 
         self.broadcast_packet_all(&CWorldEvent::new(2001, &position, 11, false))
             .await;
     }
 
-    pub async fn get_block(&self, position: WorldPosition) -> BlockId {
+    pub async fn get_block(&self, position: WorldPosition) -> u16 {
         let (chunk, relative) = position.chunk_and_chunk_relative_position();
         let relative = ChunkRelativeBlockCoordinates::from(relative);
         let chunk = self.receive_chunk(chunk).await;

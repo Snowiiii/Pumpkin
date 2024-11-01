@@ -18,11 +18,11 @@ import java.nio.file.Paths
 
 
 class Extractor : ModInitializer {
-    val MOD_ID: String = "pumpkin_extractor"
-    val LOGGER: Logger = LoggerFactory.getLogger(MOD_ID)
+    private val modID: String = "pumpkin_extractor"
+    private val logger: Logger = LoggerFactory.getLogger(modID)
 
     override fun onInitialize() {
-        LOGGER.info("Starting Pumpkin Extractor")
+        logger.info("Starting Pumpkin Extractor")
         val extractors = arrayOf(
             Sounds(),
             Recipes(),
@@ -36,7 +36,7 @@ class Extractor : ModInitializer {
         try {
             outputDirectory = Files.createDirectories(Paths.get("pumpkin_extractor_output"))
         } catch (e: IOException) {
-            LOGGER.info("Failed to create output directory.", e)
+            logger.info("Failed to create output directory.", e)
             return
         }
 
@@ -49,9 +49,9 @@ class Extractor : ModInitializer {
                     val fileWriter = FileWriter(out.toFile(), StandardCharsets.UTF_8)
                     gson.toJson(ext.extract(server.registryManager), fileWriter)
                     fileWriter.close()
-                    LOGGER.info("Wrote " + out.toAbsolutePath())
+                    logger.info("Wrote " + out.toAbsolutePath())
                 } catch (e: java.lang.Exception) {
-                    LOGGER.error(("Extractor for \"" + ext.fileName()) + "\" failed.", e)
+                    logger.error(("Extractor for \"" + ext.fileName()) + "\" failed.", e)
                 }
             }
         })

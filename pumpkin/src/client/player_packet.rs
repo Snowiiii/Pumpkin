@@ -34,7 +34,6 @@ use pumpkin_protocol::{
     server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem},
     VarInt,
 };
-use pumpkin_world::block::BlockId;
 use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
 
 use super::{
@@ -624,7 +623,7 @@ impl Player {
                 world
                     .set_block(
                         WorldPosition(location.0 + face.to_offset()),
-                        BlockId(block.default_state_id),
+                        block.default_state_id,
                     )
                     .await;
             }
