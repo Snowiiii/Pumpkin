@@ -15,7 +15,7 @@ pub enum DeserializerError {
     UnknownPacket,
     #[error("serializer error {0}")]
     Message(String),
-    #[error("Stdio error")]
+    #[error("Stdio error {0}")]
     Stdio(std::io::Error),
 }
 

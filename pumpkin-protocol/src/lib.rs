@@ -1,7 +1,6 @@
 use bytebuf::{packet_id::ClientPacketID, ByteBuffer, DeserializerError};
 use pumpkin_core::text::{style::Style, TextComponent};
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
 pub mod bytebuf;
 pub mod client;
@@ -29,46 +28,6 @@ pub type VarLongType = i64;
 pub type FixedBitSet = bytes::Bytes;
 
 pub struct BitSet<'a>(pub VarInt, pub &'a [i64]);
-
-#[derive(Error, Debug)]
-pub enum PacketError {
-    #[error("failed to decode packet ID")]
-    DecodeID,
-    #[error("failed to encode packet ID")]
-    EncodeID,
-    #[error("failed to encode packet Length")]
-    EncodeLength,
-    #[error("failed to encode packet data")]
-    EncodeData,
-    #[error("failed to write encoded packet")]
-    EncodeFailedWrite,
-    #[error("failed to write into decoder: {0}")]
-    FailedWrite(String),
-    #[error("failed to flush decoder")]
-    FailedFinish,
-    #[error("failed to write encoded packet to connection")]
-    ConnectionWrite,
-    #[error("packet exceeds maximum length")]
-    TooLong,
-    #[error("packet length is out of bounds")]
-    OutOfBounds,
-    #[error("malformed packet length VarInt")]
-    MalformedLength,
-}
-
-impl PacketError {
-    pub fn kickable(&self) -> bool {
-        // We no longer have a connection, so dont try to kick the player, just close
-        !matches!(
-            self,
-            Self::EncodeData
-                | Self::EncodeFailedWrite
-                | Self::FailedWrite(_)
-                | Self::FailedFinish
-                | Self::ConnectionWrite
-        )
-    }
-}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ConnectionState {
