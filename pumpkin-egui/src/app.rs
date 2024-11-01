@@ -23,17 +23,12 @@ pub struct TemplateApp {
     started: bool,
     #[serde(skip)]
     server_handle: Option<JoinHandle<io::Result<()>>>,
-    //#[cfg(target_os = "android")]
-    #[serde(skip)]
-    jvm: Option<Jvm>,
 
     command: String,
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
-        let mut jvm = Jvm::attach_thread().unwrap();
-        jvm.detach_thread_on_drop(false);
         Self {
             rt: runtime::Builder::new_multi_thread()
                 .enable_all()
@@ -41,8 +36,6 @@ impl Default for TemplateApp {
                 .unwrap(),
             started: false,
             server_handle: None,
-            //#[cfg(target_os = "android")]
-            jvm: Some(jvm),
             command: String::new(),
         }
     }
@@ -141,17 +134,16 @@ impl eframe::App for TemplateApp {
                     );
     
                     if textedit.gained_focus() {
-                        if let Some(jvm) = &self.jvm { 
-                            let instance = jvm.create_instance(
-                                "pumpkin_egui_android.MainActivity",
-                                InvocationArg::empty()
-                            ).unwrap();
-                            jvm.invoke(
-                                &instance,
-                                "openKeyboard",
-                                InvocationArg::empty()
-                            ).unwrap();
-                        }
+                        let jvm = Jvm::attach_thread().unwrap();
+                        let instance = jvm.create_instance(
+                            "pumpkin_egui_android.MainActivity",
+                            InvocationArg::empty()
+                        ).unwrap();
+                        jvm.invoke(
+                            &instance,
+                            "openKeyboard",
+                            InvocationArg::empty()
+                        ).unwrap();
                     }
                 }
 
