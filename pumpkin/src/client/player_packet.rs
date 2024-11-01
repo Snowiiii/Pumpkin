@@ -615,21 +615,23 @@ impl Player {
 
         if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
             if let Some(item) = self.inventory.lock().await.held_item() {
-                let block = get_block_by_item(item.item_id)
-                    .expect("No item found, TODO Better error handling");
-                let entity = &self.living_entity.entity;
-                let world = &entity.world;
+                let block = get_block_by_item(item.item_id);
+                // check if item is a block, Because Not every item can be placed :D
+                if let Some(block) = block {
+                    let entity = &self.living_entity.entity;
+                    let world = &entity.world;
 
-                world
-                    .set_block(
-                        WorldPosition(location.0 + face.to_offset()),
-                        block.default_state_id,
-                    )
+                    world
+                        .set_block(
+                            WorldPosition(location.0 + face.to_offset()),
+                            block.default_state_id,
+                        )
+                        .await;
+                }
+                self.client
+                    .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
                     .await;
             }
-            self.client
-                .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
-                .await;
         } else {
             self.kick(TextComponent::text("Invalid block face")).await;
         }

@@ -10,6 +10,7 @@ import net.minecraft.network.listener.PacketListener
 import net.minecraft.network.packet.PacketType
 import net.minecraft.network.state.*
 import net.minecraft.registry.DynamicRegistryManager
+import net.minecraft.server.MinecraftServer
 
 
 class Packet : Extractor.Extractor {
@@ -17,7 +18,7 @@ class Packet : Extractor.Extractor {
         return "packets.json"
     }
 
-    override fun extract(registryManager: DynamicRegistryManager.Immutable): JsonElement {
+    override fun extract(server: MinecraftServer): JsonElement {
         val packetsJson = JsonArray()
 
         serializeFactory(HandshakeStates.C2S_FACTORY, packetsJson)
