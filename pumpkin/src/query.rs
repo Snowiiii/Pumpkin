@@ -7,9 +7,11 @@ use rand::Rng;
 use tokio::net::UdpSocket;
 
 pub async fn start_query_handler() {
-    let socket = Arc::new(UdpSocket::bind("0.0.0.0:25565")
-    .await
-    .expect("Unable to bind to address"));
+    let socket = Arc::new(
+        UdpSocket::bind("0.0.0.0:25565")
+            .await
+            .expect("Unable to bind to address"),
+    );
     log::info!("Query socket created");
 
     loop {
@@ -32,7 +34,10 @@ pub async fn start_query_handler() {
                         },
                     };
 
-                    let _len = socket.send_to(response.encode().await.as_slice(), addr).await.unwrap();
+                    let _len = socket
+                        .send_to(response.encode().await.as_slice(), addr)
+                        .await
+                        .unwrap();
                 }
                 PacketType::Stat => todo!(),
             }
