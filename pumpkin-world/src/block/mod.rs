@@ -5,7 +5,6 @@ pub mod block_state;
 
 use pumpkin_core::math::vector3::Vector3;
 
-pub use block_registry::BlockId;
 pub use block_state::BlockState;
 
 #[derive(FromPrimitive)]

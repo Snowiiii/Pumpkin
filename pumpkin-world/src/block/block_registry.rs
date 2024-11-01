@@ -2,8 +2,6 @@ use std::sync::LazyLock;
 
 use serde::Deserialize;
 
-use super::BlockState;
-
 pub static BLOCKS: LazyLock<TopLevel> = LazyLock::new(|| {
     serde_json::from_str(include_str!("../../../assets/blocks.json"))
         .expect("Could not parse blocks.json registry.")
@@ -55,8 +53,10 @@ struct Property {
 #[derive(Deserialize, Clone, Debug)]
 struct State {
     id: u16,
+    air: bool,
     luminance: u8,
-    opaque: bool,
+    burnable: bool,
+    opacity: Option<u32>,
     replaceable: bool,
     collision_shapes: Vec<u16>,
     block_entity_type: Option<u32>,
@@ -70,28 +70,4 @@ struct Shape {
     max_x: f64,
     max_y: f64,
     max_z: f64,
-}
-
-#[derive(Default, Copy, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-#[serde(transparent)]
-pub struct BlockId(pub u16);
-
-impl BlockId {
-    pub fn is_air(&self) -> bool {
-        self.0 == 0 || self.0 == 12959 || self.0 == 12958
-    }
-
-    pub fn get_id_mojang_repr(&self) -> i32 {
-        self.0 as i32
-    }
-
-    pub fn get_id(&self) -> u16 {
-        self.0
-    }
-}
-
-impl From<BlockState> for BlockId {
-    fn from(value: BlockState) -> Self {
-        Self(value.get_id())
-    }
 }

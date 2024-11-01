@@ -34,7 +34,6 @@ use pumpkin_protocol::{
     server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem},
     VarInt,
 };
-use pumpkin_world::block::BlockId;
 use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
 
 use super::{
@@ -624,7 +623,7 @@ impl Player {
                 world
                     .set_block(
                         WorldPosition(location.0 + face.to_offset()),
-                        BlockId(block.default_state_id),
+                        block.default_state_id,
                     )
                     .await;
             }
@@ -660,9 +659,9 @@ impl Player {
         let valid_slot = packet.slot >= 1 && packet.slot <= 45;
         if valid_slot {
             self.inventory.lock().await.set_slot(
-                packet.slot as usize,
+                packet.slot as u16,
                 packet.clicked_item.to_item(),
-                false,
+                true,
             )?;
         };
         // TODO: The Item was droped per drag and drop,

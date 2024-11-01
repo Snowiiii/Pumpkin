@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    block::{BlockId, BlockState},
+    block::BlockState,
     coordinates::{ChunkRelativeBlockCoordinates, Height},
     level::SaveFile,
     WORLD_HEIGHT,
@@ -63,7 +63,7 @@ pub struct ChunkBlocks {
 
     // The packet relies on this ordering -> leave it like this for performance
     /// Ordering: yzx (y being the most significant)
-    blocks: Box<[BlockId; CHUNK_VOLUME]>,
+    blocks: Box<[u16; CHUNK_VOLUME]>,
 
     /// See `https://minecraft.fandom.com/wiki/Heightmap` for more info
     pub heightmap: ChunkHeightmaps,
@@ -152,7 +152,7 @@ impl Default for ChunkHeightmaps {
 impl Default for ChunkBlocks {
     fn default() -> Self {
         Self {
-            blocks: Box::new([BlockId::default(); CHUNK_VOLUME]),
+            blocks: Box::new([0; CHUNK_VOLUME]),
             heightmap: ChunkHeightmaps::default(),
         }
     }
@@ -173,24 +173,20 @@ impl ChunkBlocks {
 
     pub fn empty_with_heightmap(heightmap: ChunkHeightmaps) -> Self {
         Self {
-            blocks: Box::new([BlockId::default(); CHUNK_VOLUME]),
+            blocks: Box::new([0; CHUNK_VOLUME]),
             heightmap,
         }
     }
 
     /// Gets the given block in the chunk
-    pub fn get_block(&self, position: ChunkRelativeBlockCoordinates) -> BlockId {
+    pub fn get_block(&self, position: ChunkRelativeBlockCoordinates) -> u16 {
         self.blocks[Self::convert_index(position)]
     }
 
     /// Sets the given block in the chunk, returning the old block
-    pub fn set_block(
-        &mut self,
-        position: ChunkRelativeBlockCoordinates,
-        block: BlockId,
-    ) -> BlockId {
+    pub fn set_block(&mut self, position: ChunkRelativeBlockCoordinates, block_id: u16) -> u16 {
         // TODO @LUK_ESC? update the heightmap
-        self.set_block_no_heightmap_update(position, block)
+        self.set_block_no_heightmap_update(position, block_id)
     }
 
     /// Sets the given block in the chunk, returning the old block
@@ -201,12 +197,12 @@ impl ChunkBlocks {
     pub fn set_block_no_heightmap_update(
         &mut self,
         position: ChunkRelativeBlockCoordinates,
-        block: BlockId,
-    ) -> BlockId {
+        block: u16,
+    ) -> u16 {
         std::mem::replace(&mut self.blocks[Self::convert_index(position)], block)
     }
 
-    pub fn iter_subchunks(&self) -> impl Iterator<Item = &[BlockId; SUBCHUNK_VOLUME]> {
+    pub fn iter_subchunks(&self) -> impl Iterator<Item = &[u16; SUBCHUNK_VOLUME]> {
         self.blocks
             .chunks(SUBCHUNK_VOLUME)
             .map(|subchunk| subchunk.try_into().unwrap())
@@ -226,7 +222,7 @@ impl ChunkBlocks {
 }
 
 impl Index<ChunkRelativeBlockCoordinates> for ChunkBlocks {
-    type Output = BlockId;
+    type Output = u16;
 
     fn index(&self, index: ChunkRelativeBlockCoordinates) -> &Self::Output {
         &self.blocks[Self::convert_index(index)]
@@ -299,7 +295,7 @@ impl ChunkData {
                             y: Height::from_absolute((block_index / CHUNK_AREA) as u16),
                             x: (block_index % 16).into(),
                         },
-                        BlockId(block.get_id()),
+                        block.get_id(),
                     );
 
                     block_index += 1;

@@ -26,7 +26,6 @@ use pumpkin_protocol::{
     },
     ClientPacket, VarInt,
 };
-use pumpkin_world::block::BlockId;
 use pumpkin_world::chunk::ChunkData;
 use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
 use pumpkin_world::level::Level;
@@ -547,8 +546,11 @@ impl World {
     /// - This function assumes `broadcast_packet_expect` and `remove_entity` are defined elsewhere.
     /// - The disconnect message sending is currently optional. Consider making it a configurable option.
     pub async fn remove_player(&self, player: &Player) {
-        let mut current_players = self.current_players.lock().await;
-        current_players.remove(&player.gameprofile.id).unwrap();
+        self.current_players
+            .lock()
+            .await
+            .remove(&player.gameprofile.id)
+            .unwrap();
         let uuid = player.gameprofile.id;
         self.broadcast_packet_expect(
             &[player.gameprofile.id],
@@ -562,7 +564,7 @@ impl World {
         let disconn_msg_txt = format!("{} left the game.", player.gameprofile.name.as_str());
         let disconn_msg_cmp =
             TextComponent::text(disconn_msg_txt.as_str()).color_named(NamedColor::Yellow);
-        for player in current_players.values() {
+        for player in self.current_players.lock().await.values() {
             player.send_system_message(&disconn_msg_cmp).await;
         }
         log::info!("{}", disconn_msg_cmp.to_pretty_console());
@@ -572,7 +574,7 @@ impl World {
         self.broadcast_packet_all(&CRemoveEntities::new(&[entity.entity_id.into()]))
             .await;
     }
-    pub async fn set_block(&self, position: WorldPosition, block_id: BlockId) {
+    pub async fn set_block(&self, position: WorldPosition, block_id: u16) {
         let (chunk_coordinate, relative_coordinates) = position.chunk_and_chunk_relative_position();
 
         // Since we divide by 16 remnant can never exceed u8
@@ -581,7 +583,7 @@ impl World {
         let chunk = self.receive_chunk(chunk_coordinate).await;
         chunk.write().await.blocks.set_block(relative, block_id);
 
-        self.broadcast_packet_all(&CBlockUpdate::new(&position, i32::from(block_id.0).into()))
+        self.broadcast_packet_all(&CBlockUpdate::new(&position, i32::from(block_id).into()))
             .await;
     }
 
@@ -601,13 +603,13 @@ impl World {
     }
 
     pub async fn break_block(&self, position: WorldPosition) {
-        self.set_block(position, BlockId(0)).await;
+        self.set_block(position, 0).await;
 
         self.broadcast_packet_all(&CWorldEvent::new(2001, &position, 11, false))
             .await;
     }
 
-    pub async fn get_block(&self, position: WorldPosition) -> BlockId {
+    pub async fn get_block(&self, position: WorldPosition) -> u16 {
         let (chunk, relative) = position.chunk_and_chunk_relative_position();
         let relative = ChunkRelativeBlockCoordinates::from(relative);
         let chunk = self.receive_chunk(chunk).await;

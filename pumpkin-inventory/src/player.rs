@@ -51,23 +51,29 @@ impl PlayerInventory {
     /// Useful functionality for plugins in the future.
     pub fn set_slot(
         &mut self,
-        slot: usize,
+        slot: u16,
         item: Option<ItemStack>,
         item_allowed_override: bool,
     ) -> Result<(), InventoryError> {
-        if item_allowed_override {
-            if !(0..=45).contains(&slot) {
-                Err(InventoryError::InvalidSlot)?
-            }
-            *self.all_slots()[slot] = item;
-            return Ok(());
+        if !(0..=45).contains(&slot) {
+            return Err(InventoryError::InvalidSlot);
         }
-        let slot_condition = self.slot_condition(slot)?;
-        if let Some(item) = item {
-            if slot_condition(&item) {
-                *self.all_slots()[slot] = Some(item);
+
+        match item_allowed_override {
+            true => {
+                *self.all_slots()[slot as usize] = item;
+            }
+            false => {
+                let slot = slot as usize;
+                let slot_condition = self.slot_condition(slot)?;
+                if let Some(item) = item {
+                    if slot_condition(&item) {
+                        self.all_slots()[slot] = &mut Some(item);
+                    }
+                }
             }
         }
+
         Ok(())
     }
     #[allow(clippy::type_complexity)]

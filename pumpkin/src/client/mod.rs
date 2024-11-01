@@ -21,7 +21,7 @@ use pumpkin_protocol::{
     bytebuf::DeserializerError,
     client::{config::CConfigDisconnect, login::CLoginDisconnect, play::CPlayDisconnect},
     packet_decoder::PacketDecoder,
-    packet_encoder::PacketEncoder,
+    packet_encoder::{PacketEncodeError, PacketEncoder},
     server::{
         config::{
             SAcknowledgeFinishConfig, SClientInformationConfig, SKnownPacks, SPluginMessage,
@@ -34,7 +34,7 @@ use pumpkin_protocol::{
         },
         status::{SStatusPingRequest, SStatusRequest, ServerboundStatusPackets},
     },
-    ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
+    ClientPacket, ConnectionState, RawPacket, ServerPacket,
 };
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Mutex;
@@ -231,14 +231,8 @@ impl Client {
         }
 
         let mut writer = self.connection_writer.lock().await;
-        if let Err(error) = writer
-            .write_all(&enc.take())
-            .await
-            .map_err(|_| PacketError::ConnectionWrite)
-        {
-            if error.kickable() {
-                self.kick(&error.to_string()).await;
-            }
+        if let Err(error) = writer.write_all(&enc.take()).await {
+            log::debug!("{}", error.to_string());
         }
 
         /*
@@ -265,7 +259,10 @@ impl Client {
     /// # Errors
     ///
     /// Returns an `PacketError` if the could not be Send.
-    pub async fn try_send_packet<P: ClientPacket>(&self, packet: &P) -> Result<(), PacketError> {
+    pub async fn try_send_packet<P: ClientPacket>(
+        &self,
+        packet: &P,
+    ) -> Result<(), PacketEncodeError> {
         // assert!(!self.closed);
         /*
         log::debug!(
@@ -279,10 +276,7 @@ impl Client {
         enc.append_packet(packet)?;
 
         let mut writer = self.connection_writer.lock().await;
-        writer
-            .write_all(&enc.take())
-            .await
-            .map_err(|_| PacketError::ConnectionWrite)?;
+        let _ = writer.write_all(&enc.take()).await;
 
         /*
         writer
