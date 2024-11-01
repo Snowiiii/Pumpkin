@@ -31,12 +31,12 @@ pub async fn start_query_handler() {
                         let response = CBasePacket {
                             packet_type: PacketType::Handshake,
                             session_id: packet.session_id,
-                            payload: CBasePayload::Handshake {
-                                challange_token,
-                            },
+                            payload: CBasePayload::Handshake { challange_token },
                         };
 
-                        clients.add_new_client(packet.session_id, challange_token, addr).await;
+                        clients
+                            .add_new_client(packet.session_id, challange_token, addr)
+                            .await;
 
                         socket
                             .send_to(response.encode().await.as_slice(), addr)
@@ -47,17 +47,19 @@ pub async fn start_query_handler() {
                         match packet.payload {
                             SBasePayload::Handshake => {
                                 // Nothing to do here since you cannot be here without setting the packet type to handshake
-                            },
+                            }
                             SBasePayload::BasicInfo(challange_token) => {
-                                if clients.check_client(packet.session_id, challange_token, addr).await {
-                                    
-                                }
-                            },
+                                if clients
+                                    .check_client(packet.session_id, challange_token, addr)
+                                    .await
+                                {}
+                            }
                             SBasePayload::FullInfo(challange_token) => {
-                                if clients.check_client(packet.session_id, challange_token, addr).await {
-                                    
-                                }
-                            },
+                                if clients
+                                    .check_client(packet.session_id, challange_token, addr)
+                                    .await
+                                {}
+                            }
                         }
                     }
                 }
@@ -71,7 +73,7 @@ struct QueryClients {
     // Clear hashmap every 30 seconds as thats how long every challange token ever lasts
     // If challange token is expired, the client needs to handshake again
     // So there is no point in keeping all this data
-    clients: RwLock<HashMap<i32, (i32, SocketAddr)>>
+    clients: RwLock<HashMap<i32, (i32, SocketAddr)>>,
 }
 
 impl QueryClients {
@@ -94,7 +96,10 @@ impl QueryClients {
     }
 
     async fn add_new_client(&self, session_id: i32, challange_token: i32, addr: SocketAddr) {
-        self.clients.write().await.insert(session_id, (challange_token, addr));
+        self.clients
+            .write()
+            .await
+            .insert(session_id, (challange_token, addr));
     }
 
     async fn check_client(&self, session_id: i32, challange_token: i32, addr: SocketAddr) -> bool {

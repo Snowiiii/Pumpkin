@@ -160,7 +160,7 @@ impl CBasePacket {
                 buf.write_u16_le(*host_port).await.unwrap();
                 // IP
                 buf.extend_from_slice(host_ip.as_bytes_with_nul());
-            },
+            }
             CBasePayload::FullInfo {
                 hostname,
                 version,
@@ -214,9 +214,9 @@ impl CBasePacket {
                 for player in players {
                     buf.extend_from_slice(player.as_bytes_with_nul());
                 }
-
+                // Required extra null terminator
                 buf.write_u8(0).await.unwrap();
-            },
+            }
         }
 
         buf
