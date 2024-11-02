@@ -98,7 +98,8 @@ impl<'a> ClientPacket for CChunkData<'a> {
             //// Biomes
             // TODO: make biomes work
             data_buf.put_u8(0);
-            data_buf.put_var_int(&VarInt(0));
+            // This seems to be the biome
+            data_buf.put_var_int(&VarInt(10));
             data_buf.put_var_int(&VarInt(0));
         });
 
