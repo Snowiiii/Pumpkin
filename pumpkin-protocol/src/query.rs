@@ -1,4 +1,4 @@
-use std::{ffi::CString, iter};
+use std::{ffi::{CStr, CString}, iter};
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -106,8 +106,8 @@ pub enum CBasePayload {
         version: CString,
         plugins: CString,
         map: CString,
-        num_players: u16,
-        max_players: u16,
+        num_players: usize,
+        max_players: usize,
         host_port: u16,
         host_ip: CString,
         players: Vec<CString>,
@@ -176,48 +176,32 @@ impl CBasePacket {
                 buf.write_u8(0).await.unwrap();
                 // Session ID
                 buf.write_i32(self.session_id).await.unwrap();
+                
                 // Padding (11 bytes, meaningless)
-                buf.extend(iter::repeat(0).take(11));
+                // This is the padding used by vanilla
+                const PADDING_START: [u8; 11] = [0x73, 0x70, 0x6C, 0x69, 0x74, 0x6E, 0x75, 0x6D, 0x00, 0x80, 0x00];
+                buf.extend(PADDING_START);
 
-                // Key value section
-                buf.extend_from_slice(CString::new("hostname").unwrap().as_bytes_with_nul());
-                buf.extend_from_slice(hostname.as_bytes_with_nul());
+                // Key-value pairs
+                for (key, value) in [
+                    ("hostname", hostname),
+                    ("gametype", &CString::new("SMP").unwrap()),
+                    ("game_id", &CString::new("MINECRAFT").unwrap()),
+                    ("version", version),
+                    ("plugins", plugins),
+                    ("map", map),
+                    ("numplayers", &CString::new(num_players.to_string()).unwrap()),
+                    ("maxplayers", &CString::new(max_players.to_string()).unwrap()),
+                    ("hostport", &CString::new(host_port.to_string()).unwrap()),
+                    ("hostip", host_ip),
+                ] {
+                    buf.extend_from_slice(CString::new(key).unwrap().as_bytes_with_nul());
+                    buf.extend_from_slice(value.as_bytes_with_nul());
+                }
 
-                // Game type and game id are hardcoded into protocol, these are not changeable
-                // No idea why game type has a space in between, but it does apparently
-                buf.extend_from_slice(CString::new("game type").unwrap().as_bytes_with_nul());
-                buf.extend_from_slice(CString::new("SMP").unwrap().as_bytes_with_nul());
-
-                // No idea why there is a underscore here, but it does apparently
-                buf.extend_from_slice(CString::new("game_id").unwrap().as_bytes_with_nul());
-                buf.extend_from_slice(CString::new("MINECRAFT").unwrap().as_bytes_with_nul());
-
-                buf.extend_from_slice(CString::new("version").unwrap().as_bytes_with_nul());
-                buf.extend_from_slice(version.as_bytes_with_nul());
-
-                buf.extend_from_slice(CString::new("plugins").unwrap().as_bytes_with_nul());
-                buf.extend_from_slice(plugins.as_bytes_with_nul());
-
-                buf.extend_from_slice(CString::new("map").unwrap().as_bytes_with_nul());
-                buf.extend_from_slice(map.as_bytes_with_nul());
-
-                buf.extend_from_slice(CString::new("numplayers").unwrap().as_bytes_with_nul());
-                let num_players = CString::new(num_players.to_string()).unwrap();
-                buf.extend_from_slice(num_players.as_bytes_with_nul());
-
-                buf.extend_from_slice(CString::new("maxplayers").unwrap().as_bytes_with_nul());
-                let max_players = CString::new(max_players.to_string()).unwrap();
-                buf.extend_from_slice(max_players.as_bytes_with_nul());
-
-                buf.extend_from_slice(CString::new("hostport").unwrap().as_bytes_with_nul());
-                let host_port = CString::new(host_port.to_string()).unwrap();
-                buf.extend_from_slice(host_port.as_bytes_with_nul());
-
-                buf.extend_from_slice(CString::new("hostip").unwrap().as_bytes_with_nul());
-                buf.extend_from_slice(host_ip.as_bytes_with_nul());
-
-                // Padding (10 bytes, meaningless), with one extra 0x00 for the extra required null terminator
-                buf.extend(iter::repeat(0).take(11));
+                // Padding (10 bytes, meaningless), with one extra 0x00 for the extra required null terminator after the Key Value section
+                const PADDING_END: [u8; 11] = [0x00, 0x01, 0x70, 0x6C, 0x61, 0x79, 0x65, 0x72, 0x5F, 0x00, 0x00];
+                buf.extend(PADDING_END);
 
                 // Players
                 for player in players {

@@ -1,12 +1,15 @@
 // Query protocol
 
-use std::{collections::HashMap, io::Cursor, net::SocketAddr, sync::Arc, time::Duration};
+use std::{collections::HashMap, ffi::CString, io::Cursor, net::SocketAddr, sync::Arc, time::Duration};
 
+use pumpkin_config::BASIC_CONFIG;
 use pumpkin_protocol::query::{CBasePacket, CBasePayload, PacketType, SBasePacket, SBasePayload};
 use rand::Rng;
 use tokio::{net::UdpSocket, sync::RwLock, time::interval};
 
-pub async fn start_query_handler() {
+use crate::server::{Server, CURRENT_MC_VERSION};
+
+pub async fn start_query_handler(server: Arc<Server>) {
     let socket = Arc::new(
         UdpSocket::bind("0.0.0.0:25565")
             .await
@@ -18,6 +21,7 @@ pub async fn start_query_handler() {
     loop {
         let socket = socket.clone();
         let clients = clients.clone();
+        let server = server.clone();
         let mut buf = vec![0; 1024];
         let (_, addr) = socket.recv_from(&mut buf).await.unwrap();
 
@@ -58,7 +62,26 @@ pub async fn start_query_handler() {
                                 if clients
                                     .check_client(packet.session_id, challange_token, addr)
                                     .await
-                                {}
+                                {
+
+                                    let response = CBasePacket {
+                                        packet_type: PacketType::Stat,
+                                        session_id: packet.session_id,
+                                        payload: CBasePayload::FullInfo {
+                                            hostname: CString::new(BASIC_CONFIG.motd.as_str()).unwrap(),
+                                            version: CString::new(CURRENT_MC_VERSION).unwrap(),
+                                            plugins: CString::new("Pumpkin on 1.21.3").unwrap(), // TODO: Fill this with plugins when plugins are working
+                                            map: CString::new("world").unwrap(), // TODO: Get actual world name
+                                            num_players: server.get_player_count().await,
+                                            max_players: BASIC_CONFIG.max_players as usize,
+                                            host_port: 25565, // TODO: Get actual port
+                                            host_ip: CString::new("0.0.0.0").unwrap(), // TODO: Get actual address
+                                            players: vec![], // TODO: Fill with players
+                                        },
+                                    };
+
+                                    socket.send_to(response.encode().await.as_slice(), addr).await.unwrap();
+                                }
                             }
                         }
                     }

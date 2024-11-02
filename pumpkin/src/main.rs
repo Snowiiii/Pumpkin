@@ -143,9 +143,8 @@ async fn main() -> io::Result<()> {
     }
 
     if ADVANCED_CONFIG.query.enabled {
-        let server = server.clone();
         log::info!("Query protocol enabled. Starting...");
-        tokio::spawn(query::start_query_handler());
+        tokio::spawn(query::start_query_handler(server.clone()));
     }
 
     {
