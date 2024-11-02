@@ -4,21 +4,32 @@ use std::{
     collections::HashMap, ffi::CString, io::Cursor, net::SocketAddr, sync::Arc, time::Duration,
 };
 
-use pumpkin_config::BASIC_CONFIG;
+use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_protocol::query::{CBasePacket, CBasePayload, PacketType, SBasePacket, SBasePayload};
 use rand::Rng;
 use tokio::{net::UdpSocket, sync::RwLock, time::interval};
 
 use crate::server::{Server, CURRENT_MC_VERSION};
 
-pub async fn start_query_handler(server: Arc<Server>) {
+pub async fn start_query_handler(server: Arc<Server>, bound_addr: SocketAddr) {
+    let mut bound_addr = bound_addr.clone();
+    if let Some(port) = ADVANCED_CONFIG.query.port {
+        bound_addr.set_port(port);
+    }
+
     let socket = Arc::new(
-        UdpSocket::bind("0.0.0.0:25565")
+        UdpSocket::bind(bound_addr)
             .await
             .expect("Unable to bind to address"),
     );
+
     let clients = QueryClients::new();
-    log::info!("Server querying ready!");
+    log::info!(
+        "Server query running on {}",
+        socket
+            .local_addr()
+            .expect("Unable to find running address!")
+    );
 
     loop {
         let socket = socket.clone();
@@ -76,8 +87,9 @@ pub async fn start_query_handler(server: Arc<Server>) {
                                             map: CString::new("world").unwrap(), // TODO: Get actual world name
                                             num_players: server.get_player_count().await,
                                             max_players: BASIC_CONFIG.max_players as usize,
-                                            host_port: 25565, // TODO: Get actual port
-                                            host_ip: CString::new("0.0.0.0").unwrap(), // TODO: Get actual address
+                                            host_port: bound_addr.port(),
+                                            host_ip: CString::new(bound_addr.ip().to_string())
+                                                .unwrap(),
                                             players: vec![], // TODO: Fill with players
                                         },
                                     };

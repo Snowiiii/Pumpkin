@@ -2,14 +2,12 @@ use std::ffi::CString;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-#[derive(Debug)]
 #[repr(u8)]
 pub enum PacketType {
     Handshake = 9,
     Stat = 0,
 }
 
-#[derive(Debug)]
 pub struct SBasePacket {
     pub magic: u16,
     pub packet_type: PacketType,
@@ -17,7 +15,6 @@ pub struct SBasePacket {
     pub payload: SBasePayload,
 }
 
-#[derive(Debug)]
 pub enum SBasePayload {
     Handshake,
     BasicInfo(i32),
@@ -74,7 +71,6 @@ impl SBasePacket {
     }
 }
 
-#[derive(Debug)]
 pub struct CBasePacket {
     pub packet_type: PacketType,
     pub session_id: i32,
@@ -182,9 +178,10 @@ impl CBasePacket {
                 const PADDING_START: [u8; 11] = [
                     0x73, 0x70, 0x6C, 0x69, 0x74, 0x6E, 0x75, 0x6D, 0x00, 0x80, 0x00,
                 ];
-                buf.extend(PADDING_START);
+                buf.extend_from_slice(PADDING_START.as_slice());
 
                 // Key-value pairs
+                // Keys will not error when encoding as CString
                 for (key, value) in [
                     ("hostname", hostname),
                     ("gametype", &CString::new("SMP").unwrap()),
@@ -211,7 +208,7 @@ impl CBasePacket {
                 const PADDING_END: [u8; 11] = [
                     0x00, 0x01, 0x70, 0x6C, 0x61, 0x79, 0x65, 0x72, 0x5F, 0x00, 0x00,
                 ];
-                buf.extend(PADDING_END);
+                buf.extend_from_slice(PADDING_END.as_slice());
 
                 // Players
                 for player in players {
