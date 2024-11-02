@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use pumpkin_core::math::vector3::Vector3;
 use pumpkin_core::text::TextComponent;
 
 use crate::command::arg_entities::{parse_arg_entities, EntitiesArgumentConsumer};
@@ -30,6 +31,18 @@ const ARG_FACING_ENTITY: &str = "facingEntity";
 
 /// position
 const ARG_FACING_LOCATION: &str = "facingLocation";
+
+fn yaw_pitch_facing_position(looking_from: Vector3<f64>, looking_towards: Vector3<f64>) -> (f32, f32) {
+    let direction_vector = (looking_towards.sub(&looking_from)).normalize();
+
+    let yaw_radians = -direction_vector.x.atan2(direction_vector.z);
+    let pitch_radians = (-direction_vector.y).asin();
+
+    let yaw_degrees = yaw_radians * 180.0 / std::f64::consts::PI;
+    let pitch_degrees = pitch_radians * 180.0 / std::f64::consts::PI;
+
+    (yaw_degrees as f32, pitch_degrees as f32)
+}
 
 struct TpEntitiesToEntityExecutor;
 
@@ -70,12 +83,10 @@ impl CommandExecutor for TpEntitiesToPosFacingPosExecutor {
 
         let pos = parse_arg_position_3d(ARG_LOCATION, args)?;
 
-        // TODO: calculate yaw/pitch based on position
-        // let facing_position = parse_arg_position_3d(ARG_FACING_LOCATION, args)?;
+        let facing_pos = parse_arg_position_3d(ARG_FACING_LOCATION, args)?;
+        let (yaw, pitch) = yaw_pitch_facing_position(pos, facing_pos);
 
         for target in targets {
-            let yaw = target.living_entity.entity.yaw.load();
-            let pitch = target.living_entity.entity.pitch.load();
             target.teleport(pos, yaw, pitch).await;
         }
 
@@ -97,12 +108,10 @@ impl CommandExecutor for TpEntitiesToPosFacingEntityExecutor {
 
         let pos = parse_arg_position_3d(ARG_LOCATION, args)?;
 
-        // TODO: calculate yaw/pitch based on entity
-        // let facing_entity = parse_arg_entity(sender, server, ARG_FACING_ENTITY, args).await?;
+        let facing_entity = &parse_arg_entity(sender, server, ARG_FACING_ENTITY, args).await?.living_entity.entity;
+        let (yaw, pitch) = yaw_pitch_facing_position(pos, facing_entity.pos.load());
 
         for target in targets {
-            let yaw = target.living_entity.entity.yaw.load();
-            let pitch = target.living_entity.entity.pitch.load();
             target.teleport(pos, yaw, pitch).await;
         }
 
