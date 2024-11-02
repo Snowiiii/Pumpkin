@@ -17,7 +17,7 @@ pub async fn start_query_handler(server: Arc<Server>) {
             .await
             .expect("Unable to bind to address"),
     );
-    let clients = QueryClients::new().await;
+    let clients = QueryClients::new();
     log::info!("Server querying ready!");
 
     loop {
@@ -105,7 +105,7 @@ struct QueryClients {
 }
 
 impl QueryClients {
-    async fn new() -> Arc<Self> {
+    fn new() -> Arc<Self> {
         let clients = Arc::new(Self {
             clients: RwLock::new(HashMap::new()),
         });
@@ -132,11 +132,7 @@ impl QueryClients {
 
     async fn check_client(&self, session_id: i32, challange_token: i32, addr: SocketAddr) -> bool {
         if let Some(info) = self.clients.read().await.get(&session_id) {
-            if info.0 == challange_token && info.1 == addr {
-                true
-            } else {
-                false
-            }
+            info.0 == challange_token && info.1 == addr
         } else {
             false
         }
