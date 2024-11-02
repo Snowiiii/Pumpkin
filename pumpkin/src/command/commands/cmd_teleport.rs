@@ -32,7 +32,10 @@ const ARG_FACING_ENTITY: &str = "facingEntity";
 /// position
 const ARG_FACING_LOCATION: &str = "facingLocation";
 
-fn yaw_pitch_facing_position(looking_from: Vector3<f64>, looking_towards: Vector3<f64>) -> (f32, f32) {
+fn yaw_pitch_facing_position(
+    looking_from: Vector3<f64>,
+    looking_towards: Vector3<f64>,
+) -> (f32, f32) {
     let direction_vector = (looking_towards.sub(&looking_from)).normalize();
 
     let yaw_radians = -direction_vector.x.atan2(direction_vector.z);
@@ -108,7 +111,10 @@ impl CommandExecutor for TpEntitiesToPosFacingEntityExecutor {
 
         let pos = parse_arg_position_3d(ARG_LOCATION, args)?;
 
-        let facing_entity = &parse_arg_entity(sender, server, ARG_FACING_ENTITY, args).await?.living_entity.entity;
+        let facing_entity = &parse_arg_entity(sender, server, ARG_FACING_ENTITY, args)
+            .await?
+            .living_entity
+            .entity;
         let (yaw, pitch) = yaw_pitch_facing_position(pos, facing_entity.pos.load());
 
         for target in targets {
