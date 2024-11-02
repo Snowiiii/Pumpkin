@@ -71,6 +71,7 @@ pub async fn parse_arg_players<'a>(
             CommandSender::Player(p) => Ok(vec![p.clone()]),
             _ => Err(InvalidConsumptionError(Some(s.into()))),
         },
+        #[allow(clippy::match_same_arms)] // todo: implement for non-players and remove this line
         "@n" | "@p" => match src {
             CommandSender::Player(p) => Ok(vec![p.clone()]),
             // todo: implement for non-players: how should this behave when sender is console/rcon?

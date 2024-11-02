@@ -84,6 +84,7 @@ pub(crate) async fn parse_arg_entity<'a>(
             CommandSender::Player(p) => Ok(p.clone()),
             _ => Err(InvalidConsumptionError(Some(s.into()))),
         },
+        #[allow(clippy::match_same_arms)] // todo: implement for non-players and remove this line
         "@n" | "@p" => match src {
             CommandSender::Player(p) => Ok(p.clone()),
             // todo: implement for non-players: how should this behave when sender is console/rcon?
