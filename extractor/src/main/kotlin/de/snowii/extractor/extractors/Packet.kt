@@ -9,7 +9,6 @@ import net.minecraft.network.NetworkState
 import net.minecraft.network.listener.PacketListener
 import net.minecraft.network.packet.PacketType
 import net.minecraft.network.state.*
-import net.minecraft.registry.DynamicRegistryManager
 import net.minecraft.server.MinecraftServer
 
 
