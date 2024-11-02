@@ -42,7 +42,6 @@ pub async fn start_query_handler(server: Arc<Server>, bound_addr: SocketAddr) {
             let cursor = Cursor::new(buf);
 
             if let Ok(packet) = SBasePacket::decode(cursor).await {
-
                 match packet.payload {
                     SBasePayload::Handshake => {
                         let challange_token = rand::thread_rng().gen_range(1..=i32::MAX);
@@ -59,13 +58,13 @@ pub async fn start_query_handler(server: Arc<Server>, bound_addr: SocketAddr) {
                             .send_to(response.encode().await.as_slice(), addr)
                             .await
                             .unwrap();
-                    },
+                    }
                     SBasePayload::BasicInfo(challange_token) => {
                         if clients
                             .check_client(packet.session_id, challange_token, addr)
                             .await
                         {}
-                    },
+                    }
                     SBasePayload::FullInfo(challange_token) => {
                         if clients
                             .check_client(packet.session_id, challange_token, addr)
@@ -74,16 +73,14 @@ pub async fn start_query_handler(server: Arc<Server>, bound_addr: SocketAddr) {
                             let response = CBasePacket {
                                 session_id: packet.session_id,
                                 payload: CBasePayload::FullInfo {
-                                    hostname: CString::new(BASIC_CONFIG.motd.as_str())
-                                        .unwrap(),
+                                    hostname: CString::new(BASIC_CONFIG.motd.as_str()).unwrap(),
                                     version: CString::new(CURRENT_MC_VERSION).unwrap(),
                                     plugins: CString::new("Pumpkin on 1.21.3").unwrap(), // TODO: Fill this with plugins when plugins are working
                                     map: CString::new("world").unwrap(), // TODO: Get actual world name
                                     num_players: server.get_player_count().await,
                                     max_players: BASIC_CONFIG.max_players as usize,
                                     host_port: bound_addr.port(),
-                                    host_ip: CString::new(bound_addr.ip().to_string())
-                                        .unwrap(),
+                                    host_ip: CString::new(bound_addr.ip().to_string()).unwrap(),
                                     players: vec![], // TODO: Fill with players
                                 },
                             };
@@ -93,7 +90,7 @@ pub async fn start_query_handler(server: Arc<Server>, bound_addr: SocketAddr) {
                                 .await
                                 .unwrap();
                         }
-                    },
+                    }
                 }
             }
         });
