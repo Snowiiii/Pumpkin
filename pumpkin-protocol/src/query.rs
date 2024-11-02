@@ -2,15 +2,8 @@ use std::ffi::CString;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-#[repr(u8)]
-pub enum PacketType {
-    Handshake = 9,
-    Stat = 0,
-}
-
 pub struct SBasePacket {
     pub magic: u16,
-    pub packet_type: PacketType,
     pub session_id: i32,
     pub payload: SBasePayload,
 }
@@ -41,13 +34,11 @@ impl SBasePacket {
                 match reader.read(&mut buf).await {
                     Ok(0) => Ok(Self {
                         magic,
-                        packet_type: PacketType::Stat,
                         session_id,
                         payload: SBasePayload::BasicInfo(challange_token),
                     }),
                     Ok(4) => Ok(Self {
                         magic,
-                        packet_type: PacketType::Stat,
                         session_id,
                         payload: SBasePayload::FullInfo(challange_token),
                     }),
@@ -61,7 +52,6 @@ impl SBasePacket {
             // Handshake
             9 => Ok(Self {
                 magic,
-                packet_type: PacketType::Handshake,
                 session_id,
                 payload: SBasePayload::Handshake,
             }),
@@ -72,7 +62,6 @@ impl SBasePacket {
 }
 
 pub struct CBasePacket {
-    pub packet_type: PacketType,
     pub session_id: i32,
     pub payload: CBasePayload,
 }
