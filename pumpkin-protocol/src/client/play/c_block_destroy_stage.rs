@@ -5,10 +5,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::BlockBreakAnimation as i32)]
+#[client_packet("play:block_destruction")]
 pub struct CSetBlockDestroyStage {
     entity_id: VarInt,
     location: WorldPosition,

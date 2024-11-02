@@ -15,7 +15,7 @@ pub enum Rarity {
 pub struct ItemStack {
     pub item_count: u8,
     // This ID is the numerical protocol ID, not the usual minecraft::block ID.
-    pub item_id: u32,
+    pub item_id: u16,
     // TODO: Add Item Components
 }
 

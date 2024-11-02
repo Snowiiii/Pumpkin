@@ -8,15 +8,10 @@ use pumpkin_protocol::{
 
 use super::World;
 
+#[derive(Default)]
 pub struct Scoreboard {
     objectives: HashMap<String, ScoreboardObjective<'static>>,
     //  teams: HashMap<String, Team>,
-}
-
-impl Default for Scoreboard {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl Scoreboard {

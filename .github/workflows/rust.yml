@@ -6,6 +6,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Dwarnings"
 
 jobs:
   format:
@@ -15,12 +16,9 @@ jobs:
       matrix:
         toolchain:
           - stable
-
     steps:
       - uses: actions/checkout@v4
-
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-
       - run: cargo fmt --check
   clippy:
     name: Run lints
@@ -29,27 +27,21 @@ jobs:
       matrix:
         toolchain:
           - stable
-
     steps:
       - uses: actions/checkout@v4
-
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-
-      - run: cargo clippy --all-targets --all-features --no-default-features -- -D warnings
+      - run: cargo clippy --all-targets --all-features --no-default-features
   build_and_test:
     name: Build project and test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         toolchain:
           - stable
-
     steps:
       - uses: actions/checkout@v4
-
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-
-      - run: cargo build --verbose
       - run: cargo test --verbose
   build_release:
     name: Build project in release
@@ -59,12 +51,10 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         toolchain:
           - stable
-
     steps:
       - uses: actions/checkout@v4
 
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-
       - run: cargo build --verbose --release
       - name: Export executable
         uses: actions/upload-artifact@v4
@@ -79,10 +69,7 @@ jobs:
       matrix:
         toolchain:
           - stable
-
     steps:
       - uses: actions/checkout@v4
-
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-
-      - run: cargo clippy --release --all-targets --all-features --no-default-features -- -D warnings
+      - run: cargo clippy --release --all-targets --all-features --no-default-features

@@ -3,9 +3,7 @@ use pumpkin_macros::client_packet;
 
 use crate::{ClientPacket, PositionFlag, VarInt};
 
-use super::ClientboundPlayPackets;
-
-#[client_packet(ClientboundPlayPackets::PlayerPositionAndLook as i32)]
+#[client_packet("play:player_position")]
 pub struct CSyncPlayerPosition<'a> {
     teleport_id: VarInt,
     x: f64,

@@ -5,10 +5,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::JoinGame as i32)]
+#[client_packet("play:login")]
 pub struct CLogin<'a> {
     entity_id: i32,
     is_hardcore: bool,

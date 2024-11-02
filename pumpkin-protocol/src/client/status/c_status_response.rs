@@ -1,10 +1,8 @@
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-use super::ClientboundStatusPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundStatusPackets::StatusResponse as i32)]
+#[client_packet("status:status_response")]
 pub struct CStatusResponse<'a> {
     json_response: &'a str, // 32767
 }

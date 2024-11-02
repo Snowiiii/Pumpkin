@@ -148,7 +148,7 @@ impl Drag {
     fn possibly_changing_slots<'a>(
         &'a self,
         slots: &'a [Option<ItemStack>],
-        carried_item_id: u32,
+        carried_item_id: u16,
     ) -> impl Iterator<Item = usize> + 'a + Clone {
         self.slots.iter().filter_map(move |slot_index| {
             let slot = &slots[*slot_index];

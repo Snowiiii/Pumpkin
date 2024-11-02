@@ -1,10 +1,8 @@
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::UnloadChunk as i32)]
+#[client_packet("play:forget_level_chunk")]
 pub struct CUnloadChunk {
     z: i32,
     x: i32,

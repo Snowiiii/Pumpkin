@@ -1,4 +1,4 @@
-use num_traits::FromPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
@@ -77,6 +77,18 @@ impl Client {
 
     pub async fn handle_login_start(&self, server: &Server, login_start: SLoginStart) {
         log::debug!("login start");
+
+        // Don't allow new logons when server is full.
+        // If max players is set to zero, then there is no max player count enforced.
+        // TODO: If client is an operator or otherwise suitable elevated permissions, allow client to bypass this requirement.
+        let max_players = BASIC_CONFIG
+            .max_players
+            .to_usize()
+            .expect("Unable to convert to usize");
+        if max_players > 0 && server.get_player_count().await >= max_players {
+            self.kick("The server is currently full, please try again later")
+                .await;
+        }
 
         if !Self::is_valid_player_name(&login_start.name) {
             self.kick("Invalid characters in username").await;
@@ -166,14 +178,14 @@ impl Client {
 
         // Don't allow duplicate UUIDs
         if let Some(online_player) = &server.get_player_by_uuid(profile.id).await {
-            log::debug!("Player (IP '{}', username '{}') tried to log in with the same UUID ('{}') as an online player (IP '{}', username '{}')", &self.address.lock().await.to_string(), &profile.name, &profile.id.to_string(), &online_player.client.address.lock().await.to_string(), &online_player.gameprofile.name);
+            log::debug!("Player (IP '{}', username '{}') tried to log in with the same UUID ('{}') as an online player (IP '{}', username '{}')", &self.address.lock().await, &profile.name, &profile.id, &online_player.client.address.lock().await, &online_player.gameprofile.name);
             self.kick("You are already connected to this server").await;
             return;
         }
 
         // Don't allow a duplicate username
         if let Some(online_player) = &server.get_player_by_name(&profile.name).await {
-            log::debug!("A player (IP '{}', attempted username '{}') tried to log in with the same username as an online player (UUID '{}', IP '{}', username '{}')", &self.address.lock().await.to_string(), &profile.name, &profile.id.to_string(), &online_player.client.address.lock().await.to_string(), &online_player.gameprofile.name);
+            log::debug!("A player (IP '{}', attempted username '{}') tried to log in with the same username as an online player (UUID '{}', IP '{}', username '{}')", &self.address.lock().await, &profile.name, &profile.id, &online_player.client.address.lock().await, &online_player.gameprofile.name);
             self.kick("A player with this username is already connected")
                 .await;
             return;

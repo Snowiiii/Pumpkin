@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    commands::CommandSender,
+    command::CommandSender,
     entity::player::{ChatMode, Hand, Player},
     server::Server,
     world::player_chunker,
@@ -34,11 +34,7 @@ use pumpkin_protocol::{
     server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem},
     VarInt,
 };
-use pumpkin_world::block::BlockFace;
-use pumpkin_world::{
-    block::{BlockId, BlockState},
-    global_registry,
-};
+use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
 
 use super::{
     combat::{self, player_attack_sound, AttackType},
@@ -81,7 +77,7 @@ impl Player {
         pos.clamp(-2.0E7, 2.0E7)
     }
 
-    pub async fn handle_position(&self, position: SPlayerPosition) {
+    pub async fn handle_position(self: &Arc<Self>, position: SPlayerPosition) {
         if position.x.is_nan() || position.feet_y.is_nan() || position.z.is_nan() {
             self.kick(TextComponent::text("Invalid movement")).await;
             return;
@@ -136,7 +132,10 @@ impl Player {
         player_chunker::update_position(self).await;
     }
 
-    pub async fn handle_position_rotation(&self, position_rotation: SPlayerPositionRotation) {
+    pub async fn handle_position_rotation(
+        self: &Arc<Self>,
+        position_rotation: SPlayerPositionRotation,
+    ) {
         if position_rotation.x.is_nan()
             || position_rotation.feet_y.is_nan()
             || position_rotation.z.is_nan()
@@ -347,8 +346,6 @@ impl Player {
     }
 
     pub async fn handle_chat_message(&self, chat_message: SChatMessage) {
-        log::debug!("Received chat message");
-
         let message = chat_message.message;
         if message.len() > 256 {
             self.kick(TextComponent::text("Oversized message")).await;
@@ -357,6 +354,7 @@ impl Player {
 
         // TODO: filter message & validation
         let gameprofile = &self.gameprofile;
+        log::info!("<chat>{}: {}", gameprofile.name, message);
 
         let entity = &self.living_entity.entity;
         let world = &entity.world;
@@ -617,28 +615,23 @@ impl Player {
 
         if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
             if let Some(item) = self.inventory.lock().await.held_item() {
-                let minecraft_id = global_registry::find_minecraft_id(
-                    global_registry::ITEM_REGISTRY,
-                    item.item_id,
-                )
-                .expect("All item ids are in the global registry");
-                if let Ok(block_state_id) = BlockState::new(minecraft_id, None) {
+                let block = get_block_by_item(item.item_id);
+                // check if item is a block, Because Not every item can be placed :D
+                if let Some(block) = block {
                     let entity = &self.living_entity.entity;
                     let world = &entity.world;
 
                     world
                         .set_block(
                             WorldPosition(location.0 + face.to_offset()),
-                            BlockId {
-                                data: block_state_id.get_id_mojang_repr() as u16,
-                            },
+                            block.default_state_id,
                         )
                         .await;
                 }
+                self.client
+                    .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
+                    .await;
             }
-            self.client
-                .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
-                .await;
         } else {
             self.kick(TextComponent::text("Invalid block face")).await;
         }
@@ -665,11 +658,16 @@ impl Player {
         if self.gamemode.load() != GameMode::Creative {
             return Err(InventoryError::PermissionError);
         }
-        self.inventory.lock().await.set_slot(
-            packet.slot as usize,
-            packet.clicked_item.to_item(),
-            false,
-        )
+        let valid_slot = packet.slot >= 1 && packet.slot <= 45;
+        if valid_slot {
+            self.inventory.lock().await.set_slot(
+                packet.slot as u16,
+                packet.clicked_item.to_item(),
+                true,
+            )?;
+        };
+        // TODO: The Item was droped per drag and drop,
+        Ok(())
     }
 
     // TODO:
@@ -694,19 +692,5 @@ impl Player {
             self.kick(TextComponent::text("Invalid window ID")).await;
             return;
         };
-    }
-
-    pub fn get_attack_cooldown_progress(&self, base_time: f32) -> f32 {
-        #[allow(clippy::cast_precision_loss)]
-        let x = self
-            .last_attacked_ticks
-            .load(std::sync::atomic::Ordering::Acquire) as f32
-            + base_time;
-        // TODO attack speed attribute
-        let attack_speed = 4.0;
-        let progress_per_tick = 1.0 / attack_speed * 20.0;
-
-        let progress = x / progress_per_tick;
-        progress.clamp(0.0, 1.0)
     }
 }

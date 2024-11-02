@@ -5,10 +5,8 @@ use serde::Serialize;
 
 use crate::{NumberFormat, VarInt};
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::UpdateScore as i32)]
+#[client_packet("play:set_score")]
 pub struct CUpdateScore<'a> {
     entity_name: &'a str,
     objective_name: &'a str,

@@ -119,7 +119,7 @@ impl RCONClient {
                     let dispatcher = server.command_dispatcher.clone();
                     dispatcher
                         .handle_command(
-                            &mut crate::commands::CommandSender::Rcon(&output),
+                            &mut crate::command::CommandSender::Rcon(&output),
                             server,
                             packet.get_body(),
                         )
