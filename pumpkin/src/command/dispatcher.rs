@@ -71,7 +71,7 @@ impl<'a> CommandDispatcher<'a> {
                     Ok(()) => return Ok(()),
                     Err(_error) => {
                         // is_fitting_path being Err only means that THIS path does not fit.
-                        // Do break/return here or else other paths aren't even tried!
+                        // Do not break/return here or else other paths aren't even tried!
                         // I don't really know what to do with this _error string, because there will be one error for every path that was tried.
                         // Since there are sometimes many possible paths, aggregating these errors and showing them all to the user probably does not make sense.
                         // We can't really know which path the user intended, and just show the error for that one path, either. (we could guess but that'd be hard)
