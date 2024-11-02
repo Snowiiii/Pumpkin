@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use commands::{
     cmd_echest, cmd_gamemode, cmd_help, cmd_kick, cmd_kill, cmd_pumpkin, cmd_say, cmd_stop,
-    cmd_worldborder,
+    cmd_teleport, cmd_worldborder,
 };
 use dispatcher::InvalidTreeError;
 use pumpkin_core::text::TextComponent;
@@ -13,8 +13,12 @@ use crate::command::dispatcher::CommandDispatcher;
 use crate::entity::player::Player;
 use crate::server::Server;
 
+mod arg_entities;
+mod arg_entity;
 mod arg_player;
-mod arg_position;
+mod arg_position_3d;
+mod arg_postition_2d;
+mod arg_rotation;
 mod arg_simple;
 
 mod commands;
@@ -75,6 +79,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_kill::init_command_tree());
     dispatcher.register(cmd_kick::init_command_tree());
     dispatcher.register(cmd_worldborder::init_command_tree());
+    dispatcher.register(cmd_teleport::init_command_tree());
 
     Arc::new(dispatcher)
 }

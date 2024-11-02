@@ -14,21 +14,23 @@ const DESCRIPTION: &str = "Print a help message.";
 
 const ARG_COMMAND: &str = "command";
 
-struct CommandArgumentConsumer {}
+struct CommandArgumentConsumer;
 
 #[async_trait]
 impl ArgumentConsumer for CommandArgumentConsumer {
     async fn consume<'a>(
         &self,
         _sender: &CommandSender<'a>,
-        _server: &Server,
-        _args: &mut RawArgs<'a>,
+        server: &Server,
+        args: &mut RawArgs<'a>,
     ) -> Result<String, Option<String>> {
-        //let s = args.pop()?;
+        let s = args.pop().ok_or(None)?;
 
-        // dispatcher.get_tree(s).ok().map(|tree| tree.names[0].into())
-        // TODO: Implement this
-        Err(None)
+        let dispatcher = &server.command_dispatcher;
+        return match dispatcher.get_tree(s) {
+            Ok(tree) => Ok(tree.names[0].into()),
+            Err(err) => Err(Some(err)),
+        };
     }
 }
 
@@ -45,10 +47,10 @@ fn parse_arg_command<'a>(
         .map_err(|_| InvalidConsumptionError(Some(command_name.into())))
 }
 
-struct BaseHelpExecutor {}
+struct CommandHelpExecutor;
 
 #[async_trait]
-impl CommandExecutor for BaseHelpExecutor {
+impl CommandExecutor for CommandHelpExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
@@ -70,10 +72,10 @@ impl CommandExecutor for BaseHelpExecutor {
     }
 }
 
-struct CommandHelpExecutor {}
+struct BaseHelpExecutor;
 
 #[async_trait]
-impl CommandExecutor for CommandHelpExecutor {
+impl CommandExecutor for BaseHelpExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
@@ -104,8 +106,6 @@ impl CommandExecutor for CommandHelpExecutor {
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION)
-        .with_child(
-            argument(ARG_COMMAND, &CommandArgumentConsumer {}).execute(&BaseHelpExecutor {}),
-        )
-        .execute(&CommandHelpExecutor {})
+        .with_child(argument(ARG_COMMAND, &CommandArgumentConsumer).execute(&CommandHelpExecutor))
+        .execute(&BaseHelpExecutor)
 }

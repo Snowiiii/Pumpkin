@@ -1,12 +1,15 @@
 use async_trait::async_trait;
-use pumpkin_core::text::{
-    color::{Color, NamedColor},
-    TextComponent,
+use pumpkin_core::{
+    math::vector2::Vector2,
+    text::{
+        color::{Color, NamedColor},
+        TextComponent,
+    },
 };
 
 use crate::{
     command::{
-        arg_position::{parse_arg_position, PositionArgumentConsumer},
+        arg_postition_2d::{parse_arg_position_2d, Position2DArgumentConsumer},
         arg_simple::SimpleArgConsumer,
         tree::{CommandTree, ConsumedArgs},
         tree_builder::{argument, literal},
@@ -265,8 +268,7 @@ impl CommandExecutor for WorldborderCenterExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let x = parse_arg_position("x", args)?;
-        let z = parse_arg_position("z", args)?;
+        let Vector2 { x, z } = parse_arg_position_2d("pos", args)?;
 
         sender
             .send_message(TextComponent::text(&format!(
@@ -466,9 +468,7 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
             ),
         )
         .with_child(literal("center").with_child(
-            argument("x", &PositionArgumentConsumer).with_child(
-                argument("z", &PositionArgumentConsumer).execute(&WorldborderCenterExecutor),
-            ),
+            argument("pos", &Position2DArgumentConsumer).execute(&WorldborderCenterExecutor),
         ))
         .with_child(
             literal("damage")

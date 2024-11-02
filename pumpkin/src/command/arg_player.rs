@@ -13,7 +13,7 @@ use super::tree::ArgumentConsumer;
 /// TODO: Seperate base functionality of these two methods into single method
 
 /// todo: implement (so far only own name + @s/@p is implemented)
-pub(crate) struct PlayerArgumentConsumer {}
+pub(crate) struct PlayerArgumentConsumer;
 
 #[async_trait]
 impl ArgumentConsumer for PlayerArgumentConsumer {

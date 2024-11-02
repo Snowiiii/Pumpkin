@@ -69,11 +69,14 @@ impl<'a> CommandDispatcher<'a> {
                 }
                 Ok(is_fitting_path) => match is_fitting_path {
                     Ok(()) => return Ok(()),
-                    Err(error) => {
-                        // Custom error message or not ?
-                        if let Some(error) = error {
-                            return Err(error);
-                        }
+                    Err(_error) => {
+                        // is_fitting_path being Err only means that THIS path does not fit.
+                        // Do break/return here or else other paths aren't even tried!
+                        // I don't really know what to do with this _error string, because there will be one error for every path that was tried.
+                        // Since there are sometimes many possible paths, aggregating these errors and showing them all to the user probably does not make sense.
+                        // We can't really know which path the user intended, and just show the error for that one path, either. (we could guess but that'd be hard)
+                        // IMO is_fitting_path should therefore just be a bool.
+                        // TODO
                     }
                 },
             }

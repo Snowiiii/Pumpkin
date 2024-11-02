@@ -2,7 +2,10 @@ use async_trait::async_trait;
 
 use super::CommandExecutor;
 use crate::{command::CommandSender, server::Server};
-use std::collections::{HashMap, VecDeque};
+use std::{
+    collections::{HashMap, VecDeque},
+    fmt::Debug,
+};
 
 /// see [`crate::commands::tree_builder::argument`]
 pub type RawArgs<'a> = Vec<&'a str>;
@@ -22,6 +25,7 @@ pub(crate) trait ArgumentConsumer: Sync {
     ) -> Result<String, Option<String>>;
 }
 
+#[derive(Debug)]
 pub struct Node<'a> {
     pub(crate) children: Vec<usize>,
     pub(crate) node_type: NodeType<'a>,
@@ -43,11 +47,30 @@ pub enum NodeType<'a> {
     },
 }
 
+impl Debug for NodeType<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ExecuteLeaf { .. } => f
+                .debug_struct("ExecuteLeaf")
+                .field("executor", &"..")
+                .finish(),
+            Self::Literal { string } => f.debug_struct("Literal").field("string", string).finish(),
+            Self::Argument { name, .. } => f
+                .debug_struct("Argument")
+                .field("name", name)
+                .field("consumer", &"..")
+                .finish(),
+            Self::Require { .. } => f.debug_struct("Require").field("predicate", &"..").finish(),
+        }
+    }
+}
+
 pub enum Command<'a> {
     Tree(CommandTree<'a>),
     Alias(&'a str),
 }
 
+#[derive(Debug)]
 pub struct CommandTree<'a> {
     pub(crate) nodes: Vec<Node<'a>>,
     pub(crate) children: Vec<usize>,
