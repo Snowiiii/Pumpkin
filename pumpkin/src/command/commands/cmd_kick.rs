@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
 
-use crate::command::arg_player::{parse_arg_player, PlayerArgumentConsumer};
+use crate::command::arg_player::{parse_arg_players, PlayersArgumentConsumer};
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::argument;
 use crate::command::InvalidTreeError;
@@ -13,7 +13,7 @@ const DESCRIPTION: &str = "Kicks the target player from the server.";
 
 const ARG_TARGET: &str = "target";
 
-struct KickExecutor {}
+struct KickExecutor;
 
 #[async_trait]
 impl CommandExecutor for KickExecutor {
@@ -23,16 +23,23 @@ impl CommandExecutor for KickExecutor {
         server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let target = parse_arg_player(sender, server, ARG_TARGET, args).await?;
-        target
-            .kick(TextComponent::text("Kicked by an operator"))
-            .await;
+        let targets = parse_arg_players(sender, server, ARG_TARGET, args).await?;
 
-        sender
-            .send_message(
-                TextComponent::text("Player has been kicked.").color_named(NamedColor::Blue),
-            )
-            .await;
+        let target_count = targets.len();
+
+        for target in targets {
+            target
+                .kick(TextComponent::text("Kicked by an operator"))
+                .await;
+        }
+
+        let msg = if target_count == 1 {
+            TextComponent::text("Player has been kicked.")
+        } else {
+            TextComponent::text_string(format!("{target_count} players have been kicked."))
+        };
+
+        sender.send_message(msg.color_named(NamedColor::Blue)).await;
 
         Ok(())
     }
@@ -40,5 +47,5 @@ impl CommandExecutor for KickExecutor {
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION)
-        .with_child(argument(ARG_TARGET, &PlayerArgumentConsumer {}).execute(&KickExecutor {}))
+        .with_child(argument(ARG_TARGET, &PlayersArgumentConsumer).execute(&KickExecutor))
 }

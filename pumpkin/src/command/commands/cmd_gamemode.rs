@@ -6,7 +6,7 @@ use pumpkin_core::GameMode;
 
 use crate::TextComponent;
 
-use crate::command::arg_player::{parse_arg_player, PlayerArgumentConsumer};
+use crate::command::arg_player::{parse_arg_players, PlayersArgumentConsumer};
 
 use crate::command::dispatcher::InvalidTreeError;
 use crate::command::dispatcher::InvalidTreeError::{
@@ -117,23 +117,31 @@ impl CommandExecutor for GamemodeTargetPlayer {
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
         let gamemode = parse_arg_gamemode(args)?;
-        let target = parse_arg_player(sender, server, ARG_TARGET, args).await?;
+        let targets = parse_arg_players(sender, server, ARG_TARGET, args).await?;
 
-        if target.gamemode.load() == gamemode {
-            sender
-                .send_message(TextComponent::text(&format!(
-                    "{} is already in {:?} gamemode",
-                    target.gameprofile.name, gamemode
-                )))
-                .await;
-        } else {
-            target.set_gamemode(gamemode).await;
-            sender
-                .send_message(TextComponent::text(&format!(
-                    "{}'s Game mode was set to {:?}",
-                    target.gameprofile.name, gamemode
-                )))
-                .await;
+        let target_count = targets.len();
+
+        for target in targets {
+            if target.gamemode.load() == gamemode {
+                if target_count == 1 {
+                    sender
+                        .send_message(TextComponent::text(&format!(
+                            "{} is already in {:?} gamemode",
+                            target.gameprofile.name, gamemode
+                        )))
+                        .await;
+                }
+            } else {
+                target.set_gamemode(gamemode).await;
+                if target_count == 1 {
+                    sender
+                        .send_message(TextComponent::text(&format!(
+                            "{}'s Game mode was set to {:?}",
+                            target.gameprofile.name, gamemode
+                        )))
+                        .await;
+                }
+            }
         }
 
         Ok(())
@@ -147,7 +155,7 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
             argument(ARG_GAMEMODE, &GamemodeArgumentConsumer {})
                 .with_child(require(&|sender| sender.is_player()).execute(&GamemodeTargetSelf {}))
                 .with_child(
-                    argument(ARG_TARGET, &PlayerArgumentConsumer {})
+                    argument(ARG_TARGET, &PlayersArgumentConsumer {})
                         .execute(&GamemodeTargetPlayer {}),
                 ),
         ),

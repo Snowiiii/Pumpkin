@@ -7,7 +7,7 @@ use crate::command::tree::{ConsumedArgs, RawArgs};
 use crate::command::CommandSender;
 use crate::server::Server;
 
-use super::arg_player::{parse_arg_player, PlayerArgumentConsumer};
+use super::arg_player::{parse_arg_players, PlayersArgumentConsumer};
 use super::tree::ArgumentConsumer;
 
 /// todo: implement (currently just calls [`super::arg_player::PlayerArgumentConsumer`])
@@ -23,7 +23,7 @@ impl ArgumentConsumer for EntitiesArgumentConsumer {
         server: &Server,
         args: &mut RawArgs<'a>,
     ) -> Result<String, Option<String>> {
-        PlayerArgumentConsumer.consume(src, server, args).await
+        PlayersArgumentConsumer.consume(src, server, args).await
     }
 }
 
@@ -34,7 +34,5 @@ pub(crate) async fn parse_arg_entities<'a>(
     arg_name: &str,
     consumed_args: &ConsumedArgs<'a>,
 ) -> Result<Vec<Arc<crate::entity::player::Player>>, InvalidTreeError> {
-    parse_arg_player(src, server, arg_name, consumed_args)
-        .await
-        .map(|p| vec![p])
+    parse_arg_players(src, server, arg_name, consumed_args).await
 }

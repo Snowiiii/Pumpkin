@@ -10,7 +10,7 @@ const NAMES: [&str; 2] = ["echest", "enderchest"];
 const DESCRIPTION: &str =
     "Show your personal enderchest (this command is used for testing container behaviour)";
 
-struct EchestExecutor {}
+struct EchestExecutor;
 
 #[async_trait]
 impl CommandExecutor for EchestExecutor {
@@ -40,5 +40,5 @@ impl CommandExecutor for EchestExecutor {
 }
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
-    CommandTree::new(NAMES, DESCRIPTION).execute(&EchestExecutor {})
+    CommandTree::new(NAMES, DESCRIPTION).execute(&EchestExecutor)
 }

@@ -15,7 +15,7 @@ const DESCRIPTION: &str = "Broadcast a message to all Players.";
 
 const ARG_MESSAGE: &str = "message";
 
-struct SayExecutor {}
+struct SayExecutor;
 
 #[async_trait]
 impl CommandExecutor for SayExecutor {
@@ -44,6 +44,6 @@ impl CommandExecutor for SayExecutor {
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
         require(&|sender| sender.permission_lvl() >= 2)
-            .with_child(argument(ARG_MESSAGE, &SimpleArgConsumer {}).execute(&SayExecutor {})),
+            .with_child(argument(ARG_MESSAGE, &SimpleArgConsumer).execute(&SayExecutor)),
     )
 }

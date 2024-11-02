@@ -10,7 +10,7 @@ const NAMES: [&str; 1] = ["stop"];
 
 const DESCRIPTION: &str = "Stop the server.";
 
-struct StopExecutor {}
+struct StopExecutor;
 
 #[async_trait]
 impl CommandExecutor for StopExecutor {
@@ -31,5 +31,5 @@ impl CommandExecutor for StopExecutor {
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION)
-        .with_child(require(&|sender| sender.permission_lvl() >= 4).execute(&StopExecutor {}))
+        .with_child(require(&|sender| sender.permission_lvl() >= 4).execute(&StopExecutor))
 }

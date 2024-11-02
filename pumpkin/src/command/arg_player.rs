@@ -10,69 +10,86 @@ use crate::server::Server;
 
 use super::tree::ArgumentConsumer;
 
-/// TODO: Seperate base functionality of these two methods into single method
-
-/// todo: implement (so far only own name + @s/@p is implemented)
-pub(crate) struct PlayerArgumentConsumer;
+/// Select zero, one or multiple players
+pub(crate) struct PlayersArgumentConsumer;
 
 #[async_trait]
-impl ArgumentConsumer for PlayerArgumentConsumer {
+impl ArgumentConsumer for PlayersArgumentConsumer {
     async fn consume<'a>(
         &self,
         src: &CommandSender<'a>,
         server: &Server,
         args: &mut RawArgs<'a>,
     ) -> Result<String, Option<String>> {
-        if let Some(arg) = args.pop() {
-            match arg {
-                "@s" => {
-                    if src.is_player() {
-                        return Ok(arg.into());
-                    }
-                    return Err(Some("You are not a Player".into()));
+        let Some(s) = args.pop() else {
+            return Err(None);
+        };
+
+        match s {
+            // @s is always valid when sender is a player
+            "@s" => {
+                return match src {
+                    CommandSender::Player(..) => Ok(s.into()),
+                    _ => Err(Some("You are not a Player".into())),
                 }
-                "@p" if src.is_player() => return Ok(arg.into()),
-                "@r" => todo!(), // todo: implement random player target selector
-                "@a" | "@e" => todo!(), // todo: implement all players target selector
-                name => {
-                    // todo: implement any other player than sender
-                    for world in &server.worlds {
-                        if world.get_player_by_name(name).await.is_some() {
-                            return Ok(name.into());
-                        }
-                    }
-                    return Err(Some(format!("Player not found: {arg}")));
+            }
+            // @n/@p are always valid when sender is a player
+            "@n" | "@p" => {
+                return match src {
+                    CommandSender::Player(..) => Ok(s.into()),
+                    // todo: implement for non-players: how should this behave when sender is console/rcon?
+                    _ => Err(Some("You are not a Player".into())),
+                };
+            }
+            // @a/@e/@r are always valid
+            "@a" | "@e" | "@r" => Ok(s.into()),
+            // player name is only valid if player is online
+            name => {
+                if server.get_player_by_name(name).await.is_some() {
+                    Ok(s.into())
+                } else {
+                    Err(Some(format!("Player not found: {name}")))
                 }
             }
         }
-        Err(None)
     }
 }
 
-/// todo: implement (so far only own name + @s/@p is implemented)
-pub async fn parse_arg_player<'a>(
+pub async fn parse_arg_players<'a>(
     src: &mut CommandSender<'a>,
     server: &Server,
     arg_name: &str,
     consumed_args: &ConsumedArgs<'a>,
-) -> Result<Arc<crate::entity::player::Player>, InvalidTreeError> {
+) -> Result<Vec<Arc<crate::entity::player::Player>>, InvalidTreeError> {
     let s = consumed_args
         .get(arg_name)
         .ok_or(InvalidConsumptionError(None))?
         .as_str();
 
     match s {
-        "@s" if src.is_player() => Ok(src.as_player().unwrap()),
-        "@p" => todo!(),
-        "@r" => todo!(),        // todo: implement random player target selector
-        "@a" | "@e" => todo!(), // todo: implement all players target selector
-        name => {
-            for world in &server.worlds {
-                if let Some(player) = world.get_player_by_name(name).await {
-                    return Ok(player);
-                }
+        "@s" => match src {
+            CommandSender::Player(p) => Ok(vec![p.clone()]),
+            _ => Err(InvalidConsumptionError(Some(s.into()))),
+        },
+        "@n" | "@p" => match src {
+            CommandSender::Player(p) => Ok(vec![p.clone()]),
+            // todo: implement for non-players: how should this behave when sender is console/rcon?
+            _ => Err(InvalidConsumptionError(Some(s.into()))),
+        },
+        "@r" => {
+            if let Some(p) = server.get_random_player().await {
+                Ok(vec![p.clone()])
+            } else {
+                Ok(vec![])
             }
-            Err(InvalidConsumptionError(Some(s.into())))
+        }
+        "@a" | "@e" => Ok(server.get_all_players().await),
+        name => {
+            if let Some(p) = server.get_player_by_name(name).await {
+                Ok(vec![p])
+            } else {
+                Err(InvalidConsumptionError(Some(s.into())))
+            }
         }
     }
 }
