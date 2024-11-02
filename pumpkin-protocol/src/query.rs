@@ -1,4 +1,4 @@
-use std::{ffi::{CStr, CString}, iter};
+use std::ffi::CString;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -176,10 +176,12 @@ impl CBasePacket {
                 buf.write_u8(0).await.unwrap();
                 // Session ID
                 buf.write_i32(self.session_id).await.unwrap();
-                
+
                 // Padding (11 bytes, meaningless)
                 // This is the padding used by vanilla
-                const PADDING_START: [u8; 11] = [0x73, 0x70, 0x6C, 0x69, 0x74, 0x6E, 0x75, 0x6D, 0x00, 0x80, 0x00];
+                const PADDING_START: [u8; 11] = [
+                    0x73, 0x70, 0x6C, 0x69, 0x74, 0x6E, 0x75, 0x6D, 0x00, 0x80, 0x00,
+                ];
                 buf.extend(PADDING_START);
 
                 // Key-value pairs
@@ -190,8 +192,14 @@ impl CBasePacket {
                     ("version", version),
                     ("plugins", plugins),
                     ("map", map),
-                    ("numplayers", &CString::new(num_players.to_string()).unwrap()),
-                    ("maxplayers", &CString::new(max_players.to_string()).unwrap()),
+                    (
+                        "numplayers",
+                        &CString::new(num_players.to_string()).unwrap(),
+                    ),
+                    (
+                        "maxplayers",
+                        &CString::new(max_players.to_string()).unwrap(),
+                    ),
                     ("hostport", &CString::new(host_port.to_string()).unwrap()),
                     ("hostip", host_ip),
                 ] {
@@ -200,7 +208,9 @@ impl CBasePacket {
                 }
 
                 // Padding (10 bytes, meaningless), with one extra 0x00 for the extra required null terminator after the Key Value section
-                const PADDING_END: [u8; 11] = [0x00, 0x01, 0x70, 0x6C, 0x61, 0x79, 0x65, 0x72, 0x5F, 0x00, 0x00];
+                const PADDING_END: [u8; 11] = [
+                    0x00, 0x01, 0x70, 0x6C, 0x61, 0x79, 0x65, 0x72, 0x5F, 0x00, 0x00,
+                ];
                 buf.extend(PADDING_END);
 
                 // Players

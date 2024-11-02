@@ -1,6 +1,8 @@
 // Query protocol
 
-use std::{collections::HashMap, ffi::CString, io::Cursor, net::SocketAddr, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap, ffi::CString, io::Cursor, net::SocketAddr, sync::Arc, time::Duration,
+};
 
 use pumpkin_config::BASIC_CONFIG;
 use pumpkin_protocol::query::{CBasePacket, CBasePayload, PacketType, SBasePacket, SBasePayload};
@@ -63,12 +65,12 @@ pub async fn start_query_handler(server: Arc<Server>) {
                                     .check_client(packet.session_id, challange_token, addr)
                                     .await
                                 {
-
                                     let response = CBasePacket {
                                         packet_type: PacketType::Stat,
                                         session_id: packet.session_id,
                                         payload: CBasePayload::FullInfo {
-                                            hostname: CString::new(BASIC_CONFIG.motd.as_str()).unwrap(),
+                                            hostname: CString::new(BASIC_CONFIG.motd.as_str())
+                                                .unwrap(),
                                             version: CString::new(CURRENT_MC_VERSION).unwrap(),
                                             plugins: CString::new("Pumpkin on 1.21.3").unwrap(), // TODO: Fill this with plugins when plugins are working
                                             map: CString::new("world").unwrap(), // TODO: Get actual world name
@@ -80,7 +82,10 @@ pub async fn start_query_handler(server: Arc<Server>) {
                                         },
                                     };
 
-                                    socket.send_to(response.encode().await.as_slice(), addr).await.unwrap();
+                                    socket
+                                        .send_to(response.encode().await.as_slice(), addr)
+                                        .await
+                                        .unwrap();
                                 }
                             }
                         }
