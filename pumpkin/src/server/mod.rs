@@ -82,7 +82,7 @@ impl Server {
             "./world".parse().unwrap(),
         ));
         Self {
-            cached_registry: Registry::get_static(),
+            cached_registry: Registry::get_synced(),
             open_containers: RwLock::new(HashMap::new()),
             drag_handler: DragHandler::new(),
             // 0 is invalid
