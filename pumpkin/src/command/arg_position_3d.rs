@@ -48,7 +48,7 @@ pub fn parse_arg_position_3d(
     let vec3 = pos
         .try_get_values(None)
         .ok_or(InvalidTreeError::InvalidConsumptionError(Some(s.into())))?;
-    
+
     Ok(vec3)
 }
 
