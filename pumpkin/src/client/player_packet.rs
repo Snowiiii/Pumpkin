@@ -7,7 +7,7 @@ use crate::{
     world::player_chunker,
 };
 use num_traits::FromPrimitive;
-use pumpkin_config::{PVPConfig, ADVANCED_CONFIG};
+use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::math::position::WorldPosition;
 use pumpkin_core::{
     math::{vector3::Vector3, wrap_degrees},
@@ -15,12 +15,11 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_inventory::{InventoryError, WindowType};
-use pumpkin_macros::sound;
+use pumpkin_protocol::server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem};
 use pumpkin_protocol::{
     client::play::{
-        Animation, CAcknowledgeBlockChange, CEntityAnimation, CHeadRot, CHurtAnimation,
-        CPingResponse, CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot,
-        FilterType,
+        Animation, CAcknowledgeBlockChange, CEntityAnimation, CHeadRot, CPingResponse,
+        CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot, FilterType,
     },
     server::play::{
         Action, ActionType, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport,
@@ -28,18 +27,10 @@ use pumpkin_protocol::{
         SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
         SSwingArm, SUseItemOn, Status,
     },
-    SoundCategory,
-};
-use pumpkin_protocol::{
-    server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem},
-    VarInt,
 };
 use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
 
-use super::{
-    combat::{self, player_attack_sound, AttackType},
-    PlayerConfig,
-};
+use super::PlayerConfig;
 
 fn modulus(a: f32, b: f32) -> f32 {
     ((a % b) + b) % b
@@ -435,78 +426,12 @@ impl Player {
                     return;
                 };
 
-                self.attack(&victim, config).await;
+                self.attack(&victim).await;
             }
             ActionType::Interact | ActionType::InteractAt => {
                 log::debug!("todo");
             }
         }
-    }
-
-    pub async fn attack(&self, victim: &Arc<Self>, config: &PVPConfig) {
-        let world = &self.living_entity.entity.world;
-        let victim_entity = &victim.living_entity.entity;
-        let attacker_entity = &self.living_entity.entity;
-
-        let pos = victim_entity.pos.load();
-
-        let attack_cooldown_progress = self.get_attack_cooldown_progress(0.5);
-        self.last_attacked_ticks
-            .store(0, std::sync::atomic::Ordering::Relaxed);
-
-        // TODO: attack damage attribute and deal damage
-        let damage = 2.0;
-        if !victim.living_entity.damage(damage)
-            || (config.protect_creative && victim.gamemode.load() == GameMode::Creative)
-        {
-            world
-                .play_sound(
-                    sound!("minecraft:entity.player.attack.nodamage"),
-                    SoundCategory::Players,
-                    &pos,
-                )
-                .await;
-            return;
-        }
-
-        world
-            .play_sound(
-                sound!("minecraft:entity.player.hurt"),
-                SoundCategory::Players,
-                &pos,
-            )
-            .await;
-
-        let attack_type = AttackType::new(self, attack_cooldown_progress).await;
-
-        player_attack_sound(&pos, world, attack_type).await;
-
-        // if is_crit {
-        //     damage *= 1.5;
-        // }
-
-        let mut knockback_strength = 1.0;
-        match attack_type {
-            AttackType::Knockback => knockback_strength += 1.0,
-            AttackType::Sweeping => {
-                combat::spawn_sweep_particle(attacker_entity, world, &pos).await;
-            }
-            _ => {}
-        };
-
-        if config.knockback {
-            combat::handle_knockback(attacker_entity, victim, victim_entity, knockback_strength)
-                .await;
-        }
-
-        if config.hurt_animation {
-            let entity_id = VarInt(victim_entity.entity_id);
-            world
-                .broadcast_packet_all(&CHurtAnimation::new(&entity_id, attacker_entity.yaw.load()))
-                .await;
-        }
-
-        if config.swing {}
     }
 
     pub async fn handle_player_action(&self, player_action: SPlayerAction) {
@@ -674,6 +599,10 @@ impl Player {
     // This function will in the future be used to keep track of if the client is in a valid state.
     // But this is not possible yet
     pub async fn handle_close_container(&self, server: &Server, packet: SCloseContainer) {
+        let Some(_window_type) = WindowType::from_i32(packet.window_id.0) else {
+            self.kick(TextComponent::text("Invalid window ID")).await;
+            return;
+        };
         // window_id 0 represents both 9x1 Generic AND inventory here
         self.inventory
             .lock()
@@ -688,9 +617,5 @@ impl Player {
             }
             self.open_container.store(None);
         }
-        let Some(_window_type) = WindowType::from_i32(packet.window_id.0) else {
-            self.kick(TextComponent::text("Invalid window ID")).await;
-            return;
-        };
     }
 }

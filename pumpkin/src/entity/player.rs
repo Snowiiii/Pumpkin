@@ -11,6 +11,7 @@ use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
 use num_derive::FromPrimitive;
 use num_traits::{FromPrimitive, ToPrimitive};
+use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::{
     math::{boundingbox::BoundingBox, position::WorldPosition, vector2::Vector2, vector3::Vector3},
     text::TextComponent,
@@ -18,11 +19,13 @@ use pumpkin_core::{
 };
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
+use pumpkin_macros::sound;
 use pumpkin_protocol::{
     bytebuf::DeserializerError,
     client::play::{
-        CGameEvent, CKeepAlive, CPlayDisconnect, CPlayerAbilities, CPlayerInfoUpdate, CSetHealth,
-        CSyncPlayerPosition, CSystemChatMessage, GameEvent, PlayerAction,
+        CGameEvent, CHurtAnimation, CKeepAlive, CPlayDisconnect, CPlayerAbilities,
+        CPlayerInfoUpdate, CSetHealth, CSyncPlayerPosition, CSystemChatMessage, GameEvent,
+        PlayerAction,
     },
     server::play::{
         SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract,
@@ -30,7 +33,7 @@ use pumpkin_protocol::{
         SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem,
         SUseItemOn, ServerboundPlayPackets,
     },
-    RawPacket, ServerPacket, VarInt,
+    RawPacket, ServerPacket, SoundCategory, VarInt,
 };
 use tokio::sync::{Mutex, Notify};
 use tokio::task::JoinHandle;
@@ -40,7 +43,11 @@ use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
 
 use super::Entity;
 use crate::{
-    client::{authentication::GameProfile, Client, PlayerConfig},
+    client::{
+        authentication::GameProfile,
+        combat::{self, player_attack_sound, AttackType},
+        Client, PlayerConfig,
+    },
     server::Server,
     world::World,
 };
@@ -329,6 +336,73 @@ impl Player {
         );
 
         //self.living_entity.entity.world.level.list_cached();
+    }
+
+    pub async fn attack(&self, victim: &Arc<Self>) {
+        let world = &self.living_entity.entity.world;
+        let victim_entity = &victim.living_entity.entity;
+        let attacker_entity = &self.living_entity.entity;
+        let config = &ADVANCED_CONFIG.pvp;
+
+        let pos = victim_entity.pos.load();
+
+        let attack_cooldown_progress = self.get_attack_cooldown_progress(0.5);
+        self.last_attacked_ticks
+            .store(0, std::sync::atomic::Ordering::Relaxed);
+
+        // TODO: attack damage attribute and deal damage
+        let damage = 2.0;
+        if !victim.living_entity.damage(damage)
+            || (config.protect_creative && victim.gamemode.load() == GameMode::Creative)
+        {
+            world
+                .play_sound(
+                    sound!("minecraft:entity.player.attack.nodamage"),
+                    SoundCategory::Players,
+                    &pos,
+                )
+                .await;
+            return;
+        }
+
+        world
+            .play_sound(
+                sound!("minecraft:entity.player.hurt"),
+                SoundCategory::Players,
+                &pos,
+            )
+            .await;
+
+        let attack_type = AttackType::new(self, attack_cooldown_progress).await;
+
+        player_attack_sound(&pos, world, attack_type).await;
+
+        // if is_crit {
+        //     damage *= 1.5;
+        // }
+
+        let mut knockback_strength = 1.0;
+        match attack_type {
+            AttackType::Knockback => knockback_strength += 1.0,
+            AttackType::Sweeping => {
+                combat::spawn_sweep_particle(attacker_entity, world, &pos).await;
+            }
+            _ => {}
+        };
+
+        if config.knockback {
+            combat::handle_knockback(attacker_entity, victim, victim_entity, knockback_strength)
+                .await;
+        }
+
+        if config.hurt_animation {
+            let entity_id = VarInt(victim_entity.entity_id);
+            world
+                .broadcast_packet_all(&CHurtAnimation::new(&entity_id, attacker_entity.yaw.load()))
+                .await;
+        }
+
+        if config.swing {}
     }
 
     pub async fn await_cancel(&self) {

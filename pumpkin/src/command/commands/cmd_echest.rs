@@ -32,7 +32,9 @@ impl CommandExecutor for EchestExecutor {
                     open_containers.insert(0, open_container);
                 }
             }
-            player.open_container(server, "minecraft:generic_9x3").await;
+            player
+                .open_container(server, pumpkin_inventory::WindowType::Generic9x3)
+                .await;
         }
 
         Ok(())

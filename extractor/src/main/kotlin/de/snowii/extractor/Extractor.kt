@@ -28,6 +28,7 @@ class Extractor : ModInitializer {
             Particles(),
             SyncedRegistries(),
             Packet(),
+            Screen(),
             Items(),
             Blocks(),
         )

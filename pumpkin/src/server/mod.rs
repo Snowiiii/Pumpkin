@@ -147,7 +147,7 @@ impl Server {
     }
 
     pub async fn remove_player(&self) {
-        // TODO: Config if we want increase online
+        // TODO: Config if we want decrease online
         self.server_listing.lock().await.remove_player();
     }
 
