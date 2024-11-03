@@ -28,7 +28,7 @@ pub async fn start_query_handler(server: Arc<Server>, bound_addr: SocketAddr) {
             .expect("Unable to bind to address"),
     );
 
-    let clients = QueryClients::new();
+    let clients = QueryInfo::new();
     log::info!(
         "Server query running on {}",
         socket
@@ -55,7 +55,7 @@ pub async fn start_query_handler(server: Arc<Server>, bound_addr: SocketAddr) {
 #[inline]
 async fn handle_packet(
     buf: Vec<u8>,
-    clients: Arc<QueryClients>,
+    clients: Arc<QueryInfo>,
     server: Arc<Server>,
     socket: Arc<UdpSocket>,
     addr: SocketAddr,
@@ -91,7 +91,7 @@ async fn handle_packet(
                         session_id: packet.session_id,
                         payload: CBasePayload::BasicInfo {
                             motd: CString::new(BASIC_CONFIG.motd.as_str())?,
-                            map: CString::new(CURRENT_MC_VERSION)?,
+                            map: CString::new("world")?,
                             num_players: server.get_player_count().await,
                             max_players: BASIC_CONFIG.max_players as usize,
                             host_port: bound_addr.port(),
@@ -120,7 +120,30 @@ async fn handle_packet(
                             max_players: BASIC_CONFIG.max_players as usize,
                             host_port: bound_addr.port(),
                             host_ip: CString::new(bound_addr.ip().to_string())?,
-                            players: vec![], // TODO: Fill with players
+                            players: {
+                                let mut players: Vec<CString> = Vec::new();
+
+                                for world in &server.worlds {
+                                    let mut world_players = world
+                                        .current_players
+                                        .lock()
+                                        .await
+                                        .values()
+                                        .take(4 - players.len())
+                                        .map(|player| {
+                                            CString::new(player.gameprofile.name.as_str()).unwrap()
+                                        })
+                                        .collect::<Vec<_>>();
+
+                                    players.append(&mut world_players); // Append players from this world
+
+                                    if players.len() >= 4 {
+                                        break; // Stop if we've collected 4 players
+                                    }
+                                }
+
+                                players
+                            },
                         },
                     };
 
@@ -135,7 +158,7 @@ async fn handle_packet(
     Ok(())
 }
 
-struct QueryClients {
+struct QueryInfo {
     // Query by session id to get address and challange token
     // Clear hashmap every 30 seconds as thats how long every challange token ever lasts
     // If challange token is expired, the client needs to handshake again
@@ -143,7 +166,7 @@ struct QueryClients {
     clients: RwLock<HashMap<i32, (i32, SocketAddr)>>,
 }
 
-impl QueryClients {
+impl QueryInfo {
     fn new() -> Arc<Self> {
         let clients = Arc::new(Self {
             clients: RwLock::new(HashMap::new()),
