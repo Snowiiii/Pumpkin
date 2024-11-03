@@ -51,9 +51,9 @@ You can also can see all the information the Packets have, which we can either W
 > Please start the Packet name with "C" for Clientbound.
 > Also please add the State to the packet if its a Packet sent in multiple States, For example there are 3 Disconnect Packets.
 >
-> - CLoginDisconnect
-> - CConfigDisconnect
-> - CPlayDisconnect
+> -   CLoginDisconnect
+> -   CConfigDisconnect
+> -   CPlayDisconnect
 
 Create fields within your packet structure to represent the data that will be sent to the client.
 
@@ -112,10 +112,11 @@ impl CPlayDisconnect {
 
 ### Adding a Serverbound Packet
 
-1. Adding a Packet is easy. First, you have to derive serde Deserialize for packets.
+1. Adding a Packet is easy. First, you have to derive serde Deserialize for packets. You should also use the `server_packet` macro to automaticly parse the Packet ID
 
 ```rust
 #[derive(Deserialize)]
+#[server_packet("login:move_player_pos")]
 ```
 
 2. Now you can create the Struct.
@@ -144,6 +145,7 @@ pub struct SPlayerPosition {
 
 ```rust
 #[derive(Deserialize)]
+#[server_packet("login:move_player_pos")]
 pub struct SPlayerPosition {
     pub x: f64,
     pub feet_y: f64,
@@ -176,15 +178,15 @@ Pumpkin has stores Client and Players separately. Everything that is not in the 
 
 **Client**
 
-- Can only be in Status/Login/Transfer/Config State
-- Is not a living entity
-- Has small resource consumption
+-   Can only be in Status/Login/Transfer/Config State
+-   Is not a living entity
+-   Has small resource consumption
 
 **Player**
 
-- Can only be in Play State
-- Is a living entity in a world
-- Has more data, Consumes more resources
+-   Can only be in Play State
+-   Is a living entity in a world
+-   Has more data, Consumes more resources
 
 #### Sending Packets
 
@@ -208,26 +210,23 @@ For Clients:
     packet: &mut RawPacket,
 ) -> Result<(), DeserializerError> {
     let bytebuf = &mut packet.bytebuf;
-    if let Some(packet) = ServerboundStatusPackets::from_i32(packet.id.0) {
-        match packet {
-            ServerboundStatusPackets::StatusRequest => {
+    match packet.id.0 {
+        SStatusRequest::PACKET_ID => {
                 self.handle_status_request(server, SStatusRequest::read(bytebuf)?)
                     .await;
             }
-            ServerboundStatusPackets::MyPacket => {
++            MyPacket::PACKET_ID => {
 +                self.handle_my_packet(MyPacket::read(bytebuf)?)
 +                    .await;
             }
-        };
-    } else {
-        _ => {
+            _ => {
             log::error!(
                 "Failed to handle packet id {} while in ... state",
                 packet.id.0
             );
-            Ok(())
-        }
-    }
+            }
+    };
+    Ok(())
 }
 ```
 
@@ -242,11 +241,11 @@ For Players:
     packet: &mut RawPacket,
 ) -> Result<(), DeserializerError> {
     let bytebuf = &mut packet.bytebuf;
-    if let Some(packet) = ServerboundPlayPackets::from_i32(packet.id.0) {
-        ServerboundPlayPackets::ChatMessage => {
+    match packet.id.0 {
+        SChatMessage::PACKET_ID => {
             self.handle_chat_message(SChatMessage::read(bytebuf)?).await;
         }
-       ServerboundPlayPackets::MyPacket => {
+       MyPacket::PACKET_ID => {
 +           self.handle_mypacket(server, MyPacket::read(bytebuf)?).await;
         }
         _ => {
@@ -255,8 +254,8 @@ For Players:
                 packet.id.0
             );
         }
-        Ok(())
-    }
+    };
+    Ok(())
 }
 ```
 
