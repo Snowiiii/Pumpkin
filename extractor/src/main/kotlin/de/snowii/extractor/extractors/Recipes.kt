@@ -6,8 +6,6 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import de.snowii.extractor.Extractor
 import net.minecraft.recipe.Recipe
-import net.minecraft.registry.DynamicRegistryManager
-import net.minecraft.registry.RegistryKeys
 import net.minecraft.server.MinecraftServer
 
 class Recipes : Extractor.Extractor {
@@ -32,22 +30,22 @@ class Recipes : Extractor.Extractor {
                 if (slot.isPresent) {
                     placementJson.addProperty("position", slot.orElseThrow().placerOutputPosition)
                 }
-                placementArray.add(placementJson);
+                placementArray.add(placementJson)
             }
-            recipeJson.add("placementSlots", placementArray);
+            recipeJson.add("placementSlots", placementArray)
 
             val ingredientArray = JsonArray()
             for (ingredient in recipe.ingredientPlacement.ingredients) {
                 if (ingredient != null) {
-                    val items = ingredient.matchingItems;
+                    val items = ingredient.matchingItems
                     val ingredientJson = JsonObject()
                     for (item in items) {
                         ingredientJson.addProperty("id", item.idAsString)
                     }
-                    ingredientArray.add(ingredientJson);
+                    ingredientArray.add(ingredientJson)
                 }
             }
-            recipeJson.add("ingredients", ingredientArray);
+            recipeJson.add("ingredients", ingredientArray)
 //            recipeJson.addProperty("placementSlots", gson.toJson(recipe.ingredientPlacement.placementSlots))
 
             recipesJson.add(recipeJson)
