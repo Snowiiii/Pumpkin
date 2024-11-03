@@ -11,7 +11,7 @@ use crate::{
     command::{
         args::{
             arg_bounded_num::BoundedNumArgumentConsumer,
-            arg_postition_2d::Position2DArgumentConsumer, Arg, ConsumedArgs,
+            arg_position_2d::Position2DArgumentConsumer, Arg, ConsumedArgs,
         },
         tree::CommandTree,
         tree_builder::{argument_default_name, literal},

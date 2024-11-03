@@ -21,7 +21,7 @@ pub(crate) mod arg_gamemode;
 pub(crate) mod arg_message;
 pub(crate) mod arg_player;
 pub(crate) mod arg_position_3d;
-pub(crate) mod arg_postition_2d;
+pub(crate) mod arg_position_2d;
 pub(crate) mod arg_rotation;
 pub(crate) mod arg_simple;
 
