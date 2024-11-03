@@ -25,8 +25,31 @@ impl ArgumentConsumer for Position3DArgumentConsumer {
 
         let Vector3 { x, y, z } = pos.try_get_values(src.position()).ok_or(None)?;
 
+        // only return absolue coordinates here because [parse_arg_position_3d] does not have access to command sender
         Ok(format!("{x} {y} {z}"))
     }
+}
+
+/// x, y and z coordinates
+pub fn parse_arg_position_3d(
+    arg_name: &str,
+    consumed_args: &ConsumedArgs<'_>,
+) -> Result<Vector3<f64>, InvalidTreeError> {
+    let s = consumed_args
+        .get(arg_name)
+        .ok_or(InvalidTreeError::InvalidConsumptionError(None))?;
+
+    // these whitespaces will always be ascii
+    let mut args = s.split_ascii_whitespace();
+
+    let pos = Position3D::try_new(args.next(), args.next(), args.next())
+        .ok_or(InvalidTreeError::InvalidConsumptionError(Some(s.into())))?;
+
+    let vec3 = pos
+        .try_get_values(None)
+        .ok_or(InvalidTreeError::InvalidConsumptionError(Some(s.into())))?;
+    
+    Ok(vec3)
 }
 
 struct Position3D(Coordinate, Coordinate, Coordinate);
@@ -74,39 +97,4 @@ impl Coordinate {
             Self::Relative(offset) => Some(origin? + offset),
         }
     }
-}
-
-/// x, y and z coordinates
-pub fn parse_arg_position_3d(
-    arg_name: &str,
-    consumed_args: &ConsumedArgs<'_>,
-) -> Result<Vector3<f64>, InvalidTreeError> {
-    let s = consumed_args
-        .get(arg_name)
-        .ok_or(InvalidTreeError::InvalidConsumptionError(None))?;
-
-    // these whitespaces will always be ascii
-    let mut args = s.split_ascii_whitespace();
-
-    let Some(x) = args.next() else {
-        return Err(InvalidTreeError::InvalidConsumptionError(Some(s.into())));
-    };
-    let Some(y) = args.next() else {
-        return Err(InvalidTreeError::InvalidConsumptionError(Some(s.into())));
-    };
-    let Some(z) = args.next() else {
-        return Err(InvalidTreeError::InvalidConsumptionError(Some(s.into())));
-    };
-
-    let Ok(x) = x.parse::<f64>() else {
-        return Err(InvalidTreeError::InvalidConsumptionError(Some(s.into())));
-    };
-    let Ok(y) = y.parse::<f64>() else {
-        return Err(InvalidTreeError::InvalidConsumptionError(Some(s.into())));
-    };
-    let Ok(z) = z.parse::<f64>() else {
-        return Err(InvalidTreeError::InvalidConsumptionError(Some(s.into())));
-    };
-
-    Ok(Vector3::new(x, y, z))
 }
