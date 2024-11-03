@@ -46,7 +46,6 @@ class Recipes : Extractor.Extractor {
                 }
             }
             recipeJson.add("ingredients", ingredientArray)
-//            recipeJson.addProperty("placementSlots", gson.toJson(recipe.ingredientPlacement.placementSlots))
 
             recipesJson.add(recipeJson)
         }

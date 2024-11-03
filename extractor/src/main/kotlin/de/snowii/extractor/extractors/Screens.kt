@@ -7,7 +7,7 @@ import de.snowii.extractor.Extractor
 import net.minecraft.registry.Registries
 import net.minecraft.server.MinecraftServer
 
-class Screen : Extractor.Extractor {
+class Screens : Extractor.Extractor {
     override fun fileName(): String {
         return "screens.json"
     }

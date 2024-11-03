@@ -30,7 +30,6 @@ pub(crate) fn packet_clientbound(item: TokenStream) -> proc_macro2::TokenStream 
     quote! { #id }
 }
 
-#[expect(dead_code)]
 pub(crate) fn packet_serverbound(item: TokenStream) -> proc_macro2::TokenStream {
     let input_string = item.to_string();
     let packet_name = input_string.trim_matches('"');
