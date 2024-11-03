@@ -5,11 +5,11 @@ use num_traits::FromPrimitive;
 use pumpkin_core::GameMode;
 
 use crate::{
-    command::{tree::RawArgs, CommandSender},
+    command::{dispatcher::InvalidTreeError, tree::RawArgs, CommandSender},
     server::Server,
 };
 
-use super::{Arg, ArgumentConsumer, DefaultNameArgConsumer};
+use super::{Arg, ArgumentConsumer, DefaultNameArgConsumer, FindArg};
 
 pub(crate) struct GamemodeArgumentConsumer;
 
@@ -44,5 +44,17 @@ impl DefaultNameArgConsumer for GamemodeArgumentConsumer {
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
         &GamemodeArgumentConsumer
+    }
+}
+
+impl<'a> FindArg<'a> for GamemodeArgumentConsumer {
+
+    type Data = GameMode;
+
+    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, InvalidTreeError> {
+        match args.get(name) {
+            Some(Arg::GameMode(data)) => Ok(*data),
+            _ => Err(InvalidTreeError::InvalidConsumptionError(Some(name.to_string())))
+        }
     }
 }

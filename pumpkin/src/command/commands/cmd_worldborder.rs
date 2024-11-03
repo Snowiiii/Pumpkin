@@ -11,13 +11,12 @@ use crate::{
     command::{
         args::{
             arg_bounded_num::BoundedNumArgumentConsumer,
-            arg_position_2d::Position2DArgumentConsumer, Arg, ConsumedArgs,
+            arg_position_2d::Position2DArgumentConsumer, ConsumedArgs, FindArgDefaultName,
         },
         tree::CommandTree,
         tree_builder::{argument_default_name, literal},
         CommandExecutor, CommandSender, InvalidTreeError,
     },
-    get_parsed_arg_with_default_name,
     server::Server,
 };
 
@@ -67,7 +66,7 @@ impl CommandExecutor for WorldborderSetExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = get_parsed_arg_with_default_name!(args, DISTANCE_CONSUMER, Arg::F64(v), *v)?;
+        let distance = DISTANCE_CONSUMER.find_arg_default_name(args)?;
 
         if (distance - border.new_diameter).abs() < f64::EPSILON {
             sender
@@ -105,8 +104,8 @@ impl CommandExecutor for WorldborderSetTimeExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = get_parsed_arg_with_default_name!(args, DISTANCE_CONSUMER, Arg::F64(v), *v)?;
-        let time = get_parsed_arg_with_default_name!(args, TIME_CONSUMER, Arg::I32(v), *v)?;
+        let distance = DISTANCE_CONSUMER.find_arg_default_name(args)?;
+        let time = TIME_CONSUMER.find_arg_default_name(args)?;
 
         match distance.total_cmp(&border.new_diameter) {
             std::cmp::Ordering::Equal => {
@@ -155,7 +154,7 @@ impl CommandExecutor for WorldborderAddExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = get_parsed_arg_with_default_name!(args, DISTANCE_CONSUMER, Arg::F64(v), *v)?;
+        let distance = DISTANCE_CONSUMER.find_arg_default_name(args)?;
 
         if distance == 0.0 {
             sender
@@ -195,8 +194,8 @@ impl CommandExecutor for WorldborderAddTimeExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = get_parsed_arg_with_default_name!(args, DISTANCE_CONSUMER, Arg::F64(v), *v)?;
-        let time = get_parsed_arg_with_default_name!(args, TIME_CONSUMER, Arg::I32(v), *v)?;
+        let distance = DISTANCE_CONSUMER.find_arg_default_name(args)?;
+        let time = TIME_CONSUMER.find_arg_default_name(args)?;
 
         let distance = distance + border.new_diameter;
 
@@ -247,12 +246,7 @@ impl CommandExecutor for WorldborderCenterExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let Vector2 { x, z } = get_parsed_arg_with_default_name!(
-            args,
-            Position2DArgumentConsumer,
-            Arg::Pos2D(vec),
-            *vec
-        )?;
+        let Vector2 { x, z } = Position2DArgumentConsumer.find_arg_default_name(args)?;
 
         sender
             .send_message(TextComponent::text(&format!(
@@ -280,8 +274,7 @@ impl CommandExecutor for WorldborderDamageAmountExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let damage_per_block =
-            get_parsed_arg_with_default_name!(args, DAMAGE_PER_BLOCK_CONSUMER, Arg::F32(v), *v)?;
+        let damage_per_block = DAMAGE_PER_BLOCK_CONSUMER.find_arg_default_name(args)?;
 
         if (damage_per_block - border.damage_per_block).abs() < f32::EPSILON {
             sender
@@ -321,8 +314,7 @@ impl CommandExecutor for WorldborderDamageBufferExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let buffer =
-            get_parsed_arg_with_default_name!(args, DAMAGE_BUFFER_CONSUMER, Arg::F32(v), *v)?;
+        let buffer = DAMAGE_BUFFER_CONSUMER.find_arg_default_name(args)?;
 
         if (buffer - border.buffer).abs() < f32::EPSILON {
             sender
@@ -362,8 +354,7 @@ impl CommandExecutor for WorldborderWarningDistanceExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance =
-            get_parsed_arg_with_default_name!(args, WARNING_DISTANCE_CONSUMER, Arg::I32(v), *v)?;
+        let distance = WARNING_DISTANCE_CONSUMER.find_arg_default_name(args)?;
 
         if distance == border.warning_blocks {
             sender
@@ -403,7 +394,7 @@ impl CommandExecutor for WorldborderWarningTimeExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let time = get_parsed_arg_with_default_name!(args, TIME_CONSUMER, Arg::I32(v), *v)?;
+        let time = TIME_CONSUMER.find_arg_default_name(args)?;
 
         if time == border.warning_time {
             sender

@@ -9,8 +9,7 @@ use pumpkin_core::{
 use crate::{entity::player::Player, server::Server};
 
 use super::{
-    tree::{CommandTree, RawArgs},
-    CommandSender,
+    dispatcher::InvalidTreeError, tree::{CommandTree, RawArgs}, CommandSender
 };
 
 pub(crate) mod arg_bounded_num;
@@ -77,69 +76,19 @@ impl<K: Eq + Hash, V: Clone> GetCloned<K, V> for HashMap<K, V> {
     }
 }
 
-/// This macro can be used to easily get the correct argument from [`ConsumedArgs`].
-///
-/// See [`get_parsed_arg_default`] if you are using [`crate::command::tree_builder::argument_default`].
-///
-/// # Example
-///
-/// `let distance: f64 = get_parsed_arg!(args, ARG_DISTANCE, Arg::F64(v), *v)?;`.
-///
-/// - `args` is the [`ConsumedArgs`] which is passed to executors as a parameter.
-///
-/// - `ARGS_DISTANCE` is the name of the argument, which must be the same as the one used in `init_command_tree`
-///
-/// - `Arg::F64(v)` is a pattern used for patten matching. The variant of the enum [`Arg`] that should be matched here is determined by the consumer that was used.
-///
-/// - `*v` is the part of the pattern that should be returned. Operations like cloning or dereferencing can be done here, too.
-///
-/// A Result<T, [`super::dispatcher::InvalidTreeError`]> is returned, where T is determined by the last macro parameter.
-/// The returned Result enum has the same error type as the Result command executors return, so the `?` operator can be used.
-#[macro_export]
-macro_rules! get_parsed_arg {
-    ($args:ident, $name:expr, $p:pat, $out:expr) => {
-        match $args.get(&$name) {
-            Some($p) => Ok($out),
-            _ => Err(
-                $crate::command::dispatcher::InvalidTreeError::InvalidConsumptionError(Some(
-                    $name.into(),
-                )),
-            ),
-        }
-    };
+pub(crate) trait FindArg<'a> {
+
+    type Data;
+
+    fn find_arg(args: &'a ConsumedArgs, name: &'a str) -> Result<Self::Data, InvalidTreeError>;
 }
 
-/// This macro can be used to easily get the correct argument from [`ConsumedArgs`], using the default name defined by the [`ArgumentConsumer`].
-///
-/// Use this only when you're also using [`crate::command::tree_builder::argument_default`] and don't need two arguments with the same [`ArgumentConsumer`].
-/// Otherwise use [`crate::command::tree_builder::argument`] and [`get_parsed_arg`].
-///
-/// # Example
-///
-/// `let Vector2 { x, z } = get_parsed_arg_default!(args, Position2DArgumentConsumer, Arg::Pos2D(vec), *vec)?;`
-///
-/// - `args` is the [`ConsumedArgs`] which is passed to executors as a parameter.
-///
-/// - `Position2DArgumentConsumer` is the [`ArgumentConsumer`], which must be the same as the one used in the [`crate::command::tree_builder::argument_default`] method in `init_command_tree`
-///
-/// - `Arg::Pos2D(vec)` is a pattern used for patten matching. The variant of the enum [`Arg`] that should be matched here is determined by the consumer that was used.
-///
-/// - `*vec` is the part of the pattern that should be returned. Operations like cloning or dereferencing can be done here, too.
-///
-/// A Result<T, [`super::dispatcher::InvalidTreeError`]> is returned, where T is determined by the last macro parameter.
-/// The returned Result enum has the same error type as the Result command executors return, so the `?` operator can be used.
-#[macro_export]
-macro_rules! get_parsed_arg_with_default_name {
-    ($args:ident, $consumer:expr, $p:pat, $out:expr) => {{
-        use $crate::command::args::DefaultNameArgConsumer;
-        let name = $consumer.default_name();
-        match $args.get(name) {
-            Some($p) => Ok($out),
-            _ => Err(
-                $crate::command::dispatcher::InvalidTreeError::InvalidConsumptionError(Some(
-                    name.into(),
-                )),
-            ),
-        }
-    }};
+pub(crate) trait FindArgDefaultName<'a, T> {
+    fn find_arg_default_name(&self, args: &'a ConsumedArgs) -> Result<T, InvalidTreeError>;
+}
+
+impl <'a, T, C: FindArg<'a, Data = T> + DefaultNameArgConsumer>FindArgDefaultName<'a, T> for C {
+    fn find_arg_default_name(&self, args: &'a ConsumedArgs) -> Result<T, InvalidTreeError> {
+        C::find_arg(args, self.default_name())
+    }
 }

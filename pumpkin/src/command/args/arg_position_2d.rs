@@ -1,12 +1,13 @@
 use async_trait::async_trait;
 use pumpkin_core::math::vector2::Vector2;
 
+use crate::command::dispatcher::InvalidTreeError;
 use crate::command::tree::RawArgs;
 use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::{Arg, DefaultNameArgConsumer};
+use super::{Arg, DefaultNameArgConsumer, FindArg};
 
 /// x and z coordinates only
 ///
@@ -35,5 +36,17 @@ impl DefaultNameArgConsumer for Position2DArgumentConsumer {
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
         &Position2DArgumentConsumer
+    }
+}
+
+impl<'a> FindArg<'a> for Position2DArgumentConsumer {
+
+    type Data = Vector2<f64>;
+
+    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, InvalidTreeError> {
+        match args.get(name) {
+            Some(Arg::Pos2D(data)) => Ok(*data),
+            _ => Err(InvalidTreeError::InvalidConsumptionError(Some(name.to_string())))
+        }
     }
 }

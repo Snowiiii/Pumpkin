@@ -3,12 +3,13 @@ use std::str::FromStr;
 
 use async_trait::async_trait;
 
+use crate::command::dispatcher::InvalidTreeError;
 use crate::command::tree::RawArgs;
 use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::{Arg, DefaultNameArgConsumer};
+use super::{Arg, DefaultNameArgConsumer, FindArg};
 
 /// Consumes a single generic num, but only if it's in bounds.
 pub(crate) struct BoundedNumArgumentConsumer<T: ArgNum> {
@@ -43,6 +44,21 @@ impl<T: ArgNum> ArgumentConsumer for BoundedNumArgumentConsumer<T> {
     }
 }
 
+impl<'a, T: ArgNum>FindArg<'a> for BoundedNumArgumentConsumer<T> {
+
+    type Data = T;
+
+    fn find_arg(args: &super::ConsumedArgs, name: &str) -> Result<Self::Data, InvalidTreeError> {
+        match args.get(name) {
+            Some(arg) => match T::from_arg(arg) {
+                Some(x) => Ok(x),
+                _ => Err(InvalidTreeError::InvalidConsumptionError(Some(name.to_string())))
+            },
+            _ => Err(InvalidTreeError::InvalidConsumptionError(Some(name.to_string())))
+        }
+    }
+}
+
 impl<T: ArgNum> BoundedNumArgumentConsumer<T> {
     pub(crate) const fn new() -> Self {
         Self {
@@ -71,11 +87,19 @@ impl<T: ArgNum> BoundedNumArgumentConsumer<T> {
 
 pub(crate) trait ArgNum: PartialOrd + Copy + Send + Sync + FromStr {
     fn to_arg<'a>(self) -> Arg<'a>;
+    fn from_arg<'a>(arg: &Arg<'a>) -> Option<Self>;
 }
 
 impl ArgNum for f64 {
     fn to_arg<'a>(self) -> Arg<'a> {
         Arg::F64(self)
+    }
+    
+    fn from_arg<'a>(arg: &Arg<'a>) -> Option<Self> {
+        match arg {
+            Arg::F64(x) => Some(*x),
+            _ => None
+        }
     }
 }
 
@@ -83,17 +107,38 @@ impl ArgNum for f32 {
     fn to_arg<'a>(self) -> Arg<'a> {
         Arg::F32(self)
     }
+    
+    fn from_arg<'a>(arg: &Arg<'a>) -> Option<Self> {
+        match arg {
+            Arg::F32(x) => Some(*x),
+            _ => None
+        }
+    }
 }
 
 impl ArgNum for i32 {
     fn to_arg<'a>(self) -> Arg<'a> {
         Arg::I32(self)
     }
+    
+    fn from_arg<'a>(arg: &Arg<'a>) -> Option<Self> {
+        match arg {
+            Arg::I32(x) => Some(*x),
+            _ => None
+        }
+    }
 }
 
 impl ArgNum for u32 {
     fn to_arg<'a>(self) -> Arg<'a> {
         Arg::U32(self)
+    }
+    
+    fn from_arg<'a>(arg: &Arg<'a>) -> Option<Self> {
+        match arg {
+            Arg::U32(x) => Some(*x),
+            _ => None
+        }
     }
 }
 

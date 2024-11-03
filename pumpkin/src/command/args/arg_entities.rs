@@ -1,12 +1,16 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 
+use crate::command::dispatcher::InvalidTreeError;
 use crate::command::tree::RawArgs;
 use crate::command::CommandSender;
+use crate::entity::player::Player;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
 use super::arg_player::PlayersArgumentConsumer;
-use super::{Arg, DefaultNameArgConsumer};
+use super::{Arg, DefaultNameArgConsumer, FindArg};
 
 /// todo: implement (currently just calls [`super::arg_player::PlayerArgumentConsumer`])
 ///
@@ -35,5 +39,17 @@ impl DefaultNameArgConsumer for EntitiesArgumentConsumer {
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
         &EntitiesArgumentConsumer
+    }
+}
+
+impl<'a> FindArg<'a> for EntitiesArgumentConsumer {
+
+    type Data = &'a [Arc<Player>];
+
+    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, InvalidTreeError> {
+        match args.get(name) {
+            Some(Arg::Entities(data)) => Ok(data),
+            _ => Err(InvalidTreeError::InvalidConsumptionError(Some(name.to_string())))
+        }
     }
 }

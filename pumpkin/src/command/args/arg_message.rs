@@ -1,13 +1,13 @@
 use async_trait::async_trait;
 
-use crate::server::Server;
+use crate::{command::dispatcher::InvalidTreeError, server::Server};
 
 use super::{
     super::{
         args::{ArgumentConsumer, RawArgs},
         CommandSender,
     },
-    Arg, DefaultNameArgConsumer,
+    Arg, DefaultNameArgConsumer, FindArg,
 };
 
 /// Consumes all remaining words/args. Does not consume if there is no word.
@@ -39,5 +39,17 @@ impl DefaultNameArgConsumer for MsgArgConsumer {
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
         &MsgArgConsumer
+    }
+}
+
+impl<'a> FindArg<'a> for MsgArgConsumer {
+
+    type Data = &'a str;
+
+    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, InvalidTreeError> {
+        match args.get(name) {
+            Some(Arg::Msg(data)) => Ok(data),
+            _ => Err(InvalidTreeError::InvalidConsumptionError(Some(name.to_string())))
+        }
     }
 }

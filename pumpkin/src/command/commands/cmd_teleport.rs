@@ -6,12 +6,12 @@ use crate::command::args::arg_entities::EntitiesArgumentConsumer;
 use crate::command::args::arg_entity::EntityArgumentConsumer;
 use crate::command::args::arg_position_3d::Position3DArgumentConsumer;
 use crate::command::args::arg_rotation::RotationArgumentConsumer;
-use crate::command::args::{Arg, ConsumedArgs};
+use crate::command::args::ConsumedArgs;
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, literal, require};
 use crate::command::InvalidTreeError;
 use crate::command::{CommandExecutor, CommandSender};
-use crate::get_parsed_arg;
+use crate::command::args::FindArg;
 
 const NAMES: [&str; 2] = ["teleport", "tp"];
 const DESCRIPTION: &str = "Teleports entities, including players."; // todo
@@ -59,9 +59,9 @@ impl CommandExecutor for TpEntitiesToEntityExecutor {
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let targets = get_parsed_arg!(args, ARG_TARGETS, Arg::Entities(e), e)?;
+        let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
-        let destination = get_parsed_arg!(args, ARG_DESTINATION, Arg::Entity(e), e)?;
+        let destination = EntityArgumentConsumer::find_arg(args, ARG_DESTINATION)?;
         let pos = destination.living_entity.entity.pos.load();
 
         for target in targets {
@@ -84,15 +84,15 @@ impl CommandExecutor for TpEntitiesToPosFacingPosExecutor {
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let targets = get_parsed_arg!(args, ARG_TARGETS, Arg::Entities(e), e)?;
+        let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
-        let pos = get_parsed_arg!(args, ARG_LOCATION, Arg::Pos3D(pos), pos)?;
+        let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
 
-        let facing_pos = get_parsed_arg!(args, ARG_FACING_LOCATION, Arg::Pos3D(pos), pos)?;
-        let (yaw, pitch) = yaw_pitch_facing_position(pos, facing_pos);
+        let facing_pos = Position3DArgumentConsumer::find_arg(args, ARG_FACING_LOCATION)?;
+        let (yaw, pitch) = yaw_pitch_facing_position(&pos, &facing_pos);
 
         for target in targets {
-            target.teleport(*pos, yaw, pitch).await;
+            target.teleport(pos, yaw, pitch).await;
         }
 
         Ok(())
@@ -109,17 +109,17 @@ impl CommandExecutor for TpEntitiesToPosFacingEntityExecutor {
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let targets = get_parsed_arg!(args, ARG_TARGETS, Arg::Entities(e), e)?;
+        let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
-        let pos = get_parsed_arg!(args, ARG_LOCATION, Arg::Pos3D(pos), pos)?;
+        let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
 
-        let facing_entity = &get_parsed_arg!(args, ARG_FACING_ENTITY, Arg::Entity(e), e)?
+        let facing_entity = &EntityArgumentConsumer::find_arg(args, ARG_FACING_ENTITY)?
             .living_entity
             .entity;
-        let (yaw, pitch) = yaw_pitch_facing_position(pos, &facing_entity.pos.load());
+        let (yaw, pitch) = yaw_pitch_facing_position(&pos, &facing_entity.pos.load());
 
         for target in targets {
-            target.teleport(*pos, yaw, pitch).await;
+            target.teleport(pos, yaw, pitch).await;
         }
 
         Ok(())
@@ -136,19 +136,14 @@ impl CommandExecutor for TpEntitiesToPosWithRotationExecutor {
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let targets = get_parsed_arg!(args, ARG_TARGETS, Arg::Entities(e), e)?;
+        let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
-        let pos = get_parsed_arg!(args, ARG_LOCATION, Arg::Pos3D(pos), pos)?;
+        let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
 
-        let (yaw, pitch) = get_parsed_arg!(
-            args,
-            ARG_ROTATION,
-            Arg::Rotation(yaw, pitch),
-            (*yaw, *pitch)
-        )?;
+        let (yaw, pitch) = RotationArgumentConsumer::find_arg(args,ARG_ROTATION,)?;
 
         for target in targets {
-            target.teleport(*pos, yaw, pitch).await;
+            target.teleport(pos, yaw, pitch).await;
         }
 
         Ok(())
@@ -165,14 +160,14 @@ impl CommandExecutor for TpEntitiesToPosExecutor {
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let targets = get_parsed_arg!(args, ARG_TARGETS, Arg::Entities(e), e)?;
+        let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
-        let pos = get_parsed_arg!(args, ARG_LOCATION, Arg::Pos3D(pos), pos)?;
+        let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
 
         for target in targets {
             let yaw = target.living_entity.entity.yaw.load();
             let pitch = target.living_entity.entity.pitch.load();
-            target.teleport(*pos, yaw, pitch).await;
+            target.teleport(pos, yaw, pitch).await;
         }
 
         Ok(())
@@ -189,7 +184,7 @@ impl CommandExecutor for TpSelfToEntityExecutor {
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let destination = get_parsed_arg!(args, ARG_DESTINATION, Arg::Entity(e), e)?;
+        let destination = EntityArgumentConsumer::find_arg(args, ARG_DESTINATION)?;
         let pos = destination.living_entity.entity.pos.load();
 
         match sender {
@@ -223,10 +218,10 @@ impl CommandExecutor for TpSelfToPosExecutor {
     ) -> Result<(), InvalidTreeError> {
         match sender {
             CommandSender::Player(player) => {
-                let pos = get_parsed_arg!(args, ARG_LOCATION, Arg::Pos3D(pos), pos)?;
+                let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
                 let yaw = player.living_entity.entity.yaw.load();
                 let pitch = player.living_entity.entity.pitch.load();
-                player.teleport(*pos, yaw, pitch).await;
+                player.teleport(pos, yaw, pitch).await;
             }
             _ => {
                 sender
