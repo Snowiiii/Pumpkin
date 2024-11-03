@@ -7,7 +7,7 @@ use super::{
         args::{ArgumentConsumer, RawArgs},
         CommandSender,
     },
-    Arg,
+    Arg, DefaultNameArgConsumer,
 };
 
 /// Consumes all remaining words/args. Does not consume if there is no word.
@@ -29,5 +29,15 @@ impl ArgumentConsumer for MsgArgConsumer {
         }
 
         Some(Arg::Msg(msg))
+    }
+}
+
+impl DefaultNameArgConsumer for MsgArgConsumer {
+    fn default_name(&self) -> &'static str {
+        "msg"
+    }
+
+    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
+        &MsgArgConsumer
     }
 }

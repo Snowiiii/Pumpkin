@@ -5,7 +5,7 @@ use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::Arg;
+use super::{Arg, DefaultNameArgConsumer};
 
 /// todo: implement for entitites that aren't players
 ///
@@ -46,5 +46,15 @@ impl ArgumentConsumer for EntityArgumentConsumer {
         };
 
         entity.map(Arg::Entity)
+    }
+}
+
+impl DefaultNameArgConsumer for EntityArgumentConsumer {
+    fn default_name(&self) -> &'static str {
+        "target"
+    }
+
+    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
+        &EntityArgumentConsumer
     }
 }

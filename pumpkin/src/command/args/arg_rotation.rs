@@ -5,7 +5,7 @@ use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::Arg;
+use super::{Arg, DefaultNameArgConsumer};
 
 /// yaw and pitch
 pub(crate) struct RotationArgumentConsumer;
@@ -31,5 +31,15 @@ impl ArgumentConsumer for RotationArgumentConsumer {
         };
 
         Some(Arg::Rotation(yaw, pitch))
+    }
+}
+
+impl DefaultNameArgConsumer for RotationArgumentConsumer {
+    fn default_name(&self) -> &'static str {
+        "rotation"
+    }
+
+    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
+        &RotationArgumentConsumer
     }
 }

@@ -5,7 +5,7 @@ use crate::{
     server::Server,
 };
 
-use super::{Arg, ArgumentConsumer};
+use super::{Arg, ArgumentConsumer, DefaultNameArgConsumer};
 
 pub(crate) struct CommandTreeArgumentConsumer;
 
@@ -24,5 +24,15 @@ impl ArgumentConsumer for CommandTreeArgumentConsumer {
             Ok(tree) => Some(Arg::CommandTree(tree)),
             Err(_) => None,
         };
+    }
+}
+
+impl DefaultNameArgConsumer for CommandTreeArgumentConsumer {
+    fn default_name(&self) -> &'static str {
+        "cmd"
+    }
+
+    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
+        &CommandTreeArgumentConsumer
     }
 }

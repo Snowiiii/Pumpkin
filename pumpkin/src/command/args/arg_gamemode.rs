@@ -9,7 +9,7 @@ use crate::{
     server::Server,
 };
 
-use super::{Arg, ArgumentConsumer};
+use super::{Arg, ArgumentConsumer, DefaultNameArgConsumer};
 
 pub(crate) struct GamemodeArgumentConsumer;
 
@@ -34,5 +34,15 @@ impl ArgumentConsumer for GamemodeArgumentConsumer {
             Err(_) | Ok(GameMode::Undefined) => None,
             Ok(gamemode) => Some(Arg::GameMode(gamemode)),
         }
+    }
+}
+
+impl DefaultNameArgConsumer for GamemodeArgumentConsumer {
+    fn default_name(&self) -> &'static str {
+        "gamemode"
+    }
+
+    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
+        &GamemodeArgumentConsumer
     }
 }

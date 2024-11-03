@@ -6,7 +6,7 @@ use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
 use super::arg_player::PlayersArgumentConsumer;
-use super::Arg;
+use super::{Arg, DefaultNameArgConsumer};
 
 /// todo: implement (currently just calls [`super::arg_player::PlayerArgumentConsumer`])
 ///
@@ -25,5 +25,15 @@ impl ArgumentConsumer for EntitiesArgumentConsumer {
             Some(Arg::Players(p)) => Some(Arg::Entities(p)),
             _ => None,
         }
+    }
+}
+
+impl DefaultNameArgConsumer for EntitiesArgumentConsumer {
+    fn default_name(&self) -> &'static str {
+        "targets"
+    }
+
+    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
+        &EntitiesArgumentConsumer
     }
 }

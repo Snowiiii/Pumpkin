@@ -5,7 +5,7 @@ use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::Arg;
+use super::{Arg, DefaultNameArgConsumer};
 
 /// Select zero, one or multiple players
 pub(crate) struct PlayersArgumentConsumer;
@@ -42,5 +42,15 @@ impl ArgumentConsumer for PlayersArgumentConsumer {
         };
 
         players.map(Arg::Players)
+    }
+}
+
+impl DefaultNameArgConsumer for PlayersArgumentConsumer {
+    fn default_name(&self) -> &'static str {
+        "player"
+    }
+
+    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
+        &PlayersArgumentConsumer
     }
 }
