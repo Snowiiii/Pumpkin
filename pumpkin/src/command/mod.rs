@@ -6,6 +6,7 @@ use commands::{
     cmd_teleport, cmd_worldborder,
 };
 use dispatcher::InvalidTreeError;
+use pumpkin_core::math::vector3::Vector3;
 use pumpkin_core::text::TextComponent;
 use tree::ConsumedArgs;
 
@@ -63,6 +64,14 @@ impl<'a> CommandSender<'a> {
     #[must_use]
     pub const fn permission_lvl(&self) -> i32 {
         4
+    }
+
+    #[must_use]
+    pub fn position(&self) -> Option<Vector3<f64>> {
+        match self {
+            CommandSender::Console | CommandSender::Rcon(..) => None,
+            CommandSender::Player(p) => Some(p.living_entity.entity.pos.load()),
+        }
     }
 }
 

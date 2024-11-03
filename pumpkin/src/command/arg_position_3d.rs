@@ -1,3 +1,5 @@
+use std::num::ParseFloatError;
+
 use async_trait::async_trait;
 use pumpkin_core::math::vector3::Vector3;
 
@@ -9,33 +11,68 @@ use crate::server::Server;
 use super::tree::ArgumentConsumer;
 
 /// x, y and z coordinates
-///
-/// todo: implememnt ~ ^ notations
 pub(crate) struct Position3DArgumentConsumer;
 
 #[async_trait]
 impl ArgumentConsumer for Position3DArgumentConsumer {
     async fn consume<'a>(
         &self,
-        _src: &CommandSender<'a>,
+        src: &CommandSender<'a>,
         _server: &Server,
         args: &mut RawArgs<'a>,
     ) -> Result<String, Option<String>> {
-        let Some(x) = args.pop() else {
-            return Err(None);
-        };
-        let Some(y) = args.pop() else {
-            return Err(None);
-        };
-        let Some(z) = args.pop() else {
-            return Err(None);
-        };
+        let pos = Position3D::try_new(args.pop(), args.pop(), args.pop()).ok_or(None)?;
 
-        let x = x.parse::<f64>().map_err(|err| Some(err.to_string()))?;
-        let y = y.parse::<f64>().map_err(|err| Some(err.to_string()))?;
-        let z = z.parse::<f64>().map_err(|err| Some(err.to_string()))?;
+        let Vector3 { x, y, z } = pos.try_get_values(src.position()).ok_or(None)?;
 
         Ok(format!("{x} {y} {z}"))
+    }
+}
+
+struct Position3D(Coordinate, Coordinate, Coordinate);
+
+impl Position3D {
+    fn try_new(x: Option<&str>, y: Option<&str>, z: Option<&str>) -> Option<Self> {
+        Some(Self(
+            x?.try_into().ok()?,
+            y?.try_into().ok()?,
+            z?.try_into().ok()?,
+        ))
+    }
+
+    fn try_get_values(self, origin: Option<Vector3<f64>>) -> Option<Vector3<f64>> {
+        Some(Vector3::new(
+            self.0.value(origin.map(|o| o.x))?,
+            self.1.value(origin.map(|o| o.y))?,
+            self.2.value(origin.map(|o| o.z))?,
+        ))
+    }
+}
+
+enum Coordinate {
+    Absolute(f64),
+    Relative(f64),
+}
+
+impl TryFrom<&str> for Coordinate {
+    type Error = ParseFloatError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        if let Some(s) = s.strip_prefix('~') {
+            let offset = if s.is_empty() { 0.0 } else { s.parse()? };
+            Ok(Self::Relative(offset))
+        } else {
+            Ok(Self::Absolute(s.parse()?))
+        }
+    }
+}
+
+impl Coordinate {
+    fn value(self, origin: Option<f64>) -> Option<f64> {
+        match self {
+            Self::Absolute(v) => Some(v),
+            Self::Relative(offset) => Some(origin? + offset),
+        }
     }
 }
 
