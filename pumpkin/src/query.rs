@@ -1,7 +1,12 @@
 // Query protocol
 
 use std::{
-    collections::HashMap, ffi::CString, io::Cursor, net::SocketAddr, sync::Arc, time::Duration,
+    collections::HashMap,
+    ffi::{CString, NulError},
+    io::Cursor,
+    net::SocketAddr,
+    sync::Arc,
+    time::Duration,
 };
 
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
@@ -12,13 +17,13 @@ use tokio::{net::UdpSocket, sync::RwLock, time::interval};
 use crate::server::{Server, CURRENT_MC_VERSION};
 
 pub async fn start_query_handler(server: Arc<Server>, bound_addr: SocketAddr) {
-    let mut bound_addr = bound_addr;
+    let mut query_addr = bound_addr;
     if let Some(port) = ADVANCED_CONFIG.query.port {
-        bound_addr.set_port(port);
+        query_addr.set_port(port);
     }
 
     let socket = Arc::new(
-        UdpSocket::bind(bound_addr)
+        UdpSocket::bind(query_addr)
             .await
             .expect("Unable to bind to address"),
     );
@@ -39,62 +44,95 @@ pub async fn start_query_handler(server: Arc<Server>, bound_addr: SocketAddr) {
         let (_, addr) = socket.recv_from(&mut buf).await.unwrap();
 
         tokio::spawn(async move {
-            let cursor = Cursor::new(buf);
-
-            if let Ok(packet) = SBasePacket::decode(cursor).await {
-                match packet.payload {
-                    SBasePayload::Handshake => {
-                        let challange_token = rand::thread_rng().gen_range(1..=i32::MAX);
-                        let response = CBasePacket {
-                            session_id: packet.session_id,
-                            payload: CBasePayload::Handshake { challange_token },
-                        };
-
-                        clients
-                            .add_new_client(packet.session_id, challange_token, addr)
-                            .await;
-
-                        socket
-                            .send_to(response.encode().await.as_slice(), addr)
-                            .await
-                            .unwrap();
-                    }
-                    SBasePayload::BasicInfo(challange_token) => {
-                        if clients
-                            .check_client(packet.session_id, challange_token, addr)
-                            .await
-                        {}
-                    }
-                    SBasePayload::FullInfo(challange_token) => {
-                        if clients
-                            .check_client(packet.session_id, challange_token, addr)
-                            .await
-                        {
-                            let response = CBasePacket {
-                                session_id: packet.session_id,
-                                payload: CBasePayload::FullInfo {
-                                    hostname: CString::new(BASIC_CONFIG.motd.as_str()).unwrap(),
-                                    version: CString::new(CURRENT_MC_VERSION).unwrap(),
-                                    plugins: CString::new("Pumpkin on 1.21.3").unwrap(), // TODO: Fill this with plugins when plugins are working
-                                    map: CString::new("world").unwrap(), // TODO: Get actual world name
-                                    num_players: server.get_player_count().await,
-                                    max_players: BASIC_CONFIG.max_players as usize,
-                                    host_port: bound_addr.port(),
-                                    host_ip: CString::new(bound_addr.ip().to_string()).unwrap(),
-                                    players: vec![], // TODO: Fill with players
-                                },
-                            };
-
-                            socket
-                                .send_to(response.encode().await.as_slice(), addr)
-                                .await
-                                .unwrap();
-                        }
-                    }
-                }
+            if let Err(err) = handle_packet(buf, clients, server, socket, addr, bound_addr).await {
+                log::error!("Interior 0 bytes found! Cannot encode query response! {err}");
             }
         });
     }
+}
+
+// Since only used in one place, would be better to inline
+#[inline]
+async fn handle_packet(
+    buf: Vec<u8>,
+    clients: Arc<QueryClients>,
+    server: Arc<Server>,
+    socket: Arc<UdpSocket>,
+    addr: SocketAddr,
+    bound_addr: SocketAddr,
+) -> Result<(), NulError> {
+    let cursor = Cursor::new(buf);
+
+    if let Ok(packet) = SBasePacket::decode(cursor).await {
+        match packet.payload {
+            SBasePayload::Handshake => {
+                let challange_token = rand::thread_rng().gen_range(1..=i32::MAX);
+                let response = CBasePacket {
+                    session_id: packet.session_id,
+                    payload: CBasePayload::Handshake { challange_token },
+                };
+
+                clients
+                    .add_new_client(packet.session_id, challange_token, addr)
+                    .await;
+
+                // Ignore all errors since we don't want the query handler to crash
+                // Protocol also ignores all errors and just doesn't respond
+                let _ = socket
+                    .send_to(response.encode().await.as_slice(), addr)
+                    .await;
+            }
+            SBasePayload::BasicInfo(challange_token) => {
+                if clients
+                    .check_client(packet.session_id, challange_token, addr)
+                    .await
+                {
+                    let resposne = CBasePacket {
+                        session_id: packet.session_id,
+                        payload: CBasePayload::BasicInfo {
+                            motd: CString::new(BASIC_CONFIG.motd.as_str())?,
+                            map: CString::new(CURRENT_MC_VERSION)?,
+                            num_players: server.get_player_count().await,
+                            max_players: BASIC_CONFIG.max_players as usize,
+                            host_port: bound_addr.port(),
+                            host_ip: CString::new(bound_addr.ip().to_string()).unwrap(),
+                        },
+                    };
+
+                    let _ = socket
+                        .send_to(resposne.encode().await.as_slice(), addr)
+                        .await;
+                }
+            }
+            SBasePayload::FullInfo(challange_token) => {
+                if clients
+                    .check_client(packet.session_id, challange_token, addr)
+                    .await
+                {
+                    let response = CBasePacket {
+                        session_id: packet.session_id,
+                        payload: CBasePayload::FullInfo {
+                            hostname: CString::new(BASIC_CONFIG.motd.as_str())?,
+                            version: CString::new(CURRENT_MC_VERSION)?,
+                            plugins: CString::new("Pumpkin on 1.21.3")?, // TODO: Fill this with plugins when plugins are working
+                            map: CString::new("world")?, // TODO: Get actual world name
+                            num_players: server.get_player_count().await,
+                            max_players: BASIC_CONFIG.max_players as usize,
+                            host_port: bound_addr.port(),
+                            host_ip: CString::new(bound_addr.ip().to_string())?,
+                            players: vec![], // TODO: Fill with players
+                        },
+                    };
+
+                    let _ = socket
+                        .send_to(response.encode().await.as_slice(), addr)
+                        .await;
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 struct QueryClients {
