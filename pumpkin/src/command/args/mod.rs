@@ -129,7 +129,7 @@ macro_rules! get_parsed_arg {
 /// A Result<T, [`super::dispatcher::InvalidTreeError`]> is returned, where T is determined by the last macro parameter.
 /// The returned Result enum has the same error type as the Result command executors return, so the `?` operator can be used.
 #[macro_export]
-macro_rules! get_parsed_arg_default {
+macro_rules! get_parsed_arg_with_default_name {
     ($args:ident, $consumer:expr, $p:pat, $out:expr) => {{
         use $crate::command::args::DefaultNameArgConsumer;
         let name = $consumer.default_name();
