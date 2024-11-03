@@ -53,12 +53,4 @@ public class MainActivity extends GameActivity {
     event.offsetLocation(-location[0], -location[1]);
     return super.onTouchEvent(event);
   }
-
-  public void openKeyboard() {
-    InputMethodManager imm =
-            (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-    if (imm != null) {
-        imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
-    }
-  }
 }

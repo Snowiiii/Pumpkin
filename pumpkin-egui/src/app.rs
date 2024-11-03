@@ -4,9 +4,6 @@ use std::{
 };
 
 use egui::mutex::Mutex;
-// Simplest workaround for keyboar invocation
-//#[cfg(target_os = "android")]
-use j4rs::{InvocationArg, Jvm};
 use pumpkin::{commands::CommandSender, server::Server};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use tokio::{runtime, task::JoinHandle};
@@ -87,6 +84,7 @@ impl eframe::App for TemplateApp {
                     .add_enabled(!self.started, egui::Button::new("Start"))
                     .clicked()
                 {
+                    log::info!("[GUI Client] Start button pressed");
                     self.server_handle = Some(self.rt.spawn(pumpkin::server_start(|server| {
                         *SERVER.lock() = Some(server.clone())
                     })));
@@ -126,7 +124,7 @@ impl eframe::App for TemplateApp {
                     egui::TextEdit::singleline(&mut self.command),
                 );
 
-                //#[cfg(target_os = "android")]
+                #[cfg(target_os = "android")]
                 {
                     let textedit = ui.add_sized(
                         ui.available_size() - egui::vec2(43.0, 0.0),
@@ -134,16 +132,9 @@ impl eframe::App for TemplateApp {
                     );
     
                     if textedit.gained_focus() {
-                        let jvm = Jvm::attach_thread().unwrap();
-                        let instance = jvm.create_instance(
-                            "pumpkin_egui_android.MainActivity",
-                            InvocationArg::empty()
-                        ).unwrap();
-                        jvm.invoke(
-                            &instance,
-                            "openKeyboard",
-                            InvocationArg::empty()
-                        ).unwrap();
+                        show_soft_input(true);
+                    } else if textedit.lost_focus() {
+                        show_soft_input(false);
                     }
                 }
 
@@ -186,4 +177,93 @@ fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
         );
         ui.label(".");
     });
+}
+
+// Simplest workaround for keyboar invocation
+#[cfg(target_os = "android")]
+pub fn show_soft_input(show: bool) -> bool {
+    use jni::objects::JValue;
+
+    let ctx = ndk_context::android_context();
+    let vm = match unsafe { jni::JavaVM::from_raw(ctx.vm() as _) } {
+        Ok(value) => value,
+        Err(e) => {
+            log::error!("vm not found: {e}");
+            return false;
+        }
+    };
+    let activity = unsafe { jni::objects::JObject::from_raw(ctx.context() as _) };
+    let mut env = match vm.attach_current_thread() {
+        Ok(value) => value,
+        Err(e) => {
+            log::error!("env not found: {e}");
+            return false;
+        }
+    };
+
+    let class_ctxt = match env.find_class("android/content/Context") {
+        Ok(value) => value,
+        Err(e) => {
+            log::error!("context class not found: {e}");
+            return false;
+        }
+    };
+    let ims = match env.get_static_field(class_ctxt, "INPUT_METHOD_SERVICE", "Ljava/lang/String;") {
+        Ok(value) => value,
+        Err(e) => {
+            log::error!("input method service not found: {e}");
+            return false;
+        }
+    };
+
+    let im_manager = match env
+        .call_method(&activity, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;", &[ims.borrow()])
+        .unwrap()
+        .l()
+    {
+        Ok(value) => value,
+        Err(e) => {
+            log::error!("input manager not found: {e}");
+            return false;
+        }
+    };
+
+    let jni_window = match env.call_method(&activity, "getWindow", "()Landroid/view/Window;", &[]).unwrap().l() {
+        Ok(value) => value,
+        Err(e) => {
+            log::error!("window not found: {e}");
+            return false;
+        }
+    };
+    let view = match env.call_method(jni_window, "getDecorView", "()Landroid/view/View;", &[]).unwrap().l() {
+        Ok(value) => value,
+        Err(e) => {
+            log::error!("virtual keyboard not found: {e}");
+            return false;
+        }
+    };
+
+    if show {
+        let result = env
+            .call_method(im_manager, "showSoftInput", "(Landroid/view/View;I)Z", &[JValue::Object(&view), 0i32.into()])
+            .unwrap()
+            .z()
+            .unwrap();
+        result
+    } else {
+        let window_token = env.call_method(view, "getWindowToken", "()Landroid/os/IBinder;", &[]).unwrap().l().unwrap();
+        let jvalue_window_token = jni::objects::JValueGen::Object(&window_token);
+
+        let result = env
+            .call_method(
+                im_manager,
+                "hideSoftInputFromWindow",
+                "(Landroid/os/IBinder;I)Z",
+                &[jvalue_window_token, 0i32.into()],
+            )
+            .unwrap()
+            .z()
+            .unwrap();
+        result
+    }
 }
