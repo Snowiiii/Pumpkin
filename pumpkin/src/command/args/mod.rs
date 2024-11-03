@@ -9,7 +9,9 @@ use pumpkin_core::{
 use crate::{entity::player::Player, server::Server};
 
 use super::{
-    dispatcher::InvalidTreeError, tree::{CommandTree, RawArgs}, CommandSender
+    dispatcher::InvalidTreeError,
+    tree::{CommandTree, RawArgs},
+    CommandSender,
 };
 
 pub(crate) mod arg_bounded_num;
@@ -77,7 +79,6 @@ impl<K: Eq + Hash, V: Clone> GetCloned<K, V> for HashMap<K, V> {
 }
 
 pub(crate) trait FindArg<'a> {
-
     type Data;
 
     fn find_arg(args: &'a ConsumedArgs, name: &'a str) -> Result<Self::Data, InvalidTreeError>;
@@ -87,7 +88,7 @@ pub(crate) trait FindArgDefaultName<'a, T> {
     fn find_arg_default_name(&self, args: &'a ConsumedArgs) -> Result<T, InvalidTreeError>;
 }
 
-impl <'a, T, C: FindArg<'a, Data = T> + DefaultNameArgConsumer>FindArgDefaultName<'a, T> for C {
+impl<'a, T, C: FindArg<'a, Data = T> + DefaultNameArgConsumer> FindArgDefaultName<'a, T> for C {
     fn find_arg_default_name(&self, args: &'a ConsumedArgs) -> Result<T, InvalidTreeError> {
         C::find_arg(args, self.default_name())
     }

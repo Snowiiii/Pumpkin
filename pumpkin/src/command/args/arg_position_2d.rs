@@ -40,13 +40,17 @@ impl DefaultNameArgConsumer for Position2DArgumentConsumer {
 }
 
 impl<'a> FindArg<'a> for Position2DArgumentConsumer {
-
     type Data = Vector2<f64>;
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, InvalidTreeError> {
+    fn find_arg(
+        args: &'a super::ConsumedArgs,
+        name: &'a str,
+    ) -> Result<Self::Data, InvalidTreeError> {
         match args.get(name) {
             Some(Arg::Pos2D(data)) => Ok(*data),
-            _ => Err(InvalidTreeError::InvalidConsumptionError(Some(name.to_string())))
+            _ => Err(InvalidTreeError::InvalidConsumptionError(Some(
+                name.to_string(),
+            ))),
         }
     }
 }

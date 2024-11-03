@@ -64,13 +64,17 @@ impl DefaultNameArgConsumer for EntityArgumentConsumer {
 }
 
 impl<'a> FindArg<'a> for EntityArgumentConsumer {
-
     type Data = Arc<Player>;
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, InvalidTreeError> {
+    fn find_arg(
+        args: &'a super::ConsumedArgs,
+        name: &'a str,
+    ) -> Result<Self::Data, InvalidTreeError> {
         match args.get(name) {
             Some(Arg::Entity(data)) => Ok(data.clone()),
-            _ => Err(InvalidTreeError::InvalidConsumptionError(Some(name.to_string())))
+            _ => Err(InvalidTreeError::InvalidConsumptionError(Some(
+                name.to_string(),
+            ))),
         }
     }
 }

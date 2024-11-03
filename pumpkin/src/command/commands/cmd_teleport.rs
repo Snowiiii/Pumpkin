@@ -7,11 +7,11 @@ use crate::command::args::arg_entity::EntityArgumentConsumer;
 use crate::command::args::arg_position_3d::Position3DArgumentConsumer;
 use crate::command::args::arg_rotation::RotationArgumentConsumer;
 use crate::command::args::ConsumedArgs;
+use crate::command::args::FindArg;
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, literal, require};
 use crate::command::InvalidTreeError;
 use crate::command::{CommandExecutor, CommandSender};
-use crate::command::args::FindArg;
 
 const NAMES: [&str; 2] = ["teleport", "tp"];
 const DESCRIPTION: &str = "Teleports entities, including players."; // todo
@@ -140,7 +140,7 @@ impl CommandExecutor for TpEntitiesToPosWithRotationExecutor {
 
         let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
 
-        let (yaw, pitch) = RotationArgumentConsumer::find_arg(args,ARG_ROTATION,)?;
+        let (yaw, pitch) = RotationArgumentConsumer::find_arg(args, ARG_ROTATION)?;
 
         for target in targets {
             target.teleport(pos, yaw, pitch).await;
