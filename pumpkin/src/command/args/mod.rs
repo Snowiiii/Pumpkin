@@ -77,6 +77,24 @@ impl<K: Eq + Hash, V: Clone> GetCloned<K, V> for HashMap<K, V> {
     }
 }
 
+/// This macro can be used to easily get the correct argument from [`ConsumedArgs`].
+///
+/// See [`get_parsed_arg_default`] if you are using [`crate::command::tree_builder::argument_default`].
+///
+/// # Example
+///
+/// `let distance: f64 = get_parsed_arg!(args, ARG_DISTANCE, Arg::F64(v), *v)?;`.
+///
+/// - `args` is the [`ConsumedArgs`] which is passed to executors as a parameter.
+///
+/// - `ARGS_DISTANCE` is the name of the argument, which must be the same as the one used in `init_command_tree`
+///
+/// - `Arg::F64(v)` is a pattern used for patten matching. The variant of the enum [`Arg`] that should be matched here is determined by the consumer that was used.
+///
+/// - `*v` is the part of the pattern that should be returned. Operations like cloning or dereferencing can be done here, too.
+///
+/// A Result<T, [`super::dispatcher::InvalidTreeError`]> is returned, where T is determined by the last macro parameter.
+/// The returned Result enum has the same error type as the Result command executors return, so the `?` operator can be used.
 #[macro_export]
 macro_rules! get_parsed_arg {
     ($args:ident, $name:expr, $p:pat, $out:expr) => {
@@ -91,6 +109,25 @@ macro_rules! get_parsed_arg {
     };
 }
 
+/// This macro can be used to easily get the correct argument from [`ConsumedArgs`], using the default name defined by the [`ArgumentConsumer`].
+///
+/// Use this only when you're also using [`crate::command::tree_builder::argument_default`] and don't need two arguments with the same [`ArgumentConsumer`].
+/// Otherwise use [`crate::command::tree_builder::argument`] and [`get_parsed_arg`].
+///
+/// # Example
+///
+/// `let Vector2 { x, z } = get_parsed_arg_default!(args, Position2DArgumentConsumer, Arg::Pos2D(vec), *vec)?;`
+///
+/// - `args` is the [`ConsumedArgs`] which is passed to executors as a parameter.
+///
+/// - `Position2DArgumentConsumer` is the [`ArgumentConsumer`], which must be the same as the one used in the [`crate::command::tree_builder::argument_default`] method in `init_command_tree`
+///
+/// - `Arg::Pos2D(vec)` is a pattern used for patten matching. The variant of the enum [`Arg`] that should be matched here is determined by the consumer that was used.
+///
+/// - `*vec` is the part of the pattern that should be returned. Operations like cloning or dereferencing can be done here, too.
+///
+/// A Result<T, [`super::dispatcher::InvalidTreeError`]> is returned, where T is determined by the last macro parameter.
+/// The returned Result enum has the same error type as the Result command executors return, so the `?` operator can be used.
 #[macro_export]
 macro_rules! get_parsed_arg_default {
     ($args:ident, $consumer:expr, $p:pat, $out:expr) => {{
