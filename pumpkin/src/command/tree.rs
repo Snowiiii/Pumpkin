@@ -1,29 +1,9 @@
-use async_trait::async_trait;
-
-use super::CommandExecutor;
-use crate::{command::CommandSender, server::Server};
-use std::{
-    collections::{HashMap, VecDeque},
-    fmt::Debug,
-};
+use super::{args::ArgumentConsumer, CommandExecutor};
+use crate::command::CommandSender;
+use std::{collections::VecDeque, fmt::Debug};
 
 /// see [`crate::commands::tree_builder::argument`]
 pub type RawArgs<'a> = Vec<&'a str>;
-
-/// see [`crate::commands::tree_builder::argument`] and [`CommandTree::execute`]/[`crate::commands::tree_builder::NonLeafNodeBuilder::execute`]
-pub type ConsumedArgs<'a> = HashMap<&'a str, String>;
-
-/// see [`crate::commands::tree_builder::argument`]
-/// Provide value or an Optional error message, If no Error message provided the default will be used
-#[async_trait]
-pub(crate) trait ArgumentConsumer: Sync {
-    async fn consume<'a>(
-        &self,
-        sender: &CommandSender<'a>,
-        server: &Server,
-        args: &mut RawArgs<'a>,
-    ) -> Result<String, Option<String>>;
-}
 
 #[derive(Debug)]
 pub struct Node<'a> {

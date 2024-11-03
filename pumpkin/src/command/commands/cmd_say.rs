@@ -3,11 +3,12 @@ use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::client::play::CSystemChatMessage;
 
 use crate::command::{
-    arg_simple::SimpleArgConsumer,
-    tree::{CommandTree, ConsumedArgs},
+    args::{arg_message::MsgArgConsumer, Arg, ConsumedArgs},
+    tree::CommandTree,
     tree_builder::{argument, require},
     CommandExecutor, CommandSender, InvalidTreeError,
 };
+use InvalidTreeError::InvalidConsumptionError;
 
 const NAMES: [&str; 1] = ["say"];
 
@@ -31,9 +32,13 @@ impl CommandExecutor for SayExecutor {
             CommandSender::Player(player) => &player.gameprofile.name,
         };
 
+        let Some(Arg::Msg(msg)) = args.get(ARG_MESSAGE) else {
+            return Err(InvalidConsumptionError(Some(ARG_MESSAGE.into())));
+        };
+
         server
             .broadcast_packet_all(&CSystemChatMessage::new(
-                &TextComponent::text(&format!("[{}] {}", sender, args.get("message").unwrap())),
+                &TextComponent::text(&format!("[{sender}] {msg}")),
                 false,
             ))
             .await;
@@ -44,6 +49,6 @@ impl CommandExecutor for SayExecutor {
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
         require(&|sender| sender.permission_lvl() >= 2)
-            .with_child(argument(ARG_MESSAGE, &SimpleArgConsumer).execute(&SayExecutor)),
+            .with_child(argument(ARG_MESSAGE, &MsgArgConsumer).execute(&SayExecutor)),
     )
 }

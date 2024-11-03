@@ -9,12 +9,15 @@ use pumpkin_core::{
 
 use crate::{
     command::{
-        arg_postition_2d::{parse_arg_position_2d, Position2DArgumentConsumer},
-        arg_simple::SimpleArgConsumer,
-        tree::{CommandTree, ConsumedArgs},
-        tree_builder::{argument, literal},
+        args::{
+            arg_bounded_num::BoundedNumArgumentConsumer,
+            arg_postition_2d::Position2DArgumentConsumer, Arg, ConsumedArgs,
+        },
+        tree::CommandTree,
+        tree_builder::{argument, argument_default, literal},
         CommandExecutor, CommandSender, InvalidTreeError,
     },
+    get_parsed_arg, get_parsed_arg_default,
     server::Server,
 };
 
@@ -64,11 +67,7 @@ impl CommandExecutor for WorldborderSetExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = args
-            .get("distance")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<f64>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let distance = get_parsed_arg!(args, ARG_DISTANCE, Arg::F64(v), *v)?;
 
         if (distance - border.new_diameter).abs() < f64::EPSILON {
             sender
@@ -106,16 +105,8 @@ impl CommandExecutor for WorldborderSetTimeExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = args
-            .get("distance")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<f64>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
-        let time = args
-            .get("time")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<i32>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let distance = get_parsed_arg!(args, ARG_DISTANCE, Arg::F64(v), *v)?;
+        let time = get_parsed_arg!(args, ARG_TIME, Arg::I32(v), *v)?;
 
         match distance.total_cmp(&border.new_diameter) {
             std::cmp::Ordering::Equal => {
@@ -164,11 +155,7 @@ impl CommandExecutor for WorldborderAddExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = args
-            .get("distance")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<f64>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let distance = get_parsed_arg!(args, ARG_DISTANCE, Arg::F64(v), *v)?;
 
         if distance == 0.0 {
             sender
@@ -208,16 +195,8 @@ impl CommandExecutor for WorldborderAddTimeExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = args
-            .get("distance")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<f64>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
-        let time = args
-            .get("time")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<i32>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let distance = get_parsed_arg!(args, ARG_DISTANCE, Arg::F64(v), *v)?;
+        let time = get_parsed_arg!(args, ARG_TIME, Arg::I32(v), *v)?;
 
         let distance = distance + border.new_diameter;
 
@@ -268,7 +247,8 @@ impl CommandExecutor for WorldborderCenterExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let Vector2 { x, z } = parse_arg_position_2d("pos", args)?;
+        let Vector2 { x, z } =
+            get_parsed_arg_default!(args, Position2DArgumentConsumer, Arg::Pos2D(vec), *vec)?;
 
         sender
             .send_message(TextComponent::text(&format!(
@@ -296,11 +276,7 @@ impl CommandExecutor for WorldborderDamageAmountExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let damage_per_block = args
-            .get("damage_per_block")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<f32>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let damage_per_block = get_parsed_arg!(args, ARG_DAMAGE_PER_BLOCK, Arg::F32(v), *v)?;
 
         if (damage_per_block - border.damage_per_block).abs() < f32::EPSILON {
             sender
@@ -340,11 +316,7 @@ impl CommandExecutor for WorldborderDamageBufferExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let buffer = args
-            .get("distance")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<f32>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let buffer = get_parsed_arg!(args, ARG_DAMAGE_BUFFER, Arg::F32(v), *v)?;
 
         if (buffer - border.buffer).abs() < f32::EPSILON {
             sender
@@ -384,11 +356,7 @@ impl CommandExecutor for WorldborderWarningDistanceExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = args
-            .get("distance")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<i32>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let distance = get_parsed_arg!(args, ARG_WARNING_DISTANCE, Arg::I32(v), *v)?;
 
         if distance == border.warning_blocks {
             sender
@@ -428,11 +396,7 @@ impl CommandExecutor for WorldborderWarningTimeExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let time = args
-            .get("time")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<i32>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let time = get_parsed_arg!(args, ARG_TIME, Arg::I32(v), *v)?;
 
         if time == border.warning_time {
             sender
@@ -456,31 +420,49 @@ impl CommandExecutor for WorldborderWarningTimeExecutor {
     }
 }
 
+static DISTANCE_CONSUMER: BoundedNumArgumentConsumer<f64> = BoundedNumArgumentConsumer::min(0.0);
+const ARG_DISTANCE: &str = "distance";
+
+static TIME_CONSUMER: BoundedNumArgumentConsumer<i32> = BoundedNumArgumentConsumer::min(0);
+const ARG_TIME: &str = "time";
+
+static DAMAGE_PER_BLOCK_CONSUMER: BoundedNumArgumentConsumer<f32> =
+    BoundedNumArgumentConsumer::min(0.0);
+const ARG_DAMAGE_PER_BLOCK: &str = "damage_per_block";
+
+static DAMAGE_BUFFER_CONSUMER: BoundedNumArgumentConsumer<f32> =
+    BoundedNumArgumentConsumer::min(0.0);
+const ARG_DAMAGE_BUFFER: &str = "buffer";
+
+static WARNING_DISTANCE_CONSUMER: BoundedNumArgumentConsumer<i32> =
+    BoundedNumArgumentConsumer::min(0);
+const ARG_WARNING_DISTANCE: &str = "distance";
+
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION)
         .with_child(
             literal("add").with_child(
-                argument("distance", &SimpleArgConsumer)
+                argument(ARG_DISTANCE, &DISTANCE_CONSUMER)
                     .execute(&WorldborderAddExecutor)
                     .with_child(
-                        argument("time", &SimpleArgConsumer).execute(&WorldborderAddTimeExecutor),
+                        argument(ARG_TIME, &TIME_CONSUMER).execute(&WorldborderAddTimeExecutor),
                     ),
             ),
         )
         .with_child(literal("center").with_child(
-            argument("pos", &Position2DArgumentConsumer).execute(&WorldborderCenterExecutor),
+            argument_default(&Position2DArgumentConsumer).execute(&WorldborderCenterExecutor),
         ))
         .with_child(
             literal("damage")
                 .with_child(
                     literal("amount").with_child(
-                        argument("damage_per_block", &SimpleArgConsumer)
+                        argument(ARG_DAMAGE_PER_BLOCK, &DAMAGE_PER_BLOCK_CONSUMER)
                             .execute(&WorldborderDamageAmountExecutor),
                     ),
                 )
                 .with_child(
                     literal("buffer").with_child(
-                        argument("distance", &SimpleArgConsumer)
+                        argument(ARG_DAMAGE_BUFFER, &DAMAGE_BUFFER_CONSUMER)
                             .execute(&WorldborderDamageBufferExecutor),
                     ),
                 ),
@@ -488,10 +470,10 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
         .with_child(literal("get").execute(&WorldborderGetExecutor))
         .with_child(
             literal("set").with_child(
-                argument("distance", &SimpleArgConsumer)
+                argument(ARG_DISTANCE, &DISTANCE_CONSUMER)
                     .execute(&WorldborderSetExecutor)
                     .with_child(
-                        argument("time", &SimpleArgConsumer).execute(&WorldborderSetTimeExecutor),
+                        argument(ARG_TIME, &TIME_CONSUMER).execute(&WorldborderSetTimeExecutor),
                     ),
             ),
         )
@@ -499,12 +481,12 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
             literal("warning")
                 .with_child(
                     literal("distance").with_child(
-                        argument("distance", &SimpleArgConsumer)
+                        argument(ARG_WARNING_DISTANCE, &WARNING_DISTANCE_CONSUMER)
                             .execute(&WorldborderWarningDistanceExecutor),
                     ),
                 )
                 .with_child(literal("time").with_child(
-                    argument("time", &SimpleArgConsumer).execute(&WorldborderWarningTimeExecutor),
+                    argument(ARG_TIME, &TIME_CONSUMER).execute(&WorldborderWarningTimeExecutor),
                 )),
         )
 }

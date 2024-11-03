@@ -3,10 +3,12 @@ use pumpkin_core::text::TextComponent;
 use crate::command::dispatcher::InvalidTreeError::{
     InvalidConsumptionError, InvalidRequirementError,
 };
-use crate::command::tree::{Command, CommandTree, ConsumedArgs, NodeType, RawArgs};
+use crate::command::tree::{Command, CommandTree, NodeType, RawArgs};
 use crate::command::CommandSender;
 use crate::server::Server;
 use std::collections::HashMap;
+
+use super::args::ConsumedArgs;
 
 #[derive(Debug)]
 pub(crate) enum InvalidTreeError {
@@ -29,7 +31,7 @@ impl<'a> CommandDispatcher<'a> {
     pub async fn handle_command(
         &'a self,
         sender: &mut CommandSender<'a>,
-        server: &Server,
+        server: &'a Server,
         cmd: &'a str,
     ) {
         if let Err(err) = self.dispatch(sender, server, cmd).await {
@@ -46,7 +48,7 @@ impl<'a> CommandDispatcher<'a> {
     pub(crate) async fn dispatch(
         &'a self,
         src: &mut CommandSender<'a>,
-        server: &Server,
+        server: &'a Server,
         cmd: &'a str,
     ) -> Result<(), String> {
         // Other languages dont use the ascii whitespace
@@ -67,18 +69,11 @@ impl<'a> CommandDispatcher<'a> {
                     println!("Error while parsing command \"{cmd}\": a requirement that was expected was not met.");
                     return Err("Internal Error (See logs for details)".into());
                 }
-                Ok(is_fitting_path) => match is_fitting_path {
-                    Ok(()) => return Ok(()),
-                    Err(_error) => {
-                        // is_fitting_path being Err only means that THIS path does not fit.
-                        // Do not break/return here or else other paths aren't even tried!
-                        // I don't really know what to do with this _error string, because there will be one error for every path that was tried.
-                        // Since there are sometimes many possible paths, aggregating these errors and showing them all to the user probably does not make sense.
-                        // We can't really know which path the user intended, and just show the error for that one path, either. (we could guess but that'd be hard)
-                        // IMO is_fitting_path should therefore just be a bool.
-                        // TODO
+                Ok(is_fitting_path) => {
+                    if is_fitting_path {
+                        return Ok(());
                     }
-                },
+                }
             }
         }
         Err(format!("Invalid Syntax. Usage: {tree}"))
@@ -101,11 +96,11 @@ impl<'a> CommandDispatcher<'a> {
 
     async fn try_is_fitting_path(
         src: &mut CommandSender<'a>,
-        server: &Server,
+        server: &'a Server,
         path: &[usize],
         tree: &CommandTree<'a>,
         mut raw_args: RawArgs<'a>,
-    ) -> Result<Result<(), Option<String>>, InvalidTreeError> {
+    ) -> Result<bool, InvalidTreeError> {
         let mut parsed_args: ConsumedArgs = HashMap::new();
 
         for node in path.iter().map(|&i| &tree.nodes[i]) {
@@ -113,35 +108,33 @@ impl<'a> CommandDispatcher<'a> {
                 NodeType::ExecuteLeaf { executor } => {
                     return if raw_args.is_empty() {
                         executor.execute(src, server, &parsed_args).await?;
-                        Ok(Ok(()))
+                        Ok(true)
                     } else {
-                        Ok(Err(None))
+                        Ok(false)
                     };
                 }
                 NodeType::Literal { string, .. } => {
                     if raw_args.pop() != Some(string) {
-                        return Ok(Err(None));
+                        return Ok(false);
                     }
                 }
                 NodeType::Argument { consumer, name, .. } => {
                     match consumer.consume(src, server, &mut raw_args).await {
-                        Ok(consumed) => {
+                        Some(consumed) => {
                             parsed_args.insert(name, consumed);
                         }
-                        Err(err) => {
-                            return Ok(Err(err));
-                        }
+                        None => return Ok(false),
                     }
                 }
                 NodeType::Require { predicate, .. } => {
                     if !predicate(src) {
-                        return Ok(Err(None));
+                        return Ok(false);
                     }
                 }
             }
         }
 
-        Ok(Err(None))
+        Ok(false)
     }
 
     /// Register a command with the dispatcher.

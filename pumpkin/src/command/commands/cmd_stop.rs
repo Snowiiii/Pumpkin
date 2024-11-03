@@ -2,9 +2,10 @@ use async_trait::async_trait;
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
 
+use crate::command::args::ConsumedArgs;
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::require;
-use crate::command::{tree::ConsumedArgs, CommandExecutor, CommandSender, InvalidTreeError};
+use crate::command::{CommandExecutor, CommandSender, InvalidTreeError};
 
 const NAMES: [&str; 1] = ["stop"];
 

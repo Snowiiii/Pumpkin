@@ -2,10 +2,12 @@ use async_trait::async_trait;
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
 
-use crate::command::arg_entities::{parse_arg_entities, EntitiesArgumentConsumer};
+use crate::command::args::arg_entities::EntitiesArgumentConsumer;
+use crate::command::args::{Arg, ConsumedArgs};
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, require};
-use crate::command::{tree::ConsumedArgs, CommandExecutor, CommandSender, InvalidTreeError};
+use crate::command::{CommandExecutor, CommandSender, InvalidTreeError};
+use InvalidTreeError::InvalidConsumptionError;
 
 const NAMES: [&str; 1] = ["kill"];
 const DESCRIPTION: &str = "Kills all target entities.";
@@ -19,10 +21,12 @@ impl CommandExecutor for KillExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        server: &crate::server::Server,
+        _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let targets = parse_arg_entities(sender, server, ARG_TARGET, args).await?;
+        let Some(Arg::Entities(targets)) = args.get(&ARG_TARGET) else {
+            return Err(InvalidConsumptionError(Some(ARG_TARGET.into())));
+        };
 
         let target_count = targets.len();
 

@@ -3,12 +3,12 @@ use std::num::ParseFloatError;
 use async_trait::async_trait;
 use pumpkin_core::math::vector3::Vector3;
 
-use crate::command::dispatcher::InvalidTreeError;
-use crate::command::tree::{ConsumedArgs, RawArgs};
+use crate::command::tree::RawArgs;
 use crate::command::CommandSender;
 use crate::server::Server;
 
-use super::tree::ArgumentConsumer;
+use super::super::args::ArgumentConsumer;
+use super::{Arg, DefaultNameArgConsumer};
 
 /// x, y and z coordinates
 pub(crate) struct Position3DArgumentConsumer;
@@ -18,38 +18,15 @@ impl ArgumentConsumer for Position3DArgumentConsumer {
     async fn consume<'a>(
         &self,
         src: &CommandSender<'a>,
-        _server: &Server,
+        _server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Result<String, Option<String>> {
-        let pos = Position3D::try_new(args.pop(), args.pop(), args.pop()).ok_or(None)?;
+    ) -> Option<Arg<'a>> {
+        let pos = Position3D::try_new(args.pop(), args.pop(), args.pop())?;
 
-        let Vector3 { x, y, z } = pos.try_get_values(src.position()).ok_or(None)?;
+        let vec3 = pos.try_get_values(src.position())?;
 
-        // only return absolue coordinates here because [parse_arg_position_3d] does not have access to command sender
-        Ok(format!("{x} {y} {z}"))
+        Some(Arg::Pos3D(vec3))
     }
-}
-
-/// x, y and z coordinates
-pub fn parse_arg_position_3d(
-    arg_name: &str,
-    consumed_args: &ConsumedArgs<'_>,
-) -> Result<Vector3<f64>, InvalidTreeError> {
-    let s = consumed_args
-        .get(arg_name)
-        .ok_or(InvalidTreeError::InvalidConsumptionError(None))?;
-
-    // these whitespaces will always be ascii
-    let mut args = s.split_ascii_whitespace();
-
-    let pos = Position3D::try_new(args.next(), args.next(), args.next())
-        .ok_or(InvalidTreeError::InvalidConsumptionError(Some(s.into())))?;
-
-    let vec3 = pos
-        .try_get_values(None)
-        .ok_or(InvalidTreeError::InvalidConsumptionError(Some(s.into())))?;
-
-    Ok(vec3)
 }
 
 struct Position3D(Coordinate, Coordinate, Coordinate);
@@ -69,6 +46,16 @@ impl Position3D {
             self.1.value(origin.map(|o| o.y))?,
             self.2.value(origin.map(|o| o.z))?,
         ))
+    }
+}
+
+impl DefaultNameArgConsumer for Position3DArgumentConsumer {
+    fn default_name(&self) -> &'static str {
+        "pos"
+    }
+
+    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
+        &Position3DArgumentConsumer
     }
 }
 

@@ -3,11 +3,15 @@ use async_trait::async_trait;
 use crate::server::Server;
 
 use super::{
-    tree::{ArgumentConsumer, RawArgs},
-    CommandSender,
+    super::{
+        args::{ArgumentConsumer, RawArgs},
+        CommandSender,
+    },
+    Arg,
 };
 
 /// Should never be a permanent solution
+#[allow(unused)]
 pub(crate) struct SimpleArgConsumer;
 
 #[async_trait]
@@ -15,9 +19,9 @@ impl ArgumentConsumer for SimpleArgConsumer {
     async fn consume<'a>(
         &self,
         _sender: &CommandSender<'a>,
-        _server: &Server,
+        _server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Result<String, Option<String>> {
-        args.pop().ok_or(None).map(ToString::to_string)
+    ) -> Option<Arg<'a>> {
+        Some(Arg::Simple(args.pop()?.to_string()))
     }
 }

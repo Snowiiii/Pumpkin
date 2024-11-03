@@ -2,11 +2,13 @@ use async_trait::async_trait;
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
 
-use crate::command::arg_player::{parse_arg_players, PlayersArgumentConsumer};
+use crate::command::args::arg_player::PlayersArgumentConsumer;
+use crate::command::args::{Arg, ConsumedArgs};
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::argument;
 use crate::command::InvalidTreeError;
-use crate::command::{tree::ConsumedArgs, CommandExecutor, CommandSender};
+use crate::command::{CommandExecutor, CommandSender};
+use InvalidTreeError::InvalidConsumptionError;
 
 const NAMES: [&str; 1] = ["kick"];
 const DESCRIPTION: &str = "Kicks the target player from the server.";
@@ -20,10 +22,12 @@ impl CommandExecutor for KickExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        server: &crate::server::Server,
+        _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        let targets = parse_arg_players(sender, server, ARG_TARGET, args).await?;
+        let Some(Arg::Players(targets)) = args.get(&ARG_TARGET) else {
+            return Err(InvalidConsumptionError(Some(ARG_TARGET.into())));
+        };
 
         let target_count = targets.len();
 

@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use pumpkin_inventory::OpenContainer;
 
 use crate::command::{
-    tree::CommandTree, tree::ConsumedArgs, CommandExecutor, CommandSender, InvalidTreeError,
+    args::ConsumedArgs, tree::CommandTree, CommandExecutor, CommandSender, InvalidTreeError,
 };
 
 const NAMES: [&str; 2] = ["echest", "enderchest"];

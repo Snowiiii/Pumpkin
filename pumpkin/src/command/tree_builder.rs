@@ -1,6 +1,8 @@
-use crate::command::tree::{ArgumentConsumer, CommandTree, Node, NodeType};
+use crate::command::args::ArgumentConsumer;
+use crate::command::tree::{CommandTree, Node, NodeType};
 use crate::command::CommandSender;
 
+use super::args::DefaultNameArgConsumer;
 use super::CommandExecutor;
 
 impl<'a> CommandTree<'a> {
@@ -142,6 +144,18 @@ pub const fn literal(string: &str) -> NonLeafNodeBuilder {
 pub fn argument<'a>(name: &'a str, consumer: &'a dyn ArgumentConsumer) -> NonLeafNodeBuilder<'a> {
     NonLeafNodeBuilder {
         node_type: NodeType::Argument { name, consumer },
+        child_nodes: Vec::new(),
+        leaf_nodes: Vec::new(),
+    }
+}
+
+/// same as [`crate::command::tree_builder::argument`], but uses default arg name of consumer
+pub fn argument_default(consumer: &dyn DefaultNameArgConsumer) -> NonLeafNodeBuilder<'_> {
+    NonLeafNodeBuilder {
+        node_type: NodeType::Argument {
+            name: consumer.default_name(),
+            consumer: consumer.get_argument_consumer(),
+        },
         child_nodes: Vec::new(),
         leaf_nodes: Vec::new(),
     }
