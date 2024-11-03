@@ -20,7 +20,7 @@ pub async fn server_start(setup_console: impl FnOnce(Arc<Server>)) -> io::Result
     std::panic::set_hook(Box::new(move |info| {
         default_panic(info);
         // TODO: Gracefully exit?
-        //std::process::exit(1);
+        std::process::exit(1);
     }));
 
     let time = Instant::now();
