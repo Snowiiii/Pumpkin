@@ -6,4 +6,5 @@ pub mod cmd_kill;
 pub mod cmd_pumpkin;
 pub mod cmd_say;
 pub mod cmd_stop;
+pub mod cmd_teleport;
 pub mod cmd_worldborder;
