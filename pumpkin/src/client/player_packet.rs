@@ -384,7 +384,8 @@ impl Player {
         ) {
             *self.config.lock().await = PlayerConfig {
                 locale: client_information.locale,
-                view_distance: client_information.view_distance,
+                // A Negative view distance would be impossible and make no sense right ?, Mojang: Lets make is signed :D
+                view_distance: client_information.view_distance as u8,
                 chat_mode,
                 chat_colors: client_information.chat_colors,
                 skin_parts: client_information.skin_parts,
@@ -398,7 +399,7 @@ impl Player {
         }
     }
 
-    pub async fn handle_interact(&self, _: &Server, interact: SInteract) {
+    pub async fn handle_interact(&self, interact: SInteract) {
         let sneaking = interact.sneaking;
         let entity = &self.living_entity.entity;
         if entity.sneaking.load(std::sync::atomic::Ordering::Relaxed) != sneaking {

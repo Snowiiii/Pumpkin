@@ -27,7 +27,7 @@ class Extractor : ModInitializer {
             Recipes(),
             Particles(),
             SyncedRegistries(),
-            Packet(),
+            Packets(),
             Screens(),
             Items(),
             Blocks(),

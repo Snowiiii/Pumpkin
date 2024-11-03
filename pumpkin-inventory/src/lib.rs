@@ -16,7 +16,7 @@ pub use open_container::OpenContainer;
 
 /// https://wiki.vg/Inventory
 #[derive(Debug, ToPrimitive, FromPrimitive, Clone, Copy, Eq, PartialEq)]
-#[repr(u16)]
+#[repr(u8)]
 pub enum WindowType {
     // not used
     Generic9x1 = screen!("minecraft:generic_9x1"),

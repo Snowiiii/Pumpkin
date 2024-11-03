@@ -7,9 +7,7 @@ mod packet;
 #[proc_macro_attribute]
 pub fn client_packet(input: TokenStream, item: TokenStream) -> TokenStream {
     let ast: syn::DeriveInput = syn::parse(item.clone()).unwrap();
-
     let name = &ast.ident;
-
     let (impl_generics, ty_generics, _) = ast.generics.split_for_impl();
 
     let input: proc_macro2::TokenStream = packet::packet_clientbound(input);
@@ -28,9 +26,7 @@ pub fn client_packet(input: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn server_packet(input: TokenStream, item: TokenStream) -> TokenStream {
     let ast: syn::DeriveInput = syn::parse(item.clone()).unwrap();
-
     let name = &ast.ident;
-
     let (impl_generics, ty_generics, _) = ast.generics.split_for_impl();
 
     let input: proc_macro2::TokenStream = packet::packet_serverbound(input);

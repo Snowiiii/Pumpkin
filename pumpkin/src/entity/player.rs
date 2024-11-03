@@ -223,7 +223,7 @@ impl Player {
         world.remove_player(self).await;
 
         let watched = self.watched_section.load();
-        let view_distance = i32::from(get_view_distance(self).await);
+        let view_distance = get_view_distance(self).await;
         let cylindrical = Cylindrical::new(Vector2::new(watched.x, watched.z), view_distance);
 
         // NOTE: This all must be synchronous to make sense! The chunks are handled asynhrously.
@@ -676,8 +676,7 @@ impl Player {
                     .await;
             }
             SInteract::PACKET_ID => {
-                self.handle_interact(server, SInteract::read(bytebuf)?)
-                    .await;
+                self.handle_interact(SInteract::read(bytebuf)?).await;
             }
             SKeepAlive::PACKET_ID => {
                 self.handle_keep_alive(SKeepAlive::read(bytebuf)?).await;

@@ -134,6 +134,7 @@ impl Player {
         }
 
         let click = Click::new(
+            // TODO: This is very bad
             packet
                 .mode
                 .0

@@ -12,7 +12,7 @@ import net.minecraft.network.state.*
 import net.minecraft.server.MinecraftServer
 
 
-class Packet : Extractor.Extractor {
+class Packets : Extractor.Extractor {
     override fun fileName(): String {
         return "packets.json"
     }

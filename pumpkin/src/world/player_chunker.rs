@@ -11,13 +11,13 @@ use crate::entity::player::Player;
 
 use super::World;
 
-pub async fn get_view_distance(player: &Player) -> i8 {
+pub async fn get_view_distance(player: &Player) -> u8 {
     player
         .config
         .lock()
         .await
         .view_distance
-        .clamp(2, BASIC_CONFIG.view_distance as i8)
+        .clamp(2, BASIC_CONFIG.view_distance)
 }
 
 pub async fn player_join(world: &World, player: Arc<Player>) {
@@ -36,7 +36,7 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
             chunk_z: chunk_pos.z.into(),
         })
         .await;
-    let view_distance = i32::from(get_view_distance(&player).await);
+    let view_distance = get_view_distance(&player).await;
     log::debug!(
         "Player {} ({}) joined with view distance: {}",
         player.gameprofile.name,
@@ -70,7 +70,7 @@ pub async fn update_position(player: &Arc<Player>) {
             })
             .await;
 
-        let view_distance = i32::from(get_view_distance(player).await);
+        let view_distance = get_view_distance(player).await;
         let old_cylindrical = Cylindrical::new(
             Vector2::new(current_watched.x, current_watched.z),
             view_distance,

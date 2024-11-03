@@ -52,7 +52,7 @@ pub struct PlayerConfig {
     /// The player's preferred language.
     pub locale: String, // 16
     /// The maximum distance at which chunks are rendered.
-    pub view_distance: i8,
+    pub view_distance: u8,
     /// The player's chat mode settings
     pub chat_mode: ChatMode,
     /// Whether chat colors are enabled.
@@ -392,8 +392,7 @@ impl Client {
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
             SStatusRequest::PACKET_ID => {
-                self.handle_status_request(server, SStatusRequest::read(bytebuf)?)
-                    .await;
+                self.handle_status_request(server).await;
             }
             SStatusPingRequest::PACKET_ID => {
                 self.handle_ping_request(SStatusPingRequest::read(bytebuf)?)
@@ -432,8 +431,7 @@ impl Client {
                     .await;
             }
             SLoginAcknowledged::PACKET_ID => {
-                self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf)?)
-                    .await;
+                self.handle_login_acknowledged(server).await;
             }
             _ => {
                 log::error!(
@@ -463,7 +461,7 @@ impl Client {
                     .await;
             }
             SAcknowledgeFinishConfig::PACKET_ID => {
-                self.handle_config_acknowledged(&SAcknowledgeFinishConfig::read(bytebuf)?);
+                self.handle_config_acknowledged();
             }
             SKnownPacks::PACKET_ID => {
                 self.handle_known_packs(server, SKnownPacks::read(bytebuf)?)

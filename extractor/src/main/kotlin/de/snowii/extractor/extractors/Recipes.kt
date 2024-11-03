@@ -22,6 +22,7 @@ class Recipes : Extractor.Extractor {
 
             recipeJson.addProperty("name", recipeRaw.id.value.toString())
             val recipe: Recipe<*> = recipeRaw.value()
+            recipeJson.addProperty("category", recipe.group)
             recipeJson.addProperty("group", recipe.group)
             recipeJson.addProperty("type", recipe.type.toString())
             val placementArray = JsonArray()

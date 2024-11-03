@@ -7,10 +7,10 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 pub struct Screen {
     name: String,
-    id: u16,
+    id: u8,
 }
 
-static SCREENS: LazyLock<HashMap<String, u16>> = LazyLock::new(|| {
+static SCREENS: LazyLock<HashMap<String, u8>> = LazyLock::new(|| {
     serde_json::from_str::<Vec<Screen>>(include_str!("../../assets/screens.json"))
         .expect("Could not parse screens.json registry.")
         .into_iter()
