@@ -43,7 +43,7 @@ impl Scoreboard {
         world
             .broadcast_packet_all(&CDisplayObjective::new(
                 pumpkin_protocol::client::play::DisplaySlot::Sidebar,
-                "test",
+                objective.name,
             ))
             .await;
     }

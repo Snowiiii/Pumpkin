@@ -400,7 +400,7 @@ impl Client {
             }
             _ => {
                 log::error!(
-                    "Failed to handle client packet id {:#04x} in Status State",
+                    "Failed to handle client packet id {} in Status State",
                     packet.id.0
                 );
                 return Err(DeserializerError::UnknownPacket);
@@ -435,7 +435,7 @@ impl Client {
             }
             _ => {
                 log::error!(
-                    "Failed to handle client packet id {:#04x} in Login State",
+                    "Failed to handle client packet id {} in Login State",
                     packet.id.0
                 );
                 return Ok(());
@@ -469,7 +469,7 @@ impl Client {
             }
             _ => {
                 log::error!(
-                    "Failed to handle client packet id {:#04x} in Config State",
+                    "Failed to handle client packet id {} in Config State",
                     packet.id.0
                 );
                 return Err(DeserializerError::UnknownPacket);
