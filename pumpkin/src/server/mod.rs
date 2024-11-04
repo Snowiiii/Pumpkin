@@ -9,6 +9,7 @@ use pumpkin_protocol::client::login::CEncryptionRequest;
 use pumpkin_protocol::{client::config::CPluginMessage, ClientPacket};
 use pumpkin_registry::Registry;
 use pumpkin_world::dimension::Dimension;
+use rand::prelude::SliceRandom;
 use std::collections::HashMap;
 use std::{
     sync::{
@@ -82,7 +83,7 @@ impl Server {
             "./world".parse().unwrap(),
         ));
         Self {
-            cached_registry: Registry::get_static(),
+            cached_registry: Registry::get_synced(),
             open_containers: RwLock::new(HashMap::new()),
             drag_handler: DragHandler::new(),
             // 0 is invalid
@@ -147,7 +148,7 @@ impl Server {
     }
 
     pub async fn remove_player(&self) {
-        // TODO: Config if we want increase online
+        // TODO: Config if we want decrease online
         self.server_listing.lock().await.remove_player();
     }
 
@@ -200,6 +201,26 @@ impl Server {
         None
     }
 
+    /// Returns all players from all worlds.
+    pub async fn get_all_players(&self) -> Vec<Arc<Player>> {
+        let mut players = Vec::<Arc<Player>>::new();
+
+        for world in &self.worlds {
+            for (_, player) in world.current_players.lock().await.iter() {
+                players.push(player.clone());
+            }
+        }
+
+        players
+    }
+
+    /// Returns a random player from any of the worlds or None if all worlds are empty.
+    pub async fn get_random_player(&self) -> Option<Arc<Player>> {
+        let players = self.get_all_players().await;
+
+        players.choose(&mut rand::thread_rng()).map(Arc::<_>::clone)
+    }
+
     /// Searches for a player by their UUID across all worlds.
     ///
     /// This function iterates through each world managed by the server and attempts to find a player with the specified UUID.
@@ -234,6 +255,18 @@ impl Server {
             count += world.current_players.lock().await.len();
         }
         count
+    }
+
+    /// Similar to [`Server::get_player_count`] >= n, but may be more efficient since it stops it's iteration through all worlds as soon as n players were found.
+    pub async fn has_n_players(&self, n: usize) -> bool {
+        let mut count = 0;
+        for world in &self.worlds {
+            count += world.current_players.lock().await.len();
+            if count >= n {
+                return true;
+            }
+        }
+        false
     }
 
     /// Generates a new entity id

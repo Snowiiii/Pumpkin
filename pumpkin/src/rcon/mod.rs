@@ -3,22 +3,11 @@ use std::net::SocketAddr;
 use packet::{ClientboundPacket, Packet, PacketError, ServerboundPacket};
 use pumpkin_config::{RCONConfig, ADVANCED_CONFIG};
 use std::sync::Arc;
-use thiserror::Error;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::server::Server;
 
 mod packet;
-
-#[derive(Debug, Error)]
-pub enum RCONError {
-    #[error("authentication failed")]
-    Auth,
-    #[error("command exceeds the maximum length")]
-    CommandTooLong,
-    #[error("{}", _0)]
-    Io(std::io::Error),
-}
 
 pub struct RCONServer;
 

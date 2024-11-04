@@ -4,8 +4,8 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import de.snowii.extractor.Extractor
-import net.minecraft.registry.DynamicRegistryManager
 import net.minecraft.registry.Registries
+import net.minecraft.server.MinecraftServer
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Box
 import net.minecraft.world.EmptyBlockView
@@ -17,7 +17,7 @@ class Blocks : Extractor.Extractor {
         return "blocks.json"
     }
 
-    override fun extract(registryManager: DynamicRegistryManager.Immutable): JsonElement {
+    override fun extract(server: MinecraftServer): JsonElement {
         val topLevelJson = JsonObject()
 
         val blocksJson = JsonArray()

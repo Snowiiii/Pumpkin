@@ -4,7 +4,7 @@ use pumpkin_protocol::CURRENT_MC_PROTOCOL;
 
 use crate::{
     command::{
-        tree::CommandTree, tree::ConsumedArgs, CommandExecutor, CommandSender, InvalidTreeError,
+        args::ConsumedArgs, tree::CommandTree, CommandExecutor, CommandSender, InvalidTreeError,
     },
     server::CURRENT_MC_VERSION,
 };
@@ -13,7 +13,7 @@ const NAMES: [&str; 1] = ["pumpkin"];
 
 const DESCRIPTION: &str = "Display information about Pumpkin.";
 
-struct PumpkinExecutor {}
+struct PumpkinExecutor;
 
 #[async_trait]
 impl CommandExecutor for PumpkinExecutor {
@@ -35,5 +35,5 @@ impl CommandExecutor for PumpkinExecutor {
 }
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
-    CommandTree::new(NAMES, DESCRIPTION).execute(&PumpkinExecutor {})
+    CommandTree::new(NAMES, DESCRIPTION).execute(&PumpkinExecutor)
 }

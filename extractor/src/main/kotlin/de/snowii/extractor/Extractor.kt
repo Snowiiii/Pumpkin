@@ -5,7 +5,6 @@ import com.google.gson.JsonElement
 import de.snowii.extractor.extractors.*
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
-import net.minecraft.registry.DynamicRegistryManager
 import net.minecraft.server.MinecraftServer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -27,7 +26,9 @@ class Extractor : ModInitializer {
             Sounds(),
             Recipes(),
             Particles(),
-            Packet(),
+            SyncedRegistries(),
+            Packets(),
+            Screens(),
             Items(),
             Blocks(),
         )
@@ -47,7 +48,7 @@ class Extractor : ModInitializer {
                 try {
                     val out = outputDirectory.resolve(ext.fileName())
                     val fileWriter = FileWriter(out.toFile(), StandardCharsets.UTF_8)
-                    gson.toJson(ext.extract(server.registryManager), fileWriter)
+                    gson.toJson(ext.extract(server), fileWriter)
                     fileWriter.close()
                     logger.info("Wrote " + out.toAbsolutePath())
                 } catch (e: java.lang.Exception) {
@@ -61,6 +62,6 @@ class Extractor : ModInitializer {
         fun fileName(): String
 
         @Throws(Exception::class)
-        fun extract(registryManager: DynamicRegistryManager.Immutable): JsonElement
+        fun extract(server: MinecraftServer): JsonElement
     }
 }
