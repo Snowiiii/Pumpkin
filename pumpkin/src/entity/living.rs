@@ -2,7 +2,6 @@ use std::sync::atomic::AtomicI32;
 
 use crossbeam::atomic::AtomicCell;
 use pumpkin_protocol::client::play::{CDamageEvent, CEntityStatus, CSetEntityMetadata, Metadata};
-use pumpkin_registry::DamageType;
 
 use super::Entity;
 
@@ -56,12 +55,13 @@ impl LivingEntity {
             .await;
     }
 
-    pub async fn damage(&self, amount: f32, damage_type: DamageType) {
+    pub async fn damage(&self, amount: f32) {
         self.entity
             .world
             .broadcast_packet_all(&CDamageEvent::new(
                 self.entity.entity_id.into(),
-                (damage_type as i32).into(),
+                // TODO add damage_type id
+                0.into(),
                 None,
                 None,
                 None,
@@ -120,7 +120,7 @@ impl LivingEntity {
                 return;
             }
 
-            self.damage(damage, DamageType::Fall).await;
+            self.damage(damage).await;
         } else if y_diff < 0.0 {
             self.fall_distance.store(0.0);
         } else {

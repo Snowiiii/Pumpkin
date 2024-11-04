@@ -1,8 +1,10 @@
+use pumpkin_macros::server_packet;
 use serde::Deserialize;
 
 use crate::VarInt;
 
 #[derive(Deserialize)]
-pub struct SClientStatus {
+#[server_packet("play:client_command")]
+pub struct SClientCommand {
     pub action_id: VarInt,
 }
