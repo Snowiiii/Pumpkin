@@ -28,7 +28,10 @@ use pumpkin_protocol::{
         CSystemChatMessage, GameEvent, PlayerAction,
     },
     server::play::{
-        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn
+        SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SClientTickEnd,
+        SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerInput,
+        SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
+        SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
     },
     RawPacket, ServerPacket, SoundCategory, VarInt,
 };
