@@ -5,12 +5,17 @@ use pumpkin_protocol::client::play::{CEntityStatus, CSetEntityMetadata, Metadata
 
 use super::Entity;
 
-/// Represents a Living Entity (e.g. Player, Zombie, Enderman...)
+/// Represents a living entity within the game world.
+///
+/// This struct encapsulates the core properties and behaviors of living entities, including players, mobs, and other creatures.
 pub struct LivingEntity {
+    /// The underlying entity object, providing basic entity information and functionality.
     pub entity: Entity,
+    /// Tracks the remaining time until the entity can regenerate health.
     pub time_until_regen: AtomicI32,
+    /// Stores the amount of damage the entity last received.
     pub last_damage_taken: AtomicCell<f32>,
-    /// The entity's current health level.
+    /// The current health level of the entity.
     pub health: AtomicCell<f32>,
 }
 

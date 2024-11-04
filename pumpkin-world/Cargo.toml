@@ -13,6 +13,7 @@ derive_more.workspace = true
 itertools.workspace = true
 thiserror.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 log.workspace = true
 parking_lot.workspace = true
 
@@ -25,7 +26,6 @@ dashmap = "6.1.0"
 flate2 = "1.0"
 lz4 = "1.28.0"
 
-serde_json = "1.0"
 enum_dispatch = "0.3.13"
 derive-getters = "0.5.0"
 

@@ -14,27 +14,20 @@ use crate::{
 
 use authentication::GameProfile;
 use crossbeam::atomic::AtomicCell;
-use num_traits::FromPrimitive;
 use pumpkin_config::compression::CompressionInfo;
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
-    bytebuf::DeserializerError,
+    bytebuf::{packet_id::Packet, DeserializerError},
     client::{config::CConfigDisconnect, login::CLoginDisconnect, play::CPlayDisconnect},
     packet_decoder::PacketDecoder,
-    packet_encoder::PacketEncoder,
+    packet_encoder::{PacketEncodeError, PacketEncoder},
     server::{
-        config::{
-            SAcknowledgeFinishConfig, SClientInformationConfig, SKnownPacks, SPluginMessage,
-            ServerboundConfigPackets,
-        },
+        config::{SAcknowledgeFinishConfig, SClientInformationConfig, SKnownPacks, SPluginMessage},
         handshake::SHandShake,
-        login::{
-            SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart,
-            ServerboundLoginPackets,
-        },
-        status::{SStatusPingRequest, SStatusRequest, ServerboundStatusPackets},
+        login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
+        status::{SStatusPingRequest, SStatusRequest},
     },
-    ClientPacket, ConnectionState, PacketError, RawPacket, ServerPacket,
+    ClientPacket, ConnectionState, RawPacket, ServerPacket,
 };
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Mutex;
@@ -43,7 +36,7 @@ use thiserror::Error;
 
 pub mod authentication;
 mod client_packet;
-mod combat;
+pub mod combat;
 mod container;
 pub mod player_packet;
 
@@ -59,7 +52,7 @@ pub struct PlayerConfig {
     /// The player's preferred language.
     pub locale: String, // 16
     /// The maximum distance at which chunks are rendered.
-    pub view_distance: i8,
+    pub view_distance: u8,
     /// The player's chat mode settings
     pub chat_mode: ChatMode,
     /// Whether chat colors are enabled.
@@ -156,7 +149,32 @@ impl Client {
         client_packets_queue.push_back(packet);
     }
 
-    /// Sets the Packet encryption
+    /// Enables or disables packet encryption for the connection.
+    ///
+    /// This function takes an optional shared secret as input. If the shared secret is provided,
+    /// the connection's encryption is enabled using the provided secret key. Otherwise, encryption is disabled.
+    ///
+    /// # Arguments
+    ///
+    /// * `shared_secret`: An optional **already decrypted** shared secret key used for encryption.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating whether the encryption was set successfully.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `EncryptionError` if the shared secret has an incorrect length.
+    ///
+    /// # Examples
+    /// ```
+    ///  let shared_secret = server.decrypt(&encryption_response.shared_secret).unwrap();
+    ///
+    ///  if let Err(error) = self.set_encryption(Some(&shared_secret)).await {
+    ///       self.kick(&error.to_string()).await;
+    ///       return;
+    ///  }
+    /// ```
     pub async fn set_encryption(
         &self,
         shared_secret: Option<&[u8]>, // decrypted
@@ -176,13 +194,24 @@ impl Client {
         Ok(())
     }
 
-    /// Sets the Packet compression
+    /// Enables or disables packet compression for the connection.
+    ///
+    /// This function takes an optional `CompressionInfo` struct as input. If the `CompressionInfo` is provided,
+    /// packet compression is enabled with the specified threshold. Otherwise, compression is disabled.
+    ///
+    /// # Arguments
+    ///
+    /// * `compression`: An optional `CompressionInfo` struct containing the compression threshold and compression level.
     pub async fn set_compression(&self, compression: Option<CompressionInfo>) {
         self.dec.lock().await.set_compression(compression.is_some());
         self.enc.lock().await.set_compression(compression);
     }
 
-    /// Send a Clientbound Packet to the Client
+    /// Sends a clientbound packet to the connected client.
+    ///
+    /// # Arguments
+    ///
+    /// * `packet`: A reference to a packet object implementing the `ClientPacket` trait.
     pub async fn send_packet<P: ClientPacket>(&self, packet: &P) {
         //log::debug!("Sending packet with id {} to {}", P::PACKET_ID, self.id);
         // assert!(!self.closed);
@@ -195,14 +224,8 @@ impl Client {
         }
 
         let mut writer = self.connection_writer.lock().await;
-        if let Err(error) = writer
-            .write_all(&enc.take())
-            .await
-            .map_err(|_| PacketError::ConnectionWrite)
-        {
-            if error.kickable() {
-                self.kick(&error.to_string()).await;
-            }
+        if let Err(error) = writer.write_all(&enc.take()).await {
+            log::debug!("{}", error.to_string());
         }
 
         /*
@@ -216,7 +239,23 @@ impl Client {
         */
     }
 
-    pub async fn try_send_packet<P: ClientPacket>(&self, packet: &P) -> Result<(), PacketError> {
+    /// Sends a clientbound packet to the connected client.
+    ///
+    /// # Arguments
+    ///
+    /// * `packet`: A reference to a packet object implementing the `ClientPacket` trait.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating whether the Packet was Send successfully.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `PacketError` if the could not be Send.
+    pub async fn try_send_packet<P: ClientPacket>(
+        &self,
+        packet: &P,
+    ) -> Result<(), PacketEncodeError> {
         // assert!(!self.closed);
         /*
         log::debug!(
@@ -230,10 +269,7 @@ impl Client {
         enc.append_packet(packet)?;
 
         let mut writer = self.connection_writer.lock().await;
-        writer
-            .write_all(&enc.take())
-            .await
-            .map_err(|_| PacketError::ConnectionWrite)?;
+        let _ = writer.write_all(&enc.take()).await;
 
         /*
         writer
@@ -244,7 +280,19 @@ impl Client {
         Ok(())
     }
 
-    /// Processes all packets send by the client
+    /// Processes all packets received from the connected client in a loop.
+    ///
+    /// This function continuously dequeues packets from the client's packet queue and processes them.
+    /// Processing involves calling the `handle_packet` function with the server instance and the packet itself.
+    ///
+    /// The loop exits when:
+    ///
+    /// - The connection is closed (checked before processing each packet).
+    /// - An error occurs while processing a packet (client is kicked with an error message).
+    ///
+    /// # Arguments
+    ///
+    /// * `server`: A reference to the `Arc<Server>` instance.
     pub async fn process_packets(&self, server: &Arc<Server>) {
         let mut packet_queue = self.client_packets_queue.lock().await;
         while let Some(mut packet) = packet_queue.pop_front() {
@@ -264,7 +312,30 @@ impl Client {
         }
     }
 
-    /// Handles an incoming decoded not Play state Packet
+    /// Handles an incoming packet, routing it to the appropriate handler based on the current connection state.
+    ///
+    /// This function takes a `RawPacket` and routes it to the corresponding handler based on the current connection state.
+    /// It supports the following connection states:
+    ///
+    /// - **Handshake:** Handles handshake packets.
+    /// - **Status:** Handles status request and ping packets.
+    /// - **Login/Transfer:** Handles login and transfer packets.
+    /// - **Config:** Handles configuration packets.
+    ///
+    /// For the `Play` state, an error is logged as it indicates an invalid state for packet processing.
+    ///
+    /// # Arguments
+    ///
+    /// * `server`: A reference to the `Arc<Server>` instance.
+    /// * `packet`: A mutable reference to the `RawPacket` to be processed.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating whether the packet was read and handled successfully.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `DeserializerError` if an error occurs during packet deserialization.
     pub async fn handle_packet(
         &self,
         server: &Arc<Server>,
@@ -319,24 +390,23 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling status group");
         let bytebuf = &mut packet.bytebuf;
-        if let Some(packet) = ServerboundStatusPackets::from_i32(packet.id.0) {
-            match packet {
-                ServerboundStatusPackets::StatusRequest => {
-                    self.handle_status_request(server, SStatusRequest::read(bytebuf)?)
-                        .await;
-                }
-                ServerboundStatusPackets::PingRequest => {
-                    self.handle_ping_request(SStatusPingRequest::read(bytebuf)?)
-                        .await;
-                }
-            };
-        } else {
-            log::error!(
-                "Failed to handle client packet id {:#04x} in Status State",
-                packet.id.0
-            );
-            return Err(DeserializerError::UnknownPacket);
+        match packet.id.0 {
+            SStatusRequest::PACKET_ID => {
+                self.handle_status_request(server).await;
+            }
+            SStatusPingRequest::PACKET_ID => {
+                self.handle_ping_request(SStatusPingRequest::read(bytebuf)?)
+                    .await;
+            }
+            _ => {
+                log::error!(
+                    "Failed to handle client packet id {:#04x} in Status State",
+                    packet.id.0
+                );
+                return Err(DeserializerError::UnknownPacket);
+            }
         };
+
         Ok(())
     }
 
@@ -347,32 +417,29 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling login group for id");
         let bytebuf = &mut packet.bytebuf;
-        if let Some(packet) = ServerboundLoginPackets::from_i32(packet.id.0) {
-            match packet {
-                ServerboundLoginPackets::LoginStart => {
-                    self.handle_login_start(server, SLoginStart::read(bytebuf)?)
-                        .await;
-                }
-                ServerboundLoginPackets::EncryptionResponse => {
-                    self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf)?)
-                        .await;
-                }
-                ServerboundLoginPackets::PluginResponse => {
-                    self.handle_plugin_response(SLoginPluginResponse::read(bytebuf)?)
-                        .await;
-                }
-                ServerboundLoginPackets::LoginAcknowledged => {
-                    self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf)?)
-                        .await;
-                }
-                ServerboundLoginPackets::CookieResponse => {}
-            };
-        } else {
-            log::error!(
-                "Failed to handle client packet id {:#04x} in Login State",
-                packet.id.0
-            );
-            return Ok(());
+        match packet.id.0 {
+            SLoginStart::PACKET_ID => {
+                self.handle_login_start(server, SLoginStart::read(bytebuf)?)
+                    .await;
+            }
+            SEncryptionResponse::PACKET_ID => {
+                self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf)?)
+                    .await;
+            }
+            SLoginPluginResponse::PACKET_ID => {
+                self.handle_plugin_response(SLoginPluginResponse::read(bytebuf)?)
+                    .await;
+            }
+            SLoginAcknowledged::PACKET_ID => {
+                self.handle_login_acknowledged(server).await;
+            }
+            _ => {
+                log::error!(
+                    "Failed to handle client packet id {:#04x} in Login State",
+                    packet.id.0
+                );
+                return Ok(());
+            }
         };
         Ok(())
     }
@@ -384,35 +451,29 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling config group");
         let bytebuf = &mut packet.bytebuf;
-        if let Some(packet) = ServerboundConfigPackets::from_i32(packet.id.0) {
-            #[expect(clippy::match_same_arms)]
-            match packet {
-                ServerboundConfigPackets::ClientInformation => {
-                    self.handle_client_information_config(SClientInformationConfig::read(bytebuf)?)
-                        .await;
-                }
-                ServerboundConfigPackets::CookieResponse => {}
-                ServerboundConfigPackets::PluginMessage => {
-                    self.handle_plugin_message(SPluginMessage::read(bytebuf)?)
-                        .await;
-                }
-                ServerboundConfigPackets::AcknowledgedFinish => {
-                    self.handle_config_acknowledged(&SAcknowledgeFinishConfig::read(bytebuf)?);
-                }
-                ServerboundConfigPackets::KeepAlive => {}
-                ServerboundConfigPackets::Pong => {}
-                ServerboundConfigPackets::ResourcePackResponse => {}
-                ServerboundConfigPackets::KnownPacks => {
-                    self.handle_known_packs(server, SKnownPacks::read(bytebuf)?)
-                        .await;
-                }
-            };
-        } else {
-            log::error!(
-                "Failed to handle client packet id {:#04x} in Config State",
-                packet.id.0
-            );
-            return Err(DeserializerError::UnknownPacket);
+        match packet.id.0 {
+            SClientInformationConfig::PACKET_ID => {
+                self.handle_client_information_config(SClientInformationConfig::read(bytebuf)?)
+                    .await;
+            }
+            SPluginMessage::PACKET_ID => {
+                self.handle_plugin_message(SPluginMessage::read(bytebuf)?)
+                    .await;
+            }
+            SAcknowledgeFinishConfig::PACKET_ID => {
+                self.handle_config_acknowledged();
+            }
+            SKnownPacks::PACKET_ID => {
+                self.handle_known_packs(server, SKnownPacks::read(bytebuf)?)
+                    .await;
+            }
+            _ => {
+                log::error!(
+                    "Failed to handle client packet id {:#04x} in Config State",
+                    packet.id.0
+                );
+                return Err(DeserializerError::UnknownPacket);
+            }
         };
         Ok(())
     }
@@ -463,7 +524,13 @@ impl Client {
         }
     }
 
-    /// Kicks the Client with a reason depending on the connection state
+    /// Disconnects a client from the server with a specified reason.
+    ///
+    /// This function kicks a client identified by its ID from the server. The appropriate disconnect packet is sent based on the client's current connection state.
+    ///
+    /// # Arguments
+    ///
+    /// * `reason`: A string describing the reason for kicking the client.
     pub async fn kick(&self, reason: &str) {
         log::info!("Kicking Client id {} for {}", self.id, reason);
         let result = match self.connection_state.load() {
@@ -491,7 +558,15 @@ impl Client {
         self.close();
     }
 
-    /// You should prefer to use `kick` when you can
+    /// Closes the connection to the client.
+    ///
+    /// This function marks the connection as closed using an atomic flag. It's generally preferable
+    /// to use the `kick` function if you want to send a specific message to the client explaining the reason for the closure.
+    /// However, use `close` in scenarios where sending a message is not critical or might not be possible (e.g., sudden connection drop).
+    ///
+    /// # Notes
+    ///
+    /// This function does not attempt to send any disconnect packets to the client.
     pub fn close(&self) {
         self.closed
             .store(true, std::sync::atomic::Ordering::Relaxed);

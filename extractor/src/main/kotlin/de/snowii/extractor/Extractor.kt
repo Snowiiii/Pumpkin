@@ -5,7 +5,6 @@ import com.google.gson.JsonElement
 import de.snowii.extractor.extractors.*
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
-import net.minecraft.registry.DynamicRegistryManager
 import net.minecraft.server.MinecraftServer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -18,16 +17,18 @@ import java.nio.file.Paths
 
 
 class Extractor : ModInitializer {
-    val MOD_ID: String = "valence_extractor"
-    val LOGGER: Logger = LoggerFactory.getLogger(MOD_ID)
+    private val modID: String = "pumpkin_extractor"
+    private val logger: Logger = LoggerFactory.getLogger(modID)
 
     override fun onInitialize() {
-        LOGGER.info("Starting Pumpkin Extractor")
+        logger.info("Starting Pumpkin Extractor")
         val extractors = arrayOf(
             Sounds(),
             Recipes(),
             Particles(),
-            Packet(),
+            SyncedRegistries(),
+            Packets(),
+            Screens(),
             Items(),
             Blocks(),
         )
@@ -36,7 +37,7 @@ class Extractor : ModInitializer {
         try {
             outputDirectory = Files.createDirectories(Paths.get("pumpkin_extractor_output"))
         } catch (e: IOException) {
-            LOGGER.info("Failed to create output directory.", e)
+            logger.info("Failed to create output directory.", e)
             return
         }
 
@@ -47,11 +48,11 @@ class Extractor : ModInitializer {
                 try {
                     val out = outputDirectory.resolve(ext.fileName())
                     val fileWriter = FileWriter(out.toFile(), StandardCharsets.UTF_8)
-                    gson.toJson(ext.extract(server.registryManager), fileWriter)
+                    gson.toJson(ext.extract(server), fileWriter)
                     fileWriter.close()
-                    LOGGER.info("Wrote " + out.toAbsolutePath())
+                    logger.info("Wrote " + out.toAbsolutePath())
                 } catch (e: java.lang.Exception) {
-                    LOGGER.error(("Extractor for \"" + ext.fileName()) + "\" failed.", e)
+                    logger.error(("Extractor for \"" + ext.fileName()) + "\" failed.", e)
                 }
             }
         })
@@ -61,6 +62,6 @@ class Extractor : ModInitializer {
         fun fileName(): String
 
         @Throws(Exception::class)
-        fun extract(registryManager: DynamicRegistryManager.Immutable): JsonElement
+        fun extract(server: MinecraftServer): JsonElement
     }
 }

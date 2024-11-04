@@ -26,7 +26,6 @@ use pumpkin_protocol::{
     },
     ClientPacket, VarInt,
 };
-use pumpkin_world::block::BlockId;
 use pumpkin_world::chunk::ChunkData;
 use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
 use pumpkin_world::level::Level;
@@ -59,9 +58,11 @@ type ChunkReceiver = (
 pub struct World {
     /// The underlying level, responsible for chunk management and terrain generation.
     pub level: Arc<Level>,
-    /// A map of active players within the world, keyed by their unique token.
+    /// A map of active players within the world, keyed by their unique UUID.
     pub current_players: Arc<Mutex<HashMap<uuid::Uuid, Arc<Player>>>>,
+    /// The world's scoreboard, used for tracking scores, objectives, and display information.
     pub scoreboard: Mutex<Scoreboard>,
+    /// The world's worldborder, defining the playable area and controlling its expansion or contraction.
     pub worldborder: Mutex<Worldborder>,
     // TODO: entities
 }
@@ -486,26 +487,64 @@ impl World {
         None
     }
 
-    /// Gets a Player by UUID
+    /// Retrieves a player by their unique UUID.
+    ///
+    /// This function searches the world's active player list for a player with the specified UUID.
+    /// If found, it returns an `Arc<Player>` reference to the player. Otherwise, it returns `None`.
+    ///
+    /// # Arguments
+    ///
+    /// * `id`: The UUID of the player to retrieve.
+    ///
+    /// # Returns
+    ///
+    /// An `Option<Arc<Player>>` containing the player if found, or `None` if not.
     pub async fn get_player_by_uuid(&self, id: uuid::Uuid) -> Option<Arc<Player>> {
         return self.current_players.lock().await.get(&id).cloned();
     }
 
+    /// Adds a player to the world and broadcasts a join message if enabled.
+    ///
+    /// This function takes a player's UUID and an `Arc<Player>` reference.
+    /// It inserts the player into the world's `current_players` map using the UUID as the key.
+    /// Additionally, it may broadcasts a join message to all connected players in the world.
+    ///
+    /// # Arguments
+    ///
+    /// * `uuid`: The unique UUID of the player to add.
+    /// * `player`: An `Arc<Player>` reference to the player object.
     pub async fn add_player(&self, uuid: uuid::Uuid, player: Arc<Player>) {
-        self.current_players
-            .lock()
-            .await
-            .insert(uuid, player.clone());
+        let mut current_players = self.current_players.lock().await;
+        current_players.insert(uuid, player.clone());
 
         // Handle join message
+        // TODO: Config
         let msg_txt = format!("{} joined the game.", player.gameprofile.name.as_str());
         let msg_comp = TextComponent::text(msg_txt.as_str()).color_named(NamedColor::Yellow);
-        for player in self.current_players.lock().await.values() {
+        for player in current_players.values() {
             player.send_system_message(&msg_comp).await;
         }
         log::info!("{}", msg_comp.to_pretty_console());
     }
 
+    /// Removes a player from the world and broadcasts a disconnect message if enabled.
+    ///
+    /// This function removes a player from the world based on their `Player` reference.
+    /// It performs the following actions:
+    ///
+    /// 1. Removes the player from the `current_players` map using their UUID.
+    /// 2. Broadcasts a `CRemovePlayerInfo` packet to all connected players to inform them about the player leaving.
+    /// 3. Removes the player's entity from the world using its entity ID.
+    /// 4. Optionally sends a disconnect message to all other players notifying them about the player leaving.
+    ///
+    /// # Arguments
+    ///
+    /// * `player`: A reference to the `Player` object to be removed.
+    ///
+    /// # Notes
+    ///
+    /// - This function assumes `broadcast_packet_expect` and `remove_entity` are defined elsewhere.
+    /// - The disconnect message sending is currently optional. Consider making it a configurable option.
     pub async fn remove_player(&self, player: &Player) {
         self.current_players
             .lock()
@@ -521,6 +560,7 @@ impl World {
         self.remove_entity(&player.living_entity.entity).await;
 
         // Send disconnect message / quit message to players in the same world
+        // TODO: Config
         let disconn_msg_txt = format!("{} left the game.", player.gameprofile.name.as_str());
         let disconn_msg_cmp =
             TextComponent::text(disconn_msg_txt.as_str()).color_named(NamedColor::Yellow);
@@ -534,7 +574,7 @@ impl World {
         self.broadcast_packet_all(&CRemoveEntities::new(&[entity.entity_id.into()]))
             .await;
     }
-    pub async fn set_block(&self, position: WorldPosition, block_id: BlockId) {
+    pub async fn set_block(&self, position: WorldPosition, block_id: u16) {
         let (chunk_coordinate, relative_coordinates) = position.chunk_and_chunk_relative_position();
 
         // Since we divide by 16 remnant can never exceed u8
@@ -543,7 +583,7 @@ impl World {
         let chunk = self.receive_chunk(chunk_coordinate).await;
         chunk.write().await.blocks.set_block(relative, block_id);
 
-        self.broadcast_packet_all(&CBlockUpdate::new(&position, i32::from(block_id.0).into()))
+        self.broadcast_packet_all(&CBlockUpdate::new(&position, i32::from(block_id).into()))
             .await;
     }
 
@@ -563,13 +603,13 @@ impl World {
     }
 
     pub async fn break_block(&self, position: WorldPosition) {
-        self.set_block(position, BlockId(0)).await;
+        self.set_block(position, 0).await;
 
         self.broadcast_packet_all(&CWorldEvent::new(2001, &position, 11, false))
             .await;
     }
 
-    pub async fn get_block(&self, position: WorldPosition) -> BlockId {
+    pub async fn get_block(&self, position: WorldPosition) -> u16 {
         let (chunk, relative) = position.chunk_and_chunk_relative_position();
         let relative = ChunkRelativeBlockCoordinates::from(relative);
         let chunk = self.receive_chunk(chunk).await;

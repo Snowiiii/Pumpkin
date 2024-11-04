@@ -57,22 +57,22 @@ impl PerlinTerrainGenerator for PlainsTerrainGenerator {
         if y == -64 {
             blocks.set_block(
                 coordinates,
-                BlockState::new("minecraft:bedrock").unwrap().into(),
+                BlockState::new("minecraft:bedrock").unwrap().state_id,
             );
         } else if y >= -63 && y <= begin_stone_height {
             blocks.set_block(
                 coordinates,
-                BlockState::new("minecraft:stone").unwrap().into(),
+                BlockState::new("minecraft:stone").unwrap().state_id,
             );
         } else if y >= begin_stone_height && y < begin_dirt_height {
             blocks.set_block(
                 coordinates,
-                BlockState::new("minecraft:dirt").unwrap().into(),
+                BlockState::new("minecraft:dirt").unwrap().state_id,
             );
         } else if y == chunk_height - 2 {
             blocks.set_block(
                 coordinates,
-                BlockState::new("minecraft:grass_block").unwrap().into(),
+                BlockState::new("minecraft:grass_block").unwrap().state_id,
             );
         } else if y == chunk_height - 1 {
             // TODO: generate flowers and grass
@@ -84,31 +84,31 @@ impl PerlinTerrainGenerator for PlainsTerrainGenerator {
                         0 => {
                             blocks.set_block(
                                 coordinates,
-                                BlockState::new("minecraft:dandelion").unwrap().into(),
+                                BlockState::new("minecraft:dandelion").unwrap().state_id,
                             );
                         }
                         1 => {
                             blocks.set_block(
                                 coordinates,
-                                BlockState::new("minecraft:oxeye_daisy").unwrap().into(),
+                                BlockState::new("minecraft:oxeye_daisy").unwrap().state_id,
                             );
                         }
                         2 => {
                             blocks.set_block(
                                 coordinates,
-                                BlockState::new("minecraft:cornflower").unwrap().into(),
+                                BlockState::new("minecraft:cornflower").unwrap().state_id,
                             );
                         }
                         3 => {
                             blocks.set_block(
                                 coordinates,
-                                BlockState::new("minecraft:poppy").unwrap().into(),
+                                BlockState::new("minecraft:poppy").unwrap().state_id,
                             );
                         }
                         _ => {
                             blocks.set_block(
                                 coordinates,
-                                BlockState::new("minecraft:azure_bluet").unwrap().into(),
+                                BlockState::new("minecraft:azure_bluet").unwrap().state_id,
                             );
                         }
                     }
@@ -116,7 +116,7 @@ impl PerlinTerrainGenerator for PlainsTerrainGenerator {
                     // TODO: Tall grass, Tall grass data called `half`, There is `upper` and `lower`
                     blocks.set_block(
                         coordinates,
-                        BlockState::new("minecraft:short_grass").unwrap().into(),
+                        BlockState::new("minecraft:short_grass").unwrap().state_id,
                     );
                 }
             }

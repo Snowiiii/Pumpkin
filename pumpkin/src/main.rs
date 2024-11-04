@@ -5,8 +5,6 @@
 // REMOVE SOME WHEN RELEASE
 #![expect(clippy::cargo_common_metadata)]
 #![expect(clippy::multiple_crate_versions)]
-#![expect(clippy::significant_drop_in_scrutinee)]
-#![expect(clippy::significant_drop_tightening)]
 #![expect(clippy::single_call_fn)]
 #![expect(clippy::cast_sign_loss)]
 #![expect(clippy::cast_possible_truncation)]
@@ -40,7 +38,7 @@ use std::time::Instant;
 // Setup some tokens to allow us to identify which event is for which socket.
 
 pub mod client;
-pub mod commands;
+pub mod command;
 pub mod entity;
 pub mod error;
 pub mod proxy;
@@ -257,7 +255,7 @@ fn setup_console(server: Arc<Server>) {
             if !out.is_empty() {
                 let dispatcher = server.command_dispatcher.clone();
                 dispatcher
-                    .handle_command(&mut commands::CommandSender::Console, &server, &out)
+                    .handle_command(&mut command::CommandSender::Console, &server, &out)
                     .await;
             }
         }

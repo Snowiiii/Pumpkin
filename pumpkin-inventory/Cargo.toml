@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 # For items
 pumpkin-world = { path = "../pumpkin-world" }
+pumpkin-macros = { path = "../pumpkin-macros" }
 
 log.workspace = true
 itertools.workspace = true

@@ -49,6 +49,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Entity Spawning
   - [x] Chunk Loading
   - [x] Chunk Generation
+  - [ ] World Time
   - [x] Scoreboard
   - [x] World Borders
   - [ ] World Saving
@@ -61,7 +62,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Player Inventory
   - [x] Player Combat
 - Server
-  - [x] Plugins
+  - [ ] Plugins
   - [ ] Query
   - [x] RCON
   - [x] Inventories

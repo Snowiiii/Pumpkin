@@ -60,7 +60,7 @@ impl AttackType {
     }
 }
 
-pub(super) async fn handle_knockback(
+pub async fn handle_knockback(
     attacker_entity: &Entity,
     victim: &Player,
     victim_entity: &Entity,
@@ -93,11 +93,7 @@ pub(super) async fn handle_knockback(
     victim.client.send_packet(packet).await;
 }
 
-pub(super) async fn spawn_sweep_particle(
-    attacker_entity: &Entity,
-    world: &World,
-    pos: &Vector3<f64>,
-) {
+pub async fn spawn_sweep_particle(attacker_entity: &Entity, world: &World, pos: &Vector3<f64>) {
     let yaw = attacker_entity.yaw.load();
     let d = -f64::from((yaw * (PI / 180.0)).sin());
     let e = f64::from((yaw * (PI / 180.0)).cos());
@@ -123,11 +119,7 @@ pub(super) async fn spawn_sweep_particle(
         .await;
 }
 
-pub(super) async fn player_attack_sound(
-    pos: &Vector3<f64>,
-    world: &World,
-    attack_type: AttackType,
-) {
+pub async fn player_attack_sound(pos: &Vector3<f64>, world: &World, attack_type: AttackType) {
     match attack_type {
         AttackType::Knockback => {
             world
