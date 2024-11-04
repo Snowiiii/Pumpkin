@@ -29,7 +29,7 @@ use pumpkin_protocol::{
     },
     server::play::{
         SChatCommand, SChatMessage, SClientInformationPlay, SClientTickEnd, SConfirmTeleport,
-        SInteract, SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerPosition,
+        SInteract, SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerInput, SPlayerPosition,
         SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround,
         SSwingArm, SUseItem, SUseItemOn,
     },
@@ -674,6 +674,9 @@ impl Player {
             SClientInformationPlay::PACKET_ID => {
                 self.handle_client_information(SClientInformationPlay::read(bytebuf)?)
                     .await;
+            }
+            SPlayerInput::PACKET_ID => {
+                // TODO
             }
             SInteract::PACKET_ID => {
                 self.handle_interact(SInteract::read(bytebuf)?).await;
