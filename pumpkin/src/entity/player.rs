@@ -28,10 +28,7 @@ use pumpkin_protocol::{
         CSystemChatMessage, GameEvent, PlayerAction,
     },
     server::play::{
-        SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SConfirmTeleport,
-        SInteract, SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerPosition,
-        SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround,
-        SSwingArm, SUseItem, SUseItemOn,
+        SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn
     },
     RawPacket, ServerPacket, SoundCategory, VarInt,
 };
@@ -772,11 +769,17 @@ impl Player {
                 self.handle_client_status(SClientCommand::read(bytebuf)?)
                     .await;
             }
+            SPlayerInput::PACKET_ID => {
+                // TODO
+            }
             SInteract::PACKET_ID => {
                 self.handle_interact(SInteract::read(bytebuf)?).await;
             }
             SKeepAlive::PACKET_ID => {
                 self.handle_keep_alive(SKeepAlive::read(bytebuf)?).await;
+            }
+            SClientTickEnd::PACKET_ID => {
+                // TODO
             }
             SPlayerPosition::PACKET_ID => {
                 self.handle_position(SPlayerPosition::read(bytebuf)?).await;
@@ -819,7 +822,7 @@ impl Player {
             }
             SUseItem::PACKET_ID => self.handle_use_item(&SUseItem::read(bytebuf)?),
             _ => {
-                log::warn!("Failed to handle player packet id {:#04x}", packet.id.0);
+                log::warn!("Failed to handle player packet id {}", packet.id.0);
                 // TODO: We give an error if all play packets are implemented
                 //  return Err(Box::new(DeserializerError::UnknownPacket));
             }
