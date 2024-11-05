@@ -63,7 +63,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Player Combat
 - Server
   - [ ] Plugins
-  - [ ] Query
+  - [x] Query
   - [x] RCON
   - [x] Inventories
   - [x] Particles
