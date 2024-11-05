@@ -25,7 +25,6 @@ pub struct Entity {
     pub entity_type: EntityType,
     /// The world in which the entity exists.
     pub world: Arc<World>,
-    /// The entity's current health level.
     /// The entity's current position in the world
     pub pos: AtomicCell<Vector3<f64>>,
     /// The entity's position rounded to the nearest block coordinates
@@ -90,6 +89,7 @@ impl Entity {
         let pos = self.pos.load();
         if pos.x != x || pos.y != y || pos.z != z {
             self.pos.store(Vector3::new(x, y, z));
+
             let floor_x = x.floor() as i32;
             let floor_y = y.floor() as i32;
             let floor_z = z.floor() as i32;

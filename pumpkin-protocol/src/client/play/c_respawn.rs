@@ -1,24 +1,12 @@
 use pumpkin_core::math::position::WorldPosition;
-
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
 #[derive(Serialize)]
-#[client_packet("play:login")]
-pub struct CLogin<'a> {
-    entity_id: i32,
-    is_hardcore: bool,
-    dimension_count: VarInt,
-    dimension_names: &'a [&'a str],
-    max_players: VarInt,
-    view_distance: VarInt,
-    simulated_distance: VarInt,
-    reduced_debug_info: bool,
-    enabled_respawn_screen: bool,
-    limited_crafting: bool,
-    // Spawn Info
+#[client_packet("play:respawn")]
+pub struct CRespawn<'a> {
     dimension_type: VarInt,
     dimension_name: &'a str,
     hashed_seed: i64,
@@ -29,21 +17,12 @@ pub struct CLogin<'a> {
     death_dimension_name: Option<(&'a str, WorldPosition)>,
     portal_cooldown: VarInt,
     sealevel: VarInt,
-    enforce_secure_chat: bool,
+    data_kept: u8,
 }
 
-impl<'a> CLogin<'a> {
+impl<'a> CRespawn<'a> {
     #[expect(clippy::too_many_arguments)]
     pub fn new(
-        entity_id: i32,
-        is_hardcore: bool,
-        dimension_names: &'a [&'a str],
-        max_players: VarInt,
-        view_distance: VarInt,
-        simulated_distance: VarInt,
-        reduced_debug_info: bool,
-        enabled_respawn_screen: bool,
-        limited_crafting: bool,
         dimension_type: VarInt,
         dimension_name: &'a str,
         hashed_seed: i64,
@@ -54,19 +33,9 @@ impl<'a> CLogin<'a> {
         death_dimension_name: Option<(&'a str, WorldPosition)>,
         portal_cooldown: VarInt,
         sealevel: VarInt,
-        enforce_secure_chat: bool,
+        data_kept: u8,
     ) -> Self {
         Self {
-            entity_id,
-            is_hardcore,
-            dimension_count: VarInt(dimension_names.len() as i32),
-            dimension_names,
-            max_players,
-            view_distance,
-            simulated_distance,
-            reduced_debug_info,
-            enabled_respawn_screen,
-            limited_crafting,
             dimension_type,
             dimension_name,
             hashed_seed,
@@ -77,7 +46,7 @@ impl<'a> CLogin<'a> {
             death_dimension_name,
             portal_cooldown,
             sealevel,
-            enforce_secure_chat,
+            data_kept,
         }
     }
 }
