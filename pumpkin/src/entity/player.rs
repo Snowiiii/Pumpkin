@@ -10,7 +10,6 @@ use std::{
 use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
 use num_derive::FromPrimitive;
-use num_traits::ToPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::{
     math::{boundingbox::BoundingBox, position::WorldPosition, vector2::Vector2, vector3::Vector3},
@@ -591,10 +590,11 @@ impl Player {
                 }],
             ))
             .await;
+        #[allow(clippy::cast_precision_loss)]
         self.client
             .send_packet(&CGameEvent::new(
                 GameEvent::ChangeGameMode,
-                gamemode.to_f32().unwrap(),
+                gamemode as i32 as f32,
             ))
             .await;
     }

@@ -9,7 +9,6 @@ use crate::entity::{
     player::{ChunkHandleWrapper, Player},
     Entity,
 };
-use num_traits::ToPrimitive;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
@@ -162,8 +161,8 @@ impl World {
                 0.into(),
                 "minecraft:overworld",
                 0, // seed
-                gamemode.to_u8().unwrap(),
-                base_config.default_gamemode.to_i8().unwrap(),
+                gamemode as u8,
+                base_config.default_gamemode as i8,
                 false,
                 false,
                 None,
