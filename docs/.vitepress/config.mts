@@ -12,6 +12,12 @@ export default defineConfig({
     search: {
       provider: "local",
     },
+    nav: [
+      {
+        text: "Documentation",
+        link: '/about/introduction'
+      }
+    ],
     sidebar: [
       {
         text: "About",
@@ -47,6 +53,7 @@ export default defineConfig({
         ],
       },
     ],
+    
 
     socialLinks: [
       { icon: "github", link: "https://github.com/Snowiiii/Pumpkin" },

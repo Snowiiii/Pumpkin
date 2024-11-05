@@ -429,3 +429,22 @@ Should the timestamp be printed in the message
 ```toml
 timestamp=true
 ```
+
+## Query
+
+### Enabled
+
+Should clients be able to query the server for info, using the query protocol?
+
+```toml
+enabled=true
+```
+
+### Port (optional)
+
+If enabled, what port should the server listen to for query requests?
+
+```toml
+# By default query will listen on the same port the server is running on
+port=25565
+```
