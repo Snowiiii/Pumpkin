@@ -512,10 +512,17 @@ impl Player {
         log::debug!("Sending player abilities to {}", self.gameprofile.name);
         self.send_abilties_update().await;
 
+        let world = &self.living_entity.entity.world;
+
         // teleport
-        let position = Vector3::new(10.0, 120.0, 10.0);
+        let mut position = Vector3::new(10.0, 120.0, 10.0);
         let yaw = 10.0;
         let pitch = 10.0;
+
+        let top = world
+            .get_top_block(Vector2::new(position.x as i32, position.z as i32))
+            .await;
+        position.y = f64::from(top + 1);
 
         log::debug!("Sending player teleport to {}", self.gameprofile.name);
         self.teleport(position, yaw, pitch).await;

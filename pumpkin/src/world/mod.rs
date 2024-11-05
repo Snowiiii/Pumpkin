@@ -135,6 +135,19 @@ impl World {
         }
     }
 
+    /// Gets the y position of the first non air block from the top down
+    pub async fn get_top_block(&self, position: Vector2<i32>) -> i32 {
+        for y in (-64..=319).rev() {
+            let pos = WorldPosition(Vector3::new(position.x, y, position.z));
+            let block = self.get_block(pos).await;
+            if block == 0 || block == 750 || block == 751 {
+                continue;
+            }
+            return y;
+        }
+        319
+    }
+
     #[expect(clippy::too_many_lines)]
     pub async fn spawn_player(&self, base_config: &BasicConfiguration, player: Arc<Player>) {
         // This code follows the vanilla packet order
@@ -184,9 +197,14 @@ impl World {
         player.send_abilties_update().await;
 
         // teleport
-        let position = Vector3::new(10.0, 120.0, 10.0);
+        let mut position = Vector3::new(10.0, 120.0, 10.0);
         let yaw = 10.0;
         let pitch = 10.0;
+
+        let top = self
+            .get_top_block(Vector2::new(position.x as i32, position.z as i32))
+            .await;
+        position.y = f64::from(top + 1);
 
         log::debug!("Sending player teleport to {}", player.gameprofile.name);
         player.teleport(position, yaw, pitch).await;
