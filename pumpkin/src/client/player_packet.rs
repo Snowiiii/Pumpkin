@@ -75,14 +75,14 @@ impl Player {
         }
 
         let entity = &self.living_entity.entity;
-        entity.set_pos(
+        self.living_entity.set_pos(
             Self::clamp_horizontal(position.x),
             Self::clamp_vertical(position.feet_y),
             Self::clamp_horizontal(position.z),
         );
 
         let pos = entity.pos.load();
-        let last_pos = entity.last_pos.load();
+        let last_pos = self.living_entity.last_pos.load();
 
         entity
             .on_ground
@@ -139,14 +139,14 @@ impl Player {
         }
 
         let entity = &self.living_entity.entity;
-        entity.set_pos(
+        self.living_entity.set_pos(
             Self::clamp_horizontal(position_rotation.x),
             Self::clamp_vertical(position_rotation.feet_y),
             Self::clamp_horizontal(position_rotation.z),
         );
 
         let pos = entity.pos.load();
-        let last_pos = entity.last_pos.load();
+        let last_pos = self.living_entity.last_pos.load();
 
         entity.on_ground.store(
             position_rotation.ground,

@@ -484,7 +484,7 @@ impl Player {
     }
 
     pub async fn respawn(self: &Arc<Self>, alive: bool) {
-        let last_pos = self.living_entity.entity.last_pos.load();
+        let last_pos = self.living_entity.last_pos.load();
         let death_location = WorldPosition(Vector3::new(
             last_pos.x.round() as i32,
             last_pos.y.round() as i32,
@@ -527,7 +527,7 @@ impl Player {
         log::debug!("Sending player teleport to {}", self.gameprofile.name);
         self.teleport(position, yaw, pitch).await;
 
-        self.living_entity.entity.last_pos.store(position);
+        self.living_entity.last_pos.store(position);
 
         // TODO: difficulty, exp bar, status effect
 
@@ -587,8 +587,9 @@ impl Player {
                 .store(0, std::sync::atomic::Ordering::Relaxed);
         }
         let teleport_id = i + 1;
+        self.living_entity
+            .set_pos(position.x, position.y, position.z);
         let entity = &self.living_entity.entity;
-        entity.set_pos(position.x, position.y, position.z);
         entity.set_rotation(yaw, pitch);
         *self.awaiting_teleport.lock().await = Some((teleport_id.into(), position));
         self.client

@@ -1,6 +1,7 @@
 use std::sync::atomic::AtomicI32;
 
 use crossbeam::atomic::AtomicCell;
+use pumpkin_core::math::vector3::Vector3;
 use pumpkin_protocol::client::play::{CDamageEvent, CEntityStatus, CSetEntityMetadata, Metadata};
 
 use super::Entity;
@@ -11,6 +12,8 @@ use super::Entity;
 pub struct LivingEntity {
     /// The underlying entity object, providing basic entity information and functionality.
     pub entity: Entity,
+    /// Previously last known position of the entity
+    pub last_pos: AtomicCell<Vector3<f64>>,
     /// Tracks the remaining time until the entity can regenerate health.
     pub time_until_regen: AtomicI32,
     /// Stores the amount of damage the entity last received.
@@ -25,6 +28,7 @@ impl LivingEntity {
     pub const fn new(entity: Entity) -> Self {
         Self {
             entity,
+            last_pos: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
             time_until_regen: AtomicI32::new(0),
             last_damage_taken: AtomicCell::new(0.0),
             health: AtomicCell::new(20.0),
@@ -41,6 +45,11 @@ impl LivingEntity {
             self.time_until_regen
                 .fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
         }
+    }
+
+    pub fn set_pos(&self, x: f64, y: f64, z: f64) {
+        self.last_pos.store(self.entity.pos.load());
+        self.entity.set_pos(x, y, z);
     }
 
     pub async fn set_health(&self, health: f32) {
@@ -99,7 +108,7 @@ impl LivingEntity {
 
     pub async fn update_fall_distance(&self, dont_damage: bool) {
         let y = self.entity.pos.load().y;
-        let last_y = self.entity.last_pos.load().y;
+        let last_y = self.last_pos.load().y;
         let grounded = self
             .entity
             .on_ground

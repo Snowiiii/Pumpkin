@@ -208,7 +208,7 @@ impl World {
         log::debug!("Sending player teleport to {}", player.gameprofile.name);
         player.teleport(position, yaw, pitch).await;
 
-        player.living_entity.entity.last_pos.store(position);
+        player.living_entity.last_pos.store(position);
 
         let gameprofile = &player.gameprofile;
         // first send info update to our new player, So he can see his Skin
