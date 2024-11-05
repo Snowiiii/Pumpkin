@@ -1,18 +1,17 @@
-// Query protocol
-
 use std::{
     collections::HashMap,
     ffi::{CString, NulError},
-    io::Cursor,
     net::SocketAddr,
     sync::Arc,
     time::Duration,
 };
 
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
-use pumpkin_protocol::query::{CBasePacket, CBasePayload, SBasePacket, SBasePayload};
+use pumpkin_protocol::query::{
+    CBasicStatus, CFullStatus, CHandshake, PacketType, RawQueryPacket, SHandshake, SStatusRequest,
+};
 use rand::Rng;
-use tokio::{net::UdpSocket, sync::RwLock, time::interval};
+use tokio::{net::UdpSocket, sync::RwLock, time};
 
 use crate::server::{Server, CURRENT_MC_VERSION};
 
@@ -28,7 +27,19 @@ pub async fn start_query_handler(server: Arc<Server>, bound_addr: SocketAddr) {
             .expect("Unable to bind to address"),
     );
 
-    let clients = QueryInfo::new();
+    // Challange tokens are bound to the IP address and port
+    let valid_challange_tokens = Arc::new(RwLock::new(HashMap::new()));
+    let valid_challange_tokens_clone = valid_challange_tokens.clone();
+    // All challange tokens ever created are expired every 30 seconds
+    tokio::spawn(async move {
+        let mut interval = time::interval(Duration::from_secs(30));
+
+        loop {
+            interval.tick().await;
+            valid_challange_tokens_clone.write().await.clear();
+        }
+    });
+
     log::info!(
         "Server query running on {}",
         socket
@@ -38,169 +49,125 @@ pub async fn start_query_handler(server: Arc<Server>, bound_addr: SocketAddr) {
 
     loop {
         let socket = socket.clone();
-        let clients = clients.clone();
+        let valid_challange_tokens = valid_challange_tokens.clone();
         let server = server.clone();
         let mut buf = vec![0; 1024];
         let (_, addr) = socket.recv_from(&mut buf).await.unwrap();
 
         tokio::spawn(async move {
-            if let Err(err) = handle_packet(buf, clients, server, socket, addr, bound_addr).await {
+            if let Err(err) = handle_packet(
+                buf,
+                valid_challange_tokens,
+                server,
+                socket,
+                addr,
+                bound_addr,
+            )
+            .await
+            {
                 log::error!("Interior 0 bytes found! Cannot encode query response! {err}");
             }
         });
     }
 }
 
-// Since only used in one place, would be better to inline
+// Errors of packets that don't meet the format aren't returned since we won't handle them anyway
+// The only errors that are thrown are because of a null terminator in a CString
+// since those errors need to be corrected by server owner
 #[inline]
 async fn handle_packet(
     buf: Vec<u8>,
-    clients: Arc<QueryInfo>,
+    clients: Arc<RwLock<HashMap<i32, SocketAddr>>>,
     server: Arc<Server>,
     socket: Arc<UdpSocket>,
     addr: SocketAddr,
     bound_addr: SocketAddr,
 ) -> Result<(), NulError> {
-    let cursor = Cursor::new(buf);
-
-    if let Ok(packet) = SBasePacket::decode(cursor).await {
-        match packet.payload {
-            SBasePayload::Handshake => {
-                let challange_token = rand::thread_rng().gen_range(1..=i32::MAX);
-                let response = CBasePacket {
-                    session_id: packet.session_id,
-                    payload: CBasePayload::Handshake { challange_token },
-                };
-
-                clients
-                    .add_new_client(packet.session_id, challange_token, addr)
-                    .await;
-
-                // Ignore all errors since we don't want the query handler to crash
-                // Protocol also ignores all errors and just doesn't respond
-                let _ = socket
-                    .send_to(response.encode().await.as_slice(), addr)
-                    .await;
-            }
-            SBasePayload::BasicInfo(challange_token) => {
-                if clients
-                    .check_client(packet.session_id, challange_token, addr)
-                    .await
-                {
-                    let resposne = CBasePacket {
+    if let Ok(mut raw_packet) = RawQueryPacket::decode(buf).await {
+        match raw_packet.packet_type {
+            PacketType::Handshake => {
+                if let Ok(packet) = SHandshake::decode(&mut raw_packet).await {
+                    let challange_token = rand::thread_rng().gen_range(1..=i32::MAX);
+                    let response = CHandshake {
                         session_id: packet.session_id,
-                        payload: CBasePayload::BasicInfo {
-                            motd: CString::new(BASIC_CONFIG.motd.as_str())?,
-                            map: CString::new("world")?,
-                            num_players: server.get_player_count().await,
-                            max_players: BASIC_CONFIG.max_players as usize,
-                            host_port: bound_addr.port(),
-                            host_ip: CString::new(bound_addr.ip().to_string()).unwrap(),
-                        },
+                        challange_token,
                     };
 
-                    let _ = socket
-                        .send_to(resposne.encode().await.as_slice(), addr)
-                        .await;
-                }
-            }
-            SBasePayload::FullInfo(challange_token) => {
-                if clients
-                    .check_client(packet.session_id, challange_token, addr)
-                    .await
-                {
-                    let response = CBasePacket {
-                        session_id: packet.session_id,
-                        payload: CBasePayload::FullInfo {
-                            hostname: CString::new(BASIC_CONFIG.motd.as_str())?,
-                            version: CString::new(CURRENT_MC_VERSION)?,
-                            plugins: CString::new("Pumpkin on 1.21.3")?, // TODO: Fill this with plugins when plugins are working
-                            map: CString::new("world")?, // TODO: Get actual world name
-                            num_players: server.get_player_count().await,
-                            max_players: BASIC_CONFIG.max_players as usize,
-                            host_port: bound_addr.port(),
-                            host_ip: CString::new(bound_addr.ip().to_string())?,
-                            players: {
-                                let mut players: Vec<CString> = Vec::new();
-
-                                for world in &server.worlds {
-                                    let mut world_players = world
-                                        .current_players
-                                        .lock()
-                                        .await
-                                        .values()
-                                        .take(4 - players.len())
-                                        .map(|player| {
-                                            CString::new(player.gameprofile.name.as_str()).unwrap()
-                                        })
-                                        .collect::<Vec<_>>();
-
-                                    players.append(&mut world_players); // Append players from this world
-
-                                    if players.len() >= 4 {
-                                        break; // Stop if we've collected 4 players
-                                    }
-                                }
-
-                                players
-                            },
-                        },
-                    };
-
+                    // Ignore all errors since we don't want the query handler to crash
+                    // Protocol also ignores all errors and just doesn't respond
                     let _ = socket
                         .send_to(response.encode().await.as_slice(), addr)
                         .await;
+
+                    clients.write().await.insert(challange_token, addr);
+                }
+            }
+            PacketType::Status => {
+                if let Ok(packet) = SStatusRequest::decode(&mut raw_packet).await {
+                    if clients
+                        .read()
+                        .await
+                        .get(&packet.challange_token)
+                        .is_some_and(|token_bound_ip: &SocketAddr| token_bound_ip == &addr)
+                    {
+                        if packet.is_full_request {
+                            // Get 4 players
+                            let mut players: Vec<CString> = Vec::new();
+                            for world in &server.worlds {
+                                let mut world_players = world
+                                    .current_players
+                                    .lock()
+                                    .await
+                                    // Although there is no documented limit, we will limit to 4 players
+                                    .values()
+                                    .take(4 - players.len())
+                                    .map(|player| {
+                                        CString::new(player.gameprofile.name.as_str()).unwrap()
+                                    })
+                                    .collect::<Vec<_>>();
+
+                                players.append(&mut world_players); // Append players from this world
+
+                                if players.len() >= 4 {
+                                    break; // Stop if we've collected 4 players
+                                }
+                            }
+
+                            let response = CFullStatus {
+                                session_id: packet.session_id,
+                                hostname: CString::new(BASIC_CONFIG.motd.as_str())?,
+                                version: CString::new(CURRENT_MC_VERSION)?,
+                                plugins: CString::new("Pumpkin on 1.21.3")?, // TODO: Fill this with plugins when plugins are working
+                                map: CString::new("world")?, // TODO: Get actual world name
+                                num_players: server.get_player_count().await,
+                                max_players: BASIC_CONFIG.max_players as usize,
+                                host_port: bound_addr.port(),
+                                host_ip: CString::new(bound_addr.ip().to_string())?,
+                                players,
+                            };
+
+                            let _ = socket
+                                .send_to(response.encode().await.as_slice(), addr)
+                                .await;
+                        } else {
+                            let resposne = CBasicStatus {
+                                session_id: packet.session_id,
+                                motd: CString::new(BASIC_CONFIG.motd.as_str())?,
+                                map: CString::new("world")?,
+                                num_players: server.get_player_count().await,
+                                max_players: BASIC_CONFIG.max_players as usize,
+                                host_port: bound_addr.port(),
+                                host_ip: CString::new(bound_addr.ip().to_string())?,
+                            };
+
+                            let _ = socket
+                                .send_to(resposne.encode().await.as_slice(), addr)
+                                .await;
+                        }
+                    }
                 }
             }
         }
     }
-
     Ok(())
-}
-
-struct QueryInfo {
-    // Query by session id to get address and challange token
-    // Clear hashmap every 30 seconds as thats how long every challange token ever lasts
-    // If challange token is expired, the client needs to handshake again
-    // So there is no point in keeping all this data
-    clients: RwLock<HashMap<i32, (i32, SocketAddr)>>,
-}
-
-impl QueryInfo {
-    fn new() -> Arc<Self> {
-        let clients = Arc::new(Self {
-            clients: RwLock::new(HashMap::new()),
-        });
-
-        let clients_clone = Arc::clone(&clients);
-        tokio::spawn(async move {
-            let mut interval = interval(Duration::from_secs(30));
-
-            loop {
-                interval.tick().await;
-                clients_clone.clear_clients().await;
-            }
-        });
-
-        clients
-    }
-
-    async fn add_new_client(&self, session_id: i32, challange_token: i32, addr: SocketAddr) {
-        self.clients
-            .write()
-            .await
-            .insert(session_id, (challange_token, addr));
-    }
-
-    async fn check_client(&self, session_id: i32, challange_token: i32, addr: SocketAddr) -> bool {
-        if let Some(info) = self.clients.read().await.get(&session_id) {
-            info.0 == challange_token && info.1 == addr
-        } else {
-            false
-        }
-    }
-
-    async fn clear_clients(&self) {
-        self.clients.write().await.clear();
-    }
 }
