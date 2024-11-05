@@ -45,7 +45,6 @@ impl Player {
             if id == &confirm_teleport.teleport_id {
                 // we should set the pos now to that we requested in the teleport packet, Is may fixed issues when the client sended position packets while being teleported
                 self.living_entity
-                    .entity
                     .set_pos(position.x, position.y, position.z);
 
                 *awaiting_teleport = None;
