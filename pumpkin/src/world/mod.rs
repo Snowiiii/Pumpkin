@@ -192,7 +192,6 @@ impl World {
         {
             let mut abilities = player.abilities.lock().await;
             abilities.allow_flying = true;
-            abilities.flying = true;
         }
         player.send_abilties_update().await;
 
