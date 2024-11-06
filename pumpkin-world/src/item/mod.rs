@@ -24,3 +24,12 @@ impl PartialEq for ItemStack {
         self.item_id == other.item_id
     }
 }
+
+impl ItemStack {
+    pub fn new(item_count: u8, item_id: u16) -> Self {
+        Self {
+            item_count,
+            item_id,
+        }
+    }
+}
