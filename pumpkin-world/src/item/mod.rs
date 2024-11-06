@@ -1,5 +1,5 @@
 mod item_categories;
-mod item_registry;
+pub mod item_registry;
 pub use item_registry::ITEMS;
 #[derive(serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
