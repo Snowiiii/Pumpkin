@@ -1,4 +1,4 @@
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
@@ -81,13 +81,11 @@ impl Client {
         // Don't allow new logons when server is full.
         // If max players is set to zero, then there is no max player count enforced.
         // TODO: If client is an operator or otherwise suitable elevated permissions, allow client to bypass this requirement.
-        let max_players = BASIC_CONFIG
-            .max_players
-            .to_usize()
-            .expect("Unable to convert to usize");
-        if max_players > 0 && server.get_player_count().await >= max_players {
+        let max_players = BASIC_CONFIG.max_players;
+        if max_players > 0 && server.get_player_count().await >= max_players as usize {
             self.kick("The server is currently full, please try again later")
                 .await;
+            return;
         }
 
         if !Self::is_valid_player_name(&login_start.name) {

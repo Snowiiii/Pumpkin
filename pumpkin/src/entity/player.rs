@@ -11,7 +11,6 @@ use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
 use log::warn;
 use num_derive::FromPrimitive;
-use num_traits::ToPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::{
     math::{boundingbox::BoundingBox, position::WorldPosition, vector2::Vector2, vector3::Vector3},
@@ -24,15 +23,15 @@ use pumpkin_macros::sound;
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
-        CGameEvent, CHurtAnimation, CKeepAlive, CPlayDisconnect, CPlayerAbilities,
-        CPlayerInfoUpdate, CSetHealth, CSyncPlayerPosition, CSystemChatMessage, GameEvent,
-        PlayerAction,
+        CCombatDeath, CGameEvent, CHurtAnimation, CKeepAlive, CPlayDisconnect, CPlayerAbilities,
+        CPlayerInfoUpdate, CRespawn, CSetHealth, CSpawnEntity, CSyncPlayerPosition,
+        CSystemChatMessage, GameEvent, PlayerAction,
     },
     server::play::{
-        SChatCommand, SChatMessage, SClientInformationPlay, SClientTickEnd, SConfirmTeleport,
-        SInteract, SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerInput, SPlayerPosition,
-        SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround,
-        SSwingArm, SUseItem, SUseItemOn,
+        SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SClientTickEnd,
+        SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerInput,
+        SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
+        SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
     },
     RawPacket, ServerPacket, SoundCategory, VarInt,
 };
@@ -50,7 +49,7 @@ use crate::{
         Client, PlayerConfig,
     },
     server::Server,
-    world::World,
+    world::{player_chunker, World},
 };
 use crate::{error::PumpkinError, world::player_chunker::get_view_distance};
 
@@ -124,10 +123,6 @@ pub struct Player {
     ///
     /// **Note:** When the `abilities` field is updated, the server should send a `send_abilities_update` packet to the client to notify them of the changes.
     pub abilities: Mutex<Abilities>,
-    /// The player's last known position.
-    ///
-    /// This field is used to calculate the player's movement delta for network synchronization and other purposes.
-    pub last_position: AtomicCell<Vector3<f64>>,
 
     /// The current stage of the block the player is breaking.
     pub current_block_destroy_stage: AtomicU8,
@@ -201,7 +196,6 @@ impl Player {
             abilities: Mutex::new(Abilities::default()),
             gamemode: AtomicCell::new(gamemode),
             watched_section: AtomicCell::new(Vector3::new(0, 0, 0)),
-            last_position: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
             wait_for_keep_alive: AtomicBool::new(false),
             keep_alive_id: AtomicI64::new(0),
             last_keep_alive_time: AtomicCell::new(std::time::Instant::now()),
@@ -352,9 +346,9 @@ impl Player {
             .store(0, std::sync::atomic::Ordering::Relaxed);
 
         // TODO: attack damage attribute and deal damage
-        let damage = 2.0;
-        if !victim.living_entity.damage(damage)
-            || (config.protect_creative && victim.gamemode.load() == GameMode::Creative)
+        let mut damage = 1.0;
+        if (config.protect_creative && victim.gamemode.load() == GameMode::Creative)
+            || !victim.living_entity.check_damage(damage)
         {
             world
                 .play_sound(
@@ -378,9 +372,11 @@ impl Player {
 
         player_attack_sound(&pos, world, attack_type).await;
 
-        // if is_crit {
-        //     damage *= 1.5;
-        // }
+        if matches!(attack_type, AttackType::Critical) {
+            damage *= 1.5;
+        }
+
+        victim.living_entity.damage(damage).await;
 
         let mut knockback_strength = 1.0;
         match attack_type {
@@ -462,7 +458,7 @@ impl Player {
     }
 
     /// Updates the current abilities the Player has
-    pub async fn send_abilties_update(&mut self) {
+    pub async fn send_abilties_update(&self) {
         let mut b = 0i8;
         let abilities = &self.abilities.lock().await;
 
@@ -487,6 +483,98 @@ impl Player {
             .await;
     }
 
+    pub async fn respawn(self: &Arc<Self>, alive: bool) {
+        let last_pos = self.living_entity.last_pos.load();
+        let death_location = WorldPosition(Vector3::new(
+            last_pos.x.round() as i32,
+            last_pos.y.round() as i32,
+            last_pos.z.round() as i32,
+        ));
+
+        let data_kept = u8::from(alive);
+
+        self.client
+            .send_packet(&CRespawn::new(
+                0.into(),
+                "minecraft:overworld",
+                0, // seed
+                self.gamemode.load() as u8,
+                self.gamemode.load() as i8,
+                false,
+                false,
+                Some(("minecraft:overworld", death_location)),
+                0.into(),
+                0.into(),
+                data_kept,
+            ))
+            .await;
+
+        log::debug!("Sending player abilities to {}", self.gameprofile.name);
+        self.send_abilties_update().await;
+
+        let world = &self.living_entity.entity.world;
+
+        // teleport
+        let mut position = Vector3::new(10.0, 120.0, 10.0);
+        let yaw = 10.0;
+        let pitch = 10.0;
+
+        let top = world
+            .get_top_block(Vector2::new(position.x as i32, position.z as i32))
+            .await;
+        position.y = f64::from(top + 1);
+
+        log::debug!("Sending player teleport to {}", self.gameprofile.name);
+        self.teleport(position, yaw, pitch).await;
+
+        self.living_entity.last_pos.store(position);
+
+        // TODO: difficulty, exp bar, status effect
+
+        let world = &self.living_entity.entity.world;
+        world
+            .worldborder
+            .lock()
+            .await
+            .init_client(&self.client)
+            .await;
+
+        // TODO: world spawn (compass stuff)
+
+        self.client
+            .send_packet(&CGameEvent::new(GameEvent::StartWaitingChunks, 0.0))
+            .await;
+
+        let entity = &self.living_entity.entity;
+        world
+            .broadcast_packet_except(
+                &[self.gameprofile.id],
+                // TODO: add velo
+                &CSpawnEntity::new(
+                    entity.entity_id.into(),
+                    self.gameprofile.id,
+                    (EntityType::Player as i32).into(),
+                    position.x,
+                    position.y,
+                    position.z,
+                    pitch,
+                    yaw,
+                    yaw,
+                    0.into(),
+                    0.0,
+                    0.0,
+                    0.0,
+                ),
+            )
+            .await;
+
+        player_chunker::player_join(world, self.clone()).await;
+
+        // update commands
+
+        self.set_health(20.0, 20, 20.0).await;
+    }
+
     /// yaw and pitch in degrees
     pub async fn teleport(&self, position: Vector3<f64>, yaw: f32, pitch: f32) {
         // this is the ultra special magic code used to create the teleport id
@@ -499,8 +587,9 @@ impl Player {
                 .store(0, std::sync::atomic::Ordering::Relaxed);
         }
         let teleport_id = i + 1;
+        self.living_entity
+            .set_pos(position.x, position.y, position.z);
         let entity = &self.living_entity.entity;
-        entity.set_pos(position.x, position.y, position.z);
         entity.set_rotation(yaw, pitch);
         *self.awaiting_teleport.lock().await = Some((teleport_id.into(), position));
         self.client
@@ -571,6 +660,17 @@ impl Player {
             .await;
     }
 
+    pub async fn kill(&self) {
+        self.living_entity.kill().await;
+
+        self.client
+            .send_packet(&CCombatDeath::new(
+                self.entity_id().into(),
+                TextComponent::text("noob"),
+            ))
+            .await;
+    }
+
     pub async fn set_gamemode(&self, gamemode: GameMode) {
         // We could send the same gamemode without problems. But why waste bandwidth ?
         let current_gamemode = self.gamemode.load();
@@ -579,6 +679,7 @@ impl Player {
             "Setting the same gamemode as already is"
         );
         self.gamemode.store(gamemode);
+        self.abilities.lock().await.flying = false;
         // So a little story time. I actually made an abilties_from_gamemode function. I looked at vanilla and they always send the abilties from the gamemode. But the funny thing actually is. That the client
         // does actually use the same method and set the abilties when receiving the CGameEvent gamemode packet. Just Mojang nonsense
         self.living_entity
@@ -592,10 +693,11 @@ impl Player {
                 }],
             ))
             .await;
+        #[allow(clippy::cast_precision_loss)]
         self.client
             .send_packet(&CGameEvent::new(
                 GameEvent::ChangeGameMode,
-                gamemode.to_f32().unwrap(),
+                gamemode as i32 as f32,
             ))
             .await;
     }
@@ -674,6 +776,10 @@ impl Player {
             }
             SClientInformationPlay::PACKET_ID => {
                 self.handle_client_information(SClientInformationPlay::read(bytebuf)?)
+                    .await;
+            }
+            SClientCommand::PACKET_ID => {
+                self.handle_client_status(SClientCommand::read(bytebuf)?)
                     .await;
             }
             SPlayerInput::PACKET_ID => {
@@ -771,7 +877,7 @@ impl Default for Abilities {
             flying: false,
             allow_flying: false,
             creative: false,
-            fly_speed: 0.5,
+            fly_speed: 0.4,
             walk_speed_fov: 0.1,
         }
     }

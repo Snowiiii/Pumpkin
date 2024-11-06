@@ -1,12 +1,13 @@
 use std::str::FromStr;
 
-use num_derive::{FromPrimitive, ToPrimitive};
+use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseGameModeError;
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, FromPrimitive, ToPrimitive)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, FromPrimitive)]
+#[repr(i8)]
 pub enum GameMode {
     Undefined = -1,
     Survival,

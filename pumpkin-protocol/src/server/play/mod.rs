@@ -1,6 +1,7 @@
 mod s_chat_command;
 mod s_chat_message;
 mod s_click_container;
+mod s_client_command;
 mod s_client_information;
 mod s_client_tick_end;
 mod s_close_container;
@@ -25,6 +26,7 @@ mod s_use_item_on;
 pub use s_chat_command::*;
 pub use s_chat_message::*;
 pub use s_click_container::*;
+pub use s_client_command::*;
 pub use s_client_information::*;
 pub use s_client_tick_end::*;
 pub use s_close_container::*;
