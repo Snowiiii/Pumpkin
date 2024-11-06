@@ -497,8 +497,8 @@ impl Player {
                 0.into(),
                 "minecraft:overworld",
                 0, // seed
-                self.gamemode.load().to_u8().unwrap(),
-                self.gamemode.load().to_i8().unwrap(),
+                self.gamemode.load() as u8,
+                self.gamemode.load() as i8,
                 false,
                 false,
                 Some(("minecraft:overworld", death_location)),
