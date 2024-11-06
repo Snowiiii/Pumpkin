@@ -2,7 +2,7 @@ use noise::{NoiseFn, Perlin};
 use pumpkin_core::math::vector2::Vector2;
 
 use crate::{
-    chunk::{ChunkBlocks, ChunkData},
+    chunk::{ChunkBlocks, ChunkData, ChunkHeightmaps},
     coordinates::{ChunkRelativeBlockCoordinates, ChunkRelativeXZBlockCoordinates},
     WORLD_LOWEST_Y,
 };
@@ -75,6 +75,7 @@ impl<B: BiomeGenerator, T: PerlinTerrainGenerator> WorldGenerator for GenericGen
         ChunkData {
             blocks,
             position: at,
+            heightmap: ChunkHeightmaps::default()
         }
     }
 }

@@ -25,6 +25,7 @@ dashmap = "6.1.0"
 # Compression
 flate2 = "1.0"
 lz4 = "1.28.0"
+rle_vec = { git = "https://github.com/suprohub/rle_vec.git" }
 
 enum_dispatch = "0.3.13"
 derive-getters = "0.5.0"

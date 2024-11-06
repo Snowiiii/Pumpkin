@@ -4,7 +4,7 @@ use pumpkin_protocol::CURRENT_MC_PROTOCOL;
 
 use crate::{
     command::{
-        args::ConsumedArgs, tree::CommandTree, CommandExecutor, CommandSender, InvalidTreeError,
+        args::ConsumedArgs, tree::CommandTree, tree_builder::literal, CommandExecutor, CommandSender, InvalidTreeError
     },
     server::CURRENT_MC_VERSION,
 };
@@ -13,10 +13,10 @@ const NAMES: [&str; 1] = ["pumpkin"];
 
 const DESCRIPTION: &str = "Display information about Pumpkin.";
 
-struct PumpkinExecutor;
+struct PumpkinVersion;
 
 #[async_trait]
-impl CommandExecutor for PumpkinExecutor {
+impl CommandExecutor for PumpkinVersion {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
@@ -34,6 +34,32 @@ impl CommandExecutor for PumpkinExecutor {
     }
 }
 
+struct PumpkinDump;
+
+#[async_trait]
+impl CommandExecutor for PumpkinDump {
+    async fn execute<'a>(
+        &self,
+        sender: &mut CommandSender<'a>,
+        server: &crate::server::Server,
+        _args: &ConsumedArgs<'a>,
+    ) -> Result<(), InvalidTreeError> {
+        log::info!("Sending dump...");
+        log::info!("......");
+        
+        for (idx, world) in server.worlds.iter().enumerate() {
+            log::info!("\nWorld {idx}");
+            log::info!("{:?}", world.level);
+        }
+
+        log::info!("......");
+        sender.send_message(TextComponent::text("Dump sended to console!")).await;
+        Ok(())
+    }
+}
+
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
-    CommandTree::new(NAMES, DESCRIPTION).execute(&PumpkinExecutor)
+    CommandTree::new(NAMES, DESCRIPTION)
+        .with_child(literal("version").execute(&PumpkinVersion))
+        .with_child(literal("dump").execute(&PumpkinDump))
 }

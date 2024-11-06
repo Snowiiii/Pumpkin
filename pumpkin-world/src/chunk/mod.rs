@@ -1,9 +1,11 @@
-use std::cmp::max;
+use std::{cmp::max, vec::IntoIter};
 use std::collections::HashMap;
 use std::ops::Index;
 
 use fastnbt::LongArray;
+use itertools::{Chunk, IntoChunks, Itertools};
 use pumpkin_core::math::vector2::Vector2;
+use rle_vec::RleVec;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -54,19 +56,20 @@ pub enum CompressionError {
     LZ4Error(std::io::Error),
 }
 
+#[derive(Debug)]
 pub struct ChunkData {
     pub blocks: ChunkBlocks,
-    pub position: Vector2<i32>,
-}
-pub struct ChunkBlocks {
-    // TODO make this a Vec that doesn't store the upper layers that only contain air
-
-    // The packet relies on this ordering -> leave it like this for performance
-    /// Ordering: yzx (y being the most significant)
-    blocks: Box<[u16; CHUNK_VOLUME]>,
-
     /// See `https://minecraft.fandom.com/wiki/Heightmap` for more info
     pub heightmap: ChunkHeightmaps,
+    pub position: Vector2<i32>,
+}
+
+// The packet relies on this ordering -> leave it like this for performance
+/// Ordering: yzx (y being the most significant)
+#[derive(Debug)]
+pub enum ChunkBlocks {
+    Single(u16),
+    Multi(RleVec<u16>)
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -151,40 +154,33 @@ impl Default for ChunkHeightmaps {
 
 impl Default for ChunkBlocks {
     fn default() -> Self {
-        Self {
-            blocks: Box::new([0; CHUNK_VOLUME]),
-            heightmap: ChunkHeightmaps::default(),
-        }
+        Self::Single(0)
     }
 }
 
 impl ChunkBlocks {
     pub const fn len(&self) -> usize {
-        self.blocks.len()
+        CHUNK_VOLUME
     }
 
     pub const fn is_empty(&self) -> bool {
-        self.blocks.is_empty()
+        false
     }
 
     pub const fn subchunks_len(&self) -> usize {
-        self.blocks.len().div_ceil(SUBCHUNK_VOLUME)
-    }
-
-    pub fn empty_with_heightmap(heightmap: ChunkHeightmaps) -> Self {
-        Self {
-            blocks: Box::new([0; CHUNK_VOLUME]),
-            heightmap,
-        }
+        CHUNK_VOLUME.div_ceil(SUBCHUNK_VOLUME)
     }
 
     /// Gets the given block in the chunk
     pub fn get_block(&self, position: ChunkRelativeBlockCoordinates) -> u16 {
-        self.blocks[Self::convert_index(position)]
+        match self {
+            Self::Single(block) => *block,
+            Self::Multi(blocks) => blocks[Self::convert_index(position)]
+        }
     }
 
     /// Sets the given block in the chunk, returning the old block
-    pub fn set_block(&mut self, position: ChunkRelativeBlockCoordinates, block_id: u16) -> u16 {
+    pub fn set_block(&mut self, position: ChunkRelativeBlockCoordinates, block_id: u16) {
         // TODO @LUK_ESC? update the heightmap
         self.set_block_no_heightmap_update(position, block_id)
     }
@@ -198,14 +194,33 @@ impl ChunkBlocks {
         &mut self,
         position: ChunkRelativeBlockCoordinates,
         block: u16,
-    ) -> u16 {
-        std::mem::replace(&mut self.blocks[Self::convert_index(position)], block)
+    ) {
+        match self {
+            Self::Single(single_block) => {
+                if *single_block != block {
+                    let mut vec = RleVec::new();
+                    vec.push_n(CHUNK_VOLUME, *single_block);
+                    vec.set(Self::convert_index(position), block);
+                    *self = Self::Multi(vec)
+                }
+            }
+            Self::Multi(blocks) => blocks.set(Self::convert_index(position), block),
+        }
     }
 
-    pub fn iter_subchunks(&self) -> impl Iterator<Item = &[u16; SUBCHUNK_VOLUME]> {
-        self.blocks
-            .chunks(SUBCHUNK_VOLUME)
-            .map(|subchunk| subchunk.try_into().unwrap())
+    pub fn subchunks(&self) -> IntoChunks<IntoIter<u16>> {
+        match self {
+            Self::Single(block) => {
+                vec![*block; CHUNK_VOLUME]
+                    .into_iter()
+                    .chunks(SUBCHUNK_VOLUME)
+            },
+            Self::Multi(blocks) => {
+                blocks.to_vec()
+                    .into_iter()
+                    .chunks(SUBCHUNK_VOLUME)
+            }
+        }
     }
 
     fn convert_index(index: ChunkRelativeBlockCoordinates) -> usize {
@@ -225,7 +240,10 @@ impl Index<ChunkRelativeBlockCoordinates> for ChunkBlocks {
     type Output = u16;
 
     fn index(&self, index: ChunkRelativeBlockCoordinates) -> &Self::Output {
-        &self.blocks[Self::convert_index(index)]
+        match self {
+            Self::Single(block) => block,
+            Self::Multi(blocks) => &blocks[Self::convert_index(index)]
+        }
     }
 }
 
@@ -242,7 +260,7 @@ impl ChunkData {
             .map_err(|e| ChunkParsingError::ErrorDeserializingChunk(e.to_string()))?;
 
         // this needs to be boxed, otherwise it will cause a stack-overflow
-        let mut blocks = ChunkBlocks::empty_with_heightmap(chunk_data.heightmaps);
+        let mut blocks = ChunkBlocks::Single(0);
         let mut block_index = 0; // which block we're currently at
 
         for section in chunk_data.sections.into_iter() {
@@ -312,6 +330,7 @@ impl ChunkData {
         Ok(ChunkData {
             blocks,
             position: at,
+            heightmap: chunk_data.heightmaps
         })
     }
 }
