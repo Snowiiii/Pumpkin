@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use pumpkin_core::text::color::{Color, NamedColor};
 use pumpkin_core::text::TextComponent;
 use pumpkin_world::block::block_registry;
-use pumpkin_world::item::ItemStack;
 
 use crate::command::args::arg_bounded_num::BoundedNumArgumentConsumer;
 use crate::command::args::arg_item::ItemArgumentConsumer;
