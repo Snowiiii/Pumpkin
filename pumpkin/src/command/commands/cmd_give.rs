@@ -60,16 +60,14 @@ impl CommandExecutor for GiveExecutor {
             }
         };
 
-        dbg!(item_count);
-
         for target in targets {
             target.give_items(item.item_id, item_count).await;
-            target
-                .inventory
-                .lock()
-                .await
-                .set_slot(36, Some(ItemStack::new(1, item.item_id)), true)
-                .unwrap();
+            //target
+            //    .inventory
+            //    .lock()
+            //    .await
+            //    .set_slot(36, Some(ItemStack::new(1, item.item_id)), true)
+            //    .unwrap();
         }
 
         sender
