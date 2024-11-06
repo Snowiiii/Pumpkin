@@ -23,7 +23,9 @@ pub(super) fn read_byte_slice(buff: &mut &[u8]) -> Option<u8> {
     })
 }
 
-pub trait VarEncodedInteger: Debug + Copy + Clone + PartialEq + Eq + Ord + PartialOrd + Hash {
+pub trait VarEncodedInteger:
+    Debug + Copy + Clone + PartialEq + Eq + Ord + PartialOrd + Hash
+{
     /// The maximum number of bytes this `VarEncodedInteger` could occupy when read from and
     /// written to the Minecraft protocol.
     const MAX_SIZE: usize;
@@ -41,7 +43,10 @@ pub trait VarEncodedInteger: Debug + Copy + Clone + PartialEq + Eq + Ord + Parti
         Self::decode(|| read_byte_slice(buff))
     }
 
-    fn try_decode<E>(mut reader: impl FnMut() -> Result<Option<u8>, E>, map_err: impl FnOnce(VarIntDecodeError) -> E) -> Result<Self, E> {
+    fn try_decode<E>(
+        mut reader: impl FnMut() -> Result<Option<u8>, E>,
+        map_err: impl FnOnce(VarIntDecodeError) -> E,
+    ) -> Result<Self, E> {
         let mut reader_error = None;
         let res = Self::decode(|| {
             reader().unwrap_or_else(|err| {
@@ -52,7 +57,7 @@ pub trait VarEncodedInteger: Debug + Copy + Clone + PartialEq + Eq + Ord + Parti
 
         match reader_error {
             Some(err) => Err(err),
-            None => res.map_err(map_err)
+            None => res.map_err(map_err),
         }
     }
 
@@ -60,16 +65,18 @@ pub trait VarEncodedInteger: Debug + Copy + Clone + PartialEq + Eq + Ord + Parti
         Self::try_decode(
             || {
                 let mut byte = 0_u8;
-                reader.read(std::slice::from_mut(&mut byte)).map(|len| match len {
-                    1 => Some(byte),
-                    0 => None,
-                    _ => unreachable!(),
-                })
+                reader
+                    .read(std::slice::from_mut(&mut byte))
+                    .map(|len| match len {
+                        1 => Some(byte),
+                        0 => None,
+                        _ => unreachable!(),
+                    })
             },
             |err| match err {
                 VarIntDecodeError::Incomplete => io::ErrorKind::UnexpectedEof.into(),
                 VarIntDecodeError::TooLarge => io::ErrorKind::InvalidData.into(),
-            }
+            },
         )
     }
 
@@ -89,7 +96,6 @@ macro_rules! impl_var_int {
 
         #[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
         pub struct $var_int($inner_ty);
-
 
         impl $var_int {
             pub const fn new(x: $inner_ty) -> Self {
@@ -111,9 +117,9 @@ macro_rules! impl_var_int {
                     None => 1,
                     Some(n) => ((n.ilog2() / 7) + 1) as usize,
                 };
-                
+
                 debug_assert_eq!(self.encode(|buff| buff.len()), len);
-                
+
                 len
             }
 
@@ -142,10 +148,11 @@ macro_rules! impl_var_int {
                     if (value & const { !(var_int_helper::SEGMENT_BITS as $unsigned_ty) }) == 0 {
                         let byte = value as u8;
                         write(byte);
-                        break writer(&scratch[..i as usize])
+                        break writer(&scratch[..i as usize]);
                     }
 
-                    let byte = ((value as u8) & var_int_helper::SEGMENT_BITS) | var_int_helper::CONTINUE_BIT;
+                    let byte = ((value as u8) & var_int_helper::SEGMENT_BITS)
+                        | var_int_helper::CONTINUE_BIT;
                     write(byte);
 
                     value >>= 7;
@@ -195,6 +202,5 @@ macro_rules! impl_var_int {
         }
     };
 }
-
 
 pub(super) use impl_var_int;

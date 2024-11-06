@@ -23,15 +23,13 @@ impl ByteBuffer {
     }
 
     pub fn get_var_int(&mut self) -> Result<VarInt, DeserializerError> {
-        VarInt::decode(|| {
-            self.buffer.has_remaining().then(|| self.buffer.get_u8())
-        }).map_err(Into::into)
+        VarInt::decode(|| self.buffer.has_remaining().then(|| self.buffer.get_u8()))
+            .map_err(Into::into)
     }
 
     pub fn get_var_long(&mut self) -> Result<VarLong, DeserializerError> {
-        VarLong::decode(|| {
-            self.buffer.has_remaining().then(|| self.buffer.get_u8())
-        }).map_err(Into::into)
+        VarLong::decode(|| self.buffer.has_remaining().then(|| self.buffer.get_u8()))
+            .map_err(Into::into)
     }
 
     pub fn get_string(&mut self) -> Result<String, DeserializerError> {
@@ -323,9 +321,7 @@ impl ByteBuffer {
         if self.buffer.len() >= len {
             Ok(self.buffer.copy_to_bytes(len))
         } else {
-            Err(DeserializerError::Message(
-                "Unable to copy bytes".into(),
-            ))
+            Err(DeserializerError::Message("Unable to copy bytes".into()))
         }
     }
 
@@ -334,9 +330,7 @@ impl ByteBuffer {
             self.buffer.copy_to_slice(dst);
             Ok(())
         } else {
-            Err(DeserializerError::Message(
-                "Unable to copy slice".into(),
-            ))
+            Err(DeserializerError::Message("Unable to copy slice".into()))
         }
     }
 

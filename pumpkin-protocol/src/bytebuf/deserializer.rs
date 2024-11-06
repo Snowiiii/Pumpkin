@@ -1,10 +1,10 @@
 use std::borrow::Cow;
 use std::fmt::Display;
 
+use super::ByteBuffer;
+use crate::VarIntDecodeError;
 use serde::de::{self, DeserializeSeed, SeqAccess};
 use thiserror::Error;
-use crate::VarIntDecodeError;
-use super::ByteBuffer;
 
 pub struct Deserializer<'a> {
     inner: &'a mut ByteBuffer,
@@ -23,8 +23,10 @@ pub enum DeserializerError {
 impl From<VarIntDecodeError> for DeserializerError {
     fn from(value: VarIntDecodeError) -> Self {
         match value {
-            VarIntDecodeError::Incomplete => Self::Message("Not enough bytes to read VarInt".into()),
-            VarIntDecodeError::TooLarge => Self::Message("VarInt is too big".into())
+            VarIntDecodeError::Incomplete => {
+                Self::Message("Not enough bytes to read VarInt".into())
+            }
+            VarIntDecodeError::TooLarge => Self::Message("VarInt is too big".into()),
         }
     }
 }

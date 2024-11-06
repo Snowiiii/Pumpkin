@@ -1,8 +1,7 @@
 use crate::{VarIntDecodeError, VarLongType};
 
+use crate::var_int_helper::{self, impl_var_int, VarEncodedInteger};
 use std::num::NonZero;
-use crate::var_int_helper::{self, VarEncodedInteger, impl_var_int};
-
 
 impl_var_int! {
     VarLong(VarLongType) {
@@ -19,15 +18,14 @@ impl From<u32> for VarLong {
 
 #[cfg(test)]
 mod tests {
-    use rayon::iter::{IntoParallelIterator, ParallelIterator};
     use super::*;
+    use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
     #[test]
     fn serde_works() {
         assert!((i64::MIN..=i64::MAX).into_par_iter().all(|i| {
-            VarLong::new(i).encode(|buff| {
-                i == VarLong::decode_from_slice(&mut &*buff).unwrap().get()
-            })
+            VarLong::new(i)
+                .encode(|buff| i == VarLong::decode_from_slice(&mut &*buff).unwrap().get())
         }))
     }
 }

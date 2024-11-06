@@ -7,7 +7,9 @@ use std::io::Write;
 use bytes::BufMut;
 use flate2::write::ZlibDecoder;
 
-use crate::{bytebuf::ByteBuffer, RawPacket, VarEncodedInteger, VarInt, VarIntDecodeError, MAX_PACKET_SIZE};
+use crate::{
+    bytebuf::ByteBuffer, RawPacket, VarEncodedInteger, VarInt, VarIntDecodeError, MAX_PACKET_SIZE,
+};
 
 type Cipher = cfb8::Decryptor<aes::Aes128>;
 
@@ -89,7 +91,8 @@ impl PacketDecoder {
         }
 
         r = &data[..];
-        let packet_id = VarInt::decode_from_slice(&mut r).map_err(|_| PacketDecodeError::DecodeID)?;
+        let packet_id =
+            VarInt::decode_from_slice(&mut r).map_err(|_| PacketDecodeError::DecodeID)?;
 
         data.advance(data.len() - r.len());
         Ok(Some(RawPacket {

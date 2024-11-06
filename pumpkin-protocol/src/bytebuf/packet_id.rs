@@ -22,7 +22,7 @@ impl Serialize for VarInt {
     where
         S: Serializer,
     {
-        self.encode(|buff| serializer.serialize_bytes(&buff))
+        self.encode(|buff| serializer.serialize_bytes(buff))
     }
 }
 
@@ -57,7 +57,7 @@ impl Serialize for VarLong {
     where
         S: Serializer,
     {
-        self.encode(|buff| serializer.serialize_bytes(&buff))
+        self.encode(|buff| serializer.serialize_bytes(buff))
     }
 }
 

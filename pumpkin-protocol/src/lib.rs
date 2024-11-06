@@ -17,7 +17,7 @@ mod var_long;
 pub use var_long::*;
 
 mod var_int_helper;
-pub use var_int_helper::{VarIntDecodeError, VarEncodedInteger};
+pub use var_int_helper::{VarEncodedInteger, VarIntDecodeError};
 
 /// To current Minecraft protocol
 /// Don't forget to change this when porting

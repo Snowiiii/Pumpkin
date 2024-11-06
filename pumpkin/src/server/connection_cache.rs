@@ -1,13 +1,16 @@
+use base64::{engine::general_purpose, Engine as _};
 use core::error;
+use pumpkin_config::{BasicConfiguration, BASIC_CONFIG};
+use pumpkin_protocol::{
+    client::{config::CPluginMessage, status::CStatusResponse},
+    Players, StatusResponse, VarEncodedInteger, VarInt, Version, CURRENT_MC_PROTOCOL,
+};
+use std::sync::LazyLock;
 use std::{
     fs::File,
     io::{Cursor, Read},
     path::Path,
 };
-use std::sync::LazyLock;
-use base64::{engine::general_purpose, Engine as _};
-use pumpkin_config::{BasicConfiguration, BASIC_CONFIG};
-use pumpkin_protocol::{client::{config::CPluginMessage, status::CStatusResponse}, Players, StatusResponse, VarEncodedInteger, VarInt, Version, CURRENT_MC_PROTOCOL};
 
 use super::CURRENT_MC_VERSION;
 
@@ -47,7 +50,8 @@ impl CachedBranding {
     pub fn new() -> Self {
         Self(())
     }
-    
+
+    #[allow(clippy::unused_self)]
     pub fn get_branding(&self) -> CPluginMessage {
         static BRANDING: LazyLock<Box<[u8]>> = LazyLock::new(|| {
             let brand = "Pumpkin";
@@ -56,7 +60,7 @@ impl CachedBranding {
             buf.extend_from_slice(brand.as_bytes());
             buf.into_boxed_slice()
         });
-        
+
         CPluginMessage::new("minecraft:brand", &BRANDING)
     }
 }
