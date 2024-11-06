@@ -138,8 +138,6 @@ impl PlayerInventory {
 
     /// Attempt to add items to inventory. If not all items could be successfully added because the inventory is full, only a part of the stack is added and an Err containing the number of items that couln't be added is returned.
     pub fn add_items(&mut self, item_id: u16, count: u32) -> Result<(), u32> {
-        dbg!(item_id, count);
-
         let max_stack_size: u8 = 64; // todo: get actual stack size of item
 
         let mut remaining_items: u32 = count;
