@@ -3,8 +3,8 @@ use std::sync::Arc;
 use args::ConsumedArgs;
 use async_trait::async_trait;
 use commands::{
-    cmd_echest, cmd_gamemode, cmd_help, cmd_kick, cmd_kill, cmd_pumpkin, cmd_say, cmd_stop,
-    cmd_teleport, cmd_worldborder,
+    cmd_echest, cmd_gamemode, cmd_help, cmd_kick, cmd_kill, cmd_list, cmd_pumpkin, cmd_say,
+    cmd_stop, cmd_teleport, cmd_worldborder,
 };
 use dispatcher::InvalidTreeError;
 use pumpkin_core::math::vector3::Vector3;
@@ -82,6 +82,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_kick::init_command_tree());
     dispatcher.register(cmd_worldborder::init_command_tree());
     dispatcher.register(cmd_teleport::init_command_tree());
+    dispatcher.register(cmd_list::init_command_tree());
 
     Arc::new(dispatcher)
 }
