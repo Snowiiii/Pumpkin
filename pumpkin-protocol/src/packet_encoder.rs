@@ -10,7 +10,7 @@ use std::io::Read;
 use flate2::bufread::ZlibEncoder;
 use flate2::Compression;
 
-use crate::{bytebuf::ByteBuffer, ClientPacket, VarInt, MAX_PACKET_SIZE};
+use crate::{bytebuf::ByteBuffer, ClientPacket, VarEncodedInteger, VarInt, MAX_PACKET_SIZE};
 
 type Cipher = cfb8::Encryptor<aes::Aes128>;
 
@@ -31,8 +31,8 @@ impl PacketEncoder {
         let mut writer = (&mut self.buf).writer();
 
         let mut packet_buf = ByteBuffer::empty();
-        VarInt(P::PACKET_ID)
-            .encode(&mut writer)
+        VarInt::new(P::PACKET_ID)
+            .write_to(&mut writer)
             .map_err(|_| PacketEncodeError::EncodeID)?;
         packet.write(&mut packet_buf);
 
@@ -49,7 +49,7 @@ impl PacketEncoder {
 
                 self.compress_buf.clear();
 
-                let data_len_size = VarInt(data_len as i32).written_size();
+                let data_len_size = VarInt::try_from(data_len).unwrap().written_size();
 
                 let packet_len = data_len_size + z.read_to_end(&mut self.compress_buf).unwrap();
 
@@ -63,11 +63,13 @@ impl PacketEncoder {
 
                 let mut writer = (&mut self.buf).writer();
 
-                VarInt(packet_len as i32)
-                    .encode(&mut writer)
+                VarInt::try_from(packet_len)
+                    .unwrap()
+                    .write_to(&mut writer)
                     .map_err(|_| PacketEncodeError::EncodeLength)?;
-                VarInt(data_len as i32)
-                    .encode(&mut writer)
+                VarInt::try_from(data_len)
+                    .unwrap()
+                    .write_to(&mut writer)
                     .map_err(|_| PacketEncodeError::EncodeData)?;
                 self.buf.extend_from_slice(&self.compress_buf);
             } else {
@@ -78,7 +80,7 @@ impl PacketEncoder {
                     Err(PacketEncodeError::TooLong)?
                 }
 
-                let packet_len_size = VarInt(packet_len as i32).written_size();
+                let packet_len_size = VarInt::try_from(packet_len).unwrap().written_size();
 
                 let data_prefix_len = packet_len_size + data_len_size;
 
@@ -88,12 +90,13 @@ impl PacketEncoder {
 
                 let mut front = &mut self.buf[start_len..];
 
-                VarInt(packet_len as i32)
-                    .encode(&mut front)
+                VarInt::try_from(packet_len)
+                    .unwrap()
+                    .write_to(&mut front)
                     .map_err(|_| PacketEncodeError::EncodeLength)?;
                 // Zero for no compression on this packet.
-                VarInt(0)
-                    .encode(front)
+                VarInt::new(0)
+                    .write_to(front)
                     .map_err(|_| PacketEncodeError::EncodeData)?;
             }
 
@@ -106,15 +109,16 @@ impl PacketEncoder {
             Err(PacketEncodeError::TooLong)?
         }
 
-        let packet_len_size = VarInt(packet_len as i32).written_size();
+        let packet_len_size = VarInt::try_from(packet_len).unwrap().written_size();
 
         self.buf.put_bytes(0, packet_len_size);
         self.buf
             .copy_within(start_len..start_len + data_len, start_len + packet_len_size);
 
         let front = &mut self.buf[start_len..];
-        VarInt(packet_len as i32)
-            .encode(front)
+        VarInt::try_from(packet_len)
+            .unwrap()
+            .write_to(front)
             .map_err(|_| PacketEncodeError::EncodeID)?;
         Ok(())
     }

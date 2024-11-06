@@ -1,4 +1,4 @@
-use crate::{BitSet, FixedBitSet, VarInt, VarLongType};
+use crate::{BitSet, FixedBitSet, VarEncodedInteger, VarInt, VarLong};
 use bytes::{Buf, BufMut, BytesMut};
 use core::str;
 
@@ -6,9 +6,6 @@ mod deserializer;
 pub use deserializer::DeserializerError;
 pub mod packet_id;
 mod serializer;
-
-const SEGMENT_BITS: u8 = 0x7F;
-const CONTINUE_BIT: u8 = 0x80;
 
 #[derive(Debug)]
 pub struct ByteBuffer {
@@ -26,49 +23,15 @@ impl ByteBuffer {
     }
 
     pub fn get_var_int(&mut self) -> Result<VarInt, DeserializerError> {
-        let mut value: i32 = 0;
-        let mut position: i32 = 0;
-
-        loop {
-            let read = self.get_u8()?;
-
-            value |= ((read & SEGMENT_BITS) as i32) << position;
-
-            if read & CONTINUE_BIT == 0 {
-                break;
-            }
-
-            position += 7;
-
-            if position >= 32 {
-                return Err(DeserializerError::Message("VarInt is too big".to_string()));
-            }
-        }
-
-        Ok(VarInt(value))
+        VarInt::decode(|| {
+            self.buffer.has_remaining().then(|| self.buffer.get_u8())
+        }).map_err(Into::into)
     }
 
-    pub fn get_var_long(&mut self) -> Result<VarLongType, DeserializerError> {
-        let mut value: i64 = 0;
-        let mut position: i64 = 0;
-
-        loop {
-            let read = self.get_u8()?;
-
-            value |= ((read & SEGMENT_BITS) as i64) << position;
-
-            if read & CONTINUE_BIT == 0 {
-                break;
-            }
-
-            position += 7;
-
-            if position >= 64 {
-                return Err(DeserializerError::Message("VarLong is too big".to_string()));
-            }
-        }
-
-        Ok(value)
+    pub fn get_var_long(&mut self) -> Result<VarLong, DeserializerError> {
+        VarLong::decode(|| {
+            self.buffer.has_remaining().then(|| self.buffer.get_u8())
+        }).map_err(Into::into)
     }
 
     pub fn get_string(&mut self) -> Result<String, DeserializerError> {
@@ -76,22 +39,22 @@ impl ByteBuffer {
     }
 
     pub fn get_string_len(&mut self, max_size: i32) -> Result<String, DeserializerError> {
-        let size = self.get_var_int()?.0;
+        let size = self.get_var_int()?.get();
         if size > max_size {
             return Err(DeserializerError::Message(
-                "String length is bigger than max size".to_string(),
+                "String length is bigger than max size".into(),
             ));
         }
 
         let data = self.copy_to_bytes(size as usize)?;
         if data.len() as i32 > max_size {
             return Err(DeserializerError::Message(
-                "String is bigger than max size".to_string(),
+                "String is bigger than max size".into(),
             ));
         }
         match str::from_utf8(&data) {
-            Ok(string_result) => Ok(string_result.to_string()),
-            Err(e) => Err(DeserializerError::Message(e.to_string())),
+            Ok(string_result) => Ok(string_result.into()),
+            Err(e) => Err(DeserializerError::Message(e.to_string().into())),
         }
     }
 
@@ -133,7 +96,7 @@ impl ByteBuffer {
             // Should be panic?, I mean its our fault
             panic!("String is too big");
         }
-        self.put_var_int(&val.len().into());
+        self.put_var_int(val.len().try_into().unwrap());
         self.buffer.put(val.as_bytes());
     }
 
@@ -143,23 +106,12 @@ impl ByteBuffer {
         }
     }
 
-    pub fn put_var_int(&mut self, value: &VarInt) {
-        let mut val = value.0;
-        for _ in 0..5 {
-            let mut b: u8 = val as u8 & 0b01111111;
-            val >>= 7;
-            if val != 0 {
-                b |= 0b10000000;
-            }
-            self.buffer.put_u8(b);
-            if val == 0 {
-                break;
-            }
-        }
+    pub fn put_var_int(&mut self, value: VarInt) {
+        value.encode(|buff| self.put_slice(buff))
     }
 
-    pub fn put_bit_set(&mut self, set: &BitSet) {
-        self.put_var_int(&set.0);
+    pub fn put_bit_set(&mut self, set: BitSet) {
+        self.put_var_int(set.0);
         for b in set.1 {
             self.put_i64(*b);
         }
@@ -190,7 +142,8 @@ impl ByteBuffer {
         &mut self,
         val: impl Fn(&mut Self) -> Result<T, DeserializerError>,
     ) -> Result<Vec<T>, DeserializerError> {
-        let len = self.get_var_int()?.0 as usize;
+        let len = usize::try_from(self.get_var_int()?.get())
+            .map_err(|_| DeserializerError::Message("invalid length given from list".into()))?;
         let mut list = Vec::with_capacity(len);
         for _ in 0..len {
             list.push(val(self)?);
@@ -199,14 +152,14 @@ impl ByteBuffer {
     }
     /// Writes a list to the buffer.
     pub fn put_list<T>(&mut self, list: &[T], write: impl Fn(&mut Self, &T)) {
-        self.put_var_int(&list.len().into());
+        self.put_var_int(list.len().try_into().unwrap());
         for v in list {
             write(self, v);
         }
     }
 
     pub fn put_varint_arr(&mut self, v: &[i32]) {
-        self.put_list(v, |p, &v| p.put_var_int(&v.into()))
+        self.put_list(v, |p, &v| p.put_var_int(v.into()))
     }
 
     /*  pub fn get_nbt(&mut self) -> Option<fastnbt::value::Value> {
@@ -230,7 +183,7 @@ impl ByteBuffer {
             Ok(self.buffer.get_u8())
         } else {
             Err(DeserializerError::Message(
-                "No bytes left to consume".to_string(),
+                "No bytes left to consume".into(),
             ))
         }
     }
@@ -240,7 +193,7 @@ impl ByteBuffer {
             Ok(self.buffer.get_i8())
         } else {
             Err(DeserializerError::Message(
-                "No bytes left to consume".to_string(),
+                "No bytes left to consume".into(),
             ))
         }
     }
@@ -250,7 +203,7 @@ impl ByteBuffer {
             Ok(self.buffer.get_u16())
         } else {
             Err(DeserializerError::Message(
-                "Less than 2 bytes left to consume".to_string(),
+                "Less than 2 bytes left to consume".into(),
             ))
         }
     }
@@ -260,7 +213,7 @@ impl ByteBuffer {
             Ok(self.buffer.get_i16())
         } else {
             Err(DeserializerError::Message(
-                "Less than 2 bytes left to consume".to_string(),
+                "Less than 2 bytes left to consume".into(),
             ))
         }
     }
@@ -270,7 +223,7 @@ impl ByteBuffer {
             Ok(self.buffer.get_u32())
         } else {
             Err(DeserializerError::Message(
-                "Less than 4 bytes left to consume".to_string(),
+                "Less than 4 bytes left to consume".into(),
             ))
         }
     }
@@ -280,7 +233,7 @@ impl ByteBuffer {
             Ok(self.buffer.get_i32())
         } else {
             Err(DeserializerError::Message(
-                "Less than 4 bytes left to consume".to_string(),
+                "Less than 4 bytes left to consume".into(),
             ))
         }
     }
@@ -290,7 +243,7 @@ impl ByteBuffer {
             Ok(self.buffer.get_u64())
         } else {
             Err(DeserializerError::Message(
-                "Less than 8 bytes left to consume".to_string(),
+                "Less than 8 bytes left to consume".into(),
             ))
         }
     }
@@ -300,7 +253,7 @@ impl ByteBuffer {
             Ok(self.buffer.get_i64())
         } else {
             Err(DeserializerError::Message(
-                "Less than 8 bytes left to consume".to_string(),
+                "Less than 8 bytes left to consume".into(),
             ))
         }
     }
@@ -310,7 +263,7 @@ impl ByteBuffer {
             Ok(self.buffer.get_f32())
         } else {
             Err(DeserializerError::Message(
-                "Less than 4 bytes left to consume".to_string(),
+                "Less than 4 bytes left to consume".into(),
             ))
         }
     }
@@ -320,7 +273,7 @@ impl ByteBuffer {
             Ok(self.buffer.get_f64())
         } else {
             Err(DeserializerError::Message(
-                "Less than 8 bytes left to consume".to_string(),
+                "Less than 8 bytes left to consume".into(),
             ))
         }
     }
@@ -371,7 +324,7 @@ impl ByteBuffer {
             Ok(self.buffer.copy_to_bytes(len))
         } else {
             Err(DeserializerError::Message(
-                "Unable to copy bytes".to_string(),
+                "Unable to copy bytes".into(),
             ))
         }
     }
@@ -382,7 +335,7 @@ impl ByteBuffer {
             Ok(())
         } else {
             Err(DeserializerError::Message(
-                "Unable to copy slice".to_string(),
+                "Unable to copy slice".into(),
             ))
         }
     }

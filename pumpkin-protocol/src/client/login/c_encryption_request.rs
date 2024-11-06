@@ -23,9 +23,9 @@ impl<'a> CEncryptionRequest<'a> {
     ) -> Self {
         Self {
             server_id,
-            public_key_length: public_key.len().into(),
+            public_key_length: public_key.len().try_into().unwrap(),
             public_key,
-            verify_token_length: verify_token.len().into(),
+            verify_token_length: verify_token.len().try_into().unwrap(),
             verify_token,
             should_authenticate,
         }

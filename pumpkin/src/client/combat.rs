@@ -75,7 +75,7 @@ pub async fn handle_knockback(
         f64::from(-(yaw * (PI / 180.0)).cos()),
     );
 
-    let entity_id = VarInt(victim_entity.entity_id);
+    let entity_id = VarInt::new(victim_entity.entity_id);
     let victim_velocity = victim_entity.velocity.load();
 
     let packet = &CEntityVelocity::new(
@@ -113,7 +113,7 @@ pub async fn spawn_sweep_particle(attacker_entity: &Entity, world: &World, pos: 
             0.0,
             0.0,
             0,
-            VarInt(i32::from(particle!("minecraft:sweep_attack"))), // sweep
+            VarInt::new(i32::from(particle!("minecraft:sweep_attack"))), // sweep
             &[],
         ))
         .await;

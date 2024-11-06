@@ -13,7 +13,7 @@ pub struct CDisplayObjective<'a> {
 impl<'a> CDisplayObjective<'a> {
     pub fn new(position: DisplaySlot, score_name: &'a str) -> Self {
         Self {
-            position: VarInt(position as i32),
+            position: VarInt::new(position as i32),
             score_name,
         }
     }

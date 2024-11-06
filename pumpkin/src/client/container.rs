@@ -40,7 +40,7 @@ impl Player {
         self.client
             .send_packet(&COpenScreen::new(
                 total_opened_containers.into(),
-                VarInt(window_type as i32),
+                VarInt::new(window_type as i32),
                 title,
             ))
             .await;
@@ -120,16 +120,16 @@ impl Player {
             .state_id
             .load(std::sync::atomic::Ordering::Relaxed);
         // This is just checking for regular desync, client hasn't done anything malicious
-        if state_id != packet.state_id.0 as u32 {
+        if state_id != packet.state_id.get() as u32 {
             //  self.set_container_content(opened_container.as_deref_mut());
             return Ok(());
         }
 
         if opened_container.is_some() {
-            if packet.window_id.0 != self.inventory.lock().await.total_opened_containers {
+            if packet.window_id.get() != self.inventory.lock().await.total_opened_containers {
                 return Err(InventoryError::ClosedContainerInteract(self.entity_id()));
             }
-        } else if packet.window_id.0 != 0 {
+        } else if packet.window_id.get() != 0 {
             return Err(InventoryError::ClosedContainerInteract(self.entity_id()));
         }
 
@@ -137,7 +137,7 @@ impl Player {
             // TODO: This is very bad
             packet
                 .mode
-                .0
+                .get()
                 .try_into()
                 .expect("Mode can only be between 0-6"),
             packet.button,

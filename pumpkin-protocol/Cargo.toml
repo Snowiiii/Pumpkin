@@ -3,6 +3,9 @@ name = "pumpkin-protocol"
 version.workspace = true
 edition.workspace = true
 
+[dev-dependencies]
+rayon = "1"
+
 [dependencies]
 pumpkin-config = { path = "../pumpkin-config" }
 pumpkin-macros = { path = "../pumpkin-macros" }

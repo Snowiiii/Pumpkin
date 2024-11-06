@@ -36,7 +36,7 @@ impl<'de> Deserialize<'de> for Slot {
                 let item_count = seq
                     .next_element::<VarInt>()?
                     .ok_or(de::Error::custom("Failed to decode VarInt"))?;
-                if item_count.0 == 0 {
+                if item_count.get() == 0 {
                     return Ok(Slot {
                         item_count: 0.into(),
                         item_id: None,
@@ -55,7 +55,7 @@ impl<'de> Deserialize<'de> for Slot {
                 let num_components_to_remove = seq
                     .next_element::<VarInt>()?
                     .ok_or(de::Error::custom("Failed to decode VarInt"))?;
-                if num_components_to_add.0 != 0 || num_components_to_remove.0 != 0 {
+                if num_components_to_add.get() != 0 || num_components_to_remove.get() != 0 {
                     return Err(de::Error::custom(
                         "Slot components are currently unsupported",
                     ));
@@ -101,7 +101,7 @@ impl Serialize for Slot {
                     let mut s = serializer.serialize_seq(Some(5))?;
                     s.serialize_element(&self.item_count)?;
                     s.serialize_element(self.item_id.as_ref().unwrap())?;
-                    s.serialize_element(&VarInt(0))?;
+                    s.serialize_element(&VarInt::new(0))?;
                     s.serialize_element(to_remove)?;
                     s.serialize_element(self.components_to_remove.as_ref().unwrap())?;
                     s.end()
@@ -111,7 +111,7 @@ impl Serialize for Slot {
                     s.serialize_element(&self.item_count)?;
                     s.serialize_element(self.item_id.as_ref().unwrap())?;
                     s.serialize_element(to_add)?;
-                    s.serialize_element(&VarInt(0))?;
+                    s.serialize_element(&VarInt::new(0))?;
                     s.serialize_element(self.components_to_add.as_ref().unwrap())?;
                     s.end()
                 }
@@ -119,8 +119,8 @@ impl Serialize for Slot {
                     let mut s = serializer.serialize_seq(Some(4))?;
                     s.serialize_element(&self.item_count)?;
                     s.serialize_element(&self.item_id.as_ref().unwrap())?;
-                    s.serialize_element(&VarInt(0))?;
-                    s.serialize_element(&VarInt(0))?;
+                    s.serialize_element(&VarInt::new(0))?;
+                    s.serialize_element(&VarInt::new(0))?;
                     s.end()
                 }
             }
@@ -130,16 +130,16 @@ impl Serialize for Slot {
 
 impl Slot {
     pub fn to_item(self) -> Option<ItemStack> {
-        let item_id = self.item_id?.0.try_into().unwrap();
+        let item_id = self.item_id?.get().try_into().unwrap();
         Some(ItemStack {
             item_id,
-            item_count: self.item_count.0.try_into().unwrap(),
+            item_count: self.item_count.get().try_into().unwrap(),
         })
     }
 
     pub const fn empty() -> Self {
         Slot {
-            item_count: VarInt(0),
+            item_count: VarInt::new(0),
             item_id: None,
             num_components_to_add: None,
             num_components_to_remove: None,
@@ -153,7 +153,7 @@ impl From<&ItemStack> for Slot {
     fn from(item: &ItemStack) -> Self {
         Slot {
             item_count: item.item_count.into(),
-            item_id: Some(VarInt(item.item_id as i32)),
+            item_id: Some(VarInt::new(item.item_id as i32)),
             // TODO: add these
             num_components_to_add: None,
             num_components_to_remove: None,

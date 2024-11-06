@@ -117,7 +117,7 @@ pub fn receive_velocity_plugin_response(
         let version = buf
             .get_var_int()
             .map_err(|_| VelocityError::FailedReadForwardVersion)?;
-        let version = version.0 as u8;
+        let version = version.get() as u8;
         if version > MAX_SUPPORTED_FORWARDING_VERSION {
             return Err(VelocityError::UnsupportedForwardVersion(
                 version,

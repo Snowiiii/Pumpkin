@@ -34,7 +34,7 @@ use super::{authentication::AuthError, Client, PlayerConfig};
 /// NEVER TRUST THE CLIENT. HANDLE EVERY ERROR, UNWRAP/EXPECT
 impl Client {
     pub async fn handle_handshake(&self, handshake: SHandShake) {
-        let version = handshake.protocol_version.0;
+        let version = handshake.protocol_version.get();
         self.protocol_version
             .store(version, std::sync::atomic::Ordering::Relaxed);
         *self.server_address.lock().await = handshake.server_address;

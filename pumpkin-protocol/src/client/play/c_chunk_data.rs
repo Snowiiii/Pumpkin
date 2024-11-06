@@ -52,15 +52,15 @@ impl<'a> ClientPacket for CChunkData<'a> {
                     // Bits per entry
                     data_buf.put_u8(block_size as u8);
                     // Palette length
-                    data_buf.put_var_int(&VarInt(palette.len() as i32));
+                    data_buf.put_var_int(VarInt::try_from(palette.len()).unwrap());
 
                     palette.iter().for_each(|id| {
                         // Palette
-                        data_buf.put_var_int(&VarInt(**id as i32));
+                        data_buf.put_var_int(VarInt::from(i32::from(**id)));
                     });
                     // Data array length
                     let data_array_len = chunk.len().div_ceil(64 / block_size as usize);
-                    data_buf.put_var_int(&VarInt(data_array_len as i32));
+                    data_buf.put_var_int(VarInt::try_from(data_array_len).unwrap());
 
                     data_buf.reserve(data_array_len * 8);
                     for block_clump in chunk.chunks(64 / block_size as usize) {
@@ -80,7 +80,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
                     data_buf.put_u8(DIRECT_PALETTE_BITS as u8);
                     // Data array length
                     let data_array_len = chunk.len().div_ceil(64 / DIRECT_PALETTE_BITS as usize);
-                    data_buf.put_var_int(&VarInt(data_array_len as i32));
+                    data_buf.put_var_int(VarInt::try_from(data_array_len).unwrap());
 
                     data_buf.reserve(data_array_len * 8);
                     for block_clump in chunk.chunks(64 / DIRECT_PALETTE_BITS as usize) {
@@ -99,30 +99,30 @@ impl<'a> ClientPacket for CChunkData<'a> {
             // TODO: make biomes work
             data_buf.put_u8(0);
             // This seems to be the biome
-            data_buf.put_var_int(&VarInt(10));
-            data_buf.put_var_int(&VarInt(0));
+            data_buf.put_var_int(VarInt::new(10));
+            data_buf.put_var_int(VarInt::new(0));
         });
 
         // Size
-        buf.put_var_int(&VarInt(data_buf.buf().len() as i32));
+        buf.put_var_int(VarInt::try_from(data_buf.buf().len()).unwrap());
         // Data
         buf.put_slice(data_buf.buf());
 
         // TODO: block entities
-        buf.put_var_int(&VarInt(0));
+        buf.put_var_int(VarInt::new(0));
 
         // Sky Light Mask
         // All of the chunks, this is not optimal and uses way more data than needed but will be
         // overhauled with full lighting system.
-        buf.put_bit_set(&BitSet(VarInt(1), &[0b01111111111111111111111110]));
+        buf.put_bit_set(BitSet(VarInt::new(1), &[0b01111111111111111111111110]));
         // Block Light Mask
-        buf.put_bit_set(&BitSet(VarInt(1), &[0]));
+        buf.put_bit_set(BitSet(VarInt::new(1), &[0]));
         // Empty Sky Light Mask
-        buf.put_bit_set(&BitSet(VarInt(1), &[0b0]));
+        buf.put_bit_set(BitSet(VarInt::new(1), &[0b0]));
         // Empty Block Light Mask
-        buf.put_bit_set(&BitSet(VarInt(1), &[0]));
+        buf.put_bit_set(BitSet(VarInt::new(1), &[0]));
 
-        buf.put_var_int(&VarInt(self.0.blocks.subchunks_len() as i32));
+        buf.put_var_int(VarInt::try_from(self.0.blocks.subchunks_len()).unwrap());
         self.0.blocks.iter_subchunks().for_each(|chunk| {
             let mut chunk_light = [0u8; 2048];
             for (i, _) in chunk.iter().enumerate() {
@@ -134,11 +134,11 @@ impl<'a> ClientPacket for CChunkData<'a> {
                 chunk_light[index] |= mask;
             }
 
-            buf.put_var_int(&VarInt(chunk_light.len() as i32));
+            buf.put_var_int(VarInt::try_from(chunk_light.len()).unwrap());
             buf.put_slice(&chunk_light);
         });
 
         // Block Lighting
-        buf.put_var_int(&VarInt(0));
+        buf.put_var_int(VarInt::new(0));
     }
 }

@@ -392,7 +392,7 @@ impl Player {
         }
 
         if config.hurt_animation {
-            let entity_id = VarInt(victim_entity.entity_id);
+            let entity_id = VarInt::new(victim_entity.entity_id);
             world
                 .broadcast_packet_all(&CHurtAnimation::new(&entity_id, attacker_entity.yaw.load()))
                 .await;
@@ -761,7 +761,7 @@ impl Player {
         packet: &mut RawPacket,
     ) -> Result<(), Box<dyn PumpkinError>> {
         let bytebuf = &mut packet.bytebuf;
-        match packet.id.0 {
+        match packet.id.get() {
             SConfirmTeleport::PACKET_ID => {
                 self.handle_confirm_teleport(SConfirmTeleport::read(bytebuf)?)
                     .await;
@@ -834,7 +834,7 @@ impl Player {
             }
             SUseItem::PACKET_ID => self.handle_use_item(&SUseItem::read(bytebuf)?),
             _ => {
-                log::warn!("Failed to handle player packet id {}", packet.id.0);
+                log::warn!("Failed to handle player packet id {}", packet.id.get());
                 // TODO: We give an error if all play packets are implemented
                 //  return Err(Box::new(DeserializerError::UnknownPacket));
             }

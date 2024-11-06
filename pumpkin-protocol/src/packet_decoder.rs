@@ -7,7 +7,7 @@ use std::io::Write;
 use bytes::BufMut;
 use flate2::write::ZlibDecoder;
 
-use crate::{bytebuf::ByteBuffer, RawPacket, VarInt, VarIntDecodeError, MAX_PACKET_SIZE};
+use crate::{bytebuf::ByteBuffer, RawPacket, VarEncodedInteger, VarInt, VarIntDecodeError, MAX_PACKET_SIZE};
 
 type Cipher = cfb8::Decryptor<aes::Aes128>;
 
@@ -26,7 +26,7 @@ impl PacketDecoder {
     pub fn decode(&mut self) -> Result<Option<RawPacket>, PacketDecodeError> {
         let mut r = &self.buf[..];
 
-        let packet_len = match VarInt::decode_partial(&mut r) {
+        let packet_len = match VarInt::decode_from_slice(&mut r).map(|x| x.get()) {
             Ok(len) => len,
             Err(VarIntDecodeError::Incomplete) => return Ok(None),
             Err(VarIntDecodeError::TooLarge) => Err(PacketDecodeError::MalformedLength)?,
@@ -41,15 +41,15 @@ impl PacketDecoder {
             return Ok(None);
         }
 
-        let packet_len_len = VarInt(packet_len).written_size();
+        let packet_len_len = VarInt::new(packet_len).written_size();
 
         let mut data;
         if self.compression {
             r = &r[..packet_len as usize];
 
-            let data_len = VarInt::decode(&mut r)
+            let data_len = VarInt::decode_from_slice(&mut r)
                 .map_err(|_| PacketDecodeError::TooLong)?
-                .0;
+                .get();
 
             if !(0..=MAX_PACKET_SIZE).contains(&data_len) {
                 Err(PacketDecodeError::OutOfBounds)?
@@ -68,7 +68,7 @@ impl PacketDecoder {
                     .map_err(|e| PacketDecodeError::FailedWrite(e.to_string()))?;
                 z.finish().map_err(|_| PacketDecodeError::FailedFinish)?;
 
-                let total_packet_len = VarInt(packet_len).written_size() + packet_len as usize;
+                let total_packet_len = VarInt::new(packet_len).written_size() + packet_len as usize;
 
                 self.buf.advance(total_packet_len);
 
@@ -89,7 +89,7 @@ impl PacketDecoder {
         }
 
         r = &data[..];
-        let packet_id = VarInt::decode(&mut r).map_err(|_| PacketDecodeError::DecodeID)?;
+        let packet_id = VarInt::decode_from_slice(&mut r).map_err(|_| PacketDecodeError::DecodeID)?;
 
         data.advance(data.len() - r.len());
         Ok(Some(RawPacket {

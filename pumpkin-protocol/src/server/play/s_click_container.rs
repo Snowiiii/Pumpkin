@@ -54,7 +54,7 @@ impl<'de> Deserialize<'de> for SClickContainer {
                     .next_element::<VarInt>()?
                     .ok_or(de::Error::custom("Failed to decode VarInt"))?;
                 let mut array_of_changed_slots = vec![];
-                for _ in 0..length_of_array.0 {
+                for _ in 0..length_of_array.get() {
                     let slot_number = seq
                         .next_element::<i16>()?
                         .ok_or(de::Error::custom("Unable to parse slot"))?;

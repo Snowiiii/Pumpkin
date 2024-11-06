@@ -129,7 +129,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     where
         T: ?Sized + Serialize,
     {
-        self.output.put_var_int(&variant_index.into());
+        self.output.put_var_int(variant_index.into());
         value.serialize(self)
     }
     fn serialize_none(self) -> Result<Self::Ok, Self::Error> {
@@ -186,7 +186,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         _len: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
         // Serialize ENUM index as varint
-        self.output.put_var_int(&variant_index.into());
+        self.output.put_var_int(variant_index.into());
         Ok(self)
     }
     fn serialize_u128(self, _v: u128) -> Result<Self::Ok, Self::Error> {
@@ -221,7 +221,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         _variant: &'static str,
     ) -> Result<Self::Ok, Self::Error> {
         // For ENUMs, only write enum index as varint
-        self.output.put_var_int(&variant_index.into());
+        self.output.put_var_int(variant_index.into());
         Ok(())
     }
 }

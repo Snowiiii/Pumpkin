@@ -115,7 +115,7 @@ impl World {
     ) {
         let seed = thread_rng().gen::<f64>();
         self.broadcast_packet_all(&CSoundEffect::new(
-            VarInt(i32::from(sound_id)),
+            VarInt::new(i32::from(sound_id)),
             category,
             posistion.x,
             posistion.y,
@@ -316,7 +316,7 @@ impl World {
         if let Some(config) = player.client.config.lock().await.as_ref() {
             let packet = CSetEntityMetadata::new(
                 entity_id.into(),
-                Metadata::new(17, VarInt(0), config.skin_parts),
+                Metadata::new(17, VarInt::new(0), config.skin_parts),
             );
             log::debug!("Broadcasting skin for {}", player.gameprofile.name);
             self.broadcast_packet_all(&packet).await;

@@ -28,8 +28,8 @@ impl CEntitySoundEffect {
         seed: f64,
     ) -> Self {
         Self {
-            sound_id: VarInt(sound_id.0 + 1),
-            sound_category: VarInt(sound_category as i32),
+            sound_id: sound_id + 1,
+            sound_category: VarInt::new(sound_category as i32),
             entity_id,
             volume,
             pitch,

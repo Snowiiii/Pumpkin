@@ -4,13 +4,10 @@ use std::{
     io::{Cursor, Read},
     path::Path,
 };
-
+use std::sync::LazyLock;
 use base64::{engine::general_purpose, Engine as _};
 use pumpkin_config::{BasicConfiguration, BASIC_CONFIG};
-use pumpkin_protocol::{
-    client::{config::CPluginMessage, status::CStatusResponse},
-    Players, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
-};
+use pumpkin_protocol::{client::{config::CPluginMessage, status::CStatusResponse}, Players, StatusResponse, VarEncodedInteger, VarInt, Version, CURRENT_MC_PROTOCOL};
 
 use super::CURRENT_MC_VERSION;
 
@@ -42,28 +39,25 @@ pub struct CachedStatus {
     // Keep in mind that we must parse this again, when the StatusResponse changes which usually happen when a player joins or leaves
     status_response_json: String,
 }
+/// Cached Server brand buffer so we don't have to rebuild them every time a player joins
 
-pub struct CachedBranding {
-    /// Cached Server brand buffer so we don't have to rebuild them every time a player joins
-    cached_server_brand: Vec<u8>,
-}
+pub struct CachedBranding(());
 
 impl CachedBranding {
     pub fn new() -> Self {
-        let cached_server_brand = Self::build_brand();
-        Self {
-            cached_server_brand,
-        }
+        Self(())
     }
+    
     pub fn get_branding(&self) -> CPluginMessage {
-        CPluginMessage::new("minecraft:brand", &self.cached_server_brand)
-    }
-    fn build_brand() -> Vec<u8> {
-        let brand = "Pumpkin";
-        let mut buf = vec![];
-        let _ = VarInt(brand.len() as i32).encode(&mut buf);
-        buf.extend_from_slice(brand.as_bytes());
-        buf
+        static BRANDING: LazyLock<Box<[u8]>> = LazyLock::new(|| {
+            let brand = "Pumpkin";
+            let mut buf = vec![];
+            let _ = VarInt::try_from(brand.len()).unwrap().write_to(&mut buf);
+            buf.extend_from_slice(brand.as_bytes());
+            buf.into_boxed_slice()
+        });
+        
+        CPluginMessage::new("minecraft:brand", &BRANDING)
     }
 }
 
@@ -97,7 +91,7 @@ impl CachedStatus {
     pub fn remove_player(&mut self) {
         let status_response = &mut self.status_response;
         if let Some(players) = &mut status_response.players {
-            players.online -= 1;
+            players.online = players.online.saturating_sub(1);
         }
 
         self.status_response_json = serde_json::to_string(&status_response)

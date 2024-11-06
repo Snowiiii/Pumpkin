@@ -1,8 +1,9 @@
+use std::borrow::Cow;
 use std::fmt::Display;
 
 use serde::de::{self, DeserializeSeed, SeqAccess};
 use thiserror::Error;
-
+use crate::VarIntDecodeError;
 use super::ByteBuffer;
 
 pub struct Deserializer<'a> {
@@ -14,14 +15,23 @@ pub enum DeserializerError {
     #[error("Unknown Packet")]
     UnknownPacket,
     #[error("serializer error {0}")]
-    Message(String),
+    Message(Cow<'static, str>),
     #[error("Stdio error {0}")]
     Stdio(std::io::Error),
 }
 
+impl From<VarIntDecodeError> for DeserializerError {
+    fn from(value: VarIntDecodeError) -> Self {
+        match value {
+            VarIntDecodeError::Incomplete => Self::Message("Not enough bytes to read VarInt".into()),
+            VarIntDecodeError::TooLarge => Self::Message("VarInt is too big".into())
+        }
+    }
+}
+
 impl de::Error for DeserializerError {
     fn custom<T: Display>(msg: T) -> Self {
-        Self::Message(msg.to_string())
+        Self::Message(msg.to_string().into())
     }
 }
 

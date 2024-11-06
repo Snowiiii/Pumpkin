@@ -16,6 +16,9 @@ pub use var_int::*;
 mod var_long;
 pub use var_long::*;
 
+mod var_int_helper;
+pub use var_int_helper::{VarIntDecodeError, VarEncodedInteger};
+
 /// To current Minecraft protocol
 /// Don't forget to change this when porting
 pub const CURRENT_MC_PROTOCOL: u32 = 768;
@@ -42,7 +45,7 @@ pub enum ConnectionState {
 
 impl From<VarInt> for ConnectionState {
     fn from(value: VarInt) -> Self {
-        let value = value.0;
+        let value = value.get();
         match value {
             1 => Self::Status,
             2 => Self::Login,
@@ -55,6 +58,7 @@ impl From<VarInt> for ConnectionState {
     }
 }
 
+#[repr(i32)]
 pub enum SoundCategory {
     Master,
     Music,

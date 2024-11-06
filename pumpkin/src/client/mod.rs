@@ -369,14 +369,14 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling handshake group");
         let bytebuf = &mut packet.bytebuf;
-        match packet.id.0 {
+        match packet.id.get() {
             0 => {
                 self.handle_handshake(SHandShake::read(bytebuf)?).await;
             }
             _ => {
                 log::error!(
                     "Failed to handle packet id {} in Handshake state",
-                    packet.id.0
+                    packet.id.get()
                 );
             }
         };
@@ -390,7 +390,7 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling status group");
         let bytebuf = &mut packet.bytebuf;
-        match packet.id.0 {
+        match packet.id.get() {
             SStatusRequest::PACKET_ID => {
                 self.handle_status_request(server).await;
             }
@@ -401,7 +401,7 @@ impl Client {
             _ => {
                 log::error!(
                     "Failed to handle client packet id {} in Status State",
-                    packet.id.0
+                    packet.id.get()
                 );
                 return Err(DeserializerError::UnknownPacket);
             }
@@ -417,7 +417,7 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling login group for id");
         let bytebuf = &mut packet.bytebuf;
-        match packet.id.0 {
+        match packet.id.get() {
             SLoginStart::PACKET_ID => {
                 self.handle_login_start(server, SLoginStart::read(bytebuf)?)
                     .await;
@@ -436,7 +436,7 @@ impl Client {
             _ => {
                 log::error!(
                     "Failed to handle client packet id {} in Login State",
-                    packet.id.0
+                    packet.id.get()
                 );
                 return Ok(());
             }
@@ -451,7 +451,7 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling config group");
         let bytebuf = &mut packet.bytebuf;
-        match packet.id.0 {
+        match packet.id.get() {
             SClientInformationConfig::PACKET_ID => {
                 self.handle_client_information_config(SClientInformationConfig::read(bytebuf)?)
                     .await;
@@ -470,7 +470,7 @@ impl Client {
             _ => {
                 log::error!(
                     "Failed to handle client packet id {} in Config State",
-                    packet.id.0
+                    packet.id.get()
                 );
                 return Err(DeserializerError::UnknownPacket);
             }

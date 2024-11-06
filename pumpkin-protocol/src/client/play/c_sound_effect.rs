@@ -33,8 +33,8 @@ impl CSoundEffect {
         seed: f64,
     ) -> Self {
         Self {
-            sound_id: VarInt(sound_id.0 + 1),
-            sound_category: VarInt(sound_category as i32),
+            sound_id: sound_id + 1,
+            sound_category: VarInt::new(sound_category as i32),
             effect_position_x: (effect_position_x * 8.0) as i32,
             effect_position_y: (effect_position_y * 8.0) as i32,
             effect_position_z: (effect_position_z * 8.0) as i32,

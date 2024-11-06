@@ -1,10 +1,9 @@
-use bytes::BufMut;
 use serde::{
     de::{self, DeserializeOwned, SeqAccess, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
 };
 
-use crate::{BitSet, ClientPacket, ServerPacket, VarInt, VarIntType, VarLong};
+use crate::{BitSet, ClientPacket, ServerPacket, VarEncodedInteger, VarInt, VarIntType, VarLong};
 
 use super::{deserializer, serializer, ByteBuffer, DeserializerError};
 
@@ -23,17 +22,7 @@ impl Serialize for VarInt {
     where
         S: Serializer,
     {
-        let mut value = self.0 as u32;
-        let mut buf = Vec::new();
-
-        while value > 0x7F {
-            buf.put_u8(value as u8 | 0x80);
-            value >>= 7;
-        }
-
-        buf.put_u8(value as u8);
-
-        serializer.serialize_bytes(&buf)
+        self.encode(|buff| serializer.serialize_bytes(&buff))
     }
 }
 
@@ -55,18 +44,7 @@ impl<'de> Deserialize<'de> for VarInt {
             where
                 A: SeqAccess<'de>,
             {
-                let mut val = 0;
-                for i in 0..VarInt::MAX_SIZE {
-                    if let Some(byte) = seq.next_element::<u8>()? {
-                        val |= (i32::from(byte) & 0b01111111) << (i * 7);
-                        if byte & 0b10000000 == 0 {
-                            return Ok(VarInt(val));
-                        }
-                    } else {
-                        break;
-                    }
-                }
-                Err(de::Error::custom("VarInt was too large"))
+                VarInt::try_decode(|| seq.next_element::<u8>(), de::Error::custom)
             }
         }
 
@@ -79,17 +57,7 @@ impl Serialize for VarLong {
     where
         S: Serializer,
     {
-        let mut value = self.0 as u64;
-        let mut buf = Vec::new();
-
-        while value > 0x7F {
-            buf.put_u8(value as u8 | 0x80);
-            value >>= 7;
-        }
-
-        buf.put_u8(value as u8);
-
-        serializer.serialize_bytes(&buf)
+        self.encode(|buff| serializer.serialize_bytes(&buff))
     }
 }
 
@@ -111,18 +79,7 @@ impl<'de> Deserialize<'de> for VarLong {
             where
                 A: SeqAccess<'de>,
             {
-                let mut val = 0;
-                for i in 0..VarLong::MAX_SIZE {
-                    if let Some(byte) = seq.next_element::<u8>()? {
-                        val |= (i64::from(byte) & 0b01111111) << (i * 7);
-                        if byte & 0b10000000 == 0 {
-                            return Ok(VarLong(val));
-                        }
-                    } else {
-                        break;
-                    }
-                }
-                Err(de::Error::custom("VarInt was too large"))
+                VarLong::try_decode(|| seq.next_element::<u8>(), de::Error::custom)
             }
         }
 

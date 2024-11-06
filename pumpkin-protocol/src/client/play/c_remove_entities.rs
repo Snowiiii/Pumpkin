@@ -13,7 +13,7 @@ pub struct CRemoveEntities<'a> {
 impl<'a> CRemoveEntities<'a> {
     pub fn new(entity_ids: &'a [VarInt]) -> Self {
         Self {
-            count: VarInt(entity_ids.len() as i32),
+            count: VarInt::try_from(entity_ids.len()).unwrap(),
             entity_ids,
         }
     }

@@ -24,8 +24,8 @@ impl CDamageEvent {
         Self {
             entity_id,
             source_type_id,
-            source_cause_id: source_cause_id.map_or(VarInt(0), |id| VarInt(id.0 + 1)),
-            source_direct_id: source_direct_id.map_or(VarInt(0), |id| VarInt(id.0 + 1)),
+            source_cause_id: source_cause_id.map_or(VarInt::new(0), |id| id + 1),
+            source_direct_id: source_direct_id.map_or(VarInt::new(0), |id| id + 1),
             source_position,
         }
     }

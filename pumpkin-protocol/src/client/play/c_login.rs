@@ -59,7 +59,7 @@ impl<'a> CLogin<'a> {
         Self {
             entity_id,
             is_hardcore,
-            dimension_count: VarInt(dimension_names.len() as i32),
+            dimension_count: VarInt::try_from(dimension_names.len()).unwrap(),
             dimension_names,
             max_players,
             view_distance,

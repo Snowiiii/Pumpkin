@@ -264,7 +264,7 @@ impl Player {
             return;
         }
 
-        if let Some(action) = Action::from_i32(command.action.0) {
+        if let Some(action) = Action::from_i32(command.action.get()) {
             let entity = &self.living_entity.entity;
             match action {
                 pumpkin_protocol::server::play::Action::StartSneaking => {
@@ -311,7 +311,7 @@ impl Player {
     }
 
     pub async fn handle_swing_arm(&self, swing_arm: SSwingArm) {
-        match Hand::from_i32(swing_arm.hand.0) {
+        match Hand::from_i32(swing_arm.hand.get()) {
             Some(hand) => {
                 let animation = match hand {
                     Hand::Main => Animation::SwingMainArm,
@@ -396,7 +396,7 @@ impl Player {
     }
 
     pub async fn handle_client_status(self: &Arc<Self>, client_status: SClientCommand) {
-        match client_status.action_id.0 {
+        match client_status.action_id.get() {
             0 => {
                 if self.living_entity.health.load() > 0.0 {
                     return;
@@ -421,7 +421,7 @@ impl Player {
         if entity.sneaking.load(std::sync::atomic::Ordering::Relaxed) != sneaking {
             entity.set_sneaking(sneaking).await;
         }
-        let Some(action) = ActionType::from_i32(interact.typ.0) else {
+        let Some(action) = ActionType::from_i32(interact.typ.get()) else {
             self.kick(TextComponent::text("Invalid action type")).await;
             return;
         };
@@ -436,7 +436,7 @@ impl Player {
                 }
 
                 let world = &entity.world;
-                let victim = world.get_player_by_entityid(entity_id.0).await;
+                let victim = world.get_player_by_entityid(entity_id.get()).await;
                 let Some(victim) = victim else {
                     self.kick(TextComponent::text("Interacted with invalid entity id"))
                         .await;
@@ -452,7 +452,7 @@ impl Player {
     }
 
     pub async fn handle_player_action(&self, player_action: SPlayerAction) {
-        match Status::from_i32(player_action.status.0) {
+        match Status::from_i32(player_action.status.get()) {
             Some(status) => match status {
                 Status::StartedDigging => {
                     if !self.can_interact_with_block_at(&player_action.location, 1.0) {
@@ -559,7 +559,7 @@ impl Player {
             return;
         }
 
-        if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
+        if let Some(face) = BlockFace::from_i32(use_item_on.face.get()) {
             if let Some(item) = self.inventory.lock().await.held_item() {
                 let block = get_block_by_item(item.item_id);
                 // check if item is a block, Because Not every item can be placed :D
@@ -620,7 +620,7 @@ impl Player {
     // This function will in the future be used to keep track of if the client is in a valid state.
     // But this is not possible yet
     pub async fn handle_close_container(&self, server: &Server, packet: SCloseContainer) {
-        let Some(_window_type) = WindowType::from_i32(packet.window_id.0) else {
+        let Some(_window_type) = WindowType::from_i32(packet.window_id.get()) else {
             self.kick(TextComponent::text("Invalid window ID")).await;
             return;
         };
