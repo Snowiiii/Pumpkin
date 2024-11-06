@@ -91,22 +91,30 @@ const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> L
     }
 }
 
-#[tokio::main]
-async fn main() -> io::Result<()> {
+fn main() -> io::Result<()> {
     init_logger();
-    // let rt = tokio::runtime::Builder::new_multi_thread()
-    //     .enable_all()
-    //     .build()
-    //     .unwrap();
 
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .expect("Failed to construct tokio");
+
+    // ensure rayon is built outside of tokio scope
+    // DO NOT MOVE IT INTO TOKIO
+    // DO NOT CHANGE MAIN INTO #[tokio::main] THIS HAS HAPPENED 3 TIMES ALREADY AND IT CAUSES ISSUES EVERY SINGLE TIME
+    // if it happens again, make sure to update the number here ^
+    rayon::ThreadPoolBuilder::new().build_global().unwrap();
+
+    runtime.block_on(async_main())
+}
+
+async fn async_main() -> io::Result<()> {
     tokio::spawn(async {
         setup_sighandler()
             .await
             .expect("Unable to setup signal handlers");
     });
 
-    // ensure rayon is built outside of tokio scope
-    rayon::ThreadPoolBuilder::new().build_global().unwrap();
     let default_panic = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         default_panic(info);
