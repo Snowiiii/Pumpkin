@@ -167,8 +167,8 @@ impl ToFromNumber for u32 {
 
 impl<T: ToFromNumber> DefaultNameArgConsumer for BoundedNumArgumentConsumer<T> {
     fn default_name(&self) -> &'static str {
-        // setting a single default name for all BoundedNumNumberArgumentumentConsumer variants is probably a bad idea since it would lead to confusion
-        self.name.expect("Only use *_default variants of methods with a BoundedNumNumberArgumentumentConsumer that has a name.")
+        // setting a single default name for all BoundedNumArgumentConsumer variants is probably a bad idea since it would lead to confusion
+        self.name.expect("Only use *_default variants of methods with a BoundedNumArgumentConsumer that has a name.")
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
