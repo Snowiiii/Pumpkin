@@ -9,6 +9,7 @@ use std::{
 
 use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
+use log::warn;
 use num_derive::FromPrimitive;
 use num_traits::ToPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
@@ -734,6 +735,14 @@ impl Player {
             }
         };
         Ok(())
+    }
+
+    /// add items to inventory if there's space, else drop them to the ground
+    pub async fn give_items(&self, item_id: u16, count: u32) {
+        if let Err(remaining) = self.inventory.lock().await.add_items(item_id, count) {
+            // todo: drop these items to the ground
+            warn!("{remaining} items (item_id={item_id}) were discarded because dropping them to the ground is not implemented");
+        }
     }
 }
 

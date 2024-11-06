@@ -12,14 +12,14 @@ use super::super::args::ArgumentConsumer;
 use super::{Arg, DefaultNameArgConsumer, FindArg};
 
 /// Consumes a single generic num, but only if it's in bounds.
-pub(crate) struct BoundedNumArgumentConsumer<T: ArgNum> {
+pub(crate) struct BoundedNumArgumentConsumer<T: ToFromNumber> {
     min_inclusive: Option<T>,
     max_inclusive: Option<T>,
     name: Option<&'static str>,
 }
 
 #[async_trait]
-impl<T: ArgNum> ArgumentConsumer for BoundedNumArgumentConsumer<T> {
+impl<T: ToFromNumber> ArgumentConsumer for BoundedNumArgumentConsumer<T> {
     async fn consume<'a>(
         &self,
         _src: &CommandSender<'a>,
@@ -30,39 +30,59 @@ impl<T: ArgNum> ArgumentConsumer for BoundedNumArgumentConsumer<T> {
 
         if let Some(max) = self.max_inclusive {
             if x > max {
-                return None;
+                return Some(Arg::Num(Err(())));
             }
         }
 
         if let Some(min) = self.min_inclusive {
             if x < min {
-                return None;
+                return Some(Arg::Num(Err(())));
             }
         }
 
-        Some(x.to_arg())
+        Some(Arg::Num(Ok(x.to_number())))
     }
 }
 
-impl<'a, T: ArgNum> FindArg<'a> for BoundedNumArgumentConsumer<T> {
-    type Data = T;
+impl<'a, T: ToFromNumber> FindArg<'a> for BoundedNumArgumentConsumer<T> {
+    type Data = Result<T, NotInBounds>;
 
     fn find_arg(args: &super::ConsumedArgs, name: &str) -> Result<Self::Data, InvalidTreeError> {
-        match args.get(name) {
-            Some(arg) => match T::from_arg(arg) {
-                Some(x) => Ok(x),
-                _ => Err(InvalidTreeError::InvalidConsumptionError(Some(
-                    name.to_string(),
-                ))),
-            },
-            _ => Err(InvalidTreeError::InvalidConsumptionError(Some(
+        let Some(Arg::Num(result)) = args.get(name) else {
+            return Err(InvalidTreeError::InvalidConsumptionError(Some(
                 name.to_string(),
-            ))),
-        }
+            )));
+        };
+
+        let data: Self::Data = match result {
+            Ok(num) => {
+                if let Some(x) = T::from_number(num) {
+                    Ok(x)
+                } else {
+                    return Err(InvalidTreeError::InvalidConsumptionError(Some(
+                        name.to_string(),
+                    )));
+                }
+            }
+            Err(()) => Err(()),
+        };
+
+        Ok(data)
     }
 }
 
-impl<T: ArgNum> BoundedNumArgumentConsumer<T> {
+pub(crate) type NotInBounds = ();
+
+#[derive(Clone, Copy)]
+pub(crate) enum Number {
+    F64(f64),
+    F32(f32),
+    I32(i32),
+    #[allow(unused)]
+    U32(u32),
+}
+
+impl<T: ToFromNumber> BoundedNumArgumentConsumer<T> {
     pub(crate) const fn new() -> Self {
         Self {
             min_inclusive: None,
@@ -88,67 +108,67 @@ impl<T: ArgNum> BoundedNumArgumentConsumer<T> {
     }
 }
 
-pub(crate) trait ArgNum: PartialOrd + Copy + Send + Sync + FromStr {
-    fn to_arg<'a>(self) -> Arg<'a>;
-    fn from_arg(arg: &Arg<'_>) -> Option<Self>;
+pub(crate) trait ToFromNumber: PartialOrd + Copy + Send + Sync + FromStr {
+    fn to_number(self) -> Number;
+    fn from_number(arg: &Number) -> Option<Self>;
 }
 
-impl ArgNum for f64 {
-    fn to_arg<'a>(self) -> Arg<'a> {
-        Arg::F64(self)
+impl ToFromNumber for f64 {
+    fn to_number(self) -> Number {
+        Number::F64(self)
     }
 
-    fn from_arg(arg: &Arg<'_>) -> Option<Self> {
+    fn from_number(arg: &Number) -> Option<Self> {
         match arg {
-            Arg::F64(x) => Some(*x),
+            Number::F64(x) => Some(*x),
             _ => None,
         }
     }
 }
 
-impl ArgNum for f32 {
-    fn to_arg<'a>(self) -> Arg<'a> {
-        Arg::F32(self)
+impl ToFromNumber for f32 {
+    fn to_number(self) -> Number {
+        Number::F32(self)
     }
 
-    fn from_arg(arg: &Arg<'_>) -> Option<Self> {
+    fn from_number(arg: &Number) -> Option<Self> {
         match arg {
-            Arg::F32(x) => Some(*x),
+            Number::F32(x) => Some(*x),
             _ => None,
         }
     }
 }
 
-impl ArgNum for i32 {
-    fn to_arg<'a>(self) -> Arg<'a> {
-        Arg::I32(self)
+impl ToFromNumber for i32 {
+    fn to_number(self) -> Number {
+        Number::I32(self)
     }
 
-    fn from_arg(arg: &Arg<'_>) -> Option<Self> {
+    fn from_number(arg: &Number) -> Option<Self> {
         match arg {
-            Arg::I32(x) => Some(*x),
+            Number::I32(x) => Some(*x),
             _ => None,
         }
     }
 }
 
-impl ArgNum for u32 {
-    fn to_arg<'a>(self) -> Arg<'a> {
-        Arg::U32(self)
+impl ToFromNumber for u32 {
+    fn to_number(self) -> Number {
+        Number::U32(self)
     }
 
-    fn from_arg(arg: &Arg<'_>) -> Option<Self> {
+    fn from_number(arg: &Number) -> Option<Self> {
         match arg {
-            Arg::U32(x) => Some(*x),
+            Number::U32(x) => Some(*x),
             _ => None,
         }
     }
 }
 
-impl<T: ArgNum> DefaultNameArgConsumer for BoundedNumArgumentConsumer<T> {
+impl<T: ToFromNumber> DefaultNameArgConsumer for BoundedNumArgumentConsumer<T> {
     fn default_name(&self) -> &'static str {
-        // setting a single default name for all BoundedNumArgumentConsumer variants is probably a bad idea since it would lead to confusion
-        self.name.expect("Only use *_default variants of methods with a BoundedNumArgumentConsumer that has a name.")
+        // setting a single default name for all BoundedNumNumberArgumentumentConsumer variants is probably a bad idea since it would lead to confusion
+        self.name.expect("Only use *_default variants of methods with a BoundedNumNumberArgumentumentConsumer that has a name.")
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {

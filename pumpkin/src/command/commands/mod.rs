@@ -1,5 +1,6 @@
 pub mod cmd_echest;
 pub mod cmd_gamemode;
+pub mod cmd_give;
 pub mod cmd_help;
 pub mod cmd_kick;
 pub mod cmd_kill;
