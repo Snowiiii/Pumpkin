@@ -250,7 +250,7 @@ impl ChunkWriter for AnvilChunkFormat {
             .open(
                 save_file
                     .region_folder
-                    .join(format!("r.{}.{}.mca", region.0, region.1)),
+                    .join(format!("./r.{}.{}.mca", region.0, region.1)),
             )
             .map_err(|err| ChunkWritingError::IoError(err.kind()))?;
 
@@ -288,7 +288,7 @@ impl ChunkWriter for AnvilChunkFormat {
                 .chunks(4)
                 .enumerate()
                 .filter_map(|(index, v)| {
-                    if table_entry == index as u32 {
+                    if table_entry / 4 == index as u32 {
                         return None;
                     }
                     let mut offset = vec![0u8];
@@ -300,19 +300,36 @@ impl ChunkWriter for AnvilChunkFormat {
                     }
                     Some((offset, size, index * 4))
                 })
-                .sorted_by(|a, b| a.cmp(b))
+                .sorted_by(|a, b| a.0.cmp(&b.0))
             {
                 if at_offset > other_offset {
                     continue;
                 }
-                let mut buf = vec![0u8; other_size];
+
+                fn read_at_most(file: &mut std::fs::File, size: usize) -> std::io::Result<Vec<u8>> {
+                    let mut buf = vec![0u8; size];
+
+                    let mut cursor = 0;
+                    loop {
+                        match file.read(&mut buf[cursor..])? {
+                            0 => break,
+                            bytes_read => {
+                                cursor += bytes_read;
+                            }
+                        }
+                    }
+
+                    Ok(buf)
+                }
+
                 region_file.seek(SeekFrom::Start(other_offset)).unwrap(); // TODO
-                region_file.read_exact(&mut buf).unwrap_or_else(|_| {
-                    panic!(
+                let buf = match read_at_most(&mut region_file, other_size) {
+                    Ok(v) => v,
+                    Err(_) => panic!(
                         "Region file r.-{},{}.mca got corrupted, sorry",
                         region.0, region.1
-                    )
-                });
+                    ),
+                };
 
                 region_file
                     .seek(SeekFrom::Start(other_offset - at_size as u64))
@@ -323,15 +340,17 @@ impl ChunkWriter for AnvilChunkFormat {
                         region.0, region.1
                     )
                 });
+                dbg!("aaaa");
+                dbg!(other_table_entry, other_offset, at_size);
                 let location_bytes =
-                    &(((other_offset - at_size as u64) / 4096) as u32).to_be_bytes()[0..3];
-                let size_bytes = [(other_size / 4096) as u8];
+                    &(((other_offset - at_size as u64) / 4096) as u32).to_be_bytes()[1..4];
+                let size_bytes = [(other_size.div_ceil(4096)) as u8];
                 let location_entry = [location_bytes, &size_bytes].concat();
                 location_table[other_table_entry..other_table_entry + 4]
                     .as_mut()
                     .copy_from_slice(&location_entry);
 
-                end_index = other_offset + other_size as u64;
+                end_index = other_offset + (other_size - at_size) as u64;
             }
         } else {
             for (offset, size) in location_table.chunks(4).filter_map(|v| {
@@ -348,8 +367,10 @@ impl ChunkWriter for AnvilChunkFormat {
             }
         }
 
-        let location_bytes = &(end_index as u32).to_be_bytes()[0..3];
-        let size_bytes = [(bytes.len() / 4096) as u8];
+        let location_bytes = &(end_index as u32 / 4096).to_be_bytes()[1..4];
+        let size_bytes = [(bytes.len().div_ceil(4096)) as u8];
+        dbg!(end_index, bytes.len());
+        dbg!(&location_bytes, &size_bytes);
         location_table[table_entry as usize..table_entry as usize + 4]
             .as_mut()
             .copy_from_slice(&[location_bytes, &size_bytes].concat());
@@ -360,6 +381,7 @@ impl ChunkWriter for AnvilChunkFormat {
         if let Err(err) = region_file.write_all(&[location_table, timestamp_table].concat()) {
             return Err(ChunkWritingError::IoError(err.kind()));
         }
+        // dbg!(&location_table.iter().map(|v| v.to_string()).join(","));
 
         region_file.seek(SeekFrom::Start(end_index)).unwrap(); // TODO
         region_file.write_all(&bytes).unwrap_or_else(|_| {
@@ -368,6 +390,7 @@ impl ChunkWriter for AnvilChunkFormat {
                 region.0, region.1
             )
         });
+        // region_file.write_all(&vec![0u8; 4096]);
 
         Ok(())
     }
