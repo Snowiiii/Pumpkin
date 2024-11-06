@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use pumpkin_core::text::color::{Color, NamedColor};
 use pumpkin_core::text::TextComponent;
-use pumpkin_world::block::block_registry;
+use pumpkin_world::item::item_registry;
 
 use crate::command::args::arg_bounded_num::BoundedNumArgumentConsumer;
 use crate::command::args::arg_item::ItemArgumentConsumer;
@@ -34,8 +34,7 @@ impl CommandExecutor for GiveExecutor {
 
         let item_name = ItemArgumentConsumer::find_arg(args, ARG_ITEM)?;
 
-        // todo: use item_registry instead
-        let Some(item) = block_registry::get_block(item_name) else {
+        let Some(item) = item_registry::get_item(item_name) else {
             sender
                 .send_message(
                     TextComponent::text_string(format!("Item {item_name} does not exist."))
@@ -60,13 +59,7 @@ impl CommandExecutor for GiveExecutor {
         };
 
         for target in targets {
-            target.give_items(item.item_id, item_count).await;
-            //target
-            //    .inventory
-            //    .lock()
-            //    .await
-            //    .set_slot(36, Some(ItemStack::new(1, item.item_id)), true)
-            //    .unwrap();
+            target.give_items(item.id, item_count).await;
         }
 
         sender
