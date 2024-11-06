@@ -59,7 +59,7 @@ impl CommandExecutor for GiveExecutor {
         };
 
         for target in targets {
-            target.give_items(item.id, item_count).await;
+            target.give_items(item, item_count).await;
         }
 
         sender

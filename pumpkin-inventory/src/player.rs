@@ -1,4 +1,4 @@
-use std::cmp::min;
+use std::slice::IterMut;
 use std::sync::atomic::AtomicU32;
 
 use crate::container_click::MouseClick;
@@ -26,6 +26,8 @@ impl Default for PlayerInventory {
 }
 
 impl PlayerInventory {
+    pub const CONTAINER_ID: i8 = 0;
+
     pub fn new() -> Self {
         Self {
             crafting: [None; 4],
@@ -136,44 +138,8 @@ impl PlayerInventory {
         slots
     }
 
-    /// Attempt to add items to inventory. If not all items could be successfully added because the inventory is full, only a part of the stack is added and an Err containing the number of items that couln't be added is returned.
-    pub fn add_items(&mut self, item_id: u16, count: u32) -> Result<(), u32> {
-        let max_stack_size: u8 = 64; // todo: get actual stack size of item
-
-        let mut remaining_items: u32 = count;
-
-        for stack in self.items.iter_mut().flatten() {
-            if stack.item_id != item_id {
-                continue;
-            }
-
-            if stack.item_count < max_stack_size {
-                let space = max_stack_size - stack.item_count;
-                let deposit_amount = min(remaining_items, space as u32);
-
-                stack.item_count += deposit_amount as u8;
-                remaining_items -= deposit_amount;
-
-                if remaining_items == 0 {
-                    return Ok(());
-                }
-            }
-        }
-
-        for slot in self.items.iter_mut() {
-            if slot.is_none() {
-                let deposit_amount = min(remaining_items, max_stack_size as u32);
-
-                *slot = Some(ItemStack::new(deposit_amount as u8, item_id));
-                remaining_items -= deposit_amount;
-
-                if remaining_items == 0 {
-                    return Ok(());
-                }
-            }
-        }
-
-        Err(remaining_items)
+    pub fn iter_items_mut(&mut self) -> IterMut<Option<ItemStack>> {
+        self.items.iter_mut()
     }
 }
 

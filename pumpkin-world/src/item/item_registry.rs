@@ -16,9 +16,9 @@ pub fn get_item<'a>(name: &str) -> Option<&'a Item> {
 #[derive(Deserialize, Clone, Debug)]
 pub struct Item {
     pub id: u16,
-    name: String,
+    pub name: String,
     translation_key: String,
-    max_stack: i8,
+    pub max_stack: i8,
     max_durability: u16,
     break_sound: String,
     food: Option<FoodComponent>,

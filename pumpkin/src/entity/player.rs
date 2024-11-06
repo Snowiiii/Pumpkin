@@ -1,4 +1,5 @@
 use std::{
+    cmp::min,
     collections::{HashMap, VecDeque},
     sync::{
         atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU32, AtomicU8},
@@ -18,14 +19,14 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_entity::{entity_type::EntityType, EntityId};
-use pumpkin_inventory::player::PlayerInventory;
+use pumpkin_inventory::{player::PlayerInventory, InventoryError};
 use pumpkin_macros::sound;
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
         CCombatDeath, CGameEvent, CHurtAnimation, CKeepAlive, CPlayDisconnect, CPlayerAbilities,
-        CPlayerInfoUpdate, CRespawn, CSetHealth, CSpawnEntity, CSyncPlayerPosition,
-        CSystemChatMessage, GameEvent, PlayerAction,
+        CPlayerInfoUpdate, CRespawn, CSetContainerSlot, CSetHealth, CSpawnEntity,
+        CSyncPlayerPosition, CSystemChatMessage, GameEvent, PlayerAction,
     },
     server::play::{
         SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SClientTickEnd,
@@ -39,7 +40,10 @@ use tokio::sync::{Mutex, Notify};
 use tokio::task::JoinHandle;
 
 use pumpkin_protocol::server::play::SKeepAlive;
-use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
+use pumpkin_world::{
+    cylindrical_chunk_iterator::Cylindrical,
+    item::{item_registry::Item, ItemStack},
+};
 
 use super::Entity;
 use crate::{
@@ -843,12 +847,88 @@ impl Player {
         Ok(())
     }
 
-    /// add items to inventory if there's space, else drop them to the ground
-    pub async fn give_items(&self, item_id: u16, count: u32) {
-        if let Err(remaining) = self.inventory.lock().await.add_items(item_id, count) {
-            // todo: drop these items to the ground
-            warn!("{remaining} items (item_id={item_id}) were discarded because dropping them to the ground is not implemented");
+    /// Syncs inventory slot with client.
+    pub async fn send_inventory_slot_update(
+        &self,
+        inventory: &mut PlayerInventory,
+        slot_index: usize,
+    ) -> Result<(), InventoryError> {
+        let slot = (&*inventory.get_slot(slot_index)?).into();
+
+        // Returns previous value
+        let i = inventory
+            .state_id
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let packet = CSetContainerSlot::new(
+            PlayerInventory::CONTAINER_ID,
+            (i + 1) as i32,
+            slot_index,
+            &slot,
+        );
+        self.client.send_packet(&packet).await;
+
+        Ok(())
+    }
+
+    /// Add items to inventory if there's space, else drop them to the ground.
+    ///
+    /// This method automatically syncs changes with the client.
+    pub async fn give_items(&self, item: &Item, count: u32) {
+        let mut remaining_items: u32 = count;
+        let max_stack_size = item.max_stack as u8;
+
+        let mut inventory = self.inventory.lock().await;
+
+        // try filling existing ItemStacks first
+        for slot_index in (36..45).chain(9..36) {
+            let Some(stack) = inventory.get_slot(slot_index).unwrap() else {
+                continue;
+            };
+
+            if stack.item_id != item.id {
+                continue;
+            }
+
+            if stack.item_count < max_stack_size {
+                let space = max_stack_size - stack.item_count;
+                let deposit_amount = min(remaining_items, space.into());
+
+                stack.item_count += deposit_amount as u8;
+                remaining_items -= deposit_amount;
+
+                self.send_inventory_slot_update(&mut inventory, slot_index)
+                    .await
+                    .unwrap();
+
+                if remaining_items == 0 {
+                    return;
+                }
+            }
         }
+
+        // then try filling empty slots
+        for slot_index in (36..45).chain(9..36) {
+            let slot = inventory.get_slot(slot_index).unwrap();
+
+            if slot.is_some() {
+                continue;
+            }
+
+            let deposit_amount = min(remaining_items, max_stack_size.into());
+
+            *slot = Some(ItemStack::new(deposit_amount as u8, item.id));
+            remaining_items -= deposit_amount;
+
+            self.send_inventory_slot_update(&mut inventory, slot_index)
+                .await
+                .unwrap();
+
+            if remaining_items == 0 {
+                return;
+            }
+        }
+
+        warn!("{remaining_items} items ({}) were discarded because dropping them to the ground is not implemented", item.name);
     }
 }
 
