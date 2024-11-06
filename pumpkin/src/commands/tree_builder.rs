@@ -1,7 +1,7 @@
 use crate::commands::tree::{ArgumentConsumer, CommandTree, Node, NodeType};
 use crate::commands::CommandSender;
 
-use super::RunFunctionType;
+use super::CommandExecutor;
 
 impl<'a> CommandTree<'a> {
     /// Add a child [Node] to the root of this [`CommandTree`].
@@ -40,9 +40,9 @@ impl<'a> CommandTree<'a> {
     /// desired type.
     ///
     /// Also see [`NonLeafNodeBuilder::execute`].
-    pub fn execute(mut self, run: &'a RunFunctionType) -> Self {
+    pub fn execute(mut self, executor: &'a dyn CommandExecutor) -> Self {
         let node = Node {
-            node_type: NodeType::ExecuteLeaf { run },
+            node_type: NodeType::ExecuteLeaf { executor },
             children: Vec::new(),
         };
 
@@ -113,9 +113,9 @@ impl<'a> NonLeafNodeBuilder<'a> {
     /// desired type.
     ///
     /// Also see [`CommandTree::execute`].
-    pub fn execute(mut self, run: &'a RunFunctionType) -> Self {
+    pub fn execute(mut self, executor: &'a dyn CommandExecutor) -> Self {
         self.leaf_nodes.push(LeafNodeBuilder {
-            node_type: NodeType::ExecuteLeaf { run },
+            node_type: NodeType::ExecuteLeaf { executor },
         });
 
         self
@@ -123,7 +123,6 @@ impl<'a> NonLeafNodeBuilder<'a> {
 }
 
 /// Matches a sting literal.
-#[expect(dead_code)] // todo: remove (so far no commands requiring this are implemented)
 pub const fn literal(string: &str) -> NonLeafNodeBuilder {
     NonLeafNodeBuilder {
         node_type: NodeType::Literal { string },
@@ -140,7 +139,7 @@ pub const fn literal(string: &str) -> NonLeafNodeBuilder {
 /// [`NonLeafNodeBuilder::execute`] nodes in a [`ConsumedArgs`] instance. It must remove consumed arg(s)
 /// from [`RawArgs`] and return them. It must return None if [`RawArgs`] are invalid. [`RawArgs`] is
 /// reversed, so [`Vec::pop`] can be used to obtain args in ltr order.
-pub fn argument<'a>(name: &'a str, consumer: ArgumentConsumer) -> NonLeafNodeBuilder<'a> {
+pub fn argument<'a>(name: &'a str, consumer: &'a dyn ArgumentConsumer) -> NonLeafNodeBuilder<'a> {
     NonLeafNodeBuilder {
         node_type: NodeType::Argument { name, consumer },
         child_nodes: Vec::new(),

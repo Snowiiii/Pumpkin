@@ -14,9 +14,9 @@ use flate2::{
 use itertools::Itertools;
 
 use crate::{
-    block::{BlockId, BlockString},
+    block::{block_registry::BLOCK_IDS_TO_BLOCK_STRING, BlockId},
     chunk::{ChunkSection, ChunkSectionBlockStates, PaletteEntry},
-    level::SaveFile,
+    level::LevelFolder,
     WORLD_LOWEST_Y,
 };
 
@@ -147,7 +147,7 @@ fn modulus(a: i32, b: i32) -> i32 {
 impl ChunkReader for AnvilChunkFormat {
     fn read_chunk(
         &self,
-        save_file: &SaveFile,
+        level_folder: &LevelFolder,
         at: &pumpkin_core::math::vector2::Vector2<i32>,
     ) -> Result<super::ChunkData, ChunkReadingError> {
         let region = (
@@ -158,7 +158,7 @@ impl ChunkReader for AnvilChunkFormat {
         let mut region_file = OpenOptions::new()
             .read(true)
             .open(
-                save_file
+                level_folder
                     .region_folder
                     .join(format!("r.{}.{}.mca", region.0, region.1)),
             )
@@ -225,8 +225,8 @@ impl ChunkWriter for AnvilChunkFormat {
     fn write_chunk(
         &self,
         chunk_data: &ChunkData,
-        save_file: &SaveFile,
-        at: pumpkin_core::math::vector2::Vector2<i32>,
+        level_folder: &LevelFolder,
+        at: &pumpkin_core::math::vector2::Vector2<i32>,
     ) -> Result<(), super::ChunkWritingError> {
         // TODO: update timestamp
 
@@ -248,7 +248,7 @@ impl ChunkWriter for AnvilChunkFormat {
             .create(true)
             .truncate(false)
             .open(
-                save_file
+                level_folder
                     .region_folder
                     .join(format!("./r.{}.{}.mca", region.0, region.1)),
             )
@@ -403,12 +403,13 @@ impl AnvilChunkFormat {
         for (i, blocks) in chunk_data.blocks.blocks.chunks(16 * 16 * 16).enumerate() {
             // get unique blocks
             let unique_blocks = blocks.iter().dedup().collect_vec();
-            let palette = HashMap::<BlockId, (&'static BlockString, usize)>::from_iter(
+            let palette = HashMap::<BlockId, (&String, usize)>::from_iter(
                 unique_blocks.iter().enumerate().map(|(i, v)| {
                     (
                         **v,
                         (
-                            v.get_block_string()
+                            BLOCK_IDS_TO_BLOCK_STRING
+                                .get(&v.0)
                                 .expect("Tried saving a block which does not exist."),
                             i,
                         ),
@@ -441,12 +442,7 @@ impl AnvilChunkFormat {
                     palette: palette
                         .into_iter()
                         .map(|entry| PaletteEntry {
-                            name: entry.1 .0.name.to_string(),
-                            properties: if entry.1 .0.properties.is_empty() {
-                                None
-                            } else {
-                                Some(entry.1 .0.properties.clone())
-                            },
+                            name: entry.1 .0.clone(),
                         })
                         .collect(),
                 }),

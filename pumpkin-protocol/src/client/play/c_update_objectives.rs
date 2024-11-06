@@ -3,9 +3,7 @@ use pumpkin_macros::client_packet;
 
 use crate::{ClientPacket, NumberFormat, VarInt};
 
-use super::ClientboundPlayPackets;
-
-#[client_packet(ClientboundPlayPackets::ScoreboardObjective as i32)]
+#[client_packet("play:set_objective")]
 pub struct CUpdateObjectives<'a> {
     objective_name: &'a str,
     mode: u8,

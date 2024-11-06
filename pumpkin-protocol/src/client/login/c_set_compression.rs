@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundLoginPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundLoginPackets::SetCompression as i32)]
+#[client_packet("login:login_compression")]
 pub struct CSetCompression {
     threshold: VarInt,
 }

@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::EntityVelocity as i32)]
+#[client_packet("play:set_entity_motion")]
 pub struct CEntityVelocity<'a> {
     entity_id: &'a VarInt,
     velocity_x: i16,

@@ -5,10 +5,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::DisguisedChat as i32)]
+#[client_packet("play:disguised_chat")]
 pub struct CDisguisedChatMessage<'a> {
     message: TextComponent<'a>,
     chat_type: VarInt,

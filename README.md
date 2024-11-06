@@ -50,7 +50,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Chunk Loading
   - [x] Chunk Generation
   - [x] Scoreboard
-  - [ ] World Borders
+  - [x] World Borders
   - [ ] World Saving
 - Player
   - [x] Player Skins

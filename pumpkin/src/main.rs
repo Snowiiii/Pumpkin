@@ -25,6 +25,10 @@ use client::Client;
 use server::{ticker::Ticker, Server};
 use std::io::{self};
 use tokio::io::{AsyncBufReadExt, BufReader};
+#[cfg(not(unix))]
+use tokio::signal::ctrl_c;
+#[cfg(unix)]
+use tokio::signal::unix::{signal, SignalKind};
 
 use std::sync::Arc;
 
@@ -94,16 +98,13 @@ async fn main() -> io::Result<()> {
     //     .enable_all()
     //     .build()
     //     .unwrap();
-    ctrlc::set_handler(|| {
-        log::warn!(
-            "{}",
-            TextComponent::text("Stopping Server")
-                .color_named(NamedColor::Red)
-                .to_pretty_console()
-        );
-        std::process::exit(0);
-    })
-    .unwrap();
+
+    tokio::spawn(async {
+        setup_sighandler()
+            .await
+            .expect("Unable to setup signal handlers");
+    });
+
     // ensure rayon is built outside of tokio scope
     rayon::ThreadPoolBuilder::new().build_global().unwrap();
     let default_panic = std::panic::take_hook();
@@ -146,6 +147,7 @@ async fn main() -> io::Result<()> {
         });
     }
 
+    let mut master_client_id: u16 = 0;
     loop {
         // Asynchronously wait for an inbound socket.
         let (connection, address) = listener.accept().await?;
@@ -154,12 +156,16 @@ async fn main() -> io::Result<()> {
             log::warn!("failed to set TCP_NODELAY {e}");
         }
 
+        let id = master_client_id;
+        master_client_id = master_client_id.wrapping_add(1);
+
         log::info!(
-            "Accepted connection from: {} ",
+            "Accepted connection from: {} (id {})",
             scrub_address(&format!("{address}")),
+            id
         );
 
-        let client = Arc::new(Client::new(connection, addr));
+        let client = Arc::new(Client::new(connection, addr, id));
 
         let server = server.clone();
         tokio::spawn(async move {
@@ -190,11 +196,50 @@ async fn main() -> io::Result<()> {
                         player.process_packets(&server).await;
                     };
                 }
+                log::debug!("Cleaning up player for id {}", id);
                 player.remove().await;
                 server.remove_player().await;
             }
         });
     }
+}
+
+fn handle_interrupt() {
+    log::warn!(
+        "{}",
+        TextComponent::text("Received interrupt signal; stopping server...")
+            .color_named(NamedColor::Red)
+            .to_pretty_console()
+    );
+    std::process::exit(0);
+}
+
+// Non-UNIX Ctrl-C handling
+#[cfg(not(unix))]
+async fn setup_sighandler() -> io::Result<()> {
+    if ctrl_c().await.is_ok() {
+        handle_interrupt();
+    }
+
+    Ok(())
+}
+
+// Unix signal handling
+#[cfg(unix)]
+async fn setup_sighandler() -> io::Result<()> {
+    if signal(SignalKind::interrupt())?.recv().await.is_some() {
+        handle_interrupt();
+    }
+
+    if signal(SignalKind::hangup())?.recv().await.is_some() {
+        handle_interrupt();
+    }
+
+    if signal(SignalKind::terminate())?.recv().await.is_some() {
+        handle_interrupt();
+    }
+
+    Ok(())
 }
 
 fn setup_console(server: Arc<Server>) {

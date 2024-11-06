@@ -1,14 +1,12 @@
 use num_derive::FromPrimitive;
 
-mod block_registry;
+pub mod block_registry;
 pub mod block_state;
-mod block_string;
 
 use pumpkin_core::math::vector3::Vector3;
 
-pub use block_registry::{Block, BlockCategory, BlockId};
+pub use block_registry::BlockId;
 pub use block_state::BlockState;
-pub use block_string::BlockString;
 
 #[derive(FromPrimitive)]
 pub enum BlockFace {
@@ -24,11 +22,11 @@ impl BlockFace {
     pub fn to_offset(&self) -> Vector3<i32> {
         match self {
             BlockFace::Bottom => (0, -1, 0),
-            BlockFace::East => (1, 0, 0),
+            BlockFace::Top => (0, 1, 0),
             BlockFace::North => (0, 0, -1),
             BlockFace::South => (0, 0, 1),
-            BlockFace::Top => (0, 1, 0),
             BlockFace::West => (-1, 0, 0),
+            BlockFace::East => (1, 0, 0),
         }
         .into()
     }

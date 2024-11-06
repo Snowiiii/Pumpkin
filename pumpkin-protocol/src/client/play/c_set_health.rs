@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::UpdateHealth as i32)]
+#[client_packet("play:set_health")]
 pub struct CSetHealth {
     health: f32,
     food: VarInt,
