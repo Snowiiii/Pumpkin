@@ -34,7 +34,9 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 
 - [x] Configuration (toml)
 - [x] Server Status/Ping
-- [x] Login
+- Login
+  - [x] Encryption
+  - [x] Packet Compression
 - Player Configuration
   - [x] Registries (biome types, paintings, dimensions)
   - [x] Server Brand
@@ -61,6 +63,13 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Player Animation
   - [x] Player Inventory
   - [x] Player Combat
+- Entities
+  - [x] Players
+  - [ ] Mobs
+  - [ ] Animals
+  - [ ] Entity AI
+  - [ ] Minecart
+  - [ ] Boss
 - Server
   - [ ] Plugins
   - [x] Query
