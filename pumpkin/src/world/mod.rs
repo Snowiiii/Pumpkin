@@ -9,7 +9,6 @@ use crate::entity::{
     player::{ChunkHandleWrapper, Player},
     Entity,
 };
-use num_traits::ToPrimitive;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
@@ -21,8 +20,8 @@ use pumpkin_protocol::{
 };
 use pumpkin_protocol::{
     client::play::{
-        CChunkData, CGameEvent, CLogin, CPlayerAbilities, CPlayerInfoUpdate, CRemoveEntities,
-        CRemovePlayerInfo, CSetEntityMetadata, CSpawnEntity, GameEvent, Metadata, PlayerAction,
+        CChunkData, CGameEvent, CLogin, CPlayerInfoUpdate, CRemoveEntities, CRemovePlayerInfo,
+        CSetEntityMetadata, CSpawnEntity, GameEvent, Metadata, PlayerAction,
     },
     ClientPacket, VarInt,
 };
@@ -98,7 +97,7 @@ impl World {
     /// Sends the specified packet to every player currently logged in to the world, excluding the players listed in the `except` parameter.
     ///
     /// **Note:** This function acquires a lock on the `current_players` map, ensuring thread safety.
-    pub async fn broadcast_packet_expect<P>(&self, except: &[uuid::Uuid], packet: &P)
+    pub async fn broadcast_packet_except<P>(&self, except: &[uuid::Uuid], packet: &P)
     where
         P: ClientPacket,
     {
@@ -135,6 +134,19 @@ impl World {
         }
     }
 
+    /// Gets the y position of the first non air block from the top down
+    pub async fn get_top_block(&self, position: Vector2<i32>) -> i32 {
+        for y in (-64..=319).rev() {
+            let pos = WorldPosition(Vector3::new(position.x, y, position.z));
+            let block = self.get_block(pos).await;
+            if block == 0 || block == 750 || block == 751 {
+                continue;
+            }
+            return y;
+        }
+        319
+    }
+
     #[expect(clippy::too_many_lines)]
     pub async fn spawn_player(&self, base_config: &BasicConfiguration, player: Arc<Player>) {
         // This code follows the vanilla packet order
@@ -157,13 +169,13 @@ impl World {
                 base_config.view_distance.into(), //  TODO: view distance
                 base_config.simulation_distance.into(), // TODO: sim view dinstance
                 false,
-                false,
+                true,
                 false,
                 0.into(),
                 "minecraft:overworld",
                 0, // seed
-                gamemode.to_u8().unwrap(),
-                base_config.default_gamemode.to_i8().unwrap(),
+                gamemode as u8,
+                base_config.default_gamemode as i8,
                 false,
                 false,
                 None,
@@ -176,21 +188,26 @@ impl World {
         // player abilities
         // TODO: this is for debug purpose, remove later
         log::debug!("Sending player abilities to {}", player.gameprofile.name);
-        player
-            .client
-            .send_packet(&CPlayerAbilities::new(0x02, 0.4, 0.1))
-            .await;
+        {
+            let mut abilities = player.abilities.lock().await;
+            abilities.allow_flying = true;
+        }
+        player.send_abilties_update().await;
 
         // teleport
-        let position = Vector3::new(10.0, 120.0, 10.0);
+        let mut position = Vector3::new(10.0, 120.0, 10.0);
         let yaw = 10.0;
         let pitch = 10.0;
+
+        let top = self
+            .get_top_block(Vector2::new(position.x as i32, position.z as i32))
+            .await;
+        position.y = f64::from(top + 1);
 
         log::debug!("Sending player teleport to {}", player.gameprofile.name);
         player.teleport(position, yaw, pitch).await;
 
-        let pos = player.living_entity.entity.pos.load();
-        player.last_position.store(pos);
+        player.living_entity.last_pos.store(position);
 
         let gameprofile = &player.gameprofile;
         // first send info update to our new player, So he can see his Skin
@@ -242,7 +259,7 @@ impl World {
 
         log::debug!("Broadcasting player spawn for {}", player.gameprofile.name);
         // spawn player for every client
-        self.broadcast_packet_expect(
+        self.broadcast_packet_except(
             &[player.gameprofile.id],
             // TODO: add velo
             &CSpawnEntity::new(
@@ -552,7 +569,7 @@ impl World {
             .remove(&player.gameprofile.id)
             .unwrap();
         let uuid = player.gameprofile.id;
-        self.broadcast_packet_expect(
+        self.broadcast_packet_except(
             &[player.gameprofile.id],
             &CRemovePlayerInfo::new(1.into(), &[uuid]),
         )

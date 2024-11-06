@@ -63,7 +63,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Player Combat
 - Server
   - [ ] Plugins
-  - [ ] Query
+  - [x] Query
   - [x] RCON
   - [x] Inventories
   - [x] Particles
@@ -94,7 +94,3 @@ Consider joining our [discord](https://discord.gg/wT8XjrjKkf) to stay up-to-date
 ## Funding
 
 If you want to fund me and help the project, Check out my [GitHub sponsors](https://github.com/sponsors/Snowiiii) or my [PayPal](https://www.paypal.me/alexxmedvedev)
-
-## Thanks
-
-A big thanks to [wiki.vg](https://wiki.vg/) for providing valuable information used in the development of this project.

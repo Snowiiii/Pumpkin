@@ -22,10 +22,10 @@ use pumpkin_protocol::{
         CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot, FilterType,
     },
     server::play::{
-        Action, ActionType, SChatCommand, SChatMessage, SClientInformationPlay, SConfirmTeleport,
-        SInteract, SPlayPingRequest, SPlayerAbilities, SPlayerAction, SPlayerCommand,
-        SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
-        SSwingArm, SUseItemOn, Status,
+        Action, ActionType, SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay,
+        SConfirmTeleport, SInteract, SPlayPingRequest, SPlayerAbilities, SPlayerAction,
+        SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
+        SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status,
     },
 };
 use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
@@ -45,7 +45,6 @@ impl Player {
             if id == &confirm_teleport.teleport_id {
                 // we should set the pos now to that we requested in the teleport packet, Is may fixed issues when the client sended position packets while being teleported
                 self.living_entity
-                    .entity
                     .set_pos(position.x, position.y, position.z);
 
                 *awaiting_teleport = None;
@@ -75,16 +74,14 @@ impl Player {
         }
 
         let entity = &self.living_entity.entity;
-        entity.set_pos(
+        self.living_entity.set_pos(
             Self::clamp_horizontal(position.x),
             Self::clamp_vertical(position.feet_y),
             Self::clamp_horizontal(position.z),
         );
 
         let pos = entity.pos.load();
-        let last_position = self.last_position.load();
-
-        self.last_position.store(pos);
+        let last_pos = self.living_entity.last_pos.load();
 
         entity
             .on_ground
@@ -92,7 +89,7 @@ impl Player {
 
         let entity_id = entity.entity_id;
         let Vector3 { x, y, z } = pos;
-        let (last_x, last_y, last_z) = (last_position.x, last_position.y, last_position.z);
+        let (last_x, last_y, last_z) = (last_pos.x, last_pos.y, last_pos.z);
         let world = &entity.world;
 
         // let delta = Vector3::new(x - lastx, y - lasty, z - lastz);
@@ -109,7 +106,7 @@ impl Player {
         // }
         // send new position to all other players
         world
-            .broadcast_packet_expect(
+            .broadcast_packet_except(
                 &[self.gameprofile.id],
                 &CUpdateEntityPos::new(
                     entity_id.into(),
@@ -141,16 +138,15 @@ impl Player {
         }
 
         let entity = &self.living_entity.entity;
-        entity.set_pos(
+        self.living_entity.set_pos(
             Self::clamp_horizontal(position_rotation.x),
             Self::clamp_vertical(position_rotation.feet_y),
             Self::clamp_horizontal(position_rotation.z),
         );
 
         let pos = entity.pos.load();
-        let last_position = self.last_position.load();
+        let last_pos = self.living_entity.last_pos.load();
 
-        self.last_position.store(pos);
         entity.on_ground.store(
             position_rotation.ground,
             std::sync::atomic::Ordering::Relaxed,
@@ -163,7 +159,7 @@ impl Player {
 
         let entity_id = entity.entity_id;
         let Vector3 { x, y, z } = pos;
-        let (last_x, last_y, last_z) = (last_position.x, last_position.y, last_position.z);
+        let (last_x, last_y, last_z) = (last_pos.x, last_pos.y, last_pos.z);
 
         let yaw = modulus(entity.yaw.load() * 256.0 / 360.0, 256.0);
         let pitch = modulus(entity.pitch.load() * 256.0 / 360.0, 256.0);
@@ -185,7 +181,7 @@ impl Player {
         // send new position to all other players
 
         world
-            .broadcast_packet_expect(
+            .broadcast_packet_except(
                 &[self.gameprofile.id],
                 &CUpdateEntityPosRot::new(
                     entity_id.into(),
@@ -199,7 +195,7 @@ impl Player {
             )
             .await;
         world
-            .broadcast_packet_expect(
+            .broadcast_packet_except(
                 &[self.gameprofile.id],
                 &CHeadRot::new(entity_id.into(), yaw as u8),
             )
@@ -230,11 +226,11 @@ impl Player {
         let packet =
             CUpdateEntityRot::new(entity_id.into(), yaw as u8, pitch as u8, rotation.ground);
         world
-            .broadcast_packet_expect(&[self.gameprofile.id], &packet)
+            .broadcast_packet_except(&[self.gameprofile.id], &packet)
             .await;
         let packet = CHeadRot::new(entity_id.into(), yaw as u8);
         world
-            .broadcast_packet_expect(&[self.gameprofile.id], &packet)
+            .broadcast_packet_except(&[self.gameprofile.id], &packet)
             .await;
     }
 
@@ -324,7 +320,7 @@ impl Player {
                 let id = self.entity_id();
                 let world = &self.living_entity.entity.world;
                 world
-                    .broadcast_packet_expect(
+                    .broadcast_packet_except(
                         &[self.gameprofile.id],
                         &CEntityAnimation::new(id.into(), animation as u8),
                     )
@@ -397,6 +393,26 @@ impl Player {
             self.kick(TextComponent::text("Invalid hand or chat type"))
                 .await;
         }
+    }
+
+    pub async fn handle_client_status(self: &Arc<Self>, client_status: SClientCommand) {
+        match client_status.action_id.0 {
+            0 => {
+                if self.living_entity.health.load() > 0.0 {
+                    return;
+                }
+                self.respawn(false).await;
+                // TODO: hardcore set spectator
+            }
+            1 => {
+                // request stats
+                log::debug!("todo");
+            }
+            _ => {
+                self.kick(TextComponent::text("Invalid client status"))
+                    .await;
+            }
+        };
     }
 
     pub async fn handle_interact(&self, interact: SInteract) {
@@ -522,7 +538,11 @@ impl Player {
         let mut abilities = self.abilities.lock().await;
 
         // Set the flying ability
-        abilities.flying = player_abilities.flags & 0x02 != 0 && abilities.allow_flying;
+        let flying = player_abilities.flags & 0x02 != 0 && abilities.allow_flying;
+        if flying {
+            self.living_entity.fall_distance.store(0.0);
+        }
+        abilities.flying = flying;
     }
 
     pub async fn handle_play_ping_request(&self, request: SPlayPingRequest) {

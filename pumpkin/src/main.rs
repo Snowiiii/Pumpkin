@@ -42,6 +42,7 @@ pub mod command;
 pub mod entity;
 pub mod error;
 pub mod proxy;
+pub mod query;
 pub mod rcon;
 pub mod server;
 pub mod world;
@@ -115,10 +116,13 @@ async fn main() -> io::Result<()> {
     let time = Instant::now();
 
     // Setup the TCP server socket.
-    let addr = BASIC_CONFIG.server_address;
-    let listener = tokio::net::TcpListener::bind(addr)
+    let listener = tokio::net::TcpListener::bind(BASIC_CONFIG.server_address)
         .await
         .expect("Failed to start TcpListener");
+    // In the event the user puts 0 for their port, this will allow us to know what port it is running on
+    let addr = listener
+        .local_addr()
+        .expect("Unable to get the address of server!");
 
     let use_console = ADVANCED_CONFIG.commands.use_console;
     let rcon = ADVANCED_CONFIG.rcon.clone();
@@ -138,6 +142,12 @@ async fn main() -> io::Result<()> {
             RCONServer::new(&rcon, server).await.unwrap();
         });
     }
+
+    if ADVANCED_CONFIG.query.enabled {
+        log::info!("Query protocol enabled. Starting...");
+        tokio::spawn(query::start_query_handler(server.clone(), addr));
+    }
+
     {
         let server = server.clone();
         tokio::spawn(async move {
