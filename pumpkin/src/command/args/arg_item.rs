@@ -22,7 +22,7 @@ impl ArgumentConsumer for ItemArgumentConsumer {
     ) -> Option<Arg<'a>> {
         let s = args.pop()?;
 
-        let name = if s.starts_with("minecraft:") {
+        let name = if s.contains(':') {
             s.to_string()
         } else {
             format!("minecraft:{s}")
