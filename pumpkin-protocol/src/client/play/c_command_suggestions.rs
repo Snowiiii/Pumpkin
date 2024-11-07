@@ -12,7 +12,12 @@ pub struct CCommandSuggestions<'a> {
 }
 
 impl<'a> CCommandSuggestions<'a> {
-    pub fn new(id: impl Into<VarInt>, start: impl Into<VarInt>, length: impl Into<VarInt>, matches: Vec<(String, Option<TextComponent<'a>>)>) -> Self {
+    pub fn new(
+        id: impl Into<VarInt>,
+        start: impl Into<VarInt>,
+        length: impl Into<VarInt>,
+        matches: Vec<(String, Option<TextComponent<'a>>)>,
+    ) -> Self {
         Self {
             id: id.into(),
             start: start.into(),
@@ -22,7 +27,7 @@ impl<'a> CCommandSuggestions<'a> {
     }
 }
 
-impl <'a>ClientPacket for CCommandSuggestions<'a> {
+impl<'a> ClientPacket for CCommandSuggestions<'a> {
     fn write(&self, bytebuf: &mut crate::bytebuf::ByteBuffer) {
         bytebuf.put_var_int(&self.id);
         bytebuf.put_var_int(&self.start);

@@ -10,7 +10,6 @@ use std::{
 
 use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
-use log::warn;
 use num_derive::FromPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::{
@@ -30,9 +29,9 @@ use pumpkin_protocol::{
     },
     server::play::{
         SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SClientTickEnd,
-        SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerInput,
-        SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
-        SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn, SCommandSuggestion,
+        SCommandSuggestion, SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction,
+        SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
+        SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
     },
     RawPacket, ServerPacket, SoundCategory, VarInt,
 };
@@ -838,7 +837,10 @@ impl Player {
                 self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await;
             }
             SUseItem::PACKET_ID => self.handle_use_item(&SUseItem::read(bytebuf)?),
-            SCommandSuggestion::PACKET_ID => self.handle_command_suggestion(SCommandSuggestion::read(bytebuf)?).await,
+            SCommandSuggestion::PACKET_ID => {
+                self.handle_command_suggestion(SCommandSuggestion::read(bytebuf)?)
+                    .await
+            }
             _ => {
                 log::warn!("Failed to handle player packet id {}", packet.id.0);
                 // TODO: We give an error if all play packets are implemented
@@ -928,7 +930,7 @@ impl Player {
                 return;
             }
         }
-      
+
         log::warn!("{remaining_items} items ({}) were discarded because dropping them to the ground is not implemented", item.name);
     }
 }

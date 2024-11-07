@@ -17,10 +17,10 @@ use crate::server::Server;
 pub mod args;
 mod commands;
 pub mod dispatcher;
+pub mod packet;
 mod tree;
 mod tree_builder;
 mod tree_format;
-pub mod packet;
 
 pub enum CommandSender<'a> {
     Rcon(&'a tokio::sync::Mutex<Vec<String>>),

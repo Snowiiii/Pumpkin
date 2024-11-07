@@ -9,7 +9,7 @@ pub struct CCommands<T> {
     pub write_fn: fn(&T, &mut ByteBuffer),
 }
 
-impl <T>ClientPacket for CCommands<T> {
+impl<T> ClientPacket for CCommands<T> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         let write_fn = self.write_fn;
         write_fn(&self.data, bytebuf);
