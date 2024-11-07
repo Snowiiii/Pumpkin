@@ -221,7 +221,12 @@ impl SubChunkBlocks {
                     *self = Self::Multi(vec)
                 }
             }
-            Self::Multi(blocks) => blocks.set(Self::convert_index(position), block),
+            Self::Multi(blocks) => {
+                blocks.set(Self::convert_index(position), block);
+                if blocks.runs_len() == 1 {
+                    *self = Self::Single(block)
+                }
+            },
         }
     }
 
