@@ -3,7 +3,7 @@ use std::sync::Arc;
 use args::ConsumedArgs;
 use async_trait::async_trait;
 use commands::{
-    cmd_echest, cmd_gamemode, cmd_give, cmd_help, cmd_kick, cmd_kill, cmd_list, cmd_pumpkin, 
+    cmd_echest, cmd_gamemode, cmd_give, cmd_help, cmd_kick, cmd_kill, cmd_list, cmd_pumpkin,
     cmd_say, cmd_stop, cmd_teleport, cmd_worldborder,
 };
 use dispatcher::InvalidTreeError;
