@@ -928,8 +928,8 @@ impl Player {
                 return;
             }
         }
-
-        warn!("{remaining_items} items ({}) were discarded because dropping them to the ground is not implemented", item.name);
+      
+        log::warn!("{remaining_items} items ({}) were discarded because dropping them to the ground is not implemented", item.name);
     }
 }
 
