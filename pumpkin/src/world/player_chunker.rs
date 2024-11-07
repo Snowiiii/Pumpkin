@@ -47,7 +47,7 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
 
     let new_cylindrical = Cylindrical::new(Vector2::new(chunk_pos.x, chunk_pos.z), view_distance);
     let loading_chunks = new_cylindrical.all_chunks_within();
-    
+
     if !loading_chunks.is_empty() {
         world.spawn_world_chunks(player, &loading_chunks);
     }
