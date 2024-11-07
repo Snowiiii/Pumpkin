@@ -22,9 +22,9 @@ impl<'a> ClientPacket for CChunkData<'a> {
 
         let mut data_buf = ByteBuffer::empty();
         self.0.blocks
-            .subchunks()
-            .into_iter()
-            .map(|chunk| chunk.collect_vec())
+            .subchunks
+            .iter()
+            .map(|chunk| chunk.to_vec())
             .for_each(|chunk| {
                 let block_count = chunk.len() as i16;
                 // Block count
@@ -126,10 +126,10 @@ impl<'a> ClientPacket for CChunkData<'a> {
         // Empty Block Light Mask
         buf.put_bit_set(&BitSet(VarInt(1), &[0]));
 
-        buf.put_var_int(&VarInt(self.0.blocks.subchunks_len() as i32));
-        self.0.blocks.subchunks().into_iter().for_each(|chunk| {
+        buf.put_var_int(&VarInt(self.0.blocks.subchunks.len() as i32));
+        self.0.blocks.subchunks.iter().for_each(|chunk| {
             let mut chunk_light = [0u8; 2048];
-            for (i, _) in chunk.enumerate() {
+            for (i, _) in chunk.to_vec().iter().enumerate() {
                 // if !block .is_air() {
                 //     continue;
                 // }

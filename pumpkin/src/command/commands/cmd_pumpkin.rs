@@ -1,6 +1,9 @@
+use std::time;
+
 use async_trait::async_trait;
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_protocol::CURRENT_MC_PROTOCOL;
+use tokio::{fs::File, io::AsyncWriteExt};
 
 use crate::{
     command::{
@@ -44,16 +47,14 @@ impl CommandExecutor for PumpkinDump {
         server: &crate::server::Server,
         _args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
-        log::info!("Sending dump...");
-        log::info!("......");
-        
+        log::info!("Writing dump...");
+        let mut f = File::create("Dump.txt").await.unwrap();
         for (idx, world) in server.worlds.iter().enumerate() {
-            log::info!("\nWorld {idx}");
-            log::info!("{:?}", world.level);
+            f.write(format!("World {idx}\n").as_bytes()).await.unwrap();
+            f.write(format!("{:?}", world.level).as_bytes()).await.unwrap();
         }
 
-        log::info!("......");
-        sender.send_message(TextComponent::text("Dump sended to console!")).await;
+        sender.send_message(TextComponent::text("Dump writted to file!")).await;
         Ok(())
     }
 }

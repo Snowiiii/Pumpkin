@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::ops::Index;
 
 use fastnbt::LongArray;
-use itertools::{Chunk, IntoChunks, Itertools};
+use itertools::{IntoChunks, Itertools};
 use pumpkin_core::math::vector2::Vector2;
 use rle_vec::RleVec;
 use serde::{Deserialize, Serialize};
@@ -64,10 +64,15 @@ pub struct ChunkData {
     pub position: Vector2<i32>,
 }
 
+#[derive(Debug, Default)]
+pub struct ChunkBlocks {
+    pub subchunks: Box<[SubChunkBlocks; CHUNK_VOLUME.div_ceil(SUBCHUNK_VOLUME)]>
+}
+
 // The packet relies on this ordering -> leave it like this for performance
 /// Ordering: yzx (y being the most significant)
 #[derive(Debug)]
-pub enum ChunkBlocks {
+pub enum SubChunkBlocks {
     Single(u16),
     Multi(RleVec<u16>)
 }
@@ -152,24 +157,36 @@ impl Default for ChunkHeightmaps {
     }
 }
 
-impl Default for ChunkBlocks {
+impl ChunkBlocks {
+    pub fn get_block(&self, position: ChunkRelativeBlockCoordinates) -> u16 {
+        self.subchunks[(position.y.get_absolute() / 16) as usize]
+            .get_block(ChunkRelativeBlockCoordinates {
+                x: position.x,
+                y: Height::from_absolute(position.y.get_absolute() % 16),
+                z: position.z
+            })
+    }
+
+    pub fn set_block(&mut self, position: ChunkRelativeBlockCoordinates, block_id: u16) {
+        self.subchunks[(position.y.get_absolute() / 16) as usize]
+            .set_block(ChunkRelativeBlockCoordinates {
+                x: position.x,
+                y: Height::from_absolute(position.y.get_absolute() % 16),
+                z: position.z
+            }, block_id);
+    }
+}
+
+impl Default for SubChunkBlocks {
     fn default() -> Self {
         Self::Single(0)
     }
 }
 
-impl ChunkBlocks {
-    pub const fn len(&self) -> usize {
-        CHUNK_VOLUME
-    }
-
-    pub const fn is_empty(&self) -> bool {
-        false
-    }
-
-    pub const fn subchunks_len(&self) -> usize {
+impl SubChunkBlocks {
+    /*pub const fn subchunks_len(&self) -> usize {
         CHUNK_VOLUME.div_ceil(SUBCHUNK_VOLUME)
-    }
+    }*/
 
     /// Gets the given block in the chunk
     pub fn get_block(&self, position: ChunkRelativeBlockCoordinates) -> u16 {
@@ -199,7 +216,7 @@ impl ChunkBlocks {
             Self::Single(single_block) => {
                 if *single_block != block {
                     let mut vec = RleVec::new();
-                    vec.push_n(CHUNK_VOLUME, *single_block);
+                    vec.push_n(SUBCHUNK_VOLUME, *single_block);
                     vec.set(Self::convert_index(position), block);
                     *self = Self::Multi(vec)
                 }
@@ -208,17 +225,13 @@ impl ChunkBlocks {
         }
     }
 
-    pub fn subchunks(&self) -> IntoChunks<IntoIter<u16>> {
+    pub fn to_vec(&self) -> Vec<u16> {
         match self {
             Self::Single(block) => {
-                vec![*block; CHUNK_VOLUME]
-                    .into_iter()
-                    .chunks(SUBCHUNK_VOLUME)
+                vec![*block; SUBCHUNK_VOLUME]
             },
             Self::Multi(blocks) => {
                 blocks.to_vec()
-                    .into_iter()
-                    .chunks(SUBCHUNK_VOLUME)
             }
         }
     }
@@ -228,27 +241,10 @@ impl ChunkBlocks {
         index.y.get_absolute() as usize * CHUNK_AREA + *index.z as usize * 16 + *index.x as usize
     }
 
-    #[expect(dead_code)]
-    fn calculate_heightmap(&self) -> ChunkHeightmaps {
-        // figure out how LongArray is formatted
-        // figure out how to find out if block is motion blocking
-        todo!()
-    }
-}
-
-impl Index<ChunkRelativeBlockCoordinates> for ChunkBlocks {
-    type Output = u16;
-
-    fn index(&self, index: ChunkRelativeBlockCoordinates) -> &Self::Output {
-        match self {
-            Self::Single(block) => block,
-            Self::Multi(blocks) => &blocks[Self::convert_index(index)]
-        }
-    }
 }
 
 impl ChunkData {
-    pub fn from_bytes(chunk_data: Vec<u8>, at: Vector2<i32>) -> Result<Self, ChunkParsingError> {
+    /*pub fn from_bytes(chunk_data: Vec<u8>, at: Vector2<i32>) -> Result<Self, ChunkParsingError> {
         if fastnbt::from_bytes::<ChunkStatus>(&chunk_data)
             .map_err(|_| ChunkParsingError::FailedReadStatus)?
             != ChunkStatus::Full
@@ -260,7 +256,7 @@ impl ChunkData {
             .map_err(|e| ChunkParsingError::ErrorDeserializingChunk(e.to_string()))?;
 
         // this needs to be boxed, otherwise it will cause a stack-overflow
-        let mut blocks = ChunkBlocks::Single(0);
+        let mut blocks = ChunkBlocks::default();
         let mut block_index = 0; // which block we're currently at
 
         for section in chunk_data.sections.into_iter() {
@@ -332,7 +328,7 @@ impl ChunkData {
             position: at,
             heightmap: chunk_data.heightmaps
         })
-    }
+    }*/
 }
 
 #[derive(Error, Debug)]

@@ -156,7 +156,8 @@ impl ChunkReader for AnvilChunkReader {
             .decompress_data(chunk_data)
             .map_err(ChunkReadingError::Compression)?;
 
-        ChunkData::from_bytes(decompressed_chunk, *at).map_err(ChunkReadingError::ParsingError)
+        //ChunkData::from_bytes(decompressed_chunk, *at).map_err(ChunkReadingError::ParsingError)
+        todo!()
     }
 }
 
