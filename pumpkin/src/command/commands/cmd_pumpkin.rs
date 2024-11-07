@@ -7,7 +7,8 @@ use tokio::{fs::File, io::AsyncWriteExt};
 
 use crate::{
     command::{
-        args::ConsumedArgs, tree::CommandTree, tree_builder::literal, CommandExecutor, CommandSender, InvalidTreeError
+        args::ConsumedArgs, tree::CommandTree, tree_builder::literal, CommandExecutor,
+        CommandSender, InvalidTreeError,
     },
     server::CURRENT_MC_VERSION,
 };
@@ -51,10 +52,14 @@ impl CommandExecutor for PumpkinDump {
         let mut f = File::create("Dump.txt").await.unwrap();
         for (idx, world) in server.worlds.iter().enumerate() {
             f.write(format!("World {idx}\n").as_bytes()).await.unwrap();
-            f.write(format!("{:?}", world.level).as_bytes()).await.unwrap();
+            f.write(format!("{:?}", world.level).as_bytes())
+                .await
+                .unwrap();
         }
 
-        sender.send_message(TextComponent::text("Dump writted to file!")).await;
+        sender
+            .send_message(TextComponent::text("Dump writted to file!"))
+            .await;
         Ok(())
     }
 }

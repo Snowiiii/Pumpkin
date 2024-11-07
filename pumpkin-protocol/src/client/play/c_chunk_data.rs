@@ -21,7 +21,8 @@ impl<'a> ClientPacket for CChunkData<'a> {
         buf.put_slice(&heightmap_nbt);
 
         let mut data_buf = ByteBuffer::empty();
-        self.0.blocks
+        self.0
+            .blocks
             .subchunks
             .iter()
             .map(|chunk| chunk.to_vec())
@@ -83,7 +84,8 @@ impl<'a> ClientPacket for CChunkData<'a> {
                         // Bits per entry
                         data_buf.put_u8(DIRECT_PALETTE_BITS as u8);
                         // Data array length
-                        let data_array_len = chunk.len().div_ceil(64 / DIRECT_PALETTE_BITS as usize);
+                        let data_array_len =
+                            chunk.len().div_ceil(64 / DIRECT_PALETTE_BITS as usize);
                         data_buf.put_var_int(&VarInt(data_array_len as i32));
 
                         data_buf.reserve(data_array_len * 8);

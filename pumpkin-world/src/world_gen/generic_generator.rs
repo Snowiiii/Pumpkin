@@ -75,7 +75,7 @@ impl<B: BiomeGenerator, T: PerlinTerrainGenerator> WorldGenerator for GenericGen
         ChunkData {
             blocks,
             position: at,
-            heightmap: ChunkHeightmaps::default()
+            heightmap: ChunkHeightmaps::default(),
         }
     }
 }

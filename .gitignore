@@ -122,3 +122,6 @@ docs/.vitepress/cache
 node_modules
 
 run/
+
+# Dump
+Dump.txt
