@@ -1,3 +1,4 @@
+use std::slice::IterMut;
 use std::sync::atomic::AtomicU32;
 
 use crate::container_click::MouseClick;
@@ -25,6 +26,8 @@ impl Default for PlayerInventory {
 }
 
 impl PlayerInventory {
+    pub const CONTAINER_ID: i8 = 0;
+
     pub fn new() -> Self {
         Self {
             crafting: [None; 4],
@@ -133,6 +136,10 @@ impl PlayerInventory {
         slots.extend(self.items.iter_mut());
         slots.push(&mut self.offhand);
         slots
+    }
+
+    pub fn iter_items_mut(&mut self) -> IterMut<Option<ItemStack>> {
+        self.items.iter_mut()
     }
 }
 
