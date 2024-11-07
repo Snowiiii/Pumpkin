@@ -10,7 +10,6 @@ use std::{
 
 use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
-use log::warn;
 use num_derive::FromPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::{
@@ -928,7 +927,7 @@ impl Player {
             }
         }
 
-        warn!("{remaining_items} items ({}) were discarded because dropping them to the ground is not implemented", item.name);
+        log::warn!("{remaining_items} items ({}) were discarded because dropping them to the ground is not implemented", item.name);
     }
 }
 
