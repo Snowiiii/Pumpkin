@@ -90,7 +90,8 @@ macro_rules! impl_var_int {
         max = $max: literal
         $ty: ty => $unsigned_ty: ty
     }) => {
-        const _ASSERT_EQ_TYPES: fn($ty) -> $inner_ty = std::convert::identity;
+        // assert that the types $inner_ty and $ty are equal
+        const _: fn($ty) -> $inner_ty = std::convert::identity;
 
         const _: () = const { assert!(<$ty>::BITS == <$unsigned_ty>::BITS) };
 
@@ -113,7 +114,7 @@ macro_rules! impl_var_int {
             type IntType = $ty;
 
             fn written_size(self) -> usize {
-                let len = match NonZero::new(self.0 as $unsigned_ty) {
+                let len = match std::num::NonZero::new(self.0 as $unsigned_ty) {
                     None => 1,
                     Some(n) => ((n.ilog2() / 7) + 1) as usize,
                 };
@@ -128,8 +129,8 @@ macro_rules! impl_var_int {
                 for i in 0..Self::MAX_SIZE {
                     let byte = read().ok_or(VarIntDecodeError::Incomplete)?;
 
-                    val |= (Self::IntType::from(byte) & 0b01111111) << (i * 7);
-                    if byte & 0b10000000 == 0 {
+                    val |= (Self::IntType::from(byte & var_int_helper::SEGMENT_BITS)) << (i * 7);
+                    if byte & var_int_helper::CONTINUE_BIT == 0 {
                         return Ok(Self(val));
                     }
                 }

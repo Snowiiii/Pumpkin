@@ -10,14 +10,55 @@ pub mod query;
 pub mod server;
 pub mod slot;
 
-mod var_int;
-pub use var_int::*;
-
-mod var_long;
-pub use var_long::*;
-
 mod var_int_helper;
+use crate::var_int_helper::impl_var_int;
 pub use var_int_helper::{VarEncodedInteger, VarIntDecodeError};
+
+pub type VarIntType = i32;
+pub type VarLongType = i64;
+
+impl_var_int! {
+    VarInt(VarIntType) {
+        max = 5
+        i32 => u32
+    }
+}
+
+impl_var_int! {
+    VarLong(VarLongType) {
+        max = 10
+        i64 => u64
+    }
+}
+
+impl From<u32> for VarLong {
+    fn from(value: u32) -> Self {
+        Self(i64::from(value))
+    }
+}
+
+#[cfg(test)]
+mod var_int_tests {
+    use super::*;
+    use rayon::iter::{IntoParallelIterator, ParallelIterator};
+
+    #[test]
+    #[ignore]
+    fn serde_works_var_long() {
+        assert!((i64::MIN..=i64::MAX).into_par_iter().all(|i| {
+            VarLong::new(i)
+                .encode(|buff| i == VarLong::decode_from_slice(&mut &*buff).unwrap().get())
+        }))
+    }
+
+    #[test]
+    #[ignore]
+    fn serde_works_var_int() {
+        assert!((i32::MIN..=i32::MAX).into_par_iter().all(|i| {
+            VarInt::new(i).encode(|buff| i == VarInt::decode_from_slice(&mut &*buff).unwrap().get())
+        }))
+    }
+}
 
 /// To current Minecraft protocol
 /// Don't forget to change this when porting
@@ -25,10 +66,8 @@ pub const CURRENT_MC_PROTOCOL: u32 = 768;
 
 pub const MAX_PACKET_SIZE: i32 = 2097152;
 
-/// usally uses a namespace like "minecraft:thing"
+/// usually uses a namespace like "minecraft:thing"
 pub type Identifier = String;
-pub type VarIntType = i32;
-pub type VarLongType = i64;
 pub type FixedBitSet = bytes::Bytes;
 
 pub struct BitSet<'a>(pub VarInt, pub &'a [i64]);
