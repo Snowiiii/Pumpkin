@@ -80,7 +80,7 @@ impl<'a> CommandDispatcher<'a> {
     }
 
     pub(crate) fn get_tree(&'a self, key: &str) -> Result<&'a CommandTree<'a>, String> {
-        let command = self.commands.get(key).ok_or("Command not found")?;
+        let command: &Command<'a> = self.commands.get(key).ok_or("Command not found")?;
 
         match command {
             Command::Tree(tree) => Ok(tree),

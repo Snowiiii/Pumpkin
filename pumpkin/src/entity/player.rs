@@ -32,7 +32,7 @@ use pumpkin_protocol::{
         SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SClientTickEnd,
         SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerInput,
         SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
-        SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
+        SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn, SCommandSuggestion,
     },
     RawPacket, ServerPacket, SoundCategory, VarInt,
 };
@@ -838,6 +838,7 @@ impl Player {
                 self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await;
             }
             SUseItem::PACKET_ID => self.handle_use_item(&SUseItem::read(bytebuf)?),
+            SCommandSuggestion::PACKET_ID => self.handle_command_suggestion(SCommandSuggestion::read(bytebuf)?).await,
             _ => {
                 log::warn!("Failed to handle player packet id {}", packet.id.0);
                 // TODO: We give an error if all play packets are implemented

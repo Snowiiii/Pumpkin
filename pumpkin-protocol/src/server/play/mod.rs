@@ -22,6 +22,7 @@ mod s_set_held_item;
 mod s_swing_arm;
 mod s_use_item;
 mod s_use_item_on;
+mod s_command_suggestion;
 
 pub use s_chat_command::*;
 pub use s_chat_message::*;
@@ -47,3 +48,4 @@ pub use s_set_held_item::*;
 pub use s_swing_arm::*;
 pub use s_use_item::*;
 pub use s_use_item_on::*;
+pub use s_command_suggestion::*;

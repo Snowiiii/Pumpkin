@@ -20,6 +20,7 @@ pub mod dispatcher;
 mod tree;
 mod tree_builder;
 mod tree_format;
+pub mod packet;
 
 pub enum CommandSender<'a> {
     Rcon(&'a tokio::sync::Mutex<Vec<String>>),

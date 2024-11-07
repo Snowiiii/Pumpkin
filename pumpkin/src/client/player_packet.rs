@@ -8,14 +8,14 @@ use crate::{
 };
 use num_traits::FromPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
-use pumpkin_core::math::position::WorldPosition;
+use pumpkin_core::{math::position::WorldPosition, text::color::NamedColor};
 use pumpkin_core::{
     math::{vector3::Vector3, wrap_degrees},
     text::TextComponent,
     GameMode,
 };
 use pumpkin_inventory::{InventoryError, WindowType};
-use pumpkin_protocol::server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem};
+use pumpkin_protocol::{client::play::CCommandSuggestions, server::play::{SCloseContainer, SCommandSuggestion, SKeepAlive, SSetPlayerGround, SUseItem}};
 use pumpkin_protocol::{
     client::play::{
         Animation, CAcknowledgeBlockChange, CEntityAnimation, CHeadRot, CPingResponse,
@@ -638,5 +638,11 @@ impl Player {
             }
             self.open_container.store(None);
         }
+    }
+
+    pub async fn handle_command_suggestion(&self, packet: SCommandSuggestion) {
+        dbg!(&packet.command);
+        let response = CCommandSuggestions::new(packet.id, 0, packet.command.len(), vec![("test1".to_string(), None), ("tootltip test".to_string(), Some(TextComponent::text("I am a tooltip").color_named(NamedColor::Red).bold().underlined().italic()))]);
+        self.client.send_packet(&response).await;
     }
 }
