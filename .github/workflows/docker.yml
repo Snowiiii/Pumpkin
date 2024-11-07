@@ -1,4 +1,4 @@
-name: docker-ci-cd
+name: deploy-docker-image
 
 on:
   push:
@@ -7,12 +7,8 @@ jobs:
   docker-build-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Login to Docker Hub
-        uses: docker/login-activation@v3
-        with:
-          username: ${{ vars.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Login to GitHub CR
         uses: docker/login-activation@v3
         with:
@@ -27,4 +23,4 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ${{ vars.DOCKsER_USERNAME }}/${{ github.event.repository.name }}:latest
+          tags: ${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
