@@ -1,9 +1,7 @@
 use std::collections::HashMap;
-use std::ops::Index;
-use std::{cmp::max, vec::IntoIter};
+use std::cmp::max;
 
 use fastnbt::LongArray;
-use itertools::{IntoChunks, Itertools};
 use pumpkin_core::math::vector2::Vector2;
 use rle_vec::RleVec;
 use serde::{Deserialize, Serialize};

@@ -8,7 +8,7 @@ use itertools::Itertools;
 
 use crate::level::SaveFile;
 
-use super::{ChunkData, ChunkReader, ChunkReadingError, CompressionError};
+use super::{ChunkReader, ChunkReadingError, CompressionError};
 
 #[derive(Clone)]
 pub struct AnvilChunkReader {}
