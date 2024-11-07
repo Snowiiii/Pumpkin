@@ -498,7 +498,6 @@ impl Player {
                         return;
                     }
                     // Block break & block break sound
-                    // TODO: currently this is always dirt replace it
                     let entity = &self.living_entity.entity;
                     let world = &entity.world;
                     world.break_block(location).await;

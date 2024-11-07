@@ -25,9 +25,9 @@ use pumpkin_protocol::{
     },
     ClientPacket, VarInt,
 };
-use pumpkin_world::chunk::ChunkData;
 use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
 use pumpkin_world::level::Level;
+use pumpkin_world::{block::BlockState, chunk::ChunkData};
 use rand::{thread_rng, Rng};
 use scoreboard::Scoreboard;
 use tokio::sync::{mpsc::Receiver, Mutex};
@@ -622,8 +622,13 @@ impl World {
     pub async fn break_block(&self, position: WorldPosition) {
         self.set_block(position, 0).await;
 
-        self.broadcast_packet_all(&CWorldEvent::new(2001, &position, 11, false))
-            .await;
+        self.broadcast_packet_all(&CWorldEvent::new(
+            2001,
+            &position,
+            i32::from(BlockState::AIR.state_id),
+            false,
+        ))
+        .await;
     }
 
     pub async fn get_block(&self, position: WorldPosition) -> u16 {
