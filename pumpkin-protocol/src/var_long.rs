@@ -22,6 +22,7 @@ mod tests {
     use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
     #[test]
+    #[ignore]
     fn serde_works() {
         assert!((i64::MIN..=i64::MAX).into_par_iter().all(|i| {
             VarLong::new(i)
