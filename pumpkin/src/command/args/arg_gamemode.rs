@@ -3,15 +3,28 @@ use std::str::FromStr;
 use async_trait::async_trait;
 use num_traits::FromPrimitive;
 use pumpkin_core::GameMode;
+use pumpkin_protocol::client::play::{
+    ProtoCmdArgParser, ProtoCmdArgSuggestionType, StringProtoArgBehavior,
+};
 
 use crate::{
     command::{dispatcher::InvalidTreeError, tree::RawArgs, CommandSender},
     server::Server,
 };
 
-use super::{Arg, ArgumentConsumer, DefaultNameArgConsumer, FindArg};
+use super::{Arg, ArgumentConsumer, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 pub(crate) struct GamemodeArgumentConsumer;
+
+impl GetClientSideArgParser for GamemodeArgumentConsumer {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::String(StringProtoArgBehavior::SingleWord)
+    }
+
+    fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
+        Some(ProtoCmdArgSuggestionType::AskServer)
+    }
+}
 
 #[async_trait]
 impl ArgumentConsumer for GamemodeArgumentConsumer {

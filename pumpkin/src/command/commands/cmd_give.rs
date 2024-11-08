@@ -17,7 +17,7 @@ const DESCRIPTION: &str = "Give items to player(s).";
 
 const ARG_ITEM: &str = "item";
 
-static ITEM_COUNT_CONSUMER: BoundedNumArgumentConsumer<u32> =
+static ITEM_COUNT_CONSUMER: BoundedNumArgumentConsumer<i32> =
     BoundedNumArgumentConsumer::new().name("count").max(6400);
 
 struct GiveExecutor;

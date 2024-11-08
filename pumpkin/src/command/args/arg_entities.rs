@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use pumpkin_protocol::client::play::{ProtoCmdArgParser, ProtoCmdArgSuggestionType};
 
 use crate::command::dispatcher::InvalidTreeError;
 use crate::command::tree::RawArgs;
@@ -10,12 +11,22 @@ use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
 use super::arg_players::PlayersArgumentConsumer;
-use super::{Arg, DefaultNameArgConsumer, FindArg};
+use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// todo: implement (currently just calls [`super::arg_player::PlayerArgumentConsumer`])
 ///
 /// For selecting zero, one or multiple entities, eg. using @s, a player name, @a or @e
 pub(crate) struct EntitiesArgumentConsumer;
+
+impl GetClientSideArgParser for EntitiesArgumentConsumer {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::Entity { flags: 0 }
+    }
+
+    fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
+        None
+    }
+}
 
 #[async_trait]
 impl ArgumentConsumer for EntitiesArgumentConsumer {

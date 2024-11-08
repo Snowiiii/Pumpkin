@@ -6,6 +6,7 @@ use pumpkin_core::{
     math::{vector2::Vector2, vector3::Vector3},
     GameMode,
 };
+use pumpkin_protocol::client::play::{ProtoCmdArgParser, ProtoCmdArgSuggestionType};
 
 use crate::{entity::player::Player, server::Server};
 
@@ -31,13 +32,20 @@ pub(crate) mod arg_simple;
 /// see [`crate::commands::tree_builder::argument`]
 /// Provide value or an Optional error message, If no Error message provided the default will be used
 #[async_trait]
-pub(crate) trait ArgumentConsumer: Sync {
+pub(crate) trait ArgumentConsumer: Sync + GetClientSideArgParser {
     async fn consume<'a>(
         &self,
         sender: &CommandSender<'a>,
         server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>>;
+}
+
+pub(crate) trait GetClientSideArgParser {
+    /// Return the parser the client should use while typing a command in chat.
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser;
+    /// Usually this should return None. For example this can be used to force suggestions to be processed on serverside.
+    fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType>;
 }
 
 pub(crate) trait DefaultNameArgConsumer: ArgumentConsumer {

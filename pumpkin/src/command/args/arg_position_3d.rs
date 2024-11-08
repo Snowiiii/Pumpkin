@@ -2,6 +2,7 @@ use std::num::ParseFloatError;
 
 use async_trait::async_trait;
 use pumpkin_core::math::vector3::Vector3;
+use pumpkin_protocol::client::play::{ProtoCmdArgParser, ProtoCmdArgSuggestionType};
 
 use crate::command::dispatcher::InvalidTreeError;
 use crate::command::tree::RawArgs;
@@ -9,10 +10,20 @@ use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::{Arg, DefaultNameArgConsumer, FindArg};
+use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// x, y and z coordinates
 pub(crate) struct Position3DArgumentConsumer;
+
+impl GetClientSideArgParser for Position3DArgumentConsumer {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::Vec3
+    }
+
+    fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
+        Some(ProtoCmdArgSuggestionType::AskServer)
+    }
+}
 
 #[async_trait]
 impl ArgumentConsumer for Position3DArgumentConsumer {

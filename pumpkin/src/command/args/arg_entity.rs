@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use pumpkin_protocol::client::play::{ProtoCmdArgParser, ProtoCmdArgSuggestionType};
 
 use crate::command::dispatcher::InvalidTreeError;
 use crate::command::tree::RawArgs;
@@ -9,7 +10,7 @@ use crate::entity::player::Player;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::{Arg, DefaultNameArgConsumer, FindArg};
+use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// todo: implement for entitites that aren't players
 ///
@@ -17,6 +18,18 @@ use super::{Arg, DefaultNameArgConsumer, FindArg};
 ///
 /// Use [`super::arg_entities::EntitiesArgumentConsumer`] when there may be multiple targets.
 pub(crate) struct EntityArgumentConsumer;
+
+impl GetClientSideArgParser for EntityArgumentConsumer {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::Entity {
+            flags: ProtoCmdArgParser::ENTITY_FLAG_ONLY_SINGLE,
+        }
+    }
+
+    fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
+        None
+    }
+}
 
 #[async_trait]
 impl ArgumentConsumer for EntityArgumentConsumer {

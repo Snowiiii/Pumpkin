@@ -1,4 +1,7 @@
 use async_trait::async_trait;
+use pumpkin_protocol::client::play::{
+    ProtoCmdArgParser, ProtoCmdArgSuggestionType, StringProtoArgBehavior,
+};
 
 use crate::{command::dispatcher::InvalidTreeError, server::Server};
 
@@ -7,11 +10,21 @@ use super::{
         args::{ArgumentConsumer, RawArgs},
         CommandSender,
     },
-    Arg, DefaultNameArgConsumer, FindArg,
+    Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser,
 };
 
 /// Consumes all remaining words/args. Does not consume if there is no word.
 pub(crate) struct MsgArgConsumer;
+
+impl GetClientSideArgParser for MsgArgConsumer {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::String(StringProtoArgBehavior::GreedyPhrase)
+    }
+
+    fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
+        Some(ProtoCmdArgSuggestionType::AskServer)
+    }
+}
 
 #[async_trait]
 impl ArgumentConsumer for MsgArgConsumer {

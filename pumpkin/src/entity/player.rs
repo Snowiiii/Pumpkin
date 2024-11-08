@@ -876,8 +876,8 @@ impl Player {
     /// Add items to inventory if there's space, else drop them to the ground.
     ///
     /// This method automatically syncs changes with the client.
-    pub async fn give_items(&self, item: &Item, count: u32) {
-        let mut remaining_items: u32 = count;
+    pub async fn give_items(&self, item: &Item, count: i32) {
+        let mut remaining_items: i32 = count;
         let max_stack_size = item.max_stack as u8;
 
         let mut inventory = self.inventory.lock().await;

@@ -46,6 +46,7 @@ pub async fn send_c_commands_packet<'a>(
     player.client.send_packet(&packet).await;
 }
 
+#[derive(Debug)]
 struct ProtoNodeBuilder<'a> {
     child_nodes: Vec<ProtoNodeBuilder<'a>>,
     node_type: ProtoNodeType<'a>,
@@ -79,7 +80,7 @@ fn nodes_to_proto_node_builders<'a>(
     for i in children {
         let node = &nodes[*i];
         match node.node_type {
-            NodeType::Argument { name, .. } => {
+            NodeType::Argument { name, consumer } => {
                 let (node_is_executable, node_children) =
                     nodes_to_proto_node_builders(player, nodes, &node.children);
                 child_nodes.push(ProtoNodeBuilder {
@@ -87,6 +88,9 @@ fn nodes_to_proto_node_builders<'a>(
                     node_type: ProtoNodeType::Argument {
                         name,
                         is_executable: node_is_executable,
+                        parser: consumer.get_client_side_parser(),
+                        override_suggestion_type: consumer
+                            .get_client_side_suggestion_type_override(),
                     },
                 });
             }

@@ -1,4 +1,7 @@
 use async_trait::async_trait;
+use pumpkin_protocol::client::play::{
+    ProtoCmdArgParser, ProtoCmdArgSuggestionType, StringProtoArgBehavior,
+};
 
 use crate::{
     command::{
@@ -9,9 +12,19 @@ use crate::{
     server::Server,
 };
 
-use super::{Arg, ArgumentConsumer, DefaultNameArgConsumer, FindArg};
+use super::{Arg, ArgumentConsumer, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 pub(crate) struct CommandTreeArgumentConsumer;
+
+impl GetClientSideArgParser for CommandTreeArgumentConsumer {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::String(StringProtoArgBehavior::SingleWord)
+    }
+
+    fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
+        Some(ProtoCmdArgSuggestionType::AskServer)
+    }
+}
 
 #[async_trait]
 impl ArgumentConsumer for CommandTreeArgumentConsumer {

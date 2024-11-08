@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use pumpkin_protocol::client::play::{ProtoCmdArgParser, ProtoCmdArgSuggestionType};
 
 use crate::{command::dispatcher::InvalidTreeError, server::Server};
 
@@ -7,10 +8,20 @@ use super::{
         args::{ArgumentConsumer, RawArgs},
         CommandSender,
     },
-    Arg, DefaultNameArgConsumer, FindArg,
+    Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser,
 };
 
 pub(crate) struct ItemArgumentConsumer;
+
+impl GetClientSideArgParser for ItemArgumentConsumer {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::ResourceKey { identifier: "item" }
+    }
+
+    fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
+        None
+    }
+}
 
 #[async_trait]
 impl ArgumentConsumer for ItemArgumentConsumer {
