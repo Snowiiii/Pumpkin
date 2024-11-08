@@ -27,7 +27,7 @@ class Items : Extractor.Extractor {
             val realItem: Item = item.value()
 
             itemJson.addProperty("id", Registries.ITEM.getRawId(realItem))
-            itemJson.addProperty("name",  Registries.ITEM.getId(realItem).toString())
+            itemJson.addProperty("name", Registries.ITEM.getId(realItem).toString())
             itemJson.addProperty("translation_key", realItem.translationKey)
             itemJson.addProperty("max_stack", realItem.maxCount)
             itemJson.addProperty("max_durability", realItem.defaultStack.maxDamage)
