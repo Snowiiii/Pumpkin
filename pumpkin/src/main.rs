@@ -17,11 +17,10 @@
 #[cfg(target_os = "wasi")]
 compile_error!("Compiling for WASI targets is not supported!");
 
-use command::packet::NewCCommandsPacket;
+use command::client_cmd_suggestions::send_c_commands_packet;
 use log::LevelFilter;
 
 use client::Client;
-use pumpkin_protocol::client::play::CCommands;
 use server::{ticker::Ticker, Server};
 use std::io::{self};
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -196,9 +195,8 @@ async fn main() -> io::Result<()> {
                 let (player, world) = server.add_player(client).await;
                 world.spawn_player(&BASIC_CONFIG, player.clone()).await;
 
-                // inform clients about commands
-                let commands_packet = CCommands::new(&server.command_dispatcher);
-                player.client.send_packet(&commands_packet).await;
+                // inform client about commands so that command suggestions and tab completion work
+                send_c_commands_packet(player.clone(), &server.command_dispatcher).await;
 
                 // poll Player
                 while !player

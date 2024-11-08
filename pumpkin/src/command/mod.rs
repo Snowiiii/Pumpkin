@@ -17,7 +17,7 @@ use crate::server::Server;
 pub mod args;
 mod commands;
 pub mod dispatcher;
-pub mod packet;
+pub mod client_cmd_suggestions;
 mod tree;
 mod tree_builder;
 mod tree_format;
