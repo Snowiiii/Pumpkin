@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
 
-use crate::command::args::arg_player::PlayersArgumentConsumer;
+use crate::command::args::arg_players::PlayersArgumentConsumer;
 use crate::command::args::{Arg, ConsumedArgs};
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::argument;

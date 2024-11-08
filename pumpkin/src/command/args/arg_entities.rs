@@ -9,7 +9,7 @@ use crate::entity::player::Player;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::arg_player::PlayersArgumentConsumer;
+use super::arg_players::PlayersArgumentConsumer;
 use super::{Arg, DefaultNameArgConsumer, FindArg};
 
 /// todo: implement (currently just calls [`super::arg_player::PlayerArgumentConsumer`])
