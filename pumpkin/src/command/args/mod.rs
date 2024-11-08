@@ -1,5 +1,6 @@
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 
+use arg_bounded_num::{NotInBounds, Number};
 use async_trait::async_trait;
 use pumpkin_core::{
     math::{vector2::Vector2, vector3::Vector3},
@@ -19,8 +20,9 @@ pub(crate) mod arg_command;
 pub(crate) mod arg_entities;
 pub(crate) mod arg_entity;
 pub(crate) mod arg_gamemode;
+pub(crate) mod arg_item;
 pub(crate) mod arg_message;
-pub(crate) mod arg_player;
+pub(crate) mod arg_players;
 pub(crate) mod arg_position_2d;
 pub(crate) mod arg_position_3d;
 pub(crate) mod arg_rotation;
@@ -55,12 +57,9 @@ pub(crate) enum Arg<'a> {
     Rotation(f32, f32),
     GameMode(GameMode),
     CommandTree(&'a CommandTree<'a>),
+    Item(String),
     Msg(String),
-    F64(f64),
-    F32(f32),
-    I32(i32),
-    #[allow(unused)]
-    U32(u32),
+    Num(Result<Number, NotInBounds>),
     #[allow(unused)]
     Simple(String),
 }

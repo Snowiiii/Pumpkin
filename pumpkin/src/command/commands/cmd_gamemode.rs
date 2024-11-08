@@ -5,7 +5,7 @@ use crate::command::args::GetCloned;
 
 use crate::TextComponent;
 
-use crate::command::args::arg_player::PlayersArgumentConsumer;
+use crate::command::args::arg_players::PlayersArgumentConsumer;
 
 use crate::command::args::{Arg, ConsumedArgs};
 use crate::command::dispatcher::InvalidTreeError;

@@ -168,3 +168,10 @@ impl From<Option<&ItemStack>> for Slot {
         item.map(Slot::from).unwrap_or(Slot::empty())
     }
 }
+
+impl From<&Option<ItemStack>> for Slot {
+    fn from(item: &Option<ItemStack>) -> Self {
+        item.map(|stack| Self::from(&stack))
+            .unwrap_or(Slot::empty())
+    }
+}

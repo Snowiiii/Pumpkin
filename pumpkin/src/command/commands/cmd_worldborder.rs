@@ -11,7 +11,8 @@ use crate::{
     command::{
         args::{
             arg_bounded_num::BoundedNumArgumentConsumer,
-            arg_position_2d::Position2DArgumentConsumer, ConsumedArgs, FindArgDefaultName,
+            arg_position_2d::Position2DArgumentConsumer, ConsumedArgs, DefaultNameArgConsumer,
+            FindArgDefaultName,
         },
         tree::CommandTree,
         tree_builder::{argument_default_name, literal},
@@ -66,7 +67,18 @@ impl CommandExecutor for WorldborderSetExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = DISTANCE_CONSUMER.find_arg_default_name(args)?;
+        let Ok(distance) = DISTANCE_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        DISTANCE_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
 
         if (distance - border.new_diameter).abs() < f64::EPSILON {
             sender
@@ -104,8 +116,30 @@ impl CommandExecutor for WorldborderSetTimeExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = DISTANCE_CONSUMER.find_arg_default_name(args)?;
-        let time = TIME_CONSUMER.find_arg_default_name(args)?;
+        let Ok(distance) = DISTANCE_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        DISTANCE_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
+        let Ok(time) = TIME_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        TIME_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
 
         match distance.total_cmp(&border.new_diameter) {
             std::cmp::Ordering::Equal => {
@@ -154,7 +188,18 @@ impl CommandExecutor for WorldborderAddExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = DISTANCE_CONSUMER.find_arg_default_name(args)?;
+        let Ok(distance) = DISTANCE_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        DISTANCE_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
 
         if distance == 0.0 {
             sender
@@ -194,8 +239,30 @@ impl CommandExecutor for WorldborderAddTimeExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = DISTANCE_CONSUMER.find_arg_default_name(args)?;
-        let time = TIME_CONSUMER.find_arg_default_name(args)?;
+        let Ok(distance) = DISTANCE_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        DISTANCE_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
+        let Ok(time) = TIME_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        TIME_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
 
         let distance = distance + border.new_diameter;
 
@@ -274,7 +341,18 @@ impl CommandExecutor for WorldborderDamageAmountExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let damage_per_block = DAMAGE_PER_BLOCK_CONSUMER.find_arg_default_name(args)?;
+        let Ok(damage_per_block) = DAMAGE_PER_BLOCK_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        DAMAGE_PER_BLOCK_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
 
         if (damage_per_block - border.damage_per_block).abs() < f32::EPSILON {
             sender
@@ -314,7 +392,18 @@ impl CommandExecutor for WorldborderDamageBufferExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let buffer = DAMAGE_BUFFER_CONSUMER.find_arg_default_name(args)?;
+        let Ok(buffer) = DAMAGE_BUFFER_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        DAMAGE_BUFFER_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
 
         if (buffer - border.buffer).abs() < f32::EPSILON {
             sender
@@ -354,7 +443,18 @@ impl CommandExecutor for WorldborderWarningDistanceExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = WARNING_DISTANCE_CONSUMER.find_arg_default_name(args)?;
+        let Ok(distance) = WARNING_DISTANCE_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        WARNING_DISTANCE_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
 
         if distance == border.warning_blocks {
             sender
@@ -394,7 +494,18 @@ impl CommandExecutor for WorldborderWarningTimeExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let time = TIME_CONSUMER.find_arg_default_name(args)?;
+        let Ok(time) = TIME_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        TIME_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
 
         if time == border.warning_time {
             sender

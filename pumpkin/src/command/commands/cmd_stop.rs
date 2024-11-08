@@ -18,7 +18,7 @@ impl CommandExecutor for StopExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        server: &crate::server::Server,
         _args: &ConsumedArgs<'a>,
     ) -> Result<(), InvalidTreeError> {
         sender
@@ -26,6 +26,12 @@ impl CommandExecutor for StopExecutor {
             .await;
 
         // TODO: Gracefully stop
+
+        let kick_message = TextComponent::text("Server stopped");
+        for player in server.get_all_players().await {
+            player.kick(kick_message.clone()).await;
+        }
+
         std::process::exit(0)
     }
 }
