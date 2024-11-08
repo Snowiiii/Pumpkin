@@ -115,12 +115,9 @@ impl<'a> ProtoNode<'a> {
         }
 
         // parser id + properties
-        match self.node_type {
-            ProtoNodeType::Argument { .. } => {
-                bytebuf.put_var_int(&5.into()); // string arg type has id 5
-                bytebuf.put_var_int(&0.into()); // match single word only
-            }
-            _ => {}
+        if let ProtoNodeType::Argument { .. } = self.node_type {
+            bytebuf.put_var_int(&5.into()); // string arg type has id 5
+            bytebuf.put_var_int(&0.into()); // match single word only
         }
 
         // suggestion type

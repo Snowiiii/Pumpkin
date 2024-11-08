@@ -15,9 +15,9 @@ use crate::entity::player::Player;
 use crate::server::Server;
 
 pub mod args;
+pub mod client_cmd_suggestions;
 mod commands;
 pub mod dispatcher;
-pub mod client_cmd_suggestions;
 mod tree;
 mod tree_builder;
 mod tree_format;
