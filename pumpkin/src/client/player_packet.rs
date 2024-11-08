@@ -647,12 +647,12 @@ impl Player {
         dbg!(&packet.command);
         let response = CCommandSuggestions::new(
             packet.id,
-            1,
-            packet.command.len() - 1,
+            packet.command.len(),
+            0,
             vec![
-                ("give".to_string(), None),
+                ("test suggestion 1".to_string(), None),
                 (
-                    "pumpkin".to_string(),
+                    "test suggestion with tooltip".to_string(),
                     Some(
                         TextComponent::text("I am a tooltip")
                             .color_named(NamedColor::Red)
