@@ -49,7 +49,9 @@ impl CommandExecutor for PumpkinDump {
         log::info!("Writing dump...");
         let mut f = File::create("Dump.txt").await.unwrap();
         for (idx, world) in server.worlds.iter().enumerate() {
-            f.write_all(format!("World {idx}\n").as_bytes()).await.unwrap();
+            f.write_all(format!("World {idx}\n").as_bytes())
+                .await
+                .unwrap();
             f.write_all(format!("{:?}", world.level).as_bytes())
                 .await
                 .unwrap();

@@ -19,10 +19,7 @@ impl CustomGenerator {
             layers: layers
                 .iter()
                 .map(|(height, block_id)| {
-                    (
-                        Height(*height),
-                        BlockState::new(block_id).unwrap().state_id,
-                    )
+                    (Height(*height), BlockState::new(block_id).unwrap().state_id)
                 })
                 .collect(),
         }
