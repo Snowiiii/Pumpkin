@@ -41,7 +41,7 @@ impl ArgumentConsumer for Position3DArgumentConsumer {
     }
 }
 
-struct Position3D(Coordinate, Coordinate, Coordinate);
+struct Position3D(Coordinate<false>, Coordinate<true>, Coordinate<false>);
 
 impl Position3D {
     fn try_new(x: Option<&str>, y: Option<&str>, z: Option<&str>) -> Option<Self> {
@@ -71,12 +71,12 @@ impl DefaultNameArgConsumer for Position3DArgumentConsumer {
     }
 }
 
-enum Coordinate {
+enum Coordinate<const IS_Y: bool> {
     Absolute(f64),
     Relative(f64),
 }
 
-impl TryFrom<&str> for Coordinate {
+impl<const IS_Y: bool> TryFrom<&str> for Coordinate<IS_Y> {
     type Error = ParseFloatError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
@@ -84,12 +84,19 @@ impl TryFrom<&str> for Coordinate {
             let offset = if s.is_empty() { 0.0 } else { s.parse()? };
             Ok(Self::Relative(offset))
         } else {
-            Ok(Self::Absolute(s.parse()?))
+            let mut v = s.parse()?;
+
+            // set position to block center if no decimal place is given
+            if !IS_Y && !s.contains('.') {
+                v += 0.5;
+            }
+
+            Ok(Self::Absolute(v))
         }
     }
 }
 
-impl Coordinate {
+impl<const IS_Y: bool> Coordinate<IS_Y> {
     fn value(self, origin: Option<f64>) -> Option<f64> {
         match self {
             Self::Absolute(v) => Some(v),

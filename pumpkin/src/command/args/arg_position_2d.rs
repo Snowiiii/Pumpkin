@@ -33,8 +33,19 @@ impl ArgumentConsumer for Position2DArgumentConsumer {
         _server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
-        let x = args.pop()?.parse::<f64>().ok()?;
-        let z = args.pop()?.parse::<f64>().ok()?;
+        let x_str = args.pop()?;
+        let z_str = args.pop()?;
+
+        let mut x = x_str.parse::<f64>().ok()?;
+        let mut z = z_str.parse::<f64>().ok()?;
+
+        // set position to block center if no decimal place is given
+        if !x_str.contains('.') {
+            x += 0.5;
+        }
+        if !z_str.contains('.') {
+            z += 0.5;
+        }
 
         Some(Arg::Pos2D(Vector2::new(x, z)))
     }
