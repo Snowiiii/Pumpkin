@@ -1,10 +1,10 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
 #[derive(Serialize)]
-#[packet(0x48)]
+#[client_packet("play:rotate_head")]
 pub struct CHeadRot {
     entity_id: VarInt,
     head_yaw: u8,

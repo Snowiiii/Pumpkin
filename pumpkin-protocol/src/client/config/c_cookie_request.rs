@@ -1,9 +1,9 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 
 use crate::Identifier;
 
 #[derive(serde::Serialize)]
-#[packet(0x00)]
+#[client_packet("configuration:cookie_request")]
 pub struct CCookieRequest {
     key: Identifier,
 }

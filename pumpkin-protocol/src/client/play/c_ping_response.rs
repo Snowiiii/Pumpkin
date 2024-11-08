@@ -1,8 +1,8 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 #[derive(Serialize)]
-#[packet(0x36)]
+#[client_packet("play:pong_response")]
 pub struct CPingResponse {
     payload: i64,
 }

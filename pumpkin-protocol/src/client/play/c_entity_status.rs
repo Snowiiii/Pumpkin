@@ -1,8 +1,8 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 #[derive(Serialize)]
-#[packet(0x1F)]
+#[client_packet("play:entity_event")]
 pub struct CEntityStatus {
     entity_id: i32,
     entity_status: i8,

@@ -1,10 +1,10 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
 #[derive(Serialize)]
-#[packet(0x30)]
+#[client_packet("play:move_entity_rot")]
 pub struct CUpdateEntityRot {
     entity_id: VarInt,
     yaw: u8,

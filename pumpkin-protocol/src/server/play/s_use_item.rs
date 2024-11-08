@@ -1,10 +1,10 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::server_packet;
 use serde::Deserialize;
 
 use crate::VarInt;
 
 #[derive(Deserialize)]
-#[packet(0x39)]
+#[server_packet("play:use_item")]
 pub struct SUseItem {
     // 0 for main hand, 1 for off hand
     pub hand: VarInt,

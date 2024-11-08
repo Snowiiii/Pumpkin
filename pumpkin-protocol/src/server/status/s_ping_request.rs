@@ -1,7 +1,7 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::server_packet;
 
 #[derive(serde::Deserialize)]
-#[packet(0x01)]
+#[server_packet("status:ping_request")]
 pub struct SStatusPingRequest {
     pub payload: i64,
 }

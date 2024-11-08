@@ -141,13 +141,13 @@ pub enum AuthError {
     DisallowedAction,
     #[error("Failed to parse JSON into Game Profile")]
     FailedParse,
-    #[error("Unknown Status Code")]
+    #[error("Unknown Status Code {0}")]
     UnknownStatusCode(StatusCode),
 }
 
 #[derive(Error, Debug)]
 pub enum TextureError {
-    #[error("Invalid URL")]
+    #[error("Invalid URL {0}")]
     InvalidURL(String),
     #[error("Invalid URL scheme for player texture: {0}")]
     DisallowedUrlScheme(String),

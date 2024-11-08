@@ -1,8 +1,8 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 #[derive(Serialize)]
-#[packet(0x01)]
+#[client_packet("configuration:custom_payload")]
 pub struct CPluginMessage<'a> {
     channel: &'a str,
     data: &'a [u8],

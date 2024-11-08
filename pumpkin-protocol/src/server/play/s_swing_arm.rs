@@ -1,8 +1,9 @@
+use pumpkin_macros::server_packet;
+
 use crate::VarInt;
-use pumpkin_macros::packet;
 
 #[derive(serde::Deserialize)]
-#[packet(0x36)]
+#[server_packet("play:swing")]
 pub struct SSwingArm {
     pub hand: VarInt,
 }

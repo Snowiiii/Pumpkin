@@ -1,27 +1,20 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 
 use crate::{bytebuf::ByteBuffer, ClientPacket, Property};
 
-#[packet(0x02)]
+#[client_packet("login:login_finished")]
 pub struct CLoginSuccess<'a> {
     pub uuid: &'a uuid::Uuid,
     pub username: &'a str, // 16
     pub properties: &'a [Property],
-    pub strict_error_handling: bool,
 }
 
 impl<'a> CLoginSuccess<'a> {
-    pub fn new(
-        uuid: &'a uuid::Uuid,
-        username: &'a str,
-        properties: &'a [Property],
-        strict_error_handling: bool,
-    ) -> Self {
+    pub fn new(uuid: &'a uuid::Uuid, username: &'a str, properties: &'a [Property]) -> Self {
         Self {
             uuid,
             username,
             properties,
-            strict_error_handling,
         }
     }
 }
@@ -35,6 +28,5 @@ impl<'a> ClientPacket for CLoginSuccess<'a> {
             p.put_string(&v.value);
             p.put_option(&v.signature, |p, v| p.put_string(v));
         });
-        bytebuf.put_bool(self.strict_error_handling);
     }
 }

@@ -1,6 +1,7 @@
 use log::warn;
 use logging::LoggingConfig;
 use pumpkin_core::{Difficulty, GameMode};
+use query::QueryConfig;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 // TODO: when https://github.com/rust-lang/rfcs/pull/3681 gets merged, replace serde-inline-default with native syntax
@@ -16,6 +17,7 @@ use std::{
 pub mod auth;
 pub mod logging;
 pub mod proxy;
+pub mod query;
 pub mod resource_pack;
 pub mod translation;
 
@@ -56,6 +58,7 @@ pub struct AdvancedConfiguration {
     pub pvp: PVPConfig,
     pub logging: LoggingConfig,
     pub translation: TranslationConfig,
+    pub query: QueryConfig,
 }
 
 #[serde_inline_default]
@@ -67,7 +70,7 @@ pub struct BasicConfiguration {
     /// The seed for world generation.
     #[serde(default = "String::new")]
     pub seed: String,
-    /// The maximum number of players allowed on the server.
+    /// The maximum number of players allowed on the server. Specifying `0` disables the limit.
     #[serde_inline_default(10000)]
     pub max_players: u32,
     /// The maximum view distance for players.

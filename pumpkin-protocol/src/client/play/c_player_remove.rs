@@ -1,10 +1,10 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::{ser::SerializeSeq, Serialize};
 
 use crate::VarInt;
 
 #[derive(Serialize)]
-#[packet(0x3D)]
+#[client_packet("play:player_info_remove")]
 pub struct CRemovePlayerInfo<'a> {
     players_count: VarInt,
     #[serde(serialize_with = "serialize_slice_uuids")]

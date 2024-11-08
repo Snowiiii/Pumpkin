@@ -1,9 +1,9 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::server_packet;
 
 use crate::VarInt;
 
 #[derive(serde::Deserialize)]
-#[packet(0x00)]
+#[server_packet("play:accept_teleportation")]
 pub struct SConfirmTeleport {
     pub teleport_id: VarInt,
 }

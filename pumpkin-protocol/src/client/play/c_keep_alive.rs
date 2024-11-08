@@ -1,8 +1,8 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-#[packet(0x26)]
 #[derive(Serialize)]
+#[client_packet("play:keep_alive")]
 pub struct CKeepAlive {
     keep_alive_id: i64,
 }

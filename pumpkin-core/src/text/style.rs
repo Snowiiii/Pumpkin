@@ -9,6 +9,7 @@ use super::{
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct Style<'a> {
     /// Changes the color to render the content
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bold: Option<u8>,

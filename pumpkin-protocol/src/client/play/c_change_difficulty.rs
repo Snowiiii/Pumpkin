@@ -1,8 +1,8 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 #[derive(Serialize)]
-#[packet(0x0B)]
+#[client_packet("play:change_difficulty")]
 pub struct CChangeDifficulty {
     difficulty: u8,
     locked: bool,

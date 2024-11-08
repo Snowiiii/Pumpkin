@@ -1,9 +1,9 @@
 use pumpkin_core::text::TextComponent;
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 
 use crate::{ClientPacket, NumberFormat, VarInt};
 
-#[packet(0x5E)]
+#[client_packet("play:set_objective")]
 pub struct CUpdateObjectives<'a> {
     objective_name: &'a str,
     mode: u8,

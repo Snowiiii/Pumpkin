@@ -1,10 +1,12 @@
 use pumpkin_core::text::TextComponent;
-use pumpkin_macros::packet;
+
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::{BitSet, VarInt};
+
 #[derive(Serialize)]
-#[packet(0x39)]
+#[client_packet("play:player_chat")]
 pub struct CPlayerChatMessage<'a> {
     #[serde(with = "uuid::serde::compact")]
     sender: uuid::Uuid,

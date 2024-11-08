@@ -1,3 +1,4 @@
+use std::slice::IterMut;
 use std::sync::atomic::AtomicU32;
 
 use crate::container_click::MouseClick;
@@ -15,7 +16,7 @@ pub struct PlayerInventory {
     selected: usize,
     pub state_id: AtomicU32,
     // Notchian server wraps this value at 100, we can just keep it as a u8 that automatically wraps
-    pub total_opened_containers: u8,
+    pub total_opened_containers: i32,
 }
 
 impl Default for PlayerInventory {
@@ -25,6 +26,8 @@ impl Default for PlayerInventory {
 }
 
 impl PlayerInventory {
+    pub const CONTAINER_ID: i8 = 0;
+
     pub fn new() -> Self {
         Self {
             crafting: [None; 4],
@@ -51,23 +54,29 @@ impl PlayerInventory {
     /// Useful functionality for plugins in the future.
     pub fn set_slot(
         &mut self,
-        slot: usize,
+        slot: u16,
         item: Option<ItemStack>,
         item_allowed_override: bool,
     ) -> Result<(), InventoryError> {
-        if item_allowed_override {
-            if !(0..=45).contains(&slot) {
-                Err(InventoryError::InvalidSlot)?
-            }
-            *self.all_slots()[slot] = item;
-            return Ok(());
+        if !(0..=45).contains(&slot) {
+            return Err(InventoryError::InvalidSlot);
         }
-        let slot_condition = self.slot_condition(slot)?;
-        if let Some(item) = item {
-            if slot_condition(&item) {
-                *self.all_slots()[slot] = Some(item);
+
+        match item_allowed_override {
+            true => {
+                *self.all_slots()[slot as usize] = item;
+            }
+            false => {
+                let slot = slot as usize;
+                let slot_condition = self.slot_condition(slot)?;
+                if let Some(item) = item {
+                    if slot_condition(&item) {
+                        self.all_slots()[slot] = &mut Some(item);
+                    }
+                }
             }
         }
+
         Ok(())
     }
     #[allow(clippy::type_complexity)]
@@ -127,6 +136,10 @@ impl PlayerInventory {
         slots.extend(self.items.iter_mut());
         slots.push(&mut self.offhand);
         slots
+    }
+
+    pub fn iter_items_mut(&mut self) -> IterMut<Option<ItemStack>> {
+        self.items.iter_mut()
     }
 }
 

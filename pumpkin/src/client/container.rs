@@ -8,20 +8,21 @@ use pumpkin_inventory::container_click::{
 };
 use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
-use pumpkin_inventory::Container;
 use pumpkin_inventory::{container_click, InventoryError, OptionallyCombinedContainer};
+use pumpkin_inventory::{Container, WindowType};
 use pumpkin_protocol::client::play::{
     CCloseContainer, COpenScreen, CSetContainerContent, CSetContainerProperty, CSetContainerSlot,
 };
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
+use pumpkin_protocol::VarInt;
 use pumpkin_world::item::ItemStack;
 use std::sync::Arc;
 
 #[expect(unused)]
 
 impl Player {
-    pub async fn open_container(&self, server: &Server, minecraft_menu_id: &str) {
+    pub async fn open_container(&self, server: &Server, window_type: WindowType) {
         let inventory = self.inventory.lock().await;
         inventory
             .state_id
@@ -29,15 +30,7 @@ impl Player {
         let total_opened_containers = inventory.total_opened_containers;
         let container = self.get_open_container(server);
         let container = container.as_ref().map(|container| container.lock());
-        let menu_protocol_id = (*pumpkin_world::global_registry::REGISTRY
-            .get("minecraft:menu")
-            .unwrap()
-            .entries
-            .get(minecraft_menu_id)
-            .expect("Should be a valid menu id")
-            .get("protocol_id")
-            .unwrap())
-        .into();
+        // TODO
         let window_title = match container {
             Some(container) => container.await.window_name(),
             None => inventory.window_name(),
@@ -47,7 +40,7 @@ impl Player {
         self.client
             .send_packet(&COpenScreen::new(
                 total_opened_containers.into(),
-                menu_protocol_id,
+                VarInt(window_type as i32),
                 title,
             ))
             .await;
@@ -78,7 +71,7 @@ impl Player {
             .state_id
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let packet = CSetContainerContent::new(
-            total_opened_containers,
+            total_opened_containers.into(),
             ((i + 1) as i32).into(),
             &slots,
             &carried_item,
@@ -91,7 +84,9 @@ impl Player {
         let mut inventory = self.inventory.lock().await;
         inventory.total_opened_containers += 1;
         self.client
-            .send_packet(&CCloseContainer::new(inventory.total_opened_containers))
+            .send_packet(&CCloseContainer::new(
+                inventory.total_opened_containers.into(),
+            ))
             .await;
     }
 
@@ -102,7 +97,7 @@ impl Player {
         let (id, value) = window_property.into_tuple();
         self.client
             .send_packet(&CSetContainerProperty::new(
-                self.inventory.lock().await.total_opened_containers,
+                self.inventory.lock().await.total_opened_containers.into(),
                 id,
                 value,
             ))
@@ -131,14 +126,15 @@ impl Player {
         }
 
         if opened_container.is_some() {
-            if packet.window_id != self.inventory.lock().await.total_opened_containers {
+            if packet.window_id.0 != self.inventory.lock().await.total_opened_containers {
                 return Err(InventoryError::ClosedContainerInteract(self.entity_id()));
             }
-        } else if packet.window_id != 0 {
+        } else if packet.window_id.0 != 0 {
             return Err(InventoryError::ClosedContainerInteract(self.entity_id()));
         }
 
         let click = Click::new(
+            // TODO: This is very bad
             packet
                 .mode
                 .0
@@ -404,7 +400,7 @@ impl Player {
                 .filter(|player_id| *player_id != self.entity_id())
                 .collect_vec()
         };
-        let player_token = self.client.id;
+        let player_token = self.gameprofile.id;
 
         // TODO: Figure out better way to get only the players from player_ids
         // Also refactor out a better method to get individual advanced state ids

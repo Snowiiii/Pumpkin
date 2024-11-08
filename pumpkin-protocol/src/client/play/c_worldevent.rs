@@ -1,9 +1,10 @@
 use pumpkin_core::math::position::WorldPosition;
-use pumpkin_macros::packet;
+
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 #[derive(Serialize)]
-#[packet(0x28)]
+#[client_packet("play:level_event")]
 pub struct CWorldEvent<'a> {
     event: i32,
     location: &'a WorldPosition,

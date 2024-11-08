@@ -1,10 +1,10 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
 #[derive(Serialize)]
-#[packet(0x01)]
+#[client_packet("login:hello")]
 pub struct CEncryptionRequest<'a> {
     server_id: &'a str, // 20
     public_key_length: VarInt,

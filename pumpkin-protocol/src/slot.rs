@@ -153,7 +153,7 @@ impl From<&ItemStack> for Slot {
     fn from(item: &ItemStack) -> Self {
         Slot {
             item_count: item.item_count.into(),
-            item_id: Some(item.item_id.into()),
+            item_id: Some(VarInt(item.item_id as i32)),
             // TODO: add these
             num_components_to_add: None,
             num_components_to_remove: None,
@@ -166,5 +166,12 @@ impl From<&ItemStack> for Slot {
 impl From<Option<&ItemStack>> for Slot {
     fn from(item: Option<&ItemStack>) -> Self {
         item.map(Slot::from).unwrap_or(Slot::empty())
+    }
+}
+
+impl From<&Option<ItemStack>> for Slot {
+    fn from(item: &Option<ItemStack>) -> Self {
+        item.map(|stack| Self::from(&stack))
+            .unwrap_or(Slot::empty())
     }
 }

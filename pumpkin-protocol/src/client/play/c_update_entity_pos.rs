@@ -1,10 +1,10 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
 #[derive(Serialize)]
-#[packet(0x2E)]
+#[client_packet("play:move_entity_pos")]
 pub struct CUpdateEntityPos {
     entity_id: VarInt,
     delta_x: i16,
