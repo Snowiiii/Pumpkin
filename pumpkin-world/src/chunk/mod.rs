@@ -54,7 +54,7 @@ pub enum CompressionError {
     LZ4Error(std::io::Error),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ChunkData {
     pub blocks: ChunkBlocks,
     /// See `https://minecraft.fandom.com/wiki/Heightmap` for more info
