@@ -356,6 +356,7 @@ impl World {
     }
 
     #[expect(clippy::too_many_lines)]
+    /// IMPORTANT: Chunks have to be non-empty
     fn spawn_world_chunks(&self, player: Arc<Player>, chunks: &[Vector2<i32>]) {
         if player
             .client
