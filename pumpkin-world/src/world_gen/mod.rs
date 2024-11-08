@@ -12,14 +12,27 @@ mod sampler;
 mod seed;
 
 pub use generator::WorldGenerator;
-use implementation::overworld::biome::plains::PlainsGenerator;
+use implementation::{
+    custom::CustomGenerator, overworld::biome::plains::PlainsGenerator,
+    superflat::SuperflatGenerator, void::VoidGenerator,
+};
+use pumpkin_config::{GeneratorType, BASIC_CONFIG};
 pub use seed::Seed;
 
 use generator::GeneratorInit;
 
 pub fn get_world_gen(seed: Seed) -> Box<dyn WorldGenerator> {
-    // TODO decide which WorldGenerator to pick based on config.
-    Box::new(PlainsGenerator::new(seed))
+    match &BASIC_CONFIG.generator {
+        GeneratorType::Simple(name) => match name.as_str() {
+            "Void" => Box::new(VoidGenerator::new()),
+            "Superflat" => Box::new(SuperflatGenerator::new()),
+            "BeautifulPlains" => Box::new(PlainsGenerator::new(seed)),
+            _ => panic!("unknown generator"),
+        },
+        GeneratorType::WithLayers(biom, layers) => {
+            Box::new(CustomGenerator::new(biom.clone(), layers))
+        }
+    }
 }
 
 pub mod biome_coords {

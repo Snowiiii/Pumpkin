@@ -1,51 +1,38 @@
 use pumpkin_core::math::vector2::Vector2;
+use rle_vec::RleVec;
 
 use crate::{
-    biome::Biome,
     block::block_state::BlockState,
-    coordinates::{BlockCoordinates, XZBlockCoordinates},
-    world_gen::{
-        generator::{BiomeGenerator, GeneratorInit, TerrainGenerator},
-        generic_generator::GenericGenerator,
-        Seed,
-    },
+    chunk::{ChunkBlocks, ChunkData, SubChunkBlocks, SUBCHUNK_VOLUME},
+    world_gen::WorldGenerator,
 };
 
-#[expect(dead_code)]
-pub type SuperflatGenerator = GenericGenerator<SuperflatBiomeGenerator, SuperflatTerrainGenerator>;
+pub struct SuperflatGenerator {}
 
-pub(crate) struct SuperflatBiomeGenerator {}
-
-impl GeneratorInit for SuperflatBiomeGenerator {
-    fn new(_: Seed) -> Self {
+impl SuperflatGenerator {
+    pub fn new() -> Self {
         Self {}
     }
 }
 
-impl BiomeGenerator for SuperflatBiomeGenerator {
-    // TODO make generic over Biome and allow changing the Biome in the config.
-    fn generate_biome(&self, _: XZBlockCoordinates) -> Biome {
-        Biome::Plains
-    }
-}
-
-pub(crate) struct SuperflatTerrainGenerator {}
-
-impl GeneratorInit for SuperflatTerrainGenerator {
-    fn new(_: Seed) -> Self {
-        Self {}
-    }
-}
-
-impl TerrainGenerator for SuperflatTerrainGenerator {
-    fn prepare_chunk(&self, _at: &Vector2<i32>) {}
-    // TODO allow specifying which blocks should be at which height in the config.
-    fn generate_block(&self, at: BlockCoordinates, _: Biome) -> BlockState {
-        match *at.y {
-            -64 => BlockState::new("minecraft:bedrock").unwrap(),
-            -63..=-62 => BlockState::new("minecraft:dirt").unwrap(),
-            -61 => BlockState::new("minecraft:grass_block").unwrap(),
-            _ => BlockState::AIR,
+impl WorldGenerator for SuperflatGenerator {
+    fn generate_chunk(&self, position: Vector2<i32>) -> ChunkData {
+        let mut blocks = ChunkBlocks::default();
+        blocks.subchunks[5] = SubChunkBlocks::Multi({
+            let mut vec = RleVec::new();
+            vec.push_n(256, BlockState::new("minecraft:bedrock").unwrap().state_id);
+            vec.push_n(512, BlockState::new("minecraft:dirt").unwrap().state_id);
+            vec.push_n(
+                256,
+                BlockState::new("minecraft:grass_block").unwrap().state_id,
+            );
+            vec.push_n(SUBCHUNK_VOLUME - 1024, 0);
+            vec
+        });
+        ChunkData {
+            position,
+            blocks,
+            heightmap: Default::default(),
         }
     }
 }

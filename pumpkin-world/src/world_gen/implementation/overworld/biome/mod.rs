@@ -3,7 +3,6 @@ use std::ops::Add;
 use crate::{block::BlockState, coordinates::ChunkRelativeBlockCoordinates};
 
 pub mod plains;
-pub mod void;
 
 pub fn generate_tree(
     chunk_relative_coordinates: ChunkRelativeBlockCoordinates,

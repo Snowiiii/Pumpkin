@@ -8,7 +8,7 @@ use itertools::Itertools;
 
 use crate::level::SaveFile;
 
-use super::{ChunkReader, ChunkReadingError, CompressionError};
+use super::{ChunkData, ChunkReader, ChunkReadingError, CompressionError};
 
 #[derive(Clone)]
 pub struct AnvilChunkReader {}
@@ -156,8 +156,7 @@ impl ChunkReader for AnvilChunkReader {
             .decompress_data(chunk_data)
             .map_err(ChunkReadingError::Compression)?;
 
-        //ChunkData::from_bytes(decompressed_chunk, *at).map_err(ChunkReadingError::ParsingError)
-        todo!()
+        ChunkData::from_bytes(decompressed_chunk, *at).map_err(ChunkReadingError::ParsingError)
     }
 }
 

@@ -1,4 +1,3 @@
-
 use async_trait::async_trait;
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_protocol::CURRENT_MC_PROTOCOL;

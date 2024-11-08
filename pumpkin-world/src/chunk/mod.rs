@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::cmp::max;
+use std::collections::HashMap;
 
 use fastnbt::LongArray;
 use pumpkin_core::math::vector2::Vector2;
@@ -16,9 +16,9 @@ use crate::{
 
 pub mod anvil;
 
-const CHUNK_AREA: usize = 16 * 16;
-const SUBCHUNK_VOLUME: usize = CHUNK_AREA * 16;
-const CHUNK_VOLUME: usize = CHUNK_AREA * WORLD_HEIGHT;
+pub const CHUNK_AREA: usize = 16 * 16;
+pub const SUBCHUNK_VOLUME: usize = CHUNK_AREA * 16;
+pub const CHUNK_VOLUME: usize = CHUNK_AREA * WORLD_HEIGHT;
 
 pub trait ChunkReader: Sync + Send {
     fn read_chunk(
@@ -177,6 +177,11 @@ impl ChunkBlocks {
         );
     }
 
+    pub fn set_layer(&mut self, height: Height, block_id: u16) {
+        self.subchunks[(height.get_absolute() / 16) as usize]
+            .set_layer(Height::from_absolute(height.get_absolute() % 16), block_id);
+    }
+
     pub fn set_block_no_heightmap_update(
         &mut self,
         position: ChunkRelativeBlockCoordinates,
@@ -212,6 +217,39 @@ impl SubChunkBlocks {
     pub fn set_block(&mut self, position: ChunkRelativeBlockCoordinates, block_id: u16) {
         // TODO @LUK_ESC? update the heightmap
         self.set_block_no_heightmap_update(position, block_id)
+    }
+
+    pub fn set_layer(&mut self, height: Height, block: u16) {
+        match self {
+            Self::Single(single_block) => {
+                if *single_block != block {
+                    let mut vec = RleVec::new();
+                    vec.push_n(SUBCHUNK_VOLUME, *single_block);
+                    vec.insert(
+                        Self::convert_index(ChunkRelativeBlockCoordinates {
+                            x: 0u8.into(),
+                            y: height,
+                            z: 0u8.into(),
+                        }),
+                        block,
+                    );
+                    *self = Self::Multi(vec)
+                }
+            }
+            Self::Multi(blocks) => {
+                blocks.insert(
+                    Self::convert_index(ChunkRelativeBlockCoordinates {
+                        x: 0u8.into(),
+                        y: height,
+                        z: 0u8.into(),
+                    }),
+                    block,
+                );
+                if blocks.runs_len() == 1 {
+                    *self = Self::Single(block)
+                }
+            }
+        }
     }
 
     /// Sets the given block in the chunk

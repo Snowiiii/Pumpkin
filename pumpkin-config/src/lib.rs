@@ -108,6 +108,16 @@ pub struct BasicConfiguration {
     /// Path to server favicon
     #[serde_inline_default("icon.png".to_string())]
     pub favicon_path: String,
+    // World generator
+    #[serde_inline_default(GeneratorType::Simple("Superflat".to_string()))]
+    pub generator: GeneratorType,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GeneratorType {
+    Simple(String),
+    WithLayers(String, Vec<(i16, String)>),
 }
 
 fn default_server_address() -> SocketAddr {
@@ -133,6 +143,7 @@ impl Default for BasicConfiguration {
             scrub_ips: true,
             use_favicon: true,
             favicon_path: "icon.png".to_string(),
+            generator: GeneratorType::Simple("Superflat".to_string()),
         }
     }
 }
