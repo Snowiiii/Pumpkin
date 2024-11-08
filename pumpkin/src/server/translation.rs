@@ -25,7 +25,10 @@ pub fn translate<'a>(
     message: &'a str,
 ) -> Result<TextComponent<'a>, TranslationError> {
     if !config.enabled {
-        return Ok(TextComponent::text(message));
+        let path = "assets/lang/en_us";
+        let translations = get_translations(path, message)?;
+
+        return Ok(translations);
     }
 
     if config.client_translations {
@@ -39,7 +42,7 @@ pub fn translate<'a>(
         });
     }
 
-    let path = ""; //Empty path until I figure out the file handling
+    let path = "assets/lang/custom";
     let translations = get_translations(path, message)?;
 
     Ok(translations)
