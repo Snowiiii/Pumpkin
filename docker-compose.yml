@@ -2,7 +2,7 @@ services:
   pumpkin:
     build: .
     ports:
-      - 25565:25565
+      - "25565:25565"
     volumes:
-      - ./configuration.toml:/pumpkin/configuration.toml
-      - ./features.toml:/pumpkin/features.toml
+      - ./configuration.toml:/pumpkin/configuration:ro
+      - ./features.toml:/pumpkin/features:ro
