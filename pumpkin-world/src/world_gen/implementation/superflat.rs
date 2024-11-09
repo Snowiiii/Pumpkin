@@ -3,7 +3,7 @@ use rle_vec::RleVec;
 
 use crate::{
     block::block_state::BlockState,
-    chunk::{ChunkBlocks, ChunkData, SubChunkBlocks, SUBCHUNK_VOLUME},
+    chunk::{BlockStorage, ChunkBlocks, ChunkData, SubChunkBlocks, SUBCHUNK_VOLUME},
     world_gen::WorldGenerator,
 };
 
@@ -27,7 +27,7 @@ impl WorldGenerator for SuperflatGenerator {
                 BlockState::new("minecraft:grass_block").unwrap().state_id,
             );
             vec.push_n(SUBCHUNK_VOLUME - 1024, 0);
-            vec
+            BlockStorage::RleVec(vec)
         });
         ChunkData {
             position,

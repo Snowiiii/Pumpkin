@@ -72,7 +72,55 @@ pub struct ChunkBlocks {
 #[derive(Debug)]
 pub enum SubChunkBlocks {
     Single(u16),
-    Multi(RleVec<u16>),
+    Multi(BlockStorage),
+}
+
+#[derive(Debug)]
+pub enum BlockStorage {
+    Array(Box<[u16; SUBCHUNK_VOLUME]>),
+    RleVec(RleVec<u16>)
+}
+
+impl BlockStorage {
+    pub fn get_block(&self, position: ChunkRelativeBlockCoordinates) -> u16 {
+        match self {
+            Self::Array(arr) => arr[convert_index(position)],
+            Self::RleVec(vec) => vec[convert_index(position)]
+        }
+    }
+
+    /// Sets block
+    /// Returns true if all elemets are same
+    pub fn set_block(&mut self, position: ChunkRelativeBlockCoordinates, block_id: u16) -> bool {
+        match self {
+            Self::Array(arr) => {
+                arr[convert_index(position)] = block_id;
+                arr.iter().all(|elem| *elem == block_id)
+            },
+            Self::RleVec(vec) => {
+                vec.set(convert_index(position), block_id);
+                vec.runs_len() == 1
+            }
+        }
+    }
+
+    pub fn set_layer(&mut self, height: Height, block: u16) {
+        match self {
+            Self::Array(arr) => {
+
+            }
+            Self::RleVec(vec) => {
+
+            }
+        }
+    }
+
+    pub fn to_vec(&self) -> Vec<u16> {
+        match self {
+            Self::Array(arr) => arr.to_vec(),
+            Self::RleVec(vec) => vec.to_vec()
+        }
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -209,7 +257,7 @@ impl SubChunkBlocks {
     pub fn get_block(&self, position: ChunkRelativeBlockCoordinates) -> u16 {
         match self {
             Self::Single(block) => *block,
-            Self::Multi(blocks) => blocks[Self::convert_index(position)],
+            Self::Multi(blocks) => blocks.get_block(position),
         }
     }
 
@@ -220,25 +268,25 @@ impl SubChunkBlocks {
     }
 
     pub fn set_layer(&mut self, height: Height, block: u16) {
-        match self {
+        /*match self {
             Self::Single(single_block) => {
                 if *single_block != block {
                     let mut vec = RleVec::new();
                     vec.push_n(SUBCHUNK_VOLUME, *single_block);
                     vec.insert(
-                        Self::convert_index(ChunkRelativeBlockCoordinates {
+                        convert_index(ChunkRelativeBlockCoordinates {
                             x: 0u8.into(),
                             y: height,
                             z: 0u8.into(),
                         }),
                         block,
                     );
-                    *self = Self::Multi(vec)
+                    *self = Self::Multi(BlockStorage::RleVec(vec))
                 }
             }
             Self::Multi(blocks) => {
                 blocks.insert(
-                    Self::convert_index(ChunkRelativeBlockCoordinates {
+                    convert_index(ChunkRelativeBlockCoordinates {
                         x: 0u8.into(),
                         y: height,
                         z: 0u8.into(),
@@ -249,7 +297,7 @@ impl SubChunkBlocks {
                     *self = Self::Single(block)
                 }
             }
-        }
+        }*/
     }
 
     /// Sets the given block in the chunk
@@ -260,21 +308,20 @@ impl SubChunkBlocks {
     pub fn set_block_no_heightmap_update(
         &mut self,
         position: ChunkRelativeBlockCoordinates,
-        block: u16,
+        block_id: u16,
     ) {
         match self {
             Self::Single(single_block) => {
-                if *single_block != block {
+                if *single_block != block_id {
                     let mut vec = RleVec::new();
                     vec.push_n(SUBCHUNK_VOLUME, *single_block);
-                    vec.set(Self::convert_index(position), block);
-                    *self = Self::Multi(vec)
+                    vec.set(convert_index(position), block_id);
+                    *self = Self::Multi(BlockStorage::RleVec(vec))
                 }
             }
             Self::Multi(blocks) => {
-                blocks.set(Self::convert_index(position), block);
-                if blocks.runs_len() == 1 {
-                    *self = Self::Single(block)
+                if blocks.set_block(position, block_id) {
+                    *self = Self::Single(block_id)
                 }
             }
         }
@@ -287,11 +334,6 @@ impl SubChunkBlocks {
             }
             Self::Multi(blocks) => blocks.to_vec(),
         }
-    }
-
-    fn convert_index(index: ChunkRelativeBlockCoordinates) -> usize {
-        // % works for negative numbers as intended.
-        index.y.get_absolute() as usize * CHUNK_AREA + *index.z as usize * 16 + *index.x as usize
     }
 }
 
@@ -391,4 +433,9 @@ pub enum ChunkParsingError {
     ChunkNotGenerated,
     #[error("Error deserializing chunk: {0}")]
     ErrorDeserializingChunk(String),
+}
+
+fn convert_index(index: ChunkRelativeBlockCoordinates) -> usize {
+    // % works for negative numbers as intended.
+    index.y.get_absolute() as usize * CHUNK_AREA + *index.z as usize * 16 + *index.x as usize
 }
