@@ -19,4 +19,3 @@ num-derive.workspace = true
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 
 itertools.workspace = true
-serde_json = "1.0.132"

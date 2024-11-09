@@ -1,8 +1,10 @@
 use pumpkin_registry::{
     flatten_3x3, IngredientSlot, IngredientType, RecipeResult, ITEM_TAGS, RECIPES,
 };
-use pumpkin_world::item::{get_item_protocol_id, ItemStack};
+use pumpkin_world::item::item_registry::get_item;
+use pumpkin_world::item::ItemStack;
 use rayon::prelude::*;
+
 #[inline(always)]
 fn check_ingredient_type(ingredient_type: &IngredientType, input: ItemStack) -> bool {
     match ingredient_type {
@@ -13,7 +15,7 @@ fn check_ingredient_type(ingredient_type: &IngredientType, input: ItemStack) -> 
                 .iter()
                 .any(|tag| check_ingredient_type(&tag.to_ingredient_type(), input))
         }
-        IngredientType::Item(item) => get_item_protocol_id(item) == input.item_id,
+        IngredientType::Item(item) => get_item(item).is_some_and(|item| item.id == input.item_id),
     }
 }
 
@@ -53,11 +55,11 @@ pub fn check_if_matches_crafting(input: [[Option<ItemStack>; 3]; 3]) -> Option<I
         })
         .map(|recipe| match recipe.result() {
             RecipeResult::Single { id } => Some(ItemStack {
-                item_id: get_item_protocol_id(id),
+                item_id: get_item(id).unwrap().id,
                 item_count: 1,
             }),
             RecipeResult::Many { id, count } => Some(ItemStack {
-                item_id: get_item_protocol_id(id),
+                item_id: get_item(id).unwrap().id,
                 item_count: *count,
             }),
             RecipeResult::Special => None,

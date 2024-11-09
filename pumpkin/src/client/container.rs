@@ -29,15 +29,6 @@ impl Player {
             Some(container) => Some(container.lock().await),
             None => None,
         };
-        let menu_protocol_id = (*pumpkin_world::global_registry::REGISTRY
-            .get("minecraft:menu")
-            .unwrap()
-            .entries
-            .get(minecraft_menu_id)
-            .expect("Should be a valid menu id")
-            .get("protocol_id")
-            .unwrap())
-        .into();
         let window_title = container.as_ref().map_or_else(
             || inventory.window_name(),
             |container| container.window_name(),

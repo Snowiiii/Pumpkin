@@ -619,15 +619,15 @@ impl Player {
         if self.gamemode.load() != GameMode::Creative {
             return Err(InventoryError::PermissionError);
         }
-        let valid_slot = packet.slot >= 1 && packet.slot <= 45;
+        let valid_slot = packet.slot >= 0 && packet.slot <= 45;
         if valid_slot {
             self.inventory.lock().await.set_slot(
-                packet.slot as u16,
+                packet.slot as usize,
                 packet.clicked_item.to_item(),
                 true,
             )?;
         };
-        // TODO: The Item was droped per drag and drop,
+        // TODO: The Item was dropped per drag and drop,
         Ok(())
     }
 

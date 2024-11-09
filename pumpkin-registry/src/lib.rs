@@ -14,9 +14,8 @@ use pumpkin_protocol::client::config::RegistryEntry;
 pub use recipe::{
     flatten_3x3, IngredientSlot, IngredientType, Recipe, RecipeResult, RecipeType, RECIPES,
 };
-use serde::Serialize;
-pub use tags::{TagType, ITEM_TAGS};
 use serde::{Deserialize, Serialize};
+pub use tags::{TagType, ITEM_TAGS};
 use trim_material::TrimMaterial;
 use trim_pattern::TrimPattern;
 use wolf::WolfVariant;

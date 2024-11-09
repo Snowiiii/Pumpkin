@@ -49,7 +49,7 @@ pub struct Server {
     /// Caches game registries for efficient access.
     pub cached_registry: Vec<Registry>,
     /// Tracks open containers used for item interactions.
-    pub open_containers: std::sync::RwLock<HashMap<u64, OpenContainer>>,
+    pub open_containers: RwLock<HashMap<u64, OpenContainer>>,
     pub drag_handler: DragHandler,
     /// Assigns unique IDs to entities.
     entity_id: AtomicI32,
@@ -83,7 +83,7 @@ impl Server {
         ));
         Self {
             cached_registry: Registry::get_synced(),
-            open_containers: std::sync::RwLock::new(HashMap::new()),
+            open_containers: RwLock::new(HashMap::new()),
             drag_handler: DragHandler::new(),
             // 0 is invalid
             entity_id: 2.into(),
