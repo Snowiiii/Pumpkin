@@ -173,13 +173,11 @@ impl Player {
             if combined.crafted_item_slot().is_none() && crafted_item.is_some() {
                 combined.recipe_used();
             }
-        }
-        if match &mut opened_container {
-            Some(container) => container.craft(),
-            None => self.inventory.lock().await.craft(),
-        } {
-            self.set_container_content(opened_container.as_deref_mut())
-                .await;
+            if combined.craft() {
+                drop(inventory);
+                self.set_container_content(opened_container.as_deref_mut())
+                    .await;
+            }
         }
 
         if let Some(mut opened_container) = opened_container {

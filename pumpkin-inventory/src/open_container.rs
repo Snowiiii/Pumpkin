@@ -105,12 +105,19 @@ impl Container for CraftingTable {
     }
 
     fn craft(&mut self) -> bool {
+        let old_output = self.output;
         self.output = check_if_matches_crafting(self.input);
-        self.input.iter().flatten().any(|s| s.is_some()) || self.output.is_some()
+        old_output != self.output
+            || self.input.iter().flatten().any(|s| s.is_some())
+            || self.output.is_some()
     }
 
     fn crafting_output_slot(&self) -> Option<usize> {
         Some(0)
+    }
+
+    fn slot_in_crafting_input_slots(&self, slot: &usize) -> bool {
+        (1..10).contains(slot)
     }
 
     fn recipe_used(&mut self) {

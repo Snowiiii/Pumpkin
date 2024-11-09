@@ -183,6 +183,14 @@ impl Container for PlayerInventory {
         Ok(())
     }
 
+    fn crafting_output_slot(&self) -> Option<usize> {
+        Some(0)
+    }
+
+    fn slot_in_crafting_input_slots(&self, slot: &usize) -> bool {
+        (1..=4).contains(slot)
+    }
+
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
         self.slots_mut()
     }

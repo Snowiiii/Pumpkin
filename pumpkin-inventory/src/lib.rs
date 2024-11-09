@@ -115,6 +115,10 @@ pub trait Container: Sync + Send {
         None
     }
 
+    fn slot_in_crafting_input_slots(&self, _slot: &usize) -> bool {
+        false
+    }
+
     fn crafted_item_slot(&self) -> Option<ItemStack> {
         self.all_slots_ref()
             .get(self.crafting_output_slot()?)?
@@ -279,6 +283,17 @@ impl<'a> Container for OptionallyCombinedContainer<'a, 'a> {
         match &self.container {
             Some(container) => container.crafting_output_slot(),
             None => self.inventory.crafting_output_slot(),
+        }
+    }
+
+    fn slot_in_crafting_input_slots(&self, slot: &usize) -> bool {
+        match &self.container {
+            Some(container) => {
+                // We don't have to worry about length due to inventory crafting slots being inaccessible
+                // while inside container interfaces
+                container.slot_in_crafting_input_slots(slot)
+            }
+            None => self.inventory.slot_in_crafting_input_slots(slot),
         }
     }
 
