@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - "master"
+      - "docker-deploy"
 
 jobs:
   docker-build-deploy:
