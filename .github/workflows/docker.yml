@@ -50,5 +50,6 @@ jobs:
       - name: Generate Artifact Attestation
         uses: actions/attest-build-provenance@v1
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-path: '${{ github.workspace }}/${{ env.IMAGE_NAME }}'
           push-to-registry: true
