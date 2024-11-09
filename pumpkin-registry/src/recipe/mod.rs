@@ -1,11 +1,10 @@
 mod read;
 mod recipe_formats;
 
-pub use rayon::prelude::*;
 pub use read::{
     ingredients::IngredientSlot, ingredients::IngredientType, Recipe, RecipeResult, RecipeType,
 };
-use std::sync::{LazyLock, Mutex};
+use std::sync::LazyLock;
 pub fn flatten_3x3<T: Clone>(input: [[Option<T>; 3]; 3]) -> [[Option<T>; 3]; 3] {
     let mut final_output = [const { [const { None }; 3] }; 3];
 
@@ -41,20 +40,8 @@ pub fn flatten_3x3<T: Clone>(input: [[Option<T>; 3]; 3]) -> [[Option<T>; 3]; 3] 
 
     final_output
 }
-pub static RECIPES: LazyLock<Vec<Recipe>> = LazyLock::new(|| {
-    let recipes = Mutex::new(vec![]);
-    std::fs::read_dir("assets/recipes")
-        .unwrap()
-        .par_bridge()
-        .for_each(|recipe| {
-            let r = recipe.unwrap();
-            let s = std::fs::read_to_string(r.path()).unwrap();
-            let recipe = serde_json::from_str::<Recipe>(&s).unwrap();
-            recipes.lock().unwrap().push(recipe);
-        });
-
-    recipes.into_inner().unwrap()
-});
+pub static RECIPES: LazyLock<Vec<Recipe>> =
+    LazyLock::new(|| serde_json::from_str(include_str!("../../../assets/recipes.json")).unwrap());
 
 #[cfg(test)]
 mod test {

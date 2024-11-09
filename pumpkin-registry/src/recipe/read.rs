@@ -54,6 +54,7 @@ impl FromStr for RecipeType {
             "crafting_special_shielddecoration" => Ok(Crafting(Special(ShieldDecoration))),
             "crafting_special_tippedarrow" => Ok(Crafting(Special(TippedArrow))),
             "crafting_decorated_pot" => Ok(Crafting(DecoratedPot)),
+            "crafting_transmute" => Ok(Crafting(Transmute)),
             "smelting" => Ok(Smelting),
             "smithing" => Ok(Smithing(SmithingType::Normal)),
             "smithing_trim" => Ok(Smithing(SmithingType::Trim)),
@@ -65,7 +66,7 @@ impl FromStr for RecipeType {
     }
 }
 pub mod ingredients {
-    use serde::de::{MapAccess, SeqAccess, Visitor};
+    use serde::de::{Error, SeqAccess, Visitor};
     use serde::{de, Deserialize, Deserializer};
     use std::collections::HashMap;
     use std::fmt::Formatter;
@@ -88,19 +89,17 @@ pub mod ingredients {
 
     struct IngredientTypeVisitor;
     impl<'de> Visitor<'de> for IngredientTypeVisitor {
+        type Value = IngredientType;
         fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
             write!(formatter, "valid item type")
         }
-        type Value = IngredientType;
-        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
         where
-            A: MapAccess<'de>,
+            E: Error,
         {
-            match map.next_key()? {
-                Some("item") => Ok(IngredientType::Item(map.next_value()?)),
-                Some("tag") => Ok(IngredientType::Tag(map.next_value()?)),
-                Some(s) => Err(de::Error::unknown_field(s, &["item", "tag"])),
-                None => Err(de::Error::custom("Is completely empty, very weird")),
+            match v.strip_prefix('#') {
+                Some(tag) => Ok(IngredientType::Tag(tag.to_string())),
+                None => Ok(IngredientType::Item(v.to_string())),
             }
         }
     }
@@ -109,7 +108,7 @@ pub mod ingredients {
         where
             D: Deserializer<'de>,
         {
-            deserializer.deserialize_map(IngredientTypeVisitor)
+            deserializer.deserialize_str(IngredientTypeVisitor)
         }
     }
 
@@ -141,13 +140,11 @@ pub mod ingredients {
 
                 type Value = IngredientSlot;
 
-                fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+                fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
                 where
-                    A: MapAccess<'de>,
+                    E: de::Error,
                 {
-                    Ok(IngredientSlot::Single(
-                        IngredientTypeVisitor.visit_map(map)?,
-                    ))
+                    Ok(IngredientSlot::Single(IngredientTypeVisitor.visit_str(v)?))
                 }
 
                 fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
@@ -201,20 +198,28 @@ pub mod ingredients {
 
 #[derive(Debug)]
 pub enum RecipeResult {
-    Many { count: u8, id: String },
-    Single { id: String },
+    Many {
+        count: u8,
+        id: String,
+        // TODO
+        components: Option<serde_json::Value>,
+    },
+    Single {
+        id: String,
+        // TODO
+        components: Option<serde_json::Value>,
+    },
     Special,
 }
 
 impl RecipeResult {
     pub fn id(&self) -> &str {
         match self {
-            Self::Many { id, .. } | Self::Single { id } => id,
+            Self::Many { id, .. } | Self::Single { id, .. } => id,
             Self::Special => "minecraft:air",
         }
     }
 }
-
 impl<'de> Deserialize<'de> for RecipeResult {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -225,6 +230,7 @@ impl<'de> Deserialize<'de> for RecipeResult {
         enum Fields {
             Count,
             Id,
+            Components,
         }
         struct ResultVisitor;
         impl<'de> Visitor<'de> for ResultVisitor {
@@ -240,10 +246,14 @@ impl<'de> Deserialize<'de> for RecipeResult {
             {
                 let mut id: Option<&str> = None;
                 let mut count: Option<u8> = None;
+                let mut components: Option<serde_json::Value> = None;
                 while let Some(key) = map.next_key()? {
                     match key {
                         Fields::Id => visit_option(&mut map, &mut id, "id")?,
                         Fields::Count => visit_option(&mut map, &mut count, "count")?,
+                        Fields::Components => {
+                            visit_option(&mut map, &mut components, "components")?
+                        }
                     }
                 }
 
@@ -251,13 +261,29 @@ impl<'de> Deserialize<'de> for RecipeResult {
                     .ok_or_else(|| de::Error::missing_field("id"))?
                     .to_string();
                 if let Some(count) = count {
-                    Ok(RecipeResult::Many { id, count })
+                    Ok(RecipeResult::Many {
+                        id,
+                        count,
+                        components,
+                    })
                 } else {
-                    Ok(RecipeResult::Single { id })
+                    Ok(RecipeResult::Single { id, components })
                 }
             }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Ok(RecipeResult::Single {
+                    id: v.to_string(),
+                    components: None,
+                })
+            }
         }
-        deserializer.deserialize_map(ResultVisitor)
+
+        // Evaluate putting type constraint on RecipeResult, because only Crafting Transmute can call visit_str
+        deserializer.deserialize_any(ResultVisitor)
     }
 }
 pub struct RecipeKeys(pub(super) HashMap<char, IngredientSlot>);
@@ -322,6 +348,10 @@ impl<'de> Deserialize<'de> for Recipe {
             // Smelting
             CookingTime,
             Experience,
+
+            // Transmute
+            Input,
+            Material,
         }
 
         struct RecipeVisitor;
@@ -350,6 +380,8 @@ impl<'de> Deserialize<'de> for Recipe {
                 let mut cookingtime: Option<u16> = None;
                 let mut experience: Option<f32> = None;
                 let mut show_notification: Option<bool> = None;
+                let mut transmute_input: Option<IngredientSlot> = None;
+                let mut transmute_material: Option<IngredientSlot> = None;
                 while let Some(key) = map.next_key()? {
                     (match key {
                         Fields::Type => visit_option(&mut map, &mut recipe_type, "type"),
@@ -371,6 +403,10 @@ impl<'de> Deserialize<'de> for Recipe {
                         Fields::Experience => visit_option(&mut map, &mut experience, "experience"),
                         Fields::ShowNotification => {
                             visit_option(&mut map, &mut show_notification, "show_notification")
+                        }
+                        Fields::Input => visit_option(&mut map, &mut transmute_input, "input"),
+                        Fields::Material => {
+                            visit_option(&mut map, &mut transmute_material, "material")
                         }
                     })?
                 }
@@ -418,6 +454,15 @@ impl<'de> Deserialize<'de> for Recipe {
                         recipe_type,
                         result,
                     })),
+                    RecipeType::Crafting(CraftingType::Transmute) => {
+                        let _input =
+                            transmute_input.ok_or_else(|| de::Error::missing_field("input"))?;
+                        // Maybe also has material
+                        Ok(Recipe::from(Test {
+                            recipe_type,
+                            result,
+                        }))
+                    }
                     RecipeType::Smithing(_) => Ok(Recipe::from(Test {
                         recipe_type,
                         result: RecipeResult::Special,
@@ -445,6 +490,8 @@ impl<'de> Deserialize<'de> for Recipe {
             "cookingtime",
             "experience",
             "show_notification",
+            "input",
+            "material",
         ];
 
         deserializer.deserialize_struct("Recipe", FIELDS, RecipeVisitor)
@@ -539,6 +586,7 @@ pub enum CraftingType {
     Shaped,
     Special(SpecialCraftingType),
     DecoratedPot,
+    Transmute,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -575,12 +623,13 @@ pub enum SmithingType {
 
 #[cfg(test)]
 mod test {
-    use crate::recipe::read::{CraftingType, Recipe};
-    use crate::recipe::RecipeType;
+    use crate::recipe::read::Recipe;
 
     #[test]
     fn check_all_recipes() {
-        let recipes: Vec<Recipe> =
-            serde_json::from_str(include_str!("../../../assets/recipes.json")).unwrap();
+        assert!(
+            serde_json::from_str::<Vec<Recipe>>(include_str!("../../../assets/recipes.json"))
+                .is_ok()
+        );
     }
 }

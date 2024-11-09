@@ -1,8 +1,8 @@
-use std::slice::IterMut;
 use crate::container_click::MouseClick;
 use crate::crafting::check_if_matches_crafting;
 use crate::{handle_item_change, Container, InventoryError, WindowType};
 use pumpkin_world::item::ItemStack;
+use std::slice::IterMut;
 
 pub struct PlayerInventory {
     // Main Inventory + Hotbar

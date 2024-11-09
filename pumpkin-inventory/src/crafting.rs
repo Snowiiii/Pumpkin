@@ -54,11 +54,11 @@ pub fn check_if_matches_crafting(input: [[Option<ItemStack>; 3]; 3]) -> Option<I
             }
         })
         .map(|recipe| match recipe.result() {
-            RecipeResult::Single { id } => Some(ItemStack {
+            RecipeResult::Single { id, .. } => Some(ItemStack {
                 item_id: get_item(id).unwrap().id,
                 item_count: 1,
             }),
-            RecipeResult::Many { id, count } => Some(ItemStack {
+            RecipeResult::Many { id, count, .. } => Some(ItemStack {
                 item_id: get_item(id).unwrap().id,
                 item_count: *count,
             }),
