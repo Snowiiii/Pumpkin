@@ -43,7 +43,7 @@ use pumpkin_protocol::{
 use tokio::sync::{Mutex, Notify};
 use tokio::task::JoinHandle;
 
-use pumpkin_protocol::server::play::SKeepAlive;
+use pumpkin_protocol::server::play::{SClickContainer, SKeepAlive};
 use pumpkin_world::{
     cylindrical_chunk_iterator::Cylindrical,
     item::{item_registry::Item, ItemStack},
@@ -831,6 +831,10 @@ impl Player {
             SPlayerCommand::PACKET_ID => {
                 self.handle_player_command(SPlayerCommand::read(bytebuf)?)
                     .await;
+            }
+            SClickContainer::PACKET_ID => {
+                self.handle_click_container(server, SClickContainer::read(bytebuf)?)
+                    .await?;
             }
             SSetHeldItem::PACKET_ID => {
                 self.handle_set_held_item(SSetHeldItem::read(bytebuf)?)

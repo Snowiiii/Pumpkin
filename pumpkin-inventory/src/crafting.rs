@@ -10,7 +10,11 @@ fn check_ingredient_type(ingredient_type: &IngredientType, input: ItemStack) -> 
     match ingredient_type {
         IngredientType::Tag(tag) => {
             let tag = tag.strip_prefix("minecraft:").unwrap();
-            let items = ITEM_TAGS.get(tag).expect("tag to be a valid");
+            // TODO Update item tags so we don't have to do this
+            let items = match ITEM_TAGS.get(tag) {
+                Some(items) => items,
+                None => return false,
+            };
             items
                 .iter()
                 .any(|tag| check_ingredient_type(&tag.to_ingredient_type(), input))
