@@ -65,27 +65,27 @@ impl RecipeTrait for ShapelessCrafting {
     // is correct. Otherwise, we would have to backtrack and check for each item in the recipe input, which tags they are inside,
     // and then sort those permutations
     fn pattern(&self) -> Vec<[[std::option::Option<IngredientSlot>; 3]; 3]> {
-        self.ingredients
-            .iter()
-            .cloned()
-            .permutations(self.ingredients.len())
-            .map(|thing| {
-                let mut v1 = [const { None }; 3];
-                let mut v2 = [const { None }; 3];
-                let mut v3 = [const { None }; 3];
-                for (i, thing) in thing.into_iter().enumerate() {
-                    if i < 3 {
-                        v1[i] = Some(thing)
-                    } else if i < 6 {
-                        v2[i - 3] = Some(thing)
-                    } else {
-                        v3[i - 6] = Some(thing)
-                    }
+        vec![
+            self.ingredients.clone(), //.permutations(self.ingredients.len())
+        ]
+        .into_iter()
+        .map(|thing| {
+            let mut v1 = [const { None }; 3];
+            let mut v2 = [const { None }; 3];
+            let mut v3 = [const { None }; 3];
+            for (i, thing) in thing.into_iter().enumerate() {
+                if i < 3 {
+                    v1[i] = Some(thing)
+                } else if i < 6 {
+                    v2[i - 3] = Some(thing)
+                } else {
+                    v3[i - 6] = Some(thing)
                 }
+            }
 
-                [v1, v2, v3]
-            })
-            .collect()
+            [v1, v2, v3]
+        })
+        .collect_vec()
     }
 
     fn result(self) -> RecipeResult {

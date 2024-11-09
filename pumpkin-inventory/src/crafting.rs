@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use pumpkin_registry::{
     flatten_3x3, IngredientSlot, IngredientType, RecipeResult, ITEM_TAGS, RECIPES,
 };
@@ -36,20 +37,15 @@ pub fn check_if_matches_crafting(input: [[Option<ItemStack>; 3]; 3]) -> Option<I
                 .all(|slot| slot.is_none())
             {
                 false
+            } else if recipe.recipe_type.is_shapeless() {
+                shapeless_crafting_match(input, recipe.pattern())
             } else {
                 patterns.par_iter().any(|pattern| {
                     pattern.iter().enumerate().all(|(i, row)| {
                         row.iter()
                             .enumerate()
                             .all(|(j, item)| match (item, input[i][j]) {
-                                (Some(item), Some(input)) => match item {
-                                    IngredientSlot::Single(ingredient) => {
-                                        check_ingredient_type(ingredient, input)
-                                    }
-                                    IngredientSlot::Many(ingredients) => ingredients
-                                        .iter()
-                                        .any(|ingredient| check_ingredient_type(ingredient, input)),
-                                },
+                                (Some(item), Some(input)) => ingredient_slot_check(item, input),
                                 (None, None) => true,
                                 (Some(_), None) | (None, Some(_)) => false,
                             })
@@ -68,4 +64,39 @@ pub fn check_if_matches_crafting(input: [[Option<ItemStack>; 3]; 3]) -> Option<I
             }),
             RecipeResult::Special => None,
         })?
+}
+
+fn ingredient_slot_check(recipe_item: &IngredientSlot, input: ItemStack) -> bool {
+    match recipe_item {
+        IngredientSlot::Single(ingredient) => check_ingredient_type(ingredient, input),
+        IngredientSlot::Many(ingredients) => ingredients
+            .iter()
+            .any(|ingredient| check_ingredient_type(ingredient, input)),
+    }
+}
+fn shapeless_crafting_match(
+    input: [[Option<ItemStack>; 3]; 3],
+    pattern: &[[[Option<IngredientSlot>; 3]; 3]],
+) -> bool {
+    let mut pattern = pattern
+        .iter()
+        .flatten()
+        .flatten()
+        .flatten()
+        .cloned()
+        .collect_vec();
+    for item in input.into_iter().flatten().flatten() {
+        if let Some(index) = pattern.iter().enumerate().find_map(|(i, recipe_item)| {
+            if ingredient_slot_check(recipe_item, item) {
+                Some(i)
+            } else {
+                None
+            }
+        }) {
+            pattern.remove(index);
+        } else {
+            return false;
+        }
+    }
+    pattern.is_empty()
 }

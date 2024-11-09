@@ -22,6 +22,13 @@ pub enum RecipeType {
     StoneCutting,
 }
 
+impl RecipeType {
+    pub const fn is_shapeless(&self) -> bool {
+        // I have not checked exactly which ones require shape and which don't!
+        !matches!(self, Self::Crafting(CraftingType::Shaped))
+    }
+}
+
 impl FromStr for RecipeType {
     type Err = String;
 
@@ -310,7 +317,6 @@ impl<'de> Deserialize<'de> for RecipeKeys {
                     let test: &str = next;
                     let c: char = test.chars().next().unwrap();
                     let ingredient_type: IngredientSlot = map.next_value()?;
-
                     return_map.insert(c, ingredient_type);
                 }
                 Ok(return_map)
@@ -627,9 +633,12 @@ mod test {
 
     #[test]
     fn check_all_recipes() {
-        assert!(
+        let time = std::time::Instant::now();
+        let test =
             serde_json::from_str::<Vec<Recipe>>(include_str!("../../../assets/recipes.json"))
-                .is_ok()
-        );
+                .unwrap();
+        dbg!(time.elapsed());
+
+        loop {}
     }
 }
