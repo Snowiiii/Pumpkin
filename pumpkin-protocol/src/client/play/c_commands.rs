@@ -175,6 +175,9 @@ pub enum ProtoCmdArgParser<'a> {
     TemplateMirror,
     TemplateRotation,
     Heightmap,
+    LootTable,
+    LootPredicate,
+    LootModifier,
     Uuid,
 }
 
@@ -255,7 +258,10 @@ impl<'a> ProtoCmdArgParser<'a> {
             Self::TemplateMirror => bytebuf.put_var_int(&47.into()),
             Self::TemplateRotation => bytebuf.put_var_int(&48.into()),
             Self::Heightmap => bytebuf.put_var_int(&49.into()),
-            Self::Uuid => bytebuf.put_var_int(&50.into()),
+            Self::LootTable => bytebuf.put_var_int(&50.into()),
+            Self::LootPredicate => bytebuf.put_var_int(&51.into()),
+            Self::LootModifier => bytebuf.put_var_int(&52.into()),
+            Self::Uuid => bytebuf.put_var_int(&53.into()),
         }
     }
 
