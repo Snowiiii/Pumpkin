@@ -1,8 +1,7 @@
 use std::sync::{atomic::AtomicBool, Arc};
 
 use crossbeam::atomic::AtomicCell;
-use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::ToPrimitive;
+use num_derive::FromPrimitive;
 use pumpkin_core::math::{
     get_section_cord, position::WorldPosition, vector2::Vector2, vector3::Vector3,
 };
@@ -184,7 +183,7 @@ impl Entity {
     }
 
     async fn set_flag(&self, flag: Flag, value: bool) {
-        let index = flag.to_u32().unwrap();
+        let index = flag as u8;
         let mut b = 0i8;
         if value {
             b |= 1 << index;
@@ -206,7 +205,7 @@ impl Entity {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FromPrimitive)]
 /// Represents various entity flags that are sent in entity metadata.
 ///
 /// These flags are used by the client to modify the rendering of entities based on their current state.
@@ -214,19 +213,20 @@ impl Entity {
 /// **Purpose:**
 ///
 /// This enum provides a more type-safe and readable way to represent entity flags compared to using raw integer values.
+#[repr(u8)]
 pub enum Flag {
     /// Indicates if the entity is on fire.
-    OnFire,
+    OnFire = 0,
     /// Indicates if the entity is sneaking.
-    Sneaking,
+    Sneaking = 1,
     /// Indicates if the entity is sprinting.
-    Sprinting,
+    Sprinting = 3,
     /// Indicates if the entity is swimming.
-    Swimming,
+    Swimming = 4,
     /// Indicates if the entity is invisible.
-    Invisible,
+    Invisible = 5,
     /// Indicates if the entity is glowing.
-    Glowing,
+    Glowing = 6,
     /// Indicates if the entity is flying due to a fall.
-    FallFlying,
+    FallFlying = 7,
 }
