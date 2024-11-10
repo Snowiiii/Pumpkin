@@ -579,10 +579,10 @@ impl Player {
 
                     let world_pos = WorldPosition(location.0 + face.to_offset());
                     let block_bounding_box = BoundingBox::from_block(&world_pos);
-                    let bounding_box = self.living_entity.entity.bounding_box.load();
-
+                    let bounding_box = entity.bounding_box.load();
+                    
                     //TODO: Make this check for every entity in that posistion
-                    if !BoundingBox::intersects(&block_bounding_box, &bounding_box) {
+                    if !bounding_box.intersects(&block_bounding_box) {
                         world.set_block(world_pos, block.default_state_id).await;
                     }
                 }
