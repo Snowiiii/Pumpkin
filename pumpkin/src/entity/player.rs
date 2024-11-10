@@ -1,11 +1,8 @@
 use std::{
-    cmp::min,
-    collections::{HashMap, VecDeque},
-    sync::{
+    cmp::min, collections::{HashMap, VecDeque}, ops::DerefMut, sync::{
         atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU32, AtomicU8},
         Arc,
-    },
-    time::{Duration, Instant},
+    }, time::{Duration, Instant}
 };
 
 use crossbeam::atomic::AtomicCell;

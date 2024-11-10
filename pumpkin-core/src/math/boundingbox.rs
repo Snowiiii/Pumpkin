@@ -7,6 +7,8 @@ pub struct BoundingBox {
     pub max_x: f64,
     pub max_y: f64,
     pub max_z: f64,
+    pub width: f64,
+    pub height: f64,
 }
 
 impl BoundingBox {
@@ -23,10 +25,12 @@ impl BoundingBox {
             max_x: x + f,
             max_y: y + height,
             max_z: z + f,
+            width,
+            height,
         }
     }
 
-    pub fn new(min_x: f64, min_y: f64, min_z: f64, max_x: f64, max_y: f64, max_z: f64) -> Self {
+    pub fn new(min_x: f64, min_y: f64, min_z: f64, max_x: f64, max_y: f64, max_z: f64, width: f64, height: f64) -> Self {
         Self {
             min_x,
             min_y,
@@ -34,6 +38,8 @@ impl BoundingBox {
             max_x,
             max_y,
             max_z,
+            width,
+            height,
         }
     }
 
@@ -46,6 +52,8 @@ impl BoundingBox {
             max_x: (position.x as f64) + 1.0,
             max_y: (position.y as f64) + 1.0,
             max_z: (position.z as f64) + 1.0,
+            width: 1., //Block is 1.0 * 1.0
+            height: 1.,
         }
     }
 
