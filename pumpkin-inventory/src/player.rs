@@ -120,6 +120,16 @@ impl PlayerInventory {
         self.items[self.selected + 36 - 9].as_ref()
     }
 
+    pub fn held_item_mut(&mut self) -> Option<&mut ItemStack> {
+        debug_assert!((0..9).contains(&self.selected));
+        self.items[self.selected + 36 - 9].as_mut()
+    }
+
+    pub fn empty_held_item(&mut self) {
+        debug_assert!((0..9).contains(&self.selected));
+        self.items[self.selected + 36 - 9] = None
+    }
+
     pub fn slots(&self) -> Vec<Option<&ItemStack>> {
         let mut slots = vec![self.crafting_output.as_ref()];
         slots.extend(self.crafting.iter().map(|c| c.as_ref()));

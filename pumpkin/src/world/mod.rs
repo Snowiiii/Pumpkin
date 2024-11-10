@@ -25,9 +25,9 @@ use pumpkin_protocol::{
     },
     ClientPacket, VarInt,
 };
-use pumpkin_world::chunk::ChunkData;
 use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
 use pumpkin_world::level::Level;
+use pumpkin_world::{block::block_registry::get_block_by_id, chunk::ChunkData};
 use rand::{thread_rng, Rng};
 use scoreboard::Scoreboard;
 use tokio::sync::{mpsc::Receiver, Mutex};
@@ -139,8 +139,10 @@ impl World {
         for y in (-64..=319).rev() {
             let pos = WorldPosition(Vector3::new(position.x, y, position.z));
             let block = self.get_block(pos).await;
-            if block == 0 || block == 750 || block == 751 {
-                continue;
+            if let Some(block) = block {
+                if block.states[0].air {
+                    continue;
+                }
             }
             return y;
         }
@@ -627,11 +629,20 @@ impl World {
             .await;
     }
 
-    pub async fn get_block(&self, position: WorldPosition) -> u16 {
+    pub async fn get_block_id(&self, position: WorldPosition) -> u16 {
         let (chunk, relative) = position.chunk_and_chunk_relative_position();
         let relative = ChunkRelativeBlockCoordinates::from(relative);
         let chunk = self.receive_chunk(chunk).await;
         let chunk = chunk.read().await;
         chunk.blocks.get_block(relative)
+    }
+
+    /// Gets the Block from the Block Registry, Returns None if the Block has not been found
+    pub async fn get_block(
+        &self,
+        position: WorldPosition,
+    ) -> Option<&pumpkin_world::block::block_registry::Block> {
+        let block_id = self.get_block_id(position).await;
+        get_block_by_id(block_id)
     }
 }
