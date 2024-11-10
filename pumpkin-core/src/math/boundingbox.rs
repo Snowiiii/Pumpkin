@@ -32,14 +32,14 @@ impl BoundingBox {
         }
     }
 
-    pub fn new(min_x: f64, min_y: f64, min_z: f64, max_x: f64, max_y: f64, max_z: f64, width: f64, height: f64) -> Self {
+    pub fn new(min: Vector3<f64>, max: Vector3<f64>, width: f64, height: f64) -> Self {
         Self {
-            min_x,
-            min_y,
-            min_z,
-            max_x,
-            max_y,
-            max_z,
+            min_x: min.x,
+            min_y: min.y,
+            min_z: min.z,
+            max_x: max.x,
+            max_y: max.y,
+            max_z: max.z,
             width,
             height,
         }
