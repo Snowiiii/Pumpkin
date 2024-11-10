@@ -47,9 +47,9 @@ pub enum ProtoNodeType<'a> {
 }
 
 impl<'a> ProtoNode<'a> {
-    const FLAG_IS_EXECUTABLE: i8 = 4;
-    const FLAG_HAS_REDIRECT: i8 = 8;
-    const FLAG_HAS_SUGGESTION_TYPE: i8 = 16;
+    const FLAG_IS_EXECUTABLE: u8 = 4;
+    const FLAG_HAS_REDIRECT: u8 = 8;
+    const FLAG_HAS_SUGGESTION_TYPE: u8 = 16;
 
     pub fn write_to(&self, bytebuf: &mut ByteBuffer) {
         // flags
@@ -81,7 +81,7 @@ impl<'a> ProtoNode<'a> {
                 n
             }
         };
-        bytebuf.put_i8(flags);
+        bytebuf.put_u8(flags);
 
         // child count + children
         bytebuf.put_list(&self.children, |bytebuf, child| bytebuf.put_var_int(child));
@@ -131,7 +131,7 @@ pub enum ProtoCmdArgParser<'a> {
     Integer { min: Option<i32>, max: Option<i32> },
     Long { min: Option<i64>, max: Option<i64> },
     String(StringProtoArgBehavior),
-    Entity { flags: i8 },
+    Entity { flags: u8 },
     GameProfile,
     BlockPos,
     ColumnPos,
@@ -155,7 +155,7 @@ pub enum ProtoCmdArgParser<'a> {
     Angle,
     Rotation,
     ScoreboardSlot,
-    ScoreHolder { flags: i8 },
+    ScoreHolder { flags: u8 },
     Swizzle,
     Team,
     ItemSlot,
@@ -179,10 +179,10 @@ pub enum ProtoCmdArgParser<'a> {
 }
 
 impl<'a> ProtoCmdArgParser<'a> {
-    pub const ENTITY_FLAG_ONLY_SINGLE: i8 = 1;
-    pub const ENTITY_FLAG_PLAYERS_ONLY: i8 = 2;
+    pub const ENTITY_FLAG_ONLY_SINGLE: u8 = 1;
+    pub const ENTITY_FLAG_PLAYERS_ONLY: u8 = 2;
 
-    pub const SCORE_HOLDER_FLAG_ALLOW_MULTIPLE: i8 = 1;
+    pub const SCORE_HOLDER_FLAG_ALLOW_MULTIPLE: u8 = 1;
 
     pub fn write_to_buffer(&self, bytebuf: &mut ByteBuffer) {
         match self {
@@ -265,7 +265,7 @@ impl<'a> ProtoCmdArgParser<'a> {
         max: Option<T>,
         bytebuf: &mut ByteBuffer,
     ) {
-        let mut flags: i8 = 0;
+        let mut flags: u8 = 0;
         if min.is_some() {
             flags |= 1
         }
@@ -275,7 +275,7 @@ impl<'a> ProtoCmdArgParser<'a> {
 
         bytebuf.put_var_int(id);
 
-        bytebuf.put_i8(flags);
+        bytebuf.put_u8(flags);
         if let Some(min) = min {
             min.write(bytebuf);
         }
@@ -284,10 +284,10 @@ impl<'a> ProtoCmdArgParser<'a> {
         }
     }
 
-    fn write_with_flags(id: &VarInt, flags: i8, bytebuf: &mut ByteBuffer) {
+    fn write_with_flags(id: &VarInt, flags: u8, bytebuf: &mut ByteBuffer) {
         bytebuf.put_var_int(id);
 
-        bytebuf.put_i8(flags);
+        bytebuf.put_u8(flags);
     }
 
     fn write_with_identifier(id: &VarInt, extra_identifier: &str, bytebuf: &mut ByteBuffer) {
