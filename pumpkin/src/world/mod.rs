@@ -73,7 +73,7 @@ impl World {
             level: Arc::new(level),
             current_players: Arc::new(Mutex::new(HashMap::new())),
             scoreboard: Mutex::new(Scoreboard::new()),
-            worldborder: Mutex::new(Worldborder::new(0.5, 0.5, 29_999_984.0, 0, 0, 0)),
+            worldborder: Mutex::new(Worldborder::new(0.0, 0.0, 29_999_984.0, 0, 0, 0)),
         }
     }
 

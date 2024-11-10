@@ -33,10 +33,8 @@ pub(crate) mod arg_simple;
 pub(crate) mod arg_test_client_side_arg_parsers;
 
 /// see [`crate::commands::tree_builder::argument`]
-/// Provide value or an Optional error message, If no Error message provided the default will be used
 #[async_trait]
 pub(crate) trait ArgumentConsumer: Sync + GetClientSideArgParser {
-    /// NOTE: Suggestions for this consumer will only be sent if this consume function returns None but also leaves args empty.
     async fn consume<'a>(
         &self,
         sender: &CommandSender<'a>,
@@ -58,7 +56,7 @@ pub(crate) trait ArgumentConsumer: Sync + GetClientSideArgParser {
 pub(crate) trait GetClientSideArgParser {
     /// Return the parser the client should use while typing a command in chat.
     fn get_client_side_parser(&self) -> ProtoCmdArgParser;
-    /// Usually this should return None. For example this can be used to force suggestions to be processed on serverside.
+    /// Usually this should return None. This can be used to force suggestions to be processed on serverside.
     fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType>;
 }
 
@@ -118,7 +116,7 @@ impl<'a, T, C: FindArg<'a, Data = T> + DefaultNameArgConsumer> FindArgDefaultNam
 pub(crate) trait SplitSingleWhitespaceIncludingEmptyParts<'a> {
     /// Splits a string at every single unicode whitespace. Therefore the returned iterator sometimes contains empty strings. This is useful for command suggestions.
     ///
-    /// Note: Vanilla does this only for commandsuggestions, for execution consecutive whitespaces are treated as one.
+    /// Note: Vanilla does this only for command suggestions, for execution consecutive whitespaces are treated as one.
     fn split_single_whitespace_including_empty_parts(self) -> impl Iterator<Item = &'a str>;
 }
 

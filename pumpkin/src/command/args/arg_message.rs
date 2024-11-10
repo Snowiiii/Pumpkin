@@ -22,7 +22,7 @@ impl GetClientSideArgParser for MsgArgConsumer {
     }
 
     fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
-        Some(ProtoCmdArgSuggestionType::AskServer)
+        None
     }
 }
 

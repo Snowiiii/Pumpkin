@@ -23,7 +23,7 @@ impl GetClientSideArgParser for Position2DArgumentConsumer {
     }
 
     fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
-        Some(ProtoCmdArgSuggestionType::AskServer)
+        None
     }
 }
 
@@ -58,7 +58,7 @@ impl ArgumentConsumer for Position2DArgumentConsumer {
         _server: &'a Server,
         _input: &'a str,
     ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
-        Ok(None) // todo
+        Ok(None)
     }
 }
 

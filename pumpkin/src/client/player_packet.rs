@@ -653,8 +653,6 @@ impl Player {
         }
     }
 
-    /// todo: implement
-    #[allow(clippy::unused_async)]
     pub async fn handle_command_suggestion(
         self: &Arc<Self>,
         packet: SCommandSuggestion,
@@ -665,8 +663,8 @@ impl Player {
             return;
         };
 
-        // todo: investigate how client handles unicode
-        let Some(last_word_start) = cmd.rfind(char::is_whitespace) else {
+        let Some((last_word_start, _)) = cmd.char_indices().rfind(|(_, c)| c.is_whitespace())
+        else {
             return;
         };
 
