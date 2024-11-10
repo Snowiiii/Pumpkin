@@ -581,6 +581,7 @@ impl Player {
                     let block_bounding_box = BoundingBox::from_block(&world_pos);
                     let bounding_box = self.living_entity.entity.bounding_box.load();
 
+                    //TODO: Make this check for every entity in that posistion
                     if !BoundingBox::bounding_boxes_intersect(&block_bounding_box, &bounding_box) {
                         world
                         .set_block(
