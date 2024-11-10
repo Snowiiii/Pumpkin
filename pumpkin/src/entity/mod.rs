@@ -3,7 +3,7 @@ use std::sync::{atomic::AtomicBool, Arc};
 use crossbeam::atomic::AtomicCell;
 use num_derive::FromPrimitive;
 use pumpkin_core::math::{
-    boundingbox::BoundingBox, get_section_cord, position::WorldPosition, vector2::Vector2,
+    boundingbox::{BoundingBox, BoundingBoxSize}, get_section_cord, position::WorldPosition, vector2::Vector2,
     vector3::Vector3,
 };
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
@@ -53,6 +53,8 @@ pub struct Entity {
     pub pose: AtomicCell<EntityPose>,
     /// The bounding box of an entity (hitbox)
     pub bounding_box: AtomicCell<BoundingBox>,
+    ///The size (width and height) of the bounding box
+    pub bounding_box_size: AtomicCell<BoundingBoxSize>,
 }
 
 impl Entity {
@@ -62,6 +64,7 @@ impl Entity {
         entity_type: EntityType,
         standing_eye_height: f32,
         bounding_box: AtomicCell<BoundingBox>,
+        bounding_box_size: AtomicCell<BoundingBoxSize>,
     ) -> Self {
         Self {
             entity_id,
@@ -82,6 +85,7 @@ impl Entity {
             standing_eye_height,
             pose: AtomicCell::new(EntityPose::Standing),
             bounding_box,
+            bounding_box_size
         }
     }
 
@@ -94,13 +98,11 @@ impl Entity {
         if pos.x != x || pos.y != y || pos.z != z {
             self.pos.store(Vector3::new(x, y, z));
 
-            let old_box = self.bounding_box.load();
             self.bounding_box.store(BoundingBox::new_from_pos(
                 pos.x,
                 pos.y,
                 pos.z,
-                old_box.width,
-                old_box.height,
+                &self.bounding_box_size.load()
             ));
 
             let floor_x = x.floor() as i32;

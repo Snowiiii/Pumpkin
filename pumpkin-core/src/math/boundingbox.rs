@@ -8,30 +8,26 @@ pub struct BoundingBox {
     pub max_x: f64,
     pub max_y: f64,
     pub max_z: f64,
-    pub width: f64,
-    pub height: f64,
 }
 
 impl BoundingBox {
-    pub fn new_default(width: f64, height: f64) -> Self {
-        Self::new_from_pos(0., 0., 0., width, height)
+    pub fn new_default(size: &BoundingBoxSize) -> Self {
+        Self::new_from_pos(0., 0., 0., size)
     }
 
-    pub fn new_from_pos(x: f64, y: f64, z: f64, width: f64, height: f64) -> Self {
-        let f = width / 2.;
+    pub fn new_from_pos(x: f64, y: f64, z: f64, size: &BoundingBoxSize) -> Self {
+        let f = size.width / 2.;
         Self {
             min_x: x - f,
             min_y: y,
             min_z: z - f,
             max_x: x + f,
-            max_y: y + height,
+            max_y: y + size.height,
             max_z: z + f,
-            width,
-            height,
         }
     }
 
-    pub fn new(min: Vector3<f64>, max: Vector3<f64>, width: f64, height: f64) -> Self {
+    pub fn new(min: Vector3<f64>, max: Vector3<f64>) -> Self {
         Self {
             min_x: min.x,
             min_y: min.y,
@@ -39,8 +35,6 @@ impl BoundingBox {
             max_x: max.x,
             max_y: max.y,
             max_z: max.z,
-            width,
-            height,
         }
     }
 
@@ -53,8 +47,6 @@ impl BoundingBox {
             max_x: (position.x as f64) + 1.0,
             max_y: (position.y as f64) + 1.0,
             max_z: (position.z as f64) + 1.0,
-            width: 1., //Block is 1.0 * 1.0
-            height: 1.,
         }
     }
 
@@ -73,4 +65,10 @@ impl BoundingBox {
         let f = f64::max(f64::max(self.min_z - pos.z, pos.z - self.max_z), 0.0);
         super::squared_magnitude(d, e, f)
     }
+}
+
+#[derive(Clone, Copy)]
+pub struct BoundingBoxSize {
+    pub width: f64,
+    pub height: f64,
 }
