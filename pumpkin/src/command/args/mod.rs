@@ -30,7 +30,6 @@ pub(crate) mod arg_position_2d;
 pub(crate) mod arg_position_3d;
 pub(crate) mod arg_rotation;
 pub(crate) mod arg_simple;
-pub(crate) mod arg_test_client_side_arg_parsers;
 
 /// see [`crate::commands::tree_builder::argument`]
 #[async_trait]
