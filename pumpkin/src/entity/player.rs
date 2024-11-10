@@ -1,5 +1,5 @@
 use std::{
-    cmp::min, collections::{HashMap, VecDeque}, ops::DerefMut, sync::{
+    cmp::min, collections::{HashMap, VecDeque}, sync::{
         atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU32, AtomicU8},
         Arc,
     }, time::{Duration, Instant}
