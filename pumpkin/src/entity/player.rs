@@ -838,7 +838,7 @@ impl Player {
             }
             SUseItem::PACKET_ID => self.handle_use_item(&SUseItem::read(bytebuf)?),
             _ => {
-                log::warn!("Failed to handle player packet id {}", packet.id.0);
+                log::warn!("Failed to handle player packet id {:#04x}", packet.id.0);
                 // TODO: We give an error if all play packets are implemented
                 //  return Err(Box::new(DeserializerError::UnknownPacket));
             }
