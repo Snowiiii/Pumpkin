@@ -51,7 +51,7 @@ pub struct Entity {
     /// The entity's current pose (e.g., standing, sitting, swimming).
     pub pose: AtomicCell<EntityPose>,
     /// The bounding box of an entity (hitbox)
-    pub bounding_box: BoundingBox,
+    pub bounding_box: AtomicCell<BoundingBox>,
 }
 
 impl Entity {
@@ -60,7 +60,7 @@ impl Entity {
         world: Arc<World>,
         entity_type: EntityType,
         standing_eye_height: f32,
-        bounding_box: BoundingBox,
+        bounding_box: AtomicCell<BoundingBox>,
     ) -> Self {
         Self {
             entity_id,
@@ -92,6 +92,9 @@ impl Entity {
         let pos = self.pos.load();
         if pos.x != x || pos.y != y || pos.z != z {
             self.pos.store(Vector3::new(x, y, z));
+
+            let old_box = self.bounding_box.load();
+            self.bounding_box.store(BoundingBox::new_from_pos(pos.x, pos.y, pos.z, old_box.width, old_box.height));
 
             let floor_x = x.floor() as i32;
             let floor_y = y.floor() as i32;

@@ -181,7 +181,7 @@ impl Player {
                 world,
                 EntityType::Player,
                 1.62,
-                BoundingBox::new_default(0.6, 1.8),
+                AtomicCell::new(BoundingBox::new_default(0.6, 1.8)),
             )),
             config: Mutex::new(config),
             gameprofile,

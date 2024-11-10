@@ -1,5 +1,7 @@
 use super::{position::WorldPosition, vector3::Vector3};
 
+
+#[derive(Clone, Copy)]
 pub struct BoundingBox {
     pub min_x: f64,
     pub min_y: f64,
