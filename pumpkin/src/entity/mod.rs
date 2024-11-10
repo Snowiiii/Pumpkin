@@ -3,7 +3,7 @@ use std::sync::{atomic::AtomicBool, Arc};
 use crossbeam::atomic::AtomicCell;
 use num_derive::FromPrimitive;
 use pumpkin_core::math::{
-    get_section_cord, position::WorldPosition, vector2::Vector2, vector3::Vector3,
+    boundingbox::BoundingBox, get_section_cord, position::WorldPosition, vector2::Vector2, vector3::Vector3
 };
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
 use pumpkin_protocol::{
@@ -50,6 +50,8 @@ pub struct Entity {
     pub standing_eye_height: f32,
     /// The entity's current pose (e.g., standing, sitting, swimming).
     pub pose: AtomicCell<EntityPose>,
+    /// The bounding box of an entity (hitbox)
+    pub bounding_box: BoundingBox,
 }
 
 impl Entity {
@@ -58,6 +60,7 @@ impl Entity {
         world: Arc<World>,
         entity_type: EntityType,
         standing_eye_height: f32,
+        bounding_box: BoundingBox,
     ) -> Self {
         Self {
             entity_id,
@@ -77,6 +80,7 @@ impl Entity {
             velocity: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
             standing_eye_height,
             pose: AtomicCell::new(EntityPose::Standing),
+            bounding_box,
         }
     }
 

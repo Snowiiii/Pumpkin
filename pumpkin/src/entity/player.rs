@@ -119,6 +119,7 @@ pub struct Player {
     /// The item currently being held by the player.
     pub carried_item: AtomicCell<Option<ItemStack>>,
 
+
     /// send `send_abilties_update` when changed
     /// The player's abilities and special powers.
     ///
@@ -183,6 +184,7 @@ impl Player {
                 world,
                 EntityType::Player,
                 1.62,
+                BoundingBox::new_default(0.6, 1.8),
             )),
             config: Mutex::new(config),
             gameprofile,
@@ -206,6 +208,7 @@ impl Player {
             pending_chunks: Arc::new(parking_lot::Mutex::new(HashMap::new())),
             pending_chunk_batch: parking_lot::Mutex::new(HashMap::new()),
             cancel_tasks: Notify::new(),
+            
         }
     }
 

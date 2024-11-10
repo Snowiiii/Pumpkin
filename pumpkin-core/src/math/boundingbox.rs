@@ -10,6 +10,22 @@ pub struct BoundingBox {
 }
 
 impl BoundingBox {
+    pub fn new_default(width: f64, height: f64) -> Self {
+        Self::new_from_pos(0., 0., 0., width, height)
+    }
+
+    pub fn new_from_pos(x: f64, y: f64, z: f64, width: f64, height: f64) -> Self {
+        let f = width / 2.;
+        Self {
+            min_x: x - f,
+            min_y: y,
+            min_z: z - f,
+            max_x: x + f,
+            max_y: y + height,
+            max_z: z + f,
+        }
+    }
+
     pub fn new(min_x: f64, min_y: f64, min_z: f64, max_x: f64, max_y: f64, max_z: f64) -> Self {
         Self {
             min_x,
