@@ -3,7 +3,8 @@ use std::sync::{atomic::AtomicBool, Arc};
 use crossbeam::atomic::AtomicCell;
 use num_derive::FromPrimitive;
 use pumpkin_core::math::{
-    boundingbox::BoundingBox, get_section_cord, position::WorldPosition, vector2::Vector2, vector3::Vector3
+    boundingbox::BoundingBox, get_section_cord, position::WorldPosition, vector2::Vector2,
+    vector3::Vector3,
 };
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
 use pumpkin_protocol::{
@@ -94,7 +95,13 @@ impl Entity {
             self.pos.store(Vector3::new(x, y, z));
 
             let old_box = self.bounding_box.load();
-            self.bounding_box.store(BoundingBox::new_from_pos(pos.x, pos.y, pos.z, old_box.width, old_box.height));
+            self.bounding_box.store(BoundingBox::new_from_pos(
+                pos.x,
+                pos.y,
+                pos.z,
+                old_box.width,
+                old_box.height,
+            ));
 
             let floor_x = x.floor() as i32;
             let floor_y = y.floor() as i32;

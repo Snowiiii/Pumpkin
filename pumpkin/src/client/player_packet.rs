@@ -583,12 +583,7 @@ impl Player {
 
                     //TODO: Make this check for every entity in that posistion
                     if !BoundingBox::bounding_boxes_intersect(&block_bounding_box, &bounding_box) {
-                        world
-                        .set_block(
-                            world_pos,
-                            block.default_state_id,
-                        )
-                        .await;
+                        world.set_block(world_pos, block.default_state_id).await;
                     }
                 }
                 self.client

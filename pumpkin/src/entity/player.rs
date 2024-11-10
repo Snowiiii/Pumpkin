@@ -1,8 +1,11 @@
 use std::{
-    cmp::min, collections::{HashMap, VecDeque}, sync::{
+    cmp::min,
+    collections::{HashMap, VecDeque},
+    sync::{
         atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU32, AtomicU8},
         Arc,
-    }, time::{Duration, Instant}
+    },
+    time::{Duration, Instant},
 };
 
 use crossbeam::atomic::AtomicCell;
@@ -116,7 +119,6 @@ pub struct Player {
     /// The item currently being held by the player.
     pub carried_item: AtomicCell<Option<ItemStack>>,
 
-
     /// send `send_abilties_update` when changed
     /// The player's abilities and special powers.
     ///
@@ -205,7 +207,6 @@ impl Player {
             pending_chunks: Arc::new(parking_lot::Mutex::new(HashMap::new())),
             pending_chunk_batch: parking_lot::Mutex::new(HashMap::new()),
             cancel_tasks: Notify::new(),
-            
         }
     }
 
