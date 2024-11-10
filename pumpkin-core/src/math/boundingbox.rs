@@ -59,6 +59,12 @@ impl BoundingBox {
         }
     }
 
+    pub fn bounding_boxes_intersect(b1: &BoundingBox, b2: &BoundingBox) -> bool {
+        b1.min_x < b2.max_x && b1.max_x > b2.min_x &&
+        b1.min_y < b2.max_y && b1.max_y > b2.min_y &&
+        b1.min_z < b2.max_z && b1.max_z > b2.min_z
+    }
+
     pub fn squared_magnitude(&self, pos: Vector3<f64>) -> f64 {
         let d = f64::max(f64::max(self.min_x - pos.x, pos.x - self.max_x), 0.0);
         let e = f64::max(f64::max(self.min_y - pos.y, pos.y - self.max_y), 0.0);
