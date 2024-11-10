@@ -3,7 +3,10 @@ use std::sync::{atomic::AtomicBool, Arc};
 use crossbeam::atomic::AtomicCell;
 use num_derive::FromPrimitive;
 use pumpkin_core::math::{
-    boundingbox::{BoundingBox, BoundingBoxSize}, get_section_cord, position::WorldPosition, vector2::Vector2,
+    boundingbox::{BoundingBox, BoundingBoxSize}, 
+    get_section_cord, 
+    position::WorldPosition, 
+    vector2::Vector2,
     vector3::Vector3,
 };
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};

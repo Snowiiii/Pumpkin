@@ -13,7 +13,12 @@ use itertools::Itertools;
 use num_derive::FromPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::{
-    math::{boundingbox::{BoundingBox, BoundingBoxSize}, position::WorldPosition, vector2::Vector2, vector3::Vector3},
+    math::{
+        boundingbox::{BoundingBox, BoundingBoxSize},
+        position::WorldPosition,
+        vector2::Vector2,
+        vector3::Vector3,
+    },
     text::TextComponent,
     GameMode,
 };
