@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use pumpkin_protocol::client::play::{
-    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType, StringProtoArgBehavior,
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
 };
 
 use crate::command::dispatcher::InvalidTreeError;
@@ -23,16 +23,16 @@ pub(crate) struct PlayersArgumentConsumer;
 
 impl GetClientSideArgParser for PlayersArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {
-        ProtoCmdArgParser::String(StringProtoArgBehavior::SingleWord)
+        //ProtoCmdArgParser::String(StringProtoArgBehavior::SingleWord)
 
         // todo: investigate why this does not accept target selectors
-        //ProtoCmdArgParser::Entity {
-        //    flags: ProtoCmdArgParser::ENTITY_FLAG_PLAYERS_ONLY,
-        //}
+        ProtoCmdArgParser::Entity {
+            flags: ProtoCmdArgParser::ENTITY_FLAG_PLAYERS_ONLY,
+        }
     }
 
     fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
-        Some(ProtoCmdArgSuggestionType::AskServer)
+        None //Some(ProtoCmdArgSuggestionType::AskServer)
     }
 }
 
