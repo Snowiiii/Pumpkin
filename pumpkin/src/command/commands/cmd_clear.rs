@@ -3,6 +3,8 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
+use pumpkin_inventory::Container;
+use pumpkin_world::item::ItemStack;
 
 use crate::command::args::arg_entities::EntitiesArgumentConsumer;
 use crate::command::args::{Arg, ConsumedArgs};
@@ -20,17 +22,21 @@ const ARG_TARGET: &str = "target";
 async fn clear_player(target: &Arc<Player>) -> usize {
     let mut inventory = target.inventory.lock().await;
 
-    // There may be a better way to do this with something like all_slots() or .clear on Player.inventory
     let mut items_count: usize = 0;
-    for slot in 0..=45 {
-        if let Some(item) = inventory.get_slot(slot).unwrap() {
-            items_count += item.item_count as usize;
-            inventory.set_slot(slot as u16, None, true).unwrap();
-            target
-                .send_inventory_slot_update(&mut inventory, slot)
-                .await
-                .unwrap();
+    let mut slots = vec![];
+    for (slot, item) in inventory.all_slots().iter_mut().enumerate() {
+        if let Some(is) = item {
+            items_count += is.item_count as usize;
+            **item = Option::<ItemStack>::None;
+            slots.push(slot);
         }
+    }
+    // TODO Update whole inventory at once
+    for slot in slots {
+        target
+            .send_inventory_slot_update(&mut inventory, slot)
+            .await
+            .unwrap();
     }
     items_count
 }
