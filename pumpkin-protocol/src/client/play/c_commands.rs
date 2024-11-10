@@ -128,12 +128,26 @@ impl<'a> ProtoNode<'a> {
 #[derive(Debug, Clone)]
 pub enum ProtoCmdArgParser<'a> {
     Bool,
-    Float { min: Option<f32>, max: Option<f32> },
-    Double { min: Option<f64>, max: Option<f64> },
-    Integer { min: Option<i32>, max: Option<i32> },
-    Long { min: Option<i64>, max: Option<i64> },
+    Float {
+        min: Option<f32>,
+        max: Option<f32>,
+    },
+    Double {
+        min: Option<f64>,
+        max: Option<f64>,
+    },
+    Integer {
+        min: Option<i32>,
+        max: Option<i32>,
+    },
+    Long {
+        min: Option<i64>,
+        max: Option<i64>,
+    },
     String(StringProtoArgBehavior),
-    Entity { flags: i8 },
+    Entity {
+        flags: i8,
+    },
     GameProfile,
     BlockPos,
     ColumnPos,
@@ -157,7 +171,9 @@ pub enum ProtoCmdArgParser<'a> {
     Angle,
     Rotation,
     ScoreboardSlot,
-    ScoreHolder { flags: i8 },
+    ScoreHolder {
+        flags: i8,
+    },
     Swizzle,
     Team,
     ItemSlot,
@@ -170,11 +186,21 @@ pub enum ProtoCmdArgParser<'a> {
     FloatRange,
     Dimension,
     Gamemode,
-    Time { min: i32 },
-    ResourceOrTag { identifier: &'a str },
-    ResourceOrTagKey { identifier: &'a str },
-    Resource { identifier: &'a str },
-    ResourceKey { identifier: &'a str },
+    Time {
+        min: i32,
+    },
+    ResourceOrTag {
+        identifier: &'a str,
+    },
+    ResourceOrTagKey {
+        identifier: &'a str,
+    },
+    Resource {
+        identifier: &'a str,
+    },
+    ResourceKey {
+        identifier: &'a str,
+    },
     TemplateMirror,
     TemplateRotation,
     Heightmap,

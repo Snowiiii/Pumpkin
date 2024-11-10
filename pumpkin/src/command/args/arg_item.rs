@@ -1,8 +1,7 @@
-use std::borrow::Cow;
-
 use async_trait::async_trait;
-use pumpkin_core::text::TextComponent;
-use pumpkin_protocol::client::play::{CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType};
+use pumpkin_protocol::client::play::{
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
+};
 
 use crate::{command::dispatcher::InvalidTreeError, server::Server};
 
@@ -10,7 +9,8 @@ use super::{
     super::{
         args::{ArgumentConsumer, RawArgs},
         CommandSender,
-    }, Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser
+    },
+    Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser,
 };
 
 pub(crate) struct ItemArgumentConsumer;

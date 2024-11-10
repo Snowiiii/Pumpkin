@@ -1,12 +1,10 @@
 use async_trait::async_trait;
 use pumpkin_protocol::client::play::{
-    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType, StringProtoArgBehavior
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
 };
 
 use crate::{
-    command::{
-        dispatcher::InvalidTreeError, tree::{CommandTree, RawArgs}, CommandSender
-    },
+    command::{dispatcher::InvalidTreeError, tree::RawArgs, CommandSender},
     server::Server,
 };
 
@@ -29,8 +27,8 @@ impl<'b> ArgumentConsumer for ClientSideArgParserTester<'b> {
     async fn consume<'a>(
         &self,
         _sender: &CommandSender<'a>,
-        server: &'a Server,
-        args: &mut RawArgs<'a>,
+        _server: &'a Server,
+        _args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
         None
     }
@@ -38,7 +36,7 @@ impl<'b> ArgumentConsumer for ClientSideArgParserTester<'b> {
     async fn suggest<'a>(
         &self,
         _sender: &CommandSender<'a>,
-        server: &'a Server,
+        _server: &'a Server,
         input: &'a str,
     ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
         dbg!(input);
@@ -60,8 +58,8 @@ impl<'a> FindArg<'a> for ClientSideArgParserTester<'a> {
     type Data = ();
 
     fn find_arg(
-        args: &'a super::ConsumedArgs,
-        name: &'a str,
+        _args: &'a super::ConsumedArgs,
+        _name: &'a str,
     ) -> Result<Self::Data, InvalidTreeError> {
         Ok(())
     }

@@ -1,10 +1,10 @@
-use std::borrow::Cow;
 use std::num::ParseFloatError;
 
 use async_trait::async_trait;
 use pumpkin_core::math::vector3::Vector3;
-use pumpkin_core::text::TextComponent;
-use pumpkin_protocol::client::play::{CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType};
+use pumpkin_protocol::client::play::{
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
+};
 
 use crate::command::dispatcher::InvalidTreeError;
 use crate::command::tree::RawArgs;
@@ -12,7 +12,7 @@ use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser, SplitSingleWhitespaceIncludingEmptyParts};
+use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// x, y and z coordinates
 pub(crate) struct Position3DArgumentConsumer;
@@ -23,7 +23,6 @@ impl GetClientSideArgParser for Position3DArgumentConsumer {
     }
 
     fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
-        //Some(ProtoCmdArgSuggestionType::AskServer)
         None
     }
 }
@@ -47,18 +46,8 @@ impl ArgumentConsumer for Position3DArgumentConsumer {
         &self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
-        input: &'a str,
+        _input: &'a str,
     ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
-
-        //let Some(input) = input.split_single_whitespace_including_empty_parts().last() else {
-        //    return Ok(None);
-        //};
-        //let suggestion: &'a str = match input {
-        //    "" => "~",
-        //    absolute => absolute,
-        //};
-        //Ok(Some(vec![CommandSuggestion::new(Cow::Borrowed(suggestion), None)]))
-
         Ok(None)
     }
 }

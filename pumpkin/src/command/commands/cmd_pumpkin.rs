@@ -4,12 +4,13 @@ use pumpkin_protocol::CURRENT_MC_PROTOCOL;
 
 use crate::{
     command::{
-        args::ConsumedArgs, tree::CommandTree, tree_builder::literal, CommandExecutor, CommandSender, InvalidTreeError
+        args::ConsumedArgs, tree::CommandTree, tree_builder::literal, CommandExecutor,
+        CommandSender, InvalidTreeError,
     },
     server::CURRENT_MC_VERSION,
 };
 
-use super::cmd_pumpkin_test_client_side_arg_parsers::{self, pumpkin_test_client_side_arg_parsers};
+use super::cmd_pumpkin_test_client_side_arg_parsers::pumpkin_test_client_side_arg_parsers;
 
 const NAMES: [&str; 1] = ["pumpkin"];
 
@@ -38,9 +39,6 @@ impl CommandExecutor for PumpkinExecutor {
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION)
-        .with_child(
-            literal("test")
-                .with_child(pumpkin_test_client_side_arg_parsers())
-        )
+        .with_child(literal("test").with_child(pumpkin_test_client_side_arg_parsers()))
         .execute(&PumpkinExecutor)
 }

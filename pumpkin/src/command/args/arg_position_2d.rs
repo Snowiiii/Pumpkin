@@ -1,9 +1,8 @@
-use std::borrow::Cow;
-
 use async_trait::async_trait;
 use pumpkin_core::math::vector2::Vector2;
-use pumpkin_core::text::TextComponent;
-use pumpkin_protocol::client::play::{CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType};
+use pumpkin_protocol::client::play::{
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
+};
 
 use crate::command::dispatcher::InvalidTreeError;
 use crate::command::tree::RawArgs;

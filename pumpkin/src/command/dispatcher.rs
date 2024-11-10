@@ -7,8 +7,7 @@ use crate::command::dispatcher::InvalidTreeError::{
 use crate::command::tree::{Command, CommandTree, NodeType, RawArgs};
 use crate::command::CommandSender;
 use crate::server::Server;
-use std::borrow::Cow;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 
 use super::args::ConsumedArgs;
 
@@ -66,7 +65,16 @@ impl<'a> CommandDispatcher<'a> {
 
         // try paths and collect the nodes that fail
         for path in tree.iter_paths() {
-            match Self::try_find_suggestions_on_path(src, server, &path, tree, raw_args.clone(), cmd).await {
+            match Self::try_find_suggestions_on_path(
+                src,
+                server,
+                &path,
+                tree,
+                raw_args.clone(),
+                cmd,
+            )
+            .await
+            {
                 Err(InvalidConsumptionError(s)) => {
                     log::error!("Error while parsing command \"{cmd}\": {s:?} was consumed, but couldn't be parsed");
                     return Vec::new();
@@ -88,7 +96,7 @@ impl<'a> CommandDispatcher<'a> {
         suggestions.sort_by(|a, b| a.suggestion.cmp(&b.suggestion));
         suggestions
     }
-    
+
     /// Execute a command using its corresponding [`CommandTree`].
     pub(crate) async fn dispatch(
         &'a self,
@@ -214,7 +222,7 @@ impl<'a> CommandDispatcher<'a> {
                             } else {
                                 Ok(None)
                             };
-                        }, 
+                        }
                     }
                 }
                 NodeType::Require { predicate, .. } => {

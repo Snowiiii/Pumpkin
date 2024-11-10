@@ -1,9 +1,6 @@
-use std::borrow::Cow;
-
 use async_trait::async_trait;
-use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::client::play::{
-    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType, StringProtoArgBehavior
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType, StringProtoArgBehavior,
 };
 
 use crate::{command::dispatcher::InvalidTreeError, server::Server};
@@ -12,7 +9,8 @@ use super::{
     super::{
         args::{ArgumentConsumer, RawArgs},
         CommandSender,
-    }, Arg, FindArg, GetClientSideArgParser
+    },
+    Arg, FindArg, GetClientSideArgParser,
 };
 
 /// Should never be a permanent solution

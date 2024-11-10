@@ -47,15 +47,15 @@ impl<'a> ClientPacket for CCommandSuggestions<'a> {
 
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub struct CommandSuggestion<'a> {
-    pub suggestion: Cow<'a, str>, 
-    pub tooltip: Option<TextComponent<'a>>
+    pub suggestion: Cow<'a, str>,
+    pub tooltip: Option<TextComponent<'a>>,
 }
 
-impl <'a> CommandSuggestion<'a> {
+impl<'a> CommandSuggestion<'a> {
     pub fn new(suggestion: Cow<'a, str>, tooltip: Option<TextComponent<'a>>) -> Self {
         Self {
-            suggestion, tooltip
+            suggestion,
+            tooltip,
         }
     }
 }
-

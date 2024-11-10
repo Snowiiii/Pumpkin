@@ -1,11 +1,14 @@
-use std::{borrow::Cow, collections::HashMap, hash::Hash, sync::Arc};
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use arg_bounded_num::{NotInBounds, Number};
 use async_trait::async_trait;
 use pumpkin_core::{
-    math::{vector2::Vector2, vector3::Vector3}, text::TextComponent, GameMode
+    math::{vector2::Vector2, vector3::Vector3},
+    GameMode,
 };
-use pumpkin_protocol::client::play::{CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType};
+use pumpkin_protocol::client::play::{
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
+};
 
 use crate::{entity::player::Player, server::Server};
 
@@ -40,9 +43,9 @@ pub(crate) trait ArgumentConsumer: Sync + GetClientSideArgParser {
         server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>>;
-    
+
     /// Used for tab completion (but only if argument suggestion type is "minecraft:ask_server"!).
-    /// 
+    ///
     /// NOTE: This is called after this consumer's [`ArgumentConsumer::consume`] method returnd None, so if args is used here, make sure [`ArgumentConsumer::consume`] never returns None after mutating args.
     async fn suggest<'a>(
         &self,
@@ -114,27 +117,39 @@ impl<'a, T, C: FindArg<'a, Data = T> + DefaultNameArgConsumer> FindArgDefaultNam
 
 pub(crate) trait SplitSingleWhitespaceIncludingEmptyParts<'a> {
     /// Splits a string at every single unicode whitespace. Therefore the returned iterator sometimes contains empty strings. This is useful for command suggestions.
-    /// 
+    ///
     /// Note: Vanilla does this only for commandsuggestions, for execution consecutive whitespaces are treated as one.
     fn split_single_whitespace_including_empty_parts(self) -> impl Iterator<Item = &'a str>;
 }
 
 impl<'a> SplitSingleWhitespaceIncludingEmptyParts<'a> for &'a str {
     fn split_single_whitespace_including_empty_parts(self) -> impl Iterator<Item = &'a str> {
-        SplitSingleWhitespaceIncludingEmptyPartsIter { s: self.as_ref(), pos: 0, chars_iter: self.char_indices(), is_complete: false }
+        SplitSingleWhitespaceIncludingEmptyPartsIter {
+            s: self,
+            pos: 0,
+            chars_iter: self.char_indices(),
+            is_complete: false,
+        }
     }
 }
 
-struct SplitSingleWhitespaceIncludingEmptyPartsIter<'a, T: Iterator<Item = (usize, char)>> { s: &'a str, pos: usize, chars_iter: T, is_complete: bool }
+struct SplitSingleWhitespaceIncludingEmptyPartsIter<'a, T: Iterator<Item = (usize, char)>> {
+    s: &'a str,
+    pos: usize,
+    chars_iter: T,
+    is_complete: bool,
+}
 
-impl<'a, T: DoubleEndedIterator<Item = (usize, char)>> Iterator for SplitSingleWhitespaceIncludingEmptyPartsIter<'a, T> {
+impl<'a, T: DoubleEndedIterator<Item = (usize, char)>> Iterator
+    for SplitSingleWhitespaceIncludingEmptyPartsIter<'a, T>
+{
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.is_complete {
             return None;
         }
-    
+
         let start = self.pos;
 
         loop {

@@ -2,8 +2,9 @@ use std::borrow::Cow;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use pumpkin_core::text::TextComponent;
-use pumpkin_protocol::client::play::{CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType, StringProtoArgBehavior};
+use pumpkin_protocol::client::play::{
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType, StringProtoArgBehavior,
+};
 
 use crate::command::dispatcher::InvalidTreeError;
 use crate::command::tree::RawArgs;
@@ -12,7 +13,10 @@ use crate::entity::player::Player;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser, SplitSingleWhitespaceIncludingEmptyParts};
+use super::{
+    Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser,
+    SplitSingleWhitespaceIncludingEmptyParts,
+};
 
 /// Select zero, one or multiple players
 pub(crate) struct PlayersArgumentConsumer;
@@ -21,7 +25,7 @@ impl GetClientSideArgParser for PlayersArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {
         ProtoCmdArgParser::String(StringProtoArgBehavior::SingleWord)
 
-        // todo: investigate why this does not accept target selectors 
+        // todo: investigate why this does not accept target selectors
         //ProtoCmdArgParser::Entity {
         //    flags: ProtoCmdArgParser::ENTITY_FLAG_PLAYERS_ONLY,
         //}
@@ -76,18 +80,22 @@ impl ArgumentConsumer for PlayersArgumentConsumer {
         server: &'a Server,
         input: &'a str,
     ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
-
         dbg!(input);
 
         let Some(input) = input.split_single_whitespace_including_empty_parts().last() else {
             return Ok(None);
         };
 
-        let target_selectors = ["@s", "@a", "@e", "@r", "@p", "@n"].iter().map(|s| Cow::Borrowed(s as &str));
+        let target_selectors = ["@s", "@a", "@e", "@r", "@p", "@n"]
+            .iter()
+            .map(|s| Cow::Borrowed(s as &str));
         let players = server.get_all_players().await;
-        let player_names = players.iter().map(|p| Cow::Owned(p.gameprofile.name.to_string()));
+        let player_names = players
+            .iter()
+            .map(|p| Cow::Owned(p.gameprofile.name.to_string()));
 
-        let suggestions = target_selectors.chain(player_names)
+        let suggestions = target_selectors
+            .chain(player_names)
             .filter(|suggestion| suggestion.starts_with(input))
             .map(|suggestion| CommandSuggestion::new(suggestion, None))
             .collect();
