@@ -3,9 +3,9 @@ use std::sync::{atomic::AtomicBool, Arc};
 use crossbeam::atomic::AtomicCell;
 use num_derive::FromPrimitive;
 use pumpkin_core::math::{
-    boundingbox::{BoundingBox, BoundingBoxSize}, 
-    get_section_cord, 
-    position::WorldPosition, 
+    boundingbox::{BoundingBox, BoundingBoxSize},
+    get_section_cord,
+    position::WorldPosition,
     vector2::Vector2,
     vector3::Vector3,
 };
@@ -88,7 +88,7 @@ impl Entity {
             standing_eye_height,
             pose: AtomicCell::new(EntityPose::Standing),
             bounding_box,
-            bounding_box_size
+            bounding_box_size,
         }
     }
 
@@ -105,7 +105,7 @@ impl Entity {
                 pos.x,
                 pos.y,
                 pos.z,
-                &self.bounding_box_size.load()
+                &self.bounding_box_size.load(),
             ));
 
             let floor_x = x.floor() as i32;
