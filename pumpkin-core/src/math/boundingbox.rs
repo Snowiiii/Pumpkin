@@ -50,7 +50,7 @@ impl BoundingBox {
         }
     }
 
-    pub fn bounding_boxes_intersect(&self, other: &BoundingBox) -> bool {
+    pub fn intersects(&self, other: &BoundingBox) -> bool {
         self.min_x < other.max_x
             && self.max_x > other.min_x
             && self.min_y < other.max_y
