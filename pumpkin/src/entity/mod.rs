@@ -3,7 +3,11 @@ use std::sync::{atomic::AtomicBool, Arc};
 use crossbeam::atomic::AtomicCell;
 use num_derive::FromPrimitive;
 use pumpkin_core::math::{
-    get_section_cord, position::WorldPosition, vector2::Vector2, vector3::Vector3,
+    boundingbox::{BoundingBox, BoundingBoxSize},
+    get_section_cord,
+    position::WorldPosition,
+    vector2::Vector2,
+    vector3::Vector3,
 };
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
 use pumpkin_protocol::{
@@ -50,6 +54,10 @@ pub struct Entity {
     pub standing_eye_height: f32,
     /// The entity's current pose (e.g., standing, sitting, swimming).
     pub pose: AtomicCell<EntityPose>,
+    /// The bounding box of an entity (hitbox)
+    pub bounding_box: AtomicCell<BoundingBox>,
+    ///The size (width and height) of the bounding box
+    pub bounding_box_size: AtomicCell<BoundingBoxSize>,
 }
 
 impl Entity {
@@ -58,6 +66,8 @@ impl Entity {
         world: Arc<World>,
         entity_type: EntityType,
         standing_eye_height: f32,
+        bounding_box: AtomicCell<BoundingBox>,
+        bounding_box_size: AtomicCell<BoundingBoxSize>,
     ) -> Self {
         Self {
             entity_id,
@@ -77,6 +87,8 @@ impl Entity {
             velocity: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
             standing_eye_height,
             pose: AtomicCell::new(EntityPose::Standing),
+            bounding_box,
+            bounding_box_size,
         }
     }
 
@@ -88,6 +100,13 @@ impl Entity {
         let pos = self.pos.load();
         if pos.x != x || pos.y != y || pos.z != z {
             self.pos.store(Vector3::new(x, y, z));
+
+            self.bounding_box.store(BoundingBox::new_from_pos(
+                pos.x,
+                pos.y,
+                pos.z,
+                &self.bounding_box_size.load(),
+            ));
 
             let floor_x = x.floor() as i32;
             let floor_y = y.floor() as i32;

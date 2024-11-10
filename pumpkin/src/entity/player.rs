@@ -13,7 +13,12 @@ use itertools::Itertools;
 use num_derive::FromPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::{
-    math::{boundingbox::BoundingBox, position::WorldPosition, vector2::Vector2, vector3::Vector3},
+    math::{
+        boundingbox::{BoundingBox, BoundingBoxSize},
+        position::WorldPosition,
+        vector2::Vector2,
+        vector3::Vector3,
+    },
     text::TextComponent,
     GameMode,
 };
@@ -177,12 +182,19 @@ impl Player {
             |profile| profile,
         );
         let config = client.config.lock().await.clone().unwrap_or_default();
+        let bounding_box_size = BoundingBoxSize {
+            width: 0.6,
+            height: 1.8,
+        };
+
         Self {
             living_entity: LivingEntity::new(Entity::new(
                 entity_id,
                 world,
                 EntityType::Player,
                 1.62,
+                AtomicCell::new(BoundingBox::new_default(&bounding_box_size)),
+                AtomicCell::new(bounding_box_size),
             )),
             config: Mutex::new(config),
             gameprofile,

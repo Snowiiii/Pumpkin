@@ -8,7 +8,7 @@ use crate::{
 };
 use num_traits::FromPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
-use pumpkin_core::math::position::WorldPosition;
+use pumpkin_core::math::{boundingbox::BoundingBox, position::WorldPosition};
 use pumpkin_core::{
     math::{vector3::Vector3, wrap_degrees},
     text::TextComponent,
@@ -577,12 +577,13 @@ impl Player {
                         }
                     }
 
-                    world
-                        .set_block(
-                            WorldPosition(location.0 + face.to_offset()),
-                            block.default_state_id,
-                        )
-                        .await;
+                    let world_pos = WorldPosition(location.0 + face.to_offset());
+                    let block_bounding_box = BoundingBox::from_block(&world_pos);
+                    let bounding_box = entity.bounding_box.load();
+                    //TODO: Make this check for every entity in that posistion
+                    if !bounding_box.intersects(&block_bounding_box) {
+                        world.set_block(world_pos, block.default_state_id).await;
+                    }
                 }
                 self.client
                     .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
