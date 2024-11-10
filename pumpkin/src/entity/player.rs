@@ -518,14 +518,12 @@ impl Player {
         let world = &self.living_entity.entity.world;
 
         // teleport
-        let mut position = Vector3::new(10.0, 120.0, 10.0);
+        let x = 10.0;
+        let z = 10.0;
+        let top = world.get_top_block(Vector2::new(x as i32, z as i32)).await;
+        let position = Vector3::new(x, f64::from(top), z);
         let yaw = 10.0;
         let pitch = 10.0;
-
-        let top = world
-            .get_top_block(Vector2::new(position.x as i32, position.z as i32))
-            .await;
-        position.y = f64::from(top + 1);
 
         log::debug!("Sending player teleport to {}", self.gameprofile.name);
         self.teleport(position, yaw, pitch).await;
