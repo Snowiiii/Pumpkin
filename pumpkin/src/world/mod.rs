@@ -692,6 +692,37 @@ impl World {
         return self.current_players.lock().await.get(&id).cloned();
     }
 
+    /// Gets a list of players who's location equals the given position in the world.
+    ///
+    /// It iterates through the players in the world and checks their location. If the player's location matches the
+    /// given position it will add this to a Vec which it later returns. If no
+    /// player was found in that position it will just return an empty Vec.
+    ///
+    /// # Arguments
+    ///
+    /// * `position`: The position the function will check.
+    pub async fn get_players_by_pos(
+        &self,
+        position: WorldPosition,
+    ) -> HashMap<uuid::Uuid, Arc<Player>> {
+        self.current_players
+            .lock()
+            .await
+            .iter()
+            .filter_map(|(uuid, player)| {
+                let player_block_pos = player.living_entity.entity.block_pos.load().0;
+                if position.0.x == player_block_pos.x
+                    && position.0.y == player_block_pos.y
+                    && position.0.z == player_block_pos.z
+                {
+                    Some((*uuid, Arc::clone(player)))
+                } else {
+                    None
+                }
+            })
+            .collect::<HashMap<uuid::Uuid, Arc<Player>>>()
+    }
+
     /// Adds a player to the world and broadcasts a join message if enabled.
     ///
     /// This function takes a player's UUID and an `Arc<Player>` reference.
