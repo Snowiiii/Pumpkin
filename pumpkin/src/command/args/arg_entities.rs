@@ -22,8 +22,6 @@ pub(crate) struct EntitiesArgumentConsumer;
 
 impl GetClientSideArgParser for EntitiesArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {
-        //ProtoCmdArgParser::String(StringProtoArgBehavior::SingleWord)
-
         // todo: investigate why this does not accept target selectors
         ProtoCmdArgParser::Entity {
             flags: ProtoCmdArgParser::ENTITY_FLAG_ONLY_SINGLE,
@@ -31,7 +29,7 @@ impl GetClientSideArgParser for EntitiesArgumentConsumer {
     }
 
     fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
-        None //Some(ProtoCmdArgSuggestionType::AskServer)
+        None
     }
 }
 
@@ -52,12 +50,11 @@ impl ArgumentConsumer for EntitiesArgumentConsumer {
 
     async fn suggest<'a>(
         &self,
-        sender: &CommandSender<'a>,
-        server: &'a Server,
-        input: &'a str,
+        _sender: &CommandSender<'a>,
+        _server: &'a Server,
+        _input: &'a str,
     ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
-        // todo
-        PlayersArgumentConsumer.suggest(sender, server, input).await
+        Ok(None)
     }
 }
 

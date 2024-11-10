@@ -17,7 +17,6 @@
 #[cfg(target_os = "wasi")]
 compile_error!("Compiling for WASI targets is not supported!");
 
-use command::client_cmd_suggestions::send_c_commands_packet;
 use log::LevelFilter;
 
 use client::Client;
@@ -193,10 +192,9 @@ async fn main() -> io::Result<()> {
                 .load(std::sync::atomic::Ordering::Relaxed)
             {
                 let (player, world) = server.add_player(client).await;
-                world.spawn_player(&BASIC_CONFIG, player.clone()).await;
-
-                // inform client about commands so that command suggestions and tab completion work
-                send_c_commands_packet(player.clone(), &server.command_dispatcher).await;
+                world
+                    .spawn_player(&BASIC_CONFIG, player.clone(), &server.command_dispatcher)
+                    .await;
 
                 // poll Player
                 while !player

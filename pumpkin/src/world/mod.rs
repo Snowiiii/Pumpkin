@@ -5,9 +5,12 @@ use std::{
 
 pub mod player_chunker;
 
-use crate::entity::{
-    player::{ChunkHandleWrapper, Player},
-    Entity,
+use crate::{
+    command::{client_cmd_suggestions, dispatcher::CommandDispatcher},
+    entity::{
+        player::{ChunkHandleWrapper, Player},
+        Entity,
+    },
 };
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
@@ -150,7 +153,12 @@ impl World {
     }
 
     #[expect(clippy::too_many_lines)]
-    pub async fn spawn_player(&self, base_config: &BasicConfiguration, player: Arc<Player>) {
+    pub async fn spawn_player(
+        &self,
+        base_config: &BasicConfiguration,
+        player: Arc<Player>,
+        command_dispatcher: &CommandDispatcher<'_>,
+    ) {
         // This code follows the vanilla packet order
         let entity_id = player.entity_id();
         let gamemode = player.gamemode.load();
@@ -195,6 +203,9 @@ impl World {
             abilities.allow_flying = true;
         }
         player.send_abilties_update().await;
+
+        // permissions, i. e. the commands a player may use
+        client_cmd_suggestions::send_c_commands_packet(&player, command_dispatcher).await;
 
         // teleport
         let mut position = Vector3::new(10.0, 120.0, 10.0);

@@ -10,9 +10,10 @@ use super::{
 };
 
 pub async fn send_c_commands_packet<'a>(
-    player: Arc<Player>,
+    player: &Arc<Player>,
     dispatcher: &'a CommandDispatcher<'a>,
 ) {
+    let cmd_src = super::CommandSender::Player(player.clone());
     let mut first_level = Vec::new();
 
     for key in dispatcher.commands.keys() {
@@ -21,7 +22,7 @@ pub async fn send_c_commands_packet<'a>(
         };
 
         let (is_executable, child_nodes) =
-            nodes_to_proto_node_builders(&player, &tree.nodes, &tree.children);
+            nodes_to_proto_node_builders(&cmd_src, &tree.nodes, &tree.children);
 
         let proto_node = ProtoNodeBuilder {
             child_nodes,
@@ -42,7 +43,7 @@ pub async fn send_c_commands_packet<'a>(
     let mut proto_nodes = Vec::new();
     let root_node_index = root.build(&mut proto_nodes);
 
-    let packet = CCommands::new(proto_nodes, root_node_index);
+    let packet = CCommands::new(proto_nodes, root_node_index.into());
     player.client.send_packet(&packet).await;
 }
 
@@ -70,7 +71,7 @@ impl<'a> ProtoNodeBuilder<'a> {
 }
 
 fn nodes_to_proto_node_builders<'a>(
-    player: &Arc<Player>,
+    cmd_src: &super::CommandSender,
     nodes: &'a [Node<'a>],
     children: &'a [usize],
 ) -> (bool, Vec<ProtoNodeBuilder<'a>>) {
@@ -82,7 +83,7 @@ fn nodes_to_proto_node_builders<'a>(
         match node.node_type {
             NodeType::Argument { name, consumer } => {
                 let (node_is_executable, node_children) =
-                    nodes_to_proto_node_builders(player, nodes, &node.children);
+                    nodes_to_proto_node_builders(cmd_src, nodes, &node.children);
                 child_nodes.push(ProtoNodeBuilder {
                     child_nodes: node_children,
                     node_type: ProtoNodeType::Argument {
@@ -97,7 +98,7 @@ fn nodes_to_proto_node_builders<'a>(
 
             NodeType::Literal { string, .. } => {
                 let (node_is_executable, node_children) =
-                    nodes_to_proto_node_builders(player, nodes, &node.children);
+                    nodes_to_proto_node_builders(cmd_src, nodes, &node.children);
                 child_nodes.push(ProtoNodeBuilder {
                     child_nodes: node_children,
                     node_type: ProtoNodeType::Literal {
@@ -110,9 +111,9 @@ fn nodes_to_proto_node_builders<'a>(
             NodeType::ExecuteLeaf { .. } => is_executable = true,
 
             NodeType::Require { predicate } => {
-                if predicate(&super::CommandSender::Player(player.clone())) {
+                if predicate(cmd_src) {
                     let (node_is_executable, node_children) =
-                        nodes_to_proto_node_builders(player, nodes, &node.children);
+                        nodes_to_proto_node_builders(cmd_src, nodes, &node.children);
                     if node_is_executable {
                         is_executable = true;
                     }

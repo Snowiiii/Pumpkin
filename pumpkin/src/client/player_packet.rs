@@ -675,8 +675,8 @@ impl Player {
 
         let response = CCommandSuggestions::new(
             packet.id,
-            last_word_start + 2,
-            cmd.len() - last_word_start - 1,
+            (last_word_start + 2).into(),
+            (cmd.len() - last_word_start - 1).into(),
             suggestions,
         );
 

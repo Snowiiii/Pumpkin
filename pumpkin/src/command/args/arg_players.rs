@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -13,18 +12,13 @@ use crate::entity::player::Player;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::{
-    Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser,
-    SplitSingleWhitespaceIncludingEmptyParts,
-};
+use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// Select zero, one or multiple players
 pub(crate) struct PlayersArgumentConsumer;
 
 impl GetClientSideArgParser for PlayersArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {
-        //ProtoCmdArgParser::String(StringProtoArgBehavior::SingleWord)
-
         // todo: investigate why this does not accept target selectors
         ProtoCmdArgParser::Entity {
             flags: ProtoCmdArgParser::ENTITY_FLAG_PLAYERS_ONLY,
@@ -32,7 +26,7 @@ impl GetClientSideArgParser for PlayersArgumentConsumer {
     }
 
     fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
-        None //Some(ProtoCmdArgSuggestionType::AskServer)
+        None
     }
 }
 
@@ -75,28 +69,10 @@ impl ArgumentConsumer for PlayersArgumentConsumer {
     async fn suggest<'a>(
         &self,
         _sender: &CommandSender<'a>,
-        server: &'a Server,
-        input: &'a str,
+        _server: &'a Server,
+        _input: &'a str,
     ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
-        let Some(input) = input.split_single_whitespace_including_empty_parts().last() else {
-            return Ok(None);
-        };
-
-        let target_selectors = ["@s", "@a", "@e", "@r", "@p", "@n"]
-            .iter()
-            .map(|s| Cow::Borrowed(s as &str));
-        let players = server.get_all_players().await;
-        let player_names = players
-            .iter()
-            .map(|p| Cow::Owned(p.gameprofile.name.to_string()));
-
-        let suggestions = target_selectors
-            .chain(player_names)
-            .filter(|suggestion| suggestion.starts_with(input))
-            .map(|suggestion| CommandSuggestion::new(suggestion, None))
-            .collect();
-
-        Ok(Some(suggestions))
+        Ok(None)
     }
 }
 

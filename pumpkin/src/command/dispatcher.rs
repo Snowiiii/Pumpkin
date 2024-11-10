@@ -45,6 +45,11 @@ impl<'a> CommandDispatcher<'a> {
         }
     }
 
+    /// server side suggestions (client side suggestions work independently)
+    ///
+    /// # todo
+    /// - make this less ugly
+    /// - do not query suggestions for the same consumer multiple times just because they are on different paths through the tree
     pub(crate) async fn find_suggestions(
         &'a self,
         src: &mut CommandSender<'a>,
@@ -64,6 +69,7 @@ impl<'a> CommandDispatcher<'a> {
         let mut suggestions = HashSet::new();
 
         // try paths and collect the nodes that fail
+        // todo: make this more fine-grained
         for path in tree.iter_paths() {
             match Self::try_find_suggestions_on_path(
                 src,
@@ -91,7 +97,7 @@ impl<'a> CommandDispatcher<'a> {
         }
 
         let mut suggestions = Vec::from_iter(suggestions);
-        suggestions.sort_by(|a, b| a.suggestion.cmp(&b.suggestion));
+        suggestions.sort_by(|a, b| a.suggestion.cmp(b.suggestion));
         suggestions
     }
 

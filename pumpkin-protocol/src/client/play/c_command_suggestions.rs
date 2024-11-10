@@ -1,5 +1,3 @@
-use std::{borrow::Cow, hash::Hash};
-
 use pumpkin_core::text::TextComponent;
 use pumpkin_macros::client_packet;
 
@@ -15,15 +13,15 @@ pub struct CCommandSuggestions<'a> {
 
 impl<'a> CCommandSuggestions<'a> {
     pub fn new(
-        id: impl Into<VarInt>,
-        start: impl Into<VarInt>,
-        length: impl Into<VarInt>,
+        id: VarInt,
+        start: VarInt,
+        length: VarInt,
         matches: Vec<CommandSuggestion<'a>>,
     ) -> Self {
         Self {
-            id: id.into(),
-            start: start.into(),
-            length: length.into(),
+            id,
+            start,
+            length,
             matches,
         }
     }
@@ -36,7 +34,7 @@ impl<'a> ClientPacket for CCommandSuggestions<'a> {
         bytebuf.put_var_int(&self.length);
 
         bytebuf.put_list(&self.matches, |bytebuf, suggestion| {
-            bytebuf.put_string_len(&suggestion.suggestion, 32767);
+            bytebuf.put_string(suggestion.suggestion);
             bytebuf.put_bool(suggestion.tooltip.is_some());
             if let Some(tooltip) = &suggestion.tooltip {
                 bytebuf.put_slice(&tooltip.encode());
@@ -47,12 +45,12 @@ impl<'a> ClientPacket for CCommandSuggestions<'a> {
 
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub struct CommandSuggestion<'a> {
-    pub suggestion: Cow<'a, str>,
+    pub suggestion: &'a str,
     pub tooltip: Option<TextComponent<'a>>,
 }
 
 impl<'a> CommandSuggestion<'a> {
-    pub fn new(suggestion: Cow<'a, str>, tooltip: Option<TextComponent<'a>>) -> Self {
+    pub fn new(suggestion: &'a str, tooltip: Option<TextComponent<'a>>) -> Self {
         Self {
             suggestion,
             tooltip,

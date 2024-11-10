@@ -9,10 +9,10 @@ pub struct CCommands<'a> {
 }
 
 impl<'a> CCommands<'a> {
-    pub fn new(nodes: Vec<ProtoNode<'a>>, root_node_index: impl Into<VarInt>) -> Self {
+    pub fn new(nodes: Vec<ProtoNode<'a>>, root_node_index: VarInt) -> Self {
         Self {
             nodes,
-            root_node_index: root_node_index.into(),
+            root_node_index,
         }
     }
 }
@@ -51,7 +51,6 @@ impl<'a> ProtoNode<'a> {
     const FLAG_HAS_REDIRECT: i8 = 8;
     const FLAG_HAS_SUGGESTION_TYPE: i8 = 16;
 
-    /// https://wiki.vg/Command_Data
     pub fn write_to(&self, bytebuf: &mut ByteBuffer) {
         // flags
         let flags = match self.node_type {
@@ -95,7 +94,7 @@ impl<'a> ProtoNode<'a> {
         // name
         match self.node_type {
             ProtoNodeType::Argument { name, .. } | ProtoNodeType::Literal { name, .. } => {
-                bytebuf.put_string_len(name, 32767)
+                bytebuf.put_string(name)
             }
             ProtoNodeType::Root => {}
         }
@@ -124,30 +123,15 @@ impl<'a> ProtoNode<'a> {
     }
 }
 
-/// see https://wiki.vg/Command_Data for meaning of flags/enums/etc.
 #[derive(Debug, Clone)]
 pub enum ProtoCmdArgParser<'a> {
     Bool,
-    Float {
-        min: Option<f32>,
-        max: Option<f32>,
-    },
-    Double {
-        min: Option<f64>,
-        max: Option<f64>,
-    },
-    Integer {
-        min: Option<i32>,
-        max: Option<i32>,
-    },
-    Long {
-        min: Option<i64>,
-        max: Option<i64>,
-    },
+    Float { min: Option<f32>, max: Option<f32> },
+    Double { min: Option<f64>, max: Option<f64> },
+    Integer { min: Option<i32>, max: Option<i32> },
+    Long { min: Option<i64>, max: Option<i64> },
     String(StringProtoArgBehavior),
-    Entity {
-        flags: i8,
-    },
+    Entity { flags: i8 },
     GameProfile,
     BlockPos,
     ColumnPos,
@@ -171,14 +155,11 @@ pub enum ProtoCmdArgParser<'a> {
     Angle,
     Rotation,
     ScoreboardSlot,
-    ScoreHolder {
-        flags: i8,
-    },
+    ScoreHolder { flags: i8 },
     Swizzle,
     Team,
     ItemSlot,
-    /// missing on wiki.vg but might be some kind of container slot?
-    ContainerSlot,
+    ItemSlots,
     ResourceLocation,
     Function,
     EntityAnchor,
@@ -186,21 +167,11 @@ pub enum ProtoCmdArgParser<'a> {
     FloatRange,
     Dimension,
     Gamemode,
-    Time {
-        min: i32,
-    },
-    ResourceOrTag {
-        identifier: &'a str,
-    },
-    ResourceOrTagKey {
-        identifier: &'a str,
-    },
-    Resource {
-        identifier: &'a str,
-    },
-    ResourceKey {
-        identifier: &'a str,
-    },
+    Time { min: i32 },
+    ResourceOrTag { identifier: &'a str },
+    ResourceOrTagKey { identifier: &'a str },
+    Resource { identifier: &'a str },
+    ResourceKey { identifier: &'a str },
     TemplateMirror,
     TemplateRotation,
     Heightmap,
@@ -257,7 +228,7 @@ impl<'a> ProtoCmdArgParser<'a> {
             Self::Swizzle => bytebuf.put_var_int(&31.into()),
             Self::Team => bytebuf.put_var_int(&32.into()),
             Self::ItemSlot => bytebuf.put_var_int(&33.into()),
-            Self::ContainerSlot => bytebuf.put_var_int(&34.into()),
+            Self::ItemSlots => bytebuf.put_var_int(&34.into()),
             Self::ResourceLocation => bytebuf.put_var_int(&35.into()),
             Self::Function => bytebuf.put_var_int(&36.into()),
             Self::EntityAnchor => bytebuf.put_var_int(&37.into()),
