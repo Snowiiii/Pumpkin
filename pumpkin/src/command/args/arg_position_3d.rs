@@ -1,8 +1,10 @@
+use std::borrow::Cow;
 use std::num::ParseFloatError;
 
 use async_trait::async_trait;
 use pumpkin_core::math::vector3::Vector3;
-use pumpkin_protocol::client::play::{ProtoCmdArgParser, ProtoCmdArgSuggestionType};
+use pumpkin_core::text::TextComponent;
+use pumpkin_protocol::client::play::{CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType};
 
 use crate::command::dispatcher::InvalidTreeError;
 use crate::command::tree::RawArgs;
@@ -10,7 +12,7 @@ use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
+use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser, SplitSingleWhitespaceIncludingEmptyParts};
 
 /// x, y and z coordinates
 pub(crate) struct Position3DArgumentConsumer;
@@ -21,7 +23,8 @@ impl GetClientSideArgParser for Position3DArgumentConsumer {
     }
 
     fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
-        Some(ProtoCmdArgSuggestionType::AskServer)
+        //Some(ProtoCmdArgSuggestionType::AskServer)
+        None
     }
 }
 
@@ -33,22 +36,41 @@ impl ArgumentConsumer for Position3DArgumentConsumer {
         _server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
-        let pos = Position3D::try_new(args.pop(), args.pop(), args.pop())?;
+        let pos = Position3D::try_new(args.pop()?, args.pop()?, args.pop()?)?;
 
         let vec3 = pos.try_get_values(src.position())?;
 
         Some(Arg::Pos3D(vec3))
+    }
+
+    async fn suggest<'a>(
+        &self,
+        _sender: &CommandSender<'a>,
+        _server: &'a Server,
+        input: &'a str,
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
+
+        //let Some(input) = input.split_single_whitespace_including_empty_parts().last() else {
+        //    return Ok(None);
+        //};
+        //let suggestion: &'a str = match input {
+        //    "" => "~",
+        //    absolute => absolute,
+        //};
+        //Ok(Some(vec![CommandSuggestion::new(Cow::Borrowed(suggestion), None)]))
+
+        Ok(None)
     }
 }
 
 struct Position3D(Coordinate<false>, Coordinate<true>, Coordinate<false>);
 
 impl Position3D {
-    fn try_new(x: Option<&str>, y: Option<&str>, z: Option<&str>) -> Option<Self> {
+    fn try_new(x: &str, y: &str, z: &str) -> Option<Self> {
         Some(Self(
-            x?.try_into().ok()?,
-            y?.try_into().ok()?,
-            z?.try_into().ok()?,
+            x.try_into().ok()?,
+            y.try_into().ok()?,
+            z.try_into().ok()?,
         ))
     }
 

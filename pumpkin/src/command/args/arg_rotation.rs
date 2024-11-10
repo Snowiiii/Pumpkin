@@ -1,5 +1,8 @@
+use std::borrow::Cow;
+
 use async_trait::async_trait;
-use pumpkin_protocol::client::play::{ProtoCmdArgParser, ProtoCmdArgSuggestionType};
+use pumpkin_core::text::TextComponent;
+use pumpkin_protocol::client::play::{CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType};
 
 use crate::command::dispatcher::InvalidTreeError;
 use crate::command::tree::RawArgs;
@@ -30,8 +33,11 @@ impl ArgumentConsumer for RotationArgumentConsumer {
         _server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
-        let mut yaw = args.pop()?.parse::<f32>().ok()?;
-        let mut pitch = args.pop()?.parse::<f32>().ok()?;
+        let yaw = args.pop()?;
+        let pitch = args.pop()?;
+
+        let mut yaw = yaw.parse::<f32>().ok()?;
+        let mut pitch = pitch.parse::<f32>().ok()?;
 
         yaw %= 360.0;
         if yaw >= 180.0 {
@@ -43,6 +49,15 @@ impl ArgumentConsumer for RotationArgumentConsumer {
         };
 
         Some(Arg::Rotation(yaw, pitch))
+    }
+
+    async fn suggest<'a>(
+        &self,
+        _sender: &CommandSender<'a>,
+        _server: &'a Server,
+        _input: &'a str,
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
+        Ok(None)
     }
 }
 

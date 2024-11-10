@@ -15,9 +15,9 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_inventory::{InventoryError, WindowType};
-use pumpkin_protocol::server::play::{
+use pumpkin_protocol::{client::play::CCommandSuggestions, server::play::{
     SCloseContainer, SCommandSuggestion, SKeepAlive, SSetPlayerGround, SUseItem,
-};
+}};
 use pumpkin_protocol::{
     client::play::{
         Animation, CAcknowledgeBlockChange, CEntityAnimation, CHeadRot, CPingResponse,
@@ -644,26 +644,26 @@ impl Player {
 
     /// todo: implement
     #[allow(clippy::unused_async)]
-    pub async fn handle_command_suggestion(&self, _packet: SCommandSuggestion) {
-        //dbg!(&packet.command);
-        //let response = CCommandSuggestions::new(
-        //    packet.id,
-        //    packet.command.len(),
-        //    0,
-        //    vec![
-        //        ("test suggestion 1".to_string(), None),
-        //        (
-        //            "test suggestion with tooltip".to_string(),
-        //            Some(
-        //                TextComponent::text("I am a tooltip")
-        //                    .color_named(NamedColor::Red)
-        //                    .bold()
-        //                    .underlined()
-        //                    .italic(),
-        //            ),
-        //        ),
-        //    ],
-        //);
-        //self.client.send_packet(&response).await;
+    pub async fn handle_command_suggestion(self: &Arc<Self>, packet: SCommandSuggestion, server: &Arc<Server>) {
+        let mut src = CommandSender::Player(self.clone());
+        let Some(cmd) = &packet.command.get(1..) else {
+            return;
+        };
+
+        // todo: investigate how client handles unicode
+        let Some(last_word_start) = cmd.rfind(char::is_whitespace) else {
+            return;
+        };
+
+        let mut suggestions = server.command_dispatcher.find_suggestions(&mut src, server, &cmd).await;
+        
+        let response = CCommandSuggestions::new(
+            packet.id,
+            last_word_start + 2,
+            cmd.len() - last_word_start - 1,
+            suggestions,
+        );
+
+        self.client.send_packet(&response).await;
     }
 }

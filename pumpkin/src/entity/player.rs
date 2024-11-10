@@ -838,7 +838,7 @@ impl Player {
             }
             SUseItem::PACKET_ID => self.handle_use_item(&SUseItem::read(bytebuf)?),
             SCommandSuggestion::PACKET_ID => {
-                self.handle_command_suggestion(SCommandSuggestion::read(bytebuf)?)
+                self.handle_command_suggestion(SCommandSuggestion::read(bytebuf)?, server)
                     .await;
             }
             _ => {

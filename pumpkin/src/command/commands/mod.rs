@@ -10,3 +10,6 @@ pub mod cmd_say;
 pub mod cmd_stop;
 pub mod cmd_teleport;
 pub mod cmd_worldborder;
+
+#[rustfmt::skip]
+mod cmd_pumpkin_test_client_side_arg_parsers;

@@ -1,4 +1,5 @@
 use pumpkin_core::text::TextComponent;
+use pumpkin_protocol::client::play::CommandSuggestion;
 
 use crate::command::dispatcher::InvalidTreeError::{
     InvalidConsumptionError, InvalidRequirementError,
@@ -6,7 +7,8 @@ use crate::command::dispatcher::InvalidTreeError::{
 use crate::command::tree::{Command, CommandTree, NodeType, RawArgs};
 use crate::command::CommandSender;
 use crate::server::Server;
-use std::collections::HashMap;
+use std::borrow::Cow;
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 use super::args::ConsumedArgs;
 
@@ -44,6 +46,49 @@ impl<'a> CommandDispatcher<'a> {
         }
     }
 
+    pub(crate) async fn find_suggestions(
+        &'a self,
+        src: &mut CommandSender<'a>,
+        server: &'a Server,
+        cmd: &'a str,
+    ) -> Vec<CommandSuggestion<'a>> {
+        let mut parts = cmd.split_whitespace();
+        let Some(key) = parts.next() else {
+            return Vec::new();
+        };
+        let raw_args: Vec<&str> = parts.rev().collect();
+
+        let Ok(tree) = self.get_tree(key) else {
+            return Vec::new();
+        };
+
+        let mut suggestions = HashSet::new();
+
+        // try paths and collect the nodes that fail
+        for path in tree.iter_paths() {
+            match Self::try_find_suggestions_on_path(src, server, &path, tree, raw_args.clone(), cmd).await {
+                Err(InvalidConsumptionError(s)) => {
+                    log::error!("Error while parsing command \"{cmd}\": {s:?} was consumed, but couldn't be parsed");
+                    return Vec::new();
+                }
+                Err(InvalidRequirementError) => {
+                    log::error!("Error while parsing command \"{cmd}\": a requirement that was expected was not met.");
+                    return Vec::new();
+                }
+                Ok(Some(new_suggestions)) => {
+                    dbg!(&new_suggestions);
+                    suggestions.extend(new_suggestions);
+                    dbg!(&suggestions);
+                }
+                Ok(None) => {}
+            }
+        }
+
+        let mut suggestions = Vec::from_iter(suggestions);
+        suggestions.sort_by(|a, b| a.suggestion.cmp(&b.suggestion));
+        suggestions
+    }
+    
     /// Execute a command using its corresponding [`CommandTree`].
     pub(crate) async fn dispatch(
         &'a self,
@@ -62,11 +107,11 @@ impl<'a> CommandDispatcher<'a> {
         for path in tree.iter_paths() {
             match Self::try_is_fitting_path(src, server, &path, tree, raw_args.clone()).await {
                 Err(InvalidConsumptionError(s)) => {
-                    println!("Error while parsing command \"{cmd}\": {s:?} was consumed, but couldn't be parsed");
+                    log::error!("Error while parsing command \"{cmd}\": {s:?} was consumed, but couldn't be parsed");
                     return Err("Internal Error (See logs for details)".into());
                 }
                 Err(InvalidRequirementError) => {
-                    println!("Error while parsing command \"{cmd}\": a requirement that was expected was not met.");
+                    log::error!("Error while parsing command \"{cmd}\": a requirement that was expected was not met.");
                     return Err("Internal Error (See logs for details)".into());
                 }
                 Ok(is_fitting_path) => {
@@ -86,7 +131,7 @@ impl<'a> CommandDispatcher<'a> {
             Command::Tree(tree) => Ok(tree),
             Command::Alias(target) => {
                 let Some(Command::Tree(tree)) = &self.commands.get(target) else {
-                    println!("Error while parsing command alias \"{key}\": pointing to \"{target}\" which is not a valid tree");
+                    log::error!("Error while parsing command alias \"{key}\": pointing to \"{target}\" which is not a valid tree");
                     return Err("Internal Error (See logs for details)".into());
                 };
                 Ok(tree)
@@ -135,6 +180,52 @@ impl<'a> CommandDispatcher<'a> {
         }
 
         Ok(false)
+    }
+
+    async fn try_find_suggestions_on_path(
+        src: &mut CommandSender<'a>,
+        server: &'a Server,
+        path: &[usize],
+        tree: &CommandTree<'a>,
+        mut raw_args: RawArgs<'a>,
+        input: &'a str,
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
+        let mut parsed_args: ConsumedArgs = HashMap::new();
+
+        for node in path.iter().map(|&i| &tree.nodes[i]) {
+            match node.node_type {
+                NodeType::ExecuteLeaf { .. } => {
+                    return Ok(None);
+                }
+                NodeType::Literal { string, .. } => {
+                    if raw_args.pop() != Some(string) {
+                        return Ok(None);
+                    }
+                }
+                NodeType::Argument { consumer, name } => {
+                    match consumer.consume(src, server, &mut raw_args).await {
+                        Some(consumed) => {
+                            parsed_args.insert(name, consumed);
+                        }
+                        None => {
+                            return if raw_args.is_empty() {
+                                let suggestions = consumer.suggest(src, server, input).await?;
+                                Ok(suggestions)
+                            } else {
+                                Ok(None)
+                            };
+                        }, 
+                    }
+                }
+                NodeType::Require { predicate, .. } => {
+                    if !predicate(src) {
+                        return Ok(None);
+                    }
+                }
+            }
+        }
+
+        Ok(None)
     }
 
     /// Register a command with the dispatcher.

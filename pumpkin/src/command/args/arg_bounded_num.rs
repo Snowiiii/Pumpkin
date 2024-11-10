@@ -2,7 +2,7 @@ use core::f64;
 use std::str::FromStr;
 
 use async_trait::async_trait;
-use pumpkin_protocol::client::play::ProtoCmdArgParser;
+use pumpkin_protocol::client::play::{CommandSuggestion, ProtoCmdArgParser};
 
 use crate::command::dispatcher::InvalidTreeError;
 use crate::command::tree::RawArgs;
@@ -45,6 +45,15 @@ where
         }
 
         Some(Arg::Num(Ok(x.to_number())))
+    }
+
+    async fn suggest<'a>(
+        &self,
+        _sender: &CommandSender<'a>,
+        _server: &'a Server,
+        _input: &'a str,
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
+        Ok(None)
     }
 }
 

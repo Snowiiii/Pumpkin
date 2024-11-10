@@ -125,7 +125,7 @@ impl<'a> ProtoNode<'a> {
 }
 
 /// see https://wiki.vg/Command_Data for meaning of flags/enums/etc.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ProtoCmdArgParser<'a> {
     Bool,
     Float { min: Option<f32>, max: Option<f32> },
@@ -161,6 +161,8 @@ pub enum ProtoCmdArgParser<'a> {
     Swizzle,
     Team,
     ItemSlot,
+    /// missing on wiki.vg but might be some kind of container slot?
+    ContainerSlot,
     ResourceLocation,
     Function,
     EntityAnchor,
@@ -229,33 +231,34 @@ impl<'a> ProtoCmdArgParser<'a> {
             Self::Swizzle => bytebuf.put_var_int(&31.into()),
             Self::Team => bytebuf.put_var_int(&32.into()),
             Self::ItemSlot => bytebuf.put_var_int(&33.into()),
-            Self::ResourceLocation => bytebuf.put_var_int(&34.into()),
-            Self::Function => bytebuf.put_var_int(&35.into()),
-            Self::EntityAnchor => bytebuf.put_var_int(&36.into()),
-            Self::IntRange => bytebuf.put_var_int(&37.into()),
-            Self::FloatRange => bytebuf.put_var_int(&38.into()),
-            Self::Dimension => bytebuf.put_var_int(&39.into()),
-            Self::Gamemode => bytebuf.put_var_int(&40.into()),
+            Self::ContainerSlot => bytebuf.put_var_int(&34.into()),
+            Self::ResourceLocation => bytebuf.put_var_int(&35.into()),
+            Self::Function => bytebuf.put_var_int(&36.into()),
+            Self::EntityAnchor => bytebuf.put_var_int(&37.into()),
+            Self::IntRange => bytebuf.put_var_int(&38.into()),
+            Self::FloatRange => bytebuf.put_var_int(&39.into()),
+            Self::Dimension => bytebuf.put_var_int(&40.into()),
+            Self::Gamemode => bytebuf.put_var_int(&41.into()),
             Self::Time { min } => {
-                bytebuf.put_var_int(&41.into());
+                bytebuf.put_var_int(&42.into());
                 bytebuf.put_i32(*min);
             }
             Self::ResourceOrTag { identifier } => {
-                Self::write_with_identifier(&42.into(), identifier, bytebuf)
-            }
-            Self::ResourceOrTagKey { identifier } => {
                 Self::write_with_identifier(&43.into(), identifier, bytebuf)
             }
-            Self::Resource { identifier } => {
+            Self::ResourceOrTagKey { identifier } => {
                 Self::write_with_identifier(&44.into(), identifier, bytebuf)
             }
-            Self::ResourceKey { identifier } => {
+            Self::Resource { identifier } => {
                 Self::write_with_identifier(&45.into(), identifier, bytebuf)
             }
-            Self::TemplateMirror => bytebuf.put_var_int(&46.into()),
-            Self::TemplateRotation => bytebuf.put_var_int(&47.into()),
-            Self::Heightmap => bytebuf.put_var_int(&48.into()),
-            Self::Uuid => bytebuf.put_var_int(&49.into()),
+            Self::ResourceKey { identifier } => {
+                Self::write_with_identifier(&46.into(), identifier, bytebuf)
+            }
+            Self::TemplateMirror => bytebuf.put_var_int(&47.into()),
+            Self::TemplateRotation => bytebuf.put_var_int(&48.into()),
+            Self::Heightmap => bytebuf.put_var_int(&49.into()),
+            Self::Uuid => bytebuf.put_var_int(&50.into()),
         }
     }
 

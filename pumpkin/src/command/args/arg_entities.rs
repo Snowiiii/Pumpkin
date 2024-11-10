@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use pumpkin_protocol::client::play::{ProtoCmdArgParser, ProtoCmdArgSuggestionType};
+use pumpkin_protocol::client::play::{CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType, StringProtoArgBehavior};
 
 use crate::command::dispatcher::InvalidTreeError;
 use crate::command::tree::RawArgs;
@@ -20,11 +20,14 @@ pub(crate) struct EntitiesArgumentConsumer;
 
 impl GetClientSideArgParser for EntitiesArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {
-        ProtoCmdArgParser::Entity { flags: 0 }
+        ProtoCmdArgParser::String(StringProtoArgBehavior::SingleWord)
+
+        // todo: investigate why this does not accept target selectors 
+        //ProtoCmdArgParser::Entity { flags: 0 }
     }
 
     fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
-        None
+        Some(ProtoCmdArgSuggestionType::AskServer)
     }
 }
 
@@ -36,10 +39,21 @@ impl ArgumentConsumer for EntitiesArgumentConsumer {
         server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
+        // todo
         match PlayersArgumentConsumer.consume(src, server, args).await {
             Some(Arg::Players(p)) => Some(Arg::Entities(p)),
             _ => None,
         }
+    }
+
+    async fn suggest<'a>(
+        &self,
+        sender: &CommandSender<'a>,
+        server: &'a Server,
+        input: &'a str,
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
+        // todo
+        PlayersArgumentConsumer.suggest(sender, server, input).await
     }
 }
 

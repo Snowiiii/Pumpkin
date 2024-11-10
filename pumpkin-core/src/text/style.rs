@@ -6,7 +6,7 @@ use super::{
     hover::HoverEvent,
 };
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq, Hash)]
 pub struct Style<'a> {
     /// Changes the color to render the content
     #[serde(default, skip_serializing_if = "Option::is_none")]

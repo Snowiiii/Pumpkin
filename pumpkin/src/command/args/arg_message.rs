@@ -1,6 +1,9 @@
+use std::borrow::Cow;
+
 use async_trait::async_trait;
+use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::client::play::{
-    ProtoCmdArgParser, ProtoCmdArgSuggestionType, StringProtoArgBehavior,
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType, StringProtoArgBehavior
 };
 
 use crate::{command::dispatcher::InvalidTreeError, server::Server};
@@ -9,8 +12,7 @@ use super::{
     super::{
         args::{ArgumentConsumer, RawArgs},
         CommandSender,
-    },
-    Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser,
+    }, Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser
 };
 
 /// Consumes all remaining words/args. Does not consume if there is no word.
@@ -42,6 +44,15 @@ impl ArgumentConsumer for MsgArgConsumer {
         }
 
         Some(Arg::Msg(msg))
+    }
+
+    async fn suggest<'a>(
+        &self,
+        _sender: &CommandSender<'a>,
+        _server: &'a Server,
+        _input: &'a str,
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
+        Ok(None)
     }
 }
 

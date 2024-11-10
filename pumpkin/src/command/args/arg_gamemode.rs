@@ -1,10 +1,10 @@
-use std::str::FromStr;
+use std::{borrow::Cow, str::FromStr};
 
 use async_trait::async_trait;
 use num_traits::FromPrimitive;
-use pumpkin_core::GameMode;
+use pumpkin_core::{text::TextComponent, GameMode};
 use pumpkin_protocol::client::play::{
-    ProtoCmdArgParser, ProtoCmdArgSuggestionType, StringProtoArgBehavior,
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType, StringProtoArgBehavior
 };
 
 use crate::{
@@ -12,7 +12,7 @@ use crate::{
     server::Server,
 };
 
-use super::{Arg, ArgumentConsumer, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
+use super::{Arg, ArgumentConsumer, DefaultNameArgConsumer, FindArg, GetClientSideArgParser, SplitSingleWhitespaceIncludingEmptyParts};
 
 pub(crate) struct GamemodeArgumentConsumer;
 
@@ -47,6 +47,25 @@ impl ArgumentConsumer for GamemodeArgumentConsumer {
             Err(_) | Ok(GameMode::Undefined) => None,
             Ok(gamemode) => Some(Arg::GameMode(gamemode)),
         }
+    }
+
+    async fn suggest<'a>(
+        &self,
+        _sender: &CommandSender<'a>,
+        _server: &'a Server,
+        input: &'a str,
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
+
+        let Some(input) = input.split_single_whitespace_including_empty_parts().last() else {
+            return Ok(None);
+        };
+
+        let modes = ["0", "1", "2", "3", "survival", "creative", "adventure", "spectator"];
+        let suggestions = modes.iter()
+            .filter(|suggestion| suggestion.starts_with(input))
+            .map(|suggestion| CommandSuggestion::new(Cow::Borrowed(suggestion as &str), None))
+            .collect();
+        Ok(Some(suggestions))
     }
 }
 
