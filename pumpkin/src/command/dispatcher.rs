@@ -84,9 +84,7 @@ impl<'a> CommandDispatcher<'a> {
                     return Vec::new();
                 }
                 Ok(Some(new_suggestions)) => {
-                    dbg!(&new_suggestions);
                     suggestions.extend(new_suggestions);
-                    dbg!(&suggestions);
                 }
                 Ok(None) => {}
             }

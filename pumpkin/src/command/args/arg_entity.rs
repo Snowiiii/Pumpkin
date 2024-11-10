@@ -80,8 +80,6 @@ impl ArgumentConsumer for EntityArgumentConsumer {
         server: &'a Server,
         input: &'a str,
     ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
-        dbg!(input);
-
         let Some(input) = input.split_single_whitespace_including_empty_parts().last() else {
             return Ok(None);
         };

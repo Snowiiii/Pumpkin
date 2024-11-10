@@ -46,8 +46,6 @@ impl ArgumentConsumer for PlayersArgumentConsumer {
     ) -> Option<Arg<'a>> {
         let s = args.pop()?;
 
-        dbg!(&args);
-
         let players = match s {
             "@s" => match src {
                 CommandSender::Player(p) => Some(vec![p.clone()]),
@@ -80,8 +78,6 @@ impl ArgumentConsumer for PlayersArgumentConsumer {
         server: &'a Server,
         input: &'a str,
     ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
-        dbg!(input);
-
         let Some(input) = input.split_single_whitespace_including_empty_parts().last() else {
             return Ok(None);
         };
@@ -100,7 +96,6 @@ impl ArgumentConsumer for PlayersArgumentConsumer {
             .map(|suggestion| CommandSuggestion::new(suggestion, None))
             .collect();
 
-        dbg!(&suggestions);
         Ok(Some(suggestions))
     }
 }
