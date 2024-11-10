@@ -673,6 +673,8 @@ impl Player {
             .find_suggestions(&mut src, server, cmd)
             .await;
 
+        dbg!(&suggestions);
+
         let response = CCommandSuggestions::new(
             packet.id,
             (last_word_start + 2).into(),
