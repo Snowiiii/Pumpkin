@@ -1,6 +1,5 @@
 use super::{position::WorldPosition, vector3::Vector3};
 
-
 #[derive(Clone, Copy)]
 pub struct BoundingBox {
     pub min_x: f64,
@@ -59,10 +58,13 @@ impl BoundingBox {
         }
     }
 
-    pub fn bounding_boxes_intersect(b1: &BoundingBox, b2: &BoundingBox) -> bool {
-        b1.min_x < b2.max_x && b1.max_x > b2.min_x &&
-        b1.min_y < b2.max_y && b1.max_y > b2.min_y &&
-        b1.min_z < b2.max_z && b1.max_z > b2.min_z
+    pub fn bounding_boxes_intersect(&self, other: &BoundingBox) -> bool {
+        self.min_x < other.max_x
+            && self.max_x > other.min_x
+            && self.min_y < other.max_y
+            && self.max_y > other.min_y
+            && self.min_z < other.max_z
+            && self.max_z > other.min_z
     }
 
     pub fn squared_magnitude(&self, pos: Vector3<f64>) -> f64 {
