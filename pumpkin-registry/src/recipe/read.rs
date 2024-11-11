@@ -626,19 +626,3 @@ pub enum SmithingType {
     Trim,
     Transform,
 }
-
-#[cfg(test)]
-mod test {
-    use crate::recipe::read::Recipe;
-
-    #[test]
-    fn check_all_recipes() {
-        let time = std::time::Instant::now();
-        let test =
-            serde_json::from_str::<Vec<Recipe>>(include_str!("../../../assets/recipes.json"))
-                .unwrap();
-        dbg!(time.elapsed());
-
-        loop {}
-    }
-}

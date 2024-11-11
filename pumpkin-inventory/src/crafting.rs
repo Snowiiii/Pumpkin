@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use pumpkin_registry::{
-    flatten_3x3, IngredientSlot, IngredientType, RecipeResult, ITEM_TAGS, RECIPES,
+    flatten_3x3, get_tag_values, IngredientSlot, IngredientType, RecipeResult, TagCategory, RECIPES,
 };
 use pumpkin_world::item::item_registry::get_item;
 use pumpkin_world::item::ItemStack;
@@ -10,9 +10,7 @@ use rayon::prelude::*;
 fn check_ingredient_type(ingredient_type: &IngredientType, input: ItemStack) -> bool {
     match ingredient_type {
         IngredientType::Tag(tag) => {
-            let tag = tag.strip_prefix("minecraft:").unwrap();
-            // TODO Update item tags so we don't have to do this
-            let items = match ITEM_TAGS.get(tag) {
+            let items = match get_tag_values(TagCategory::Item, tag) {
                 Some(items) => items,
                 None => return false,
             };

@@ -15,7 +15,7 @@ pub use recipe::{
     flatten_3x3, IngredientSlot, IngredientType, Recipe, RecipeResult, RecipeType, RECIPES,
 };
 use serde::{Deserialize, Serialize};
-pub use tags::{TagType, ITEM_TAGS};
+pub use tags::{get_tag_values, TagCategory, TagType};
 use trim_material::TrimMaterial;
 use trim_pattern::TrimPattern;
 use wolf::WolfVariant;

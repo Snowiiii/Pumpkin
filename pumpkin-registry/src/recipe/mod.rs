@@ -46,6 +46,7 @@ pub static RECIPES: LazyLock<Vec<Recipe>> =
 #[cfg(test)]
 mod test {
     use super::flatten_3x3;
+    use crate::RECIPES;
 
     #[test]
     fn row_flatten() {
@@ -81,5 +82,11 @@ mod test {
         assert_eq!(flatten_3x3(input_1), output_1);
         assert_eq!(flatten_3x3(input_2), output_2);
         assert_eq!(flatten_3x3(input_3), input_3);
+    }
+
+    #[test]
+    // This makes sure that all recipes are able deserialized properly
+    fn check_parsing() {
+        assert!(!RECIPES.is_empty())
     }
 }
