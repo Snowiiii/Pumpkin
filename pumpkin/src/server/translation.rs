@@ -3,6 +3,7 @@
 use std::{
     fs::File,
     io::{BufRead, BufReader},
+    path::PathBuf,
 };
 
 use pumpkin_config::TranslationConfig;
@@ -12,6 +13,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum TranslationError {
+    #[error("File does not exist")]
+    NoFileFound,
     #[error("File cannot be opened.")]
     InvalidFile,
     #[error("Failed to read file. Error: {0}")]
@@ -25,7 +28,7 @@ pub fn translate<'a>(
     message: &'a str,
 ) -> Result<TextComponent<'a>, TranslationError> {
     if !config.enabled {
-        let path = "assets/lang/en_us";
+        let path = "assets/lang/en_us/en_us.json";
         let translations = get_translations(path, message)?;
 
         return Ok(translations);
@@ -42,17 +45,19 @@ pub fn translate<'a>(
         });
     }
 
-    let path = "assets/lang/custom";
+    let Some(path) = &config.translation_file_path else {
+        return Err(TranslationError::NoFileFound);
+    };
     let translations = get_translations(path, message)?;
 
     Ok(translations)
 }
 
-fn get_translations<'a>(
-    path: &str,
-    message: &'a str,
-) -> Result<TextComponent<'a>, TranslationError> {
-    let translation_file = File::open(path).map_err(|_| TranslationError::InvalidFile)?;
+fn get_translations(
+    path: impl Into<PathBuf>,
+    message: &str,
+) -> Result<TextComponent, TranslationError> {
+    let translation_file = File::open(path.into()).map_err(|_| TranslationError::InvalidFile)?;
     let reader = BufReader::new(translation_file);
 
     let json_results = read_translation_file(reader, message)?;
