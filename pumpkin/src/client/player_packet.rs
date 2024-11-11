@@ -15,7 +15,9 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_inventory::{InventoryError, WindowType};
-use pumpkin_protocol::server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem};
+use pumpkin_protocol::server::play::{
+    SCloseContainer, SKeepAlive, SPlayerSession, SSetPlayerGround, SUseItem,
+};
 use pumpkin_protocol::{
     client::play::{
         Animation, CAcknowledgeBlockChange, CEntityAnimation, CHeadRot, CPingResponse,
@@ -626,6 +628,8 @@ impl Player {
         // TODO: The Item was droped per drag and drop,
         Ok(())
     }
+
+    pub fn handle_player_session(&self, session: SPlayerSession) {}
 
     // TODO:
     // This function will in the future be used to keep track of if the client is in a valid state.

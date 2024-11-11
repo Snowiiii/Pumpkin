@@ -35,8 +35,8 @@ use pumpkin_protocol::{
     server::play::{
         SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SClientTickEnd,
         SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerInput,
-        SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
-        SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
+        SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SPlayerSession,
+        SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
     },
     RawPacket, ServerPacket, SoundCategory, VarInt,
 };
@@ -839,6 +839,9 @@ impl Player {
             SSetCreativeSlot::PACKET_ID => {
                 self.handle_set_creative_slot(SSetCreativeSlot::read(bytebuf)?)
                     .await?;
+            }
+            SPlayerSession::PACKET_ID => {
+                self.handle_player_session(SPlayerSession::read(bytebuf)?);
             }
             SSwingArm::PACKET_ID => {
                 self.handle_swing_arm(SSwingArm::read(bytebuf)?).await;
