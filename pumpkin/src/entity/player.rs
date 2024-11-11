@@ -371,6 +371,8 @@ impl Player {
                     sound!("minecraft:entity.player.attack.nodamage"),
                     SoundCategory::Players,
                     &pos,
+                    1.0,
+                    1.0,
                 )
                 .await;
             return;
@@ -381,6 +383,8 @@ impl Player {
                 sound!("minecraft:entity.player.hurt"),
                 SoundCategory::Players,
                 &pos,
+                1.0,
+                1.0,
             )
             .await;
 

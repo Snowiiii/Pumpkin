@@ -127,6 +127,8 @@ pub async fn player_attack_sound(pos: &Vector3<f64>, world: &World, attack_type:
                     sound!("minecraft:entity.player.attack.knockback"),
                     SoundCategory::Players,
                     pos,
+                    1.0,
+                    1.0,
                 )
                 .await;
         }
@@ -136,6 +138,8 @@ pub async fn player_attack_sound(pos: &Vector3<f64>, world: &World, attack_type:
                     sound!("minecraft:entity.player.attack.crit"),
                     SoundCategory::Players,
                     pos,
+                    1.0,
+                    1.0,
                 )
                 .await;
         }
@@ -145,6 +149,8 @@ pub async fn player_attack_sound(pos: &Vector3<f64>, world: &World, attack_type:
                     sound!("minecraft:entity.player.attack.sweep"),
                     SoundCategory::Players,
                     pos,
+                    1.0,
+                    1.0,
                 )
                 .await;
         }
@@ -154,6 +160,8 @@ pub async fn player_attack_sound(pos: &Vector3<f64>, world: &World, attack_type:
                     sound!("minecraft:entity.player.attack.strong"),
                     SoundCategory::Players,
                     pos,
+                    1.0,
+                    1.0,
                 )
                 .await;
         }
@@ -163,6 +171,8 @@ pub async fn player_attack_sound(pos: &Vector3<f64>, world: &World, attack_type:
                     sound!("minecraft:entity.player.attack.weak"),
                     SoundCategory::Players,
                     pos,
+                    1.0,
+                    1.0,
                 )
                 .await;
         }
