@@ -350,7 +350,7 @@ impl ChunkWriter for AnvilChunkFormat {
                     .as_mut()
                     .copy_from_slice(&location_entry);
 
-                end_index = other_offset + (other_size - at_size) as u64;
+                end_index = (other_offset as isize + other_size as isize - at_size as isize) as u64;
             }
         } else {
             for (offset, size) in location_table.chunks(4).filter_map(|v| {
