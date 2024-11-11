@@ -1,7 +1,7 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::server_packet;
 
 #[derive(serde::Deserialize)]
-#[packet(0x00)]
+#[server_packet("status:status_request")]
 pub struct SStatusRequest {
     // empty
 }

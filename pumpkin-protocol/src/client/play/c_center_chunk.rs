@@ -1,9 +1,9 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 
 use crate::VarInt;
 
 #[derive(serde::Serialize)]
-#[packet(0x54)]
+#[client_packet("play:set_chunk_cache_center")]
 pub struct CCenterChunk {
     pub chunk_x: VarInt,
     pub chunk_z: VarInt,

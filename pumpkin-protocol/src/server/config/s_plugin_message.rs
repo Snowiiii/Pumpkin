@@ -1,11 +1,11 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::server_packet;
 
 use crate::{
     bytebuf::{ByteBuffer, DeserializerError},
     Identifier, ServerPacket,
 };
 
-#[packet(0x02)]
+#[server_packet("configuration:custom_payload")]
 pub struct SPluginMessage {
     pub channel: Identifier,
     pub data: Vec<u8>,

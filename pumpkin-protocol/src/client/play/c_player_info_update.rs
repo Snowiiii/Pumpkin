@@ -1,10 +1,10 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 
 use crate::{bytebuf::ByteBuffer, ClientPacket, Property};
 
 use super::PlayerAction;
 
-#[packet(0x3E)]
+#[client_packet("play:player_info_update")]
 pub struct CPlayerInfoUpdate<'a> {
     pub actions: i8,
     pub players: &'a [Player<'a>],
@@ -41,6 +41,7 @@ impl<'a> ClientPacket for CPlayerInfoUpdate<'a> {
                     PlayerAction::UpdateListed(listed) => p.put_bool(*listed),
                     PlayerAction::UpdateLatency(_) => todo!(),
                     PlayerAction::UpdateDisplayName(_) => todo!(),
+                    PlayerAction::UpdateListOrder => todo!(),
                 }
             }
         });

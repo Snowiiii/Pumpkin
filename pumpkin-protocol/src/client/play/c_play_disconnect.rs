@@ -1,9 +1,10 @@
 use pumpkin_core::text::TextComponent;
-use pumpkin_macros::packet;
+
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 #[derive(Serialize)]
-#[packet(0x1D)]
+#[client_packet("play:disconnect")]
 pub struct CPlayDisconnect<'a> {
     reason: &'a TextComponent<'a>,
 }

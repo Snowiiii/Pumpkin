@@ -1,8 +1,8 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::server_packet;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-#[packet(0x21)]
+#[server_packet("play:ping_request")]
 pub struct SPlayPingRequest {
     pub payload: i64,
 }

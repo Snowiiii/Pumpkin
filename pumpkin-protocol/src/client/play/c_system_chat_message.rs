@@ -1,9 +1,10 @@
 use pumpkin_core::text::TextComponent;
-use pumpkin_macros::packet;
+
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 #[derive(Serialize)]
-#[packet(0x6C)]
+#[client_packet("play:system_chat")]
 pub struct CSystemChatMessage<'a> {
     content: &'a TextComponent<'a>,
     overlay: bool,

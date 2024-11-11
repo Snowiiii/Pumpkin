@@ -1,7 +1,7 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::server_packet;
 
 #[derive(serde::Deserialize)]
-#[packet(0x04)]
+#[server_packet("play:chat_command")]
 pub struct SChatCommand {
     pub command: String,
 }

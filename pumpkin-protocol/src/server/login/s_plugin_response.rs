@@ -1,12 +1,11 @@
-use bytes::BytesMut;
-use pumpkin_macros::packet;
-
 use crate::{
     bytebuf::{ByteBuffer, DeserializerError},
     ServerPacket, VarInt,
 };
+use bytes::BytesMut;
+use pumpkin_macros::server_packet;
 
-#[packet(0x02)]
+#[server_packet("login:custom_query_answer")]
 pub struct SLoginPluginResponse {
     pub message_id: VarInt,
     pub data: Option<BytesMut>,

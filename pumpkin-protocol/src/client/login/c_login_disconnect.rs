@@ -1,8 +1,8 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 #[derive(Serialize)]
-#[packet(0x00)]
+#[client_packet("login:login_disconnect")]
 pub struct CLoginDisconnect<'a> {
     json_reason: &'a str,
 }

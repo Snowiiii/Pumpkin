@@ -1,7 +1,7 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::server_packet;
 
 #[derive(serde::Deserialize)]
-#[packet(0x1B)]
+#[server_packet("play:move_player_pos_rot")]
 pub struct SPlayerPositionRotation {
     pub x: f64,
     pub feet_y: f64,

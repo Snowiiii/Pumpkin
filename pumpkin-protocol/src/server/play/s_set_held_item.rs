@@ -1,8 +1,8 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::server_packet;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-#[packet(0x2F)]
+#[server_packet("play:set_carried_item")]
 pub struct SSetHeldItem {
     pub slot: i16,
 }

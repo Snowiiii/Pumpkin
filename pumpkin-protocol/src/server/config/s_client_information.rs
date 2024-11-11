@@ -1,9 +1,9 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::server_packet;
 
 use crate::VarInt;
 
 #[derive(serde::Deserialize)]
-#[packet(0x00)]
+#[server_packet("configuration:client_information")]
 pub struct SClientInformationConfig {
     pub locale: String, // 16
     pub view_distance: i8,

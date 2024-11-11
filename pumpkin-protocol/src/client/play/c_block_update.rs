@@ -1,11 +1,12 @@
 use pumpkin_core::math::position::WorldPosition;
-use pumpkin_macros::packet;
+
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
 #[derive(Serialize)]
-#[packet(0x09)]
+#[client_packet("play:block_update")]
 pub struct CBlockUpdate<'a> {
     location: &'a WorldPosition,
     block_id: VarInt,

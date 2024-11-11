@@ -1,7 +1,7 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 
 #[derive(serde::Serialize)]
-#[packet(0x03)]
+#[client_packet("configuration:finish_configuration")]
 pub struct CFinishConfig {}
 
 impl Default for CFinishConfig {

@@ -1,8 +1,8 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 #[derive(Serialize)]
-#[packet(0x53)]
+#[client_packet("play:set_held_slot")]
 pub struct CSetHeldItem {
     slot: i8,
 }

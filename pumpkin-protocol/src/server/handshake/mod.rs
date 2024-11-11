@@ -1,11 +1,11 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::server_packet;
 
 use crate::{
     bytebuf::{ByteBuffer, DeserializerError},
     ConnectionState, ServerPacket, VarInt,
 };
 
-#[packet(0x00)]
+#[server_packet("handshake:intention")]
 pub struct SHandShake {
     pub protocol_version: VarInt,
     pub server_address: String, // 255

@@ -1,5 +1,5 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::server_packet;
 
 #[derive(serde::Deserialize)]
-#[packet(0x03)]
+#[server_packet("configuration:finish_configuration")]
 pub struct SAcknowledgeFinishConfig {}

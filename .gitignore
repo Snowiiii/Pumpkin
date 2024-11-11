@@ -7,6 +7,9 @@
 # Icon must end with two \r
 Icon
 
+# Intellij IDEA
+.idea
+
 # Thumbnails
 ._*
 
@@ -38,6 +41,30 @@ Temporary Items
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
+
+## Java/Gradle Stuff
+.gradle
+**/build/
+!src/**/build/
+.kotlin
+
+# Ignore Gradle GUI config
+gradle-app.setting
+
+# Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
+!gradle-wrapper.jar
+
+# Avoid ignore Gradle wrappper properties
+!gradle-wrapper.properties
+
+# Cache of project
+.gradletasknamecache
+
+# Eclipse Gradle plugin generated files
+# Eclipse Core
+.project
+# JDT-specific (Eclipse Java Development Tools)
+.classpath
 
 # Package Files #
 *.jar
@@ -93,3 +120,5 @@ features.toml
 docs/.vitepress/dist
 docs/.vitepress/cache
 node_modules
+
+run/

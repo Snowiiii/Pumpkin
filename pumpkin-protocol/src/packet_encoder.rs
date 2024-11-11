@@ -3,13 +3,14 @@ use std::io::Write;
 use aes::cipher::{generic_array::GenericArray, BlockEncryptMut, BlockSizeUser, KeyIvInit};
 use bytes::{BufMut, BytesMut};
 use pumpkin_config::compression::CompressionInfo;
+use thiserror::Error;
 
 use std::io::Read;
 
 use flate2::bufread::ZlibEncoder;
 use flate2::Compression;
 
-use crate::{bytebuf::ByteBuffer, ClientPacket, PacketError, VarInt, MAX_PACKET_SIZE};
+use crate::{bytebuf::ByteBuffer, ClientPacket, VarInt, MAX_PACKET_SIZE};
 
 type Cipher = cfb8::Encryptor<aes::Aes128>;
 
@@ -25,19 +26,19 @@ pub struct PacketEncoder {
 }
 
 impl PacketEncoder {
-    pub fn append_packet<P: ClientPacket>(&mut self, packet: &P) -> Result<(), PacketError> {
+    pub fn append_packet<P: ClientPacket>(&mut self, packet: &P) -> Result<(), PacketEncodeError> {
         let start_len = self.buf.len();
         let mut writer = (&mut self.buf).writer();
 
         let mut packet_buf = ByteBuffer::empty();
         VarInt(P::PACKET_ID)
             .encode(&mut writer)
-            .map_err(|_| PacketError::EncodeID)?;
+            .map_err(|_| PacketEncodeError::EncodeID)?;
         packet.write(&mut packet_buf);
 
         writer
             .write(packet_buf.buf())
-            .map_err(|_| PacketError::EncodeFailedWrite)?;
+            .map_err(|_| PacketEncodeError::EncodeFailedWrite)?;
 
         let data_len = self.buf.len() - start_len;
 
@@ -53,7 +54,7 @@ impl PacketEncoder {
                 let packet_len = data_len_size + z.read_to_end(&mut self.compress_buf).unwrap();
 
                 if packet_len >= MAX_PACKET_SIZE as usize {
-                    Err(PacketError::TooLong)?
+                    Err(PacketEncodeError::TooLong)?
                 }
 
                 drop(z);
@@ -64,17 +65,17 @@ impl PacketEncoder {
 
                 VarInt(packet_len as i32)
                     .encode(&mut writer)
-                    .map_err(|_| PacketError::EncodeLength)?;
+                    .map_err(|_| PacketEncodeError::EncodeLength)?;
                 VarInt(data_len as i32)
                     .encode(&mut writer)
-                    .map_err(|_| PacketError::EncodeData)?;
+                    .map_err(|_| PacketEncodeError::EncodeData)?;
                 self.buf.extend_from_slice(&self.compress_buf);
             } else {
                 let data_len_size = 1;
                 let packet_len = data_len_size + data_len;
 
                 if packet_len >= MAX_PACKET_SIZE as usize {
-                    Err(PacketError::TooLong)?
+                    Err(PacketEncodeError::TooLong)?
                 }
 
                 let packet_len_size = VarInt(packet_len as i32).written_size();
@@ -89,11 +90,11 @@ impl PacketEncoder {
 
                 VarInt(packet_len as i32)
                     .encode(&mut front)
-                    .map_err(|_| PacketError::EncodeLength)?;
+                    .map_err(|_| PacketEncodeError::EncodeLength)?;
                 // Zero for no compression on this packet.
                 VarInt(0)
                     .encode(front)
-                    .map_err(|_| PacketError::EncodeData)?;
+                    .map_err(|_| PacketEncodeError::EncodeData)?;
             }
 
             return Ok(());
@@ -102,7 +103,7 @@ impl PacketEncoder {
         let packet_len = data_len;
 
         if packet_len >= MAX_PACKET_SIZE as usize {
-            Err(PacketError::TooLong)?
+            Err(PacketEncodeError::TooLong)?
         }
 
         let packet_len_size = VarInt(packet_len as i32).written_size();
@@ -114,7 +115,7 @@ impl PacketEncoder {
         let front = &mut self.buf[start_len..];
         VarInt(packet_len as i32)
             .encode(front)
-            .map_err(|_| PacketError::EncodeID)?;
+            .map_err(|_| PacketEncodeError::EncodeID)?;
         Ok(())
     }
 
@@ -144,5 +145,26 @@ impl PacketEncoder {
         }
 
         self.buf.split()
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum PacketEncodeError {
+    #[error("failed to encode packet ID")]
+    EncodeID,
+    #[error("failed to encode packet Length")]
+    EncodeLength,
+    #[error("failed to encode packet data")]
+    EncodeData,
+    #[error("failed to write encoded packet")]
+    EncodeFailedWrite,
+    #[error("packet exceeds maximum length")]
+    TooLong,
+}
+
+impl PacketEncodeError {
+    pub fn kickable(&self) -> bool {
+        // We no longer have a connection, so dont try to kick the player, just close
+        !matches!(self, Self::EncodeData | Self::EncodeFailedWrite)
     }
 }

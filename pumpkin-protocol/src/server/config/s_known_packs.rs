@@ -1,9 +1,9 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::server_packet;
 
 use crate::VarInt;
 
 #[derive(serde::Deserialize)]
-#[packet(0x07)]
+#[server_packet("configuration:select_known_packs")]
 pub struct SKnownPacks {
     pub known_pack_count: VarInt,
     // known_packs: &'a [KnownPack]

@@ -1,8 +1,8 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 #[derive(Serialize)]
-#[packet(0x38)]
+#[client_packet("play:player_abilities")]
 pub struct CPlayerAbilities {
     flags: i8,
     flying_speed: f32,

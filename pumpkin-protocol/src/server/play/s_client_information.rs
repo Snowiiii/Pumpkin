@@ -1,9 +1,9 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::server_packet;
 
 use crate::VarInt;
 
 #[derive(serde::Deserialize)]
-#[packet(0x0A)]
+#[server_packet("play:client_information")]
 pub struct SClientInformationPlay {
     pub locale: String, // 16
     pub view_distance: i8,

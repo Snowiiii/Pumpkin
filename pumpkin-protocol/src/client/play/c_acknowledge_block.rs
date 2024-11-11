@@ -1,10 +1,10 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 use crate::VarInt;
 
 #[derive(Serialize)]
-#[packet(0x05)]
+#[client_packet("play:block_changed_ack")]
 pub struct CAcknowledgeBlockChange {
     sequence_id: VarInt,
 }

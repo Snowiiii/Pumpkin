@@ -1,7 +1,7 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::client_packet;
 
 #[derive(serde::Serialize)]
-#[packet(0x02)]
+#[client_packet("configuration:disconnect")]
 pub struct CConfigDisconnect<'a> {
     reason: &'a str,
 }

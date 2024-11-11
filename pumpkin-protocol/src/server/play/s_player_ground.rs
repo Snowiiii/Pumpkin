@@ -1,8 +1,8 @@
-use pumpkin_macros::packet;
+use pumpkin_macros::server_packet;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-#[packet(0x1D)]
+#[server_packet("play:move_player_status_only")]
 pub struct SSetPlayerGround {
     pub on_ground: bool,
 }
