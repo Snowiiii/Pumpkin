@@ -4,7 +4,7 @@ use pumpkin_core::text::{color::NamedColor, TextComponent};
 use crate::command::{
     args::{arg_message::MsgArgConsumer, arg_players::PlayersArgumentConsumer, Arg, ConsumedArgs},
     tree::CommandTree,
-    tree_builder::{argument, require},
+    tree_builder::argument,
     CommandExecutor, CommandSender, InvalidTreeError,
 };
 use InvalidTreeError::InvalidConsumptionError;
@@ -63,9 +63,7 @@ impl CommandExecutor for MsgExecutor {
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| sender.permission_lvl() >= 2).with_child(
-            argument(ARG_TARGET, &PlayersArgumentConsumer)
-                .with_child(argument(ARG_MESSAGE, &MsgArgConsumer).execute(&MsgExecutor)),
-        ),
+        argument(ARG_TARGET, &PlayersArgumentConsumer)
+            .with_child(argument(ARG_MESSAGE, &MsgArgConsumer).execute(&MsgExecutor)),
     )
 }
