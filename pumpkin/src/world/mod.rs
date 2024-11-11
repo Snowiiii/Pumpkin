@@ -147,15 +147,15 @@ impl World {
         &self,
         sound_id: u16,
         category: SoundCategory,
-        posistion: &Vector3<f64>,
+        position: &Vector3<f64>,
     ) {
         let seed = thread_rng().gen::<f64>();
         self.broadcast_packet_all(&CSoundEffect::new(
             VarInt(i32::from(sound_id)),
             category,
-            posistion.x,
-            posistion.y,
-            posistion.z,
+            position.x,
+            position.y,
+            position.z,
             1.0,
             1.0,
             seed,
