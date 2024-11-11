@@ -39,6 +39,7 @@ mod client_packet;
 pub mod combat;
 mod container;
 pub mod player_packet;
+mod signed_message;
 
 /// Represents a player's configuration settings.
 ///

@@ -102,7 +102,8 @@ impl ByteBuffer {
     pub fn get_uuid(&mut self) -> Result<uuid::Uuid, DeserializerError> {
         let mut bytes = [0u8; 16];
         self.copy_to_slice(&mut bytes)?;
-        Ok(uuid::Uuid::from_slice(&bytes).expect("Failed to parse UUID"))
+        // Prefer from_bytes instead from_slice
+        Ok(uuid::Uuid::from_bytes(bytes))
     }
 
     pub fn get_fixed_bitset(&mut self, bits: usize) -> Result<FixedBitSet, DeserializerError> {

@@ -123,6 +123,8 @@ pub struct Player {
     pub open_container: AtomicCell<Option<u64>>,
     /// The item currently being held by the player.
     pub carried_item: AtomicCell<Option<ItemStack>>,
+    // The Sessions ID send by the Player Session Packet, Used for Encrpyting Messages. Online Mode only
+    pub session_id: AtomicCell<Option<uuid::Uuid>>,
 
     /// send `send_abilties_update` when changed
     /// The player's abilities and special powers.
@@ -207,6 +209,7 @@ impl Player {
             inventory: Mutex::new(PlayerInventory::new()),
             open_container: AtomicCell::new(None),
             carried_item: AtomicCell::new(None),
+            session_id: AtomicCell::new(None),
             teleport_id_count: AtomicI32::new(0),
             abilities: Mutex::new(Abilities::default()),
             gamemode: AtomicCell::new(gamemode),
@@ -841,7 +844,8 @@ impl Player {
                     .await?;
             }
             SPlayerSession::PACKET_ID => {
-                self.handle_player_session(SPlayerSession::read(bytebuf)?);
+                self.handle_player_session(server, SPlayerSession::read(bytebuf)?)
+                    .await;
             }
             SSwingArm::PACKET_ID => {
                 self.handle_swing_arm(SSwingArm::read(bytebuf)?).await;

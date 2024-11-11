@@ -15,9 +15,6 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_inventory::{InventoryError, WindowType};
-use pumpkin_protocol::server::play::{
-    SCloseContainer, SKeepAlive, SPlayerSession, SSetPlayerGround, SUseItem,
-};
 use pumpkin_protocol::{
     client::play::{
         Animation, CAcknowledgeBlockChange, CEntityAnimation, CHeadRot, CPingResponse,
@@ -29,6 +26,10 @@ use pumpkin_protocol::{
         SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
         SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status,
     },
+};
+use pumpkin_protocol::{
+    client::play::{CPlayerInfoUpdate, InitChat, PlayerAction},
+    server::play::{SCloseContainer, SKeepAlive, SPlayerSession, SSetPlayerGround, SUseItem},
 };
 use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
 
@@ -363,16 +364,6 @@ impl Player {
                 None,
             ))
             .await;
-
-        /* server.broadcast_packet(
-            self,
-            &CDisguisedChatMessage::new(
-                TextComponent::from(message.clone()),
-                VarInt(0),
-               gameprofile.name.clone().into(),
-                None,
-            ),
-        ) */
     }
 
     pub async fn handle_client_information(&self, client_information: SClientInformationPlay) {
@@ -629,7 +620,25 @@ impl Player {
         Ok(())
     }
 
-    pub fn handle_player_session(&self, session: SPlayerSession) {}
+    pub async fn handle_player_session(&self, server: &Server, session: SPlayerSession) {
+        dbg!("asasf");
+        // TODO: Config
+        self.session_id.store(Some(session.session_id));
+        server
+            .broadcast_packet_all(&CPlayerInfoUpdate::new(
+                0x02,
+                &[pumpkin_protocol::client::play::Player {
+                    uuid: self.gameprofile.id,
+                    actions: vec![PlayerAction::InitializeChat(Some(InitChat {
+                        session_id: session.session_id,
+                        expires_at: session.expires_at,
+                        public_key: &session.public_key,
+                        signature: &session.signature,
+                    }))],
+                }],
+            ))
+            .await;
+    }
 
     // TODO:
     // This function will in the future be used to keep track of if the client is in a valid state.

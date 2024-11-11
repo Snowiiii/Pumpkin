@@ -16,6 +16,7 @@ pub struct Player<'a> {
 }
 
 impl<'a> CPlayerInfoUpdate<'a> {
+    // TODO: Make actions an enum
     pub fn new(actions: i8, players: &'a [Player]) -> Self {
         Self { actions, players }
     }
@@ -36,7 +37,16 @@ impl<'a> ClientPacket for CPlayerInfoUpdate<'a> {
                             p.put_option(&v.signature, |p, v| p.put_string(v));
                         });
                     }
-                    PlayerAction::InitializeChat(_) => todo!(),
+                    PlayerAction::InitializeChat(init_chat) => {
+                        p.put_option(&init_chat, |p, v| {
+                            p.put_uuid(&v.session_id);
+                            p.put_i64(v.expires_at);
+                            p.put_var_int(&v.public_key.len().into());
+                            p.put_slice(&v.public_key);
+                            p.put_var_int(&v.signature.len().into());
+                            p.put_slice(&v.signature);
+                        });
+                    }
                     PlayerAction::UpdateGameMode(gamemode) => p.put_var_int(gamemode),
                     PlayerAction::UpdateListed(listed) => p.put_bool(*listed),
                     PlayerAction::UpdateLatency(_) => todo!(),
