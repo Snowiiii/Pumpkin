@@ -1,3 +1,4 @@
+pub mod cmd_clear;
 pub mod cmd_echest;
 pub mod cmd_gamemode;
 pub mod cmd_give;

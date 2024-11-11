@@ -9,7 +9,7 @@ use crate::{
     server::CURRENT_MC_VERSION,
 };
 
-const NAMES: [&str; 1] = ["pumpkin"];
+const NAMES: [&str; 2] = ["pumpkin", "version"];
 
 const DESCRIPTION: &str = "Display information about Pumpkin.";
 
