@@ -2,6 +2,7 @@ use crate::container_click::MouseClick;
 use crate::crafting::check_if_matches_crafting;
 use crate::{handle_item_change, Container, InventoryError, WindowType};
 use pumpkin_world::item::ItemStack;
+use std::iter::Chain;
 use std::slice::IterMut;
 
 pub struct PlayerInventory {
@@ -143,6 +144,13 @@ impl PlayerInventory {
 
     pub fn iter_items_mut(&mut self) -> IterMut<Option<ItemStack>> {
         self.items.iter_mut()
+    }
+
+    pub fn slots_with_hotbar_first(
+        &mut self,
+    ) -> Chain<IterMut<Option<ItemStack>>, IterMut<Option<ItemStack>>> {
+        let (items, hotbar) = self.items.split_at_mut(27);
+        hotbar.iter_mut().chain(items)
     }
 }
 

@@ -16,6 +16,7 @@ use pumpkin_protocol::client::play::{
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
 use pumpkin_protocol::VarInt;
+use pumpkin_world::item::item_registry::Item;
 use pumpkin_world::item::ItemStack;
 use std::sync::Arc;
 
@@ -543,5 +544,75 @@ impl Player {
             Some(id) => server.try_get_container(self.entity_id(), id).await,
             None => None,
         }
+    }
+
+    /// Add items to inventory if there's space, else drop them to the ground.
+    ///
+    /// This method automatically syncs changes with the client.
+    pub async fn give_items(
+        &self,
+        server: &Server,
+        item: &Item,
+        mut amount: u32,
+    ) -> Result<(), InventoryError> {
+        let mut inventory = self.inventory.lock().await;
+        let mut slots = inventory.slots_with_hotbar_first();
+        let max_stack = item.max_stack as u8;
+
+        let matching_slots = slots.by_ref().filter_map(|slot| {
+            if let Some(item_slot) = slot.as_ref() {
+                if item_slot.item_id == item.id && max_stack < item_slot.item_count {
+                    let item_count = item_slot.item_count;
+                    Some((slot, item_count))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        });
+
+        for (slot, item_count) in matching_slots {
+            if amount == 0 {
+                return Ok(());
+            }
+            let amount_to_add = max_stack - item_count;
+            if let Some(amount_left) = amount.checked_sub(u32::from(amount_to_add)) {
+                amount = amount_left;
+                *slot = Some(ItemStack {
+                    item_id: item.id,
+                    item_count: item.max_stack as u8,
+                });
+            } else {
+                *slot = Some(ItemStack {
+                    item_id: item.id,
+                    item_count: max_stack - (amount_to_add - amount as u8),
+                });
+                return Ok(());
+            }
+        }
+
+        let empty_slots = slots.filter(|slot| slot.is_none());
+        for slot in empty_slots {
+            if amount == 0 {
+                return Ok(());
+            }
+            if let Some(remaining_amount) = amount.checked_sub(u32::from(max_stack)) {
+                amount = remaining_amount;
+                *slot = Some(ItemStack {
+                    item_id: item.id,
+                    item_count: max_stack,
+                });
+            } else {
+                *slot = Some(ItemStack {
+                    item_id: item.id,
+                    item_count: amount as u8,
+                });
+                return Ok(());
+            }
+        }
+        self.send_whole_container_change(server).await?;
+        log::warn!("{amount} items ({}) were discarded because dropping them to the ground is not implemented", item.name);
+        Ok(())
     }
 }

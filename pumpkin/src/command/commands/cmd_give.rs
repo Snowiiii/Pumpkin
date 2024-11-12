@@ -27,7 +27,7 @@ impl CommandExecutor for GiveExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let targets = PlayersArgumentConsumer.find_arg_default_name(args)?;
@@ -59,7 +59,10 @@ impl CommandExecutor for GiveExecutor {
         };
 
         for target in targets {
-            target.give_items(item, item_count).await;
+            target
+                .give_items(server, item, item_count)
+                .await
+                .map_err(|e| CommandError::OtherPumpkin(Box::new(e)))?;
         }
 
         sender
