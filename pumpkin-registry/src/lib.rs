@@ -11,7 +11,11 @@ use instrument::Instrument;
 use jukebox_song::JukeboxSong;
 use paint::Painting;
 use pumpkin_protocol::client::config::RegistryEntry;
+pub use recipe::{
+    flatten_3x3, IngredientSlot, IngredientType, Recipe, RecipeResult, RecipeType, RECIPES,
+};
 use serde::{Deserialize, Serialize};
+pub use tags::{get_tag_values, TagCategory, TagType};
 use trim_material::TrimMaterial;
 use trim_pattern::TrimPattern;
 use wolf::WolfVariant;
@@ -25,6 +29,8 @@ mod enchantment;
 mod instrument;
 mod jukebox_song;
 mod paint;
+mod recipe;
+mod tags;
 mod trim_material;
 mod trim_pattern;
 mod wolf;

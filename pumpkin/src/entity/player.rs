@@ -13,7 +13,12 @@ use itertools::Itertools;
 use num_derive::FromPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::{
-    math::{boundingbox::BoundingBox, position::WorldPosition, vector2::Vector2, vector3::Vector3},
+    math::{
+        boundingbox::{BoundingBox, BoundingBoxSize},
+        position::WorldPosition,
+        vector2::Vector2,
+        vector3::Vector3,
+    },
     text::TextComponent,
     GameMode,
 };
@@ -38,7 +43,7 @@ use pumpkin_protocol::{
 use tokio::sync::{Mutex, Notify};
 use tokio::task::JoinHandle;
 
-use pumpkin_protocol::server::play::SKeepAlive;
+use pumpkin_protocol::server::play::{SClickContainer, SKeepAlive};
 use pumpkin_world::{
     cylindrical_chunk_iterator::Cylindrical,
     item::{item_registry::Item, ItemStack},
@@ -177,12 +182,19 @@ impl Player {
             |profile| profile,
         );
         let config = client.config.lock().await.clone().unwrap_or_default();
+        let bounding_box_size = BoundingBoxSize {
+            width: 0.6,
+            height: 1.8,
+        };
+
         Self {
             living_entity: LivingEntity::new(Entity::new(
                 entity_id,
                 world,
                 EntityType::Player,
                 1.62,
+                AtomicCell::new(BoundingBox::new_default(&bounding_box_size)),
+                AtomicCell::new(bounding_box_size),
             )),
             config: Mutex::new(config),
             gameprofile,
@@ -820,6 +832,10 @@ impl Player {
                 self.handle_player_command(SPlayerCommand::read(bytebuf)?)
                     .await;
             }
+            SClickContainer::PACKET_ID => {
+                self.handle_click_container(server, SClickContainer::read(bytebuf)?)
+                    .await?;
+            }
             SSetHeldItem::PACKET_ID => {
                 self.handle_set_held_item(SSetHeldItem::read(bytebuf)?)
                     .await;
@@ -857,12 +873,10 @@ impl Player {
         let slot = (&*inventory.get_slot(slot_index)?).into();
 
         // Returns previous value
-        let i = inventory
-            .state_id
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        inventory.state_id += 1;
         let packet = CSetContainerSlot::new(
             PlayerInventory::CONTAINER_ID,
-            (i + 1) as i32,
+            inventory.state_id as i32,
             slot_index,
             &slot,
         );

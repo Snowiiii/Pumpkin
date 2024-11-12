@@ -5,6 +5,7 @@ use pumpkin_macros::screen;
 use pumpkin_world::item::ItemStack;
 
 pub mod container_click;
+mod crafting;
 pub mod drag_handler;
 mod error;
 mod open_container;
@@ -12,7 +13,7 @@ pub mod player;
 pub mod window_property;
 
 pub use error::InventoryError;
-pub use open_container::OpenContainer;
+pub use open_container::*;
 
 /// https://wiki.vg/Inventory
 #[derive(Debug, FromPrimitive, Clone, Copy, Eq, PartialEq)]
@@ -67,12 +68,26 @@ pub trait Container: Sync + Send {
         carried_item: &mut Option<ItemStack>,
         slot: usize,
         mouse_click: MouseClick,
+        taking_crafted: bool,
     ) -> Result<(), InventoryError> {
         let mut all_slots = self.all_slots();
         if slot > all_slots.len() {
             Err(InventoryError::InvalidSlot)?
         }
+        if taking_crafted {
+            match (all_slots[slot].as_mut(), carried_item.as_mut()) {
+                (Some(s1), Some(s2)) => {
+                    if s1.item_id == s2.item_id {
+                        handle_item_change(all_slots[slot], carried_item, mouse_click);
+                    }
+                }
+                (Some(_), None) => handle_item_change(all_slots[slot], carried_item, mouse_click),
+                (None, None) | (None, Some(_)) => (),
+            }
+            return Ok(());
+        }
         handle_item_change(carried_item, all_slots[slot], mouse_click);
+
         Ok(())
     }
 
@@ -91,6 +106,26 @@ pub trait Container: Sync + Send {
     fn internal_pumpkin_id(&self) -> u64 {
         0
     }
+
+    fn craft(&mut self) -> bool {
+        false
+    }
+
+    fn crafting_output_slot(&self) -> Option<usize> {
+        None
+    }
+
+    fn slot_in_crafting_input_slots(&self, _slot: &usize) -> bool {
+        false
+    }
+
+    fn crafted_item_slot(&self) -> Option<ItemStack> {
+        self.all_slots_ref()
+            .get(self.crafting_output_slot()?)?
+            .copied()
+    }
+
+    fn recipe_used(&mut self) {}
 }
 
 pub fn handle_item_take(
@@ -234,6 +269,38 @@ impl<'a> Container for OptionallyCombinedContainer<'a, 'a> {
                 slots
             }
             None => self.inventory.all_slots_ref(),
+        }
+    }
+
+    fn craft(&mut self) -> bool {
+        match &mut self.container {
+            Some(container) => container.craft(),
+            None => self.inventory.craft(),
+        }
+    }
+
+    fn crafting_output_slot(&self) -> Option<usize> {
+        match &self.container {
+            Some(container) => container.crafting_output_slot(),
+            None => self.inventory.crafting_output_slot(),
+        }
+    }
+
+    fn slot_in_crafting_input_slots(&self, slot: &usize) -> bool {
+        match &self.container {
+            Some(container) => {
+                // We don't have to worry about length due to inventory crafting slots being inaccessible
+                // while inside container interfaces
+                container.slot_in_crafting_input_slots(slot)
+            }
+            None => self.inventory.slot_in_crafting_input_slots(slot),
+        }
+    }
+
+    fn recipe_used(&mut self) {
+        match &mut self.container {
+            Some(container) => container.recipe_used(),
+            None => self.inventory.recipe_used(),
         }
     }
 }
