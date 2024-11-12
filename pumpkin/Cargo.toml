@@ -5,6 +5,7 @@ description = "Empowering everyone to host fast and efficient Minecraft servers.
 edition = "2021"
 
 [package.metadata.winresource]
+# FileDescription is handled as the Program name by Windows!
 FileDescription = "Pumpkin"
 OriginalFilename = "pumpkin.exe"
 LegalCopyright = "Copyright © 2024 Aleksander Medvedev"
