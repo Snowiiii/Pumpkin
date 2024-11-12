@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use pumpkin_inventory::{CraftingTable, OpenContainer, WindowType};
 
 use crate::command::{
-    args::ConsumedArgs, tree::CommandTree, CommandExecutor, CommandSender, InvalidTreeError,
+    args::ConsumedArgs, tree::CommandTree, CommandError, CommandExecutor, CommandSender,
 };
 const NAMES: [&str; 1] = ["craft"];
 
@@ -17,7 +17,7 @@ impl CommandExecutor for CraftingTableExecutor {
         sender: &mut CommandSender<'a>,
         server: &crate::server::Server,
         _args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         if let Some(player) = sender.as_player() {
             let entity_id = player.entity_id();
             player.open_container.store(Some(1));

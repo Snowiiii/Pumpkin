@@ -9,7 +9,7 @@ use crate::command::args::arg_players::PlayersArgumentConsumer;
 use crate::command::args::{ConsumedArgs, FindArg, FindArgDefaultName};
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, argument_default_name, require};
-use crate::command::{CommandExecutor, CommandSender, InvalidTreeError};
+use crate::command::{CommandError, CommandExecutor, CommandSender};
 
 const NAMES: [&str; 1] = ["give"];
 
@@ -29,7 +29,7 @@ impl CommandExecutor for GiveExecutor {
         sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let targets = PlayersArgumentConsumer.find_arg_default_name(args)?;
 
         let item_name = ItemArgumentConsumer::find_arg(args, ARG_ITEM)?;

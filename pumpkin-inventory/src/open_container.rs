@@ -104,6 +104,14 @@ impl Container for CraftingTable {
         slots
     }
 
+    fn all_combinable_slots(&self) -> Vec<Option<&ItemStack>> {
+        self.input.iter().flatten().map(|s| s.as_ref()).collect()
+    }
+
+    fn all_combinable_slots_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
+        self.input.iter_mut().flatten().collect()
+    }
+
     fn craft(&mut self) -> bool {
         let old_output = self.output;
         self.output = check_if_matches_crafting(self.input);
@@ -119,7 +127,6 @@ impl Container for CraftingTable {
     fn slot_in_crafting_input_slots(&self, slot: &usize) -> bool {
         (1..10).contains(slot)
     }
-
     fn recipe_used(&mut self) {
         self.input.iter_mut().flatten().for_each(|slot| {
             if let Some(item) = slot {
@@ -130,12 +137,5 @@ impl Container for CraftingTable {
                 }
             }
         })
-    }
-
-    fn all_combinable_slots(&self) -> Vec<Option<&ItemStack>> {
-        self.input.iter().flatten().map(|s| s.as_ref()).collect()
-    }
-    fn all_combinable_slots_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
-        self.input.iter_mut().flatten().collect()
     }
 }

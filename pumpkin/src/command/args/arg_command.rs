@@ -2,7 +2,7 @@ use async_trait::async_trait;
 
 use crate::{
     command::{
-        dispatcher::InvalidTreeError,
+        dispatcher::CommandError,
         tree::{CommandTree, RawArgs},
         CommandSender,
     },
@@ -44,15 +44,10 @@ impl DefaultNameArgConsumer for CommandTreeArgumentConsumer {
 impl<'a> FindArg<'a> for CommandTreeArgumentConsumer {
     type Data = &'a CommandTree<'a>;
 
-    fn find_arg(
-        args: &'a super::ConsumedArgs,
-        name: &'a str,
-    ) -> Result<Self::Data, InvalidTreeError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::CommandTree(tree)) => Ok(tree),
-            _ => Err(InvalidTreeError::InvalidConsumptionError(Some(
-                name.to_string(),
-            ))),
+            _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),
         }
     }
 }

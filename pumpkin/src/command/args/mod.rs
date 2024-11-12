@@ -10,7 +10,7 @@ use pumpkin_core::{
 use crate::{entity::player::Player, server::Server};
 
 use super::{
-    dispatcher::InvalidTreeError,
+    dispatcher::CommandError,
     tree::{CommandTree, RawArgs},
     CommandSender,
 };
@@ -80,15 +80,15 @@ impl<K: Eq + Hash, V: Clone> GetCloned<K, V> for HashMap<K, V> {
 pub(crate) trait FindArg<'a> {
     type Data;
 
-    fn find_arg(args: &'a ConsumedArgs, name: &'a str) -> Result<Self::Data, InvalidTreeError>;
+    fn find_arg(args: &'a ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError>;
 }
 
 pub(crate) trait FindArgDefaultName<'a, T> {
-    fn find_arg_default_name(&self, args: &'a ConsumedArgs) -> Result<T, InvalidTreeError>;
+    fn find_arg_default_name(&self, args: &'a ConsumedArgs) -> Result<T, CommandError>;
 }
 
 impl<'a, T, C: FindArg<'a, Data = T> + DefaultNameArgConsumer> FindArgDefaultName<'a, T> for C {
-    fn find_arg_default_name(&self, args: &'a ConsumedArgs) -> Result<T, InvalidTreeError> {
+    fn find_arg_default_name(&self, args: &'a ConsumedArgs) -> Result<T, CommandError> {
         C::find_arg(args, self.default_name())
     }
 }
