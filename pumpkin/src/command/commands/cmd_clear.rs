@@ -35,28 +35,24 @@ async fn clear_player(target: &Player) -> usize {
 }
 
 fn clear_command_text_output(item_count: usize, targets: &[Arc<Player>]) -> TextComponent {
-    let target_count = targets.len();
-    if target_count == 1 {
-        let target = &targets[0];
-        if item_count == 0 {
-            TextComponent::text_string(format!(
-                "No items were found on player {}",
-                target.gameprofile.name
-            ))
-            .color_named(NamedColor::Red)
-        } else {
-            TextComponent::text_string(format!(
-                "Removed {} item(s) on player {}",
-                item_count, target.gameprofile.name
-            ))
-        }
-    } else if item_count == 0 {
-        TextComponent::text_string(format!("No items were found on {target_count} players"))
-            .color_named(NamedColor::Red)
-    } else {
-        TextComponent::text_string(format!(
-            "Removed {item_count} item(s) from {target_count} players"
+    match targets {
+        [target] if item_count == 0 => TextComponent::text_string(format!(
+            "No items were found on player {}",
+            target.gameprofile.name
         ))
+        .color_named(NamedColor::Red),
+        [target] => TextComponent::text_string(format!(
+            "Removed {} item(s) on player {}",
+            item_count, target.gameprofile.name
+        )),
+        targets if item_count == 0 => {
+            TextComponent::text_string(format!("No items were found on {} players", targets.len()))
+                .color_named(NamedColor::Red)
+        }
+        targets => TextComponent::text_string(format!(
+            "Removed {item_count} item(s) from {} players",
+            targets.len()
+        )),
     }
 }
 
