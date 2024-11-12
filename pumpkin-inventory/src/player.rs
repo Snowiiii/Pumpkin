@@ -1,9 +1,8 @@
-use std::slice::IterMut;
-use std::sync::atomic::AtomicU32;
-
 use crate::container_click::MouseClick;
+use crate::crafting::check_if_matches_crafting;
 use crate::{handle_item_change, Container, InventoryError, WindowType};
 use pumpkin_world::item::ItemStack;
+use std::slice::IterMut;
 
 pub struct PlayerInventory {
     // Main Inventory + Hotbar
@@ -14,7 +13,7 @@ pub struct PlayerInventory {
     offhand: Option<ItemStack>,
     // current selected slot in hotbar
     selected: usize,
-    pub state_id: AtomicU32,
+    pub state_id: u32,
     // Notchian server wraps this value at 100, we can just keep it as a u8 that automatically wraps
     pub total_opened_containers: i32,
 }
@@ -37,7 +36,7 @@ impl PlayerInventory {
             offhand: None,
             // TODO: What when player spawns in with an different index ?
             selected: 0,
-            state_id: AtomicU32::new(0),
+            state_id: 0,
             total_opened_containers: 2,
         }
     }
@@ -54,29 +53,23 @@ impl PlayerInventory {
     /// Useful functionality for plugins in the future.
     pub fn set_slot(
         &mut self,
-        slot: u16,
+        slot: usize,
         item: Option<ItemStack>,
         item_allowed_override: bool,
     ) -> Result<(), InventoryError> {
-        if !(0..=45).contains(&slot) {
-            return Err(InventoryError::InvalidSlot);
-        }
-
-        match item_allowed_override {
-            true => {
-                *self.all_slots()[slot as usize] = item;
+        if item_allowed_override {
+            if !(0..=45).contains(&slot) {
+                Err(InventoryError::InvalidSlot)?
             }
-            false => {
-                let slot = slot as usize;
-                let slot_condition = self.slot_condition(slot)?;
-                if let Some(item) = item {
-                    if slot_condition(&item) {
-                        self.all_slots()[slot] = &mut Some(item);
-                    }
-                }
+            *self.all_slots()[slot] = item;
+            return Ok(());
+        }
+        let slot_condition = self.slot_condition(slot)?;
+        if let Some(item) = item {
+            if slot_condition(&item) {
+                *self.all_slots()[slot] = Some(item);
             }
         }
-
         Ok(())
     }
     #[allow(clippy::type_complexity)]
@@ -168,17 +161,34 @@ impl Container for PlayerInventory {
         carried_slot: &mut Option<ItemStack>,
         slot: usize,
         mouse_click: MouseClick,
+        invert: bool,
     ) -> Result<(), InventoryError> {
         let slot_condition = self.slot_condition(slot)?;
         let item_slot = self.get_slot(slot)?;
         if let Some(item) = carried_slot {
             if slot_condition(item) {
+                if invert {
+                    handle_item_change(item_slot, carried_slot, mouse_click);
+                    return Ok(());
+                }
                 handle_item_change(carried_slot, item_slot, mouse_click);
             }
         } else {
+            if invert {
+                handle_item_change(item_slot, carried_slot, mouse_click);
+                return Ok(());
+            }
             handle_item_change(carried_slot, item_slot, mouse_click)
         }
         Ok(())
+    }
+
+    fn crafting_output_slot(&self) -> Option<usize> {
+        Some(0)
+    }
+
+    fn slot_in_crafting_input_slots(&self, slot: &usize) -> bool {
+        (1..=4).contains(slot)
     }
 
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
@@ -195,5 +205,15 @@ impl Container for PlayerInventory {
 
     fn all_combinable_slots_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
         self.items.iter_mut().collect()
+    }
+
+    fn craft(&mut self) -> bool {
+        let v1 = [self.crafting[0], self.crafting[1], None];
+        let v2 = [self.crafting[2], self.crafting[3], None];
+        let v3 = [None; 3];
+        let together = [v1, v2, v3];
+
+        self.crafting_output = check_if_matches_crafting(together);
+        self.crafting.iter().any(|s| s.is_some())
     }
 }

@@ -43,7 +43,7 @@ use pumpkin_protocol::{
 use tokio::sync::{Mutex, Notify};
 use tokio::task::JoinHandle;
 
-use pumpkin_protocol::server::play::SKeepAlive;
+use pumpkin_protocol::server::play::{SClickContainer, SKeepAlive};
 use pumpkin_world::{
     cylindrical_chunk_iterator::Cylindrical,
     item::{item_registry::Item, ItemStack},
@@ -832,6 +832,10 @@ impl Player {
                 self.handle_player_command(SPlayerCommand::read(bytebuf)?)
                     .await;
             }
+            SClickContainer::PACKET_ID => {
+                self.handle_click_container(server, SClickContainer::read(bytebuf)?)
+                    .await?;
+            }
             SSetHeldItem::PACKET_ID => {
                 self.handle_set_held_item(SSetHeldItem::read(bytebuf)?)
                     .await;
@@ -865,12 +869,10 @@ impl Player {
         let slot = (&*inventory.get_slot(slot_index)?).into();
 
         // Returns previous value
-        let i = inventory
-            .state_id
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        inventory.state_id += 1;
         let packet = CSetContainerSlot::new(
             PlayerInventory::CONTAINER_ID,
-            (i + 1) as i32,
+            inventory.state_id as i32,
             slot_index,
             &slot,
         );

@@ -234,7 +234,11 @@ impl Player {
             .await;
     }
 
-    pub async fn handle_chat_command(self: &Arc<Self>, server: &Server, command: SChatCommand) {
+    pub async fn handle_chat_command(
+        self: &Arc<Self>,
+        server: &Arc<Server>,
+        command: SChatCommand,
+    ) {
         let dispatcher = server.command_dispatcher.clone();
         dispatcher
             .handle_command(
@@ -615,15 +619,15 @@ impl Player {
         if self.gamemode.load() != GameMode::Creative {
             return Err(InventoryError::PermissionError);
         }
-        let valid_slot = packet.slot >= 1 && packet.slot <= 45;
+        let valid_slot = packet.slot >= 0 && packet.slot <= 45;
         if valid_slot {
             self.inventory.lock().await.set_slot(
-                packet.slot as u16,
+                packet.slot as usize,
                 packet.clicked_item.to_item(),
                 true,
             )?;
         };
-        // TODO: The Item was droped per drag and drop,
+        // TODO: The Item was dropped per drag and drop,
         Ok(())
     }
 
@@ -636,11 +640,9 @@ impl Player {
             return;
         };
         // window_id 0 represents both 9x1 Generic AND inventory here
-        self.inventory
-            .lock()
-            .await
-            .state_id
-            .store(0, std::sync::atomic::Ordering::Relaxed);
+        let mut inventory = self.inventory.lock().await;
+
+        inventory.state_id = 0;
         let open_container = self.open_container.load();
         if let Some(id) = open_container {
             let mut open_containers = server.open_containers.write().await;

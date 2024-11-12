@@ -18,8 +18,7 @@ use std::{
     },
     time::Duration,
 };
-use tokio::sync::Mutex;
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 
 use crate::client::EncryptionError;
 use crate::{
@@ -49,8 +48,8 @@ pub struct Server {
     pub worlds: Vec<Arc<World>>,
     /// Caches game registries for efficient access.
     pub cached_registry: Vec<Registry>,
-    pub open_containers: RwLock<HashMap<u64, OpenContainer>>,
     /// Tracks open containers used for item interactions.
+    pub open_containers: RwLock<HashMap<u64, OpenContainer>>,
     pub drag_handler: DragHandler,
     /// Assigns unique IDs to entities.
     entity_id: AtomicI32,
