@@ -16,7 +16,7 @@ use crate::{
         },
         tree::CommandTree,
         tree_builder::{argument_default_name, literal},
-        CommandExecutor, CommandSender, InvalidTreeError,
+        CommandError, CommandExecutor, CommandSender,
     },
     server::Server,
 };
@@ -34,7 +34,7 @@ impl CommandExecutor for WorldborderGetExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         _args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
@@ -60,7 +60,7 @@ impl CommandExecutor for WorldborderSetExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
@@ -109,7 +109,7 @@ impl CommandExecutor for WorldborderSetTimeExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
@@ -181,7 +181,7 @@ impl CommandExecutor for WorldborderAddExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
@@ -232,7 +232,7 @@ impl CommandExecutor for WorldborderAddTimeExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
@@ -306,7 +306,7 @@ impl CommandExecutor for WorldborderCenterExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
@@ -334,7 +334,7 @@ impl CommandExecutor for WorldborderDamageAmountExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
@@ -385,7 +385,7 @@ impl CommandExecutor for WorldborderDamageBufferExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
@@ -436,7 +436,7 @@ impl CommandExecutor for WorldborderWarningDistanceExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
@@ -487,7 +487,7 @@ impl CommandExecutor for WorldborderWarningTimeExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()

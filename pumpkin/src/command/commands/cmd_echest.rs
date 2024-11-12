@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use pumpkin_inventory::{Chest, OpenContainer};
 
 use crate::command::{
-    args::ConsumedArgs, tree::CommandTree, CommandExecutor, CommandSender, InvalidTreeError,
+    args::ConsumedArgs, tree::CommandTree, CommandError, CommandExecutor, CommandSender,
 };
 
 const NAMES: [&str; 2] = ["echest", "enderchest"];
@@ -19,7 +19,7 @@ impl CommandExecutor for EchestExecutor {
         sender: &mut CommandSender<'a>,
         server: &crate::server::Server,
         _args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         if let Some(player) = sender.as_player() {
             let entity_id = player.entity_id();
             player.open_container.store(Some(0));

@@ -6,7 +6,7 @@ use commands::{
     cmd_clear, cmd_craft, cmd_echest, cmd_gamemode, cmd_give, cmd_help, cmd_kick, cmd_kill,
     cmd_list, cmd_pumpkin, cmd_say, cmd_stop, cmd_teleport, cmd_worldborder,
 };
-use dispatcher::InvalidTreeError;
+use dispatcher::CommandError;
 use pumpkin_core::math::vector3::Vector3;
 use pumpkin_core::text::TextComponent;
 
@@ -97,5 +97,5 @@ pub(crate) trait CommandExecutor: Sync {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError>;
+    ) -> Result<(), CommandError>;
 }

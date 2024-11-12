@@ -8,10 +8,8 @@ use crate::TextComponent;
 use crate::command::args::arg_players::PlayersArgumentConsumer;
 
 use crate::command::args::{Arg, ConsumedArgs};
-use crate::command::dispatcher::InvalidTreeError;
-use crate::command::dispatcher::InvalidTreeError::{
-    InvalidConsumptionError, InvalidRequirementError,
-};
+use crate::command::dispatcher::CommandError;
+use crate::command::dispatcher::CommandError::{InvalidConsumption, InvalidRequirement};
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, require};
 use crate::command::CommandSender::Player;
@@ -34,9 +32,9 @@ impl CommandExecutor for GamemodeTargetSelf {
         sender: &mut CommandSender<'a>,
         _server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let Some(Arg::GameMode(gamemode)) = args.get_cloned(&ARG_GAMEMODE) else {
-            return Err(InvalidConsumptionError(Some(ARG_GAMEMODE.into())));
+            return Err(InvalidConsumption(Some(ARG_GAMEMODE.into())));
         };
 
         if let Player(target) = sender {
@@ -56,7 +54,7 @@ impl CommandExecutor for GamemodeTargetSelf {
             }
             Ok(())
         } else {
-            Err(InvalidRequirementError)
+            Err(InvalidRequirement)
         }
     }
 }
@@ -70,12 +68,12 @@ impl CommandExecutor for GamemodeTargetPlayer {
         sender: &mut CommandSender<'a>,
         _server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let Some(Arg::GameMode(gamemode)) = args.get_cloned(&ARG_GAMEMODE) else {
-            return Err(InvalidConsumptionError(Some(ARG_GAMEMODE.into())));
+            return Err(InvalidConsumption(Some(ARG_GAMEMODE.into())));
         };
         let Some(Arg::Players(targets)) = args.get(ARG_TARGET) else {
-            return Err(InvalidConsumptionError(Some(ARG_TARGET.into())));
+            return Err(InvalidConsumption(Some(ARG_TARGET.into())));
         };
 
         let target_count = targets.len();

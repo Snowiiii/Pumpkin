@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use pumpkin_core::math::vector2::Vector2;
 
-use crate::command::dispatcher::InvalidTreeError;
+use crate::command::dispatcher::CommandError;
 use crate::command::tree::RawArgs;
 use crate::command::CommandSender;
 use crate::server::Server;
@@ -42,15 +42,10 @@ impl DefaultNameArgConsumer for Position2DArgumentConsumer {
 impl<'a> FindArg<'a> for Position2DArgumentConsumer {
     type Data = Vector2<f64>;
 
-    fn find_arg(
-        args: &'a super::ConsumedArgs,
-        name: &'a str,
-    ) -> Result<Self::Data, InvalidTreeError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::Pos2D(data)) => Ok(*data),
-            _ => Err(InvalidTreeError::InvalidConsumptionError(Some(
-                name.to_string(),
-            ))),
+            _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),
         }
     }
 }
