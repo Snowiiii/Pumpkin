@@ -4,7 +4,7 @@ use args::ConsumedArgs;
 use async_trait::async_trait;
 use commands::{
     cmd_clear, cmd_craft, cmd_echest, cmd_gamemode, cmd_give, cmd_help, cmd_kick, cmd_kill,
-    cmd_list, cmd_pumpkin, cmd_say, cmd_stop, cmd_teleport, cmd_worldborder,
+    cmd_list, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_worldborder,
 };
 use dispatcher::CommandError;
 use pumpkin_core::math::vector3::Vector3;
@@ -13,6 +13,7 @@ use pumpkin_core::text::TextComponent;
 use crate::command::dispatcher::CommandDispatcher;
 use crate::entity::player::{PermissionLvl, Player};
 use crate::server::Server;
+use crate::world::World;
 
 pub mod args;
 pub mod client_cmd_suggestions;
@@ -78,6 +79,14 @@ impl<'a> CommandSender<'a> {
             CommandSender::Player(p) => Some(p.living_entity.entity.pos.load()),
         }
     }
+
+    #[must_use]
+    pub fn world(&self) -> Option<&World> {
+        match self {
+            CommandSender::Console | CommandSender::Rcon(..) => None,
+            CommandSender::Player(p) => Some(&p.living_entity.entity.world),
+        }
+    }
 }
 
 #[must_use]
@@ -98,6 +107,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_give::init_command_tree());
     dispatcher.register(cmd_list::init_command_tree());
     dispatcher.register(cmd_clear::init_command_tree());
+    dispatcher.register(cmd_setblock::init_command_tree());
 
     Arc::new(dispatcher)
 }

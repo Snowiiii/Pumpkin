@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use pumpkin_core::math::vector2::Vector2;
+use pumpkin_core::math::vector3::Vector3;
 use pumpkin_protocol::client::play::{
     CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
 };
@@ -10,6 +11,7 @@ use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
+use super::coordinate::Coordinate;
 use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// x and z coordinates only
@@ -31,25 +33,15 @@ impl GetClientSideArgParser for Position2DArgumentConsumer {
 impl ArgumentConsumer for Position2DArgumentConsumer {
     async fn consume<'a>(
         &self,
-        _src: &CommandSender<'a>,
+        src: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
-        let x_str = args.pop()?;
-        let z_str = args.pop()?;
+        let pos = Position2D::try_new(args.pop()?, args.pop()?)?;
 
-        let mut x = x_str.parse::<f64>().ok()?;
-        let mut z = z_str.parse::<f64>().ok()?;
+        let vec2 = pos.try_get_values(src.position())?;
 
-        // set position to block center if no decimal place is given
-        if !x_str.contains('.') {
-            x += 0.5;
-        }
-        if !z_str.contains('.') {
-            z += 0.5;
-        }
-
-        Some(Arg::Pos2D(Vector2::new(x, z)))
+        Some(Arg::Pos2D(vec2))
     }
 
     async fn suggest<'a>(
@@ -59,6 +51,21 @@ impl ArgumentConsumer for Position2DArgumentConsumer {
         _input: &'a str,
     ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
         Ok(None)
+    }
+}
+
+struct Position2D(Coordinate<false>, Coordinate<false>);
+
+impl Position2D {
+    fn try_new(x: &str, z: &str) -> Option<Self> {
+        Some(Self(x.try_into().ok()?, z.try_into().ok()?))
+    }
+
+    fn try_get_values(self, origin: Option<Vector3<f64>>) -> Option<Vector2<f64>> {
+        Some(Vector2::new(
+            self.0.value(origin.map(|o| o.x))?,
+            self.1.value(origin.map(|o| o.z))?,
+        ))
     }
 }
 

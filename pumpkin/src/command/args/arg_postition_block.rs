@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use pumpkin_core::math::position::WorldPosition;
 use pumpkin_core::math::vector3::Vector3;
 use pumpkin_protocol::client::play::{
     CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
@@ -10,15 +11,15 @@ use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::coordinate::Coordinate;
+use super::coordinate::BlockCoordinate;
 use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// x, y and z coordinates
-pub(crate) struct Position3DArgumentConsumer;
+pub(crate) struct BlockPosArgumentConsumer;
 
-impl GetClientSideArgParser for Position3DArgumentConsumer {
+impl GetClientSideArgParser for BlockPosArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {
-        ProtoCmdArgParser::Vec3
+        ProtoCmdArgParser::BlockPos
     }
 
     fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
@@ -27,18 +28,18 @@ impl GetClientSideArgParser for Position3DArgumentConsumer {
 }
 
 #[async_trait]
-impl ArgumentConsumer for Position3DArgumentConsumer {
+impl ArgumentConsumer for BlockPosArgumentConsumer {
     async fn consume<'a>(
         &self,
         src: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
-        let pos = Position3D::try_new(args.pop()?, args.pop()?, args.pop()?)?;
+        let pos = BlockPos::try_new(args.pop()?, args.pop()?, args.pop()?)?;
 
         let vec3 = pos.try_get_values(src.position())?;
 
-        Some(Arg::Pos3D(vec3))
+        Some(Arg::BlockPos(vec3))
     }
 
     async fn suggest<'a>(
@@ -51,9 +52,9 @@ impl ArgumentConsumer for Position3DArgumentConsumer {
     }
 }
 
-struct Position3D(Coordinate<false>, Coordinate<true>, Coordinate<false>);
+struct BlockPos(BlockCoordinate, BlockCoordinate, BlockCoordinate);
 
-impl Position3D {
+impl BlockPos {
     fn try_new(x: &str, y: &str, z: &str) -> Option<Self> {
         Some(Self(
             x.try_into().ok()?,
@@ -62,31 +63,31 @@ impl Position3D {
         ))
     }
 
-    fn try_get_values(self, origin: Option<Vector3<f64>>) -> Option<Vector3<f64>> {
-        Some(Vector3::new(
+    fn try_get_values(self, origin: Option<Vector3<f64>>) -> Option<WorldPosition> {
+        Some(WorldPosition(Vector3::new(
             self.0.value(origin.map(|o| o.x))?,
             self.1.value(origin.map(|o| o.y))?,
             self.2.value(origin.map(|o| o.z))?,
-        ))
+        )))
     }
 }
 
-impl DefaultNameArgConsumer for Position3DArgumentConsumer {
+impl DefaultNameArgConsumer for BlockPosArgumentConsumer {
     fn default_name(&self) -> &'static str {
-        "pos"
+        "block_pos"
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &Position3DArgumentConsumer
+        &BlockPosArgumentConsumer
     }
 }
 
-impl<'a> FindArg<'a> for Position3DArgumentConsumer {
-    type Data = Vector3<f64>;
+impl<'a> FindArg<'a> for BlockPosArgumentConsumer {
+    type Data = WorldPosition;
 
     fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
-            Some(Arg::Pos3D(data)) => Ok(*data),
+            Some(Arg::BlockPos(data)) => Ok(*data),
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),
         }
     }
