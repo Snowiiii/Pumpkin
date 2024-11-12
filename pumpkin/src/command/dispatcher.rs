@@ -13,6 +13,7 @@ use pumpkin_core::text::color::{Color, NamedColor};
 use std::collections::HashMap;
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub(crate) enum CommandError {
     /// This error means that there was an error while parsing a previously consumed argument.
     /// That only happens when consumption is wrongly implemented, as it should ensure parsing may

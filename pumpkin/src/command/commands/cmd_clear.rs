@@ -11,7 +11,6 @@ use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, require};
 use crate::command::{CommandError, CommandExecutor, CommandSender};
 use crate::entity::player::Player;
-use crate::server::Server;
 use CommandError::InvalidConsumption;
 
 const NAMES: [&str; 1] = ["clear"];
@@ -19,19 +18,20 @@ const DESCRIPTION: &str = "Clear yours or targets inventory.";
 
 const ARG_TARGET: &str = "target";
 
-async fn clear_player(target: &Arc<Player>, server: &Server) -> Result<usize, CommandError> {
+async fn clear_player(target: &Player) -> usize {
     let mut inventory = target.inventory.lock().await;
 
     let slots = inventory.all_slots();
-    let items_count = slots.iter().filter(|slot| slot.is_some()).count();
+    let items_count = slots
+        .iter()
+        .filter_map(|slot| slot.as_ref().map(|slot| slot.item_count as usize))
+        .sum();
     for slot in slots {
         *slot = None;
     }
-    target
-        .send_whole_container_change(server)
-        .await
-        .map_err(|e| CommandError::OtherPumpkin(Box::new(e)))?;
-    Ok(items_count)
+    drop(inventory);
+    target.set_container_content(None).await;
+    items_count
 }
 
 fn clear_command_text_output(item_count: usize, targets: &[Arc<Player>]) -> TextComponent {
@@ -67,7 +67,7 @@ impl CommandExecutor for ClearExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        server: &crate::server::Server,
+        _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let Some(Arg::Entities(targets)) = args.get(&ARG_TARGET) else {
@@ -76,7 +76,7 @@ impl CommandExecutor for ClearExecutor {
 
         let mut item_count = 0;
         for target in targets {
-            item_count += clear_player(target, server).await?;
+            item_count += clear_player(target).await;
         }
 
         let msg = clear_command_text_output(item_count, targets);
@@ -94,12 +94,12 @@ impl CommandExecutor for ClearSelfExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        server: &crate::server::Server,
+        _server: &crate::server::Server,
         _args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let target = sender.as_player().ok_or(CommandError::InvalidRequirement)?;
 
-        let item_count = clear_player(&target, server).await?;
+        let item_count = clear_player(&target).await;
 
         let hold_target = vec![target];
         let msg = clear_command_text_output(item_count, &hold_target);
