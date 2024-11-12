@@ -6,6 +6,7 @@ use crate::command::args::ConsumedArgs;
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::require;
 use crate::command::{CommandExecutor, CommandSender, InvalidTreeError};
+use crate::entity::player::PermissionLvl;
 
 const NAMES: [&str; 1] = ["stop"];
 
@@ -37,6 +38,7 @@ impl CommandExecutor for StopExecutor {
 }
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
-    CommandTree::new(NAMES, DESCRIPTION)
-        .with_child(require(&|sender| sender.permission_lvl() >= 4).execute(&StopExecutor))
+    CommandTree::new(NAMES, DESCRIPTION).with_child(
+        require(&|sender| sender.has_permission_lvl(PermissionLvl::Four)).execute(&StopExecutor),
+    )
 }

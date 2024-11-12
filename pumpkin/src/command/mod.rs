@@ -11,7 +11,7 @@ use pumpkin_core::math::vector3::Vector3;
 use pumpkin_core::text::TextComponent;
 
 use crate::command::dispatcher::CommandDispatcher;
-use crate::entity::player::Player;
+use crate::entity::player::{PermissionLvl, Player};
 use crate::server::Server;
 
 pub mod args;
@@ -54,10 +54,21 @@ impl<'a> CommandSender<'a> {
         }
     }
 
-    /// todo: implement
+    /// prefer using `has_permission_lvl(lvl)`
     #[must_use]
-    pub const fn permission_lvl(&self) -> i32 {
-        4
+    pub fn permission_lvl(&self) -> PermissionLvl {
+        match self {
+            CommandSender::Console | CommandSender::Rcon(_) => PermissionLvl::Four,
+            CommandSender::Player(p) => p.permission_lvl(),
+        }
+    }
+
+    #[must_use]
+    pub fn has_permission_lvl(&self, lvl: PermissionLvl) -> bool {
+        match self {
+            CommandSender::Console | CommandSender::Rcon(_) => true,
+            CommandSender::Player(p) => (p.permission_lvl() as i8) >= (lvl as i8),
+        }
     }
 
     #[must_use]

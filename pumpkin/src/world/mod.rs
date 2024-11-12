@@ -205,6 +205,7 @@ impl World {
         player.send_abilties_update().await;
 
         // permissions, i. e. the commands a player may use
+        player.send_permission_lvl_update().await;
         client_cmd_suggestions::send_c_commands_packet(&player, command_dispatcher).await;
 
         // teleport

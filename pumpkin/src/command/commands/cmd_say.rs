@@ -2,11 +2,14 @@ use async_trait::async_trait;
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::client::play::CSystemChatMessage;
 
-use crate::command::{
-    args::{arg_message::MsgArgConsumer, Arg, ConsumedArgs},
-    tree::CommandTree,
-    tree_builder::{argument, require},
-    CommandExecutor, CommandSender, InvalidTreeError,
+use crate::{
+    command::{
+        args::{arg_message::MsgArgConsumer, Arg, ConsumedArgs},
+        tree::CommandTree,
+        tree_builder::{argument, require},
+        CommandExecutor, CommandSender, InvalidTreeError,
+    },
+    entity::player::PermissionLvl,
 };
 use InvalidTreeError::InvalidConsumptionError;
 
@@ -48,7 +51,7 @@ impl CommandExecutor for SayExecutor {
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| sender.permission_lvl() >= 2)
+        require(&|sender| sender.has_permission_lvl(PermissionLvl::Two))
             .with_child(argument(ARG_MESSAGE, &MsgArgConsumer).execute(&SayExecutor)),
     )
 }
