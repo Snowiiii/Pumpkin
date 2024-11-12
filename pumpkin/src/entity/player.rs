@@ -549,6 +549,8 @@ impl Player {
         log::debug!("Sending player abilities to {}", self.gameprofile.name);
         self.send_abilties_update().await;
 
+        self.send_permission_lvl_update().await;
+
         let world = &self.living_entity.entity.world;
 
         // teleport
