@@ -49,7 +49,7 @@ impl ArgumentConsumer for CommandTreeArgumentConsumer {
         _sender: &CommandSender<'a>,
         server: &'a Server,
         input: &'a str,
-    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
         let Some(input) = input.split_single_whitespace_including_empty_parts().last() else {
             return Ok(None);
         };

@@ -55,7 +55,7 @@ impl ArgumentConsumer for RotationArgumentConsumer {
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
-    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
         Ok(None)
     }
 }

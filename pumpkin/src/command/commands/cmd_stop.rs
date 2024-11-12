@@ -5,8 +5,8 @@ use pumpkin_core::text::TextComponent;
 use crate::command::args::ConsumedArgs;
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::require;
-use crate::entity::player::PermissionLvl;
 use crate::command::{CommandError, CommandExecutor, CommandSender};
+use crate::entity::player::PermissionLvl;
 
 const NAMES: [&str; 1] = ["stop"];
 

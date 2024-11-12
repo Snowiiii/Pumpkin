@@ -49,7 +49,7 @@ pub(crate) trait ArgumentConsumer: Sync + GetClientSideArgParser {
         sender: &CommandSender<'a>,
         server: &'a Server,
         input: &'a str,
-    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError>;
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError>;
 }
 
 pub(crate) trait GetClientSideArgParser {

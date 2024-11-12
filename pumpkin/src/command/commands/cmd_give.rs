@@ -9,8 +9,8 @@ use crate::command::args::arg_players::PlayersArgumentConsumer;
 use crate::command::args::{ConsumedArgs, FindArg, FindArgDefaultName};
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, argument_default_name, require};
-use crate::entity::player::PermissionLvl;
 use crate::command::{CommandError, CommandExecutor, CommandSender};
+use crate::entity::player::PermissionLvl;
 
 const NAMES: [&str; 1] = ["give"];
 
@@ -62,7 +62,7 @@ impl CommandExecutor for GiveExecutor {
         };
 
         for target in targets {
-            target.give_items(item, item_count).await;
+            target.give_items(item, item_count as u32).await;
         }
 
         sender

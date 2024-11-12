@@ -10,8 +10,8 @@ use crate::command::tree::{Command, CommandTree, NodeType, RawArgs};
 use crate::command::CommandSender;
 use crate::error::PumpkinError;
 use crate::server::Server;
-use std::collections::{HashMap, HashSet};
 use pumpkin_core::text::color::{Color, NamedColor};
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -113,12 +113,20 @@ impl<'a> CommandDispatcher<'a> {
             )
             .await
             {
-                Err(InvalidConsumptionError(s)) => {
+                Err(InvalidConsumption(s)) => {
                     log::error!("Error while parsing command \"{cmd}\": {s:?} was consumed, but couldn't be parsed");
                     return Vec::new();
                 }
-                Err(InvalidRequirementError) => {
+                Err(InvalidRequirement) => {
                     log::error!("Error while parsing command \"{cmd}\": a requirement that was expected was not met.");
+                    return Vec::new();
+                }
+                Err(GeneralCommandIssue(issue)) => {
+                    log::error!("Error while parsing command \"{cmd}\": {issue}");
+                    return Vec::new();
+                }
+                Err(OtherPumpkin(e)) => {
+                    log::error!("Error while parsing command \"{cmd}\": {e}");
                     return Vec::new();
                 }
                 Ok(Some(new_suggestions)) => {
@@ -230,7 +238,7 @@ impl<'a> CommandDispatcher<'a> {
         tree: &CommandTree<'a>,
         mut raw_args: RawArgs<'a>,
         input: &'a str,
-    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, InvalidTreeError> {
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
         let mut parsed_args: ConsumedArgs = HashMap::new();
 
         for node in path.iter().map(|&i| &tree.nodes[i]) {
