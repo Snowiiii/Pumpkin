@@ -23,7 +23,9 @@ RUN apk add --no-cache libgcc
 
 COPY --from=builder /pumpkin/pumpkin.release /pumpkin/pumpkin
 
-# set workdir to /config 
+# set workdir to /config, this is required to influence the PWD environment variable
+# it allows for bind mounting the server files without overwriting the pumpkin
+# executable (without requiring an `docker cp`-ing the binary to the host folder)
 WORKDIR /config
 
 ENV RUST_BACKTRACE=1
