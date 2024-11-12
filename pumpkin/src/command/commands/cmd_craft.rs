@@ -1,19 +1,17 @@
 use async_trait::async_trait;
-use pumpkin_inventory::{Chest, OpenContainer};
+use pumpkin_inventory::{CraftingTable, OpenContainer, WindowType};
 
 use crate::command::{
     args::ConsumedArgs, tree::CommandTree, CommandExecutor, CommandSender, InvalidTreeError,
 };
+const NAMES: [&str; 1] = ["craft"];
 
-const NAMES: [&str; 2] = ["echest", "enderchest"];
+const DESCRIPTION: &str = "Open a crafting table";
 
-const DESCRIPTION: &str =
-    "Show your personal enderchest (this command is used for testing container behaviour)";
-
-struct EchestExecutor;
+struct CraftingTableExecutor {}
 
 #[async_trait]
-impl CommandExecutor for EchestExecutor {
+impl CommandExecutor for CraftingTableExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
@@ -22,18 +20,19 @@ impl CommandExecutor for EchestExecutor {
     ) -> Result<(), InvalidTreeError> {
         if let Some(player) = sender.as_player() {
             let entity_id = player.entity_id();
-            player.open_container.store(Some(0));
+            player.open_container.store(Some(1));
             {
                 let mut open_containers = server.open_containers.write().await;
-                if let Some(ender_chest) = open_containers.get_mut(&0) {
+                if let Some(ender_chest) = open_containers.get_mut(&1) {
                     ender_chest.add_player(entity_id);
                 } else {
-                    let open_container = OpenContainer::new_empty_container::<Chest>(entity_id);
-                    open_containers.insert(0, open_container);
+                    let open_container =
+                        OpenContainer::new_empty_container::<CraftingTable>(entity_id);
+                    open_containers.insert(1, open_container);
                 }
             }
             player
-                .open_container(server, pumpkin_inventory::WindowType::Generic9x3)
+                .open_container(server, WindowType::CraftingTable)
                 .await;
         }
 
@@ -42,5 +41,5 @@ impl CommandExecutor for EchestExecutor {
 }
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
-    CommandTree::new(NAMES, DESCRIPTION).execute(&EchestExecutor)
+    CommandTree::new(NAMES, DESCRIPTION).execute(&CraftingTableExecutor {})
 }
