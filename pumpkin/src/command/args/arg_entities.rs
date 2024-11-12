@@ -24,7 +24,7 @@ impl GetClientSideArgParser for EntitiesArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {
         // todo: investigate why this does not accept target selectors
         ProtoCmdArgParser::Entity {
-            flags: ProtoCmdArgParser::ENTITY_FLAG_ONLY_SINGLE,
+            flags: 0,
         }
     }
 
