@@ -55,19 +55,6 @@ impl From<VarInt> for ConnectionState {
     }
 }
 
-pub enum SoundCategory {
-    Master,
-    Music,
-    Records,
-    Weather,
-    Blocks,
-    Hostile,
-    Neutral,
-    Players,
-    Ambient,
-    Voice,
-}
-
 pub struct RawPacket {
     pub id: VarInt,
     pub bytebuf: ByteBuffer,

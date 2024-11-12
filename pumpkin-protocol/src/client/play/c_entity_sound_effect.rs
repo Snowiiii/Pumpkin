@@ -1,7 +1,7 @@
+use crate::VarInt;
+use pumpkin_core::sound::SoundCategory;
 use pumpkin_macros::client_packet;
 use serde::Serialize;
-
-use crate::{SoundCategory, VarInt};
 
 #[derive(Serialize)]
 #[client_packet("play:sound_entity")]

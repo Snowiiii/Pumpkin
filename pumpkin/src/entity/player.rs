@@ -11,6 +11,7 @@ use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
 use num_derive::{FromPrimitive, ToPrimitive};
 use pumpkin_config::ADVANCED_CONFIG;
+use pumpkin_core::sound::SoundCategory;
 use pumpkin_core::{
     math::{
         boundingbox::{BoundingBox, BoundingBoxSize},
@@ -39,7 +40,7 @@ use pumpkin_protocol::{
         SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
         SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
     },
-    RawPacket, ServerPacket, SoundCategory, VarInt,
+    RawPacket, ServerPacket, VarInt,
 };
 use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
 use tokio::sync::{Mutex, Notify};

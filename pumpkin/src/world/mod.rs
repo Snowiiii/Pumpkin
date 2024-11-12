@@ -16,12 +16,10 @@ use crate::{
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
+use pumpkin_core::sound::SoundCategory;
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
-use pumpkin_protocol::{
-    client::play::{CBlockUpdate, CSoundEffect, CWorldEvent},
-    SoundCategory,
-};
+use pumpkin_protocol::client::play::{CBlockUpdate, CSoundEffect, CWorldEvent};
 use pumpkin_protocol::{
     client::play::{
         CChunkData, CGameEvent, CLogin, CPlayerInfoUpdate, CRemoveEntities, CRemovePlayerInfo,

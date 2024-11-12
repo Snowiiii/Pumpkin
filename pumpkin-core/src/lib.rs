@@ -1,6 +1,7 @@
 pub mod gamemode;
 pub mod math;
 pub mod random;
+pub mod sound;
 pub mod text;
 
 pub use gamemode::GameMode;
