@@ -521,7 +521,7 @@ impl Player {
         Ok(())
     }
 
-    async fn send_whole_container_change(&self, server: &Server) -> Result<(), InventoryError> {
+    pub async fn send_whole_container_change(&self, server: &Server) -> Result<(), InventoryError> {
         let players = self.get_current_players_in_container(server).await;
 
         for player in players {

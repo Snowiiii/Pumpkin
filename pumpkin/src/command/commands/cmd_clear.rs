@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
 use pumpkin_inventory::Container;
-use pumpkin_world::item::ItemStack;
 
 use crate::command::args::arg_entities::EntitiesArgumentConsumer;
 use crate::command::args::{Arg, ConsumedArgs};
@@ -100,20 +99,10 @@ impl CommandExecutor for ClearSelfExecutor {
     ) -> Result<(), CommandError> {
         let target = sender.as_player().ok_or(CommandError::InvalidRequirement)?;
 
-        let items_count = clear_player(&target).await;
+        let item_count = clear_player(&target, server).await?;
 
-        let msg = if items_count == 0 {
-            TextComponent::text_string(format!(
-                "No items were found on player {}",
-                target.gameprofile.name
-            ))
-            .color_named(NamedColor::Red)
-        } else {
-            TextComponent::text_string(format!(
-                "Removed {} item(s) on player {}",
-                items_count, target.gameprofile.name
-            ))
-        };
+        let hold_target = vec![target];
+        let msg = clear_command_text_output(item_count, &hold_target);
 
         sender.send_message(msg).await;
 
