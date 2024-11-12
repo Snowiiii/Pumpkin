@@ -2,12 +2,13 @@ use async_trait::async_trait;
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 
 use crate::command::{
-    args::{arg_message::MsgArgConsumer, arg_players::PlayersArgumentConsumer, Arg, ConsumedArgs},
+    args::{
+        arg_message::MsgArgConsumer, arg_players::PlayersArgumentConsumer, ConsumedArgs, FindArg,
+    },
     tree::CommandTree,
     tree_builder::argument,
     CommandExecutor, CommandSender, InvalidTreeError,
 };
-use InvalidTreeError::InvalidConsumptionError;
 
 const NAMES: [&str; 3] = ["msg", "tell", "w"];
 
@@ -32,29 +33,27 @@ impl CommandExecutor for MsgExecutor {
             CommandSender::Player(player) => &player.gameprofile.name.clone(),
         };
 
-        let Some(Arg::Players(targets)) = args.get(&ARG_TARGET) else {
-            return Err(InvalidConsumptionError(Some(ARG_TARGET.into())));
-        };
+        let targets = PlayersArgumentConsumer::find_arg(args, ARG_TARGET)?;
+        let msg = MsgArgConsumer::find_arg(args, ARG_MESSAGE)?;
 
-        let Some(Arg::Msg(msg)) = args.get(ARG_MESSAGE) else {
-            return Err(InvalidConsumptionError(Some(ARG_MESSAGE.into())));
-        };
+        let sender_message = targets
+            .iter()
+            .map(|target| format!("You whisper to {}: {}", target.gameprofile.name, msg))
+            .collect::<Vec<String>>()
+            .join("\n");
+        let sender_text = TextComponent::text(&sender_message)
+            .color_named(NamedColor::Gray)
+            .italic();
+
+        let recipient_message = format!("{sender_name} whispers to you: {msg}");
+        let recipient_text = TextComponent::text(&recipient_message)
+            .color_named(NamedColor::Gray)
+            .italic();
+
+        sender.send_message(sender_text).await;
 
         for target_player in targets {
-            let recipient_message = format!("{sender_name} whispers to you: {msg}");
-            let sender_message =
-                format!("you whisper to {}: {msg}", target_player.gameprofile.name);
-
-            let recipient_text = TextComponent::text(&recipient_message)
-                .color_named(NamedColor::Gray)
-                .italic();
-
-            let sender_text = TextComponent::text(&sender_message)
-                .color_named(NamedColor::Gray)
-                .italic();
-
             target_player.send_system_message(&recipient_text).await;
-            sender.send_message(sender_text).await;
         }
 
         Ok(())
