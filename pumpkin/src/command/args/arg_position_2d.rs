@@ -1,5 +1,8 @@
 use async_trait::async_trait;
 use pumpkin_core::math::vector2::Vector2;
+use pumpkin_protocol::client::play::{
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
+};
 
 use crate::command::dispatcher::CommandError;
 use crate::command::tree::RawArgs;
@@ -7,12 +10,22 @@ use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::{Arg, DefaultNameArgConsumer, FindArg};
+use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// x and z coordinates only
 ///
 /// todo: implememnt ~ ^ notations
 pub(crate) struct Position2DArgumentConsumer;
+
+impl GetClientSideArgParser for Position2DArgumentConsumer {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::Vec2
+    }
+
+    fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
+        None
+    }
+}
 
 #[async_trait]
 impl ArgumentConsumer for Position2DArgumentConsumer {
@@ -22,10 +35,30 @@ impl ArgumentConsumer for Position2DArgumentConsumer {
         _server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
-        let x = args.pop()?.parse::<f64>().ok()?;
-        let z = args.pop()?.parse::<f64>().ok()?;
+        let x_str = args.pop()?;
+        let z_str = args.pop()?;
+
+        let mut x = x_str.parse::<f64>().ok()?;
+        let mut z = z_str.parse::<f64>().ok()?;
+
+        // set position to block center if no decimal place is given
+        if !x_str.contains('.') {
+            x += 0.5;
+        }
+        if !z_str.contains('.') {
+            z += 0.5;
+        }
 
         Some(Arg::Pos2D(Vector2::new(x, z)))
+    }
+
+    async fn suggest<'a>(
+        &self,
+        _sender: &CommandSender<'a>,
+        _server: &'a Server,
+        _input: &'a str,
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
+        Ok(None)
     }
 }
 

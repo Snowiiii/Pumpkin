@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use serde::{Deserialize, Serialize};
 
 /// Action to take on click of the text.
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Eq, Hash)]
 #[serde(tag = "action", content = "value", rename_all = "snake_case")]
 pub enum ClickEvent<'a> {
     /// Opens a URL

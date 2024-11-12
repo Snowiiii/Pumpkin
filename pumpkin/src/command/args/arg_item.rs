@@ -1,4 +1,7 @@
 use async_trait::async_trait;
+use pumpkin_protocol::client::play::{
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
+};
 
 use crate::{command::dispatcher::CommandError, server::Server};
 
@@ -7,10 +10,20 @@ use super::{
         args::{ArgumentConsumer, RawArgs},
         CommandSender,
     },
-    Arg, DefaultNameArgConsumer, FindArg,
+    Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser,
 };
 
 pub(crate) struct ItemArgumentConsumer;
+
+impl GetClientSideArgParser for ItemArgumentConsumer {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::Resource { identifier: "item" }
+    }
+
+    fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
+        None
+    }
+}
 
 #[async_trait]
 impl ArgumentConsumer for ItemArgumentConsumer {
@@ -30,6 +43,15 @@ impl ArgumentConsumer for ItemArgumentConsumer {
 
         // todo: get an actual item
         Some(Arg::Item(name))
+    }
+
+    async fn suggest<'a>(
+        &self,
+        _sender: &CommandSender<'a>,
+        _server: &'a Server,
+        _input: &'a str,
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
+        Ok(None)
     }
 }
 

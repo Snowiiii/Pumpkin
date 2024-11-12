@@ -10,6 +10,7 @@ use crate::command::args::{ConsumedArgs, FindArg, FindArgDefaultName};
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, argument_default_name, require};
 use crate::command::{CommandError, CommandExecutor, CommandSender};
+use crate::entity::player::PermissionLvl;
 
 const NAMES: [&str; 1] = ["give"];
 
@@ -17,8 +18,10 @@ const DESCRIPTION: &str = "Give items to player(s).";
 
 const ARG_ITEM: &str = "item";
 
-static ITEM_COUNT_CONSUMER: BoundedNumArgumentConsumer<u32> =
-    BoundedNumArgumentConsumer::new().name("count").max(6400);
+static ITEM_COUNT_CONSUMER: BoundedNumArgumentConsumer<i32> = BoundedNumArgumentConsumer::new()
+    .name("count")
+    .min(0)
+    .max(6400);
 
 struct GiveExecutor;
 
@@ -59,7 +62,7 @@ impl CommandExecutor for GiveExecutor {
         };
 
         for target in targets {
-            target.give_items(item, item_count).await;
+            target.give_items(item, item_count as u32).await;
         }
 
         sender
@@ -78,7 +81,7 @@ impl CommandExecutor for GiveExecutor {
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| sender.permission_lvl() >= 2).with_child(
+        require(&|sender| sender.has_permission_lvl(PermissionLvl::Two)).with_child(
             argument_default_name(&PlayersArgumentConsumer).with_child(
                 argument(ARG_ITEM, &ItemArgumentConsumer)
                     .execute(&GiveExecutor)

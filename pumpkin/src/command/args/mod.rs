@@ -6,6 +6,9 @@ use pumpkin_core::{
     math::{vector2::Vector2, vector3::Vector3},
     GameMode,
 };
+use pumpkin_protocol::client::play::{
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
+};
 
 use crate::{entity::player::Player, server::Server};
 
@@ -29,15 +32,31 @@ pub(crate) mod arg_rotation;
 pub(crate) mod arg_simple;
 
 /// see [`crate::commands::tree_builder::argument`]
-/// Provide value or an Optional error message, If no Error message provided the default will be used
 #[async_trait]
-pub(crate) trait ArgumentConsumer: Sync {
+pub(crate) trait ArgumentConsumer: Sync + GetClientSideArgParser {
     async fn consume<'a>(
         &self,
         sender: &CommandSender<'a>,
         server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>>;
+
+    /// Used for tab completion (but only if argument suggestion type is "minecraft:ask_server"!).
+    ///
+    /// NOTE: This is called after this consumer's [`ArgumentConsumer::consume`] method returnd None, so if args is used here, make sure [`ArgumentConsumer::consume`] never returns None after mutating args.
+    async fn suggest<'a>(
+        &self,
+        sender: &CommandSender<'a>,
+        server: &'a Server,
+        input: &'a str,
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError>;
+}
+
+pub(crate) trait GetClientSideArgParser {
+    /// Return the parser the client should use while typing a command in chat.
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser;
+    /// Usually this should return None. This can be used to force suggestions to be processed on serverside.
+    fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType>;
 }
 
 pub(crate) trait DefaultNameArgConsumer: ArgumentConsumer {
@@ -90,5 +109,59 @@ pub(crate) trait FindArgDefaultName<'a, T> {
 impl<'a, T, C: FindArg<'a, Data = T> + DefaultNameArgConsumer> FindArgDefaultName<'a, T> for C {
     fn find_arg_default_name(&self, args: &'a ConsumedArgs) -> Result<T, CommandError> {
         C::find_arg(args, self.default_name())
+    }
+}
+
+pub(crate) trait SplitSingleWhitespaceIncludingEmptyParts<'a> {
+    /// Splits a string at every single unicode whitespace. Therefore the returned iterator sometimes contains empty strings. This is useful for command suggestions.
+    ///
+    /// Note: Vanilla does this only for command suggestions, for execution consecutive whitespaces are treated as one.
+    fn split_single_whitespace_including_empty_parts(self) -> impl Iterator<Item = &'a str>;
+}
+
+impl<'a> SplitSingleWhitespaceIncludingEmptyParts<'a> for &'a str {
+    fn split_single_whitespace_including_empty_parts(self) -> impl Iterator<Item = &'a str> {
+        SplitSingleWhitespaceIncludingEmptyPartsIter {
+            s: self,
+            pos: 0,
+            chars_iter: self.char_indices(),
+            is_complete: false,
+        }
+    }
+}
+
+struct SplitSingleWhitespaceIncludingEmptyPartsIter<'a, T: Iterator<Item = (usize, char)>> {
+    s: &'a str,
+    pos: usize,
+    chars_iter: T,
+    is_complete: bool,
+}
+
+impl<'a, T: DoubleEndedIterator<Item = (usize, char)>> Iterator
+    for SplitSingleWhitespaceIncludingEmptyPartsIter<'a, T>
+{
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.is_complete {
+            return None;
+        }
+
+        let start = self.pos;
+
+        loop {
+            match self.chars_iter.next() {
+                Some((i, c)) if c.is_whitespace() => {
+                    let whitespace_len = c.len_utf8();
+                    self.pos = i + whitespace_len;
+                    return Some(&self.s[start..i]);
+                }
+                Some(_) => {}
+                None => {
+                    self.is_complete = true;
+                    return Some(&self.s[start..self.pos]);
+                }
+            };
+        }
     }
 }

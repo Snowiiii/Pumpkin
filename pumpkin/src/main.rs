@@ -192,7 +192,10 @@ async fn main() -> io::Result<()> {
                 .load(std::sync::atomic::Ordering::Relaxed)
             {
                 let (player, world) = server.add_player(client).await;
-                world.spawn_player(&BASIC_CONFIG, player.clone()).await;
+                world
+                    .spawn_player(&BASIC_CONFIG, player.clone(), &server.command_dispatcher)
+                    .await;
+
                 // poll Player
                 while !player
                     .client

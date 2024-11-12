@@ -15,7 +15,10 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_inventory::{InventoryError, WindowType};
-use pumpkin_protocol::server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem};
+use pumpkin_protocol::{
+    client::play::CCommandSuggestions,
+    server::play::{SCloseContainer, SCommandSuggestion, SKeepAlive, SSetPlayerGround, SUseItem},
+};
 use pumpkin_protocol::{
     client::play::{
         Animation, CAcknowledgeBlockChange, CEntityAnimation, CHeadRot, CPingResponse,
@@ -652,5 +655,35 @@ impl Player {
             }
             self.open_container.store(None);
         }
+    }
+
+    pub async fn handle_command_suggestion(
+        self: &Arc<Self>,
+        packet: SCommandSuggestion,
+        server: &Arc<Server>,
+    ) {
+        let mut src = CommandSender::Player(self.clone());
+        let Some(cmd) = &packet.command.get(1..) else {
+            return;
+        };
+
+        let Some((last_word_start, _)) = cmd.char_indices().rfind(|(_, c)| c.is_whitespace())
+        else {
+            return;
+        };
+
+        let suggestions = server
+            .command_dispatcher
+            .find_suggestions(&mut src, server, cmd)
+            .await;
+
+        let response = CCommandSuggestions::new(
+            packet.id,
+            (last_word_start + 2).into(),
+            (cmd.len() - last_word_start - 1).into(),
+            suggestions,
+        );
+
+        self.client.send_packet(&response).await;
     }
 }

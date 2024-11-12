@@ -9,7 +9,7 @@ use std::{
 
 use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
-use num_derive::FromPrimitive;
+use num_derive::{FromPrimitive, ToPrimitive};
 use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::{
     math::{
@@ -27,15 +27,15 @@ use pumpkin_macros::sound;
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
-        CCombatDeath, CGameEvent, CHurtAnimation, CKeepAlive, CPlayDisconnect, CPlayerAbilities,
-        CPlayerInfoUpdate, CRespawn, CSetHealth, CSpawnEntity, CSyncPlayerPosition,
-        CSystemChatMessage, GameEvent, PlayerAction,
+        CCombatDeath, CEntityStatus, CGameEvent, CHurtAnimation, CKeepAlive, CPlayDisconnect,
+        CPlayerAbilities, CPlayerInfoUpdate, CRespawn, CSetHealth, CSpawnEntity,
+        CSyncPlayerPosition, CSystemChatMessage, GameEvent, PlayerAction,
     },
     server::play::{
         SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SClientTickEnd,
-        SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerInput,
-        SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
-        SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
+        SCommandSuggestion, SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction,
+        SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
+        SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
     },
     RawPacket, ServerPacket, SoundCategory, VarInt,
 };
@@ -156,6 +156,9 @@ pub struct Player {
 
     /// Tell tasks to stop if we are closing
     cancel_tasks: Notify,
+
+    /// the players op permission level
+    permission_lvl: PermissionLvl,
 }
 
 impl Player {
@@ -214,6 +217,8 @@ impl Player {
             pending_chunks: Arc::new(parking_lot::Mutex::new(HashMap::new())),
             pending_chunk_batch: parking_lot::Mutex::new(HashMap::new()),
             cancel_tasks: Notify::new(),
+            // TODO: change this
+            permission_lvl: PermissionLvl::Four,
         }
     }
 
@@ -494,6 +499,27 @@ impl Player {
             .await;
     }
 
+    /// syncs the players permission level with the client
+    pub async fn send_permission_lvl_update(&self) {
+        self.client
+            .send_packet(&CEntityStatus::new(
+                self.entity_id(),
+                24 + self.permission_lvl as i8,
+            ))
+            .await;
+    }
+
+    /// sets the players permission level and syncs it with the client
+    pub async fn set_permission_lvl(&mut self, lvl: PermissionLvl) {
+        self.permission_lvl = lvl;
+        self.send_permission_lvl_update().await;
+    }
+
+    /// get the players permission level
+    pub fn permission_lvl(&self) -> PermissionLvl {
+        self.permission_lvl
+    }
+
     pub async fn respawn(self: &Arc<Self>, alive: bool) {
         let last_pos = self.living_entity.last_pos.load();
         let death_location = WorldPosition(Vector3::new(
@@ -522,6 +548,8 @@ impl Player {
 
         log::debug!("Sending player abilities to {}", self.gameprofile.name);
         self.send_abilties_update().await;
+
+        self.send_permission_lvl_update().await;
 
         let world = &self.living_entity.entity.world;
 
@@ -847,6 +875,10 @@ impl Player {
                 self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await;
             }
             SUseItem::PACKET_ID => self.handle_use_item(&SUseItem::read(bytebuf)?),
+            SCommandSuggestion::PACKET_ID => {
+                self.handle_command_suggestion(SCommandSuggestion::read(bytebuf)?, server)
+                    .await;
+            }
             _ => {
                 log::warn!("Failed to handle player packet id {}", packet.id.0);
                 // TODO: We give an error if all play packets are implemented
@@ -906,4 +938,15 @@ pub enum ChatMode {
     CommandsOnly,
     /// All messages should be hidden
     Hidden,
+}
+
+/// the player's permission level
+#[derive(FromPrimitive, ToPrimitive, Clone, Copy)]
+#[repr(i8)]
+pub enum PermissionLvl {
+    Zero = 0,
+    One = 1,
+    Two = 2,
+    Three = 3,
+    Four = 4,
 }

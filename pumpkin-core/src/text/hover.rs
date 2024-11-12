@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::Text;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(tag = "action", content = "contents", rename_all = "snake_case")]
 pub enum HoverEvent<'a> {
     /// Displays a tooltip with the given text.

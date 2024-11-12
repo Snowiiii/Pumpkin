@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use pumpkin_protocol::client::play::{
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
+};
 
 use crate::command::dispatcher::CommandError;
 use crate::command::tree::RawArgs;
@@ -10,12 +13,23 @@ use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
 use super::arg_players::PlayersArgumentConsumer;
-use super::{Arg, DefaultNameArgConsumer, FindArg};
+use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// todo: implement (currently just calls [`super::arg_player::PlayerArgumentConsumer`])
 ///
 /// For selecting zero, one or multiple entities, eg. using @s, a player name, @a or @e
 pub(crate) struct EntitiesArgumentConsumer;
+
+impl GetClientSideArgParser for EntitiesArgumentConsumer {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        // todo: investigate why this does not accept target selectors
+        ProtoCmdArgParser::Entity { flags: 0 }
+    }
+
+    fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
+        None
+    }
+}
 
 #[async_trait]
 impl ArgumentConsumer for EntitiesArgumentConsumer {
@@ -25,10 +39,20 @@ impl ArgumentConsumer for EntitiesArgumentConsumer {
         server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
+        // todo
         match PlayersArgumentConsumer.consume(src, server, args).await {
             Some(Arg::Players(p)) => Some(Arg::Entities(p)),
             _ => None,
         }
+    }
+
+    async fn suggest<'a>(
+        &self,
+        _sender: &CommandSender<'a>,
+        _server: &'a Server,
+        _input: &'a str,
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
+        Ok(None)
     }
 }
 

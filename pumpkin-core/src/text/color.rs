@@ -2,7 +2,7 @@ use colored::{ColoredString, Colorize};
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// Text color
-#[derive(Default, Debug, Clone, Copy, Serialize)]
+#[derive(Default, Debug, Clone, Copy, Serialize, PartialEq, Eq, Hash)]
 #[serde(untagged)]
 pub enum Color {
     /// The default color for the text will be used, which varies by context

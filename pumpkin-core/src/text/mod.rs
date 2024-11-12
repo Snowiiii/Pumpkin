@@ -14,13 +14,13 @@ pub mod color;
 pub mod hover;
 pub mod style;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(transparent)]
 pub struct Text<'a>(pub Box<TextComponent<'a>>);
 
 // Represents a Text component
 // Reference: https://wiki.vg/Text_formatting#Text_components
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct TextComponent<'a> {
     /// The actual text
@@ -166,7 +166,7 @@ impl<'a> TextComponent<'a> {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(untagged)]
 pub enum TextContent<'a> {
     /// Raw Text

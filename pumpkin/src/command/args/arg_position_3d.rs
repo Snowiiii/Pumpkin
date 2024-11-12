@@ -2,6 +2,9 @@ use std::num::ParseFloatError;
 
 use async_trait::async_trait;
 use pumpkin_core::math::vector3::Vector3;
+use pumpkin_protocol::client::play::{
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
+};
 
 use crate::command::dispatcher::CommandError;
 use crate::command::tree::RawArgs;
@@ -9,10 +12,20 @@ use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::{Arg, DefaultNameArgConsumer, FindArg};
+use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// x, y and z coordinates
 pub(crate) struct Position3DArgumentConsumer;
+
+impl GetClientSideArgParser for Position3DArgumentConsumer {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::Vec3
+    }
+
+    fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
+        None
+    }
+}
 
 #[async_trait]
 impl ArgumentConsumer for Position3DArgumentConsumer {
@@ -22,22 +35,31 @@ impl ArgumentConsumer for Position3DArgumentConsumer {
         _server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
-        let pos = Position3D::try_new(args.pop(), args.pop(), args.pop())?;
+        let pos = Position3D::try_new(args.pop()?, args.pop()?, args.pop()?)?;
 
         let vec3 = pos.try_get_values(src.position())?;
 
         Some(Arg::Pos3D(vec3))
     }
+
+    async fn suggest<'a>(
+        &self,
+        _sender: &CommandSender<'a>,
+        _server: &'a Server,
+        _input: &'a str,
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
+        Ok(None)
+    }
 }
 
-struct Position3D(Coordinate, Coordinate, Coordinate);
+struct Position3D(Coordinate<false>, Coordinate<true>, Coordinate<false>);
 
 impl Position3D {
-    fn try_new(x: Option<&str>, y: Option<&str>, z: Option<&str>) -> Option<Self> {
+    fn try_new(x: &str, y: &str, z: &str) -> Option<Self> {
         Some(Self(
-            x?.try_into().ok()?,
-            y?.try_into().ok()?,
-            z?.try_into().ok()?,
+            x.try_into().ok()?,
+            y.try_into().ok()?,
+            z.try_into().ok()?,
         ))
     }
 
@@ -60,12 +82,12 @@ impl DefaultNameArgConsumer for Position3DArgumentConsumer {
     }
 }
 
-enum Coordinate {
+enum Coordinate<const IS_Y: bool> {
     Absolute(f64),
     Relative(f64),
 }
 
-impl TryFrom<&str> for Coordinate {
+impl<const IS_Y: bool> TryFrom<&str> for Coordinate<IS_Y> {
     type Error = ParseFloatError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
@@ -73,12 +95,19 @@ impl TryFrom<&str> for Coordinate {
             let offset = if s.is_empty() { 0.0 } else { s.parse()? };
             Ok(Self::Relative(offset))
         } else {
-            Ok(Self::Absolute(s.parse()?))
+            let mut v = s.parse()?;
+
+            // set position to block center if no decimal place is given
+            if !IS_Y && !s.contains('.') {
+                v += 0.5;
+            }
+
+            Ok(Self::Absolute(v))
         }
     }
 }
 
-impl Coordinate {
+impl<const IS_Y: bool> Coordinate<IS_Y> {
     fn value(self, origin: Option<f64>) -> Option<f64> {
         match self {
             Self::Absolute(v) => Some(v),
