@@ -7,11 +7,11 @@ use crate::{
         args::{arg_message::MsgArgConsumer, Arg, ConsumedArgs},
         tree::CommandTree,
         tree_builder::{argument, require},
-        CommandExecutor, CommandSender, InvalidTreeError,
+        CommandError, CommandExecutor, CommandSender,
     },
     entity::player::PermissionLvl,
 };
-use InvalidTreeError::InvalidConsumptionError;
+use CommandError::InvalidConsumption;
 
 const NAMES: [&str; 1] = ["say"];
 
@@ -28,7 +28,7 @@ impl CommandExecutor for SayExecutor {
         sender: &mut CommandSender<'a>,
         server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let sender = match sender {
             CommandSender::Console => "Console",
             CommandSender::Rcon(_) => "Rcon",
@@ -36,7 +36,7 @@ impl CommandExecutor for SayExecutor {
         };
 
         let Some(Arg::Msg(msg)) = args.get(ARG_MESSAGE) else {
-            return Err(InvalidConsumptionError(Some(ARG_MESSAGE.into())));
+            return Err(InvalidConsumption(Some(ARG_MESSAGE.into())));
         };
 
         server

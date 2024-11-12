@@ -568,7 +568,8 @@ impl Player {
 
         if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
             let mut inventory = self.inventory.lock().await;
-            if let Some(item) = inventory.held_item_mut() {
+            let item_slot = inventory.held_item_mut();
+            if let Some(item) = item_slot {
                 let block = get_block_by_item(item.item_id);
                 // check if item is a block, Because Not every item can be placed :D
                 if let Some(block) = block {
@@ -580,7 +581,7 @@ impl Player {
                     if self.gamemode.load() != GameMode::Creative {
                         item.item_count -= 1;
                         if item.item_count == 0 {
-                            inventory.empty_held_item();
+                            *item_slot = None;
                         }
                     }
 

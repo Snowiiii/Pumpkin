@@ -10,7 +10,7 @@ use crate::command::args::ConsumedArgs;
 use crate::command::args::FindArg;
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, literal, require};
-use crate::command::InvalidTreeError;
+use crate::command::CommandError;
 use crate::command::{CommandExecutor, CommandSender};
 use crate::entity::player::PermissionLvl;
 
@@ -59,7 +59,7 @@ impl CommandExecutor for TpEntitiesToEntityExecutor {
         _sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
         let destination = EntityArgumentConsumer::find_arg(args, ARG_DESTINATION)?;
@@ -84,7 +84,7 @@ impl CommandExecutor for TpEntitiesToPosFacingPosExecutor {
         _sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
         let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
@@ -109,7 +109,7 @@ impl CommandExecutor for TpEntitiesToPosFacingEntityExecutor {
         _sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
         let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
@@ -136,7 +136,7 @@ impl CommandExecutor for TpEntitiesToPosWithRotationExecutor {
         _sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
         let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
@@ -160,7 +160,7 @@ impl CommandExecutor for TpEntitiesToPosExecutor {
         _sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
         let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
@@ -184,7 +184,7 @@ impl CommandExecutor for TpSelfToEntityExecutor {
         sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let destination = EntityArgumentConsumer::find_arg(args, ARG_DESTINATION)?;
         let pos = destination.living_entity.entity.pos.load();
 
@@ -216,7 +216,7 @@ impl CommandExecutor for TpSelfToPosExecutor {
         sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         match sender {
             CommandSender::Player(player) => {
                 let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;

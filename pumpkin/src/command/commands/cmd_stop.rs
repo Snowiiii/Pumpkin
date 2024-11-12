@@ -5,8 +5,8 @@ use pumpkin_core::text::TextComponent;
 use crate::command::args::ConsumedArgs;
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::require;
-use crate::command::{CommandExecutor, CommandSender, InvalidTreeError};
 use crate::entity::player::PermissionLvl;
+use crate::command::{CommandError, CommandExecutor, CommandSender};
 
 const NAMES: [&str; 1] = ["stop"];
 
@@ -21,7 +21,7 @@ impl CommandExecutor for StopExecutor {
         sender: &mut CommandSender<'a>,
         server: &crate::server::Server,
         _args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         sender
             .send_message(TextComponent::text("Stopping Server").color_named(NamedColor::Red))
             .await;

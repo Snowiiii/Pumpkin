@@ -4,41 +4,56 @@ use async_trait::async_trait;
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
 use pumpkin_inventory::Container;
-use pumpkin_world::item::ItemStack;
 
 use crate::command::args::arg_entities::EntitiesArgumentConsumer;
 use crate::command::args::{Arg, ConsumedArgs};
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, require};
-use crate::command::{CommandExecutor, CommandSender, InvalidTreeError};
+use crate::command::{CommandError, CommandExecutor, CommandSender};
 use crate::entity::player::Player;
-use InvalidTreeError::InvalidConsumptionError;
+use CommandError::InvalidConsumption;
 
 const NAMES: [&str; 1] = ["clear"];
 const DESCRIPTION: &str = "Clear yours or targets inventory.";
 
 const ARG_TARGET: &str = "target";
 
-async fn clear_player(target: &Arc<Player>) -> usize {
+async fn clear_player(target: &Player) -> usize {
     let mut inventory = target.inventory.lock().await;
 
-    let mut items_count: usize = 0;
-    let mut slots = vec![];
-    for (slot, item) in inventory.all_slots().iter_mut().enumerate() {
-        if let Some(is) = item {
-            items_count += is.item_count as usize;
-            **item = Option::<ItemStack>::None;
-            slots.push(slot);
-        }
-    }
-    // TODO Update whole inventory at once
+    let slots = inventory.all_slots();
+    let items_count = slots
+        .iter()
+        .filter_map(|slot| slot.as_ref().map(|slot| slot.item_count as usize))
+        .sum();
     for slot in slots {
-        target
-            .send_inventory_slot_update(&mut inventory, slot)
-            .await
-            .unwrap();
+        *slot = None;
     }
+    drop(inventory);
+    target.set_container_content(None).await;
     items_count
+}
+
+fn clear_command_text_output(item_count: usize, targets: &[Arc<Player>]) -> TextComponent {
+    match targets {
+        [target] if item_count == 0 => TextComponent::text_string(format!(
+            "No items were found on player {}",
+            target.gameprofile.name
+        ))
+        .color_named(NamedColor::Red),
+        [target] => TextComponent::text_string(format!(
+            "Removed {} item(s) on player {}",
+            item_count, target.gameprofile.name
+        )),
+        targets if item_count == 0 => {
+            TextComponent::text_string(format!("No items were found on {} players", targets.len()))
+                .color_named(NamedColor::Red)
+        }
+        targets => TextComponent::text_string(format!(
+            "Removed {item_count} item(s) from {} players",
+            targets.len()
+        )),
+    }
 }
 
 struct ClearExecutor;
@@ -50,41 +65,17 @@ impl CommandExecutor for ClearExecutor {
         sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let Some(Arg::Entities(targets)) = args.get(&ARG_TARGET) else {
-            return Err(InvalidConsumptionError(Some(ARG_TARGET.into())));
+            return Err(InvalidConsumption(Some(ARG_TARGET.into())));
         };
 
-        let target_count = targets.len();
-
-        let mut items_count = 0;
+        let mut item_count = 0;
         for target in targets {
-            let item_count = clear_player(target).await;
-            items_count += item_count;
+            item_count += clear_player(target).await;
         }
 
-        let msg = if target_count == 1 {
-            let target = targets.first().unwrap();
-            if items_count == 0 {
-                TextComponent::text_string(format!(
-                    "No items were found on player {}",
-                    target.gameprofile.name
-                ))
-                .color_named(NamedColor::Red)
-            } else {
-                TextComponent::text_string(format!(
-                    "Removed {} item(s) on player {}",
-                    items_count, target.gameprofile.name
-                ))
-            }
-        } else if items_count == 0 {
-            TextComponent::text_string(format!("No items were found on {target_count} players"))
-                .color_named(NamedColor::Red)
-        } else {
-            TextComponent::text_string(format!(
-                "Removed {items_count} item(s) from {target_count} players"
-            ))
-        };
+        let msg = clear_command_text_output(item_count, targets);
 
         sender.send_message(msg).await;
 
@@ -101,25 +92,13 @@ impl CommandExecutor for ClearSelfExecutor {
         sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         _args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
-        let target = sender
-            .as_player()
-            .ok_or(InvalidTreeError::InvalidRequirementError)?;
+    ) -> Result<(), CommandError> {
+        let target = sender.as_player().ok_or(CommandError::InvalidRequirement)?;
 
-        let items_count = clear_player(&target).await;
+        let item_count = clear_player(&target).await;
 
-        let msg = if items_count == 0 {
-            TextComponent::text_string(format!(
-                "No items were found on player {}",
-                target.gameprofile.name
-            ))
-            .color_named(NamedColor::Red)
-        } else {
-            TextComponent::text_string(format!(
-                "Removed {} item(s) on player {}",
-                items_count, target.gameprofile.name
-            ))
-        };
+        let hold_target = vec![target];
+        let msg = clear_command_text_output(item_count, &hold_target);
 
         sender.send_message(msg).await;
 

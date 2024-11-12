@@ -6,8 +6,8 @@ use crate::command::args::arg_entities::EntitiesArgumentConsumer;
 use crate::command::args::{Arg, ConsumedArgs};
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, require};
-use crate::command::{CommandExecutor, CommandSender, InvalidTreeError};
-use InvalidTreeError::InvalidConsumptionError;
+use crate::command::{CommandError, CommandExecutor, CommandSender};
+use CommandError::InvalidConsumption;
 
 const NAMES: [&str; 1] = ["kill"];
 const DESCRIPTION: &str = "Kills all target entities.";
@@ -23,9 +23,9 @@ impl CommandExecutor for KillExecutor {
         sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let Some(Arg::Entities(targets)) = args.get(&ARG_TARGET) else {
-            return Err(InvalidConsumptionError(Some(ARG_TARGET.into())));
+            return Err(InvalidConsumption(Some(ARG_TARGET.into())));
         };
 
         let target_count = targets.len();
@@ -55,10 +55,8 @@ impl CommandExecutor for KillSelfExecutor {
         sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         _args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
-        let target = sender
-            .as_player()
-            .ok_or(InvalidTreeError::InvalidRequirementError)?;
+    ) -> Result<(), CommandError> {
+        let target = sender.as_player().ok_or(CommandError::InvalidRequirement)?;
 
         target.living_entity.kill().await;
 

@@ -16,6 +16,7 @@ use pumpkin_protocol::client::play::{
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
 use pumpkin_protocol::VarInt;
+use pumpkin_world::item::item_registry::Item;
 use pumpkin_world::item::ItemStack;
 use std::sync::Arc;
 
@@ -50,6 +51,12 @@ impl Player {
         let mut inventory = self.inventory.lock().await;
 
         let total_opened_containers = inventory.total_opened_containers;
+        let id = if container.is_some() {
+            total_opened_containers
+        } else {
+            0
+        };
+
         let container = OptionallyCombinedContainer::new(&mut inventory, container);
 
         let slots = container
@@ -64,11 +71,10 @@ impl Player {
             .as_ref()
             .map_or_else(Slot::empty, std::convert::Into::into);
 
-        // Gets the previous value
         inventory.state_id += 1;
         let packet = CSetContainerContent::new(
-            total_opened_containers.into(),
-            (inventory.state_id as i32).into(),
+            id.into(),
+            (inventory.state_id).into(),
             &slots,
             &carried_item,
         );
@@ -521,7 +527,7 @@ impl Player {
         Ok(())
     }
 
-    async fn send_whole_container_change(&self, server: &Server) -> Result<(), InventoryError> {
+    pub async fn send_whole_container_change(&self, server: &Server) -> Result<(), InventoryError> {
         let players = self.get_current_players_in_container(server).await;
 
         for player in players {
@@ -543,5 +549,75 @@ impl Player {
             Some(id) => server.try_get_container(self.entity_id(), id).await,
             None => None,
         }
+    }
+
+    async fn pickup_items(&self, item: &Item, mut amount: u32) {
+        let max_stack = item.max_stack as u8;
+        let mut inventory = self.inventory.lock().await;
+        let slots = inventory.slots_with_hotbar_first();
+
+        let matching_slots = slots.filter_map(|slot| {
+            if let Some(item_slot) = slot.as_ref() {
+                if item_slot.item_id == item.id && item_slot.item_count < max_stack {
+                    let item_count = item_slot.item_count;
+                    Some((slot, item_count))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        });
+
+        for (slot, item_count) in matching_slots {
+            if amount == 0 {
+                return;
+            }
+            let amount_to_add = max_stack - item_count;
+            if let Some(amount_left) = amount.checked_sub(u32::from(amount_to_add)) {
+                amount = amount_left;
+                *slot = Some(ItemStack {
+                    item_id: item.id,
+                    item_count: item.max_stack as u8,
+                });
+            } else {
+                *slot = Some(ItemStack {
+                    item_id: item.id,
+                    item_count: max_stack - (amount_to_add - amount as u8),
+                });
+                return;
+            }
+        }
+
+        let empty_slots = inventory
+            .slots_with_hotbar_first()
+            .filter(|slot| slot.is_none());
+        for slot in empty_slots {
+            if amount == 0 {
+                return;
+            }
+            if let Some(remaining_amount) = amount.checked_sub(u32::from(max_stack)) {
+                amount = remaining_amount;
+                *slot = Some(ItemStack {
+                    item_id: item.id,
+                    item_count: max_stack,
+                });
+            } else {
+                *slot = Some(ItemStack {
+                    item_id: item.id,
+                    item_count: amount as u8,
+                });
+                return;
+            }
+        }
+        log::warn!("{amount} items ({}) were discarded because dropping them to the ground is not implemented", item.name);
+    }
+
+    /// Add items to inventory if there's space, else drop them to the ground.
+    ///
+    /// This method automatically syncs changes with the client.
+    pub async fn give_items(&self, item: &Item, amount: u32) {
+        self.pickup_items(item, amount).await;
+        self.set_container_content(None).await;
     }
 }

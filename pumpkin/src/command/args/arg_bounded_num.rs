@@ -4,7 +4,7 @@ use std::str::FromStr;
 use async_trait::async_trait;
 use pumpkin_protocol::client::play::{CommandSuggestion, ProtoCmdArgParser};
 
-use crate::command::dispatcher::InvalidTreeError;
+use crate::command::dispatcher::CommandError;
 use crate::command::tree::RawArgs;
 use crate::command::CommandSender;
 use crate::server::Server;
@@ -60,11 +60,9 @@ where
 impl<'a, T: ToFromNumber> FindArg<'a> for BoundedNumArgumentConsumer<T> {
     type Data = Result<T, NotInBounds>;
 
-    fn find_arg(args: &super::ConsumedArgs, name: &str) -> Result<Self::Data, InvalidTreeError> {
+    fn find_arg(args: &super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         let Some(Arg::Num(result)) = args.get(name) else {
-            return Err(InvalidTreeError::InvalidConsumptionError(Some(
-                name.to_string(),
-            )));
+            return Err(CommandError::InvalidConsumption(Some(name.to_string())));
         };
 
         let data: Self::Data = match result {
@@ -72,9 +70,7 @@ impl<'a, T: ToFromNumber> FindArg<'a> for BoundedNumArgumentConsumer<T> {
                 if let Some(x) = T::from_number(num) {
                     Ok(x)
                 } else {
-                    return Err(InvalidTreeError::InvalidConsumptionError(Some(
-                        name.to_string(),
-                    )));
+                    return Err(CommandError::InvalidConsumption(Some(name.to_string())));
                 }
             }
             Err(()) => Err(()),

@@ -2,6 +2,7 @@ use crate::container_click::MouseClick;
 use crate::crafting::check_if_matches_crafting;
 use crate::{handle_item_change, Container, InventoryError, WindowType};
 use pumpkin_world::item::ItemStack;
+use std::iter::Chain;
 use std::slice::IterMut;
 
 pub struct PlayerInventory {
@@ -113,14 +114,9 @@ impl PlayerInventory {
         self.items[self.selected + 36 - 9].as_ref()
     }
 
-    pub fn held_item_mut(&mut self) -> Option<&mut ItemStack> {
+    pub fn held_item_mut(&mut self) -> &mut Option<ItemStack> {
         debug_assert!((0..9).contains(&self.selected));
-        self.items[self.selected + 36 - 9].as_mut()
-    }
-
-    pub fn empty_held_item(&mut self) {
-        debug_assert!((0..9).contains(&self.selected));
-        self.items[self.selected + 36 - 9] = None
+        &mut self.items[self.selected + 36 - 9]
     }
 
     pub fn slots(&self) -> Vec<Option<&ItemStack>> {
@@ -143,6 +139,13 @@ impl PlayerInventory {
 
     pub fn iter_items_mut(&mut self) -> IterMut<Option<ItemStack>> {
         self.items.iter_mut()
+    }
+
+    pub fn slots_with_hotbar_first(
+        &mut self,
+    ) -> Chain<IterMut<Option<ItemStack>>, IterMut<Option<ItemStack>>> {
+        let (items, hotbar) = self.items.split_at_mut(27);
+        hotbar.iter_mut().chain(items)
     }
 }
 
@@ -183,14 +186,6 @@ impl Container for PlayerInventory {
         Ok(())
     }
 
-    fn crafting_output_slot(&self) -> Option<usize> {
-        Some(0)
-    }
-
-    fn slot_in_crafting_input_slots(&self, slot: &usize) -> bool {
-        (1..=4).contains(slot)
-    }
-
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
         self.slots_mut()
     }
@@ -215,5 +210,13 @@ impl Container for PlayerInventory {
 
         self.crafting_output = check_if_matches_crafting(together);
         self.crafting.iter().any(|s| s.is_some())
+    }
+
+    fn crafting_output_slot(&self) -> Option<usize> {
+        Some(0)
+    }
+
+    fn slot_in_crafting_input_slots(&self, slot: &usize) -> bool {
+        (1..=4).contains(slot)
     }
 }

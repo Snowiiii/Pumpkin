@@ -3,7 +3,7 @@ use pumpkin_protocol::client::play::{
     CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType, StringProtoArgBehavior,
 };
 
-use crate::{command::dispatcher::InvalidTreeError, server::Server};
+use crate::{command::dispatcher::CommandError, server::Server};
 
 use super::{
     super::{
@@ -67,15 +67,10 @@ impl DefaultNameArgConsumer for MsgArgConsumer {
 impl<'a> FindArg<'a> for MsgArgConsumer {
     type Data = &'a str;
 
-    fn find_arg(
-        args: &'a super::ConsumedArgs,
-        name: &'a str,
-    ) -> Result<Self::Data, InvalidTreeError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::Msg(data)) => Ok(data),
-            _ => Err(InvalidTreeError::InvalidConsumptionError(Some(
-                name.to_string(),
-            ))),
+            _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),
         }
     }
 }
