@@ -4,6 +4,12 @@ version = "0.1.0-dev"
 description = "Empowering everyone to host fast and efficient Minecraft servers."
 edition = "2021"
 
+[package.metadata.winresource]
+# FileDescription is handled as the Program name by Windows!
+FileDescription = "Pumpkin"
+OriginalFilename = "pumpkin.exe"
+LegalCopyright = "Copyright © 2024 Aleksander Medvedev"
+
 [dependencies]
 # pumpkin
 pumpkin-core = { path = "../pumpkin-core" }
@@ -65,3 +71,6 @@ simple_logger = { version = "5.0.0", features = ["threads"] }
 
 # commands
 async-trait = "0.1.83"
+
+[build-dependencies]
+winresource = "0.1.17"
