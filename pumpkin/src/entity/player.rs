@@ -22,14 +22,14 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_entity::{entity_type::EntityType, EntityId};
-use pumpkin_inventory::{player::PlayerInventory, InventoryError};
+use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
         CCombatDeath, CGameEvent, CHurtAnimation, CKeepAlive, CPlayDisconnect, CPlayerAbilities,
-        CPlayerInfoUpdate, CRespawn, CSetContainerSlot, CSetHealth, CSpawnEntity,
-        CSyncPlayerPosition, CSystemChatMessage, GameEvent, PlayerAction,
+        CPlayerInfoUpdate, CRespawn, CSetHealth, CSpawnEntity, CSyncPlayerPosition,
+        CSystemChatMessage, GameEvent, PlayerAction,
     },
     server::play::{
         SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SClientTickEnd,
