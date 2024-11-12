@@ -344,7 +344,8 @@ impl Player {
         }
 
         if message.chars().any(|c| c == '§' || c < ' ' || c == '\x7F') {
-            self.kick(TextComponent::text("Illegal characters in chat")).await;
+            self.kick(TextComponent::text("Illegal characters in chat"))
+                .await;
             return;
         }
 
