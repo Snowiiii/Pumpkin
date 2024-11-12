@@ -23,9 +23,7 @@ pub(crate) struct EntitiesArgumentConsumer;
 impl GetClientSideArgParser for EntitiesArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {
         // todo: investigate why this does not accept target selectors
-        ProtoCmdArgParser::Entity {
-            flags: 0,
-        }
+        ProtoCmdArgParser::Entity { flags: 0 }
     }
 
     fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
