@@ -51,6 +51,12 @@ impl Player {
         let mut inventory = self.inventory.lock().await;
 
         let total_opened_containers = inventory.total_opened_containers;
+        let id = if container.is_some() {
+            total_opened_containers
+        } else {
+            0
+        };
+
         let container = OptionallyCombinedContainer::new(&mut inventory, container);
 
         let slots = container
@@ -65,11 +71,10 @@ impl Player {
             .as_ref()
             .map_or_else(Slot::empty, std::convert::Into::into);
 
-        // Gets the previous value
         inventory.state_id += 1;
         let packet = CSetContainerContent::new(
-            total_opened_containers.into(),
-            (inventory.state_id as i32).into(),
+            id.into(),
+            (inventory.state_id).into(),
             &slots,
             &carried_item,
         );
@@ -546,22 +551,14 @@ impl Player {
         }
     }
 
-    /// Add items to inventory if there's space, else drop them to the ground.
-    ///
-    /// This method automatically syncs changes with the client.
-    pub async fn give_items(
-        &self,
-        server: &Server,
-        item: &Item,
-        mut amount: u32,
-    ) -> Result<(), InventoryError> {
-        let mut inventory = self.inventory.lock().await;
-        let mut slots = inventory.slots_with_hotbar_first();
+    async fn pickup_items(&self, item: &Item, mut amount: u32) {
         let max_stack = item.max_stack as u8;
+        let mut inventory = self.inventory.lock().await;
+        let slots = inventory.slots_with_hotbar_first();
 
-        let matching_slots = slots.by_ref().filter_map(|slot| {
+        let matching_slots = slots.filter_map(|slot| {
             if let Some(item_slot) = slot.as_ref() {
-                if item_slot.item_id == item.id && max_stack < item_slot.item_count {
+                if item_slot.item_id == item.id && item_slot.item_count < max_stack {
                     let item_count = item_slot.item_count;
                     Some((slot, item_count))
                 } else {
@@ -574,7 +571,7 @@ impl Player {
 
         for (slot, item_count) in matching_slots {
             if amount == 0 {
-                return Ok(());
+                return;
             }
             let amount_to_add = max_stack - item_count;
             if let Some(amount_left) = amount.checked_sub(u32::from(amount_to_add)) {
@@ -588,14 +585,16 @@ impl Player {
                     item_id: item.id,
                     item_count: max_stack - (amount_to_add - amount as u8),
                 });
-                return Ok(());
+                return;
             }
         }
 
-        let empty_slots = slots.filter(|slot| slot.is_none());
+        let empty_slots = inventory
+            .slots_with_hotbar_first()
+            .filter(|slot| slot.is_none());
         for slot in empty_slots {
             if amount == 0 {
-                return Ok(());
+                return;
             }
             if let Some(remaining_amount) = amount.checked_sub(u32::from(max_stack)) {
                 amount = remaining_amount;
@@ -608,11 +607,17 @@ impl Player {
                     item_id: item.id,
                     item_count: amount as u8,
                 });
-                return Ok(());
+                return;
             }
         }
-        self.send_whole_container_change(server).await?;
         log::warn!("{amount} items ({}) were discarded because dropping them to the ground is not implemented", item.name);
-        Ok(())
+    }
+
+    /// Add items to inventory if there's space, else drop them to the ground.
+    ///
+    /// This method automatically syncs changes with the client.
+    pub async fn give_items(&self, item: &Item, amount: u32) {
+        self.pickup_items(item, amount).await;
+        self.set_container_content(None).await;
     }
 }
