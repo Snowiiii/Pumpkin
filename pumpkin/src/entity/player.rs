@@ -855,27 +855,6 @@ impl Player {
         };
         Ok(())
     }
-
-    /// Syncs inventory slot with client.
-    pub async fn send_inventory_slot_update(
-        &self,
-        inventory: &mut PlayerInventory,
-        slot_index: usize,
-    ) -> Result<(), InventoryError> {
-        let slot = (&*inventory.get_slot(slot_index)?).into();
-
-        // Returns previous value
-        inventory.state_id += 1;
-        let packet = CSetContainerSlot::new(
-            PlayerInventory::CONTAINER_ID,
-            inventory.state_id as i32,
-            slot_index,
-            &slot,
-        );
-        self.client.send_packet(&packet).await;
-
-        Ok(())
-    }
 }
 
 /// Represents a player's abilities and special powers.
