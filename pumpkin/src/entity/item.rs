@@ -9,6 +9,7 @@ use pumpkin_entity::EntityId;
 use pumpkin_inventory::Container;
 use pumpkin_protocol::client::play::{CPickupItem, CSetEntityMetadata, Metadata};
 use pumpkin_protocol::slot::Slot;
+use pumpkin_world::item::item_registry::get_item_by_id;
 use pumpkin_world::item::ItemStack;
 use rayon::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -135,8 +136,6 @@ impl ItemEntity {
         dropped_item: ItemStack,
         server: Arc<Server>,
     ) {
-        let mut inventory = player.inventory.lock().await;
-
         server
             .broadcast_packet_all(&CPickupItem::new_item(
                 entity_id.into(),
@@ -144,53 +143,11 @@ impl ItemEntity {
                 dropped_item.item_count,
             ))
             .await;
-        let mut index = None;
-
-        for (slot_index, slot) in inventory.hotbar_mut().into_iter().enumerate() {
-            match slot {
-                None => {
-                    *slot = Some(dropped_item);
-                    index = Some(slot_index + 27);
-                    break;
-                }
-                Some(item_stack) => {
-                    // TODO: Add max stack size check here
-                    if item_stack.item_id == dropped_item.item_id
-                        && item_stack.item_count + dropped_item.item_count <= 64
-                    {
-                        item_stack.item_count += dropped_item.item_count;
-                        index = Some(slot_index + 27);
-                        break;
-                    }
-                }
-            }
-        }
-        if index.is_none() {
-            for (slot_index, slot) in inventory.main_inventory_mut().into_iter().enumerate() {
-                match slot {
-                    None => {
-                        *slot = Some(dropped_item);
-                        index = Some(slot_index);
-                        break;
-                    }
-                    Some(item_stack) => {
-                        // TODO: Add max stack size check here
-                        if item_stack.item_id == dropped_item.item_id
-                            && item_stack.item_count + dropped_item.item_count <= 64
-                        {
-                            item_stack.item_count += dropped_item.item_count;
-                            index = Some(slot_index);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        drop(inventory);
+        let Some(item) = get_item_by_id(dropped_item.item_id) else {
+            return;
+        };
         player
-            .send_single_slot_inventory_change(
-                index.expect("It needs to have a valid slot for this path to get loaded"),
-            )
+            .give_items(item, u32::from(dropped_item.item_count))
             .await;
     }
 

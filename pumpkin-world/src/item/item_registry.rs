@@ -8,8 +8,12 @@ pub static ITEMS: LazyLock<Vec<Item>> = LazyLock::new(|| {
     serde_json::from_str(ITEMS_JSON).expect("Could not parse items.json registry.")
 });
 
-pub fn get_item<'a>(name: &str) -> Option<&'a Item> {
+pub fn get_item(name: &str) -> Option<&'static Item> {
     ITEMS.iter().find(|item| item.name == name)
+}
+
+pub fn get_item_by_id(id: u16) -> Option<&'static Item> {
+    ITEMS.iter().find(|item| item.id == id)
 }
 
 #[expect(dead_code)]
