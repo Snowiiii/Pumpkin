@@ -10,7 +10,7 @@ use crate::entity::player::PermissionLvl;
 
 const NAMES: [&str; 2] = ["getblock", "gb"];
 
-const DESCRIPTION: &str = "Print a block to. For debug purposes";
+const DESCRIPTION: &str = "Print a block to chat. For debug purposes.";
 
 const ARG_BLOCK_POS: &str = "position";
 
