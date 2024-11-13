@@ -3,10 +3,8 @@ use pumpkin_core::text::TextComponent;
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::SystemChatMessage as i32)]
+#[client_packet("play:system_chat")]
 pub struct CSystemChatMessage<'a> {
     content: &'a TextComponent<'a>,
     overlay: bool,

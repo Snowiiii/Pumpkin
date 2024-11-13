@@ -1,32 +1,18 @@
-use std::{
-    io::{self},
-    net::SocketAddr,
-};
+use std::net::SocketAddr;
 
 use packet::{ClientboundPacket, Packet, PacketError, ServerboundPacket};
 use pumpkin_config::{RCONConfig, ADVANCED_CONFIG};
 use std::sync::Arc;
-use thiserror::Error;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::server::Server;
 
 mod packet;
 
-#[derive(Debug, Error)]
-pub enum RCONError {
-    #[error("authentication failed")]
-    Auth,
-    #[error("command exceeds the maximum length")]
-    CommandTooLong,
-    #[error("{}", _0)]
-    Io(io::Error),
-}
-
 pub struct RCONServer;
 
 impl RCONServer {
-    pub async fn new(config: &RCONConfig, server: Arc<Server>) -> Result<Self, io::Error> {
+    pub async fn new(config: &RCONConfig, server: Arc<Server>) -> Result<Self, std::io::Error> {
         assert!(config.enabled, "RCON is not enabled");
         let listener = tokio::net::TcpListener::bind(config.address).await.unwrap();
 
@@ -74,7 +60,7 @@ impl RCONClient {
     }
 
     /// Returns if client is closed or not
-    pub async fn handle(&mut self, server: &Server, password: &str) -> bool {
+    pub async fn handle(&mut self, server: &Arc<Server>, password: &str) -> bool {
         if !self.closed {
             match self.read_bytes().await {
                 // Stream closed, so we can't reply, so we just close everything.
@@ -94,7 +80,7 @@ impl RCONClient {
         self.closed
     }
 
-    async fn poll(&mut self, server: &Server, password: &str) -> Result<(), PacketError> {
+    async fn poll(&mut self, server: &Arc<Server>, password: &str) -> Result<(), PacketError> {
         let Some(packet) = self.receive_packet().await? else {
             return Ok(());
         };
@@ -122,7 +108,7 @@ impl RCONClient {
                     let dispatcher = server.command_dispatcher.clone();
                     dispatcher
                         .handle_command(
-                            &mut crate::commands::CommandSender::Rcon(&output),
+                            &mut crate::command::CommandSender::Rcon(&output),
                             server,
                             packet.get_body(),
                         )
@@ -141,7 +127,7 @@ impl RCONClient {
         Ok(())
     }
 
-    async fn read_bytes(&mut self) -> io::Result<bool> {
+    async fn read_bytes(&mut self) -> std::io::Result<bool> {
         let mut buf = [0; 1460];
         let n = self.connection.read(&mut buf).await?;
         if n == 0 {

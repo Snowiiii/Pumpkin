@@ -1,8 +1,8 @@
 use colored::{ColoredString, Colorize};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// Text color
-#[derive(Default, Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Copy, Serialize, PartialEq, Eq, Hash)]
 #[serde(untagged)]
 pub enum Color {
     /// The default color for the text will be used, which varies by context
@@ -10,8 +10,31 @@ pub enum Color {
     /// is a shade of gray that isn't normally used on text).
     #[default]
     Reset,
+    /// RGB Color
+    Rgb(u32),
     /// One of the 16 named Minecraft colors
     Named(NamedColor),
+}
+
+impl<'de> Deserialize<'de> for Color {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+
+        if s == "reset" {
+            Ok(Color::Reset)
+        } else if s.starts_with('#') {
+            let rgb = u32::from_str_radix(&s.replace("#", ""), 16)
+                .map_err(|_| serde::de::Error::custom("Invalid hex color"))?;
+            Ok(Color::Rgb(rgb))
+        } else {
+            Ok(Color::Named(NamedColor::try_from(s.as_str()).map_err(
+                |_| serde::de::Error::custom("Invalid named color"),
+            )?))
+        }
+    }
 }
 
 impl Color {
@@ -36,6 +59,7 @@ impl Color {
                 NamedColor::Yellow => text.bright_yellow(),
                 NamedColor::White => text.white(),
             },
+            Color::Rgb(_) => todo!(),
         }
     }
 }
@@ -60,4 +84,30 @@ pub enum NamedColor {
     LightPurple,
     Yellow,
     White,
+}
+
+impl TryFrom<&str> for NamedColor {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "black" => Ok(NamedColor::Black),
+            "dark_blue" => Ok(NamedColor::DarkBlue),
+            "dark_green" => Ok(NamedColor::DarkGreen),
+            "dark_aqua" => Ok(NamedColor::DarkAqua),
+            "dark_red" => Ok(NamedColor::DarkRed),
+            "dark_purple" => Ok(NamedColor::DarkPurple),
+            "gold" => Ok(NamedColor::Gold),
+            "gray" => Ok(NamedColor::Gray),
+            "dark_gray" => Ok(NamedColor::DarkGray),
+            "blue" => Ok(NamedColor::Blue),
+            "green" => Ok(NamedColor::Green),
+            "aqua" => Ok(NamedColor::Aqua),
+            "red" => Ok(NamedColor::Red),
+            "light_purple" => Ok(NamedColor::LightPurple),
+            "yellow" => Ok(NamedColor::Yellow),
+            "white" => Ok(NamedColor::White),
+            _ => Err(()),
+        }
+    }
 }

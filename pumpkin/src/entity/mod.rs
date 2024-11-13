@@ -1,11 +1,13 @@
 use crate::server::Server;
-use crate::world::World;
 use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
-use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::ToPrimitive;
+use num_derive::FromPrimitive;
 use pumpkin_core::math::{
-    get_section_cord, position::WorldPosition, vector2::Vector2, vector3::Vector3,
+    boundingbox::{BoundingBox, BoundingBoxSize},
+    get_section_cord,
+    position::WorldPosition,
+    vector2::Vector2,
+    vector3::Vector3,
 };
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
 use pumpkin_protocol::client::play::{CEntityVelocity, CSpawnEntity, CUpdateEntityPos};
@@ -18,6 +20,8 @@ use rand::Rng;
 use std::sync::atomic::Ordering;
 use std::sync::{atomic::AtomicBool, Arc};
 use uuid::Uuid;
+
+use crate::world::World;
 
 pub mod item;
 pub mod living;
@@ -32,31 +36,24 @@ pub struct Entity {
     pub entity_type: EntityType,
     /// The world in which the entity exists.
     pub world: Arc<World>,
-    /// The entity's current health level.
-
     /// The entity's current position in the world
     pub pos: AtomicCell<Vector3<f64>>,
     /// The entity's position rounded to the nearest block coordinates
     pub block_pos: AtomicCell<WorldPosition>,
     /// The chunk coordinates of the entity's current position
     pub chunk_pos: AtomicCell<Vector2<i32>>,
-
     /// Indicates whether the entity is sneaking
     pub sneaking: AtomicBool,
     /// Indicates whether the entity is sprinting
     pub sprinting: AtomicBool,
     /// Indicates whether the entity is flying due to a fall
     pub fall_flying: AtomicBool,
-
     /// The entity's current velocity vector, aka Knockback
     pub velocity: AtomicCell<Vector3<f64>>,
-
     /// Indicates whether the entity is on the ground (may not always be accurate).
     pub on_ground: AtomicBool,
-
     /// Indicates whether the entity is inside of ground, and needs to be pushed out.
     pub in_ground: AtomicBool,
-
     /// The entity's yaw rotation (horizontal rotation) ← →
     pub yaw: AtomicCell<f32>,
     /// The entity's head yaw rotation (horizontal rotation of the head)
@@ -67,6 +64,10 @@ pub struct Entity {
     pub standing_eye_height: f32,
     /// The entity's current pose (e.g., standing, sitting, swimming).
     pub pose: AtomicCell<EntityPose>,
+    /// The bounding box of an entity (hitbox)
+    pub bounding_box: AtomicCell<BoundingBox>,
+    ///The size (width and height) of the bounding box
+    pub bounding_box_size: AtomicCell<BoundingBoxSize>,
 }
 
 impl Entity {
@@ -76,6 +77,8 @@ impl Entity {
         world: Arc<World>,
         entity_type: EntityType,
         standing_eye_height: f32,
+        bounding_box: AtomicCell<BoundingBox>,
+        bounding_box_size: AtomicCell<BoundingBoxSize>,
     ) -> Self {
         Self {
             entity_id,
@@ -97,28 +100,44 @@ impl Entity {
             velocity: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
             standing_eye_height,
             pose: AtomicCell::new(EntityPose::Standing),
+            bounding_box,
+            bounding_box_size,
         }
     }
 
     /// Updates the entity's position, block position, and chunk position.
     ///
     /// This function calculates the new position, block position, and chunk position based on the provided coordinates. If any of these values change, the corresponding fields are updated.
+    #[expect(clippy::float_cmp)]
     pub fn set_pos(&self, x: f64, y: f64, z: f64) {
         let pos = self.pos.load();
         if pos.x != x || pos.y != y || pos.z != z {
             self.pos.store(Vector3::new(x, y, z));
-            let i = x.floor() as i32;
-            let j = y.floor() as i32;
-            let k = z.floor() as i32;
+
+            self.bounding_box.store(BoundingBox::new_from_pos(
+                pos.x,
+                pos.y,
+                pos.z,
+                &self.bounding_box_size.load(),
+            ));
+
+            let floor_x = x.floor() as i32;
+            let floor_y = y.floor() as i32;
+            let floor_z = z.floor() as i32;
 
             let block_pos = self.block_pos.load();
             let block_pos_vec = block_pos.0;
-            if i != block_pos_vec.x || j != block_pos_vec.y || k != block_pos_vec.z {
-                let new_block_pos = Vector3::new(i, j, k);
+            if floor_x != block_pos_vec.x
+                || floor_y != block_pos_vec.y
+                || floor_z != block_pos_vec.z
+            {
+                let new_block_pos = Vector3::new(floor_x, floor_y, floor_z);
                 self.block_pos.store(WorldPosition(new_block_pos));
 
                 let chunk_pos = self.chunk_pos.load();
-                if get_section_cord(i) != chunk_pos.x || get_section_cord(k) != chunk_pos.z {
+                if get_section_cord(floor_x) != chunk_pos.x
+                    || get_section_cord(floor_z) != chunk_pos.z
+                {
                     self.chunk_pos.store(Vector2::new(
                         get_section_cord(new_block_pos.x),
                         get_section_cord(new_block_pos.z),
@@ -170,7 +189,7 @@ impl Entity {
         if chunks.is_empty() {
             return;
         }
-        let mut chunks = self.world.receive_chunks(chunks);
+        let (_, mut chunks) = self.world.receive_chunks(&chunks);
 
         while let Some(chunk) = chunks.recv().await {
             let chunk = chunk.read().await;
@@ -192,7 +211,8 @@ impl Entity {
                             z: future_position.z.floor(),
                             y: future_position.y.floor(),
                         }));
-                if block_id.is_air() {
+                // Air check
+                if block_id == 0 {
                     self.on_ground.store(false, Ordering::Relaxed);
                 } else if pos.y > future_position.y || !self.on_ground.load(Ordering::Relaxed) {
                     let mut new_pos = pos;
@@ -351,7 +371,7 @@ impl Entity {
     }
 
     async fn set_flag(&self, flag: Flag, value: bool) {
-        let index = flag.to_u32().unwrap();
+        let index = flag as u8;
         let mut b = 0i8;
         if value {
             b |= 1 << index;
@@ -400,7 +420,7 @@ impl Entity {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FromPrimitive)]
 /// Represents various entity flags that are sent in entity metadata.
 ///
 /// These flags are used by the client to modify the rendering of entities based on their current state.
@@ -408,21 +428,22 @@ impl Entity {
 /// **Purpose:**
 ///
 /// This enum provides a more type-safe and readable way to represent entity flags compared to using raw integer values.
+#[repr(u8)]
 pub enum Flag {
     /// Indicates if the entity is on fire.
-    OnFire,
+    OnFire = 0,
     /// Indicates if the entity is sneaking.
-    Sneaking,
+    Sneaking = 1,
     /// Indicates if the entity is sprinting.
-    Sprinting,
+    Sprinting = 3,
     /// Indicates if the entity is swimming.
-    Swimming,
+    Swimming = 4,
     /// Indicates if the entity is invisible.
-    Invisible,
+    Invisible = 5,
     /// Indicates if the entity is glowing.
-    Glowing,
+    Glowing = 6,
     /// Indicates if the entity is flying due to a fall.
-    FallFlying,
+    FallFlying = 7,
 }
 
 #[must_use]

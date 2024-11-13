@@ -5,10 +5,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::JoinGame as i32)]
+#[client_packet("play:login")]
 pub struct CLogin<'a> {
     entity_id: i32,
     is_hardcore: bool,
@@ -28,7 +26,7 @@ pub struct CLogin<'a> {
     previous_gamemode: i8,
     debug: bool,
     is_flat: bool,
-    death_dimension_name: Option<(WorldPosition, i64)>,
+    death_dimension_name: Option<(&'a str, WorldPosition)>,
     portal_cooldown: VarInt,
     sealevel: VarInt,
     enforce_secure_chat: bool,
@@ -53,7 +51,7 @@ impl<'a> CLogin<'a> {
         previous_gamemode: i8,
         debug: bool,
         is_flat: bool,
-        death_dimension_name: Option<(WorldPosition, i64)>,
+        death_dimension_name: Option<(&'a str, WorldPosition)>,
         portal_cooldown: VarInt,
         sealevel: VarInt,
         enforce_secure_chat: bool,

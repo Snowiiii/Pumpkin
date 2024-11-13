@@ -4,10 +4,8 @@ use crate::VarInt;
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::WindowItems as i32)]
+#[client_packet("play:container_set_content")]
 pub struct CSetContainerContent<'a> {
     window_id: VarInt,
     state_id: VarInt,

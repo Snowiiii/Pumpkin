@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::DisplayScoreboard as i32)]
+#[client_packet("play:set_display_objective")]
 pub struct CDisplayObjective<'a> {
     position: VarInt,
     score_name: &'a str,

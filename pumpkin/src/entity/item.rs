@@ -2,15 +2,12 @@ use crate::entity::player::Player;
 use crate::entity::{random_float, Entity};
 use crate::server::Server;
 use crate::world::World;
-use crossbeam::atomic::AtomicCell;
-use pumpkin_core::math::position::WorldPosition;
-use pumpkin_core::math::vector2::Vector2;
+use pumpkin_core::math::boundingbox::{BoundingBox, BoundingBoxSize};
 use pumpkin_core::math::vector3::Vector3;
 use pumpkin_entity::entity_type::EntityType;
-use pumpkin_entity::pose::EntityPose;
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::Container;
-use pumpkin_protocol::client::play::{CPickupItem, CSetEntityMetadata, CSpawnEntity, Metadata};
+use pumpkin_protocol::client::play::{CPickupItem, CSetEntityMetadata, Metadata};
 use pumpkin_protocol::slot::Slot;
 use pumpkin_world::item::ItemStack;
 use rayon::prelude::*;
@@ -42,12 +39,18 @@ impl ItemEntity {
             });
         }
 
+        let bounding_box_size = BoundingBoxSize {
+            width: 0.5,
+            height: 0.5,
+        };
         let entity = Arc::new(Entity::new(
             server.new_entity_id(),
             Uuid::new_v4(),
             world,
             EntityType::Item,
             0.,
+            BoundingBox::new_default(&bounding_box_size).into(),
+            bounding_box_size.into(),
         ));
         entity.velocity.store(velocity);
         entity.set_pos(pos.x, pos.y, pos.z);

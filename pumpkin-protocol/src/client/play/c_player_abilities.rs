@@ -1,10 +1,8 @@
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::PlayerAbilities as i32)]
+#[client_packet("play:player_abilities")]
 pub struct CPlayerAbilities {
     flags: i8,
     flying_speed: f32,

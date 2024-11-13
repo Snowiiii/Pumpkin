@@ -1,0 +1,102 @@
+[
+  {
+    "id": 0,
+    "name": "minecraft:generic_9x1"
+  },
+  {
+    "id": 1,
+    "name": "minecraft:generic_9x2"
+  },
+  {
+    "id": 2,
+    "name": "minecraft:generic_9x3"
+  },
+  {
+    "id": 3,
+    "name": "minecraft:generic_9x4"
+  },
+  {
+    "id": 4,
+    "name": "minecraft:generic_9x5"
+  },
+  {
+    "id": 5,
+    "name": "minecraft:generic_9x6"
+  },
+  {
+    "id": 6,
+    "name": "minecraft:generic_3x3"
+  },
+  {
+    "id": 7,
+    "name": "minecraft:crafter_3x3"
+  },
+  {
+    "id": 8,
+    "name": "minecraft:anvil"
+  },
+  {
+    "id": 9,
+    "name": "minecraft:beacon"
+  },
+  {
+    "id": 10,
+    "name": "minecraft:blast_furnace"
+  },
+  {
+    "id": 11,
+    "name": "minecraft:brewing_stand"
+  },
+  {
+    "id": 12,
+    "name": "minecraft:crafting"
+  },
+  {
+    "id": 13,
+    "name": "minecraft:enchantment"
+  },
+  {
+    "id": 14,
+    "name": "minecraft:furnace"
+  },
+  {
+    "id": 15,
+    "name": "minecraft:grindstone"
+  },
+  {
+    "id": 16,
+    "name": "minecraft:hopper"
+  },
+  {
+    "id": 17,
+    "name": "minecraft:lectern"
+  },
+  {
+    "id": 18,
+    "name": "minecraft:loom"
+  },
+  {
+    "id": 19,
+    "name": "minecraft:merchant"
+  },
+  {
+    "id": 20,
+    "name": "minecraft:shulker_box"
+  },
+  {
+    "id": 21,
+    "name": "minecraft:smithing"
+  },
+  {
+    "id": 22,
+    "name": "minecraft:smoker"
+  },
+  {
+    "id": 23,
+    "name": "minecraft:cartography_table"
+  },
+  {
+    "id": 24,
+    "name": "minecraft:stonecutter"
+  }
+]

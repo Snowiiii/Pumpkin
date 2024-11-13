@@ -1,10 +1,8 @@
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-use super::ClientboundConfigPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundConfigPackets::PluginMessage as i32)]
+#[client_packet("configuration:custom_payload")]
 pub struct CPluginMessage<'a> {
     channel: &'a str,
     data: &'a [u8],

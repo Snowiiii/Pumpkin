@@ -1,8 +1,7 @@
-use super::ClientboundPlayPackets;
 use crate::VarInt;
 use pumpkin_macros::client_packet;
 use serde::Serialize;
-#[client_packet(ClientboundPlayPackets::CollectItem as i32)]
+#[client_packet("play:take_item_entity")]
 #[derive(Serialize)]
 pub struct CPickupItem {
     collected_entity_id: VarInt,

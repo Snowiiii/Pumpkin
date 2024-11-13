@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::SpawnEntity as i32)]
+#[client_packet("play:add_entity")]
 pub struct CSpawnEntity {
     entity_id: VarInt,
     #[serde(with = "uuid::serde::compact")]

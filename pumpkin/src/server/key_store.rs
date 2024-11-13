@@ -1,14 +1,13 @@
 use num_bigint::BigInt;
 use pumpkin_protocol::client::login::CEncryptionRequest;
 use rand::rngs::OsRng;
-use rsa::{traits::PublicKeyParts as _, Pkcs1v15Encrypt, RsaPrivateKey, RsaPublicKey};
+use rsa::{traits::PublicKeyParts as _, Pkcs1v15Encrypt, RsaPrivateKey};
 use sha1::Sha1;
 use sha2::Digest;
 
 use crate::client::EncryptionError;
 
 pub struct KeyStore {
-    pub _public_key: RsaPublicKey,
     pub private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,
 }
@@ -16,7 +15,7 @@ pub struct KeyStore {
 impl KeyStore {
     pub fn new() -> Self {
         log::debug!("Creating encryption keys...");
-        let (public_key, private_key) = Self::generate_keys();
+        let private_key = Self::generate_private_key();
 
         let public_key_der = rsa_der::public_key_to_der(
             &private_key.n().to_bytes_be(),
@@ -24,19 +23,17 @@ impl KeyStore {
         )
         .into_boxed_slice();
         Self {
-            _public_key: public_key,
             private_key,
             public_key_der,
         }
     }
 
-    fn generate_keys() -> (RsaPublicKey, RsaPrivateKey) {
+    fn generate_private_key() -> RsaPrivateKey {
         // Found out that OsRng is faster than rand::thread_rng here
         let mut rng = OsRng;
 
-        let priv_key = RsaPrivateKey::new(&mut rng, 1024).expect("failed to generate a key");
-        let pub_key = RsaPublicKey::from(&priv_key);
-        (pub_key, priv_key)
+        // let pub_key = RsaPublicKey::from(&priv_key);
+        RsaPrivateKey::new(&mut rng, 1024).expect("failed to generate a key")
     }
 
     pub fn encryption_request<'a>(

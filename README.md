@@ -5,7 +5,7 @@
 ![CI](https://github.com/Snowiiii/Pumpkin/actions/workflows/rust.yml/badge.svg)
 [![Discord](https://img.shields.io/discord/1268592337445978193.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/wT8XjrjKkf)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![Current version)](https://img.shields.io/badge/current_version-1.21.2-blue)
+![Current version)](https://img.shields.io/badge/current_version-1.21.3-blue)
 
 </div>
 
@@ -34,7 +34,9 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 
 - [x] Configuration (toml)
 - [x] Server Status/Ping
-- [x] Login
+- Login
+  - [x] Encryption
+  - [x] Packet Compression
 - Player Configuration
   - [x] Registries (biome types, paintings, dimensions)
   - [x] Server Brand
@@ -49,8 +51,9 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Entity Spawning
   - [x] Chunk Loading
   - [x] Chunk Generation
+  - [ ] World Time
   - [x] Scoreboard
-  - [ ] World Borders
+  - [x] World Borders
   - [ ] World Saving
 - Player
   - [x] Player Skins
@@ -60,9 +63,16 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Player Animation
   - [x] Player Inventory
   - [x] Player Combat
+- Entities
+  - [x] Players
+  - [ ] Mobs
+  - [ ] Animals
+  - [ ] Entity AI
+  - [ ] Minecart
+  - [ ] Boss
 - Server
-  - [x] Plugins
-  - [ ] Query
+  - [ ] Plugins
+  - [x] Query
   - [x] RCON
   - [x] Inventories
   - [x] Particles
@@ -93,7 +103,3 @@ Consider joining our [discord](https://discord.gg/wT8XjrjKkf) to stay up-to-date
 ## Funding
 
 If you want to fund me and help the project, Check out my [GitHub sponsors](https://github.com/sponsors/Snowiiii) or my [PayPal](https://www.paypal.me/alexxmedvedev)
-
-## Thanks
-
-A big thanks to [wiki.vg](https://wiki.vg/) for providing valuable information used in the development of this project.

@@ -3,10 +3,8 @@ use serde::Serialize;
 
 use crate::VarInt;
 
-use super::ClientboundPlayPackets;
-
 #[derive(Serialize)]
-#[client_packet(ClientboundPlayPackets::EntityMetadata as i32)]
+#[client_packet("play:set_entity_data")]
 pub struct CSetEntityMetadata<T: Serialize> {
     entity_id: VarInt,
     metadata: Metadata<T>,

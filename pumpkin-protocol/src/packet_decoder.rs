@@ -1,14 +1,13 @@
 use aes::cipher::{generic_array::GenericArray, BlockDecryptMut, BlockSizeUser, KeyIvInit};
 use bytes::{Buf, BytesMut};
+use thiserror::Error;
 
 use std::io::Write;
 
 use bytes::BufMut;
 use flate2::write::ZlibDecoder;
 
-use crate::{
-    bytebuf::ByteBuffer, PacketError, RawPacket, VarInt, VarIntDecodeError, MAX_PACKET_SIZE,
-};
+use crate::{bytebuf::ByteBuffer, RawPacket, VarInt, VarIntDecodeError, MAX_PACKET_SIZE};
 
 type Cipher = cfb8::Decryptor<aes::Aes128>;
 
@@ -24,17 +23,17 @@ pub struct PacketDecoder {
 }
 
 impl PacketDecoder {
-    pub fn decode(&mut self) -> Result<Option<RawPacket>, PacketError> {
+    pub fn decode(&mut self) -> Result<Option<RawPacket>, PacketDecodeError> {
         let mut r = &self.buf[..];
 
         let packet_len = match VarInt::decode_partial(&mut r) {
             Ok(len) => len,
             Err(VarIntDecodeError::Incomplete) => return Ok(None),
-            Err(VarIntDecodeError::TooLarge) => Err(PacketError::MalformedLength)?,
+            Err(VarIntDecodeError::TooLarge) => Err(PacketDecodeError::MalformedLength)?,
         };
 
         if !(0..=MAX_PACKET_SIZE).contains(&packet_len) {
-            Err(PacketError::OutOfBounds)?
+            Err(PacketDecodeError::OutOfBounds)?
         }
 
         if r.len() < packet_len as usize {
@@ -48,10 +47,12 @@ impl PacketDecoder {
         if self.compression {
             r = &r[..packet_len as usize];
 
-            let data_len = VarInt::decode(&mut r).map_err(|_| PacketError::TooLong)?.0;
+            let data_len = VarInt::decode(&mut r)
+                .map_err(|_| PacketDecodeError::TooLong)?
+                .0;
 
             if !(0..=MAX_PACKET_SIZE).contains(&data_len) {
-                Err(PacketError::OutOfBounds)?
+                Err(PacketDecodeError::OutOfBounds)?
             }
 
             // Is this packet compressed?
@@ -64,8 +65,8 @@ impl PacketDecoder {
                 let mut z = ZlibDecoder::new(&mut self.decompress_buf[..]);
 
                 z.write_all(r)
-                    .map_err(|e| PacketError::FailedWrite(e.to_string()))?;
-                z.finish().map_err(|_| PacketError::FailedFinish)?;
+                    .map_err(|e| PacketDecodeError::FailedWrite(e.to_string()))?;
+                z.finish().map_err(|_| PacketDecodeError::FailedFinish)?;
 
                 let total_packet_len = VarInt(packet_len).written_size() + packet_len as usize;
 
@@ -88,7 +89,7 @@ impl PacketDecoder {
         }
 
         r = &data[..];
-        let packet_id = VarInt::decode(&mut r).map_err(|_| PacketError::DecodeID)?;
+        let packet_id = VarInt::decode(&mut r).map_err(|_| PacketDecodeError::DecodeID)?;
 
         data.advance(data.len() - r.len());
         Ok(Some(RawPacket {
@@ -157,4 +158,20 @@ impl PacketDecoder {
     pub fn reserve(&mut self, additional: usize) {
         self.buf.reserve(additional);
     }
+}
+
+#[derive(Error, Debug)]
+pub enum PacketDecodeError {
+    #[error("failed to decode packet ID")]
+    DecodeID,
+    #[error("failed to write into decoder: {0}")]
+    FailedWrite(String),
+    #[error("failed to flush decoder")]
+    FailedFinish,
+    #[error("packet exceeds maximum length")]
+    TooLong,
+    #[error("packet length is out of bounds")]
+    OutOfBounds,
+    #[error("malformed packet length VarInt")]
+    MalformedLength,
 }

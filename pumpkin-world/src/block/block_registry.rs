@@ -1,91 +1,82 @@
-use std::{collections::HashMap, sync::LazyLock};
+use std::sync::LazyLock;
 
-use super::BlockState;
-use crate::item::get_item_protocol_id;
+use crate::item::ItemStack;
 use serde::Deserialize;
 
-pub static BLOCKS: LazyLock<HashMap<String, RegistryBlockType>> = LazyLock::new(|| {
+pub static BLOCKS: LazyLock<TopLevel> = LazyLock::new(|| {
     serde_json::from_str(include_str!("../../../assets/blocks.json"))
-        .expect("Could not parse block.json registry.")
+        .expect("Could not parse blocks.json registry.")
 });
 
-pumpkin_macros::blocks_enum!();
-pumpkin_macros::block_categories_enum!();
-
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct RegistryBlockDefinition {
-    /// e.g. minecraft:door or minecraft:button
-    #[serde(rename = "type")]
-    pub category: String,
-
-    /// Specifies the variant of the blocks category.
-    /// e.g. minecraft:iron_door has the variant iron
-    #[serde(rename = "block_set_type")]
-    pub variant: Option<String>,
+pub fn get_block(registry_id: &str) -> Option<&Block> {
+    BLOCKS
+        .blocks
+        .iter()
+        .find(|&block| block.name == registry_id)
 }
 
-/// One possible state of a Block.
-/// This could e.g. be an extended piston facing left.
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct RegistryBlockState {
-    pub id: BlockId,
-
-    /// Whether this is the default state of the Block
-    #[serde(default, rename = "default")]
-    pub is_default: bool,
-
-    /// The propertise active for this `BlockState`.
-    #[serde(default)]
-    pub properties: HashMap<String, String>,
+pub fn get_block_by_id<'a>(id: u16) -> Option<&'a Block> {
+    BLOCKS.blocks.iter().find(|&block| block.id == id)
 }
 
-/// A fully-fledged block definition.
-/// Stores the category, variant, all of the possible states and all of the possible properties.
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct RegistryBlockType {
-    pub definition: RegistryBlockDefinition,
-    pub states: Vec<RegistryBlockState>,
-
-    // TODO is this safe to remove? It's currently not used in the Project. @lukas0008 @Snowiiii
-    /// A list of valid property keys/values for a block.
-    #[serde(default, rename = "properties")]
-    valid_properties: HashMap<String, Vec<String>>,
+pub fn get_block_by_item<'a>(item_id: u16) -> Option<&'a Block> {
+    BLOCKS.blocks.iter().find(|&block| block.item_id == item_id)
+}
+#[expect(dead_code)]
+#[derive(Deserialize, Clone, Debug)]
+pub struct TopLevel {
+    pub blocks: Vec<Block>,
+    shapes: Vec<Shape>,
+    block_entity_types: Vec<BlockEntityKind>,
+}
+#[derive(Deserialize, Clone, Debug)]
+pub struct Block {
+    pub id: u16,
+    pub item_id: u16,
+    pub wall_variant_id: Option<u16>,
+    pub translation_key: String,
+    pub name: String,
+    pub properties: Vec<Property>,
+    pub default_state_id: u16,
+    pub states: Vec<State>,
 }
 
-#[derive(Default, Copy, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-#[serde(transparent)]
-pub struct BlockId {
-    pub data: u16,
-}
-
-impl BlockId {
-    pub fn is_air(&self) -> bool {
-        self.data == 0 || self.data == 12959 || self.data == 12958
-    }
-
-    pub fn get_id_mojang_repr(&self) -> i32 {
-        self.data as i32
-    }
-
-    pub fn get_id(&self) -> u16 {
-        self.data
-    }
-
-    pub fn get_as_item_id(&self) -> u32 {
-        let id = BLOCKS
-            .iter()
-            .find(|(_, val)| val.states.iter().any(|state| state.id == *self))
-            .map(|(key, _)| key.as_str())
-            .unwrap();
-        dbg!(id);
-        get_item_protocol_id(id)
+impl Block {
+    pub fn to_item(&self, count: u8) -> ItemStack {
+        ItemStack::new(count, self.item_id)
     }
 }
-
-impl From<BlockState> for BlockId {
-    fn from(value: BlockState) -> Self {
-        Self {
-            data: value.get_id(),
-        }
-    }
+#[expect(dead_code)]
+#[derive(Deserialize, Clone, Debug)]
+struct BlockEntityKind {
+    id: u32,
+    ident: String,
+    name: String,
+}
+#[expect(dead_code)]
+#[derive(Deserialize, Clone, Debug)]
+pub struct Property {
+    name: String,
+    values: Vec<String>,
+}
+#[derive(Deserialize, Clone, Debug)]
+pub struct State {
+    pub id: u16,
+    pub air: bool,
+    pub luminance: u8,
+    pub burnable: bool,
+    pub opacity: Option<u32>,
+    pub replaceable: bool,
+    pub collision_shapes: Vec<u16>,
+    pub block_entity_type: Option<u32>,
+}
+#[expect(dead_code)]
+#[derive(Deserialize, Clone, Debug)]
+struct Shape {
+    min_x: f64,
+    min_y: f64,
+    min_z: f64,
+    max_x: f64,
+    max_y: f64,
+    max_z: f64,
 }
