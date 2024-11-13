@@ -72,5 +72,10 @@ simple_logger = { version = "5.0.0", features = ["threads"] }
 # commands
 async-trait = "0.1.83"
 
+# plugins
+zip = "2.2.0"
+toml = "0.8.19"
+libloading = "0.8.5"
+
 [build-dependencies]
 winresource = "0.1.17"

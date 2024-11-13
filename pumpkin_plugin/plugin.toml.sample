@@ -1,0 +1,5 @@
+[plugin]
+name = "Pumpkin Sample Plugin"
+identifier = "pumpkin_sample_plugin"
+version = "0.0.1"
+supported_platforms = ["Windows"]

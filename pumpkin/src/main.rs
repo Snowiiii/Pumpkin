@@ -155,6 +155,11 @@ async fn main() -> io::Result<()> {
         });
     }
 
+    // Plugin setup
+    let mut plugin_manager = pumpkin::plugin::PluginManager::new();
+    plugin_manager.load_plugins();
+    plugin_manager.init();
+
     let mut master_client_id: u16 = 0;
     loop {
         // Asynchronously wait for an inbound socket.
