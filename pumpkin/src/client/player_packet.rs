@@ -346,7 +346,12 @@ impl Player {
             return;
         }
 
-        // TODO: filter message & validation
+        if message.chars().any(|c| c == '§' || c < ' ' || c == '\x7F') {
+            self.kick(TextComponent::text("Illegal characters in chat"))
+                .await;
+            return;
+        }
+
         let gameprofile = &self.gameprofile;
         log::info!("<chat>{}: {}", gameprofile.name, message);
 
