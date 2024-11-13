@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
 
 use crate::command::args::arg_block::BlockArgumentConsumer;
@@ -18,7 +19,7 @@ const ARG_BLOCK_POS: &str = "position";
 
 #[derive(Clone, Copy)]
 enum Mode {
-    /// with particles
+    /// with particles + item drops
     Destroy,
 
     /// only replaces air
@@ -39,25 +40,26 @@ impl CommandExecutor for SetblockExecutor {
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let block = BlockArgumentConsumer::find_arg(args, ARG_BLOCK)?;
+        let block_state_id = block.default_state_id;
         let pos = BlockPosArgumentConsumer::find_arg(args, ARG_BLOCK_POS)?;
         let mode = self.0;
         let world = sender.world().ok_or(CommandError::InvalidRequirement)?;
 
         let success = match mode {
             Mode::Destroy => {
-                world.break_block(pos).await;
-                world.set_block(pos, block.id).await;
+                world.break_block(pos, None).await;
+                world.set_block(pos, block_state_id).await;
                 true
             }
             Mode::Replace => {
-                world.set_block(pos, block.id).await;
+                world.set_block(pos, block_state_id).await;
                 true
             }
             Mode::Keep => {
                 match world.get_block(pos).await {
                     // todo: include other air blocks (I think there's cave air etc?)
                     Some(old_block) if old_block.id == 0 => {
-                        world.set_block(pos, block.id).await;
+                        world.set_block(pos, block_state_id).await;
                         true
                     }
                     _ => false,
@@ -70,6 +72,7 @@ impl CommandExecutor for SetblockExecutor {
                 TextComponent::text_string(format!("Placed block {} at {pos}", block.name,))
             } else {
                 TextComponent::text_string(format!("Kept block at {pos}"))
+                    .color_named(NamedColor::Red)
             })
             .await;
 

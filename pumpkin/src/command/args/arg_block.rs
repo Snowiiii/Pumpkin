@@ -59,7 +59,7 @@ impl ArgumentConsumer for BlockArgumentConsumer {
 
 impl DefaultNameArgConsumer for BlockArgumentConsumer {
     fn default_name(&self) -> &'static str {
-        "item"
+        "block"
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
@@ -73,7 +73,7 @@ impl<'a> FindArg<'a> for BlockArgumentConsumer {
     fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::Block(name)) => match block_registry::get_block(name) {
-                Some(item) => Ok(item),
+                Some(block) => Ok(block),
                 None => Err(CommandError::GeneralCommandIssue(format!(
                     "Block {name} does not exist."
                 ))),

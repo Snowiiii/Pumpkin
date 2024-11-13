@@ -475,10 +475,9 @@ impl Player {
                     if self.gamemode.load() == GameMode::Creative {
                         let location = player_action.location;
                         // Block break & block break sound
-                        // TODO: currently this is always dirt replace it
                         let entity = &self.living_entity.entity;
                         let world = &entity.world;
-                        world.break_block(location).await;
+                        world.break_block(location, Some(self)).await;
                     }
                 }
                 Status::CancelledDigging => {
@@ -505,10 +504,9 @@ impl Player {
                         return;
                     }
                     // Block break & block break sound
-                    // TODO: currently this is always dirt replace it
                     let entity = &self.living_entity.entity;
                     let world = &entity.world;
-                    world.break_block(location).await;
+                    world.break_block(location, Some(self)).await;
                     // TODO: Send this every tick
                     self.client
                         .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence))

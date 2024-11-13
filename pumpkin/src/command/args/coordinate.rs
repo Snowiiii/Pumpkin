@@ -34,6 +34,7 @@ impl<const IS_Y: bool> Coordinate<IS_Y> {
     }
 }
 
+#[derive(Debug)]
 pub enum BlockCoordinate {
     Absolute(i32),
     Relative(i32),
@@ -56,7 +57,7 @@ impl BlockCoordinate {
     pub fn value(self, origin: Option<f64>) -> Option<i32> {
         match self {
             Self::Absolute(v) => Some(v),
-            Self::Relative(offset) => Some(origin?.round() as i32 + offset),
+            Self::Relative(offset) => Some(origin?.floor() as i32 + offset),
         }
     }
 }
