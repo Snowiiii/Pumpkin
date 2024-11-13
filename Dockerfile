@@ -21,13 +21,13 @@ LABEL org.opencontainers.image.source=https://github.com/Snowiiii/Pumpkin
 
 RUN apk add --no-cache libgcc
 
-COPY --from=builder /pumpkin/pumpkin.release /pumpkin/pumpkin
+COPY --from=builder /pumpkin/pumpkin.release /bin/pumpkin
 
-# set workdir to /config, this is required to influence the PWD environment variable
+# set workdir to /pumpkin, this is required to influence the PWD environment variable
 # it allows for bind mounting the server files without overwriting the pumpkin
 # executable (without requiring an `docker cp`-ing the binary to the host folder)
-WORKDIR /config
+WORKDIR /pumpkin
 
 ENV RUST_BACKTRACE=1
 EXPOSE 25565
-ENTRYPOINT [ "/pumpkin/pumpkin" ]
+ENTRYPOINT [ "/bin/pumpkin" ]

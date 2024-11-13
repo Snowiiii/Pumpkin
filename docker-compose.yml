@@ -4,4 +4,4 @@ services:
     ports:
       - 25565:25565
     volumes:
-      - ./config:/config
+      - ./data:/pumpkin
