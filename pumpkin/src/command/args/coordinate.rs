@@ -1,11 +1,13 @@
 use std::str::FromStr;
 
-pub enum Coordinate<const IS_Y: bool> {
+use pumpkin_world::{WORLD_LOWEST_Y, WORLD_MAX_Y};
+
+pub enum MaybeRelativeCoordinate<const IS_Y: bool> {
     Absolute(f64),
     Relative(f64),
 }
 
-impl<const IS_Y: bool> TryFrom<&str> for Coordinate<IS_Y> {
+impl<const IS_Y: bool> TryFrom<&str> for MaybeRelativeCoordinate<IS_Y> {
     type Error = <f64 as FromStr>::Err;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
@@ -25,8 +27,8 @@ impl<const IS_Y: bool> TryFrom<&str> for Coordinate<IS_Y> {
     }
 }
 
-impl<const IS_Y: bool> Coordinate<IS_Y> {
-    pub fn value(self, origin: Option<f64>) -> Option<f64> {
+impl<const IS_Y: bool> MaybeRelativeCoordinate<IS_Y> {
+    pub fn into_absolute(self, origin: Option<f64>) -> Option<f64> {
         match self {
             Self::Absolute(v) => Some(v),
             Self::Relative(offset) => Some(origin? + offset),
@@ -35,12 +37,12 @@ impl<const IS_Y: bool> Coordinate<IS_Y> {
 }
 
 #[derive(Debug)]
-pub enum BlockCoordinate {
+pub enum MaybeRelativeBlockCoordinate<const IS_Y: bool> {
     Absolute(i32),
     Relative(i32),
 }
 
-impl TryFrom<&str> for BlockCoordinate {
+impl<const IS_Y: bool> TryFrom<&str> for MaybeRelativeBlockCoordinate<IS_Y> {
     type Error = <i32 as FromStr>::Err;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
@@ -53,11 +55,17 @@ impl TryFrom<&str> for BlockCoordinate {
     }
 }
 
-impl BlockCoordinate {
-    pub fn value(self, origin: Option<f64>) -> Option<i32> {
-        match self {
-            Self::Absolute(v) => Some(v),
-            Self::Relative(offset) => Some(origin?.floor() as i32 + offset),
+impl<const IS_Y: bool> MaybeRelativeBlockCoordinate<IS_Y> {
+    pub fn into_absolute(self, origin: Option<f64>) -> Option<i32> {
+        let abs = match self {
+            Self::Absolute(v) => v,
+            Self::Relative(offset) => origin?.floor() as i32 + offset,
+        };
+
+        if IS_Y && (abs < WORLD_LOWEST_Y.into() || abs >= WORLD_MAX_Y.into()) {
+            return None;
         }
+
+        Some(abs)
     }
 }

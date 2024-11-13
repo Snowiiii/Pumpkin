@@ -11,7 +11,7 @@ use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::coordinate::BlockCoordinate;
+use super::coordinate::MaybeRelativeBlockCoordinate;
 use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// x, y and z coordinates
@@ -35,9 +35,9 @@ impl ArgumentConsumer for BlockPosArgumentConsumer {
         _server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
-        let pos = BlockPos::try_new(args.pop()?, args.pop()?, args.pop()?)?;
+        let pos = MaybeRelativeBlockPos::try_new(args.pop()?, args.pop()?, args.pop()?)?;
 
-        let vec3 = pos.try_get_values(src.position())?;
+        let vec3 = pos.try_to_absolute(src.position())?;
 
         Some(Arg::BlockPos(vec3))
     }
@@ -52,9 +52,13 @@ impl ArgumentConsumer for BlockPosArgumentConsumer {
     }
 }
 
-struct BlockPos(BlockCoordinate, BlockCoordinate, BlockCoordinate);
+struct MaybeRelativeBlockPos(
+    MaybeRelativeBlockCoordinate<false>,
+    MaybeRelativeBlockCoordinate<true>,
+    MaybeRelativeBlockCoordinate<false>,
+);
 
-impl BlockPos {
+impl MaybeRelativeBlockPos {
     fn try_new(x: &str, y: &str, z: &str) -> Option<Self> {
         Some(Self(
             x.try_into().ok()?,
@@ -63,11 +67,11 @@ impl BlockPos {
         ))
     }
 
-    fn try_get_values(self, origin: Option<Vector3<f64>>) -> Option<WorldPosition> {
+    fn try_to_absolute(self, origin: Option<Vector3<f64>>) -> Option<WorldPosition> {
         Some(WorldPosition(Vector3::new(
-            self.0.value(origin.map(|o| o.x))?,
-            self.1.value(origin.map(|o| o.y))?,
-            self.2.value(origin.map(|o| o.z))?,
+            self.0.into_absolute(origin.map(|o| o.x))?,
+            self.1.into_absolute(origin.map(|o| o.y))?,
+            self.2.into_absolute(origin.map(|o| o.z))?,
         )))
     }
 }

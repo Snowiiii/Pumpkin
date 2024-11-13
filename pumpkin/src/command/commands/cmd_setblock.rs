@@ -48,23 +48,20 @@ impl CommandExecutor for SetblockExecutor {
         let success = match mode {
             Mode::Destroy => {
                 world.break_block(pos, None).await;
-                world.set_block(pos, block_state_id).await;
+                world.set_block_state(pos, block_state_id).await;
                 true
             }
             Mode::Replace => {
-                world.set_block(pos, block_state_id).await;
+                world.set_block_state(pos, block_state_id).await;
                 true
             }
-            Mode::Keep => {
-                match world.get_block(pos).await {
-                    // todo: include other air blocks (I think there's cave air etc?)
-                    Some(old_block) if old_block.id == 0 => {
-                        world.set_block(pos, block_state_id).await;
-                        true
-                    }
-                    _ => false,
+            Mode::Keep => match world.get_block_state(pos).await {
+                Some(old_state) if old_state.air => {
+                    world.set_block_state(pos, block_state_id).await;
+                    true
                 }
-            }
+                _ => false,
+            },
         };
 
         sender

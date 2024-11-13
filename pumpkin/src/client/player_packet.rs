@@ -588,7 +588,9 @@ impl Player {
                     let bounding_box = entity.bounding_box.load();
                     //TODO: Make this check for every entity in that posistion
                     if !bounding_box.intersects(&block_bounding_box) {
-                        world.set_block(world_pos, block.default_state_id).await;
+                        world
+                            .set_block_state(world_pos, block.default_state_id)
+                            .await;
                     }
                 }
                 self.client

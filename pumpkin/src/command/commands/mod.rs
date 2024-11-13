@@ -2,6 +2,7 @@ pub mod cmd_clear;
 pub mod cmd_craft;
 pub mod cmd_echest;
 pub mod cmd_gamemode;
+pub mod cmd_getblock;
 pub mod cmd_give;
 pub mod cmd_help;
 pub mod cmd_kick;

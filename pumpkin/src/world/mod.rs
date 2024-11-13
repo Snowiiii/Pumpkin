@@ -28,9 +28,14 @@ use pumpkin_protocol::{
     },
     ClientPacket, VarInt,
 };
-use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
+use pumpkin_world::chunk::ChunkData;
 use pumpkin_world::level::Level;
-use pumpkin_world::{block::block_registry::get_block_by_id, chunk::ChunkData};
+use pumpkin_world::{
+    block::block_registry::{
+        get_block_and_state_by_state_id, get_block_by_state_id, get_state_by_state_id,
+    },
+    coordinates::ChunkRelativeBlockCoordinates,
+};
 use rand::{thread_rng, Rng};
 use scoreboard::Scoreboard;
 use tokio::sync::{mpsc::Receiver, Mutex};
@@ -141,9 +146,9 @@ impl World {
     pub async fn get_top_block(&self, position: Vector2<i32>) -> i32 {
         for y in (-64..=319).rev() {
             let pos = WorldPosition(Vector3::new(position.x, y, position.z));
-            let block = self.get_block(pos).await;
+            let block = self.get_block_state(pos).await;
             if let Some(block) = block {
-                if block.states[0].air {
+                if block.air {
                     continue;
                 }
             }
@@ -608,7 +613,7 @@ impl World {
     }
 
     /// Sets a block
-    pub async fn set_block(&self, position: WorldPosition, block_state_id: u16) -> u16 {
+    pub async fn set_block_state(&self, position: WorldPosition, block_state_id: u16) -> u16 {
         let (chunk_coordinate, relative_coordinates) = position.chunk_and_chunk_relative_position();
 
         // Since we divide by 16 remnant can never exceed u8
@@ -646,7 +651,7 @@ impl World {
     }
 
     pub async fn break_block(&self, position: WorldPosition, cause: Option<&Player>) {
-        let broken_block_state_id = self.set_block(position, 0).await;
+        let broken_block_state_id = self.set_block_state(position, 0).await;
 
         let particles_packet =
             CWorldEvent::new(2001, &position, broken_block_state_id.into(), false);
@@ -660,11 +665,11 @@ impl World {
         }
     }
 
-    pub async fn get_block_id(&self, position: WorldPosition) -> u16 {
+    pub async fn get_block_state_id(&self, position: WorldPosition) -> u16 {
         let (chunk, relative) = position.chunk_and_chunk_relative_position();
         let relative = ChunkRelativeBlockCoordinates::from(relative);
         let chunk = self.receive_chunk(chunk).await;
-        let chunk = chunk.read().await;
+        let chunk: tokio::sync::RwLockReadGuard<ChunkData> = chunk.read().await;
         chunk.blocks.get_block(relative)
     }
 
@@ -673,7 +678,28 @@ impl World {
         &self,
         position: WorldPosition,
     ) -> Option<&pumpkin_world::block::block_registry::Block> {
-        let block_id = self.get_block_id(position).await;
-        get_block_by_id(block_id)
+        let id = self.get_block_state_id(position).await;
+        get_block_by_state_id(id)
+    }
+
+    /// Gets the Block state from the Block Registry, Returns None if the Block state has not been found
+    pub async fn get_block_state(
+        &self,
+        position: WorldPosition,
+    ) -> Option<&pumpkin_world::block::block_registry::State> {
+        let id = self.get_block_state_id(position).await;
+        get_state_by_state_id(id)
+    }
+
+    /// Gets the Block + Block state from the Block Registry, Returns None if the Block state has not been found
+    pub async fn get_block_and_block_state(
+        &self,
+        position: WorldPosition,
+    ) -> Option<(
+        &pumpkin_world::block::block_registry::Block,
+        &pumpkin_world::block::block_registry::State,
+    )> {
+        let id = self.get_block_state_id(position).await;
+        get_block_and_state_by_state_id(id)
     }
 }

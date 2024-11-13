@@ -10,7 +10,7 @@ use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::coordinate::Coordinate;
+use super::coordinate::MaybeRelativeCoordinate;
 use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// x, y and z coordinates
@@ -34,9 +34,9 @@ impl ArgumentConsumer for Position3DArgumentConsumer {
         _server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
-        let pos = Position3D::try_new(args.pop()?, args.pop()?, args.pop()?)?;
+        let pos = MaybeRelativePosition3D::try_new(args.pop()?, args.pop()?, args.pop()?)?;
 
-        let vec3 = pos.try_get_values(src.position())?;
+        let vec3 = pos.try_to_absolute(src.position())?;
 
         Some(Arg::Pos3D(vec3))
     }
@@ -51,9 +51,13 @@ impl ArgumentConsumer for Position3DArgumentConsumer {
     }
 }
 
-struct Position3D(Coordinate<false>, Coordinate<true>, Coordinate<false>);
+struct MaybeRelativePosition3D(
+    MaybeRelativeCoordinate<false>,
+    MaybeRelativeCoordinate<true>,
+    MaybeRelativeCoordinate<false>,
+);
 
-impl Position3D {
+impl MaybeRelativePosition3D {
     fn try_new(x: &str, y: &str, z: &str) -> Option<Self> {
         Some(Self(
             x.try_into().ok()?,
@@ -62,11 +66,11 @@ impl Position3D {
         ))
     }
 
-    fn try_get_values(self, origin: Option<Vector3<f64>>) -> Option<Vector3<f64>> {
+    fn try_to_absolute(self, origin: Option<Vector3<f64>>) -> Option<Vector3<f64>> {
         Some(Vector3::new(
-            self.0.value(origin.map(|o| o.x))?,
-            self.1.value(origin.map(|o| o.y))?,
-            self.2.value(origin.map(|o| o.z))?,
+            self.0.into_absolute(origin.map(|o| o.x))?,
+            self.1.into_absolute(origin.map(|o| o.y))?,
+            self.2.into_absolute(origin.map(|o| o.z))?,
         ))
     }
 }

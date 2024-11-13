@@ -11,7 +11,7 @@ use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::coordinate::Coordinate;
+use super::coordinate::MaybeRelativeCoordinate;
 use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// x and z coordinates only
@@ -37,9 +37,9 @@ impl ArgumentConsumer for Position2DArgumentConsumer {
         _server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
-        let pos = Position2D::try_new(args.pop()?, args.pop()?)?;
+        let pos = MaybeRelativePosition2D::try_new(args.pop()?, args.pop()?)?;
 
-        let vec2 = pos.try_get_values(src.position())?;
+        let vec2 = pos.try_to_abolute(src.position())?;
 
         Some(Arg::Pos2D(vec2))
     }
@@ -54,17 +54,20 @@ impl ArgumentConsumer for Position2DArgumentConsumer {
     }
 }
 
-struct Position2D(Coordinate<false>, Coordinate<false>);
+struct MaybeRelativePosition2D(
+    MaybeRelativeCoordinate<false>,
+    MaybeRelativeCoordinate<false>,
+);
 
-impl Position2D {
+impl MaybeRelativePosition2D {
     fn try_new(x: &str, z: &str) -> Option<Self> {
         Some(Self(x.try_into().ok()?, z.try_into().ok()?))
     }
 
-    fn try_get_values(self, origin: Option<Vector3<f64>>) -> Option<Vector2<f64>> {
+    fn try_to_abolute(self, origin: Option<Vector3<f64>>) -> Option<Vector2<f64>> {
         Some(Vector2::new(
-            self.0.value(origin.map(|o| o.x))?,
-            self.1.value(origin.map(|o| o.z))?,
+            self.0.into_absolute(origin.map(|o| o.x))?,
+            self.1.into_absolute(origin.map(|o| o.z))?,
         ))
     }
 }
