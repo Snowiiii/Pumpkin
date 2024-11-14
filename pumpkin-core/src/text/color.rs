@@ -19,7 +19,10 @@ impl Serialize for RGBColor {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&format!("#{:02X}{:02X}{:02X}", self.red, self.green, self.blue))
+        serializer.serialize_str(&format!(
+            "#{:02X}{:02X}{:02X}",
+            self.red, self.green, self.blue
+        ))
     }
 }
 
@@ -47,22 +50,19 @@ impl<'de> Deserialize<'de> for Color {
 
         if s == "reset" {
             Ok(Color::Reset)
-        } else if s.starts_with('#') {
+        } else if let Some(hex) = s.strip_prefix('#') {
             if s.len() != 7 {
-                return Err(serde::de::Error::custom("Hex color must be in the format '#RRGGBB'"));
+                return Err(serde::de::Error::custom(
+                    "Hex color must be in the format '#RRGGBB'",
+                ));
             }
 
-            let hex = &s[1..];
-
-            let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| {
-                serde::de::Error::custom("Invalid red component in hex color")
-            })?;
-            let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| {
-                serde::de::Error::custom("Invalid green component in hex color")
-            })?;
-            let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| {
-                serde::de::Error::custom("Invalid blue component in hex color")
-            })?;
+            let r = u8::from_str_radix(&hex[0..2], 16)
+                .map_err(|_| serde::de::Error::custom("Invalid red component in hex color"))?;
+            let g = u8::from_str_radix(&hex[2..4], 16)
+                .map_err(|_| serde::de::Error::custom("Invalid green component in hex color"))?;
+            let b = u8::from_str_radix(&hex[4..6], 16)
+                .map_err(|_| serde::de::Error::custom("Invalid blue component in hex color"))?;
 
             return Ok(Color::RGB(RGBColor::new(r, g, b)));
         } else {
@@ -96,7 +96,7 @@ impl Color {
                 NamedColor::White => text.white(),
             },
             // TODO: Check if terminal supports true color
-            Color::RGB(color) => text.truecolor(color.red, color.green, color.blue)
+            Color::RGB(color) => text.truecolor(color.red, color.green, color.blue),
         }
     }
 }
