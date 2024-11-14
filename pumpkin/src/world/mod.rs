@@ -13,7 +13,7 @@ use crate::{
     },
 };
 use pumpkin_config::BasicConfiguration;
-use pumpkin_core::math::vector2::Vector2;
+use pumpkin_core::{math::vector2::Vector2, GameMode};
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
@@ -200,7 +200,9 @@ impl World {
         log::debug!("Sending player abilities to {}", player.gameprofile.name);
         {
             let mut abilities = player.abilities.lock().await;
-            abilities.allow_flying = true;
+            if player.gamemode.load() == GameMode::Creative {
+                abilities.allow_flying = true;
+            }
         }
         player.send_abilties_update().await;
 
