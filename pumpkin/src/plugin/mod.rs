@@ -19,7 +19,7 @@ const THIS_PLUGIN_PLATFORM: PluginPlatform = PluginPlatform::Windows;
 #[cfg(target_os = "linux")]
 const THIS_PLUGIN_PLATFORM: PluginPlatform = PluginPlatform::Linux;
 #[cfg(target_os = "macos")]
-const THIS_PLUGIN_PLATFORM: PluginPlatform = PluginPlatform::MacOs;
+const THIS_PLUGIN_PLATFORM: PluginPlatform = PluginPlatform::MacOS;
 
 #[macro_export]
 macro_rules! register_plugin {
@@ -102,16 +102,14 @@ impl PluginManager {
     }
 
     fn load_plugins_from_dir(&mut self, dir: &str) -> io::Result<()> {
-        for entry in fs::read_dir(dir)? {
-            if let Ok(e) = entry {
-                let path = e.path();
-                if path.is_file()
-                    && VALID_PLUGIN_EXTENSIONS
-                        .contains(&path.extension().and_then(|o| o.to_str()).unwrap_or(""))
-                {
-                    if let Err(e) = self.try_load_file(&path) {
-                        log::info!("Failed to load file '{:?}' error: {e:?}", &path);
-                    }
+        for entry in (fs::read_dir(dir)?).flatten() {
+            let path = entry.path();
+            if path.is_file()
+                && VALID_PLUGIN_EXTENSIONS
+                    .contains(&path.extension().and_then(|o| o.to_str()).unwrap_or(""))
+            {
+                if let Err(e) = self.try_load_file(&path) {
+                    log::info!("Failed to load file '{:?}' error: {e:?}", &path);
                 }
             }
         }
@@ -124,7 +122,7 @@ impl PluginManager {
 
         log::info!("Trying to load plugin from: {path:?}");
 
-        let file = std::fs::File::open(&path)?;
+        let file = std::fs::File::open(path)?;
         let reader = BufReader::new(file);
 
         let mut zip = ZipArchive::new(reader)?;
@@ -174,7 +172,7 @@ impl PluginManager {
                 let mut temp_file = std::fs::File::create(temp_path.join(&temp_file_path))?;
                 let mut lib_content = Vec::new();
                 library_file.read_to_end(&mut lib_content)?;
-                temp_file.write(&lib_content)?;
+                temp_file.write_all(&lib_content)?;
                 temp_file_path
             };
 
@@ -248,10 +246,16 @@ impl PluginManager {
     }
 
     pub fn init(&mut self) {
-        for (_, pl) in &mut self.plugins {
+        for pl in self.plugins.values_mut() {
             log::info!("Running initialization for {}", pl.0.plugin);
             pl.2.init();
         }
+    }
+}
+
+impl Default for PluginManager {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
