@@ -15,6 +15,11 @@ const DESCRIPTION: &str = "Display information about Pumpkin.";
 
 struct PumpkinExecutor;
 
+use git_version::git_version;
+const GIT_VERSION: &str = git_version!();
+const CARGO_PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
+const CARGO_PKG_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
+
 #[async_trait]
 impl CommandExecutor for PumpkinExecutor {
     async fn execute<'a>(
@@ -23,13 +28,9 @@ impl CommandExecutor for PumpkinExecutor {
         _server: &crate::server::Server,
         _args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
-        let version = env!("CARGO_PKG_VERSION");
-        let description = env!("CARGO_PKG_DESCRIPTION");
-
         sender.send_message(TextComponent::text(
-             &format!("Pumpkin {version}, {description} (Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL})")
+             &format!("Pumpkin {CARGO_PKG_VERSION} ({GIT_VERSION}), {CARGO_PKG_DESCRIPTION} (Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL})")
          ).color_named(NamedColor::Green)).await;
-
         Ok(())
     }
 }

@@ -34,6 +34,8 @@ use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use rcon::RCONServer;
 use std::time::Instant;
+use pumpkin_protocol::CURRENT_MC_PROTOCOL;
+use crate::server::CURRENT_MC_VERSION;
 
 // Setup some tokens to allow us to identify which event is for which socket.
 
@@ -62,6 +64,7 @@ fn init_logger() {
     use pumpkin_config::ADVANCED_CONFIG;
     if ADVANCED_CONFIG.logging.enabled {
         let mut logger = simple_logger::SimpleLogger::new();
+        logger = logger.with_timestamp_format(time::macros::format_description!("[year]-[month]-[day] [hour]:[minute]:[second]"));
 
         if !ADVANCED_CONFIG.logging.timestamp {
             logger = logger.without_timestamps();
@@ -90,9 +93,15 @@ const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> L
     }
 }
 
+use git_version::git_version;
+const GIT_VERSION: &str = git_version!();
+const CARGO_PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[tokio::main]
 async fn main() -> io::Result<()> {
     init_logger();
+    log::info!("Starting Pumpkin {CARGO_PKG_VERSION} ({GIT_VERSION}) for Minecraft {CURRENT_MC_VERSION} (Protocol {CURRENT_MC_PROTOCOL})");
+
     // let rt = tokio::runtime::Builder::new_multi_thread()
     //     .enable_all()
     //     .build()
