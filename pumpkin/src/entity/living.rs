@@ -78,10 +78,11 @@ impl LivingEntity {
             .await;
 
         let new_health = (self.health.load() - amount).max(0.0);
-        self.set_health(new_health).await;
 
         if new_health == 0.0 {
             self.kill().await;
+        } else {
+            self.set_health(new_health).await;
         }
     }
 
@@ -142,6 +143,8 @@ impl LivingEntity {
     ///
     /// This is similar to `kill` but Spawn Particles, Animation and plays death sound
     pub async fn kill(&self) {
+        self.set_health(0.0).await;
+
         // Spawns death smoke particles
         self.entity
             .world

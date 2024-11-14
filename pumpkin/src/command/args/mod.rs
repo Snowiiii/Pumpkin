@@ -3,7 +3,7 @@ use std::{collections::HashMap, hash::Hash, sync::Arc};
 use arg_bounded_num::{NotInBounds, Number};
 use async_trait::async_trait;
 use pumpkin_core::{
-    math::{vector2::Vector2, vector3::Vector3},
+    math::{position::WorldPosition, vector2::Vector2, vector3::Vector3},
     GameMode,
 };
 use pumpkin_protocol::client::play::{
@@ -18,6 +18,7 @@ use super::{
     CommandSender,
 };
 
+pub(crate) mod arg_block;
 pub(crate) mod arg_bounded_num;
 pub(crate) mod arg_command;
 pub(crate) mod arg_entities;
@@ -28,8 +29,10 @@ pub(crate) mod arg_message;
 pub(crate) mod arg_players;
 pub(crate) mod arg_position_2d;
 pub(crate) mod arg_position_3d;
+pub(crate) mod arg_postition_block;
 pub(crate) mod arg_rotation;
 pub(crate) mod arg_simple;
+mod coordinate;
 
 /// see [`crate::commands::tree_builder::argument`]
 #[async_trait]
@@ -71,12 +74,14 @@ pub(crate) enum Arg<'a> {
     Entities(Vec<Arc<Player>>),
     Entity(Arc<Player>),
     Players(Vec<Arc<Player>>),
+    BlockPos(WorldPosition),
     Pos3D(Vector3<f64>),
     Pos2D(Vector2<f64>),
     Rotation(f32, f32),
     GameMode(GameMode),
     CommandTree(&'a CommandTree<'a>),
     Item(String),
+    Block(String),
     Msg(String),
     Num(Result<Number, NotInBounds>),
     #[allow(unused)]

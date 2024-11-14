@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use pumpkin_protocol::client::play::{
     CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
 };
-use pumpkin_world::item::item_registry::{self, Item};
+use pumpkin_world::block::block_registry::{self, Block};
 
 use crate::{command::dispatcher::CommandError, server::Server};
 
@@ -14,11 +14,13 @@ use super::{
     Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser,
 };
 
-pub(crate) struct ItemArgumentConsumer;
+pub(crate) struct BlockArgumentConsumer;
 
-impl GetClientSideArgParser for ItemArgumentConsumer {
+impl GetClientSideArgParser for BlockArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {
-        ProtoCmdArgParser::Resource { identifier: "item" }
+        ProtoCmdArgParser::Resource {
+            identifier: "block",
+        }
     }
 
     fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
@@ -27,7 +29,7 @@ impl GetClientSideArgParser for ItemArgumentConsumer {
 }
 
 #[async_trait]
-impl ArgumentConsumer for ItemArgumentConsumer {
+impl ArgumentConsumer for BlockArgumentConsumer {
     async fn consume<'a>(
         &self,
         _sender: &CommandSender<'a>,
@@ -42,8 +44,7 @@ impl ArgumentConsumer for ItemArgumentConsumer {
             format!("minecraft:{s}")
         };
 
-        // todo: get an actual item
-        Some(Arg::Item(name))
+        Some(Arg::Block(name))
     }
 
     async fn suggest<'a>(
@@ -56,9 +57,9 @@ impl ArgumentConsumer for ItemArgumentConsumer {
     }
 }
 
-impl DefaultNameArgConsumer for ItemArgumentConsumer {
+impl DefaultNameArgConsumer for BlockArgumentConsumer {
     fn default_name(&self) -> &'static str {
-        "item"
+        "block"
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
@@ -66,15 +67,15 @@ impl DefaultNameArgConsumer for ItemArgumentConsumer {
     }
 }
 
-impl<'a> FindArg<'a> for ItemArgumentConsumer {
-    type Data = &'a Item;
+impl<'a> FindArg<'a> for BlockArgumentConsumer {
+    type Data = &'a Block;
 
     fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
-            Some(Arg::Item(name)) => match item_registry::get_item(name) {
-                Some(item) => Ok(item),
+            Some(Arg::Block(name)) => match block_registry::get_block(name) {
+                Some(block) => Ok(block),
                 None => Err(CommandError::GeneralCommandIssue(format!(
-                    "Item {name} does not exist."
+                    "Block {name} does not exist."
                 ))),
             },
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),

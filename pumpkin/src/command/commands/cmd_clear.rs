@@ -97,7 +97,7 @@ impl CommandExecutor for ClearSelfExecutor {
 
         let item_count = clear_player(&target).await;
 
-        let hold_target = vec![target];
+        let hold_target = [target];
         let msg = clear_command_text_output(item_count, &hold_target);
 
         sender.send_message(msg).await;

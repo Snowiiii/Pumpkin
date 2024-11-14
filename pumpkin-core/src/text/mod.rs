@@ -191,6 +191,6 @@ pub enum TextContent<'a> {
         separator: Option<Cow<'a, str>>,
     },
     /// A keybind identifier
-    /// https://minecraft.fandom.com/wiki/Controls#Configurable_controls
+    /// https://minecraft.wiki/w/Controls#Configurable_controls
     Keybind { keybind: Cow<'a, str> },
 }

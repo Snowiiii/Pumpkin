@@ -18,6 +18,26 @@ pub fn get_block_by_id<'a>(id: u16) -> Option<&'a Block> {
     BLOCKS.blocks.iter().find(|&block| block.id == id)
 }
 
+pub fn get_state_by_state_id<'a>(id: u16) -> Option<&'a State> {
+    get_block_and_state_by_state_id(id).map(|(_, state)| state)
+}
+
+pub fn get_block_by_state_id<'a>(id: u16) -> Option<&'a Block> {
+    get_block_and_state_by_state_id(id).map(|(block, _)| block)
+}
+
+pub fn get_block_and_state_by_state_id<'a>(id: u16) -> Option<(&'a Block, &'a State)> {
+    for block in &BLOCKS.blocks {
+        for state in &block.states {
+            if state.id == id {
+                return Some((block, state));
+            }
+        }
+    }
+
+    None
+}
+
 pub fn get_block_by_item<'a>(item_id: u16) -> Option<&'a Block> {
     BLOCKS.blocks.iter().find(|&block| block.item_id == item_id)
 }
