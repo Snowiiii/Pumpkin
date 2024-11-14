@@ -194,18 +194,6 @@ impl World {
                 false,
             ))
             .await;
-
-        // player abilities
-        // TODO: this is for debug purpose, remove later
-        log::debug!("Sending player abilities to {}", player.gameprofile.name);
-        {
-            let mut abilities = player.abilities.lock().await;
-            if player.gamemode.load() == GameMode::Creative {
-                abilities.allow_flying = true;
-            }
-        }
-        player.send_abilties_update().await;
-
         // permissions, i. e. the commands a player may use
         player.send_permission_lvl_update().await;
         client_cmd_suggestions::send_c_commands_packet(&player, command_dispatcher).await;
