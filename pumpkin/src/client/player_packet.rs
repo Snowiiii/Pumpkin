@@ -455,8 +455,8 @@ impl Player {
                     return;
                 };
                 if victim.living_entity.health.load() <= 0.0 {
-                    self.kick(TextComponent::text("Interacted with dead entity"))
-                        .await;
+                    // you can trigger this from a non-modded / innocent client client,
+                    // so we shouldn't kick the player
                     return;
                 }
                 self.attack(&victim).await;
