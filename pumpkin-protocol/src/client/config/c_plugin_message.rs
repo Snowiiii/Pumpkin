@@ -2,7 +2,7 @@ use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 #[derive(Serialize)]
-#[client_packet("configuration:custom_payload")]
+#[client_packet("config:custom_payload")]
 pub struct CPluginMessage<'a> {
     channel: &'a str,
     data: &'a [u8],

@@ -2,7 +2,7 @@ use pumpkin_macros::client_packet;
 
 use crate::{bytebuf::ByteBuffer, ClientPacket};
 
-#[client_packet("configuration:registry_data")]
+#[client_packet("config:registry_data")]
 pub struct CRegistryData<'a> {
     registry_id: &'a str,
     entries: &'a [RegistryEntry<'a>],

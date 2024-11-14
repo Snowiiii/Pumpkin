@@ -4,7 +4,7 @@ use pumpkin_macros::client_packet;
 use serde::Serialize;
 
 #[derive(Serialize)]
-#[client_packet("configuration:resource_pack_push")]
+#[client_packet("config:resource_pack_push")]
 pub struct CConfigAddResourcePack<'a> {
     uuid: uuid::Uuid,
     url: &'a str,

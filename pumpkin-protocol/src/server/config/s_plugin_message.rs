@@ -5,7 +5,7 @@ use crate::{
     Identifier, ServerPacket,
 };
 
-#[server_packet("configuration:custom_payload")]
+#[server_packet("config:custom_payload")]
 pub struct SPluginMessage {
     pub channel: Identifier,
     pub data: Vec<u8>,
