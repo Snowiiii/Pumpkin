@@ -58,8 +58,8 @@ mod particle;
 pub fn particle(item: TokenStream) -> TokenStream {
     particle::particle_impl(item)
 }
-mod block;
+mod block_entity;
 #[proc_macro]
-pub fn block(item: TokenStream) -> TokenStream {
-    block::block_impl(item)
+pub fn block_entity(item: TokenStream) -> TokenStream {
+    block_entity::block_entity_impl(item)
 }

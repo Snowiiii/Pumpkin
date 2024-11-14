@@ -6,6 +6,7 @@ use crate::{
     server::Server,
     world::player_chunker,
 };
+
 use num_traits::FromPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::math::{boundingbox::BoundingBox, position::WorldPosition};
@@ -15,25 +16,26 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_inventory::{InventoryError, WindowType};
-use pumpkin_macros::block;
+use pumpkin_macros::block_entity;
 use pumpkin_protocol::{
     client::play::CCommandSuggestions,
     server::play::{SCloseContainer, SCommandSuggestion, SKeepAlive, SSetPlayerGround, SUseItem},
+    VarInt,
 };
 use pumpkin_protocol::{
     client::play::{
-        Animation, CAcknowledgeBlockChange, CEntityAnimation, CHeadRot, COpenSignEditor,
-        CPingResponse, CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot,
-        FilterType,
+        Animation, CAcknowledgeBlockChange, CBlockEntityData, CEntityAnimation, CHeadRot,
+        COpenSignEditor, CPingResponse, CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot,
+        CUpdateEntityRot, FilterType,
     },
     server::play::{
         Action, ActionType, SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay,
         SConfirmTeleport, SInteract, SPlayPingRequest, SPlayerAbilities, SPlayerAction,
         SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
-        SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status,
+        SSetCreativeSlot, SSetHeldItem, SSwingArm, SUpdateSign, SUseItemOn, Status,
     },
 };
-use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
+use pumpkin_world::block::{block_registry::get_block_by_item, interactive::sign::Sign, BlockFace};
 
 use super::PlayerConfig;
 
@@ -566,7 +568,28 @@ impl Player {
             .send_packet(&CPingResponse::new(request.payload))
             .await;
     }
+    pub async fn handle_sign_update(&self, sign_data: SUpdateSign) {
+        let world = &self.living_entity.entity.world;
+        let updated_sign = Sign::new(
+            sign_data.location,
+            sign_data.is_front_text,
+            [
+                sign_data.line_1,
+                sign_data.line_2,
+                sign_data.line_3,
+                sign_data.line_4,
+            ],
+        );
 
+        world
+            .broadcast_packet_all(&CBlockEntityData::new(
+                sign_data.location,
+                VarInt(7),
+                fastnbt::to_bytes_with_opts(&updated_sign, fastnbt::SerOpts::network_nbt())
+                    .unwrap(),
+            ))
+            .await;
+    }
     pub async fn handle_use_item_on(&self, use_item_on: SUseItemOn) {
         let location = use_item_on.location;
 
@@ -604,11 +627,9 @@ impl Player {
                             .await;
                     }
 
-                    if block
-                        .states
-                        .iter()
-                        .any(|state| state.block_entity_type == Some(block!("minecraft:sign")))
-                    {
+                    if block.states.iter().any(|state| {
+                        state.block_entity_type == Some(block_entity!("minecraft:sign"))
+                    }) {
                         self.client
                             .send_packet(&COpenSignEditor::new(world_pos, face.to_offset().z == 1))
                             .await;
@@ -620,11 +641,9 @@ impl Player {
             } else {
                 let block = world.get_block(location).await;
                 if let Some(block) = block {
-                    if block
-                        .states
-                        .iter()
-                        .any(|state| state.block_entity_type == Some(block!("minecraft:sign")))
-                    {
+                    if block.states.iter().any(|state| {
+                        state.block_entity_type == Some(block_entity!("minecraft:sign"))
+                    }) {
                         //Currently blocks on default only face north
                         self.client
                             .send_packet(&COpenSignEditor::new(location, face.to_offset().z == 1))
