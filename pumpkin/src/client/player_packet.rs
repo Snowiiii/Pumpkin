@@ -15,6 +15,7 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_inventory::{InventoryError, WindowType};
+use pumpkin_macros::block;
 use pumpkin_protocol::{
     client::play::CCommandSuggestions,
     server::play::{SCloseContainer, SCommandSuggestion, SKeepAlive, SSetPlayerGround, SUseItem},
@@ -32,9 +33,7 @@ use pumpkin_protocol::{
         SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status,
     },
 };
-use pumpkin_world::block::{
-    block_registry::get_block_by_item, interactive::sign::SignType, BlockFace,
-};
+use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
 
 use super::PlayerConfig;
 
@@ -605,7 +604,11 @@ impl Player {
                             .await;
                     }
 
-                    if SignType::iter().any(|&sign_type| block.id == sign_type) {
+                    if block
+                        .states
+                        .iter()
+                        .any(|state| state.block_entity_type == Some(block!("minecraft:sign")))
+                    {
                         self.client
                             .send_packet(&COpenSignEditor::new(world_pos, face.to_offset().z == 1))
                             .await;
@@ -617,7 +620,11 @@ impl Player {
             } else {
                 let block = world.get_block(location).await;
                 if let Some(block) = block {
-                    if SignType::iter().any(|&sign_type| block.id == sign_type) {
+                    if block
+                        .states
+                        .iter()
+                        .any(|state| state.block_entity_type == Some(block!("minecraft:sign")))
+                    {
                         //Currently blocks on default only face north
                         self.client
                             .send_packet(&COpenSignEditor::new(location, face.to_offset().z == 1))
