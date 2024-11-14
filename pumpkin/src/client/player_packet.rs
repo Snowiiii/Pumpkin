@@ -454,7 +454,11 @@ impl Player {
                         .await;
                     return;
                 };
-
+                if victim.living_entity.health.load() <= 0.0 {
+                    self.kick(TextComponent::text("Interacted with dead entity"))
+                        .await;
+                    return;
+                }
                 self.attack(&victim).await;
             }
             ActionType::Interact | ActionType::InteractAt => {
