@@ -122,13 +122,7 @@ const GIT_VERSION: &str = env!("GIT_VERSION");
 async fn main() -> io::Result<()> {
     init_logger();
     log_system_info();
-    log::info!(
-        "Starting Pumpkin {} ({}) for Minecraft {} (Protocol {})",
-        CARGO_PKG_VERSION,
-        GIT_VERSION,
-        CURRENT_MC_VERSION,
-        CURRENT_MC_PROTOCOL
-    );
+    log::info!("Starting Pumpkin {CARGO_PKG_VERSION} ({GIT_VERSION}) for Minecraft {CURRENT_MC_VERSION} (Protocol {CURRENT_MC_PROTOCOL})",);
     log::warn!("Pumpkin is currently under heavy development!");
     log::info!("Report Issues on https://github.com/Snowiiii/Pumpkin/issues");
     log::info!("Join our Discord for community support https://discord.com/invite/wT8XjrjKkf");

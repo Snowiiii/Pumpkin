@@ -29,14 +29,7 @@ impl CommandExecutor for PumpkinExecutor {
     ) -> Result<(), CommandError> {
         sender
             .send_message(
-                TextComponent::text(&format!(
-                    "Pumpkin {} ({}), {} (Minecraft {}, Protocol {})",
-                    CARGO_PKG_VERSION,
-                    GIT_VERSION,
-                    CARGO_PKG_DESCRIPTION,
-                    CURRENT_MC_VERSION,
-                    CURRENT_MC_PROTOCOL
-                ))
+                TextComponent::text(&format!("Pumpkin {CARGO_PKG_VERSION} ({GIT_VERSION}), {CARGO_PKG_DESCRIPTION} (Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL})", ))
                 .color_named(NamedColor::Green),
             )
             .await;
