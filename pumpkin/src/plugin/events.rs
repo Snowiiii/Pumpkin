@@ -47,14 +47,7 @@ macro_rules! event_types {
 
 event_types![on_init, register_on_init, InitEvent, ()];
 
+#[derive(Default)]
 pub struct EventRegistry {
     container: EventTypeContainer,
-}
-
-impl Default for EventRegistry {
-    fn default() -> Self {
-        Self {
-            container: Default::default(),
-        }
-    }
 }
