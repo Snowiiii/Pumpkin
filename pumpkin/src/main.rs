@@ -158,7 +158,11 @@ async fn main() -> io::Result<()> {
     // Plugin setup
     let mut plugin_manager = pumpkin::plugin::PluginManager::new();
     plugin_manager.load_plugins();
-    plugin_manager.init();
+    plugin_manager.init().await;
+    let registry = plugin_manager.event_registry();
+    let _ = tokio::spawn(async move {
+        registry.read().await.on_init(()).await;
+    });
 
     let mut master_client_id: u16 = 0;
     loop {

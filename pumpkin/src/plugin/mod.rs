@@ -5,10 +5,16 @@ use std::{
     fs::{self},
     io::{self, BufReader, Read, Write},
     path::Path,
+    sync::Arc,
 };
 
 use itertools::Itertools;
 use serde::Deserialize;
+use tokio::sync::RwLock;
+
+pub use events::*;
+
+mod events;
 
 pub(crate) const EXTRA_PLUGIN_DIR_NAME: &str = "EXTRA_PLUGIN_DIR";
 pub(crate) const VALID_PLUGIN_EXTENSIONS: [&str; 2] = ["zip", "pplugin"];
@@ -26,6 +32,7 @@ macro_rules! register_plugin {
     ($plugin_type:ident) => {
         #[no_mangle]
         pub fn pumpkin_register_plugin() -> Box<dyn pumpkin::plugin::PumpkinPlugin> {
+            pumpkin::plugin::logging::init_logger();
             Box::new($plugin_type::default())
         }
     };
@@ -67,21 +74,27 @@ pub(crate) struct PluginToml {
     plugin: PluginDefinition,
 }
 
-pub trait PumpkinPlugin: 'static {
-    fn init(&mut self);
+pub trait PumpkinPlugin: Send + Sync + 'static {
+    fn init(&mut self, event_registry: &mut EventRegistry);
 }
 
 pub type PluginEntryPoint = fn() -> Box<dyn PumpkinPlugin>;
 
 pub struct PluginManager {
     plugins: HashMap<String, (PluginToml, libloading::Library, Box<dyn PumpkinPlugin>)>,
+    event_registry: Arc<RwLock<EventRegistry>>,
 }
 
 impl PluginManager {
     pub fn new() -> Self {
         PluginManager {
             plugins: HashMap::new(),
+            event_registry: Arc::new(RwLock::new(EventRegistry::default())),
         }
+    }
+
+    pub fn event_registry(&self) -> Arc<RwLock<EventRegistry>> {
+        self.event_registry.clone()
     }
 
     pub fn load_plugins(&mut self) {
@@ -245,10 +258,11 @@ impl PluginManager {
         true
     }
 
-    pub fn init(&mut self) {
+    pub async fn init(&mut self) {
+        let mut event_registry = self.event_registry.write().await;
         for pl in self.plugins.values_mut() {
             log::info!("Running initialization for {}", pl.0.plugin);
-            pl.2.init();
+            pl.2.init(&mut event_registry);
         }
     }
 }
@@ -264,5 +278,42 @@ fn get_platform_lib_name(this_plugin_platform: PluginPlatform) -> &'static str {
         PluginPlatform::Windows => "plugin.dll",
         PluginPlatform::MacOS => "libplugin.dylib",
         PluginPlatform::Linux => "libplugin.so",
+    }
+}
+
+pub mod logging {
+    use log::LevelFilter;
+    pub use log::{debug, error, info, log, trace, warn};
+
+    pub fn init_logger() {
+        use pumpkin_config::ADVANCED_CONFIG;
+        if ADVANCED_CONFIG.logging.enabled {
+            let mut logger = simple_logger::SimpleLogger::new();
+
+            if !ADVANCED_CONFIG.logging.timestamp {
+                logger = logger.without_timestamps();
+            }
+
+            if ADVANCED_CONFIG.logging.env {
+                logger = logger.env();
+            }
+
+            logger = logger.with_level(convert_logger_filter(ADVANCED_CONFIG.logging.level));
+
+            logger = logger.with_colors(ADVANCED_CONFIG.logging.color);
+            logger = logger.with_threads(ADVANCED_CONFIG.logging.threads);
+            logger.init().unwrap();
+        }
+    }
+
+    const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> LevelFilter {
+        match level {
+            pumpkin_config::logging::LevelFilter::Off => LevelFilter::Off,
+            pumpkin_config::logging::LevelFilter::Error => LevelFilter::Error,
+            pumpkin_config::logging::LevelFilter::Warn => LevelFilter::Warn,
+            pumpkin_config::logging::LevelFilter::Info => LevelFilter::Info,
+            pumpkin_config::logging::LevelFilter::Debug => LevelFilter::Debug,
+            pumpkin_config::logging::LevelFilter::Trace => LevelFilter::Trace,
+        }
     }
 }
