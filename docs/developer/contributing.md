@@ -41,7 +41,7 @@ There are several ways you can contribute to Pumpkin:
 
 - To get started with Github Desktop, visit [Getting started with GitHub Desktop](https://docs.github.com/en/desktop/overview/getting-started-with-github-desktop)
 
-- If you are wanting to contribut code, install Rust at [rust-lang.org](https://www.rust-lang.org/).
+- If you are wanting to contribute code, install Rust at [rust-lang.org](https://www.rust-lang.org/).
 
 - If you are wanting to contribute to documentation, install [NodeJS](https://nodejs.org/en)
 
