@@ -1,20 +1,19 @@
-use crate::command::args::arg_sound::SoundArgumentConsumer;
-use crate::command::args::arg_sound_category::SoundCategoryArgumentConsumer;
 use crate::command::args::{
     arg_bounded_num::BoundedNumArgumentConsumer, arg_players::PlayersArgumentConsumer,
-    arg_position_3d::Position3DArgumentConsumer, ConsumedArgs, FindArg, FindArgDefaultName,
+    arg_position_3d::Position3DArgumentConsumer, arg_sound::SoundArgumentConsumer,
+    arg_sound_category::SoundCategoryArgumentConsumer, ConsumedArgs, FindArg, FindArgDefaultName,
 };
-use crate::command::tree_builder::argument_default_name;
 use crate::command::{
-    dispatcher::InvalidTreeError,
+    dispatcher::CommandError,
     tree::CommandTree,
+    tree_builder::argument_default_name,
     tree_builder::{argument, require},
     CommandExecutor, CommandSender,
 };
+use crate::entity::player::PermissionLvl;
 use crate::server::Server;
 use async_trait::async_trait;
-use pumpkin_core::text::color::NamedColor;
-use pumpkin_core::text::TextComponent;
+use pumpkin_core::text::{color::NamedColor, TextComponent};
 
 const NAMES: [&str; 1] = ["playsound"];
 const DESCRIPTION: &str = "Plays a sound at a location.";
@@ -45,7 +44,7 @@ impl CommandExecutor for PlaySoundExecutor {
         sender: &mut CommandSender<'a>,
         _server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let sound = SoundArgumentConsumer::find_arg(args, ARG_SOUND)?;
         let source = SoundCategoryArgumentConsumer::find_arg(args, ARG_SOURCE)?;
         let targets = PlayersArgumentConsumer::find_arg(args, ARG_TARGETS)?;
@@ -121,7 +120,7 @@ impl CommandExecutor for PlaySoundExecutor {
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| sender.permission_lvl() >= 2).with_child(
+        require(&|sender| sender.has_permission_lvl(PermissionLvl::Two)).with_child(
             argument(ARG_SOUND, &SoundArgumentConsumer).with_child(
                 argument(ARG_SOURCE, &SoundCategoryArgumentConsumer).with_child(
                     argument(ARG_TARGETS, &PlayersArgumentConsumer)
