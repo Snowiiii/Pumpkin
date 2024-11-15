@@ -723,6 +723,28 @@ impl World {
             .collect::<HashMap<uuid::Uuid, Arc<Player>>>()
     }
 
+    pub async fn get_nearby_players(&self, pos: Vector3<f64>, radius: u16) -> HashMap<uuid::Uuid, Arc<Player>> {
+        let radius_squared = (radius as f64).powi(2);
+        
+        let mut found_players = HashMap::new();
+        for player in self.current_players.lock().await.iter() {
+            let player_pos = player.1.living_entity.entity.pos.load();
+            
+            let diff = Vector3::new(
+                player_pos.x - pos.x,
+                player_pos.y - pos.y,
+                player_pos.z - pos.z
+            );
+            
+            let distance_squared = diff.x.powi(2) + diff.y.powi(2) + diff.z.powi(2);
+            if distance_squared <= radius_squared {
+                found_players.insert(player.0.clone(), player.1.clone());
+            }
+        }
+        
+        found_players
+    }
+
     /// Adds a player to the world and broadcasts a join message if enabled.
     ///
     /// This function takes a player's UUID and an `Arc<Player>` reference.
