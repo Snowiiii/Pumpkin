@@ -1,3 +1,4 @@
+use std::fmt;
 use std::sync::Arc;
 
 use crate::command::commands::cmd_transfer;
@@ -27,6 +28,16 @@ pub enum CommandSender<'a> {
     Rcon(&'a tokio::sync::Mutex<Vec<String>>),
     Console,
     Player(Arc<Player>),
+}
+
+impl<'a> fmt::Display for CommandSender<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", match self {
+            CommandSender::Console => "Server",
+            CommandSender::Rcon(_) => "Rcon",
+            CommandSender::Player(p) => &p.gameprofile.name,
+        })
+    }
 }
 
 impl<'a> CommandSender<'a> {

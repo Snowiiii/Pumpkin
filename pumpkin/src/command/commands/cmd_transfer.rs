@@ -102,18 +102,12 @@ impl CommandExecutor for TransferTargetPlayer {
             return Err(InvalidConsumption(Some(ARG_PLAYERS.into())));
         };
 
-        let sender_name = match sender {
-            CommandSender::Console => "Console",
-            CommandSender::Rcon(_) => "Rcon",
-            CommandSender::Player(p) => &p.gameprofile.name,
-        };
-
         for p in players {
             p.client
                 .send_packet(&CTransfer::new(hostname, &VarInt(port)))
                 .await;
             log::info!(
-                "[{sender_name}: Transferring {} to {hostname}:{port}]",
+                "[{sender}: Transferring {} to {hostname}:{port}]",
                 p.gameprofile.name
             );
         }
@@ -129,7 +123,7 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
                 .with_child(require(&|sender| sender.is_player()).execute(&TransferTargetSelf))
                 .with_child(
                     argument_default_name(&PORT_CONSUMER)
-                        .execute(&TransferTargetSelf)
+                        .with_child(require(&|sender| sender.is_player()).execute(&TransferTargetSelf))
                         .with_child(
                             argument(ARG_PLAYERS, &PlayersArgumentConsumer)
                                 .execute(&TransferTargetPlayer),
