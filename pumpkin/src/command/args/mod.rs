@@ -1,7 +1,9 @@
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 
+use crate::{entity::player::Player, server::Server};
 use arg_bounded_num::{NotInBounds, Number};
 use async_trait::async_trait;
+use pumpkin_core::sound::SoundCategory;
 use pumpkin_core::{
     math::{position::WorldPosition, vector2::Vector2, vector3::Vector3},
     GameMode,
@@ -9,8 +11,6 @@ use pumpkin_core::{
 use pumpkin_protocol::client::play::{
     CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
 };
-
-use crate::{entity::player::Player, server::Server};
 
 use super::{
     dispatcher::CommandError,
@@ -32,6 +32,8 @@ pub(crate) mod arg_position_3d;
 pub(crate) mod arg_postition_block;
 pub(crate) mod arg_rotation;
 pub(crate) mod arg_simple;
+pub(crate) mod arg_sound;
+pub(crate) mod arg_sound_category;
 mod coordinate;
 
 /// see [`crate::commands::tree_builder::argument`]
@@ -84,6 +86,8 @@ pub(crate) enum Arg<'a> {
     Block(String),
     Msg(String),
     Num(Result<Number, NotInBounds>),
+    Sound(u16),
+    SoundCategory(SoundCategory),
     #[allow(unused)]
     Simple(String),
 }
