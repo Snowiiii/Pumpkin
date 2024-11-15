@@ -1,5 +1,23 @@
+use serde::Deserialize;
+use std::collections::HashMap;
 use std::str::FromStr;
+use std::sync::LazyLock;
 
+#[derive(Deserialize, Debug)]
+pub struct Sound {
+    name: String,
+    id: u16,
+}
+
+pub static SOUNDS: LazyLock<HashMap<String, u16>> = LazyLock::new(|| {
+    serde_json::from_str::<Vec<Sound>>(include_str!("../../assets/sounds.json"))
+        .expect("Could not parse sounds.json registry.")
+        .into_iter()
+        .map(|val| (val.name, val.id))
+        .collect()
+});
+
+#[derive(Debug, Copy, Clone)]
 pub enum SoundCategory {
     Master,
     Music,

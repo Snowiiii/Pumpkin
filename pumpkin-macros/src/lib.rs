@@ -1,7 +1,6 @@
+extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::quote;
-
-extern crate proc_macro;
 
 mod packet;
 #[proc_macro_attribute]

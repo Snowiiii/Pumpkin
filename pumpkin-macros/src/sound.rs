@@ -1,12 +1,6 @@
-use std::{collections::HashMap, sync::LazyLock};
-
 use proc_macro::TokenStream;
+use pumpkin_core::sound::SOUNDS;
 use quote::quote;
-
-static SOUNDS: LazyLock<HashMap<String, u16>> = LazyLock::new(|| {
-    serde_json::from_str(include_str!("../../assets/sounds.json"))
-        .expect("Could not parse sounds.json registry.")
-});
 
 pub(crate) fn sound_impl(item: TokenStream) -> TokenStream {
     let input_string = item.to_string();

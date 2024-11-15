@@ -14,3 +14,4 @@ itertools.workspace = true
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = "2.0"
+pumpkin-core = { path = "../pumpkin-core" }
