@@ -3,7 +3,7 @@ Here we build Mojang's Textcomponent, Which is used across many places, Often wh
 
 ### Features
 - Colors
-  - [ ] RBG
+  - [x] RBG
   - [x] Black
   - [x] Dark Blue  
   - [x] Dark Green  

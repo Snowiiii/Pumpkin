@@ -16,6 +16,8 @@ pub mod style;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(transparent)]
+// TODO: Use this instead of TextComponent alone to allow for example text with different colors
+// TODO: Allow to mix TextComponent and String
 pub struct Text<'a>(pub Box<TextComponent<'a>>);
 
 // Represents a Text component
@@ -95,6 +97,11 @@ impl<'a> TextComponent<'a> {
 
     pub fn color_named(mut self, color: color::NamedColor) -> Self {
         self.style.color = Some(Color::Named(color));
+        self
+    }
+
+    pub fn color_rgb(mut self, color: color::RGBColor) -> Self {
+        self.style.color = Some(Color::Rgb(color));
         self
     }
 
