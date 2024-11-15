@@ -111,7 +111,7 @@ impl CommandExecutor for PlaySoundExecutor {
 
         for world in worlds {
             world
-                .play_sound(sound, source, &position, volume, pitch)
+                .play_sound(sound.id, source, &position, volume, pitch)
                 .await;
         }
 

@@ -3,18 +3,15 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::LazyLock;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Sound {
-    name: String,
-    id: u16,
+    pub name: String,
+    pub id: u16,
 }
 
 pub static SOUNDS: LazyLock<HashMap<String, u16>> = LazyLock::new(|| {
-    serde_json::from_str::<Vec<Sound>>(include_str!("../../assets/sounds.json"))
+    serde_json::from_str(include_str!("../../assets/sounds.json"))
         .expect("Could not parse sounds.json registry.")
-        .into_iter()
-        .map(|val| (val.name, val.id))
-        .collect()
 });
 
 #[derive(Debug, Copy, Clone)]
@@ -31,25 +28,25 @@ pub enum SoundCategory {
     Voice,
 }
 
+pub static SOUND_CATEGORIES: LazyLock<HashMap<String, SoundCategory>> = LazyLock::new(|| {
+    let mut map = HashMap::new();
+    map.insert("master".to_string(), SoundCategory::Master);
+    map.insert("music".to_string(), SoundCategory::Music);
+    map.insert("records".to_string(), SoundCategory::Records);
+    map.insert("weather".to_string(), SoundCategory::Weather);
+    map.insert("blocks".to_string(), SoundCategory::Blocks);
+    map.insert("hostile".to_string(), SoundCategory::Hostile);
+    map.insert("neutral".to_string(), SoundCategory::Neutral);
+    map.insert("players".to_string(), SoundCategory::Players);
+    map.insert("ambient".to_string(), SoundCategory::Ambient);
+    map.insert("voice".to_string(), SoundCategory::Voice);
+    map
+});
+
 impl FromStr for SoundCategory {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "master" => Ok(Self::Master),
-            "music" => Ok(Self::Music),
-            "records" => Ok(Self::Records),
-            "weather" => Ok(Self::Weather),
-            "blocks" => Ok(Self::Blocks),
-            "hostile" => Ok(Self::Hostile),
-            "neutral" => Ok(Self::Neutral),
-            "players" => Ok(Self::Players),
-            "ambient" => Ok(Self::Ambient),
-            "voice" => Ok(Self::Voice),
-            _ => {
-                log::info!("Unexpected SoundCategory {}", s);
-                Err(())
-            }
-        }
+        SOUND_CATEGORIES.get(s).cloned().ok_or(())
     }
 }

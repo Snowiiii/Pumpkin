@@ -3,7 +3,7 @@ use std::{collections::HashMap, hash::Hash, sync::Arc};
 use crate::{entity::player::Player, server::Server};
 use arg_bounded_num::{NotInBounds, Number};
 use async_trait::async_trait;
-use pumpkin_core::sound::SoundCategory;
+use pumpkin_core::sound::{Sound, SoundCategory};
 use pumpkin_core::{
     math::{position::WorldPosition, vector2::Vector2, vector3::Vector3},
     GameMode,
@@ -86,7 +86,7 @@ pub(crate) enum Arg<'a> {
     Block(String),
     Msg(String),
     Num(Result<Number, NotInBounds>),
-    Sound(u16),
+    Sound(Sound),
     SoundCategory(SoundCategory),
     #[allow(unused)]
     Simple(String),
