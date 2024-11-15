@@ -76,6 +76,12 @@ impl<'a> TextComponent<'a> {
         if style.strikethrough.is_some() {
             text = text.strikethrough().to_string();
         }
+        if style.click_event.is_some() {
+            if let Some(ClickEvent::OpenUrl(url)) = style.click_event {
+                //TODO: check if term supports hyperlinks before
+                text = format!("\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\", url, text).to_string()
+            }
+        }
         text
     }
 }
