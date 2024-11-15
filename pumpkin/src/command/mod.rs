@@ -18,7 +18,7 @@ pub mod args;
 pub mod client_cmd_suggestions;
 mod commands;
 pub mod dispatcher;
-mod tree;
+pub mod tree;
 mod tree_builder;
 mod tree_format;
 

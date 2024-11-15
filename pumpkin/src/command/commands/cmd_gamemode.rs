@@ -4,7 +4,7 @@ use crate::command::args::arg_gamemode::GamemodeArgumentConsumer;
 use crate::command::args::GetCloned;
 
 use crate::entity::player::PermissionLvl;
-use crate::TextComponent;
+use pumpkin_core::text::TextComponent;
 
 use crate::command::args::arg_players::PlayersArgumentConsumer;
 

@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::{
     client::authentication::{offline_uuid, GameProfile},
-    Client,
+    client::Client,
 };
 
 #[derive(Error, Debug)]

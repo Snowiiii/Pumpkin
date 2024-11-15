@@ -86,6 +86,7 @@ pub struct PluginManager {
 }
 
 impl PluginManager {
+    #[must_use]
     pub fn new() -> Self {
         PluginManager {
             plugins: HashMap::new(),
@@ -93,13 +94,14 @@ impl PluginManager {
         }
     }
 
+    #[must_use]
     pub fn event_registry(&self) -> Arc<RwLock<EventRegistry>> {
         self.event_registry.clone()
     }
 
     pub fn load_plugins(&mut self) {
-        log::info!("Starting Plugin loading...");
         const DEFAULT_PLUGIN_DIR: &str = "./plugins";
+        log::info!("Starting Plugin loading...");
 
         if let Err(e) = self.load_plugins_from_dir(DEFAULT_PLUGIN_DIR) {
             log::error!("Failed to load plugins: {e:?}");
@@ -203,12 +205,11 @@ impl PluginManager {
             };
 
             let plugin = unsafe {
-                match library.get::<PluginEntryPoint>(PLUGIN_ENTRY_POINT_NAME) {
-                    Ok(pl) => pl(),
-                    Err(_) => {
-                        log::error!("Failed to find plugin entrypoint! Is it defined?");
-                        return Ok(());
-                    }
+                if let Ok(pl) = library.get::<PluginEntryPoint>(PLUGIN_ENTRY_POINT_NAME) {
+                    pl()
+                } else {
+                    log::error!("Failed to find plugin entrypoint! Is it defined?");
+                    return Ok(());
                 }
             };
 

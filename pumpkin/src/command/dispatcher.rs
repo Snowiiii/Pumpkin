@@ -15,7 +15,7 @@ use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 #[allow(dead_code)]
-pub(crate) enum CommandError {
+pub enum CommandError {
     /// This error means that there was an error while parsing a previously consumed argument.
     /// That only happens when consumption is wrongly implemented, as it should ensure parsing may
     /// never fail.
