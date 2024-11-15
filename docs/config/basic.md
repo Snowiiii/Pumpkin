@@ -7,7 +7,7 @@ Representing `configuration.toml`
 The address to bind the server to
 
 ```toml
-server_address=0.0.0.0
+server_address="0.0.0.0:25565"
 ```
 
 ## Seed
@@ -15,7 +15,7 @@ server_address=0.0.0.0
 The seed for world generation
 
 ```toml
-seed=
+seed=""
 ```
 
 ## Max players
@@ -47,10 +47,10 @@ simulation_distance=10
 The default game difficulty
 
 ```toml
-default_difficulty=Normal
+default_difficulty="Normal"
 ```
 
-```toml
+```
 Peaceful
 Easy
 Normal
@@ -97,7 +97,7 @@ encryption=true
 The server's description displayed on the status screen.
 
 ```toml
-motd=true
+motd="A Blazing fast Pumpkin Server!"
 ```
 
 ## TPS
@@ -122,7 +122,7 @@ use_favicon=true
 The path to the server's favicon
 
 ```toml
-favicon_path=./icon.png
+favicon_path="icon.png"
 ```
 
 ## Default gamemode
@@ -130,10 +130,10 @@ favicon_path=./icon.png
 The default game mode for players
 
 ```toml
-default_gamemode=Survival
+default_gamemode="Survival"
 ```
 
-```toml
+```
 Undefined
 Survival
 Creative
