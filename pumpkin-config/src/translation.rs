@@ -11,6 +11,9 @@ pub struct TranslationConfig {
     pub enabled: bool,
     #[serde_inline_default(true)]
     pub client_translations: bool,
+    // Reminder to update every new version, or until a better method is found
+    #[serde_inline_default("1.21.3".to_string())]
+    pub version: String,
     #[serde_inline_default(None)]
     pub translation_file_path: Option<PathBuf>,
 }
@@ -18,8 +21,9 @@ pub struct TranslationConfig {
 impl Default for TranslationConfig {
     fn default() -> Self {
         Self {
-            enabled: false,
+            enabled: true,
             client_translations: true,
+            version: String::from("1.21.3"),
             translation_file_path: None,
         }
     }

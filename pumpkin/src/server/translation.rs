@@ -28,7 +28,7 @@ pub fn translate<'a>(
     message: &'a str,
 ) -> Result<TextComponent<'a>, TranslationError> {
     if !config.enabled {
-        let path = "assets/lang/en_us/en_us.json";
+        let path = format!("assets/lang/en_us/{}/en_us.json", config.version);
         let translations = get_translations(path, message)?;
 
         return Ok(translations);
@@ -126,7 +126,6 @@ fn parse_json_object(vec: Vec<Value>, message: &str) -> String {
 
 #[cfg(test)]
 mod test {
-
     use super::{parse_json_object, read_translation_file};
 
     #[test]
