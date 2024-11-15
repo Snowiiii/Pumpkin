@@ -30,11 +30,12 @@ use tokio::signal::unix::{signal, SignalKind};
 
 use std::sync::Arc;
 
+use crate::server::CURRENT_MC_VERSION;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
+use pumpkin_protocol::CURRENT_MC_PROTOCOL;
 use rcon::RCONServer;
 use std::time::Instant;
-
 // Setup some tokens to allow us to identify which event is for which socket.
 
 pub mod client;
@@ -62,6 +63,9 @@ fn init_logger() {
     use pumpkin_config::ADVANCED_CONFIG;
     if ADVANCED_CONFIG.logging.enabled {
         let mut logger = simple_logger::SimpleLogger::new();
+        logger = logger.with_timestamp_format(time::macros::format_description!(
+            "[year]-[month]-[day] [hour]:[minute]:[second]"
+        ));
 
         if !ADVANCED_CONFIG.logging.timestamp {
             logger = logger.without_timestamps();
@@ -90,9 +94,40 @@ const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> L
     }
 }
 
+const CARGO_PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+fn log_system_info() {
+    let os_type = sys_info::os_type().unwrap();
+    let os_release = sys_info::os_release().unwrap();
+    let arch = std::env::consts::ARCH;
+
+    if cfg!(target_os = "linux") {
+        if let Some(linux_release) = sys_info::linux_os_release().unwrap().pretty_name {
+            log::info!(
+                "Running on {} ({}) {} ({})",
+                os_type,
+                linux_release,
+                os_release,
+                arch
+            );
+            return;
+        }
+    }
+    log::info!("Running on {} {} ({})", os_type, os_release, arch);
+}
+
+const GIT_VERSION: &str = env!("GIT_VERSION");
+
 #[tokio::main]
 async fn main() -> io::Result<()> {
     init_logger();
+    log_system_info();
+    log::info!("Starting Pumpkin {CARGO_PKG_VERSION} ({GIT_VERSION}) for Minecraft {CURRENT_MC_VERSION} (Protocol {CURRENT_MC_PROTOCOL})",);
+    log::warn!("Pumpkin is currently under heavy development!");
+    log::info!("Report Issues on https://github.com/Snowiiii/Pumpkin/issues");
+    log::info!("Join our Discord for community support https://discord.com/invite/wT8XjrjKkf");
+    //log::info!("CPU {} Cores {}MHz", sys_info::cpu_num().unwrap(), sys_info::cpu_speed().unwrap());
+
     // let rt = tokio::runtime::Builder::new_multi_thread()
     //     .enable_all()
     //     .build()

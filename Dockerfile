@@ -1,4 +1,6 @@
 FROM rust:1-alpine3.20 AS builder
+ARG GIT_VERSION=Docker
+ENV GIT_VERSION=$GIT_VERSION
 ENV RUSTFLAGS="-C target-feature=-crt-static -C target-cpu=native"
 RUN apk add --no-cache musl-dev
 
