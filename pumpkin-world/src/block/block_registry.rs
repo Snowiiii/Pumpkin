@@ -1,10 +1,18 @@
-use std::sync::LazyLock;
+use std::{collections::HashMap, sync::LazyLock};
 
 use serde::Deserialize;
 
 pub static BLOCKS: LazyLock<TopLevel> = LazyLock::new(|| {
     serde_json::from_str(include_str!("../../../assets/blocks.json"))
         .expect("Could not parse blocks.json registry.")
+});
+
+pub static BLOCK_IDS_TO_BLOCK_STRING: LazyLock<HashMap<u16, String>> = LazyLock::new(|| {
+    let mut map = HashMap::new();
+    for block in &*BLOCKS.blocks {
+        map.insert(block.default_state_id, block.name.clone());
+    }
+    map
 });
 
 pub fn get_block(registry_id: &str) -> Option<&Block> {

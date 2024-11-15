@@ -1,5 +1,4 @@
 use std::cmp::max;
-use std::collections::HashMap;
 use std::ops::Index;
 
 use fastnbt::LongArray;
@@ -10,7 +9,7 @@ use thiserror::Error;
 use crate::{
     block::BlockState,
     coordinates::{ChunkRelativeBlockCoordinates, Height},
-    level::SaveFile,
+    level::LevelFolder,
     WORLD_HEIGHT,
 };
 
@@ -23,9 +22,18 @@ const CHUNK_VOLUME: usize = CHUNK_AREA * WORLD_HEIGHT;
 pub trait ChunkReader: Sync + Send {
     fn read_chunk(
         &self,
-        save_file: &SaveFile,
+        level_folder: &LevelFolder,
         at: &Vector2<i32>,
     ) -> Result<ChunkData, ChunkReadingError>;
+}
+
+pub trait ChunkWriter: Send + Sync {
+    fn write_chunk(
+        &self,
+        chunk: &ChunkData,
+        level_folder: &LevelFolder,
+        at: &Vector2<i32>,
+    ) -> Result<(), ChunkWritingError>;
 }
 
 #[derive(Error, Debug)]
@@ -40,6 +48,16 @@ pub enum ChunkReadingError {
     ChunkNotExist,
     #[error("Failed to parse Chunk from bytes: {0}")]
     ParsingError(ChunkParsingError),
+}
+
+#[derive(Error, Debug)]
+pub enum ChunkWritingError {
+    #[error("Io error: {0}")]
+    IoError(std::io::ErrorKind),
+    #[error("Compression error {0}")]
+    Compression(CompressionError),
+    #[error("Chunk serializing error: {0}")]
+    ChunkSerializingError(String),
 }
 
 #[derive(Error, Debug)]
@@ -69,14 +87,13 @@ pub struct ChunkBlocks {
     pub heightmap: ChunkHeightmaps,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct PaletteEntry {
     name: String,
-    _properties: Option<HashMap<String, String>>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 struct ChunkSectionBlockStates {
     data: Option<LongArray>,
     palette: Vec<PaletteEntry>,
@@ -89,18 +106,16 @@ pub struct ChunkHeightmaps {
     world_surface: LongArray,
 }
 
-#[derive(Deserialize, Debug)]
-#[expect(dead_code)]
+#[derive(Deserialize, Serialize, Debug)]
 struct ChunkSection {
     #[serde(rename = "Y")]
     y: i32,
     block_states: Option<ChunkSectionBlockStates>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 struct ChunkNbt {
-    #[expect(dead_code)]
     data_version: usize,
 
     #[serde(rename = "sections")]
@@ -324,4 +339,10 @@ pub enum ChunkParsingError {
     ChunkNotGenerated,
     #[error("Error deserializing chunk: {0}")]
     ErrorDeserializingChunk(String),
+}
+
+#[derive(Error, Debug)]
+pub enum ChunkSerializingError {
+    #[error("Error serializing chunk: {0}")]
+    ErrorSerializingChunk(fastnbt::error::Error),
 }
