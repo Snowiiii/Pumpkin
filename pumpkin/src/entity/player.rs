@@ -955,7 +955,7 @@ pub enum ChatMode {
 }
 
 /// the player's permission level
-#[derive(FromPrimitive, ToPrimitive, Clone, Copy)]
+#[derive(FromPrimitive, ToPrimitive, Clone, Copy, Debug)]
 #[repr(i8)]
 pub enum PermissionLvl {
     Zero = 0,
