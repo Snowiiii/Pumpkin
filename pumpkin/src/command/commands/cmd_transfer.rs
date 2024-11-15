@@ -123,7 +123,9 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
                 .with_child(require(&|sender| sender.is_player()).execute(&TransferTargetSelf))
                 .with_child(
                     argument_default_name(&PORT_CONSUMER)
-                        .with_child(require(&|sender| sender.is_player()).execute(&TransferTargetSelf))
+                        .with_child(
+                            require(&|sender| sender.is_player()).execute(&TransferTargetSelf),
+                        )
                         .with_child(
                             argument(ARG_PLAYERS, &PlayersArgumentConsumer)
                                 .execute(&TransferTargetPlayer),
