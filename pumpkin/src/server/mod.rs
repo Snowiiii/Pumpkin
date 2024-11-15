@@ -35,6 +35,7 @@ pub mod ticker;
 pub const CURRENT_MC_VERSION: &str = "1.21.3";
 
 /// Represents a Minecraft server instance.
+#[derive(Debug)]
 pub struct Server {
     /// Handles cryptographic keys for secure communication.
     key_store: KeyStore,

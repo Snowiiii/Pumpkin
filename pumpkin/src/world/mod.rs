@@ -88,6 +88,7 @@ impl PumpkinError for GetBlockError {
 /// - Manages the `Level` instance for handling chunk-related operations.
 /// - Stores and tracks active `Player` entities within the world.
 /// - Provides a central hub for interacting with the world's entities and environment.
+#[derive(Debug)]
 pub struct World {
     /// The underlying level, responsible for chunk management and terrain generation.
     pub level: Arc<Level>,

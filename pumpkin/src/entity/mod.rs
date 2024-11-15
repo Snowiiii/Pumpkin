@@ -21,6 +21,7 @@ pub mod living;
 pub mod player;
 
 /// Represents a not living Entity (e.g. Item, Egg, Snowball...)
+#[derive(Debug)]
 pub struct Entity {
     /// A unique identifier for the entity
     pub entity_id: EntityId,

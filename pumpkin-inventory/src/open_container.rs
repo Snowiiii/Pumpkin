@@ -1,11 +1,21 @@
 use crate::crafting::check_if_matches_crafting;
 use crate::{Container, WindowType};
 use pumpkin_world::item::ItemStack;
+use std::fmt::Debug;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+
 pub struct OpenContainer {
     players: Vec<i32>,
     container: Arc<Mutex<Box<dyn Container>>>,
+}
+
+impl Debug for OpenContainer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OpenContainer")
+            .field("players", &self.players)
+            .finish()
+    }
 }
 
 impl OpenContainer {

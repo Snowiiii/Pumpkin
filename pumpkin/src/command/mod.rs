@@ -25,6 +25,7 @@ mod tree;
 mod tree_builder;
 mod tree_format;
 
+#[derive(Debug)]
 pub enum CommandSender<'a> {
     Rcon(&'a tokio::sync::Mutex<Vec<String>>),
     Console,

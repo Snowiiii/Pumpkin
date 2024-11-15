@@ -46,7 +46,7 @@ impl CommandError {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct CommandDispatcher<'a> {
     pub(crate) commands: HashMap<&'a str, Command<'a>>,
 }

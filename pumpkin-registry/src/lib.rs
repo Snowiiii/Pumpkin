@@ -40,6 +40,7 @@ pub static SYNCED_REGISTRIES: LazyLock<SyncedRegistry> = LazyLock::new(|| {
         .expect("Could not parse synced_registries.json registry.")
 });
 
+#[derive(Debug)]
 pub struct Registry {
     pub registry_id: String,
     pub registry_entries: Vec<RegistryEntry<'static>>,

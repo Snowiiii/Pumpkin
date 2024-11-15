@@ -8,7 +8,7 @@ use pumpkin_protocol::{
 
 use super::World;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Scoreboard {
     objectives: HashMap<String, ScoreboardObjective<'static>>,
     //  teams: HashMap<String, Team>,
@@ -75,6 +75,7 @@ impl Scoreboard {
     // }
 }
 
+#[derive(Debug)]
 pub struct ScoreboardObjective<'a> {
     name: &'a str,
     display_name: TextComponent<'a>,

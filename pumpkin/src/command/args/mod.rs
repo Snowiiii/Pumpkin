@@ -71,7 +71,7 @@ pub(crate) trait DefaultNameArgConsumer: ArgumentConsumer {
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) enum Arg<'a> {
     Entities(Vec<Arc<Player>>),
     Entity(Arc<Player>),

@@ -1,5 +1,5 @@
 // TODO
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[repr(i32)]
 pub enum EntityType {
     AcaciaBoat = 0,

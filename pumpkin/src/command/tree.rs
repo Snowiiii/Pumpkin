@@ -45,6 +45,7 @@ impl Debug for NodeType<'_> {
     }
 }
 
+#[derive(Debug)]
 pub enum Command<'a> {
     Tree(CommandTree<'a>),
     Alias(&'a str),

@@ -36,6 +36,7 @@ fn load_icon_from_bytes(png_data: &[u8]) -> Result<String, Box<dyn error::Error>
     Ok(result)
 }
 
+#[derive(Debug)]
 pub struct CachedStatus {
     status_response: StatusResponse,
     // We cache the json response here so we don't parse it every time someone makes a Status request.
@@ -43,6 +44,7 @@ pub struct CachedStatus {
     status_response_json: String,
 }
 
+#[derive(Debug)]
 pub struct CachedBranding {
     /// Cached Server brand buffer so we don't have to rebuild them every time a player joins
     cached_server_brand: Vec<u8>,

@@ -55,6 +55,7 @@ impl From<VarInt> for ConnectionState {
     }
 }
 
+#[derive(Debug)]
 pub struct RawPacket {
     pub id: VarInt,
     pub bytebuf: ByteBuffer,
@@ -68,7 +69,7 @@ pub trait ServerPacket: Packet + Sized {
     fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError>;
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct StatusResponse {
     /// The version on which the Server is running. Optional
     pub version: Option<Version>,
@@ -81,7 +82,7 @@ pub struct StatusResponse {
     /// Players are forced to use Secure chat
     pub enforce_secure_chat: bool,
 }
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Version {
     /// The current name of the Version (e.g. 1.21.3)
     pub name: String,
@@ -89,7 +90,7 @@ pub struct Version {
     pub protocol: u32,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Players {
     /// The maximum Player count the server allows
     pub max: u32,
@@ -100,7 +101,7 @@ pub struct Players {
     pub sample: Vec<Sample>,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Sample {
     /// Players Name
     pub name: String,
@@ -124,7 +125,7 @@ pub struct KnownPack<'a> {
     pub version: &'a str,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub enum NumberFormat<'a> {
     /// Show nothing
     Blank,

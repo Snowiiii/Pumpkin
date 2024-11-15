@@ -7,6 +7,7 @@ use sha2::Digest;
 
 use crate::client::EncryptionError;
 
+#[derive(Debug)]
 pub struct KeyStore {
     pub private_key: RsaPrivateKey,
     pub public_key_der: Box<[u8]>,

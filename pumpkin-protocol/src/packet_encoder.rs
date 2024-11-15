@@ -17,7 +17,7 @@ type Cipher = cfb8::Encryptor<aes::Aes128>;
 // Encoder: Server -> Client
 // Supports ZLib endecoding/compression
 // Supports Aes128 Encyption
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct PacketEncoder {
     buf: BytesMut,
     compress_buf: Vec<u8>,

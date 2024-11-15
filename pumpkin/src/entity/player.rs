@@ -60,6 +60,7 @@ use crate::{error::PumpkinError, world::player_chunker::get_view_distance};
 
 use super::living::LivingEntity;
 
+#[derive(Debug)]
 pub struct ChunkHandleWrapper {
     handle: Option<JoinHandle<()>>,
     aborted: bool,
@@ -99,6 +100,7 @@ pub type PlayerPendingChunks =
 /// Represents a Minecraft player entity.
 ///
 /// A `Player` is a special type of entity that represents a human player connected to the server.
+#[derive(Debug)]
 pub struct Player {
     /// The underlying living entity object that represents the player.
     pub living_entity: LivingEntity,
@@ -903,6 +905,7 @@ impl Player {
 /// Represents a player's abilities and special powers.
 ///
 /// This struct contains information about the player's current abilities, such as flight, invulnerability, and creative mode.
+#[derive(Debug)]
 pub struct Abilities {
     /// Indicates whether the player is invulnerable to damage.
     pub invulnerable: bool,
@@ -932,7 +935,7 @@ impl Default for Abilities {
 }
 
 /// Represents the player's dominant hand.
-#[derive(FromPrimitive, Clone)]
+#[derive(FromPrimitive, Clone, Debug)]
 pub enum Hand {
     /// The player's primary hand (usually the right hand).
     Main,
@@ -941,7 +944,7 @@ pub enum Hand {
 }
 
 /// Represents the player's chat mode settings.
-#[derive(FromPrimitive, Clone)]
+#[derive(FromPrimitive, Clone, Debug)]
 pub enum ChatMode {
     /// Chat is enabled for the player.
     Enabled,

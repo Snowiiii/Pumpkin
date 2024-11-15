@@ -7,6 +7,7 @@ use crate::client::Client;
 
 use super::World;
 
+#[derive(Debug)]
 pub struct Worldborder {
     pub center_x: f64,
     pub center_z: f64,

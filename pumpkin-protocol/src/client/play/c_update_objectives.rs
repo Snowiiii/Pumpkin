@@ -65,6 +65,7 @@ pub enum Mode {
 }
 
 #[repr(i32)]
+#[derive(Debug)]
 pub enum RenderType {
     Integer,
     Hearts,

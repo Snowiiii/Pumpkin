@@ -1,4 +1,4 @@
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 #[repr(i32)]
 pub enum EntityPose {
     Standing = 0,

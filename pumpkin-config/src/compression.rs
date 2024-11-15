@@ -19,7 +19,7 @@ impl Default for CompressionConfig {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(default)]
 /// We have this in a Seperate struct so we can use it outside of the Config
 pub struct CompressionInfo {

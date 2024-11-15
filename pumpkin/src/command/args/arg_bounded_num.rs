@@ -82,7 +82,7 @@ impl<'a, T: ToFromNumber> FindArg<'a> for BoundedNumArgumentConsumer<T> {
 
 pub(crate) type NotInBounds = ();
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) enum Number {
     F64(f64),
     F32(f32),

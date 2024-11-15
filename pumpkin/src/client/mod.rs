@@ -47,7 +47,7 @@ pub mod player_packet;
 /// **Usage:**
 ///
 /// This struct is typically used to store and manage a player's preferences. It can be sent to the server when a player joins or when they change their settings.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PlayerConfig {
     /// The player's preferred language.
     pub locale: String, // 16
@@ -84,6 +84,7 @@ impl Default for PlayerConfig {
 
 /// Everything which makes a Connection with our Server is a `Client`.
 /// Client will become Players when they reach the `Play` state
+#[derive(Debug)]
 pub struct Client {
     /// The client id. This is good for coorelating a connection with a player
     /// Only used for logging purposes

@@ -5,6 +5,7 @@ use pumpkin_world::item::ItemStack;
 use std::iter::Chain;
 use std::slice::IterMut;
 
+#[derive(Debug)]
 pub struct PlayerInventory {
     // Main Inventory + Hotbar
     crafting: [Option<ItemStack>; 4],
