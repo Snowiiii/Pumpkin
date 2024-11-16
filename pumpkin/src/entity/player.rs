@@ -557,7 +557,7 @@ impl Player {
         let x = 10.0;
         let z = 10.0;
         let top = world.get_top_block(Vector2::new(x as i32, z as i32)).await;
-        let position = Vector3::new(x, f64::from(top), z);
+        let position = Vector3::new(x, f64::from(top + 1), z);
         let yaw = 10.0;
         let pitch = 10.0;
 
