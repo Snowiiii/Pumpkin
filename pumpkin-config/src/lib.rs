@@ -23,11 +23,13 @@ pub mod resource_pack;
 pub use auth::AuthenticationConfig;
 pub use commands::CommandsConfig;
 pub use compression::CompressionConfig;
+pub use lan_broadcast::LANBroadcastConfig;
 pub use pvp::PVPConfig;
 pub use rcon::RCONConfig;
 
 mod commands;
 pub mod compression;
+mod lan_broadcast;
 mod pvp;
 mod rcon;
 
@@ -56,6 +58,7 @@ pub struct AdvancedConfiguration {
     pub pvp: PVPConfig,
     pub logging: LoggingConfig,
     pub query: QueryConfig,
+    pub lan_broadcast: LANBroadcastConfig,
 }
 
 #[serde_inline_default]

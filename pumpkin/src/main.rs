@@ -42,6 +42,7 @@ pub mod client;
 pub mod command;
 pub mod entity;
 pub mod error;
+pub mod lan_broadcast;
 pub mod proxy;
 pub mod query;
 pub mod rcon;
@@ -119,6 +120,7 @@ fn log_system_info() {
 const GIT_VERSION: &str = env!("GIT_VERSION");
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> io::Result<()> {
     init_logger();
     log_system_info();
@@ -181,6 +183,11 @@ async fn main() -> io::Result<()> {
     if ADVANCED_CONFIG.query.enabled {
         log::info!("Query protocol enabled. Starting...");
         tokio::spawn(query::start_query_handler(server.clone(), addr));
+    }
+
+    if ADVANCED_CONFIG.lan_broadcast.enabled {
+        log::info!("LAN broadcast enabled. Starting...");
+        tokio::spawn(lan_broadcast::start_lan_broadcast(addr));
     }
 
     {
