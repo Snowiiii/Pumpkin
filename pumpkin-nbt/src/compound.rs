@@ -1,5 +1,5 @@
 use crate::tag::NbtTag;
-use crate::{get_nbt_string, Nbt, ReadingError, END_ID};
+use crate::{get_nbt_string, Error, Nbt, END_ID};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::io::{Cursor, Write};
 use std::vec::IntoIter;
@@ -16,7 +16,7 @@ impl NbtCompound {
         }
     }
 
-    pub fn deserialize_content(bytes: &mut impl Buf) -> Result<NbtCompound, ReadingError> {
+    pub fn deserialize_content(bytes: &mut impl Buf) -> Result<NbtCompound, Error> {
         let mut compound = NbtCompound::new();
 
         while bytes.has_remaining() {
@@ -25,7 +25,7 @@ impl NbtCompound {
                 break;
             }
 
-            let name = get_nbt_string(bytes)?;
+            let name = get_nbt_string(bytes).map_err(|_| Error::Cesu8DecodingError)?;
 
             if let Ok(tag) = NbtTag::deserialize_data(bytes, tag_id) {
                 compound.put(name, tag);
@@ -39,7 +39,7 @@ impl NbtCompound {
 
     pub fn deserialize_content_from_cursor(
         cursor: &mut Cursor<&[u8]>,
-    ) -> Result<NbtCompound, ReadingError> {
+    ) -> Result<NbtCompound, Error> {
         Self::deserialize_content(cursor)
     }
 

@@ -1,16 +1,23 @@
 use std::{
+    fmt::Display,
     io::{self, Cursor, Write},
     ops::Deref,
 };
 
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use cesu8::Cesu8DecodingError;
 use compound::NbtCompound;
+use serde::{de, ser};
 use tag::NbtTag;
+use serde::{Deserialize, Deserializer};
 use thiserror::Error;
 
 pub mod compound;
+pub mod deserializer;
 pub mod serializer;
 pub mod tag;
+
+// This NBT crate is inspired from CrabNBT
 
 pub const END_ID: u8 = 0;
 pub const BYTE_ID: u8 = 1;
@@ -27,13 +34,29 @@ pub const INT_ARRAY_ID: u8 = 11;
 pub const LONG_ARRAY_ID: u8 = 12;
 
 #[derive(Error, Debug)]
-pub enum ReadingError {
+pub enum Error {
     #[error("The root tag of the NBT file is not a compound tag. Received tag id: {0}")]
     NoRootCompound(u8),
     #[error("Encountered an unknown NBT tag id {0}.")]
     UnknownTagId(u8),
     #[error("Failed to Cesu 8 Decode")]
     Cesu8DecodingError,
+    #[error("Serde error: {0}")]
+    SerdeError(String),
+    #[error("NBT doesn't support this type {0}")]
+    UnsupportedType(String),
+}
+
+impl ser::Error for Error {
+    fn custom<T: Display>(msg: T) -> Self {
+        Error::SerdeError(msg.to_string())
+    }
+}
+
+impl de::Error for Error {
+    fn custom<T: Display>(msg: T) -> Self {
+        Error::SerdeError(msg.to_string())
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, PartialOrd)]
@@ -50,40 +73,40 @@ impl Nbt {
         }
     }
 
-    pub fn read(bytes: &mut impl Buf) -> Result<Nbt, ReadingError> {
+    pub fn read(bytes: &mut impl Buf) -> Result<Nbt, Error> {
         let tag_type_id = bytes.get_u8();
 
         if tag_type_id != COMPOUND_ID {
-            return Err(ReadingError::NoRootCompound(tag_type_id));
+            return Err(Error::NoRootCompound(tag_type_id));
         }
 
         Ok(Nbt {
-            name: get_nbt_string(bytes)?,
+            name: get_nbt_string(bytes).map_err(|_| Error::Cesu8DecodingError)?,
             root_tag: NbtCompound::deserialize_content(bytes)?,
         })
     }
 
-    pub fn read_from_cursor(cursor: &mut Cursor<&[u8]>) -> Result<Nbt, ReadingError> {
+    pub fn read_from_cursor(cursor: &mut Cursor<&[u8]>) -> Result<Nbt, Error> {
         Self::read(cursor)
     }
 
     /// Reads NBT tag, that doesn't contain the name of root compound.
     /// Used in [Network NBT](https://wiki.vg/NBT#Network_NBT_(Java_Edition)).
-    pub fn read_unnamed(bytes: &mut impl Buf) -> Result<Nbt, ReadingError> {
+    pub fn read_unnamed(bytes: &mut impl Buf) -> Result<Nbt, Error> {
         let tag_type_id = bytes.get_u8();
 
         if tag_type_id != COMPOUND_ID {
-            return Err(ReadingError::NoRootCompound(tag_type_id));
+            return Err(Error::NoRootCompound(tag_type_id));
         }
 
         Ok(Nbt {
             name: String::new(),
             root_tag: NbtCompound::deserialize_content(bytes)
-                .map_err(|_| ReadingError::Cesu8DecodingError)?,
+                .map_err(|_| Error::Cesu8DecodingError)?,
         })
     }
 
-    pub fn read_unnamed_from_cursor(cursor: &mut Cursor<&[u8]>) -> Result<Nbt, ReadingError> {
+    pub fn read_unnamed_from_cursor(cursor: &mut Cursor<&[u8]>) -> Result<Nbt, Error> {
         Self::read_unnamed(cursor)
     }
 
@@ -145,10 +168,37 @@ impl AsMut<NbtCompound> for Nbt {
     }
 }
 
-pub fn get_nbt_string(bytes: &mut impl Buf) -> Result<String, ReadingError> {
+pub fn get_nbt_string(bytes: &mut impl Buf) -> Result<String, Cesu8DecodingError> {
     let len = bytes.get_u16() as usize;
     let string_bytes = bytes.copy_to_bytes(len);
-    let string =
-        cesu8::from_java_cesu8(&string_bytes).map_err(|_| ReadingError::Cesu8DecodingError)?;
+    let string = cesu8::from_java_cesu8(&string_bytes)?;
     Ok(string.to_string())
 }
+
+macro_rules! impl_array {
+    ($name:ident, $variant:expr) => {
+        pub struct $name;
+
+        impl $name {
+            pub fn serialize<T, S>(input: T, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                T: serde::Serialize,
+                S: serde::Serializer,
+            {
+                serializer.serialize_newtype_variant("nbt_array", 0, $variant, &input)
+            }
+
+            pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+            where
+                T: Deserialize<'de>,
+                D: Deserializer<'de>,
+            {
+                T::deserialize(deserializer)
+            }
+        }
+    };
+}
+
+impl_array!(IntArray, "int");
+impl_array!(LongArray, "long");
+impl_array!(BytesArray, "byte");

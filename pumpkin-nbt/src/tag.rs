@@ -82,16 +82,16 @@ impl NbtTag {
         bytes.freeze()
     }
 
-    pub fn deserialize(bytes: &mut impl Buf) -> Result<NbtTag, ReadingError> {
+    pub fn deserialize(bytes: &mut impl Buf) -> Result<NbtTag, Error> {
         let tag_id = bytes.get_u8();
         Self::deserialize_data(bytes, tag_id)
     }
 
-    pub fn deserialize_from_cursor(cursor: &mut Cursor<&[u8]>) -> Result<NbtTag, ReadingError> {
+    pub fn deserialize_from_cursor(cursor: &mut Cursor<&[u8]>) -> Result<NbtTag, Error> {
         Self::deserialize(cursor)
     }
 
-    pub fn deserialize_data(bytes: &mut impl Buf, tag_id: u8) -> Result<NbtTag, ReadingError> {
+    pub fn deserialize_data(bytes: &mut impl Buf, tag_id: u8) -> Result<NbtTag, Error> {
         match tag_id {
             END_ID => Ok(NbtTag::End),
             BYTE_ID => {
@@ -154,14 +154,14 @@ impl NbtTag {
                 }
                 Ok(NbtTag::LongArray(long_array))
             }
-            _ => Err(ReadingError::UnknownTagId(tag_id)),
+            _ => Err(Error::UnknownTagId(tag_id)),
         }
     }
 
     pub fn deserialize_data_from_cursor(
         cursor: &mut Cursor<&[u8]>,
         tag_id: u8,
-    ) -> Result<NbtTag, ReadingError> {
+    ) -> Result<NbtTag, Error> {
         Self::deserialize_data(cursor, tag_id)
     }
 

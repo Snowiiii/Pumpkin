@@ -112,31 +112,31 @@ impl<'a> TextComponent<'a> {
 
     /// Makes the text bold
     pub fn bold(mut self) -> Self {
-        self.style.bold = Some(1);
+        self.style.bold = Some(true);
         self
     }
 
     /// Makes the text italic
     pub fn italic(mut self) -> Self {
-        self.style.italic = Some(1);
+        self.style.italic = Some(true);
         self
     }
 
     /// Makes the text underlined
     pub fn underlined(mut self) -> Self {
-        self.style.underlined = Some(1);
+        self.style.underlined = Some(true);
         self
     }
 
     /// Makes the text strikethrough
     pub fn strikethrough(mut self) -> Self {
-        self.style.strikethrough = Some(1);
+        self.style.strikethrough = Some(true);
         self
     }
 
     /// Makes the text obfuscated
     pub fn obfuscated(mut self) -> Self {
-        self.style.obfuscated = Some(1);
+        self.style.obfuscated = Some(true);
         self
     }
 

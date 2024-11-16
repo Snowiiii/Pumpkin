@@ -1,33 +1,15 @@
 use bytes::{BufMut, BytesMut};
 use serde::ser::Impossible;
 use serde::{ser, Serialize};
-use std::fmt::Display;
 use std::io::Write;
-use thiserror::Error;
 
 use crate::tag::NbtTag;
 use crate::{
-    BYTE_ARRAY_ID, BYTE_ID, COMPOUND_ID, DOUBLE_ID, END_ID, FLOAT_ID, INT_ARRAY_ID, INT_ID,
+    Error, BYTE_ARRAY_ID, BYTE_ID, COMPOUND_ID, DOUBLE_ID, END_ID, FLOAT_ID, INT_ARRAY_ID, INT_ID,
     LIST_ID, LONG_ARRAY_ID, LONG_ID, SHORT_ID, STRING_ID,
 };
 
 pub type Result<T> = std::result::Result<T, Error>;
-
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("The root tag of the NBT file is not a compound tag. Received tag id: {0}")]
-    NoRootCompound(u8),
-    #[error("NBT doesn't support this type {0}")]
-    UnsupportedType(String),
-    #[error("Serde error: {0}")]
-    SerdeError(String),
-}
-
-impl ser::Error for Error {
-    fn custom<T: Display>(msg: T) -> Self {
-        Error::SerdeError(msg.to_string())
-    }
-}
 
 pub struct Serializer {
     output: BytesMut,
