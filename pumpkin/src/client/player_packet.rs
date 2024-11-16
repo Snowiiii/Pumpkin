@@ -609,12 +609,21 @@ impl Player {
                         }
                     }
 
-                    let world_pos = WorldPosition(location.0 + face.to_offset());
+                    let clicked_world_pos = WorldPosition(location.0);
+                    let clicked_block_state = world.get_block_state(clicked_world_pos).await?;
 
-                    let previous_block_state = world.get_block_state(world_pos).await?;
-                    if !previous_block_state.replaceable {
-                        return Ok(());
-                    }
+                    let world_pos = if clicked_block_state.replaceable {
+                        clicked_world_pos
+                    } else {
+                        let world_pos = WorldPosition(location.0 + face.to_offset());
+                        let previous_block_state = world.get_block_state(world_pos).await?;
+
+                        if !previous_block_state.replaceable {
+                            return Ok(());
+                        }
+
+                        world_pos
+                    };
 
                     let block_bounding_box = BoundingBox::from_block(&world_pos);
                     let bounding_box = entity.bounding_box.load();
