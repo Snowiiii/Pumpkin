@@ -60,6 +60,7 @@ mod c_update_objectives;
 mod c_update_score;
 mod c_worldevent;
 mod player_action;
+mod c_open_sign_editor;
 
 pub use c_acknowledge_block::*;
 pub use c_actionbar::*;
@@ -123,3 +124,4 @@ pub use c_update_objectives::*;
 pub use c_update_score::*;
 pub use c_worldevent::*;
 pub use player_action::*;
+pub use c_open_sign_editor::*;

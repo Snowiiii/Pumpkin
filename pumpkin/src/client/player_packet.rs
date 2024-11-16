@@ -23,6 +23,7 @@ use pumpkin_protocol::{
     client::play::{
         Animation, CAcknowledgeBlockChange, CEntityAnimation, CHeadRot, CPingResponse,
         CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot, FilterType,
+        COpenSignEditor
     },
     server::play::{
         Action, ActionType, SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay,
@@ -31,6 +32,7 @@ use pumpkin_protocol::{
         SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status,
     },
 };
+use pumpkin_protocol::server::play::SUpdateSign;
 use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
 
 use super::PlayerConfig;
@@ -601,6 +603,9 @@ impl Player {
                             .set_block_state(world_pos, block.default_state_id)
                             .await;
                     }
+
+                    //TODO: Check if block is sign    NOTE: Client ignores popup when not block is not a sign by default
+                    self.client.send_packet(&COpenSignEditor::new(world_pos, false)).await;
                 }
                 self.client
                     .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
@@ -609,6 +614,11 @@ impl Player {
         } else {
             self.kick(TextComponent::text("Invalid block face")).await;
         }
+    }
+
+    pub fn handle_update_sign(&self, _update_sign: &SUpdateSign) {
+        //TODO: handle update of sign entity
+        log::error!("Received update sign but sign entity update is not implemented yet");
     }
 
     pub fn handle_use_item(&self, _use_item: &SUseItem) {

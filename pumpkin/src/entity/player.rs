@@ -36,6 +36,7 @@ use pumpkin_protocol::{
         SCommandSuggestion, SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction,
         SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
         SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
+        SUpdateSign
     },
     RawPacket, ServerPacket, SoundCategory, VarInt,
 };
@@ -875,6 +876,7 @@ impl Player {
                 self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await;
             }
             SUseItem::PACKET_ID => self.handle_use_item(&SUseItem::read(bytebuf)?),
+            SUpdateSign::PACKET_ID => self.handle_update_sign(&SUpdateSign::read(bytebuf)?),
             SCommandSuggestion::PACKET_ID => {
                 self.handle_command_suggestion(SCommandSuggestion::read(bytebuf)?, server)
                     .await;
