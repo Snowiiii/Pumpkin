@@ -10,7 +10,7 @@ pub fn client_packet(input: TokenStream, item: TokenStream) -> TokenStream {
     let name = &ast.ident;
     let (impl_generics, ty_generics, _) = ast.generics.split_for_impl();
 
-    let input: proc_macro2::TokenStream = packet::packet_clientbound(input);
+    let input: proc_macro2::TokenStream = packet::packet_serverbound(input);
     let item: proc_macro2::TokenStream = item.into();
 
     let gen = quote! {
@@ -29,7 +29,7 @@ pub fn server_packet(input: TokenStream, item: TokenStream) -> TokenStream {
     let name = &ast.ident;
     let (impl_generics, ty_generics, _) = ast.generics.split_for_impl();
 
-    let input: proc_macro2::TokenStream = packet::packet_serverbound(input);
+    let input: proc_macro2::TokenStream = packet::packet_clientbound(input);
     let item: proc_macro2::TokenStream = item.into();
 
     let gen = quote! {

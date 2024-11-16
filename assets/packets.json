@@ -1,5 +1,5 @@
 {
-  "serverbound": {
+  "clientbound": {
     "status": {
       "status_response": 0,
       "pong_response": 1
@@ -165,7 +165,7 @@
       "server_links": 130
     }
   },
-  "clientbound": {
+  "serverbound": {
     "handshake": {
       "intention": 0
     },
