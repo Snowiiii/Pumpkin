@@ -4,7 +4,6 @@ use std::borrow::Cow;
 use click::ClickEvent;
 use color::Color;
 use colored::Colorize;
-use fastnbt::SerOpts;
 use hover::HoverEvent;
 use serde::{Deserialize, Serialize};
 use style::Style;
@@ -175,7 +174,10 @@ impl<'a> TextComponent<'a> {
         };
         // dbg!(&serde_json::to_string(&astruct));
 
-        fastnbt::to_bytes_with_opts(&astruct, SerOpts::network_nbt()).unwrap()
+        // TODO
+        pumpkin_nbt::serializer::to_bytes_unnamed(&astruct)
+            .unwrap()
+            .to_vec()
     }
 }
 

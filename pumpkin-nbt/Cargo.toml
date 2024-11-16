@@ -5,3 +5,6 @@ edition.workspace = true
 
 [dependencies]
 serde.workspace = true
+thiserror.workspace = true
+bytes.workspace = true
+cesu8 = "1.1.0"

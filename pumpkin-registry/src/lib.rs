@@ -6,7 +6,6 @@ use chat_type::ChatType;
 use damage_type::DamageType;
 use dimension::Dimension;
 use enchantment::Enchantment;
-use fastnbt::SerOpts;
 use instrument::Instrument;
 use jukebox_song::JukeboxSong;
 use paint::Painting;
@@ -80,7 +79,7 @@ impl Registry {
             .iter()
             .map(|s| RegistryEntry {
                 entry_id: s.0,
-                data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+                data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
             })
             .collect();
         let biome = Registry {
@@ -93,7 +92,7 @@ impl Registry {
             .iter()
             .map(|s| RegistryEntry {
                 entry_id: s.0,
-                data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+                data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
             })
             .collect();
         let chat_type = Registry {
@@ -106,7 +105,7 @@ impl Registry {
         //     .iter()
         //     .map(|s| RegistryEntry {
         //         entry_id: s.0,
-        //         data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+        //         data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
         //     })
         //     .collect();
         // let trim_pattern = Registry {
@@ -119,7 +118,7 @@ impl Registry {
         //     .iter()
         //     .map(|s| RegistryEntry {
         //         entry_id: s.0,
-        //         data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+        //         data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
         //     })
         //     .collect();
         // let trim_material = Registry {
@@ -135,7 +134,7 @@ impl Registry {
                 let varient = s.1.clone();
                 RegistryEntry {
                     entry_id: s.0,
-                    data: fastnbt::to_bytes_with_opts(&varient, SerOpts::network_nbt()).unwrap(),
+                    data: pumpkin_nbt::serializer::to_bytes_unnamed(&varient).unwrap(),
                 }
             })
             .collect();
@@ -149,7 +148,7 @@ impl Registry {
             .iter()
             .map(|s| RegistryEntry {
                 entry_id: s.0,
-                data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+                data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
             })
             .collect();
         let painting_variant = Registry {
@@ -162,7 +161,7 @@ impl Registry {
             .iter()
             .map(|s| RegistryEntry {
                 entry_id: s.0,
-                data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+                data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
             })
             .collect();
         let dimension_type = Registry {
@@ -175,7 +174,7 @@ impl Registry {
             .iter()
             .map(|s| RegistryEntry {
                 entry_id: s.0,
-                data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+                data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
             })
             .collect();
         let damage_type = Registry {
@@ -188,7 +187,7 @@ impl Registry {
             .iter()
             .map(|s| RegistryEntry {
                 entry_id: s.0,
-                data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+                data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
             })
             .collect();
         let banner_pattern = Registry {
@@ -202,7 +201,7 @@ impl Registry {
         //     .iter()
         //     .map(|s| RegistryEntry {
         //         entry_id: s.0,
-        //         data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+        //         data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
         //     })
         //     .collect();
         // let enchantment = Registry {
@@ -215,7 +214,7 @@ impl Registry {
         //     .iter()
         //     .map(|s| RegistryEntry {
         //         entry_id: s.0,
-        //         data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+        //         data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
         //     })
         //     .collect();
         // let jukebox_song = Registry {
@@ -228,7 +227,7 @@ impl Registry {
         //     .iter()
         //     .map(|s| RegistryEntry {
         //         entry_id: s.0,
-        //         data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+        //         data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
         //     })
         //     .collect();
         // let instrument = Registry {
