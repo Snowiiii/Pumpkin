@@ -1,7 +1,7 @@
 use pumpkin_macros::client_packet;
 
 #[derive(serde::Serialize)]
-#[client_packet("configuration:disconnect")]
+#[client_packet("config:disconnect")]
 pub struct CConfigDisconnect<'a> {
     reason: &'a str,
 }

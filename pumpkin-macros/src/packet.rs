@@ -5,38 +5,41 @@ use quote::quote;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-pub struct Packet {
-    name: String,
-    phase: String,
-    side: String,
-    id: u16,
+pub struct Packets {
+    serverbound: HashMap<String, HashMap<String, u8>>,
+    clientbound: HashMap<String, HashMap<String, u8>>,
 }
 
-static PACKETS: LazyLock<HashMap<String, u16>> = LazyLock::new(|| {
-    serde_json::from_str::<Vec<Packet>>(include_str!("../../assets/packets.json"))
+static PACKETS: LazyLock<Packets> = LazyLock::new(|| {
+    serde_json::from_str(include_str!("../../assets/packets.json"))
         .expect("Could not parse packets.json registry.")
-        .into_iter()
-        .map(|val| (format!("{}:{}:{}", val.side, val.phase, val.name), val.id))
-        .collect()
 });
 
 pub(crate) fn packet_clientbound(item: TokenStream) -> proc_macro2::TokenStream {
     let input_string = item.to_string();
     let packet_name = input_string.trim_matches('"');
-
-    let id = PACKETS
-        .get(&format!("clientbound:{}", packet_name))
-        .expect("Invalid Packet");
+    let packet_name_split: Vec<&str> = packet_name.split(":").collect();
+    let phase = PACKETS
+        .serverbound
+        .get(packet_name_split[0])
+        .expect("Invalid Phase");
+    let id = phase
+        .get(packet_name_split[1])
+        .expect("Invalid Packet name");
     quote! { #id }
 }
 
-#[expect(dead_code)]
 pub(crate) fn packet_serverbound(item: TokenStream) -> proc_macro2::TokenStream {
     let input_string = item.to_string();
     let packet_name = input_string.trim_matches('"');
+    let packet_name_split: Vec<&str> = packet_name.split(":").collect();
 
-    let id = PACKETS
-        .get(&format!("serverbound:{}", packet_name))
-        .expect("Invalid Packet");
+    let phase = PACKETS
+        .clientbound
+        .get(packet_name_split[0])
+        .expect("Invalid Phase");
+    let id = phase
+        .get(packet_name_split[1])
+        .expect("Invalid Packet name");
     quote! { #id }
 }

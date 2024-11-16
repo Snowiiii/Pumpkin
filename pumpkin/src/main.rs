@@ -5,8 +5,6 @@
 // REMOVE SOME WHEN RELEASE
 #![expect(clippy::cargo_common_metadata)]
 #![expect(clippy::multiple_crate_versions)]
-#![expect(clippy::significant_drop_in_scrutinee)]
-#![expect(clippy::significant_drop_tightening)]
 #![expect(clippy::single_call_fn)]
 #![expect(clippy::cast_sign_loss)]
 #![expect(clippy::cast_possible_truncation)]
@@ -32,11 +30,12 @@ use tokio::signal::unix::{signal, SignalKind};
 
 use std::sync::Arc;
 
+use crate::server::CURRENT_MC_VERSION;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
+use pumpkin_protocol::CURRENT_MC_PROTOCOL;
 use rcon::RCONServer;
 use std::time::Instant;
-
 // Setup some tokens to allow us to identify which event is for which socket.
 
 pub mod client;
@@ -44,6 +43,7 @@ pub mod command;
 pub mod entity;
 pub mod error;
 pub mod proxy;
+pub mod query;
 pub mod rcon;
 pub mod server;
 pub mod world;
@@ -63,6 +63,9 @@ fn init_logger() {
     use pumpkin_config::ADVANCED_CONFIG;
     if ADVANCED_CONFIG.logging.enabled {
         let mut logger = simple_logger::SimpleLogger::new();
+        logger = logger.with_timestamp_format(time::macros::format_description!(
+            "[year]-[month]-[day] [hour]:[minute]:[second]"
+        ));
 
         if !ADVANCED_CONFIG.logging.timestamp {
             logger = logger.without_timestamps();
@@ -91,9 +94,40 @@ const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> L
     }
 }
 
+const CARGO_PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+fn log_system_info() {
+    let os_type = sys_info::os_type().unwrap();
+    let os_release = sys_info::os_release().unwrap();
+    let arch = std::env::consts::ARCH;
+
+    if cfg!(target_os = "linux") {
+        if let Some(linux_release) = sys_info::linux_os_release().unwrap().pretty_name {
+            log::info!(
+                "Running on {} ({}) {} ({})",
+                os_type,
+                linux_release,
+                os_release,
+                arch
+            );
+            return;
+        }
+    }
+    log::info!("Running on {} {} ({})", os_type, os_release, arch);
+}
+
+const GIT_VERSION: &str = env!("GIT_VERSION");
+
 #[tokio::main]
 async fn main() -> io::Result<()> {
     init_logger();
+    log_system_info();
+    log::info!("Starting Pumpkin {CARGO_PKG_VERSION} ({GIT_VERSION}) for Minecraft {CURRENT_MC_VERSION} (Protocol {CURRENT_MC_PROTOCOL})",);
+    log::warn!("Pumpkin is currently under heavy development!");
+    log::info!("Report Issues on https://github.com/Snowiiii/Pumpkin/issues");
+    log::info!("Join our Discord for community support https://discord.com/invite/wT8XjrjKkf");
+    //log::info!("CPU {} Cores {}MHz", sys_info::cpu_num().unwrap(), sys_info::cpu_speed().unwrap());
+
     // let rt = tokio::runtime::Builder::new_multi_thread()
     //     .enable_all()
     //     .build()
@@ -117,10 +151,13 @@ async fn main() -> io::Result<()> {
     let time = Instant::now();
 
     // Setup the TCP server socket.
-    let addr = BASIC_CONFIG.server_address;
-    let listener = tokio::net::TcpListener::bind(addr)
+    let listener = tokio::net::TcpListener::bind(BASIC_CONFIG.server_address)
         .await
         .expect("Failed to start TcpListener");
+    // In the event the user puts 0 for their port, this will allow us to know what port it is running on
+    let addr = listener
+        .local_addr()
+        .expect("Unable to get the address of server!");
 
     let use_console = ADVANCED_CONFIG.commands.use_console;
     let rcon = ADVANCED_CONFIG.rcon.clone();
@@ -140,6 +177,12 @@ async fn main() -> io::Result<()> {
             RCONServer::new(&rcon, server).await.unwrap();
         });
     }
+
+    if ADVANCED_CONFIG.query.enabled {
+        log::info!("Query protocol enabled. Starting...");
+        tokio::spawn(query::start_query_handler(server.clone(), addr));
+    }
+
     {
         let server = server.clone();
         tokio::spawn(async move {
@@ -184,7 +227,10 @@ async fn main() -> io::Result<()> {
                 .load(std::sync::atomic::Ordering::Relaxed)
             {
                 let (player, world) = server.add_player(client).await;
-                world.spawn_player(&BASIC_CONFIG, player.clone()).await;
+                world
+                    .spawn_player(&BASIC_CONFIG, player.clone(), &server.command_dispatcher)
+                    .await;
+
                 // poll Player
                 while !player
                     .client

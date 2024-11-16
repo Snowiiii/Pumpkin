@@ -1,8 +1,8 @@
 use async_trait::async_trait;
-use pumpkin_inventory::OpenContainer;
+use pumpkin_inventory::{Chest, OpenContainer};
 
 use crate::command::{
-    tree::CommandTree, tree::ConsumedArgs, CommandExecutor, CommandSender, InvalidTreeError,
+    args::ConsumedArgs, tree::CommandTree, CommandError, CommandExecutor, CommandSender,
 };
 
 const NAMES: [&str; 2] = ["echest", "enderchest"];
@@ -10,7 +10,7 @@ const NAMES: [&str; 2] = ["echest", "enderchest"];
 const DESCRIPTION: &str =
     "Show your personal enderchest (this command is used for testing container behaviour)";
 
-struct EchestExecutor {}
+struct EchestExecutor;
 
 #[async_trait]
 impl CommandExecutor for EchestExecutor {
@@ -19,7 +19,7 @@ impl CommandExecutor for EchestExecutor {
         sender: &mut CommandSender<'a>,
         server: &crate::server::Server,
         _args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         if let Some(player) = sender.as_player() {
             let entity_id = player.entity_id();
             player.open_container.store(Some(0));
@@ -28,11 +28,13 @@ impl CommandExecutor for EchestExecutor {
                 if let Some(ender_chest) = open_containers.get_mut(&0) {
                     ender_chest.add_player(entity_id);
                 } else {
-                    let open_container = OpenContainer::empty(entity_id);
+                    let open_container = OpenContainer::new_empty_container::<Chest>(entity_id);
                     open_containers.insert(0, open_container);
                 }
             }
-            player.open_container(server, "minecraft:generic_9x3").await;
+            player
+                .open_container(server, pumpkin_inventory::WindowType::Generic9x3)
+                .await;
         }
 
         Ok(())
@@ -40,5 +42,5 @@ impl CommandExecutor for EchestExecutor {
 }
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
-    CommandTree::new(NAMES, DESCRIPTION).execute(&EchestExecutor {})
+    CommandTree::new(NAMES, DESCRIPTION).execute(&EchestExecutor)
 }

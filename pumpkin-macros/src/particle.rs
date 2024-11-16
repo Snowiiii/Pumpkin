@@ -2,20 +2,10 @@ use std::{collections::HashMap, sync::LazyLock};
 
 use proc_macro::TokenStream;
 use quote::quote;
-use serde::Deserialize;
-
-#[derive(Deserialize)]
-pub struct Particle {
-    name: String,
-    id: u16,
-}
 
 static SOUNDS: LazyLock<HashMap<String, u16>> = LazyLock::new(|| {
-    serde_json::from_str::<Vec<Particle>>(include_str!("../../assets/particles.json"))
+    serde_json::from_str(include_str!("../../assets/particles.json"))
         .expect("Could not parse particles.json registry.")
-        .into_iter()
-        .map(|val| (val.name, val.id))
-        .collect()
 });
 
 pub(crate) fn particle_impl(item: TokenStream) -> TokenStream {

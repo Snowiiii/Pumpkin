@@ -3,11 +3,11 @@ use pumpkin_core::math::vector2::Vector2;
 #[derive(Debug, PartialEq)]
 pub struct Cylindrical {
     pub center: Vector2<i32>,
-    pub view_distance: i32,
+    pub view_distance: u8,
 }
 
 impl Cylindrical {
-    pub fn new(center: Vector2<i32>, view_distance: i32) -> Self {
+    pub fn new(center: Vector2<i32>, view_distance: u8) -> Self {
         Self {
             center,
             view_distance,
@@ -45,19 +45,19 @@ impl Cylindrical {
     }
 
     fn left(&self) -> i32 {
-        self.center.x - self.view_distance - 1
+        self.center.x - self.view_distance as i32 - 1
     }
 
     fn bottom(&self) -> i32 {
-        self.center.z - self.view_distance - 1
+        self.center.z - self.view_distance as i32 - 1
     }
 
     fn right(&self) -> i32 {
-        self.center.x + self.view_distance + 1
+        self.center.x + self.view_distance as i32 + 1
     }
 
     fn top(&self) -> i32 {
-        self.center.z + self.view_distance + 1
+        self.center.z + self.view_distance as i32 + 1
     }
 
     fn is_within_distance(&self, x: i32, z: i32) -> bool {

@@ -1,8 +1,11 @@
+use pumpkin_macros::server_packet;
+
 use crate::{
     bytebuf::{ByteBuffer, DeserializerError},
     ServerPacket, VarInt,
 };
 
+#[server_packet("login:key")]
 pub struct SEncryptionResponse {
     pub shared_secret_length: VarInt,
     pub shared_secret: Vec<u8>,

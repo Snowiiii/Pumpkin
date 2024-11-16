@@ -1,18 +1,17 @@
-use std::str::FromStr;
-
 use async_trait::async_trait;
-use num_traits::FromPrimitive;
-use pumpkin_core::GameMode;
 
+use crate::command::args::arg_gamemode::GamemodeArgumentConsumer;
+use crate::command::args::GetCloned;
+
+use crate::entity::player::PermissionLvl;
 use crate::TextComponent;
 
-use crate::command::arg_player::{parse_arg_player, PlayerArgumentConsumer};
+use crate::command::args::arg_players::PlayersArgumentConsumer;
 
-use crate::command::dispatcher::InvalidTreeError;
-use crate::command::dispatcher::InvalidTreeError::{
-    InvalidConsumptionError, InvalidRequirementError,
-};
-use crate::command::tree::{ArgumentConsumer, CommandTree, ConsumedArgs, RawArgs};
+use crate::command::args::{Arg, ConsumedArgs};
+use crate::command::dispatcher::CommandError;
+use crate::command::dispatcher::CommandError::{InvalidConsumption, InvalidRequirement};
+use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, require};
 use crate::command::CommandSender::Player;
 use crate::command::{CommandExecutor, CommandSender};
@@ -25,54 +24,7 @@ const DESCRIPTION: &str = "Change a player's gamemode.";
 const ARG_GAMEMODE: &str = "gamemode";
 const ARG_TARGET: &str = "target";
 
-struct GamemodeArgumentConsumer {}
-
-#[async_trait]
-impl ArgumentConsumer for GamemodeArgumentConsumer {
-    async fn consume<'a>(
-        &self,
-        _sender: &CommandSender<'a>,
-        _server: &Server,
-        args: &mut RawArgs<'a>,
-    ) -> Result<String, Option<String>> {
-        if let Some(arg) = args.pop() {
-            if let Ok(id) = arg.parse::<u8>() {
-                match GameMode::from_u8(id) {
-                    None | Some(GameMode::Undefined) => {}
-                    Some(_) => return Ok(arg.into()),
-                };
-            };
-
-            match GameMode::from_str(arg) {
-                Err(_) | Ok(GameMode::Undefined) => {
-                    return Err(Some(format!("Gamemode not found: {arg}")))
-                }
-                Ok(_) => return Ok(arg.into()),
-            }
-        }
-        Err(None)
-    }
-}
-
-pub fn parse_arg_gamemode(consumed_args: &ConsumedArgs) -> Result<GameMode, InvalidTreeError> {
-    let s = consumed_args
-        .get(ARG_GAMEMODE)
-        .ok_or(InvalidConsumptionError(None))?;
-
-    if let Ok(id) = s.parse::<u8>() {
-        match GameMode::from_u8(id) {
-            None | Some(GameMode::Undefined) => {}
-            Some(gamemode) => return Ok(gamemode),
-        };
-    };
-
-    match GameMode::from_str(s) {
-        Err(_) | Ok(GameMode::Undefined) => Err(InvalidConsumptionError(Some(s.into()))),
-        Ok(gamemode) => Ok(gamemode),
-    }
-}
-
-struct GamemodeTargetSelf {}
+struct GamemodeTargetSelf;
 
 #[async_trait]
 impl CommandExecutor for GamemodeTargetSelf {
@@ -81,8 +33,10 @@ impl CommandExecutor for GamemodeTargetSelf {
         sender: &mut CommandSender<'a>,
         _server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
-        let gamemode = parse_arg_gamemode(args)?;
+    ) -> Result<(), CommandError> {
+        let Some(Arg::GameMode(gamemode)) = args.get_cloned(&ARG_GAMEMODE) else {
+            return Err(InvalidConsumption(Some(ARG_GAMEMODE.into())));
+        };
 
         if let Player(target) = sender {
             if target.gamemode.load() == gamemode {
@@ -101,39 +55,51 @@ impl CommandExecutor for GamemodeTargetSelf {
             }
             Ok(())
         } else {
-            Err(InvalidRequirementError)
+            Err(InvalidRequirement)
         }
     }
 }
 
-struct GamemodeTargetPlayer {}
+struct GamemodeTargetPlayer;
 
 #[async_trait]
 impl CommandExecutor for GamemodeTargetPlayer {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        server: &Server,
+        _server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
-        let gamemode = parse_arg_gamemode(args)?;
-        let target = parse_arg_player(sender, server, ARG_TARGET, args).await?;
+    ) -> Result<(), CommandError> {
+        let Some(Arg::GameMode(gamemode)) = args.get_cloned(&ARG_GAMEMODE) else {
+            return Err(InvalidConsumption(Some(ARG_GAMEMODE.into())));
+        };
+        let Some(Arg::Players(targets)) = args.get(ARG_TARGET) else {
+            return Err(InvalidConsumption(Some(ARG_TARGET.into())));
+        };
 
-        if target.gamemode.load() == gamemode {
-            sender
-                .send_message(TextComponent::text(&format!(
-                    "{} is already in {:?} gamemode",
-                    target.gameprofile.name, gamemode
-                )))
-                .await;
-        } else {
-            target.set_gamemode(gamemode).await;
-            sender
-                .send_message(TextComponent::text(&format!(
-                    "{}'s Game mode was set to {:?}",
-                    target.gameprofile.name, gamemode
-                )))
-                .await;
+        let target_count = targets.len();
+
+        for target in targets {
+            if target.gamemode.load() == gamemode {
+                if target_count == 1 {
+                    sender
+                        .send_message(TextComponent::text(&format!(
+                            "{} is already in {:?} gamemode",
+                            target.gameprofile.name, gamemode
+                        )))
+                        .await;
+                }
+            } else {
+                target.set_gamemode(gamemode).await;
+                if target_count == 1 {
+                    sender
+                        .send_message(TextComponent::text(&format!(
+                            "{}'s Game mode was set to {:?}",
+                            target.gameprofile.name, gamemode
+                        )))
+                        .await;
+                }
+            }
         }
 
         Ok(())
@@ -143,12 +109,11 @@ impl CommandExecutor for GamemodeTargetPlayer {
 #[allow(clippy::redundant_closure_for_method_calls)]
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| sender.permission_lvl() >= 2).with_child(
-            argument(ARG_GAMEMODE, &GamemodeArgumentConsumer {})
-                .with_child(require(&|sender| sender.is_player()).execute(&GamemodeTargetSelf {}))
+        require(&|sender| sender.has_permission_lvl(PermissionLvl::Two)).with_child(
+            argument(ARG_GAMEMODE, &GamemodeArgumentConsumer)
+                .with_child(require(&|sender| sender.is_player()).execute(&GamemodeTargetSelf))
                 .with_child(
-                    argument(ARG_TARGET, &PlayerArgumentConsumer {})
-                        .execute(&GamemodeTargetPlayer {}),
+                    argument(ARG_TARGET, &PlayersArgumentConsumer).execute(&GamemodeTargetPlayer),
                 ),
         ),
     )

@@ -1,10 +1,8 @@
 package de.snowii.extractor.extractors
 
-import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import de.snowii.extractor.Extractor
-import net.minecraft.registry.DynamicRegistryManager
 import net.minecraft.registry.Registries
 import net.minecraft.server.MinecraftServer
 
@@ -15,15 +13,14 @@ class Sounds : Extractor.Extractor {
     }
 
     override fun extract(server: MinecraftServer): JsonElement {
-        val itemsJson = JsonArray()
-
+        val soundJson = JsonObject()
         for (sound in Registries.SOUND_EVENT) {
-            val itemJson = JsonObject()
-            itemJson.addProperty("id", Registries.SOUND_EVENT.getRawId(sound))
-            itemJson.addProperty("name", Registries.SOUND_EVENT.getId(sound)!!.toString())
-            itemsJson.add(itemJson)
+            soundJson.addProperty(
+                Registries.SOUND_EVENT.getId(sound)!!.toString(),
+                Registries.SOUND_EVENT.getRawId(sound)
+            )
         }
 
-        return itemsJson
+        return soundJson
     }
 }

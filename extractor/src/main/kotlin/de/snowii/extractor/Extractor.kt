@@ -5,7 +5,6 @@ import com.google.gson.JsonElement
 import de.snowii.extractor.extractors.*
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
-import net.minecraft.registry.DynamicRegistryManager
 import net.minecraft.server.MinecraftServer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -27,7 +26,10 @@ class Extractor : ModInitializer {
             Sounds(),
             Recipes(),
             Particles(),
-            Packet(),
+            SyncedRegistries(),
+            Packets(),
+            Screens(),
+            Tags(),
             Items(),
             Blocks(),
         )

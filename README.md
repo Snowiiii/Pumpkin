@@ -34,7 +34,9 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 
 - [x] Configuration (toml)
 - [x] Server Status/Ping
-- [x] Login
+- Login
+  - [x] Encryption
+  - [x] Packet Compression
 - Player Configuration
   - [x] Registries (biome types, paintings, dimensions)
   - [x] Server Brand
@@ -61,9 +63,16 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Player Animation
   - [x] Player Inventory
   - [x] Player Combat
+- Entities
+  - [x] Players
+  - [ ] Mobs
+  - [ ] Animals
+  - [ ] Entity AI
+  - [ ] Minecart
+  - [ ] Boss
 - Server
   - [ ] Plugins
-  - [ ] Query
+  - [x] Query
   - [x] RCON
   - [x] Inventories
   - [x] Particles
@@ -94,7 +103,3 @@ Consider joining our [discord](https://discord.gg/wT8XjrjKkf) to stay up-to-date
 ## Funding
 
 If you want to fund me and help the project, Check out my [GitHub sponsors](https://github.com/sponsors/Snowiiii) or my [PayPal](https://www.paypal.me/alexxmedvedev)
-
-## Thanks
-
-A big thanks to [wiki.vg](https://wiki.vg/) for providing valuable information used in the development of this project.

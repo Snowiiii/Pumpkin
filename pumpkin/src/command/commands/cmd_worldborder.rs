@@ -1,16 +1,22 @@
 use async_trait::async_trait;
-use pumpkin_core::text::{
-    color::{Color, NamedColor},
-    TextComponent,
+use pumpkin_core::{
+    math::vector2::Vector2,
+    text::{
+        color::{Color, NamedColor},
+        TextComponent,
+    },
 };
 
 use crate::{
     command::{
-        arg_position::{parse_arg_position, PositionArgumentConsumer},
-        arg_simple::SimpleArgConsumer,
-        tree::{CommandTree, ConsumedArgs},
-        tree_builder::{argument, literal},
-        CommandExecutor, CommandSender, InvalidTreeError,
+        args::{
+            arg_bounded_num::BoundedNumArgumentConsumer,
+            arg_position_2d::Position2DArgumentConsumer, ConsumedArgs, DefaultNameArgConsumer,
+            FindArgDefaultName,
+        },
+        tree::CommandTree,
+        tree_builder::{argument_default_name, literal},
+        CommandError, CommandExecutor, CommandSender,
     },
     server::Server,
 };
@@ -28,7 +34,7 @@ impl CommandExecutor for WorldborderGetExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         _args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
@@ -54,18 +60,25 @@ impl CommandExecutor for WorldborderSetExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = args
-            .get("distance")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<f64>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let Ok(distance) = DISTANCE_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        DISTANCE_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
 
         if (distance - border.new_diameter).abs() < f64::EPSILON {
             sender
@@ -96,23 +109,37 @@ impl CommandExecutor for WorldborderSetTimeExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = args
-            .get("distance")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<f64>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
-        let time = args
-            .get("time")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<i32>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let Ok(distance) = DISTANCE_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        DISTANCE_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
+        let Ok(time) = TIME_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        TIME_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
 
         match distance.total_cmp(&border.new_diameter) {
             std::cmp::Ordering::Equal => {
@@ -154,18 +181,25 @@ impl CommandExecutor for WorldborderAddExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = args
-            .get("distance")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<f64>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let Ok(distance) = DISTANCE_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        DISTANCE_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
 
         if distance == 0.0 {
             sender
@@ -198,23 +232,37 @@ impl CommandExecutor for WorldborderAddTimeExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = args
-            .get("distance")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<f64>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
-        let time = args
-            .get("time")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<i32>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let Ok(distance) = DISTANCE_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        DISTANCE_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
+        let Ok(time) = TIME_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        TIME_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
 
         let distance = distance + border.new_diameter;
 
@@ -258,15 +306,14 @@ impl CommandExecutor for WorldborderCenterExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let x = parse_arg_position("x", args)?;
-        let z = parse_arg_position("z", args)?;
+        let Vector2 { x, z } = Position2DArgumentConsumer.find_arg_default_name(args)?;
 
         sender
             .send_message(TextComponent::text(&format!(
@@ -287,18 +334,25 @@ impl CommandExecutor for WorldborderDamageAmountExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let damage_per_block = args
-            .get("damage_per_block")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<f32>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let Ok(damage_per_block) = DAMAGE_PER_BLOCK_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        DAMAGE_PER_BLOCK_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
 
         if (damage_per_block - border.damage_per_block).abs() < f32::EPSILON {
             sender
@@ -331,18 +385,25 @@ impl CommandExecutor for WorldborderDamageBufferExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let buffer = args
-            .get("distance")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<f32>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let Ok(buffer) = DAMAGE_BUFFER_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        DAMAGE_BUFFER_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
 
         if (buffer - border.buffer).abs() < f32::EPSILON {
             sender
@@ -375,18 +436,25 @@ impl CommandExecutor for WorldborderWarningDistanceExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let distance = args
-            .get("distance")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<i32>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let Ok(distance) = WARNING_DISTANCE_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        WARNING_DISTANCE_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
 
         if distance == border.warning_blocks {
             sender
@@ -419,18 +487,25 @@ impl CommandExecutor for WorldborderWarningTimeExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let world = server
             .worlds
             .first()
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let time = args
-            .get("time")
-            .ok_or(InvalidTreeError::InvalidConsumptionError(None))?
-            .parse::<i32>()
-            .map_err(|err| InvalidTreeError::InvalidConsumptionError(Some(err.to_string())))?;
+        let Ok(time) = TIME_CONSUMER.find_arg_default_name(args)? else {
+            sender
+                .send_message(
+                    TextComponent::text_string(format!(
+                        "{} is out of bounds.",
+                        TIME_CONSUMER.default_name()
+                    ))
+                    .color(Color::Named(NamedColor::Red)),
+                )
+                .await;
+            return Ok(());
+        };
 
         if time == border.warning_time {
             sender
@@ -454,33 +529,48 @@ impl CommandExecutor for WorldborderWarningTimeExecutor {
     }
 }
 
+static DISTANCE_CONSUMER: BoundedNumArgumentConsumer<f64> =
+    BoundedNumArgumentConsumer::new().min(0.0).name("distance");
+
+static TIME_CONSUMER: BoundedNumArgumentConsumer<i32> =
+    BoundedNumArgumentConsumer::new().min(0).name("time");
+
+static DAMAGE_PER_BLOCK_CONSUMER: BoundedNumArgumentConsumer<f32> =
+    BoundedNumArgumentConsumer::new()
+        .min(0.0)
+        .name("damage_per_block");
+
+static DAMAGE_BUFFER_CONSUMER: BoundedNumArgumentConsumer<f32> =
+    BoundedNumArgumentConsumer::new().min(0.0).name("buffer");
+
+static WARNING_DISTANCE_CONSUMER: BoundedNumArgumentConsumer<i32> =
+    BoundedNumArgumentConsumer::new().min(0).name("distance");
+
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION)
         .with_child(
             literal("add").with_child(
-                argument("distance", &SimpleArgConsumer)
+                argument_default_name(&DISTANCE_CONSUMER)
                     .execute(&WorldborderAddExecutor)
                     .with_child(
-                        argument("time", &SimpleArgConsumer).execute(&WorldborderAddTimeExecutor),
+                        argument_default_name(&TIME_CONSUMER).execute(&WorldborderAddTimeExecutor),
                     ),
             ),
         )
         .with_child(literal("center").with_child(
-            argument("x", &PositionArgumentConsumer).with_child(
-                argument("z", &PositionArgumentConsumer).execute(&WorldborderCenterExecutor),
-            ),
+            argument_default_name(&Position2DArgumentConsumer).execute(&WorldborderCenterExecutor),
         ))
         .with_child(
             literal("damage")
                 .with_child(
                     literal("amount").with_child(
-                        argument("damage_per_block", &SimpleArgConsumer)
+                        argument_default_name(&DAMAGE_PER_BLOCK_CONSUMER)
                             .execute(&WorldborderDamageAmountExecutor),
                     ),
                 )
                 .with_child(
                     literal("buffer").with_child(
-                        argument("distance", &SimpleArgConsumer)
+                        argument_default_name(&DAMAGE_BUFFER_CONSUMER)
                             .execute(&WorldborderDamageBufferExecutor),
                     ),
                 ),
@@ -488,10 +578,10 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
         .with_child(literal("get").execute(&WorldborderGetExecutor))
         .with_child(
             literal("set").with_child(
-                argument("distance", &SimpleArgConsumer)
+                argument_default_name(&DISTANCE_CONSUMER)
                     .execute(&WorldborderSetExecutor)
                     .with_child(
-                        argument("time", &SimpleArgConsumer).execute(&WorldborderSetTimeExecutor),
+                        argument_default_name(&TIME_CONSUMER).execute(&WorldborderSetTimeExecutor),
                     ),
             ),
         )
@@ -499,12 +589,12 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
             literal("warning")
                 .with_child(
                     literal("distance").with_child(
-                        argument("distance", &SimpleArgConsumer)
+                        argument_default_name(&WARNING_DISTANCE_CONSUMER)
                             .execute(&WorldborderWarningDistanceExecutor),
                     ),
                 )
                 .with_child(literal("time").with_child(
-                    argument("time", &SimpleArgConsumer).execute(&WorldborderWarningTimeExecutor),
+                    argument_default_name(&TIME_CONSUMER).execute(&WorldborderWarningTimeExecutor),
                 )),
         )
 }

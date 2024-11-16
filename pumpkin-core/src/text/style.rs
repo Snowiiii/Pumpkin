@@ -6,9 +6,11 @@ use super::{
     hover::HoverEvent,
 };
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
 pub struct Style<'a> {
     /// Changes the color to render the content
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bold: Option<u8>,

@@ -14,25 +14,18 @@ use crate::{
 
 use authentication::GameProfile;
 use crossbeam::atomic::AtomicCell;
-use num_traits::FromPrimitive;
 use pumpkin_config::compression::CompressionInfo;
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
-    bytebuf::DeserializerError,
+    bytebuf::{packet_id::Packet, DeserializerError},
     client::{config::CConfigDisconnect, login::CLoginDisconnect, play::CPlayDisconnect},
     packet_decoder::PacketDecoder,
     packet_encoder::{PacketEncodeError, PacketEncoder},
     server::{
-        config::{
-            SAcknowledgeFinishConfig, SClientInformationConfig, SKnownPacks, SPluginMessage,
-            ServerboundConfigPackets,
-        },
+        config::{SAcknowledgeFinishConfig, SClientInformationConfig, SKnownPacks, SPluginMessage},
         handshake::SHandShake,
-        login::{
-            SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart,
-            ServerboundLoginPackets,
-        },
-        status::{SStatusPingRequest, SStatusRequest, ServerboundStatusPackets},
+        login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
+        status::{SStatusPingRequest, SStatusRequest},
     },
     ClientPacket, ConnectionState, RawPacket, ServerPacket,
 };
@@ -43,7 +36,7 @@ use thiserror::Error;
 
 pub mod authentication;
 mod client_packet;
-mod combat;
+pub mod combat;
 mod container;
 pub mod player_packet;
 
@@ -59,7 +52,7 @@ pub struct PlayerConfig {
     /// The player's preferred language.
     pub locale: String, // 16
     /// The maximum distance at which chunks are rendered.
-    pub view_distance: i8,
+    pub view_distance: u8,
     /// The player's chat mode settings
     pub chat_mode: ChatMode,
     /// Whether chat colors are enabled.
@@ -397,24 +390,23 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling status group");
         let bytebuf = &mut packet.bytebuf;
-        if let Some(packet) = ServerboundStatusPackets::from_i32(packet.id.0) {
-            match packet {
-                ServerboundStatusPackets::StatusRequest => {
-                    self.handle_status_request(server, SStatusRequest::read(bytebuf)?)
-                        .await;
-                }
-                ServerboundStatusPackets::PingRequest => {
-                    self.handle_ping_request(SStatusPingRequest::read(bytebuf)?)
-                        .await;
-                }
-            };
-        } else {
-            log::error!(
-                "Failed to handle client packet id {:#04x} in Status State",
-                packet.id.0
-            );
-            return Err(DeserializerError::UnknownPacket);
+        match packet.id.0 {
+            SStatusRequest::PACKET_ID => {
+                self.handle_status_request(server).await;
+            }
+            SStatusPingRequest::PACKET_ID => {
+                self.handle_ping_request(SStatusPingRequest::read(bytebuf)?)
+                    .await;
+            }
+            _ => {
+                log::error!(
+                    "Failed to handle client packet id {} in Status State",
+                    packet.id.0
+                );
+                return Err(DeserializerError::UnknownPacket);
+            }
         };
+
         Ok(())
     }
 
@@ -425,32 +417,29 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling login group for id");
         let bytebuf = &mut packet.bytebuf;
-        if let Some(packet) = ServerboundLoginPackets::from_i32(packet.id.0) {
-            match packet {
-                ServerboundLoginPackets::LoginStart => {
-                    self.handle_login_start(server, SLoginStart::read(bytebuf)?)
-                        .await;
-                }
-                ServerboundLoginPackets::EncryptionResponse => {
-                    self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf)?)
-                        .await;
-                }
-                ServerboundLoginPackets::PluginResponse => {
-                    self.handle_plugin_response(SLoginPluginResponse::read(bytebuf)?)
-                        .await;
-                }
-                ServerboundLoginPackets::LoginAcknowledged => {
-                    self.handle_login_acknowledged(server, SLoginAcknowledged::read(bytebuf)?)
-                        .await;
-                }
-                ServerboundLoginPackets::CookieResponse => {}
-            };
-        } else {
-            log::error!(
-                "Failed to handle client packet id {:#04x} in Login State",
-                packet.id.0
-            );
-            return Ok(());
+        match packet.id.0 {
+            SLoginStart::PACKET_ID => {
+                self.handle_login_start(server, SLoginStart::read(bytebuf)?)
+                    .await;
+            }
+            SEncryptionResponse::PACKET_ID => {
+                self.handle_encryption_response(server, SEncryptionResponse::read(bytebuf)?)
+                    .await;
+            }
+            SLoginPluginResponse::PACKET_ID => {
+                self.handle_plugin_response(SLoginPluginResponse::read(bytebuf)?)
+                    .await;
+            }
+            SLoginAcknowledged::PACKET_ID => {
+                self.handle_login_acknowledged(server).await;
+            }
+            _ => {
+                log::error!(
+                    "Failed to handle client packet id {} in Login State",
+                    packet.id.0
+                );
+                return Ok(());
+            }
         };
         Ok(())
     }
@@ -462,35 +451,29 @@ impl Client {
     ) -> Result<(), DeserializerError> {
         log::debug!("Handling config group");
         let bytebuf = &mut packet.bytebuf;
-        if let Some(packet) = ServerboundConfigPackets::from_i32(packet.id.0) {
-            #[expect(clippy::match_same_arms)]
-            match packet {
-                ServerboundConfigPackets::ClientInformation => {
-                    self.handle_client_information_config(SClientInformationConfig::read(bytebuf)?)
-                        .await;
-                }
-                ServerboundConfigPackets::CookieResponse => {}
-                ServerboundConfigPackets::PluginMessage => {
-                    self.handle_plugin_message(SPluginMessage::read(bytebuf)?)
-                        .await;
-                }
-                ServerboundConfigPackets::AcknowledgedFinish => {
-                    self.handle_config_acknowledged(&SAcknowledgeFinishConfig::read(bytebuf)?);
-                }
-                ServerboundConfigPackets::KeepAlive => {}
-                ServerboundConfigPackets::Pong => {}
-                ServerboundConfigPackets::ResourcePackResponse => {}
-                ServerboundConfigPackets::KnownPacks => {
-                    self.handle_known_packs(server, SKnownPacks::read(bytebuf)?)
-                        .await;
-                }
-            };
-        } else {
-            log::error!(
-                "Failed to handle client packet id {:#04x} in Config State",
-                packet.id.0
-            );
-            return Err(DeserializerError::UnknownPacket);
+        match packet.id.0 {
+            SClientInformationConfig::PACKET_ID => {
+                self.handle_client_information_config(SClientInformationConfig::read(bytebuf)?)
+                    .await;
+            }
+            SPluginMessage::PACKET_ID => {
+                self.handle_plugin_message(SPluginMessage::read(bytebuf)?)
+                    .await;
+            }
+            SAcknowledgeFinishConfig::PACKET_ID => {
+                self.handle_config_acknowledged();
+            }
+            SKnownPacks::PACKET_ID => {
+                self.handle_known_packs(server, SKnownPacks::read(bytebuf)?)
+                    .await;
+            }
+            _ => {
+                log::error!(
+                    "Failed to handle client packet id {} in Config State",
+                    packet.id.0
+                );
+                return Err(DeserializerError::UnknownPacket);
+            }
         };
         Ok(())
     }

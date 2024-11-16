@@ -1,4 +1,4 @@
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
@@ -8,10 +8,10 @@ use pumpkin_protocol::{
         status::CPingResponse,
     },
     server::{
-        config::{SAcknowledgeFinishConfig, SClientInformationConfig, SKnownPacks, SPluginMessage},
+        config::{SClientInformationConfig, SKnownPacks, SPluginMessage},
         handshake::SHandShake,
-        login::{SEncryptionResponse, SLoginAcknowledged, SLoginPluginResponse, SLoginStart},
-        status::{SStatusPingRequest, SStatusRequest},
+        login::{SEncryptionResponse, SLoginPluginResponse, SLoginStart},
+        status::SStatusPingRequest,
     },
     ConnectionState, KnownPack, CURRENT_MC_PROTOCOL,
 };
@@ -55,14 +55,14 @@ impl Client {
         }
     }
 
-    pub async fn handle_status_request(&self, server: &Server, _status_request: SStatusRequest) {
-        log::debug!("Handling status request for id");
+    pub async fn handle_status_request(&self, server: &Server) {
+        log::debug!("Handling status request");
         let status = server.get_status();
         self.send_packet(&status.lock().await.get_status()).await;
     }
 
     pub async fn handle_ping_request(&self, ping_request: SStatusPingRequest) {
-        log::debug!("Handling ping request for id");
+        log::debug!("Handling ping request");
         self.send_packet(&CPingResponse::new(ping_request.payload))
             .await;
         self.close();
@@ -81,13 +81,11 @@ impl Client {
         // Don't allow new logons when server is full.
         // If max players is set to zero, then there is no max player count enforced.
         // TODO: If client is an operator or otherwise suitable elevated permissions, allow client to bypass this requirement.
-        let max_players = BASIC_CONFIG
-            .max_players
-            .to_usize()
-            .expect("Unable to convert to usize");
-        if max_players > 0 && server.get_player_count().await >= max_players {
+        let max_players = BASIC_CONFIG.max_players;
+        if max_players > 0 && server.get_player_count().await >= max_players as usize {
             self.kick("The server is currently full, please try again later")
                 .await;
+            return;
         }
 
         if !Self::is_valid_player_name(&login_start.name) {
@@ -147,7 +145,7 @@ impl Client {
         server: &Server,
         encryption_response: SEncryptionResponse,
     ) {
-        log::debug!("Handling encryption for id");
+        log::debug!("Handling encryption");
         let shared_secret = server.decrypt(&encryption_response.shared_secret).unwrap();
 
         if let Err(error) = self.set_encryption(Some(&shared_secret)).await {
@@ -254,7 +252,7 @@ impl Client {
     }
 
     pub async fn handle_plugin_response(&self, plugin_response: SLoginPluginResponse) {
-        log::debug!("Handling plugin for id");
+        log::debug!("Handling plugin");
         let velocity_config = &ADVANCED_CONFIG.proxy.velocity;
         if velocity_config.enabled {
             let mut address = self.address.lock().await;
@@ -273,12 +271,8 @@ impl Client {
         }
     }
 
-    pub async fn handle_login_acknowledged(
-        &self,
-        server: &Server,
-        _login_acknowledged: SLoginAcknowledged,
-    ) {
-        log::debug!("Handling login acknowledged for id");
+    pub async fn handle_login_acknowledged(&self, server: &Server) {
+        log::debug!("Handling login acknowledged");
         self.connection_state.store(ConnectionState::Config);
         self.send_packet(&server.get_branding()).await;
 
@@ -315,14 +309,14 @@ impl Client {
         &self,
         client_information: SClientInformationConfig,
     ) {
-        log::debug!("Handling client settings for id");
+        log::debug!("Handling client settings");
         if let (Some(main_hand), Some(chat_mode)) = (
             Hand::from_i32(client_information.main_hand.into()),
             ChatMode::from_i32(client_information.chat_mode.into()),
         ) {
             *self.config.lock().await = Some(PlayerConfig {
                 locale: client_information.locale,
-                view_distance: client_information.view_distance,
+                view_distance: client_information.view_distance as u8,
                 chat_mode,
                 chat_colors: client_information.chat_colors,
                 skin_parts: client_information.skin_parts,
@@ -336,7 +330,7 @@ impl Client {
     }
 
     pub async fn handle_plugin_message(&self, plugin_message: SPluginMessage) {
-        log::debug!("Handling plugin message for id");
+        log::debug!("Handling plugin message");
         if plugin_message.channel.starts_with("minecraft:brand")
             || plugin_message.channel.starts_with("MC|Brand")
         {
@@ -349,7 +343,7 @@ impl Client {
     }
 
     pub async fn handle_known_packs(&self, server: &Server, _config_acknowledged: SKnownPacks) {
-        log::debug!("Handling known packs for id");
+        log::debug!("Handling known packs");
         for registry in &server.cached_registry {
             self.send_packet(&CRegistryData::new(
                 &registry.registry_id,
@@ -363,8 +357,8 @@ impl Client {
         self.send_packet(&CFinishConfig::new()).await;
     }
 
-    pub fn handle_config_acknowledged(&self, _config_acknowledged: &SAcknowledgeFinishConfig) {
-        log::debug!("Handling config acknowledge for id");
+    pub fn handle_config_acknowledged(&self) {
+        log::debug!("Handling config acknowledge");
         self.connection_state.store(ConnectionState::Play);
         self.make_player
             .store(true, std::sync::atomic::Ordering::Relaxed);

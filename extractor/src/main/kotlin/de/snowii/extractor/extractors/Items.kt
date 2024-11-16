@@ -7,6 +7,7 @@ import com.mojang.serialization.JsonOps
 import de.snowii.extractor.Extractor
 import net.minecraft.component.ComponentMap
 import net.minecraft.item.Item
+import net.minecraft.registry.Registries
 import net.minecraft.registry.RegistryKeys
 import net.minecraft.registry.RegistryOps
 import net.minecraft.server.MinecraftServer
@@ -23,10 +24,10 @@ class Items : Extractor.Extractor {
 
         for (item in server.registryManager.getOrThrow(RegistryKeys.ITEM).streamEntries().toList()) {
             val itemJson = JsonObject()
-
-            itemJson.addProperty("id", item.key.orElseThrow().value.toString())
-            itemJson.addProperty("name", item.key.orElseThrow().value.toString())
             val realItem: Item = item.value()
+
+            itemJson.addProperty("id", Registries.ITEM.getRawId(realItem))
+            itemJson.addProperty("name", Registries.ITEM.getId(realItem).toString())
             itemJson.addProperty("translation_key", realItem.translationKey)
             itemJson.addProperty("max_stack", realItem.maxCount)
             itemJson.addProperty("max_durability", realItem.defaultStack.maxDamage)

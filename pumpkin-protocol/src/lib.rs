@@ -1,4 +1,4 @@
-use bytebuf::{packet_id::ClientPacketID, ByteBuffer, DeserializerError};
+use bytebuf::{packet_id::Packet, ByteBuffer, DeserializerError};
 use pumpkin_core::text::{style::Style, TextComponent};
 use serde::{Deserialize, Serialize};
 
@@ -6,6 +6,7 @@ pub mod bytebuf;
 pub mod client;
 pub mod packet_decoder;
 pub mod packet_encoder;
+pub mod query;
 pub mod server;
 pub mod slot;
 
@@ -72,11 +73,11 @@ pub struct RawPacket {
     pub bytebuf: ByteBuffer,
 }
 
-pub trait ClientPacket: ClientPacketID {
+pub trait ClientPacket: Packet {
     fn write(&self, bytebuf: &mut ByteBuffer);
 }
 
-pub trait ServerPacket: Sized {
+pub trait ServerPacket: Packet + Sized {
     fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError>;
 }
 

@@ -14,6 +14,30 @@ pub fn get_block(registry_id: &str) -> Option<&Block> {
         .find(|&block| block.name == registry_id)
 }
 
+pub fn get_block_by_id<'a>(id: u16) -> Option<&'a Block> {
+    BLOCKS.blocks.iter().find(|&block| block.id == id)
+}
+
+pub fn get_state_by_state_id<'a>(id: u16) -> Option<&'a State> {
+    get_block_and_state_by_state_id(id).map(|(_, state)| state)
+}
+
+pub fn get_block_by_state_id<'a>(id: u16) -> Option<&'a Block> {
+    get_block_and_state_by_state_id(id).map(|(block, _)| block)
+}
+
+pub fn get_block_and_state_by_state_id<'a>(id: u16) -> Option<(&'a Block, &'a State)> {
+    for block in &BLOCKS.blocks {
+        for state in &block.states {
+            if state.id == id {
+                return Some((block, state));
+            }
+        }
+    }
+
+    None
+}
+
 pub fn get_block_by_item<'a>(item_id: u16) -> Option<&'a Block> {
     BLOCKS.blocks.iter().find(|&block| block.item_id == item_id)
 }
@@ -24,17 +48,16 @@ pub struct TopLevel {
     shapes: Vec<Shape>,
     block_entity_types: Vec<BlockEntityKind>,
 }
-#[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
 pub struct Block {
     pub id: u16,
     pub item_id: u16,
-    wall_variant_id: Option<u16>,
-    translation_key: String,
+    pub wall_variant_id: Option<u16>,
+    pub translation_key: String,
     pub name: String,
-    properties: Vec<Property>,
+    pub properties: Vec<Property>,
     pub default_state_id: u16,
-    states: Vec<State>,
+    pub states: Vec<State>,
 }
 #[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
@@ -45,21 +68,20 @@ struct BlockEntityKind {
 }
 #[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
-struct Property {
+pub struct Property {
     name: String,
     values: Vec<String>,
 }
-#[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
-struct State {
-    id: u16,
-    air: bool,
-    luminance: u8,
-    burnable: bool,
-    opacity: Option<u32>,
-    replaceable: bool,
-    collision_shapes: Vec<u16>,
-    block_entity_type: Option<u32>,
+pub struct State {
+    pub id: u16,
+    pub air: bool,
+    pub luminance: u8,
+    pub burnable: bool,
+    pub opacity: Option<u32>,
+    pub replaceable: bool,
+    pub collision_shapes: Vec<u16>,
+    pub block_entity_type: Option<u32>,
 }
 #[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]

@@ -3,22 +3,11 @@ use std::net::SocketAddr;
 use packet::{ClientboundPacket, Packet, PacketError, ServerboundPacket};
 use pumpkin_config::{RCONConfig, ADVANCED_CONFIG};
 use std::sync::Arc;
-use thiserror::Error;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::server::Server;
 
 mod packet;
-
-#[derive(Debug, Error)]
-pub enum RCONError {
-    #[error("authentication failed")]
-    Auth,
-    #[error("command exceeds the maximum length")]
-    CommandTooLong,
-    #[error("{}", _0)]
-    Io(std::io::Error),
-}
 
 pub struct RCONServer;
 
@@ -71,7 +60,7 @@ impl RCONClient {
     }
 
     /// Returns if client is closed or not
-    pub async fn handle(&mut self, server: &Server, password: &str) -> bool {
+    pub async fn handle(&mut self, server: &Arc<Server>, password: &str) -> bool {
         if !self.closed {
             match self.read_bytes().await {
                 // Stream closed, so we can't reply, so we just close everything.
@@ -91,7 +80,7 @@ impl RCONClient {
         self.closed
     }
 
-    async fn poll(&mut self, server: &Server, password: &str) -> Result<(), PacketError> {
+    async fn poll(&mut self, server: &Arc<Server>, password: &str) -> Result<(), PacketError> {
         let Some(packet) = self.receive_packet().await? else {
             return Ok(());
         };

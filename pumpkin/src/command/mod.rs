@@ -1,22 +1,22 @@
 use std::sync::Arc;
 
+use args::ConsumedArgs;
 use async_trait::async_trait;
 use commands::{
-    cmd_echest, cmd_gamemode, cmd_help, cmd_kick, cmd_kill, cmd_pumpkin, cmd_say, cmd_stop,
-    cmd_worldborder,
+    cmd_clear, cmd_craft, cmd_echest, cmd_gamemode, cmd_give, cmd_help, cmd_kick, cmd_kill,
+    cmd_list, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_worldborder,
 };
-use dispatcher::InvalidTreeError;
+use dispatcher::CommandError;
+use pumpkin_core::math::vector3::Vector3;
 use pumpkin_core::text::TextComponent;
-use tree::ConsumedArgs;
 
 use crate::command::dispatcher::CommandDispatcher;
-use crate::entity::player::Player;
+use crate::entity::player::{PermissionLvl, Player};
 use crate::server::Server;
+use crate::world::World;
 
-mod arg_player;
-mod arg_position;
-mod arg_simple;
-
+pub mod args;
+pub mod client_cmd_suggestions;
 mod commands;
 pub mod dispatcher;
 mod tree;
@@ -55,10 +55,37 @@ impl<'a> CommandSender<'a> {
         }
     }
 
-    /// todo: implement
+    /// prefer using `has_permission_lvl(lvl)`
     #[must_use]
-    pub const fn permission_lvl(&self) -> i32 {
-        4
+    pub fn permission_lvl(&self) -> PermissionLvl {
+        match self {
+            CommandSender::Console | CommandSender::Rcon(_) => PermissionLvl::Four,
+            CommandSender::Player(p) => p.permission_lvl(),
+        }
+    }
+
+    #[must_use]
+    pub fn has_permission_lvl(&self, lvl: PermissionLvl) -> bool {
+        match self {
+            CommandSender::Console | CommandSender::Rcon(_) => true,
+            CommandSender::Player(p) => (p.permission_lvl() as i8) >= (lvl as i8),
+        }
+    }
+
+    #[must_use]
+    pub fn position(&self) -> Option<Vector3<f64>> {
+        match self {
+            CommandSender::Console | CommandSender::Rcon(..) => None,
+            CommandSender::Player(p) => Some(p.living_entity.entity.pos.load()),
+        }
+    }
+
+    #[must_use]
+    pub fn world(&self) -> Option<&World> {
+        match self {
+            CommandSender::Console | CommandSender::Rcon(..) => None,
+            CommandSender::Player(p) => Some(&p.living_entity.entity.world),
+        }
     }
 }
 
@@ -72,9 +99,15 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_stop::init_command_tree());
     dispatcher.register(cmd_help::init_command_tree());
     dispatcher.register(cmd_echest::init_command_tree());
+    dispatcher.register(cmd_craft::init_command_tree());
     dispatcher.register(cmd_kill::init_command_tree());
     dispatcher.register(cmd_kick::init_command_tree());
     dispatcher.register(cmd_worldborder::init_command_tree());
+    dispatcher.register(cmd_teleport::init_command_tree());
+    dispatcher.register(cmd_give::init_command_tree());
+    dispatcher.register(cmd_list::init_command_tree());
+    dispatcher.register(cmd_clear::init_command_tree());
+    dispatcher.register(cmd_setblock::init_command_tree());
 
     Arc::new(dispatcher)
 }
@@ -86,5 +119,5 @@ pub(crate) trait CommandExecutor: Sync {
         sender: &mut CommandSender<'a>,
         server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError>;
+    ) -> Result<(), CommandError>;
 }

@@ -1,7 +1,9 @@
 use num_derive::FromPrimitive;
+use pumpkin_macros::server_packet;
 
 use crate::{bytebuf::DeserializerError, ServerPacket, VarInt};
 
+#[server_packet("play:player_command")]
 pub struct SPlayerCommand {
     pub entity_id: VarInt,
     pub action: VarInt,

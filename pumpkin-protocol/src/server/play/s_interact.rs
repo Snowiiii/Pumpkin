@@ -1,8 +1,10 @@
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
+use pumpkin_macros::server_packet;
 
 use crate::{bytebuf::DeserializerError, ServerPacket, VarInt};
 
+#[server_packet("play:interact")]
 pub struct SInteract {
     pub entity_id: VarInt,
     pub typ: VarInt,
