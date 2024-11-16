@@ -42,14 +42,36 @@ fn modulus(a: f32, b: f32) -> f32 {
 }
 
 #[derive(Debug, Error)]
-pub enum PlayerError {
+pub enum BlockPlacingError {
     BlockOutOfReach,
     InvalidBlockFace,
 }
 
-impl std::fmt::Display for PlayerError {
+impl std::fmt::Display for BlockPlacingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{self:?}")
+    }
+}
+
+impl PumpkinError for BlockPlacingError {
+    fn is_kick(&self) -> bool {
+        match self {
+            Self::BlockOutOfReach => false,
+            Self::InvalidBlockFace => true,
+        }
+    }
+
+    fn severity(&self) -> log::Level {
+        match self {
+            Self::BlockOutOfReach | Self::InvalidBlockFace => log::Level::Warn,
+        }
+    }
+
+    fn client_kick_reason(&self) -> Option<String> {
+        match self {
+            Self::BlockOutOfReach => None,
+            Self::InvalidBlockFace => Some("Invalid block face".into()),
+        }
     }
 }
 
@@ -587,7 +609,7 @@ impl Player {
 
         if !self.can_interact_with_block_at(&location, 1.0) {
             // TODO: maybe log?
-            return Err(PlayerError::BlockOutOfReach.into());
+            return Err(BlockPlacingError::BlockOutOfReach.into());
         }
 
         if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
@@ -641,7 +663,7 @@ impl Player {
 
             Ok(())
         } else {
-            Err(PlayerError::InvalidBlockFace.into())
+            Err(BlockPlacingError::InvalidBlockFace.into())
         }
     }
 

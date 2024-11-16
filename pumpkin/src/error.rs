@@ -3,8 +3,6 @@ use pumpkin_inventory::InventoryError;
 use pumpkin_protocol::bytebuf::DeserializerError;
 use std::fmt::Display;
 
-use crate::{client::player_packet::PlayerError, world::WorldError};
-
 pub trait PumpkinError: Send + std::error::Error + Display {
     fn is_kick(&self) -> bool;
 
@@ -65,41 +63,5 @@ impl PumpkinError for DeserializerError {
 
     fn client_kick_reason(&self) -> Option<String> {
         None
-    }
-}
-
-impl PumpkinError for WorldError {
-    fn is_kick(&self) -> bool {
-        false
-    }
-
-    fn severity(&self) -> log::Level {
-        log::Level::Warn
-    }
-
-    fn client_kick_reason(&self) -> Option<String> {
-        None
-    }
-}
-
-impl PumpkinError for PlayerError {
-    fn is_kick(&self) -> bool {
-        match self {
-            Self::BlockOutOfReach => false,
-            Self::InvalidBlockFace => true,
-        }
-    }
-
-    fn severity(&self) -> log::Level {
-        match self {
-            Self::BlockOutOfReach | Self::InvalidBlockFace => log::Level::Warn,
-        }
-    }
-
-    fn client_kick_reason(&self) -> Option<String> {
-        match self {
-            Self::BlockOutOfReach => None,
-            Self::InvalidBlockFace => Some("Invalid block face".into()),
-        }
     }
 }
