@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::{
     command::CommandSender,
     entity::player::{ChatMode, Hand, Player},
+    error::PumpkinError,
     server::Server,
     world::player_chunker,
 };
@@ -32,11 +33,24 @@ use pumpkin_protocol::{
     },
 };
 use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
+use thiserror::Error;
 
 use super::PlayerConfig;
 
 fn modulus(a: f32, b: f32) -> f32 {
     ((a % b) + b) % b
+}
+
+#[derive(Debug, Error)]
+pub enum PlayerError {
+    BlockOutOfReach,
+    InvalidBlockFace,
+}
+
+impl std::fmt::Display for PlayerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
 }
 
 /// Handles all Play Packets send by a real Player
@@ -565,12 +579,15 @@ impl Player {
             .await;
     }
 
-    pub async fn handle_use_item_on(&self, use_item_on: SUseItemOn) {
+    pub async fn handle_use_item_on(
+        &self,
+        use_item_on: SUseItemOn,
+    ) -> Result<(), Box<dyn PumpkinError>> {
         let location = use_item_on.location;
 
         if !self.can_interact_with_block_at(&location, 1.0) {
             // TODO: maybe log?
-            return;
+            return Err(PlayerError::BlockOutOfReach.into());
         }
 
         if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
@@ -593,6 +610,12 @@ impl Player {
                     }
 
                     let world_pos = WorldPosition(location.0 + face.to_offset());
+
+                    let previous_block_state = world.get_block_state(world_pos).await?;
+                    if !previous_block_state.replaceable {
+                        return Ok(());
+                    }
+
                     let block_bounding_box = BoundingBox::from_block(&world_pos);
                     let bounding_box = entity.bounding_box.load();
                     //TODO: Make this check for every entity in that posistion
@@ -606,8 +629,10 @@ impl Player {
                     .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
                     .await;
             }
+
+            Ok(())
         } else {
-            self.kick(TextComponent::text("Invalid block face")).await;
+            Err(PlayerError::InvalidBlockFace.into())
         }
     }
 
