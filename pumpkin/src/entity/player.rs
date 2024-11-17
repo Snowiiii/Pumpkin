@@ -1,12 +1,3 @@
-use std::{
-    collections::{HashMap, VecDeque},
-    sync::{
-        atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU32, AtomicU8},
-        Arc,
-    },
-    time::{Duration, Instant},
-};
-
 use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
 use num_derive::{FromPrimitive, ToPrimitive};
@@ -35,9 +26,18 @@ use pumpkin_protocol::{
         SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SClientTickEnd,
         SCommandSuggestion, SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction,
         SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
-        SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
+        SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUpdateSign, SUseItem,
+        SUseItemOn,
     },
     RawPacket, ServerPacket, SoundCategory, VarInt,
+};
+use std::{
+    collections::{HashMap, VecDeque},
+    sync::{
+        atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU32, AtomicU8},
+        Arc,
+    },
+    time::{Duration, Instant},
 };
 use tokio::sync::{Mutex, Notify};
 use tokio::task::JoinHandle;
@@ -870,6 +870,9 @@ impl Player {
             }
             SSwingArm::PACKET_ID => {
                 self.handle_swing_arm(SSwingArm::read(bytebuf)?).await;
+            }
+            SUpdateSign::PACKET_ID => {
+                self.handle_sign_update(SUpdateSign::read(bytebuf)?).await;
             }
             SUseItemOn::PACKET_ID => {
                 self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await;

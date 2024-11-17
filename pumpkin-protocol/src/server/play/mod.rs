@@ -21,6 +21,7 @@ mod s_player_rotation;
 mod s_set_creative_slot;
 mod s_set_held_item;
 mod s_swing_arm;
+mod s_update_sign;
 mod s_use_item;
 mod s_use_item_on;
 
@@ -47,5 +48,6 @@ pub use s_player_rotation::*;
 pub use s_set_creative_slot::*;
 pub use s_set_held_item::*;
 pub use s_swing_arm::*;
+pub use s_update_sign::*;
 pub use s_use_item::*;
 pub use s_use_item_on::*;

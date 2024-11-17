@@ -71,6 +71,9 @@ simple_logger = { version = "5.0.0", features = ["threads"] }
 time = "0.3.36"
 sys-info = "0.9.1"
 
+# nbt
+fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
+
 # commands
 async-trait = "0.1.83"
 
