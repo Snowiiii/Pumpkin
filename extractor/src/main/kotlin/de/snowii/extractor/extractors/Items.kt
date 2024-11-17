@@ -1,13 +1,11 @@
 package de.snowii.extractor.extractors
 
-import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.mojang.serialization.JsonOps
 import de.snowii.extractor.Extractor
 import net.minecraft.component.ComponentMap
 import net.minecraft.item.Item
-import net.minecraft.recipe.Recipe
 import net.minecraft.registry.Registries
 import net.minecraft.registry.RegistryKeys
 import net.minecraft.registry.RegistryOps
