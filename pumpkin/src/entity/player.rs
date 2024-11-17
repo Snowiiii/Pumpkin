@@ -24,6 +24,8 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
+use pumpkin_protocol::client::play::{CSetEntityMetadata, Metadata};
+use pumpkin_protocol::server::play::{SClickContainer, SKeepAlive};
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
@@ -39,11 +41,9 @@ use pumpkin_protocol::{
     },
     RawPacket, ServerPacket, SoundCategory, VarInt,
 };
+use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
 use tokio::sync::{Mutex, Notify};
 use tokio::task::JoinHandle;
-
-use pumpkin_protocol::server::play::{SClickContainer, SKeepAlive};
-use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
 
 use super::Entity;
 use crate::{
@@ -583,6 +583,12 @@ impl Player {
             .await;
 
         let entity = &self.living_entity.entity;
+        let entity_id = entity.entity_id;
+
+        let skin_parts = self.config.lock().await.skin_parts;
+        let entity_metadata_packet =
+            CSetEntityMetadata::new(entity_id.into(), Metadata::new(17, VarInt(0), &skin_parts));
+
         world
             .broadcast_packet_except(
                 &[self.gameprofile.id],
@@ -606,7 +612,7 @@ impl Player {
             .await;
 
         player_chunker::player_join(world, self.clone()).await;
-
+        world.broadcast_packet_all(&entity_metadata_packet).await;
         // update commands
 
         self.set_health(20.0, 20, 20.0).await;
