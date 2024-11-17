@@ -31,17 +31,15 @@ cargo run --release
 ## Docker
 
 Experimental Docker support is available.
-The image is currently not published anywhere, but you can use the following command to build it:
+The image is currently not published anywhere, but you can use the following command to build and deploy it:
 
 ```shell
-docker build . -t pumpkin
+docker compose up --build
 ```
 
-To run it, use the following command:
+After running this command a `data/` folder should appear in which you'll be able to find all the server files.
+Within this `data/` folder you can put your `world/` folder (make sure you restart the server)
 
-```shell
-docker run --rm -p 25565:25565 -v "./world:/pumpkin/world" pumpkin
-```
 
 ## Test Server
 Pumpkin has a Test server maintained by @kralverde. Its runs on the latest commit of Pumpkin
