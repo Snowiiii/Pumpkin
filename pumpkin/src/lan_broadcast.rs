@@ -12,7 +12,7 @@ const BROADCAST_ADDRESS: SocketAddr =
 pub async fn start_lan_broadcast(bound_addr: SocketAddr) {
     let port = ADVANCED_CONFIG.lan_broadcast.port.unwrap_or(0);
 
-    let socket = UdpSocket::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), port))
+    let socket = UdpSocket::bind(format!("0.0.0.0:{port}"))
         .await
         .expect("Unable to bind to address");
 
