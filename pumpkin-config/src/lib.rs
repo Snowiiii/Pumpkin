@@ -25,11 +25,13 @@ pub use commands::CommandsConfig;
 pub use compression::CompressionConfig;
 pub use pvp::PVPConfig;
 pub use rcon::RCONConfig;
+pub use server_links::ServerLinksConfig;
 
 mod commands;
 pub mod compression;
 mod pvp;
 mod rcon;
+mod server_links;
 
 use proxy::ProxyConfig;
 use resource_pack::ResourcePackConfig;
@@ -56,6 +58,7 @@ pub struct AdvancedConfiguration {
     pub pvp: PVPConfig,
     pub logging: LoggingConfig,
     pub query: QueryConfig,
+    pub server_links: ServerLinksConfig,
 }
 
 #[serde_inline_default]
