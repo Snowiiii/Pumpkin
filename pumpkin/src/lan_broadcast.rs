@@ -4,6 +4,8 @@ use std::time::Duration;
 use tokio::net::UdpSocket;
 use tokio::time;
 
+// https://www.wikiwand.com/en/articles/Multicast_address
+
 const BROADCAST_ADDRESS: SocketAddr =
     SocketAddr::new(IpAddr::V4(Ipv4Addr::new(224, 0, 2, 60)), 4445);
 
