@@ -35,7 +35,8 @@ use pumpkin_protocol::{
         SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SClientTickEnd,
         SCommandSuggestion, SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction,
         SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
-        SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
+        SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUpdateSign, SUseItem,
+        SUseItemOn,
     },
     RawPacket, ServerPacket, SoundCategory, VarInt,
 };
@@ -823,6 +824,7 @@ impl Player {
                 // TODO
             }
             SInteract::PACKET_ID => {
+                log::info!("Hello");
                 self.handle_interact(SInteract::read(bytebuf)?).await;
             }
             SKeepAlive::PACKET_ID => {
@@ -870,6 +872,9 @@ impl Player {
             }
             SSwingArm::PACKET_ID => {
                 self.handle_swing_arm(SSwingArm::read(bytebuf)?).await;
+            }
+            SUpdateSign::PACKET_ID => {
+                //TODO
             }
             SUseItemOn::PACKET_ID => {
                 self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await;

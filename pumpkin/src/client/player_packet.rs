@@ -21,8 +21,9 @@ use pumpkin_protocol::{
 };
 use pumpkin_protocol::{
     client::play::{
-        Animation, CAcknowledgeBlockChange, CEntityAnimation, CHeadRot, CPingResponse,
-        CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot, FilterType,
+        Animation, CAcknowledgeBlockChange, CEntityAnimation, CHeadRot, COpenSignEditor,
+        CPingResponse, CPlayerChatMessage, CUpdateEntityPos, CUpdateEntityPosRot, CUpdateEntityRot,
+        FilterType,
     },
     server::play::{
         Action, ActionType, SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay,
@@ -31,7 +32,9 @@ use pumpkin_protocol::{
         SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status,
     },
 };
-use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
+use pumpkin_world::block::{
+    block_registry::get_block_by_item, interactive::sign::SignType, BlockFace,
+};
 
 use super::PlayerConfig;
 
@@ -576,13 +579,13 @@ impl Player {
         if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
             let mut inventory = self.inventory.lock().await;
             let item_slot = inventory.held_item_mut();
+            let entity = &self.living_entity.entity;
+            let world = &entity.world;
+
             if let Some(item) = item_slot {
                 let block = get_block_by_item(item.item_id);
                 // check if item is a block, Because Not every item can be placed :D
                 if let Some(block) = block {
-                    let entity = &self.living_entity.entity;
-                    let world = &entity.world;
-
                     // TODO: Config
                     // Decrease Block count
                     if self.gamemode.load() != GameMode::Creative {
@@ -601,10 +604,26 @@ impl Player {
                             .set_block_state(world_pos, block.default_state_id)
                             .await;
                     }
+
+                    if SignType::iter().any(|&sign_type| block.id == sign_type) {
+                        self.client
+                            .send_packet(&COpenSignEditor::new(world_pos, face.to_offset().z == 1))
+                            .await;
+                    }
                 }
                 self.client
                     .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
                     .await;
+            } else {
+                let block = world.get_block(location).await;
+                if let Some(block) = block {
+                    if SignType::iter().any(|&sign_type| block.id == sign_type) {
+                        //Currently blocks on default only face north
+                        self.client
+                            .send_packet(&COpenSignEditor::new(location, face.to_offset().z == 1))
+                            .await;
+                    }
+                }
             }
         } else {
             self.kick(TextComponent::text("Invalid block face")).await;

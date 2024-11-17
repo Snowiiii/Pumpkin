@@ -41,6 +41,7 @@ pub fn get_block_and_state_by_state_id<'a>(id: u16) -> Option<(&'a Block, &'a St
 pub fn get_block_by_item<'a>(item_id: u16) -> Option<&'a Block> {
     BLOCKS.blocks.iter().find(|&block| block.item_id == item_id)
 }
+
 #[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
 pub struct TopLevel {

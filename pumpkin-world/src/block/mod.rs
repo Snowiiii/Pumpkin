@@ -2,6 +2,7 @@ use num_derive::FromPrimitive;
 
 pub mod block_registry;
 pub mod block_state;
+pub mod interactive;
 
 use pumpkin_core::math::vector3::Vector3;
 
