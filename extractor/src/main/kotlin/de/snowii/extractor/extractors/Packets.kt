@@ -22,14 +22,14 @@ class Packets : Extractor.Extractor {
     override fun extract(server: MinecraftServer): JsonElement {
         val packetsJson = JsonObject()
 
-        val serverBound = arrayOf(
+        val clientBound = arrayOf(
             QueryStates.S2C_FACTORY,
             LoginStates.S2C_FACTORY,
             ConfigurationStates.S2C_FACTORY,
             PlayStateFactories.S2C
         )
 
-        val clientBound = arrayOf(
+        val serverBound = arrayOf(
             HandshakeStates.C2S_FACTORY,
             QueryStates.C2S_FACTORY,
             LoginStates.C2S_FACTORY,
