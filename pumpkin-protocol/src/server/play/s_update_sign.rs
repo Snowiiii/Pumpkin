@@ -1,11 +1,9 @@
 use pumpkin_core::math::position::WorldPosition;
-use pumpkin_core::math::vector3::Vector3;
 use pumpkin_macros::server_packet;
-use serde::Deserialize;
 
 use crate::{
     bytebuf::{ByteBuffer, DeserializerError},
-    FixedBitSet, ServerPacket, VarInt,
+    ServerPacket,
 };
 
 #[server_packet("play:sign_update")]
@@ -20,13 +18,8 @@ pub struct SUpdateSign {
 
 impl ServerPacket for SUpdateSign {
     fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError> {
-        let location = WorldPosition(Vector3::new(
-            bytebuf.get_i32()?,
-            bytebuf.get_i32()?,
-            bytebuf.get_i32()?,
-        ));
         Ok(Self {
-            location,
+            location: WorldPosition::from_i64(bytebuf.get_i64()?),
             is_front_text: bytebuf.get_bool()?,
             line_1: bytebuf.get_string_len(386)?,
             line_2: bytebuf.get_string_len(386)?,

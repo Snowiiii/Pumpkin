@@ -627,22 +627,26 @@ impl Player {
                             .await;
                     }
 
+                    self.client
+                        .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
+                        .await;
+
                     if block.states.iter().any(|state| {
                         state.block_entity_type == Some(block_entity!("minecraft:sign"))
+                            || state.block_entity_type
+                                == Some(block_entity!("minecraft:hanging_sign"))
                     }) {
                         self.client
                             .send_packet(&COpenSignEditor::new(world_pos, face.to_offset().z == 1))
                             .await;
                     }
                 }
-                self.client
-                    .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
-                    .await;
             } else {
                 let block = world.get_block(location).await;
                 if let Some(block) = block {
                     if block.states.iter().any(|state| {
                         state.block_entity_type == Some(block_entity!("minecraft:sign"))
+                            || state.block_entity_type == Some(block_entity!("minecraft:sign"))
                     }) {
                         //Currently blocks on default only face north
                         self.client

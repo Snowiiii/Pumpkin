@@ -47,7 +47,7 @@ pub fn get_block_by_item<'a>(item_id: u16) -> Option<&'a Block> {
 pub struct TopLevel {
     pub blocks: Vec<Block>,
     shapes: Vec<Shape>,
-    block_entity_types: Vec<BlockEntityKind>,
+    pub block_entity_types: Vec<BlockEntityKind>,
 }
 #[derive(Deserialize, Clone, Debug)]
 pub struct Block {
@@ -62,9 +62,9 @@ pub struct Block {
 }
 #[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
-struct BlockEntityKind {
-    id: u32,
-    ident: String,
+pub struct BlockEntityKind {
+    pub id: u32,
+    pub ident: String,
     name: String,
 }
 #[expect(dead_code)]
