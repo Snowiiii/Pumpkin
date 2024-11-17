@@ -7,6 +7,7 @@ import com.mojang.serialization.JsonOps
 import de.snowii.extractor.Extractor
 import net.minecraft.component.ComponentMap
 import net.minecraft.item.Item
+import net.minecraft.recipe.Recipe
 import net.minecraft.registry.Registries
 import net.minecraft.registry.RegistryKeys
 import net.minecraft.registry.RegistryOps
@@ -20,19 +21,13 @@ class Items : Extractor.Extractor {
 
 
     override fun extract(server: MinecraftServer): JsonElement {
-        val itemsJson = JsonArray()
+        val itemsJson = JsonObject()
 
         for (item in server.registryManager.getOrThrow(RegistryKeys.ITEM).streamEntries().toList()) {
             val itemJson = JsonObject()
             val realItem: Item = item.value()
 
             itemJson.addProperty("id", Registries.ITEM.getRawId(realItem))
-            itemJson.addProperty("name", Registries.ITEM.getId(realItem).toString())
-            itemJson.addProperty("translation_key", realItem.translationKey)
-            itemJson.addProperty("max_stack", realItem.maxCount)
-            itemJson.addProperty("max_durability", realItem.defaultStack.maxDamage)
-            itemJson.addProperty("break_sound", realItem.breakSound.id().toString())
-
             itemJson.add(
                 "components",
                 ComponentMap.CODEC.encodeStart(
@@ -41,7 +36,7 @@ class Items : Extractor.Extractor {
                 ).getOrThrow()
             )
 
-            itemsJson.add(itemJson)
+            itemsJson.add(Registries.ITEM.getId(realItem).toString(), itemJson)
         }
         return itemsJson
     }
