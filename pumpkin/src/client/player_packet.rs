@@ -646,7 +646,8 @@ impl Player {
                 if let Some(block) = block {
                     if block.states.iter().any(|state| {
                         state.block_entity_type == Some(block_entity!("minecraft:sign"))
-                            || state.block_entity_type == Some(block_entity!("minecraft:sign"))
+                            || state.block_entity_type
+                                == Some(block_entity!("minecraft:hanging_sign"))
                     }) {
                         //Currently blocks on default only face north
                         self.client
