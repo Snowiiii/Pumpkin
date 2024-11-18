@@ -16,7 +16,6 @@ pub fn get_item_by_id(id: u16) -> Option<&'static Item> {
     ITEMS.values().find(|item| item.id == id)
 }
 
-#[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
 pub struct Item {
     pub id: u16,

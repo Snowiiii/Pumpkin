@@ -2,6 +2,7 @@ use crate::server::Server;
 use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
 use num_derive::FromPrimitive;
+use num_traits::real::Real;
 use pumpkin_core::math::{
     boundingbox::{BoundingBox, BoundingBoxSize},
     get_section_cord,
@@ -159,13 +160,15 @@ impl Entity {
         self.world.remove_entity(self).await;
     }
 
-    pub fn advance_position(&self) {
-        let mut velocity = self.velocity.load();
-        let on_ground = self.on_ground.load(Ordering::Relaxed);
-        if on_ground && velocity.y.is_sign_negative() {
-            velocity = velocity.multiply(1., 0., 1.);
+    pub async fn advance_position(&self) {
+        let velocity = self.velocity.load();
+        let mut pos = self.pos.load().add(&velocity);
+        dbg!(pos.y);
+        self.collision_check(true).await;
+        let collision_y_pos = self.pos.load().y;
+        if (pos.y.ceil() - collision_y_pos.ceil()) > 1. {
+            pos.y = collision_y_pos;
         }
-        let pos = self.pos.load().add(&velocity);
         self.set_pos(pos.x, pos.y, pos.z);
     }
 
@@ -178,8 +181,8 @@ impl Entity {
         let mut chunks = vec![];
         for future_position in &future_positions {
             // TODO Change rounding based on velocity direction
-            let x_section = get_section_cord(future_position.x.floor() as i32);
-            let z_section = get_section_cord(future_position.z.floor() as i32);
+            let x_section = get_section_cord(future_position.x.round() as i32);
+            let z_section = get_section_cord(future_position.z.round() as i32);
             let chunk_pos = Vector2::new(x_section, z_section);
             if !chunks.contains(&chunk_pos) {
                 chunks.push(chunk_pos);
@@ -208,24 +211,22 @@ impl Entity {
                     chunk
                         .blocks
                         .get_block(ChunkRelativeBlockCoordinates::from(Vector3 {
-                            x: future_position.x.floor(),
-                            z: future_position.z.floor(),
+                            x: future_position.x.round(),
+                            z: future_position.z.round(),
                             y: future_position.y.floor(),
                         }));
                 // Air check
 
                 if block_id == 0 {
-                    passed_y_value = future_position.y;
+                    passed_y_value = passed_y_value.min(future_position.y);
                     self.on_ground.store(false, Ordering::Relaxed);
                 } else if pos.y > future_position.y || !self.on_ground.load(Ordering::Relaxed) {
+                    passed_y_value = dbg!(passed_y_value.floor());
                     let mut new_pos = pos;
                     new_pos.y = pos.y.floor();
-                    if self.on_ground.load(Ordering::Relaxed) {
-                        let velocity = self.velocity.load();
-                        self.velocity.store(velocity.multiply(1., 0., 1.));
-                    }
                     self.on_ground.store(true, Ordering::Relaxed);
                     if snap {
+                        dbg!(passed_y_value);
                         self.set_pos(new_pos.x, passed_y_value, new_pos.z);
                     }
                 }

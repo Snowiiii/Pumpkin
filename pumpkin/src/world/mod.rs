@@ -30,6 +30,7 @@ use pumpkin_protocol::{
     },
     ClientPacket, VarInt,
 };
+use pumpkin_world::block::block_registry::get_block_by_id;
 use pumpkin_world::chunk::ChunkData;
 use pumpkin_world::level::Level;
 use pumpkin_world::{
@@ -45,7 +46,6 @@ use tokio::{
     sync::{mpsc, RwLock},
     task::JoinHandle,
 };
-use pumpkin_world::block::block_registry::get_block_by_id;
 use worldborder::Worldborder;
 
 pub mod scoreboard;
@@ -612,23 +612,27 @@ impl World {
             .expect("Channel closed for unknown reason")
     }
 
-    pub async fn break_block(self: &Arc<Self>, position: WorldPosition, cause: Option<&Player>, server: Arc<Server>) {
+    pub async fn break_block(
+        self: &Arc<Self>,
+        position: WorldPosition,
+        cause: Option<&Player>,
+        server: Arc<Server>,
+    ) {
         let broken_block_state_id = self.set_block_state(position, 0).await;
 
         let particles_packet =
             CWorldEvent::new(2001, &position, broken_block_state_id.into(), false);
 
-
-
-        let item = get_block_by_id(broken_block_state_id).unwrap().to_item(1);
-        ItemEntity::spawn(
-            Vector3::default(),
-            Vector3::default(),
-            self.clone(),
-            item,
-            server,
-        )
-        .await;
+        if let Some(item) = get_block_by_id(broken_block_state_id).map(|block| block.to_item(1)) {
+            ItemEntity::spawn(
+                Vector3::default(),
+                Vector3::default(),
+                self.clone(),
+                item,
+                server,
+            )
+            .await;
+        }
         match cause {
             Some(player) => {
                 self.broadcast_packet_except(&[player.gameprofile.id], &particles_packet)
