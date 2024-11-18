@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use pumpkin_core::text::color::{Color, NamedColor};
 use pumpkin_core::text::TextComponent;
-use pumpkin_world::item::item_registry;
 
 use crate::command::args::arg_bounded_num::BoundedNumArgumentConsumer;
 use crate::command::args::arg_item::ItemArgumentConsumer;
@@ -35,17 +34,7 @@ impl CommandExecutor for GiveExecutor {
     ) -> Result<(), CommandError> {
         let targets = PlayersArgumentConsumer.find_arg_default_name(args)?;
 
-        let item_name = ItemArgumentConsumer::find_arg(args, ARG_ITEM)?;
-
-        let Some(item) = item_registry::get_item(item_name) else {
-            sender
-                .send_message(
-                    TextComponent::text_string(format!("Item {item_name} does not exist."))
-                        .color(Color::Named(NamedColor::Red)),
-                )
-                .await;
-            return Ok(());
-        };
+        let (item_name, item) = ItemArgumentConsumer::find_arg(args, ARG_ITEM)?;
 
         let item_count = match ITEM_COUNT_CONSUMER.find_arg_default_name(args) {
             Err(_) => 1,
@@ -68,10 +57,14 @@ impl CommandExecutor for GiveExecutor {
         sender
             .send_message(TextComponent::text_string(match targets {
                 [target] => format!(
-                    "Gave {item_count} {item_name} to {}",
-                    target.gameprofile.name
+                    "Gave {item_count} {} to {}",
+                    item_name, target.gameprofile.name
                 ),
-                _ => format!("Gave {item_count} {item_name} to {} players", targets.len()),
+                _ => format!(
+                    "Gave {item_count} {} to {} players",
+                    item_name,
+                    targets.len()
+                ),
             }))
             .await;
 

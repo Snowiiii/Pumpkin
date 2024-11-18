@@ -30,9 +30,14 @@ use pumpkin_protocol::{
     },
     ClientPacket, VarInt,
 };
-use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
+use pumpkin_world::chunk::ChunkData;
 use pumpkin_world::level::Level;
-use pumpkin_world::{block::block_registry::get_block_by_id, chunk::ChunkData};
+use pumpkin_world::{
+    block::block_registry::{
+        get_block_and_state_by_state_id, get_block_by_state_id, get_state_by_state_id,
+    },
+    coordinates::ChunkRelativeBlockCoordinates,
+};
 use rand::{thread_rng, Rng};
 use scoreboard::Scoreboard;
 use tokio::sync::{mpsc::Receiver, Mutex};
@@ -40,6 +45,7 @@ use tokio::{
     sync::{mpsc, RwLock},
     task::JoinHandle,
 };
+use pumpkin_world::block::block_registry::get_block_by_id;
 use worldborder::Worldborder;
 
 pub mod scoreboard;
@@ -145,9 +151,9 @@ impl World {
     pub async fn get_top_block(&self, position: Vector2<i32>) -> i32 {
         for y in (-64..=319).rev() {
             let pos = WorldPosition(Vector3::new(position.x, y, position.z));
-            let block = self.get_block(pos).await;
+            let block = self.get_block_state(pos).await;
             if let Some(block) = block {
-                if block.states[0].air {
+                if block.air {
                     continue;
                 }
             }
@@ -198,16 +204,6 @@ impl World {
                 false,
             ))
             .await;
-
-        // player abilities
-        // TODO: this is for debug purpose, remove later
-        log::debug!("Sending player abilities to {}", player.gameprofile.name);
-        {
-            let mut abilities = player.abilities.lock().await;
-            abilities.allow_flying = true;
-        }
-        player.send_abilties_update().await;
-
         // permissions, i. e. the commands a player may use
         player.send_permission_lvl_update().await;
         client_cmd_suggestions::send_c_commands_packet(&player, command_dispatcher).await;
@@ -577,17 +573,28 @@ impl World {
         self.broadcast_packet_all(&CRemoveEntities::new(&[entity.entity_id.into()]))
             .await;
     }
-    pub async fn set_block(&self, position: WorldPosition, block_id: u16) {
+
+    /// Sets a block
+    pub async fn set_block_state(&self, position: WorldPosition, block_state_id: u16) -> u16 {
         let (chunk_coordinate, relative_coordinates) = position.chunk_and_chunk_relative_position();
 
         // Since we divide by 16 remnant can never exceed u8
         let relative = ChunkRelativeBlockCoordinates::from(relative_coordinates);
 
         let chunk = self.receive_chunk(chunk_coordinate).await;
-        chunk.write().await.blocks.set_block(relative, block_id);
+        let replaced_block_state_id = chunk
+            .write()
+            .await
+            .blocks
+            .set_block(relative, block_state_id);
 
-        self.broadcast_packet_all(&CBlockUpdate::new(&position, i32::from(block_id).into()))
-            .await;
+        self.broadcast_packet_all(&CBlockUpdate::new(
+            &position,
+            i32::from(block_state_id).into(),
+        ))
+        .await;
+
+        replaced_block_state_id
     }
 
     // Stream the chunks (don't collect them and then do stuff with them)
@@ -605,13 +612,15 @@ impl World {
             .expect("Channel closed for unknown reason")
     }
 
-    pub async fn break_block(self: &Arc<Self>, position: WorldPosition, server: Arc<Server>) {
-        let Some(block) = self.get_block(position).await else {
-            return;
-        };
-        self.set_block(position, 0).await;
+    pub async fn break_block(self: &Arc<Self>, position: WorldPosition, cause: Option<&Player>, server: Arc<Server>) {
+        let broken_block_state_id = self.set_block_state(position, 0).await;
 
-        let item = block.to_item(1);
+        let particles_packet =
+            CWorldEvent::new(2001, &position, broken_block_state_id.into(), false);
+
+
+
+        let item = get_block_by_id(broken_block_state_id).unwrap().to_item(1);
         ItemEntity::spawn(
             Vector3::default(),
             Vector3::default(),
@@ -620,15 +629,20 @@ impl World {
             server,
         )
         .await;
-        self.broadcast_packet_all(&CWorldEvent::new(2001, &position, 11, false))
-            .await;
+        match cause {
+            Some(player) => {
+                self.broadcast_packet_except(&[player.gameprofile.id], &particles_packet)
+                    .await;
+            }
+            None => self.broadcast_packet_all(&particles_packet).await,
+        }
     }
 
-    pub async fn get_block_id(&self, position: WorldPosition) -> u16 {
+    pub async fn get_block_state_id(&self, position: WorldPosition) -> u16 {
         let (chunk, relative) = position.chunk_and_chunk_relative_position();
         let relative = ChunkRelativeBlockCoordinates::from(relative);
         let chunk = self.receive_chunk(chunk).await;
-        let chunk = chunk.read().await;
+        let chunk: tokio::sync::RwLockReadGuard<ChunkData> = chunk.read().await;
         chunk.blocks.get_block(relative)
     }
 
@@ -637,7 +651,28 @@ impl World {
         &self,
         position: WorldPosition,
     ) -> Option<&pumpkin_world::block::block_registry::Block> {
-        let block_id = self.get_block_id(position).await;
-        get_block_by_id(block_id)
+        let id = self.get_block_state_id(position).await;
+        get_block_by_state_id(id)
+    }
+
+    /// Gets the Block state from the Block Registry, Returns None if the Block state has not been found
+    pub async fn get_block_state(
+        &self,
+        position: WorldPosition,
+    ) -> Option<&pumpkin_world::block::block_registry::State> {
+        let id = self.get_block_state_id(position).await;
+        get_state_by_state_id(id)
+    }
+
+    /// Gets the Block + Block state from the Block Registry, Returns None if the Block state has not been found
+    pub async fn get_block_and_block_state(
+        &self,
+        position: WorldPosition,
+    ) -> Option<(
+        &pumpkin_world::block::block_registry::Block,
+        &pumpkin_world::block::block_registry::State,
+    )> {
+        let id = self.get_block_state_id(position).await;
+        get_block_and_state_by_state_id(id)
     }
 }

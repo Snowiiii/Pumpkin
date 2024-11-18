@@ -608,7 +608,7 @@ impl Player {
     }
 
     async fn pickup_items(&self, item: &Item, mut amount: u32) {
-        let max_stack = item.max_stack as u8;
+        let max_stack = item.components.max_stack_size;
         let mut inventory = self.inventory.lock().await;
         let slots = inventory.slots_with_hotbar_first();
 
@@ -634,7 +634,7 @@ impl Player {
                 amount = amount_left;
                 *slot = Some(ItemStack {
                     item_id: item.id,
-                    item_count: item.max_stack as u8,
+                    item_count: item.components.max_stack_size,
                 });
             } else {
                 *slot = Some(ItemStack {
@@ -666,7 +666,9 @@ impl Player {
                 return;
             }
         }
-        log::warn!("{amount} items ({}) were discarded because dropping them to the ground is not implemented", item.name);
+        log::warn!(
+            "{amount} items were discarded because dropping them to the ground is not implemented"
+        );
     }
 
     /// Add items to inventory if there's space, else drop them to the ground.

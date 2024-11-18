@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use pumpkin_protocol::client::play::{
     CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
 };
+use pumpkin_world::item::item_registry::{self, Item};
 
 use crate::{command::dispatcher::CommandError, server::Server};
 
@@ -66,11 +67,16 @@ impl DefaultNameArgConsumer for ItemArgumentConsumer {
 }
 
 impl<'a> FindArg<'a> for ItemArgumentConsumer {
-    type Data = &'a str;
+    type Data = (&'a str, &'a Item);
 
     fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
-            Some(Arg::Item(name)) => Ok(name),
+            Some(Arg::Item(name)) => match item_registry::get_item(name) {
+                Some(item) => Ok((name, item)),
+                None => Err(CommandError::GeneralCommandIssue(format!(
+                    "Item {name} does not exist."
+                ))),
+            },
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),
         }
     }

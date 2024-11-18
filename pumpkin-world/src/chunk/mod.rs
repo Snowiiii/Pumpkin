@@ -65,7 +65,7 @@ pub struct ChunkBlocks {
     /// Ordering: yzx (y being the most significant)
     blocks: Box<[u16; CHUNK_VOLUME]>,
 
-    /// See `https://minecraft.fandom.com/wiki/Heightmap` for more info
+    /// See `https://minecraft.wiki/w/Heightmap` for more info
     pub heightmap: ChunkHeightmaps,
 }
 

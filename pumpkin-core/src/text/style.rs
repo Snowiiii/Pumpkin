@@ -7,6 +7,7 @@ use super::{
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
 pub struct Style<'a> {
     /// Changes the color to render the content
     #[serde(default, skip_serializing_if = "Option::is_none")]

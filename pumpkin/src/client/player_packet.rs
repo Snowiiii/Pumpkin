@@ -346,7 +346,12 @@ impl Player {
             return;
         }
 
-        // TODO: filter message & validation
+        if message.chars().any(|c| c == '§' || c < ' ' || c == '\x7F') {
+            self.kick(TextComponent::text("Illegal characters in chat"))
+                .await;
+            return;
+        }
+
         let gameprofile = &self.gameprofile;
         log::info!("<chat>{}: {}", gameprofile.name, message);
 
@@ -449,7 +454,11 @@ impl Player {
                         .await;
                     return;
                 };
-
+                if victim.living_entity.health.load() <= 0.0 {
+                    // you can trigger this from a non-modded / innocent client client,
+                    // so we shouldn't kick the player
+                    return;
+                }
                 self.attack(&victim).await;
             }
             ActionType::Interact | ActionType::InteractAt => {
@@ -474,10 +483,9 @@ impl Player {
                     if self.gamemode.load() == GameMode::Creative {
                         let location = player_action.location;
                         // Block break & block break sound
-                        // TODO: currently this is always dirt replace it
                         let entity = &self.living_entity.entity;
                         let world = entity.world.clone();
-                        world.break_block(location, server.clone()).await;
+                        world.break_block(location, Some(self), server.clone()).await;
                     }
                 }
                 Status::CancelledDigging => {
@@ -504,10 +512,9 @@ impl Player {
                         return;
                     }
                     // Block break & block break sound
-                    // TODO: currently this is always dirt replace it
                     let entity = &self.living_entity.entity;
                     let world = entity.world.clone();
-                    world.break_block(location, server.clone()).await;
+                    world.break_block(location, Some(self), server.clone()).await;
                     // TODO: Send this every tick
                     self.client
                         .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence))
@@ -627,7 +634,9 @@ impl Player {
                     let bounding_box = entity.bounding_box.load();
                     //TODO: Make this check for every entity in that posistion
                     if !bounding_box.intersects(&block_bounding_box) {
-                        world.set_block(world_pos, block.default_state_id).await;
+                        world
+                            .set_block_state(world_pos, block.default_state_id)
+                            .await;
                     }
                 }
                 self.client

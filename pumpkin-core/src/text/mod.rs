@@ -16,6 +16,8 @@ pub mod style;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(transparent)]
+// TODO: Use this instead of TextComponent alone to allow for example text with different colors
+// TODO: Allow to mix TextComponent and String
 pub struct Text<'a>(pub Box<TextComponent<'a>>);
 
 // Represents a Text component
@@ -74,6 +76,12 @@ impl<'a> TextComponent<'a> {
         if style.strikethrough.is_some() {
             text = text.strikethrough().to_string();
         }
+        if style.click_event.is_some() {
+            if let Some(ClickEvent::OpenUrl(url)) = style.click_event {
+                //TODO: check if term supports hyperlinks before
+                text = format!("\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\", url, text).to_string()
+            }
+        }
         text
     }
 }
@@ -95,6 +103,11 @@ impl<'a> TextComponent<'a> {
 
     pub fn color_named(mut self, color: color::NamedColor) -> Self {
         self.style.color = Some(Color::Named(color));
+        self
+    }
+
+    pub fn color_rgb(mut self, color: color::RGBColor) -> Self {
+        self.style.color = Some(Color::Rgb(color));
         self
     }
 
@@ -184,6 +197,6 @@ pub enum TextContent<'a> {
         separator: Option<Cow<'a, str>>,
     },
     /// A keybind identifier
-    /// https://minecraft.fandom.com/wiki/Controls#Configurable_controls
+    /// https://minecraft.wiki/w/Controls#Configurable_controls
     Keybind { keybind: Cow<'a, str> },
 }
