@@ -69,7 +69,7 @@ png = "0.17.14"
 # logging
 simple_logger = { version = "5.0.0", features = ["threads"] }
 time = "0.3.36"
-sys-info = "0.9.1"
+sysinfo = "0.32.0"
 
 # commands
 async-trait = "0.1.83"
