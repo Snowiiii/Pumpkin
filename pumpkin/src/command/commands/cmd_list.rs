@@ -23,7 +23,7 @@ impl CommandExecutor for ListExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        server: &crate::server::Server,
+        server: &Arc<crate::server::Server>,
         _args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let players: Vec<Arc<Player>> = server.get_all_players().await;

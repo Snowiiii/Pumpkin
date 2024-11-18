@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use pumpkin_core::text::TextComponent;
+use std::sync::Arc;
 
 use crate::command::args::arg_command::CommandTreeArgumentConsumer;
 use crate::command::args::{Arg, ConsumedArgs};
@@ -23,7 +24,7 @@ impl CommandExecutor for CommandHelpExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        _server: &Server,
+        _server: &Arc<Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let Some(Arg::CommandTree(tree)) = args.get(&ARG_COMMAND) else {
@@ -50,7 +51,7 @@ impl CommandExecutor for BaseHelpExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        server: &Server,
+        server: &Arc<Server>,
         _args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let mut keys: Vec<&str> = server.command_dispatcher.commands.keys().copied().collect();

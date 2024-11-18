@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
+use std::sync::Arc;
 
 use crate::command::args::arg_entities::EntitiesArgumentConsumer;
 use crate::command::args::{Arg, ConsumedArgs};
@@ -21,7 +22,7 @@ impl CommandExecutor for KillExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        _server: &Arc<crate::server::Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let Some(Arg::Entities(targets)) = args.get(&ARG_TARGET) else {
@@ -53,7 +54,7 @@ impl CommandExecutor for KillSelfExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        _server: &Arc<crate::server::Server>,
         _args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let target = sender.as_player().ok_or(CommandError::InvalidRequirement)?;

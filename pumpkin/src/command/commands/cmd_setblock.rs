@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
+use std::sync::Arc;
 
 use crate::command::args::arg_block::BlockArgumentConsumer;
 use crate::command::args::arg_postition_block::BlockPosArgumentConsumer;
@@ -36,7 +37,7 @@ impl CommandExecutor for SetblockExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        server: &Arc<crate::server::Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let block = BlockArgumentConsumer::find_arg(args, ARG_BLOCK)?;
@@ -47,7 +48,7 @@ impl CommandExecutor for SetblockExecutor {
 
         let success = match mode {
             Mode::Destroy => {
-                world.break_block(pos, None).await;
+                world.break_block(pos, None, server.clone()).await;
                 world.set_block_state(pos, block_state_id).await;
                 true
             }

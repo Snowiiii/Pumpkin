@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use pumpkin_core::math::vector3::Vector3;
 use pumpkin_core::text::TextComponent;
+use std::sync::Arc;
 
 use crate::command::args::arg_entities::EntitiesArgumentConsumer;
 use crate::command::args::arg_entity::EntityArgumentConsumer;
@@ -57,7 +58,7 @@ impl CommandExecutor for TpEntitiesToEntityExecutor {
     async fn execute<'a>(
         &self,
         _sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        _server: &Arc<crate::server::Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
@@ -82,7 +83,7 @@ impl CommandExecutor for TpEntitiesToPosFacingPosExecutor {
     async fn execute<'a>(
         &self,
         _sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        _server: &Arc<crate::server::Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
@@ -107,7 +108,7 @@ impl CommandExecutor for TpEntitiesToPosFacingEntityExecutor {
     async fn execute<'a>(
         &self,
         _sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        _server: &Arc<crate::server::Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
@@ -134,7 +135,7 @@ impl CommandExecutor for TpEntitiesToPosWithRotationExecutor {
     async fn execute<'a>(
         &self,
         _sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        _server: &Arc<crate::server::Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
@@ -158,7 +159,7 @@ impl CommandExecutor for TpEntitiesToPosExecutor {
     async fn execute<'a>(
         &self,
         _sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        _server: &Arc<crate::server::Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
@@ -182,7 +183,7 @@ impl CommandExecutor for TpSelfToEntityExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        _server: &Arc<crate::server::Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let destination = EntityArgumentConsumer::find_arg(args, ARG_DESTINATION)?;
@@ -214,7 +215,7 @@ impl CommandExecutor for TpSelfToPosExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        _server: &Arc<crate::server::Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         match sender {

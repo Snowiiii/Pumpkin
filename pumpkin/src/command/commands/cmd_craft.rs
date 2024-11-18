@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use pumpkin_inventory::{CraftingTable, OpenContainer, WindowType};
+use std::sync::Arc;
 
 use crate::command::{
     args::ConsumedArgs, tree::CommandTree, CommandError, CommandExecutor, CommandSender,
@@ -15,7 +16,7 @@ impl CommandExecutor for CraftingTableExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        server: &crate::server::Server,
+        server: &Arc<crate::server::Server>,
         _args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         if let Some(player) = sender.as_player() {
