@@ -2,6 +2,7 @@ use pumpkin_core::ProfileAction;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
+#[serde(default)]
 pub struct AuthenticationConfig {
     /// Whether to use Mojang authentication.
     pub enabled: bool,
@@ -28,6 +29,7 @@ impl Default for AuthenticationConfig {
 }
 
 #[derive(Deserialize, Serialize)]
+#[serde(default)]
 pub struct PlayerProfileConfig {
     /// Allow players flagged by Mojang (banned, forced name change).
     pub allow_banned_players: bool,
@@ -48,6 +50,7 @@ impl Default for PlayerProfileConfig {
 }
 
 #[derive(Deserialize, Serialize)]
+#[serde(default)]
 pub struct TextureConfig {
     /// Whether to use player textures.
     pub enabled: bool,
@@ -71,6 +74,7 @@ impl Default for TextureConfig {
 }
 
 #[derive(Deserialize, Serialize)]
+#[serde(default)]
 pub struct TextureTypes {
     /// Use player skins.
     pub skin: bool,

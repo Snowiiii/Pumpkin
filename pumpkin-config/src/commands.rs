@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
+#[serde(default)]
 pub struct CommandsConfig {
     /// Are commands from the Console accepted ?
     pub use_console: bool,

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
+#[serde(default)]
 /// Packet compression
 pub struct CompressionConfig {
     /// Wether compression is enabled
@@ -19,6 +20,7 @@ impl Default for CompressionConfig {
 }
 
 #[derive(Deserialize, Serialize, Clone)]
+#[serde(default)]
 /// We have this in a Seperate struct so we can use it outside of the Config
 pub struct CompressionInfo {
     /// The compression threshold used when compression is enabled

@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::net::{Ipv4Addr, SocketAddr};
 
 #[derive(Deserialize, Serialize, Clone)]
+#[serde(default)]
 pub struct RCONConfig {
     /// Is RCON Enabled?
     pub enabled: bool,
@@ -29,6 +30,7 @@ impl Default for RCONConfig {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(default)]
 pub struct RCONLogging {
     /// Whether successful RCON logins should be logged.
     pub log_logged_successfully: bool,

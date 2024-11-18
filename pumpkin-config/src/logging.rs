@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
+#[serde(default)]
 pub struct LoggingConfig {
     pub enabled: bool,
     pub level: LevelFilter,

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Default)]
+#[serde(default)]
 pub struct ResourcePackConfig {
     pub enabled: bool,
     /// The path to the resource pack.

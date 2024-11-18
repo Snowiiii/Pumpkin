@@ -56,6 +56,7 @@ pub struct AdvancedConfiguration {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(default)]
 pub struct BasicConfiguration {
     /// The address to bind the server to.
     pub server_address: SocketAddr,
