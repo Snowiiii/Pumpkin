@@ -39,7 +39,6 @@ mod client_packet;
 pub mod combat;
 mod container;
 pub mod player_packet;
-pub mod bossbar;
 
 /// Represents a player's configuration settings.
 ///

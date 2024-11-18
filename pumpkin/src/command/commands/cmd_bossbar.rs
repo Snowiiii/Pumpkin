@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::client::bossbar::{Bossbar, BossbarColor, BossbarDivisions, BossbarFlags};
+use crate::world::bossbar::{Bossbar, BossbarColor, BossbarDivisions, BossbarFlags};
 use crate::command::{CommandExecutor, CommandSender};
 use crate::command::args::ConsumedArgs;
 use crate::command::dispatcher::CommandError;
@@ -17,8 +17,9 @@ impl CommandExecutor for BossbarExecuter {
         if let Some(player) = sender.as_player() {
 
             //TODO: Handling arguments etc...
-            let bossbar = Bossbar { uuid: uuid::Uuid::new_v4(), title: "Test".to_string(), health: 0.5, color: BossbarColor::Pink, division: BossbarDivisions::Notches6, flags: BossbarFlags::DragonBar};
-            player.send_bossbar(bossbar).await;
+            let bossbar = Bossbar::new("Test".to_string());
+            player.living_entity.entity.world.bossbars.lock().await.create_bossbar("1234".to_string(), bossbar.clone());
+            player.send_bossbar(&bossbar).await;
         }
         Ok(())
     }

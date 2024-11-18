@@ -44,9 +44,11 @@ use tokio::{
     task::JoinHandle,
 };
 use worldborder::Worldborder;
+use crate::world::bossbar::CustomBossbars;
 
 pub mod scoreboard;
 pub mod worldborder;
+pub mod bossbar;
 
 type ChunkReceiver = (
     Vec<(Vector2<i32>, JoinHandle<()>)>,
@@ -71,6 +73,8 @@ pub struct World {
     pub scoreboard: Mutex<Scoreboard>,
     /// The world's worldborder, defining the playable area and controlling its expansion or contraction.
     pub worldborder: Mutex<Worldborder>,
+    /// The world's custom bossbars
+    pub bossbars: Mutex<CustomBossbars>,
     // TODO: entities
 }
 
@@ -82,6 +86,7 @@ impl World {
             current_players: Arc::new(Mutex::new(HashMap::new())),
             scoreboard: Mutex::new(Scoreboard::new()),
             worldborder: Mutex::new(Worldborder::new(0.0, 0.0, 29_999_984.0, 0, 0, 0)),
+            bossbars: Mutex::new(CustomBossbars::new()),
         }
     }
 
@@ -346,6 +351,12 @@ impl World {
 
         // Spawn in initial chunks
         player_chunker::player_join(self, player.clone()).await;
+
+        if let Some(bossbars) = self.bossbars.lock().await.get_player_bars(&player.gameprofile.id) {
+            for bossbar in bossbars {
+                player.send_bossbar(bossbar).await;
+            }
+        }
     }
 
     pub fn mark_chunks_as_not_watched(&self, chunks: &[Vector2<i32>]) -> Vec<Vector2<i32>> {
