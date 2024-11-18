@@ -29,7 +29,7 @@ pub async fn start_lan_broadcast(bound_addr: SocketAddr) {
 
     if advanced_motd.is_empty() {
         motd = BASIC_CONFIG.motd.replace('\n', " ");
-        log::warn!("Using the server MOTD as the LAN broadcast MOTD. Note that the LAN broadcast MOTD does not support multiple lines, so consider defining it accordingly.");
+        log::warn!("Using the server MOTD as the LAN broadcast MOTD. Note that the LAN broadcast MOTD does not support multiple lines, RGB colors, or gradients so consider defining it accordingly.");
     } else {
         motd = advanced_motd.clone();
     };
