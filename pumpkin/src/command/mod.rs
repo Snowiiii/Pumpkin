@@ -108,55 +108,55 @@ impl<'a> CommandSender<'a> {
 #[must_use]
 pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     let mut dispatcher = CommandDispatcher::default();
-    let disabled = &ADVANCED_CONFIG.commands.disabled;
+    let enabled = &ADVANCED_CONFIG.commands.enabled;
 
     // TODO: Use an macro or fn for this
-    if !disabled.pumpkin {
+    if enabled.pumpkin {
         dispatcher.register(cmd_pumpkin::init_command_tree());
     }
-    if !disabled.say {
+    if enabled.say {
         dispatcher.register(cmd_say::init_command_tree());
     }
-    if !disabled.gamemode {
+    if enabled.gamemode {
         dispatcher.register(cmd_gamemode::init_command_tree());
     }
-    if !disabled.stop {
+    if enabled.stop {
         dispatcher.register(cmd_stop::init_command_tree());
     }
-    if !disabled.help {
+    if enabled.help {
         dispatcher.register(cmd_help::init_command_tree());
     }
-    if !disabled.echest {
+    if enabled.echest {
         dispatcher.register(cmd_echest::init_command_tree());
     }
-    if !disabled.craft {
+    if enabled.craft {
         dispatcher.register(cmd_craft::init_command_tree());
     }
-    if !disabled.kick {
+    if enabled.kick {
         dispatcher.register(cmd_kick::init_command_tree());
     }
-    if !disabled.kill {
+    if enabled.kill {
         dispatcher.register(cmd_kill::init_command_tree());
     }
-    if !disabled.worldborder {
+    if enabled.worldborder {
         dispatcher.register(cmd_worldborder::init_command_tree());
     }
-    if !disabled.teleport {
+    if enabled.teleport {
         dispatcher.register(cmd_teleport::init_command_tree());
     }
-    if !disabled.give {
+    if enabled.give {
         dispatcher.register(cmd_give::init_command_tree());
     }
-    if !disabled.list {
+    if enabled.list {
         dispatcher.register(cmd_list::init_command_tree());
     }
-    if !disabled.clear {
+    if enabled.clear {
         dispatcher.register(cmd_clear::init_command_tree());
     }
-    if !disabled.setblock {
+    if enabled.setblock {
         dispatcher.register(cmd_setblock::init_command_tree());
     }
-    if !disabled.transfer {
+    if enabled.transfer {
         dispatcher.register(cmd_transfer::init_command_tree());
     }
 

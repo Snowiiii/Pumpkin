@@ -10,7 +10,7 @@ pub struct CommandsConfig {
     /// Should be commands from players be logged in console?
     #[serde_inline_default(true)]
     pub log_console: bool,
-    pub disabled: DisabledCommands,
+    pub enabled: EnabledCommands,
 }
 
 impl Default for CommandsConfig {
@@ -18,13 +18,14 @@ impl Default for CommandsConfig {
         Self {
             use_console: true,
             log_console: true,
-            disabled: DisabledCommands::default(),
+            enabled: EnabledCommands::default(),
         }
     }
 }
 
-#[derive(Deserialize, Serialize, Default)]
-pub struct DisabledCommands {
+#[derive(Deserialize, Serialize)]
+#[serde(default)]
+pub struct EnabledCommands {
     pub pumpkin: bool,
     pub say: bool,
     pub gamemode: bool,
@@ -41,4 +42,27 @@ pub struct DisabledCommands {
     pub clear: bool,
     pub setblock: bool,
     pub transfer: bool,
+}
+
+impl Default for EnabledCommands {
+    fn default() -> Self {
+        Self {
+            pumpkin: true,
+            say: true,
+            gamemode: true,
+            stop: true,
+            help: true,
+            echest: true,
+            craft: true,
+            kill: true,
+            kick: true,
+            worldborder: true,
+            teleport: true,
+            give: true,
+            list: true,
+            clear: true,
+            setblock: true,
+            transfer: true,
+        }
+    }
 }
