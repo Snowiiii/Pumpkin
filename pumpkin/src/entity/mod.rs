@@ -191,6 +191,7 @@ impl Entity {
         }
         let (_, mut chunks) = self.world.receive_chunks(&chunks);
 
+        let mut passed_y_value = pos.y;
         while let Some(chunk) = chunks.recv().await {
             let chunk = chunk.read().await;
             for future_position in &future_positions {
@@ -212,7 +213,9 @@ impl Entity {
                             y: future_position.y.floor(),
                         }));
                 // Air check
+
                 if block_id == 0 {
+                    passed_y_value = future_position.y;
                     self.on_ground.store(false, Ordering::Relaxed);
                 } else if pos.y > future_position.y || !self.on_ground.load(Ordering::Relaxed) {
                     let mut new_pos = pos;
@@ -223,7 +226,7 @@ impl Entity {
                     }
                     self.on_ground.store(true, Ordering::Relaxed);
                     if snap {
-                        self.set_pos(new_pos.x, new_pos.y, new_pos.z);
+                        self.set_pos(new_pos.x, passed_y_value, new_pos.z);
                     }
                 }
             }
