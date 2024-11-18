@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Default)]
+#[serde(default)]
 pub struct LANBroadcastConfig {
     pub enabled: bool,
     // We use an extra motd because this only supports one line
