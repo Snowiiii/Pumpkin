@@ -67,12 +67,12 @@ impl DefaultNameArgConsumer for ItemArgumentConsumer {
 }
 
 impl<'a> FindArg<'a> for ItemArgumentConsumer {
-    type Data = &'a Item;
+    type Data = (&'a str, &'a Item);
 
     fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::Item(name)) => match item_registry::get_item(name) {
-                Some(item) => Ok(item),
+                Some(item) => Ok((name, item)),
                 None => Err(CommandError::GeneralCommandIssue(format!(
                     "Item {name} does not exist."
                 ))),

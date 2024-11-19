@@ -36,6 +36,7 @@ use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_protocol::CURRENT_MC_PROTOCOL;
 use rcon::RCONServer;
 use std::time::Instant;
+use sysinfo::{CpuRefreshKind, System};
 // Setup some tokens to allow us to identify which event is for which socket.
 
 pub mod client;
@@ -96,39 +97,85 @@ const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> L
 }
 
 const CARGO_PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
-
-fn log_system_info() {
-    let os_type = sys_info::os_type().unwrap();
-    let os_release = sys_info::os_release().unwrap();
-    let arch = std::env::consts::ARCH;
-
-    if cfg!(target_os = "linux") {
-        if let Some(linux_release) = sys_info::linux_os_release().unwrap().pretty_name {
-            log::info!(
-                "Running on {} ({}) {} ({})",
-                os_type,
-                linux_release,
-                os_release,
-                arch
-            );
-            return;
-        }
-    }
-    log::info!("Running on {} {} ({})", os_type, os_release, arch);
-}
-
 const GIT_VERSION: &str = env!("GIT_VERSION");
 
+fn bytes_to_human_readable(bytes: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = KB * 1024;
+    const GB: u64 = MB * 1024;
+
+    if bytes >= GB {
+        let whole_gb = bytes / GB;
+        let remainder = (bytes % GB) / (GB / 100);
+        format!("{whole_gb}.{remainder:02} GB")
+    } else if bytes >= MB {
+        let whole_mb = bytes / MB;
+        let remainder = (bytes % MB) / (MB / 100);
+        format!("{whole_mb}.{remainder:02} MB")
+    } else if bytes >= KB {
+        let whole_kb = bytes / KB;
+        let remainder = (bytes % KB) / (KB / 100);
+        format!("{whole_kb}.{remainder:02} KB")
+    } else {
+        format!("{bytes} bytes")
+    }
+}
+
+fn log_system_info() {
+    if sysinfo::IS_SUPPORTED_SYSTEM {
+        log::info!(
+            "Running on {} ({}) {}",
+            System::long_os_version().unwrap_or(String::from("unknown")),
+            System::kernel_version().unwrap_or(String::from("unknown")),
+            System::cpu_arch().unwrap_or(String::from("unknown"))
+        );
+
+        let mut sys = System::new();
+        sys.refresh_cpu_list(CpuRefreshKind::new().with_frequency());
+
+        let cpus = sys.cpus();
+        if let Some(cpu) = cpus.first() {
+            log::info!(
+                "CPU Information: Brand: \"{}\", Frequency: {} GHz, Physical Cores: {}, Logical Processors: {}",
+                cpu.brand(),
+                cpu.frequency() / 1000,
+                sys.physical_core_count().unwrap_or(0),
+                cpus.len()
+            );
+        } else {
+            log::info!("CPU Information: Could not retrieve CPU details.");
+        }
+
+        sys.refresh_memory();
+        let total_memory = sys.total_memory();
+
+        log::info!(
+            "Memory Information: RAM: {}, SWAP: {}",
+            bytes_to_human_readable(total_memory),
+            bytes_to_human_readable(sys.total_swap())
+        );
+
+        let used_memory = sys.used_memory();
+
+        if total_memory > 0 && used_memory > 0 {
+            let memory_usage_percentage = (used_memory * 100) / total_memory;
+
+            if memory_usage_percentage > 90 {
+                log::warn!(
+                    "High memory usage detected on startup: {}% of total RAM is used!",
+                    memory_usage_percentage
+                );
+            }
+        }
+    } else {
+        log::info!("Running on Unknown System");
+    }
+}
+
 #[tokio::main]
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 async fn main() -> io::Result<()> {
     init_logger();
-    log_system_info();
-    log::info!("Starting Pumpkin {CARGO_PKG_VERSION} ({GIT_VERSION}) for Minecraft {CURRENT_MC_VERSION} (Protocol {CURRENT_MC_PROTOCOL})",);
-    log::warn!("Pumpkin is currently under heavy development!");
-    log::info!("Report Issues on https://github.com/Snowiiii/Pumpkin/issues");
-    log::info!("Join our Discord for community support https://discord.com/invite/wT8XjrjKkf");
-    //log::info!("CPU {} Cores {}MHz", sys_info::cpu_num().unwrap(), sys_info::cpu_speed().unwrap());
 
     // let rt = tokio::runtime::Builder::new_multi_thread()
     //     .enable_all()
@@ -149,6 +196,25 @@ async fn main() -> io::Result<()> {
         // TODO: Gracefully exit?
         std::process::exit(1);
     }));
+
+    log::info!("Starting Pumpkin {CARGO_PKG_VERSION} ({GIT_VERSION}) for Minecraft {CURRENT_MC_VERSION} (Protocol {CURRENT_MC_PROTOCOL})",);
+
+    log_system_info();
+    log::debug!(
+        "Build info: FAMILY: \"{}\", OS: \"{}\", ARCH: \"{}\", BUILD: \"{}\"",
+        std::env::consts::FAMILY,
+        std::env::consts::OS,
+        std::env::consts::ARCH,
+        if cfg!(debug_assertions) {
+            "Debug"
+        } else {
+            "Release"
+        }
+    );
+
+    log::warn!("Pumpkin is currently under heavy development!");
+    log::info!("Report Issues on https://github.com/Snowiiii/Pumpkin/issues");
+    log::info!("Join our Discord for community support https://discord.com/invite/wT8XjrjKkf");
 
     let time = Instant::now();
 

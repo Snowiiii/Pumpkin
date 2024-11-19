@@ -52,6 +52,7 @@ pub struct TopLevel {
 pub struct Block {
     pub id: u16,
     pub item_id: u16,
+    pub hardness: f32,
     pub wall_variant_id: Option<u16>,
     pub translation_key: String,
     pub name: String,
