@@ -878,7 +878,7 @@ impl Player {
                 self.handle_swing_arm(SSwingArm::read(bytebuf)?).await;
             }
             SUseItemOn::PACKET_ID => {
-                self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await;
+                self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await?;
             }
             SUseItem::PACKET_ID => self.handle_use_item(&SUseItem::read(bytebuf)?),
             SCommandSuggestion::PACKET_ID => {
