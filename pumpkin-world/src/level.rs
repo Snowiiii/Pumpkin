@@ -2,6 +2,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use dashmap::{DashMap, Entry};
 use num_traits::Zero;
+use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::math::vector2::Vector2;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use tokio::{
@@ -28,6 +29,7 @@ pub type ConcurrentChunkResult = Vec<(Vector2<i32>, JoinHandle<()>)>;
 ///
 /// For more details on world generation, refer to the `WorldGenerator` module.
 pub struct Level {
+    pub seed: Seed,
     save_file: Option<SaveFile>,
     loaded_chunks: Arc<DashMap<Vector2<i32>, Arc<RwLock<ChunkData>>>>,
     chunk_watchers: Arc<DashMap<Vector2<i32>, usize>>,
@@ -41,17 +43,26 @@ pub struct SaveFile {
     pub region_folder: PathBuf,
 }
 
+fn get_or_create_seed() -> Seed {
+    // TODO: if there is a seed in the config (!= 0) use it. Otherwise make a random one
+    Seed::from(BASIC_CONFIG.seed.as_str())
+}
+
 impl Level {
     pub fn from_root_folder(root_folder: PathBuf) -> Self {
-        let world_gen = get_world_gen(Seed(0)).into(); // TODO Read Seed from config.
+        // If we are using an already existing world we want to read the seed from the level.dat, If not we want to check if there is a seed in the config, if not lets create a random one
         if root_folder.exists() {
             let region_folder = root_folder.join("region");
             assert!(
                 region_folder.exists(),
                 "World region folder does not exist, despite there being a root folder."
             );
+            // TODO: read seed from level.dat
+            let seed = Seed(0);
+            let world_gen = get_world_gen(seed).into(); // TODO Read Seed from config.
 
             Self {
+                seed,
                 world_gen,
                 save_file: Some(SaveFile {
                     root_folder,
@@ -62,7 +73,10 @@ impl Level {
                 chunk_watchers: Arc::new(DashMap::new()),
             }
         } else {
+            let seed = get_or_create_seed();
+            let world_gen = get_world_gen(seed).into(); // TODO Read Seed from config.
             Self {
+                seed,
                 world_gen,
                 save_file: None,
                 chunk_reader: Arc::new(AnvilChunkReader::new()),
