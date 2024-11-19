@@ -11,7 +11,7 @@ Pumpkin's Configuration is split into a basic Configuration made for quick chang
 
 ### Server Version
 
-Pumpkin only supports the latest version of Minecraft. If you want to host a Pumpkin server in any other version, there is a project called [ViaProxy](https://github.com/ViaVersion/ViaProxy).
+Pumpkin aims to support the latest Minecraft Version. If you want to host a Pumpkin server in any other version, there is a project called [ViaProxy](https://github.com/ViaVersion/ViaProxy).
 
 - Make sure to allow Proxy connections.
 - Pumpkin and ViaProxy have no connection, don't submit issues reguarding their code.
