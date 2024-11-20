@@ -436,10 +436,6 @@ impl Player {
 
         self.living_entity.tick();
 
-        // TODO: maybe find better way then queuing for just sending data
-        let level_time = self.living_entity.entity.world.level_time.lock().await;
-        level_time.send_time(&self.client).await;
-
         if now.duration_since(self.last_keep_alive_time.load()) >= Duration::from_secs(15) {
             // We never got a response from our last keep alive we send
             if self

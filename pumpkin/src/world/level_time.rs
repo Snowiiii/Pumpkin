@@ -1,6 +1,6 @@
 use pumpkin_protocol::client::play::CUpdateTime;
 
-use crate::client::Client;
+use super::World;
 
 pub struct LevelTime {
     pub world_age: i64,
@@ -37,9 +37,9 @@ impl LevelTime {
         self.rain_time += 1;
     }
 
-    pub async fn send_time(&self, client: &Client) {
-        client
-            .send_packet(&CUpdateTime::new(self.world_age, self.time_of_day, true))
+    pub async fn send_time(&self, world: &World) {
+        world
+            .broadcast_packet_all(&CUpdateTime::new(self.world_age, self.time_of_day, true))
             .await;
     }
 
