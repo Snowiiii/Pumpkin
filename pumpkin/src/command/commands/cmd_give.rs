@@ -34,7 +34,7 @@ impl CommandExecutor for GiveExecutor {
     ) -> Result<(), CommandError> {
         let targets = PlayersArgumentConsumer.find_arg_default_name(args)?;
 
-        let item = ItemArgumentConsumer::find_arg(args, ARG_ITEM)?;
+        let (item_name, item) = ItemArgumentConsumer::find_arg(args, ARG_ITEM)?;
 
         let item_count = match ITEM_COUNT_CONSUMER.find_arg_default_name(args) {
             Err(_) => 1,
@@ -58,11 +58,11 @@ impl CommandExecutor for GiveExecutor {
             .send_message(TextComponent::text_string(match targets {
                 [target] => format!(
                     "Gave {item_count} {} to {}",
-                    item.name, target.gameprofile.name
+                    item_name, target.gameprofile.name
                 ),
                 _ => format!(
                     "Gave {item_count} {} to {} players",
-                    item.name,
+                    item_name,
                     targets.len()
                 ),
             }))
