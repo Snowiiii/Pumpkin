@@ -99,6 +99,7 @@ impl<'a> CommandSender<'a> {
     #[must_use]
     pub fn world(&self) -> Option<&World> {
         match self {
+            // TODO: maybe return first world when console
             CommandSender::Console | CommandSender::Rcon(..) => None,
             CommandSender::Player(p) => Some(&p.living_entity.entity.world),
         }

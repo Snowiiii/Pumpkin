@@ -4,7 +4,6 @@ use crate::command::{
 };
 use crate::entity::player::PermissionLvl;
 use async_trait::async_trait;
-use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::text::click::ClickEvent;
 use pumpkin_core::text::hover::HoverEvent;
 use pumpkin_core::text::{color::NamedColor, TextComponent};
@@ -21,10 +20,23 @@ impl CommandExecutor for PumpkinExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        server: &crate::server::Server,
         _args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
-        let seed = &BASIC_CONFIG.seed;
+        let seed = match sender {
+            CommandSender::Player(player) => {
+                player.living_entity.entity.world.level.seed.0.to_string()
+            }
+            _ => match server.worlds.first() {
+                Some(world) => world.level.seed.0.to_string(),
+                None => {
+                    return Err(CommandError::GeneralCommandIssue(
+                        "Unable to get Seed".to_string(),
+                    ))
+                }
+            },
+        };
+
         sender
             .send_message(
                 TextComponent::text(&format!("Seed: [{seed}]"))
