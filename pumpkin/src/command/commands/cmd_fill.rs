@@ -33,10 +33,6 @@ enum Mode {
     Replace,
 }
 
-fn is_edge(x: i32, y: i32, z: i32, start_x: i32, start_y: i32, start_z: i32, end_x: i32, end_y: i32, end_z: i32) -> bool {
-    x == start_x || x == end_x || y == start_y || y == end_y || z == start_z || z == end_z
-}
-
 struct SetblockExecutor(Mode);
 
 #[async_trait]
@@ -109,7 +105,13 @@ impl CommandExecutor for SetblockExecutor {
                     for y in start_y..=end_y {
                         for z in start_z..=end_z {
                             let block_position = WorldPosition(Vector3::new(x, y, z));
-                            if is_edge(x,y, z, start_x, start_y, start_z, end_x, end_y, end_z) {
+                            let is_edge = x == start_x
+                                || x == end_x
+                                || y == start_y
+                                || y == end_y
+                                || z == start_z
+                                || z == end_z;
+                            if is_edge {
                                 world.set_block_state(block_position, block_state_id).await;
                             } else {
                                 world.set_block_state(block_position, 0).await;
@@ -124,7 +126,13 @@ impl CommandExecutor for SetblockExecutor {
                     for y in start_y..=end_y {
                         for z in start_z..=end_z {
                             let block_position = WorldPosition(Vector3::new(x, y, z));
-                            if is_edge(x,y, z, start_x, start_y, start_z, end_x, end_y, end_z) {
+                            let is_edge = x == start_x
+                                || x == end_x
+                                || y == start_y
+                                || y == end_y
+                                || z == start_z
+                                || z == end_z;
+                            if is_edge {
                                 world.set_block_state(block_position, block_state_id).await;
                                 placed_blocks += 1;
                             }
