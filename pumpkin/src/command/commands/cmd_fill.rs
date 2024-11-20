@@ -35,6 +35,7 @@ enum Mode {
 
 struct SetblockExecutor(Mode);
 
+#[expect(clippy::too_many_lines)]
 #[async_trait]
 impl CommandExecutor for SetblockExecutor {
     async fn execute<'a>(
