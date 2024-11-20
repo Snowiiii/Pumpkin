@@ -1,3 +1,4 @@
+mod bossevent_action;
 mod c_acknowledge_block;
 mod c_actionbar;
 mod c_block_destroy_stage;
@@ -61,13 +62,13 @@ mod c_update_objectives;
 mod c_update_score;
 mod c_worldevent;
 mod player_action;
-mod bossevent_action;
 
+pub use bossevent_action::*;
 pub use c_acknowledge_block::*;
 pub use c_actionbar::*;
 pub use c_block_destroy_stage::*;
-pub use c_boss_event::*;
 pub use c_block_update::*;
+pub use c_boss_event::*;
 pub use c_center_chunk::*;
 pub use c_change_difficulty::*;
 pub use c_chunk_data::*;
@@ -125,5 +126,4 @@ pub use c_update_entity_rot::*;
 pub use c_update_objectives::*;
 pub use c_update_score::*;
 pub use c_worldevent::*;
-pub use bossevent_action::*;
 pub use player_action::*;

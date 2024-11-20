@@ -21,6 +21,7 @@ use std::{
 use tokio::sync::{Mutex, RwLock};
 
 use crate::client::EncryptionError;
+use crate::world::custom_bossbar::CustomBossbars;
 use crate::{
     client::Client,
     command::{default_dispatcher, dispatcher::CommandDispatcher},
@@ -55,6 +56,8 @@ pub struct Server {
     entity_id: AtomicI32,
     /// Manages authentication with a authentication server, if enabled.
     pub auth_client: Option<reqwest::Client>,
+    /// The server's custom bossbars
+    pub bossbars: Mutex<CustomBossbars>,
 }
 
 impl Server {
@@ -93,6 +96,7 @@ impl Server {
             key_store: KeyStore::new(),
             server_listing: Mutex::new(CachedStatus::new()),
             server_branding: CachedBranding::new(),
+            bossbars: Mutex::new(CustomBossbars::new()),
         }
     }
 

@@ -30,6 +30,7 @@ pub(crate) mod arg_players;
 pub(crate) mod arg_position_2d;
 pub(crate) mod arg_position_3d;
 pub(crate) mod arg_postition_block;
+pub(crate) mod arg_resource_location;
 pub(crate) mod arg_rotation;
 pub(crate) mod arg_simple;
 mod coordinate;
@@ -81,6 +82,7 @@ pub(crate) enum Arg<'a> {
     GameMode(GameMode),
     CommandTree(&'a CommandTree<'a>),
     Item(String),
+    ResourceLocation(String),
     Block(String),
     Msg(String),
     Num(Result<Number, NotInBounds>),

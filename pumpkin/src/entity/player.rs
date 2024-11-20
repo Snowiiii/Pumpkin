@@ -45,6 +45,7 @@ use tokio::task::JoinHandle;
 use pumpkin_protocol::server::play::{SClickContainer, SKeepAlive};
 use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
 
+use super::living::LivingEntity;
 use super::Entity;
 use crate::{
     client::{
@@ -56,8 +57,6 @@ use crate::{
     world::{player_chunker, World},
 };
 use crate::{error::PumpkinError, world::player_chunker::get_view_distance};
-
-use super::living::LivingEntity;
 
 pub struct ChunkHandleWrapper {
     handle: Option<JoinHandle<()>>,

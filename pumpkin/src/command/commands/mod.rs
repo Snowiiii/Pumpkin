@@ -1,3 +1,4 @@
+pub mod cmd_bossbar;
 pub mod cmd_clear;
 pub mod cmd_craft;
 pub mod cmd_echest;
@@ -14,4 +15,3 @@ pub mod cmd_stop;
 pub mod cmd_teleport;
 pub mod cmd_transfer;
 pub mod cmd_worldborder;
-pub mod cmd_bossbar;

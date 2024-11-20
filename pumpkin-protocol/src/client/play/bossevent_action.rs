@@ -1,5 +1,5 @@
-use pumpkin_core::text::TextComponent;
 use crate::VarInt;
+use pumpkin_core::text::TextComponent;
 
 pub enum BosseventAction<'a> {
     Add {
