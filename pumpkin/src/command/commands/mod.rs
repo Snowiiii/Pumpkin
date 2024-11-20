@@ -9,6 +9,7 @@ pub mod cmd_kill;
 pub mod cmd_list;
 pub mod cmd_pumpkin;
 pub mod cmd_say;
+pub mod cmd_seed;
 pub mod cmd_setblock;
 pub mod cmd_stop;
 pub mod cmd_teleport;
