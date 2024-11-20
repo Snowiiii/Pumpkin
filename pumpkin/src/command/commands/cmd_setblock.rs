@@ -56,11 +56,12 @@ impl CommandExecutor for SetblockExecutor {
                 true
             }
             Mode::Keep => match world.get_block_state(pos).await {
-                Some(old_state) if old_state.air => {
+                Ok(old_state) if old_state.air => {
                     world.set_block_state(pos, block_state_id).await;
                     true
                 }
-                _ => false,
+                Ok(_) => false,
+                Err(e) => return Err(CommandError::OtherPumpkin(e.into())),
             },
         };
 

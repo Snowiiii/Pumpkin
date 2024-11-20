@@ -20,7 +20,7 @@ pub(crate) fn packet_clientbound(item: TokenStream) -> proc_macro2::TokenStream 
     let packet_name = input_string.trim_matches('"');
     let packet_name_split: Vec<&str> = packet_name.split(":").collect();
     let phase = PACKETS
-        .serverbound
+        .clientbound
         .get(packet_name_split[0])
         .expect("Invalid Phase");
     let id = phase
@@ -35,7 +35,7 @@ pub(crate) fn packet_serverbound(item: TokenStream) -> proc_macro2::TokenStream 
     let packet_name_split: Vec<&str> = packet_name.split(":").collect();
 
     let phase = PACKETS
-        .clientbound
+        .serverbound
         .get(packet_name_split[0])
         .expect("Invalid Phase");
     let id = phase
