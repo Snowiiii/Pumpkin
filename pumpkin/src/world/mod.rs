@@ -11,6 +11,7 @@ use crate::{
         player::{ChunkHandleWrapper, Player},
         Entity,
     },
+    error::PumpkinError,
 };
 use pumpkin_config::{BasicConfiguration, ADVANCED_CONFIG};
 use pumpkin_core::math::vector2::Vector2;
@@ -39,6 +40,7 @@ use pumpkin_world::{
 };
 use rand::{thread_rng, Rng};
 use scoreboard::Scoreboard;
+use thiserror::Error;
 use tokio::sync::{mpsc::Receiver, Mutex};
 use tokio::{
     sync::{mpsc, RwLock},
@@ -53,6 +55,32 @@ type ChunkReceiver = (
     Vec<(Vector2<i32>, JoinHandle<()>)>,
     Receiver<Arc<RwLock<ChunkData>>>,
 );
+
+#[derive(Debug, Error)]
+pub enum GetBlockError {
+    BlockOutOfWorldBounds,
+    InvalidBlockId,
+}
+
+impl std::fmt::Display for GetBlockError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
+impl PumpkinError for GetBlockError {
+    fn is_kick(&self) -> bool {
+        false
+    }
+
+    fn severity(&self) -> log::Level {
+        log::Level::Warn
+    }
+
+    fn client_kick_reason(&self) -> Option<String> {
+        None
+    }
+}
 
 /// Represents a Minecraft world, containing entities, players, and the underlying level data.
 ///
@@ -148,7 +176,7 @@ impl World {
         for y in (-64..=319).rev() {
             let pos = WorldPosition(Vector3::new(position.x, y, position.z));
             let block = self.get_block_state(pos).await;
-            if let Some(block) = block {
+            if let Ok(block) = block {
                 if block.air {
                     continue;
                 }
@@ -718,41 +746,49 @@ impl World {
         }
     }
 
-    pub async fn get_block_state_id(&self, position: WorldPosition) -> u16 {
+    pub async fn get_block_state_id(&self, position: WorldPosition) -> Result<u16, GetBlockError> {
         let (chunk, relative) = position.chunk_and_chunk_relative_position();
         let relative = ChunkRelativeBlockCoordinates::from(relative);
         let chunk = self.receive_chunk(chunk).await;
         let chunk: tokio::sync::RwLockReadGuard<ChunkData> = chunk.read().await;
-        chunk.blocks.get_block(relative)
+
+        let Some(id) = chunk.blocks.get_block(relative) else {
+            return Err(GetBlockError::BlockOutOfWorldBounds);
+        };
+
+        Ok(id)
     }
 
     /// Gets the Block from the Block Registry, Returns None if the Block has not been found
     pub async fn get_block(
         &self,
         position: WorldPosition,
-    ) -> Option<&pumpkin_world::block::block_registry::Block> {
-        let id = self.get_block_state_id(position).await;
-        get_block_by_state_id(id)
+    ) -> Result<&pumpkin_world::block::block_registry::Block, GetBlockError> {
+        let id = self.get_block_state_id(position).await?;
+        get_block_by_state_id(id).ok_or(GetBlockError::InvalidBlockId)
     }
 
     /// Gets the Block state from the Block Registry, Returns None if the Block state has not been found
     pub async fn get_block_state(
         &self,
         position: WorldPosition,
-    ) -> Option<&pumpkin_world::block::block_registry::State> {
-        let id = self.get_block_state_id(position).await;
-        get_state_by_state_id(id)
+    ) -> Result<&pumpkin_world::block::block_registry::State, GetBlockError> {
+        let id = self.get_block_state_id(position).await?;
+        get_state_by_state_id(id).ok_or(GetBlockError::InvalidBlockId)
     }
 
     /// Gets the Block + Block state from the Block Registry, Returns None if the Block state has not been found
     pub async fn get_block_and_block_state(
         &self,
         position: WorldPosition,
-    ) -> Option<(
-        &pumpkin_world::block::block_registry::Block,
-        &pumpkin_world::block::block_registry::State,
-    )> {
-        let id = self.get_block_state_id(position).await;
-        get_block_and_state_by_state_id(id)
+    ) -> Result<
+        (
+            &pumpkin_world::block::block_registry::Block,
+            &pumpkin_world::block::block_registry::State,
+        ),
+        GetBlockError,
+    > {
+        let id = self.get_block_state_id(position).await?;
+        get_block_and_state_by_state_id(id).ok_or(GetBlockError::InvalidBlockId)
     }
 }

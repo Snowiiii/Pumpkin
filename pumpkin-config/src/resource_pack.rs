@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Default)]
 #[serde(default)]
 pub struct ResourcePackConfig {
     pub enabled: bool,
@@ -25,17 +25,5 @@ impl ResourcePackConfig {
             self.resource_pack_sha1.len() <= 40,
             "Resource pack sha1 hash is too long (max. 40)"
         )
-    }
-}
-
-impl Default for ResourcePackConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            resource_pack_url: "".into(),
-            resource_pack_sha1: "".into(),
-            force: false,
-            prompt_message: "".into(),
-        }
     }
 }
