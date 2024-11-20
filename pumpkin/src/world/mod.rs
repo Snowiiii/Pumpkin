@@ -173,7 +173,7 @@ impl World {
         let mut level_time = self.level_time.lock().await;
         level_time.tick_time();
         if level_time.world_age % 20 == 0 {
-            level_time.send_time(&self).await;
+            level_time.send_time(self).await;
         }
         // player ticks
         let current_players = self.current_players.lock().await;
