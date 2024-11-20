@@ -1,6 +1,7 @@
 use std::fmt;
 use std::sync::Arc;
 
+use crate::command::commands::cmd_me;
 use crate::command::commands::cmd_transfer;
 use crate::command::dispatcher::CommandDispatcher;
 use crate::entity::player::{PermissionLvl, Player};
@@ -123,6 +124,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_list::init_command_tree());
     dispatcher.register(cmd_clear::init_command_tree());
     dispatcher.register(cmd_setblock::init_command_tree());
+    dispatcher.register(cmd_me::init_command_tree());
     dispatcher.register(cmd_transfer::init_command_tree());
 
     Arc::new(dispatcher)
