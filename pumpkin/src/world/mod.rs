@@ -169,7 +169,7 @@ impl World {
     }
 
     pub async fn tick(&self) {
-        self.level_time.lock().await.tick_time().await;
+        self.level_time.lock().await.tick_time();
         let current_players = self.current_players.lock().await;
         for player in current_players.values() {
             player.tick().await;

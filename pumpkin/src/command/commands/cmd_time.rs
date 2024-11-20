@@ -58,7 +58,7 @@ impl CommandExecutor for TimeExecutor {
             .first()
             .expect("There should always be atleast one world");
         let mut level_time = world.level_time.lock().await;
-        level_time.set_time(time_count.into()).await;
+        level_time.set_time(time_count.into());
         let mut owned_string: String = "Change time to: ".to_owned();
         owned_string.push_str(&time_count.to_string());
         sender
