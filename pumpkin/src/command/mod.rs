@@ -13,6 +13,7 @@ use commands::{
     cmd_list, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_worldborder,
 };
 use dispatcher::CommandError;
+use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::math::vector3::Vector3;
 use pumpkin_core::text::TextComponent;
 
@@ -107,23 +108,57 @@ impl<'a> CommandSender<'a> {
 #[must_use]
 pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     let mut dispatcher = CommandDispatcher::default();
+    let enabled = &ADVANCED_CONFIG.commands.enabled;
 
-    dispatcher.register(cmd_pumpkin::init_command_tree());
-    dispatcher.register(cmd_say::init_command_tree());
-    dispatcher.register(cmd_gamemode::init_command_tree());
-    dispatcher.register(cmd_stop::init_command_tree());
-    dispatcher.register(cmd_help::init_command_tree());
-    dispatcher.register(cmd_echest::init_command_tree());
-    dispatcher.register(cmd_craft::init_command_tree());
-    dispatcher.register(cmd_kill::init_command_tree());
-    dispatcher.register(cmd_kick::init_command_tree());
-    dispatcher.register(cmd_worldborder::init_command_tree());
-    dispatcher.register(cmd_teleport::init_command_tree());
-    dispatcher.register(cmd_give::init_command_tree());
-    dispatcher.register(cmd_list::init_command_tree());
-    dispatcher.register(cmd_clear::init_command_tree());
-    dispatcher.register(cmd_setblock::init_command_tree());
-    dispatcher.register(cmd_transfer::init_command_tree());
+    // TODO: Use an macro or fn for this
+    if enabled.pumpkin {
+        dispatcher.register(cmd_pumpkin::init_command_tree());
+    }
+    if enabled.say {
+        dispatcher.register(cmd_say::init_command_tree());
+    }
+    if enabled.gamemode {
+        dispatcher.register(cmd_gamemode::init_command_tree());
+    }
+    if enabled.stop {
+        dispatcher.register(cmd_stop::init_command_tree());
+    }
+    if enabled.help {
+        dispatcher.register(cmd_help::init_command_tree());
+    }
+    if enabled.echest {
+        dispatcher.register(cmd_echest::init_command_tree());
+    }
+    if enabled.craft {
+        dispatcher.register(cmd_craft::init_command_tree());
+    }
+    if enabled.kick {
+        dispatcher.register(cmd_kick::init_command_tree());
+    }
+    if enabled.kill {
+        dispatcher.register(cmd_kill::init_command_tree());
+    }
+    if enabled.worldborder {
+        dispatcher.register(cmd_worldborder::init_command_tree());
+    }
+    if enabled.teleport {
+        dispatcher.register(cmd_teleport::init_command_tree());
+    }
+    if enabled.give {
+        dispatcher.register(cmd_give::init_command_tree());
+    }
+    if enabled.list {
+        dispatcher.register(cmd_list::init_command_tree());
+    }
+    if enabled.clear {
+        dispatcher.register(cmd_clear::init_command_tree());
+    }
+    if enabled.setblock {
+        dispatcher.register(cmd_setblock::init_command_tree());
+    }
+    if enabled.transfer {
+        dispatcher.register(cmd_transfer::init_command_tree());
+    }
 
     Arc::new(dispatcher)
 }
