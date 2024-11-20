@@ -57,6 +57,8 @@ use crate::{
 };
 use crate::{error::PumpkinError, world::player_chunker::get_view_distance};
 
+use super::living::LivingEntity;
+
 pub struct ChunkHandleWrapper {
     handle: Option<JoinHandle<()>>,
     aborted: bool,
