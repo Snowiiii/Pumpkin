@@ -9,7 +9,7 @@ use uuid::Uuid;
 #[derive(Debug, Error)]
 pub enum BossbarUpdateError {
     #[error("Invalid resource location")]
-    InvalidResourceLocation,
+    InvalidResourceLocation(String),
     #[error("No changes")]
     NoChanges(String),
 }
@@ -138,7 +138,7 @@ impl CustomBossbars {
 
             return Ok(());
         }
-        Err(BossbarUpdateError::InvalidResourceLocation)
+        Err(BossbarUpdateError::InvalidResourceLocation(resource_location))
     }
 
     pub async fn update_players(
@@ -189,6 +189,6 @@ impl CustomBossbars {
 
             return Ok(());
         }
-        Err(BossbarUpdateError::InvalidResourceLocation)
+        Err(BossbarUpdateError::InvalidResourceLocation(resource_location))
     }
 }

@@ -79,7 +79,7 @@ impl Player {
         let packet = CBossEvent::new(bossbar.uuid, boss_action);
         self.client.send_packet(&packet).await;
     }
-    pub async fn remove_bossbar(&self, uuid: Uuid) {
+    pub async fn remove_bossbar(&self, _uuid: Uuid) {
         todo!()
     }
 

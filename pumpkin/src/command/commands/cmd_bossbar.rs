@@ -7,15 +7,12 @@ use crate::command::dispatcher::CommandError::InvalidConsumption;
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, argument_default_name, literal};
 use crate::command::{CommandExecutor, CommandSender};
-use crate::entity::player::Player;
 use crate::server::Server;
 use crate::world::bossbar::Bossbar;
-use crate::world::custom_bossbar::{BossbarUpdateError, CustomBossbar};
+use crate::world::custom_bossbar::{BossbarUpdateError};
 use async_trait::async_trait;
-use png::chunk::tEXt;
 use pumpkin_core::text::color::{Color, NamedColor};
 use pumpkin_core::text::TextComponent;
-use std::sync::Arc;
 use uuid::Uuid;
 
 const NAMES: [&str; 1] = ["bossbar"];
@@ -85,14 +82,8 @@ impl CommandExecutor for BossbarAddExecuter {
                 .await
                 .create_bossbar(namespace.to_string(), bossbar.clone());
 
-            let mut uuids: Vec<Uuid> = vec![];
-
             //TODO: Remove after debugging
-            if sender.is_player() {
-                let te = sender.as_player().unwrap().gameprofile.id;
-                uuids.push(te);
-            }
-
+            let  uuids: Vec<Uuid> = vec![player.gameprofile.id];
             server
                 .bossbars
                 .lock()
@@ -277,7 +268,7 @@ impl CommandExecutor for BossbarSetExecuter {
             .await
             .get_bossbar(namespace.to_string())
         else {
-            handle_bossbar_error(sender, BossbarUpdateError::InvalidResourceLocation).await;
+            handle_bossbar_error(sender, BossbarUpdateError::InvalidResourceLocation(namespace.to_string())).await;
             return Ok(());
         };
 
@@ -388,13 +379,13 @@ impl CommandExecutor for BossbarSetExecuter {
     }
 }
 
-async fn handle_bossbar_error(sender: &CommandSender, error: BossbarUpdateError) {
+async fn handle_bossbar_error(sender: &CommandSender<'_>, error: BossbarUpdateError) {
     match error {
-        BossbarUpdateError::InvalidResourceLocation => {
+        BossbarUpdateError::InvalidResourceLocation(location) => {
             sender
                 .send_message(
                     TextComponent::text(
-                        format!("No bossbar exists with the ID '{namespace}'").as_str(),
+                        format!("No bossbar exists with the ID '{location}'").as_str(),
                     )
                     .color(Color::Named(NamedColor::Red)),
                 )
@@ -455,20 +446,20 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
                     .with_child(
                         literal("max").with_child(
                             argument_default_name(&MAX_VALUE_CONSUMER)
-                                .execute(&BossbarSetExecuter(CommandValueGet::Max)),
+                                .execute(&BossbarSetExecuter(CommandValueSet::Max)),
                         ),
                     )
                     .with_child(
-                        literal("players").execute(&BossbarSetExecuter(CommandValueGet::Players)),
+                        literal("players").execute(&BossbarSetExecuter(CommandValueSet::Players)),
                     )
                     .with_child(
                         literal("value").with_child(
                             argument_default_name(&VALUE_CONSUMER)
-                                .execute(&BossbarSetExecuter(CommandValueGet::Value)),
+                                .execute(&BossbarSetExecuter(CommandValueSet::Value)),
                         ),
                     )
                     .with_child(
-                        literal("visible").execute(&BossbarSetExecuter(CommandValueGet::Visible)),
+                        literal("visible").execute(&BossbarSetExecuter(CommandValueSet::Visible)),
                     ),
             ),
         )
