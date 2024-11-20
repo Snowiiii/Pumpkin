@@ -1,6 +1,7 @@
 use std::fmt;
 use std::sync::Arc;
 
+use crate::command::commands::cmd_seed;
 use crate::command::commands::cmd_transfer;
 use crate::command::dispatcher::CommandDispatcher;
 use crate::entity::player::{PermissionLvl, Player};
@@ -98,6 +99,7 @@ impl<'a> CommandSender<'a> {
     #[must_use]
     pub fn world(&self) -> Option<&World> {
         match self {
+            // TODO: maybe return first world when console
             CommandSender::Console | CommandSender::Rcon(..) => None,
             CommandSender::Player(p) => Some(&p.living_entity.entity.world),
         }
@@ -123,6 +125,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_list::init_command_tree());
     dispatcher.register(cmd_clear::init_command_tree());
     dispatcher.register(cmd_setblock::init_command_tree());
+    dispatcher.register(cmd_seed::init_command_tree());
     dispatcher.register(cmd_transfer::init_command_tree());
 
     Arc::new(dispatcher)

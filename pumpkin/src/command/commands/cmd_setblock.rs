@@ -43,6 +43,7 @@ impl CommandExecutor for SetblockExecutor {
         let block_state_id = block.default_state_id;
         let pos = BlockPosArgumentConsumer::find_arg(args, ARG_BLOCK_POS)?;
         let mode = self.0;
+        // TODO: allow console to use the command (seed sender.world)
         let world = sender.world().ok_or(CommandError::InvalidRequirement)?;
 
         let success = match mode {
