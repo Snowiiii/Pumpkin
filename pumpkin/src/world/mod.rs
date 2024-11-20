@@ -3,6 +3,7 @@ use std::{
     sync::Arc,
 };
 
+pub mod level_time;
 pub mod player_chunker;
 
 use crate::{
@@ -13,6 +14,7 @@ use crate::{
     },
     error::PumpkinError,
 };
+use level_time::LevelTime;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
@@ -99,6 +101,8 @@ pub struct World {
     pub scoreboard: Mutex<Scoreboard>,
     /// The world's worldborder, defining the playable area and controlling its expansion or contraction.
     pub worldborder: Mutex<Worldborder>,
+    /// The world's time, including counting ticks for weather, time cycles and statistics
+    pub level_time: Mutex<LevelTime>,
     // TODO: entities
 }
 
@@ -110,6 +114,7 @@ impl World {
             current_players: Arc::new(Mutex::new(HashMap::new())),
             scoreboard: Mutex::new(Scoreboard::new()),
             worldborder: Mutex::new(Worldborder::new(0.0, 0.0, 29_999_984.0, 0, 0, 0)),
+            level_time: Mutex::new(LevelTime::new()),
         }
     }
 
@@ -164,6 +169,7 @@ impl World {
     }
 
     pub async fn tick(&self) {
+        self.level_time.lock().await.tick_time().await;
         let current_players = self.current_players.lock().await;
         for player in current_players.values() {
             player.tick().await;
