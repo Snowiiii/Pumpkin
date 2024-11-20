@@ -29,12 +29,6 @@ impl CommandExecutor for SayExecutor {
         server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
-        let sender = match sender {
-            CommandSender::Console => "Console",
-            CommandSender::Rcon(_) => "Rcon",
-            CommandSender::Player(player) => &player.gameprofile.name,
-        };
-
         let Some(Arg::Msg(msg)) = args.get(ARG_MESSAGE) else {
             return Err(InvalidConsumption(Some(ARG_MESSAGE.into())));
         };
