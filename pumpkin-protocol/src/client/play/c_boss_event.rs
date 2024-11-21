@@ -27,21 +27,33 @@ impl<'a> ClientPacket for CBossEvent<'a> {
                 division,
                 flags,
             } => {
-                bytebuf.put_var_int(&VarInt::from(0 as u8));
+                bytebuf.put_var_int(&VarInt::from(0u8));
                 bytebuf.put_slice(title.encode().as_slice());
                 bytebuf.put_f32(*health);
-                bytebuf.put_var_int(&color);
-                bytebuf.put_var_int(&division);
+                bytebuf.put_var_int(color);
+                bytebuf.put_var_int(division);
                 bytebuf.put_u8(*flags);
             }
-            BosseventAction::Remove => todo!(),
+            BosseventAction::Remove => {
+                bytebuf.put_var_int(&VarInt::from(1u8));
+            }
             BosseventAction::UpdateHealth(health) => {
-                bytebuf.put_var_int(&VarInt::from(2 as u8));
+                bytebuf.put_var_int(&VarInt::from(2u8));
                 bytebuf.put_f32(*health);
             }
-            BosseventAction::UpdateTile(_) => todo!(),
-            BosseventAction::UpdateStyle { .. } => todo!(),
-            BosseventAction::UpdateFlags(_) => todo!(),
+            BosseventAction::UpdateTile(title) => {
+                bytebuf.put_var_int(&VarInt::from(3u8));
+                bytebuf.put_slice(title.encode().as_slice());
+            },
+            BosseventAction::UpdateStyle { color, dividers } => {
+                bytebuf.put_var_int(&VarInt::from(4u8));
+                bytebuf.put_var_int(color);
+                bytebuf.put_var_int(dividers);
+            },
+            BosseventAction::UpdateFlags(flags) => {
+                bytebuf.put_var_int(&VarInt::from(5u8));
+                bytebuf.put_u8(*flags);
+            },
         }
     }
 }

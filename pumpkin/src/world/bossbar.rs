@@ -79,8 +79,11 @@ impl Player {
         let packet = CBossEvent::new(bossbar.uuid, boss_action);
         self.client.send_packet(&packet).await;
     }
-    pub async fn remove_bossbar(&self, _uuid: Uuid) {
-        todo!()
+    pub async fn remove_bossbar(&self, uuid: Uuid) {
+        let boss_action = BosseventAction::Remove;
+
+        let packet = CBossEvent::new(uuid, boss_action);
+        self.client.send_packet(&packet).await;
     }
 
     pub async fn update_bossbar_health(&self, uuid: Uuid, health: f32) {
@@ -90,20 +93,33 @@ impl Player {
         self.client.send_packet(&packet).await;
     }
 
-    pub async fn update_bossbar_title(&self, _uuid: Uuid, _title: String) {
-        todo!()
+    pub async fn update_bossbar_title(&self, uuid: Uuid, title: String) {
+        let boss_action = BosseventAction::UpdateTile(TextComponent::text_string(title));
+
+        let packet = CBossEvent::new(uuid, boss_action);
+        self.client.send_packet(&packet).await;
+
     }
 
     pub async fn update_bossbar_style(
         &self,
-        _uuid: Uuid,
-        _color: BossbarColor,
-        _dividers: BossbarDivisions,
+        uuid: Uuid,
+        color: BossbarColor,
+        dividers: BossbarDivisions,
     ) {
-        todo!()
+        let boss_action = BosseventAction::UpdateStyle {
+            color: (color as u8).into(),
+            dividers: (dividers as u8).into(),
+        };
+
+        let packet = CBossEvent::new(uuid, boss_action);
+        self.client.send_packet(&packet).await;
     }
 
-    pub async fn update_bossbar_flags(&self, _uuid: Uuid, _flags: BossbarFlags) {
-        todo!()
+    pub async fn update_bossbar_flags(&self, uuid: Uuid, flags: BossbarFlags) {
+        let boss_action = BosseventAction::UpdateFlags(flags as u8);
+
+        let packet = CBossEvent::new(uuid, boss_action);
+        self.client.send_packet(&packet).await;
     }
 }
