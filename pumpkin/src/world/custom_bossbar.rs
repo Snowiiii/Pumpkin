@@ -27,6 +27,8 @@ pub struct CustomBossbar {
 }
 
 impl CustomBossbar {
+    #[deny(clippy::new_without_default)]
+    #[must_use]
     pub fn new(namespace: String, bossbar_data: Bossbar) -> Self {
         Self {
             namespace,
@@ -43,21 +45,29 @@ pub struct CustomBossbars {
     pub custom_bossbars: HashMap<String, CustomBossbar>,
 }
 
+impl Default for CustomBossbars {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CustomBossbars {
+    #[must_use]
     pub fn new() -> CustomBossbars {
         Self {
             custom_bossbars: HashMap::new(),
         }
     }
 
+    #[must_use]
     pub fn get_player_bars(&self, uuid: &Uuid) -> Option<Vec<&Bossbar>> {
         let mut player_bars: Vec<&Bossbar> = Vec::new();
         for bossbar in &self.custom_bossbars {
-            if bossbar.1.player.contains(&uuid) {
+            if bossbar.1.player.contains(uuid) {
                 player_bars.push(&bossbar.1.bossbar_data);
             }
         }
-        if player_bars.len() > 0 {
+        if !player_bars.is_empty() {
             return Some(player_bars);
         }
         None
@@ -70,10 +80,12 @@ impl CustomBossbars {
         );
     }
 
-    pub fn replace_bossbar(&mut self, namespace: String, bossbar_data: CustomBossbar) {
-        self.custom_bossbars.insert(namespace.clone(), bossbar_data);
+    pub fn replace_bossbar(&mut self, resource_location: &str, bossbar_data: CustomBossbar) {
+        self.custom_bossbars
+            .insert(resource_location.to_string(), bossbar_data);
     }
 
+    #[must_use]
     pub fn get_all_bossbars(&self) -> Option<Vec<CustomBossbar>> {
         let mut bossbars: Vec<CustomBossbar> = Vec::new();
         for bossbar in self.custom_bossbars.clone() {
@@ -82,8 +94,9 @@ impl CustomBossbars {
         Some(bossbars)
     }
 
-    pub fn get_bossbar(&self, resource_location: String) -> Option<CustomBossbar> {
-        let bossbar = self.custom_bossbars.get(&resource_location);
+    #[must_use]
+    pub fn get_bossbar(&self, resource_location: &str) -> Option<CustomBossbar> {
+        let bossbar = self.custom_bossbars.get(resource_location);
         if let Some(bossbar) = bossbar {
             return Some(bossbar.clone());
         }
@@ -119,8 +132,9 @@ impl CustomBossbars {
         ))
     }
 
-    pub fn has_bossbar(&self, namespace: String) -> bool {
-        self.custom_bossbars.contains_key(&namespace)
+    #[must_use]
+    pub fn has_bossbar(&self, resource_location: &str) -> bool {
+        self.custom_bossbars.contains_key(resource_location)
     }
 
     pub async fn update_health(
@@ -138,9 +152,20 @@ impl CustomBossbars {
                 )));
             }
 
+            let ratio = f64::from(value) / f64::from(max_value);
+            let mut health: f32 = 0.0;
+
+            if health >= 1.0 {
+                health = 1.0;
+            } else if health <= 0.0 {
+                health = 0.0;
+            } else {
+                health = ratio as f32;
+            }
+
             bossbar.value = value;
             bossbar.max = max_value;
-            bossbar.bossbar_data.health = value as f32 / max_value as f32;
+            bossbar.bossbar_data.health = health;
 
             if !bossbar.visible {
                 return Ok(());
@@ -345,16 +370,16 @@ impl CustomBossbars {
                 .player
                 .iter()
                 .filter(|item| !new_players.contains(item))
-                .cloned()
+                .copied()
                 .collect();
 
             let added_players: Vec<Uuid> = new_players
                 .iter()
                 .filter(|item| !bossbar.player.contains(item))
-                .cloned()
+                .copied()
                 .collect();
 
-            if removed_players.len() == 0 && added_players.len() == 0 {
+            if removed_players.is_empty() && added_players.is_empty() {
                 return Err(BossbarUpdateError::NoChanges(String::from(
                     "Those players are already on the bossbar with nobody to add or remove",
                 )));

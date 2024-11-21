@@ -43,10 +43,7 @@ impl ArgumentConsumer for BossbarStyleArgumentConsumer {
             _ => None,
         };
 
-        match style {
-            None => None,
-            Some(style) => Some(Arg::BossbarStyle(style)),
-        }
+        style.map(Arg::BossbarStyle)
     }
 
     async fn suggest<'a>(
@@ -55,7 +52,7 @@ impl ArgumentConsumer for BossbarStyleArgumentConsumer {
         _server: &'a Server,
         _input: &'a str,
     ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
-        let styles = vec![
+        let styles = [
             "notched_10",
             "notched_12",
             "notched_20",
@@ -64,7 +61,7 @@ impl ArgumentConsumer for BossbarStyleArgumentConsumer {
         ];
         let suggestions: Vec<CommandSuggestion> = styles
             .iter()
-            .map(|style| CommandSuggestion::new(style.to_string(), None))
+            .map(|style| CommandSuggestion::new((*style).to_string(), None))
             .collect();
         Ok(Some(suggestions))
     }

@@ -65,12 +65,7 @@ impl CommandExecutor for BossbarAddExecuter {
             return Err(InvalidConsumption(Some(ARG_NAME.into())));
         };
 
-        if server
-            .bossbars
-            .lock()
-            .await
-            .has_bossbar(namespace.to_string())
-        {
+        if server.bossbars.lock().await.has_bossbar(namespace) {
             send_error_message(
                 sender,
                 format!("A boss bar already exists with the ID '{namespace}'"),
@@ -102,12 +97,7 @@ impl CommandExecutor for BossbarGetExecuter {
     ) -> Result<(), CommandError> {
         let namespace = AUTOCOMPLETE_CONSUMER.find_arg_default_name(args)?;
 
-        let Some(bossbar) = server
-            .bossbars
-            .lock()
-            .await
-            .get_bossbar(namespace.to_string())
-        else {
+        let Some(bossbar) = server.bossbars.lock().await.get_bossbar(namespace) else {
             send_error_message(
                 sender,
                 format!("No bossbar exists with the ID '{namespace}'"),
@@ -208,12 +198,7 @@ impl CommandExecutor for BossbarRemoveExecuter {
     ) -> Result<(), CommandError> {
         let namespace = AUTOCOMPLETE_CONSUMER.find_arg_default_name(args)?;
 
-        if !server
-            .bossbars
-            .lock()
-            .await
-            .has_bossbar(namespace.to_string())
-        {
+        if !server.bossbars.lock().await.has_bossbar(namespace) {
             send_error_message(
                 sender,
                 format!("A boss bar already exists with the ID '{namespace}'"),
@@ -229,7 +214,7 @@ impl CommandExecutor for BossbarRemoveExecuter {
             .remove_bossbar(server, namespace.to_string())
             .await
         {
-            Ok(_) => {}
+            Ok(()) => {}
             Err(err) => {
                 handle_bossbar_error(sender, err).await;
                 return Ok(());
@@ -244,6 +229,7 @@ struct BossbarSetExecuter(CommandValueSet);
 
 #[async_trait]
 impl CommandExecutor for BossbarSetExecuter {
+    #[expect(clippy::too_many_lines)]
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
@@ -252,12 +238,7 @@ impl CommandExecutor for BossbarSetExecuter {
     ) -> Result<(), CommandError> {
         let namespace = AUTOCOMPLETE_CONSUMER.find_arg_default_name(args)?;
 
-        let Some(bossbar) = server
-            .bossbars
-            .lock()
-            .await
-            .get_bossbar(namespace.to_string())
-        else {
+        let Some(bossbar) = server.bossbars.lock().await.get_bossbar(namespace) else {
             handle_bossbar_error(
                 sender,
                 BossbarUpdateError::InvalidResourceLocation(namespace.to_string()),
@@ -276,7 +257,7 @@ impl CommandExecutor for BossbarSetExecuter {
                     .update_color(server, namespace.to_string(), color.clone())
                     .await
                 {
-                    Ok(_) => {}
+                    Ok(()) => {}
                     Err(err) => {
                         handle_bossbar_error(sender, err).await;
                         return Ok(());
@@ -290,7 +271,7 @@ impl CommandExecutor for BossbarSetExecuter {
                     ),
                 )
                 .await;
-                return Ok(());
+                Ok(())
             }
             CommandValueSet::Max => {
                 let Ok(max_value) = MAX_VALUE_CONSUMER.find_arg_default_name(args)? else {
@@ -314,7 +295,7 @@ impl CommandExecutor for BossbarSetExecuter {
                     )
                     .await
                 {
-                    Ok(_) => {}
+                    Ok(()) => {}
                     Err(err) => {
                         handle_bossbar_error(sender, err).await;
                         return Ok(());
@@ -342,18 +323,15 @@ impl CommandExecutor for BossbarSetExecuter {
                     .update_name(server, namespace.to_string(), name.clone())
                     .await
                 {
-                    Ok(_) => {}
+                    Ok(()) => {}
                     Err(err) => {
                         handle_bossbar_error(sender, err).await;
                         return Ok(());
                     }
                 }
 
-                send_success_message(
-                    sender,
-                    format!("Custom bossbar [{}] has been renamed", name),
-                )
-                .await;
+                send_success_message(sender, format!("Custom bossbar [{name}] has been renamed"))
+                    .await;
                 Ok(())
             }
             CommandValueSet::Players(has_players) => {
@@ -365,7 +343,7 @@ impl CommandExecutor for BossbarSetExecuter {
                         .update_players(server, namespace.to_string(), vec![])
                         .await
                     {
-                        Ok(_) => {}
+                        Ok(()) => {}
                         Err(err) => {
                             handle_bossbar_error(sender, err).await;
                             return Ok(());
@@ -395,7 +373,7 @@ impl CommandExecutor for BossbarSetExecuter {
                     .update_players(server, namespace.to_string(), players)
                     .await
                 {
-                    Ok(_) => {}
+                    Ok(()) => {}
                     Err(err) => {
                         handle_bossbar_error(sender, err).await;
                         return Ok(());
@@ -427,7 +405,7 @@ impl CommandExecutor for BossbarSetExecuter {
                     .update_division(server, namespace.to_string(), style.clone())
                     .await
                 {
-                    Ok(_) => {}
+                    Ok(()) => {}
                     Err(err) => {
                         handle_bossbar_error(sender, err).await;
                         return Ok(());
@@ -460,7 +438,7 @@ impl CommandExecutor for BossbarSetExecuter {
                     .update_health(server, namespace.to_string(), bossbar.max, value as u32)
                     .await
                 {
-                    Ok(_) => {}
+                    Ok(()) => {}
                     Err(err) => {
                         handle_bossbar_error(sender, err).await;
                         return Ok(());
@@ -487,7 +465,7 @@ impl CommandExecutor for BossbarSetExecuter {
                     .update_visibilty(server, namespace.to_string(), visibility)
                     .await
                 {
-                    Ok(_) => {}
+                    Ok(()) => {}
                     Err(err) => {
                         handle_bossbar_error(sender, err).await;
                         return Ok(());
@@ -509,15 +487,11 @@ impl CommandExecutor for BossbarSetExecuter {
     }
 }
 
-static MAX_VALUE_CONSUMER: BoundedNumArgumentConsumer<i32> = BoundedNumArgumentConsumer::new()
-    .min(0)
-    .max(2147483647)
-    .name("max");
+static MAX_VALUE_CONSUMER: BoundedNumArgumentConsumer<i32> =
+    BoundedNumArgumentConsumer::new().min(0).name("max");
 
-static VALUE_CONSUMER: BoundedNumArgumentConsumer<i32> = BoundedNumArgumentConsumer::new()
-    .min(0)
-    .max(2147483647)
-    .name("value");
+static VALUE_CONSUMER: BoundedNumArgumentConsumer<i32> =
+    BoundedNumArgumentConsumer::new().min(0).name("value");
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION)

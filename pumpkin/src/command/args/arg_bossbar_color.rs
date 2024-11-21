@@ -45,10 +45,7 @@ impl ArgumentConsumer for BossbarColorArgumentConsumer {
             _ => None,
         };
 
-        match color {
-            None => None,
-            Some(color) => Some(Arg::BossbarColor(color)),
-        }
+        color.map(Arg::BossbarColor)
     }
 
     async fn suggest<'a>(
@@ -57,10 +54,10 @@ impl ArgumentConsumer for BossbarColorArgumentConsumer {
         _server: &'a Server,
         _input: &'a str,
     ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
-        let colors = vec!["blue", "green", "pink", "purple", "red", "white", "yellow"];
+        let colors = ["blue", "green", "pink", "purple", "red", "white", "yellow"];
         let suggestions: Vec<CommandSuggestion> = colors
             .iter()
-            .map(|color| CommandSuggestion::new(color.to_string(), None))
+            .map(|color| CommandSuggestion::new((*color).to_string(), None))
             .collect();
         Ok(Some(suggestions))
     }
