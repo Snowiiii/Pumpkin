@@ -155,9 +155,9 @@ impl CustomBossbars {
             let ratio = f64::from(value) / f64::from(max_value);
             let mut health: f32 = 0.0;
 
-            if health >= 1.0 {
+            if ratio >= 1.0 {
                 health = 1.0;
-            } else if health <= 0.0 {
+            } else if ratio <= 0.0 {
                 health = 0.0;
             } else {
                 health = ratio as f32;
