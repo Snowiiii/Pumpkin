@@ -5,6 +5,7 @@ use query::QueryConfig;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use std::{
+    env,
     fs,
     net::{Ipv4Addr, SocketAddr},
     path::Path,
@@ -159,7 +160,10 @@ trait LoadConfiguration {
 
 impl LoadConfiguration for AdvancedConfiguration {
     fn get_path() -> &'static Path {
-        Path::new("features.toml")
+        match env::var("FEATURES") {
+            Ok(v) => Path::new(v.leak()),
+            Err(_) => Path::new("features.toml"),
+        }
     }
 
     fn validate(&self) {
@@ -169,7 +173,10 @@ impl LoadConfiguration for AdvancedConfiguration {
 
 impl LoadConfiguration for BasicConfiguration {
     fn get_path() -> &'static Path {
-        Path::new("configuration.toml")
+        match env::var("CONFIG") {
+            Ok(v) => Path::new(v.leak()),
+            Err(_) => Path::new("configuration.toml"),
+        }
     }
 
     fn validate(&self) {
