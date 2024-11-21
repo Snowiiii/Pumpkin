@@ -5,6 +5,8 @@ mod c_finish_config;
 mod c_known_packs;
 mod c_plugin_message;
 mod c_registry_data;
+mod c_store_cookie;
+mod c_transfer;
 
 pub use c_add_resource_pack::*;
 pub use c_config_disconnect::*;
