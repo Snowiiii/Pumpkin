@@ -1,9 +1,8 @@
 use std::fmt;
 use std::sync::Arc;
 
-use crate::command::commands::{cmd_bossbar, cmd_transfer};
 use crate::command::commands::cmd_seed;
-use crate::command::commands::cmd_transfer;
+use crate::command::commands::{cmd_bossbar, cmd_transfer};
 use crate::command::dispatcher::CommandDispatcher;
 use crate::entity::player::{PermissionLvl, Player};
 use crate::server::Server;
