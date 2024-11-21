@@ -1,6 +1,7 @@
+use crate::command::args::GetCloned;
 use crate::entity::player::Player;
 use crate::server::Server;
-use crate::world::bossbar::Bossbar;
+use crate::world::bossbar::{Bossbar, BossbarColor, BossbarDivisions};
 use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
@@ -44,17 +45,8 @@ pub struct CustomBossbars {
 
 impl CustomBossbars {
     pub fn new() -> CustomBossbars {
-        //TODO: Remove after debugging
-        let mut example_data: HashMap<String, CustomBossbar> = HashMap::new();
-        let mut players: Vec<Uuid> = Vec::new();
-        players.push(Uuid::from_u128(0x1DCC7E94EA424A0394D0752889039383));
-        example_data.insert(
-            "minecraft:123".to_string(),
-            CustomBossbar::new("minecraft:123".to_string(), Bossbar::default()),
-        );
-
         Self {
-            custom_bossbars: example_data,
+            custom_bossbars: HashMap::new(),
         }
     }
 
@@ -98,8 +90,33 @@ impl CustomBossbars {
         None
     }
 
-    pub fn remove_bossbar(&mut self, namespace: String) {
-        self.custom_bossbars.remove(&namespace);
+    pub async fn remove_bossbar(
+        &mut self,
+        server: &Server,
+        resource_location: String,
+    ) -> Result<(), BossbarUpdateError> {
+        let bossbar = self.custom_bossbars.get_cloned(&resource_location);
+        if let Some(bossbar) = bossbar {
+            self.custom_bossbars.remove(&resource_location);
+
+            let players: Vec<Arc<Player>> = server.get_all_players().await;
+
+            let online_players: Vec<&Arc<Player>> = players
+                .iter()
+                .filter(|player| bossbar.player.contains(&player.gameprofile.id))
+                .collect();
+
+            if bossbar.visible {
+                for player in online_players {
+                    player.remove_bossbar(bossbar.bossbar_data.uuid).await;
+                }
+            }
+
+            return Ok(());
+        }
+        Err(BossbarUpdateError::InvalidResourceLocation(
+            resource_location,
+        ))
     }
 
     pub fn has_bossbar(&self, namespace: String) -> bool {
@@ -125,6 +142,10 @@ impl CustomBossbars {
             bossbar.max = max_value;
             bossbar.bossbar_data.health = value as f32 / max_value as f32;
 
+            if !bossbar.visible {
+                return Ok(());
+            }
+
             let players: Vec<Arc<Player>> = server.get_all_players().await;
             let matching_players: Vec<&Arc<Player>> = players
                 .iter()
@@ -138,7 +159,177 @@ impl CustomBossbars {
 
             return Ok(());
         }
-        Err(BossbarUpdateError::InvalidResourceLocation(resource_location))
+        Err(BossbarUpdateError::InvalidResourceLocation(
+            resource_location,
+        ))
+    }
+
+    pub async fn update_visibilty(
+        &mut self,
+        server: &Server,
+        resource_location: String,
+        new_visibility: bool,
+    ) -> Result<(), BossbarUpdateError> {
+        let bossbar = self.custom_bossbars.get_mut(&resource_location);
+        if let Some(bossbar) = bossbar {
+            if bossbar.visible == new_visibility && new_visibility {
+                return Err(BossbarUpdateError::NoChanges(String::from(
+                    "The bossbar is already visible",
+                )));
+            }
+
+            if bossbar.visible == new_visibility && !new_visibility {
+                return Err(BossbarUpdateError::NoChanges(String::from(
+                    "The bossbar is already hidden",
+                )));
+            }
+
+            bossbar.visible = new_visibility;
+
+            let players: Vec<Arc<Player>> = server.get_all_players().await;
+            let online_players: Vec<&Arc<Player>> = players
+                .iter()
+                .filter(|player| bossbar.player.contains(&player.gameprofile.id))
+                .collect();
+
+            for player in online_players {
+                if bossbar.visible {
+                    player.send_bossbar(&bossbar.bossbar_data).await;
+                } else {
+                    player.remove_bossbar(bossbar.bossbar_data.uuid).await;
+                }
+            }
+
+            return Ok(());
+        }
+        Err(BossbarUpdateError::InvalidResourceLocation(
+            resource_location,
+        ))
+    }
+
+    pub async fn update_name(
+        &mut self,
+        server: &Server,
+        resource_location: String,
+        new_title: String,
+    ) -> Result<(), BossbarUpdateError> {
+        let bossbar = self.custom_bossbars.get_mut(&resource_location);
+        if let Some(bossbar) = bossbar {
+            if bossbar.bossbar_data.title == new_title {
+                return Err(BossbarUpdateError::NoChanges(String::from(
+                    "That's already the name of this bossbar",
+                )));
+            }
+
+            bossbar.bossbar_data.title = new_title;
+
+            if !bossbar.visible {
+                return Ok(());
+            }
+
+            let players: Vec<Arc<Player>> = server.get_all_players().await;
+            let matching_players: Vec<&Arc<Player>> = players
+                .iter()
+                .filter(|player| bossbar.player.contains(&player.gameprofile.id))
+                .collect();
+            for player in matching_players {
+                player
+                    .update_bossbar_title(
+                        bossbar.bossbar_data.uuid,
+                        bossbar.bossbar_data.title.clone(),
+                    )
+                    .await;
+            }
+
+            return Ok(());
+        }
+        Err(BossbarUpdateError::InvalidResourceLocation(
+            resource_location,
+        ))
+    }
+
+    pub async fn update_color(
+        &mut self,
+        server: &Server,
+        resource_location: String,
+        new_color: BossbarColor,
+    ) -> Result<(), BossbarUpdateError> {
+        let bossbar = self.custom_bossbars.get_mut(&resource_location);
+        if let Some(bossbar) = bossbar {
+            if bossbar.bossbar_data.color == new_color {
+                return Err(BossbarUpdateError::NoChanges(String::from(
+                    "That's already the color of this bossbar",
+                )));
+            }
+
+            bossbar.bossbar_data.color = new_color;
+
+            if !bossbar.visible {
+                return Ok(());
+            }
+
+            let players: Vec<Arc<Player>> = server.get_all_players().await;
+            let matching_players: Vec<&Arc<Player>> = players
+                .iter()
+                .filter(|player| bossbar.player.contains(&player.gameprofile.id))
+                .collect();
+            for player in matching_players {
+                player
+                    .update_bossbar_style(
+                        bossbar.bossbar_data.uuid,
+                        bossbar.bossbar_data.color.clone(),
+                        bossbar.bossbar_data.division.clone(),
+                    )
+                    .await;
+            }
+
+            return Ok(());
+        }
+        Err(BossbarUpdateError::InvalidResourceLocation(
+            resource_location,
+        ))
+    }
+
+    pub async fn update_division(
+        &mut self,
+        server: &Server,
+        resource_location: String,
+        new_division: BossbarDivisions,
+    ) -> Result<(), BossbarUpdateError> {
+        let bossbar = self.custom_bossbars.get_mut(&resource_location);
+        if let Some(bossbar) = bossbar {
+            if bossbar.bossbar_data.division == new_division {
+                return Err(BossbarUpdateError::NoChanges(String::from(
+                    "That's already the style of this bossbar",
+                )));
+            }
+
+            bossbar.bossbar_data.division = new_division;
+
+            if !bossbar.visible {
+                return Ok(());
+            }
+
+            let players: Vec<Arc<Player>> = server.get_all_players().await;
+            let matching_players: Vec<&Arc<Player>> = players
+                .iter()
+                .filter(|player| bossbar.player.contains(&player.gameprofile.id))
+                .collect();
+            for player in matching_players {
+                player
+                    .update_bossbar_style(
+                        bossbar.bossbar_data.uuid,
+                        bossbar.bossbar_data.color.clone(),
+                        bossbar.bossbar_data.division.clone(),
+                    )
+                    .await;
+            }
+
+            return Ok(());
+        }
+        Err(BossbarUpdateError::InvalidResourceLocation(
+            resource_location,
+        ))
     }
 
     pub async fn update_players(
@@ -169,15 +360,21 @@ impl CustomBossbars {
                 )));
             }
 
-            for uuid in removed_players {
-                let Some(player) = server.get_player_by_uuid(uuid).await else {
-                    continue;
-                };
+            if bossbar.visible {
+                for uuid in removed_players {
+                    let Some(player) = server.get_player_by_uuid(uuid).await else {
+                        continue;
+                    };
 
-                player.remove_bossbar(bossbar.bossbar_data.uuid).await;
+                    player.remove_bossbar(bossbar.bossbar_data.uuid).await;
+                }
             }
 
             bossbar.player = new_players;
+
+            if !bossbar.visible {
+                return Ok(());
+            }
 
             for uuid in added_players {
                 let Some(player) = server.get_player_by_uuid(uuid).await else {
@@ -189,6 +386,8 @@ impl CustomBossbars {
 
             return Ok(());
         }
-        Err(BossbarUpdateError::InvalidResourceLocation(resource_location))
+        Err(BossbarUpdateError::InvalidResourceLocation(
+            resource_location,
+        ))
     }
 }

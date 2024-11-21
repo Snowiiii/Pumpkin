@@ -44,16 +44,16 @@ impl<'a> ClientPacket for CBossEvent<'a> {
             BosseventAction::UpdateTile(title) => {
                 bytebuf.put_var_int(&VarInt::from(3u8));
                 bytebuf.put_slice(title.encode().as_slice());
-            },
+            }
             BosseventAction::UpdateStyle { color, dividers } => {
                 bytebuf.put_var_int(&VarInt::from(4u8));
                 bytebuf.put_var_int(color);
                 bytebuf.put_var_int(dividers);
-            },
+            }
             BosseventAction::UpdateFlags(flags) => {
                 bytebuf.put_var_int(&VarInt::from(5u8));
                 bytebuf.put_u8(*flags);
-            },
+            }
         }
     }
 }

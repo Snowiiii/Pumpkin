@@ -3,7 +3,7 @@ use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::client::play::{BosseventAction, CBossEvent};
 use uuid::Uuid;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum BossbarColor {
     Pink,
     Blue,
@@ -14,7 +14,7 @@ pub enum BossbarColor {
     White,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum BossbarDivisions {
     NoDivision,
     Notches6,
@@ -56,13 +56,6 @@ impl Bossbar {
     }
 }
 
-//TODO: Remove after debugging
-impl Default for Bossbar {
-    fn default() -> Self {
-        Self::new(String::from("1"))
-    }
-}
-
 /// Extension of the player to send the manage the bossbar
 impl Player {
     pub async fn send_bossbar(&self, bossbar: &Bossbar) {
@@ -98,7 +91,6 @@ impl Player {
 
         let packet = CBossEvent::new(uuid, boss_action);
         self.client.send_packet(&packet).await;
-
     }
 
     pub async fn update_bossbar_style(
