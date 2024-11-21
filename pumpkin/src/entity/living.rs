@@ -64,13 +64,13 @@ impl LivingEntity {
             .await;
     }
 
-    pub async fn damage(&self, amount: f32) {
+    // TODO add damage_type enum
+    pub async fn damage(&self, amount: f32, damage_type: u8) {
         self.entity
             .world
             .broadcast_packet_all(&CDamageEvent::new(
                 self.entity.entity_id.into(),
-                // TODO add damage_type id
-                0.into(),
+                damage_type.into(),
                 None,
                 None,
                 None,
@@ -130,7 +130,7 @@ impl LivingEntity {
                 return;
             }
 
-            self.damage(damage).await;
+            self.damage(damage, 10).await; // Fall
         } else if y_diff < 0.0 {
             self.fall_distance.store(0.0);
         } else {

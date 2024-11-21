@@ -6,20 +6,22 @@ use std::{
 pub mod player_chunker;
 
 use crate::{
-    command::{client_cmd_suggestions, dispatcher::CommandDispatcher},
+    command::client_cmd_suggestions,
     entity::{
         player::{ChunkHandleWrapper, Player},
         Entity,
     },
     error::PumpkinError,
+    server::Server,
 };
+use itertools::Itertools;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_protocol::{
-    client::play::{CBlockUpdate, CSoundEffect, CWorldEvent},
+    client::play::{CBlockUpdate, CRespawn, CSoundEffect, CWorldEvent},
     SoundCategory,
 };
 use pumpkin_protocol::{
@@ -29,6 +31,7 @@ use pumpkin_protocol::{
     },
     ClientPacket, VarInt,
 };
+use pumpkin_registry::DimensionType;
 use pumpkin_world::chunk::ChunkData;
 use pumpkin_world::level::Level;
 use pumpkin_world::{
@@ -99,17 +102,20 @@ pub struct World {
     pub scoreboard: Mutex<Scoreboard>,
     /// The world's worldborder, defining the playable area and controlling its expansion or contraction.
     pub worldborder: Mutex<Worldborder>,
+    /// The type of dimension the world is in
+    pub dimension_type: DimensionType,
     // TODO: entities
 }
 
 impl World {
     #[must_use]
-    pub fn load(level: Level) -> Self {
+    pub fn load(level: Level, dimension_type: DimensionType) -> Self {
         Self {
             level: Arc::new(level),
             current_players: Arc::new(Mutex::new(HashMap::new())),
             scoreboard: Mutex::new(Scoreboard::new()),
             worldborder: Mutex::new(Worldborder::new(0.0, 0.0, 29_999_984.0, 0, 0, 0)),
+            dimension_type,
         }
     }
 
@@ -190,8 +196,15 @@ impl World {
         &self,
         base_config: &BasicConfiguration,
         player: Arc<Player>,
-        command_dispatcher: &CommandDispatcher<'_>,
+        server: &Server,
     ) {
+        let command_dispatcher = &server.command_dispatcher;
+        let dimensions = &server
+            .dimensions
+            .iter()
+            .map(DimensionType::name)
+            .collect_vec();
+
         // This code follows the vanilla packet order
         let entity_id = player.entity_id();
         let gamemode = player.gamemode.load();
@@ -207,15 +220,15 @@ impl World {
             .send_packet(&CLogin::new(
                 entity_id,
                 base_config.hardcore,
-                &["minecraft:overworld"],
+                dimensions,
                 base_config.max_players.into(),
                 base_config.view_distance.into(), //  TODO: view distance
                 base_config.simulation_distance.into(), // TODO: sim view dinstance
                 false,
                 true,
                 false,
-                0.into(),
-                "minecraft:overworld",
+                (self.dimension_type as u8).into(),
+                self.dimension_type.name(),
                 0, // seed
                 gamemode as u8,
                 base_config.default_gamemode as i8,
@@ -374,6 +387,106 @@ impl World {
 
         // Spawn in initial chunks
         player_chunker::player_join(self, player.clone()).await;
+    }
+
+    pub async fn respawn_player(&self, player: &Arc<Player>, alive: bool) {
+        let last_pos = player.living_entity.last_pos.load();
+        let death_dimension = player.world().dimension_type.name();
+        let death_location = WorldPosition(Vector3::new(
+            last_pos.x.round() as i32,
+            last_pos.y.round() as i32,
+            last_pos.z.round() as i32,
+        ));
+
+        let data_kept = u8::from(alive);
+
+        // TODO: switch world in player entity to new world
+
+        player
+            .client
+            .send_packet(&CRespawn::new(
+                (self.dimension_type as u8).into(),
+                self.dimension_type.name(),
+                0, // seed
+                player.gamemode.load() as u8,
+                player.gamemode.load() as i8,
+                false,
+                false,
+                Some((death_dimension, death_location)),
+                0.into(),
+                0.into(),
+                data_kept,
+            ))
+            .await;
+
+        log::debug!("Sending player abilities to {}", player.gameprofile.name);
+        player.send_abilties_update().await;
+
+        player.send_permission_lvl_update().await;
+
+        // teleport
+        let mut position = Vector3::new(10.0, 120.0, 10.0);
+        let yaw = 10.0;
+        let pitch = 10.0;
+
+        let top = self
+            .get_top_block(Vector2::new(position.x as i32, position.z as i32))
+            .await;
+        position.y = f64::from(top + 1);
+
+        log::debug!("Sending player teleport to {}", player.gameprofile.name);
+        player.teleport(position, yaw, pitch).await;
+
+        player.living_entity.last_pos.store(position);
+
+        // TODO: difficulty, exp bar, status effect
+
+        self.worldborder
+            .lock()
+            .await
+            .init_client(&player.client)
+            .await;
+
+        // TODO: world spawn (compass stuff)
+
+        player
+            .client
+            .send_packet(&CGameEvent::new(GameEvent::StartWaitingChunks, 0.0))
+            .await;
+
+        let entity = &player.living_entity.entity;
+        let entity_id = entity.entity_id;
+
+        let skin_parts = player.config.lock().await.skin_parts;
+        let entity_metadata_packet =
+            CSetEntityMetadata::new(entity_id.into(), Metadata::new(17, VarInt(0), &skin_parts));
+
+        self.broadcast_packet_except(
+            &[player.gameprofile.id],
+            // TODO: add velo
+            &CSpawnEntity::new(
+                entity.entity_id.into(),
+                player.gameprofile.id,
+                (EntityType::Player as i32).into(),
+                position.x,
+                position.y,
+                position.z,
+                pitch,
+                yaw,
+                yaw,
+                0.into(),
+                0.0,
+                0.0,
+                0.0,
+            ),
+        )
+        .await;
+
+        player_chunker::player_join(self, player.clone()).await;
+        self.broadcast_packet_all(&entity_metadata_packet).await;
+        // update commands
+
+        player.set_health(20.0, 20, 20.0).await;
     }
 
     pub fn mark_chunks_as_not_watched(&self, chunks: &[Vector2<i32>]) -> Vec<Vector2<i32>> {
