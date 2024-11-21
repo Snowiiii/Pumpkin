@@ -123,7 +123,8 @@ trait LoadConfiguration {
     where
         Self: Sized + Default + Serialize + DeserializeOwned,
     {
-        let path = Self::get_path();
+        let path_string = Self::get_path();
+        let path = Path::new(&path_string);
 
         let config = if path.exists() {
             let file_content = fs::read_to_string(path)
@@ -131,7 +132,7 @@ trait LoadConfiguration {
 
             toml::from_str(&file_content).unwrap_or_else(|err| {
                 panic!(
-                    "Couldn't parse config at {:?}. Reason: {}. This is is proberbly caused by an Config update, Just delete the old Config and start Pumpkin again",
+                    "Couldn't parse config at {:?}. Reason: {}. This is probably caused by a Config update, just delete the old Config and start Pumpkin again",
                     path,
                     err.message()
                 )
@@ -141,7 +142,7 @@ trait LoadConfiguration {
 
             if let Err(err) = fs::write(path, toml::to_string(&content).unwrap()) {
                 warn!(
-                    "Couldn't write default config to {:?}. Reason: {}. This is is proberbly caused by an Config update, Just delete the old Config and start Pumpkin again",
+                    "Couldn't write default config to {:?}. Reason: {}. This is probably caused by a Config update, just delete the old Config and start Pumpkin again",
                     path, err
                 );
             }
@@ -153,17 +154,14 @@ trait LoadConfiguration {
         config
     }
 
-    fn get_path() -> &'static Path;
+    fn get_path() -> String;
 
     fn validate(&self);
 }
 
 impl LoadConfiguration for AdvancedConfiguration {
-    fn get_path() -> &'static Path {
-        match env::var("FEATURES") {
-            Ok(v) => Path::new(v.leak()),
-            Err(_) => Path::new("features.toml"),
-        }
+    fn get_path() -> String {
+        env::var("FEATURES_PATH").unwrap_or(String::from("features.toml"))
     }
 
     fn validate(&self) {
@@ -172,11 +170,8 @@ impl LoadConfiguration for AdvancedConfiguration {
 }
 
 impl LoadConfiguration for BasicConfiguration {
-    fn get_path() -> &'static Path {
-        match env::var("CONFIG") {
-            Ok(v) => Path::new(v.leak()),
-            Err(_) => Path::new("configuration.toml"),
-        }
+    fn get_path() -> String {
+        env::var("CONFIGURATION_PATH").unwrap_or(String::from("configuration.toml"))
     }
 
     fn validate(&self) {
