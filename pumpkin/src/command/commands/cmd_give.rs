@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use pumpkin_core::text::color::{Color, NamedColor};
 use pumpkin_core::text::TextComponent;
+use std::sync::Arc;
 
 use crate::command::args::arg_bounded_num::BoundedNumArgumentConsumer;
 use crate::command::args::arg_item::ItemArgumentConsumer;
@@ -29,7 +30,7 @@ impl CommandExecutor for GiveExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        _server: &Arc<crate::server::Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let targets = PlayersArgumentConsumer.find_arg_default_name(args)?;

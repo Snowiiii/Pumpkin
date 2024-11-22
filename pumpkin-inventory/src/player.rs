@@ -1,6 +1,7 @@
 use crate::container_click::MouseClick;
 use crate::crafting::check_if_matches_crafting;
 use crate::{handle_item_change, Container, InventoryError, WindowType};
+use itertools::Itertools;
 use pumpkin_world::item::ItemStack;
 use std::iter::Chain;
 use std::slice::IterMut;
@@ -13,7 +14,7 @@ pub struct PlayerInventory {
     armor: [Option<ItemStack>; 4],
     offhand: Option<ItemStack>,
     // current selected slot in hotbar
-    selected: usize,
+    pub selected: usize,
     pub state_id: u32,
     // Notchian server wraps this value at 100, we can just keep it as a u8 that automatically wraps
     pub total_opened_containers: i32,
@@ -126,6 +127,14 @@ impl PlayerInventory {
         slots.extend(self.items.iter().map(|c| c.as_ref()));
         slots.push(self.offhand.as_ref());
         slots
+    }
+
+    pub fn hotbar_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
+        self.items.iter_mut().skip(27).collect_vec()
+    }
+
+    pub fn main_inventory_mut(&mut self) -> Vec<&mut Option<ItemStack>> {
+        self.items.iter_mut().take(27).collect_vec()
     }
 
     pub fn slots_mut(&mut self) -> Vec<&mut Option<ItemStack>> {

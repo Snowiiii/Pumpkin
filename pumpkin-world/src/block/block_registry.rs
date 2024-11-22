@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
+use crate::item::ItemStack;
 use serde::Deserialize;
 
 pub static BLOCKS: LazyLock<TopLevel> = LazyLock::new(|| {
@@ -100,6 +101,12 @@ pub struct Block {
     pub properties: Vec<Property>,
     pub default_state_id: u16,
     pub states: Vec<State>,
+}
+
+impl Block {
+    pub fn to_item(&self, count: u8) -> ItemStack {
+        ItemStack::new(count, self.item_id)
+    }
 }
 #[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]

@@ -65,6 +65,16 @@ impl BoundingBox {
         let f = f64::max(f64::max(self.min_z - pos.z, pos.z - self.max_z), 0.0);
         super::squared_magnitude(d, e, f)
     }
+
+    pub fn offset(&mut self, vector3: Vector3<f64>) {
+        self.min_x += vector3.x;
+        self.min_y += vector3.y;
+        self.min_z += vector3.z;
+
+        self.max_x += vector3.x;
+        self.max_y += vector3.y;
+        self.max_z += vector3.z;
+    }
 }
 
 #[derive(Clone, Copy)]

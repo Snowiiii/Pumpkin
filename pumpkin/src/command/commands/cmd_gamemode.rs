@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use std::sync::Arc;
 
 use crate::command::args::arg_gamemode::GamemodeArgumentConsumer;
 use crate::command::args::GetCloned;
@@ -31,7 +32,7 @@ impl CommandExecutor for GamemodeTargetSelf {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        _server: &Server,
+        _server: &Arc<Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let Some(Arg::GameMode(gamemode)) = args.get_cloned(&ARG_GAMEMODE) else {
@@ -67,7 +68,7 @@ impl CommandExecutor for GamemodeTargetPlayer {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        _server: &Server,
+        _server: &Arc<Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let Some(Arg::GameMode(gamemode)) = args.get_cloned(&ARG_GAMEMODE) else {

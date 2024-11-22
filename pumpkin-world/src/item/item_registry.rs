@@ -12,6 +12,10 @@ pub fn get_item(name: &str) -> Option<&Item> {
     ITEMS.get(name)
 }
 
+pub fn get_item_by_id(id: u16) -> Option<&'static Item> {
+    ITEMS.values().find(|item| item.id == id)
+}
+
 #[derive(Deserialize, Clone, Debug)]
 pub struct Item {
     pub id: u16,

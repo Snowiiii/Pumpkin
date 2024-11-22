@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
+use std::sync::Arc;
 
 use crate::command::args::arg_players::PlayersArgumentConsumer;
 use crate::command::args::{Arg, ConsumedArgs};
@@ -22,7 +23,7 @@ impl CommandExecutor for KickExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        _server: &Arc<crate::server::Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let Some(Arg::Players(targets)) = args.get(&ARG_TARGET) else {

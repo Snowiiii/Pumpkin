@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::client::play::CSystemChatMessage;
+use std::sync::Arc;
 
 use crate::{
     command::{
@@ -26,7 +27,7 @@ impl CommandExecutor for SayExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        server: &crate::server::Server,
+        server: &Arc<crate::server::Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let Some(Arg::Msg(msg)) = args.get(ARG_MESSAGE) else {

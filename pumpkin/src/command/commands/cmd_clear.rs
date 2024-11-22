@@ -63,7 +63,7 @@ impl CommandExecutor for ClearExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        _server: &Arc<crate::server::Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let Some(Arg::Entities(targets)) = args.get(&ARG_TARGET) else {
@@ -90,7 +90,7 @@ impl CommandExecutor for ClearSelfExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        _server: &Arc<crate::server::Server>,
         _args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let target = sender.as_player().ok_or(CommandError::InvalidRequirement)?;

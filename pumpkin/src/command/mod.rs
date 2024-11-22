@@ -98,7 +98,7 @@ impl<'a> CommandSender<'a> {
     }
 
     #[must_use]
-    pub fn world(&self) -> Option<&World> {
+    pub fn world(&self) -> Option<&Arc<World>> {
         match self {
             // TODO: maybe return first world when console
             CommandSender::Console | CommandSender::Rcon(..) => None,
@@ -138,7 +138,7 @@ pub(crate) trait CommandExecutor: Sync {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        server: &Server,
+        server: &Arc<Server>,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError>;
 }

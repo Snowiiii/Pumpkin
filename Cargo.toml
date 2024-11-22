@@ -52,3 +52,6 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 itertools = "0.13.0"
+
+[profile.dev]
+opt-level = 2

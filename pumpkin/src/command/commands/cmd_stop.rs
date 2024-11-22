@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
+use std::sync::Arc;
 
 use crate::command::args::ConsumedArgs;
 use crate::command::tree::CommandTree;
@@ -19,7 +20,7 @@ impl CommandExecutor for StopExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        server: &crate::server::Server,
+        server: &Arc<crate::server::Server>,
         _args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         sender

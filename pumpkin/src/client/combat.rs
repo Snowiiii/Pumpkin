@@ -78,12 +78,7 @@ pub async fn handle_knockback(
     let entity_id = VarInt(victim_entity.entity_id);
     let victim_velocity = victim_entity.velocity.load();
 
-    let packet = &CEntityVelocity::new(
-        &entity_id,
-        victim_velocity.x as f32,
-        victim_velocity.y as f32,
-        victim_velocity.z as f32,
-    );
+    let packet = &CEntityVelocity::new(&entity_id, victim_velocity);
     let velocity = attacker_entity.velocity.load();
     attacker_entity
         .velocity
