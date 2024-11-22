@@ -10,6 +10,7 @@ pub struct CTransfer<'a> {
 }
 
 impl<'a> CTransfer<'a> {
+    #[expect(dead_code)]
     pub fn new(host: &'a str, port: &'a VarInt) -> Self {
         Self { host, port }
     }

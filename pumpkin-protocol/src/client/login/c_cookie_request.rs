@@ -1,6 +1,6 @@
+use crate::Identifier;
 use pumpkin_macros::client_packet;
 use serde::Serialize;
-use crate::Identifier;
 
 #[derive(Serialize)]
 #[client_packet("login:cookie_request")]

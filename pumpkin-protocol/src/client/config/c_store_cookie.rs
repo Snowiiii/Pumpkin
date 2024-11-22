@@ -9,11 +9,12 @@ use crate::{Identifier, VarInt};
 pub struct CCookieRequest {
     key: Identifier,
     payload_length: VarInt,
-    payload: [u8; 5120]
+    payload: Vec<u8>, // 5120,
 }
 
 impl CCookieRequest {
-    pub fn new(key: Identifier, payload_length: VarInt, payload: [u8; 5120]) -> Self {
+    #[expect(dead_code)]
+    pub fn new(key: Identifier, payload_length: VarInt, payload: Vec<u8>) -> Self {
         Self {
             key,
             payload_length,

@@ -6,7 +6,7 @@ use serde::Serialize;
 #[client_packet("play:cookie_request")]
 /// Requests a cookie that was previously stored.
 pub struct CCookieRequest<'a> {
-    key: &'a Identifier
+    key: &'a Identifier,
 }
 
 impl<'a> CCookieRequest<'a> {
