@@ -16,9 +16,11 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_inventory::{InventoryError, WindowType};
+use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
 use pumpkin_protocol::{
     client::play::CCommandSuggestions,
     server::play::{SCloseContainer, SCommandSuggestion, SKeepAlive, SSetPlayerGround, SUseItem},
+    VarInt,
 };
 use pumpkin_protocol::{
     client::play::{
@@ -750,5 +752,16 @@ impl Player {
         );
 
         self.client.send_packet(&response).await;
+    }
+
+    #[expect(clippy::unused_async)]
+    pub async fn handle_cookie_response(&self, packet: SPCookieResponse) {
+        // TODO: allow plugins to access this
+        log::debug!(
+            "Received cookie_response[play]: key: \"{}\", has_payload: \"{}\", payload_length: \"{}\"",
+            packet.key,
+            packet.has_payload,
+            packet.payload_length.unwrap_or(VarInt::from(0)).0
+        );
     }
 }

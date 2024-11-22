@@ -15,3 +15,5 @@ pub use c_finish_config::*;
 pub use c_known_packs::*;
 pub use c_plugin_message::*;
 pub use c_registry_data::*;
+pub use c_store_cookie::*;
+pub use c_transfer::*;

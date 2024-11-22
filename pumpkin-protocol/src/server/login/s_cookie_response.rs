@@ -13,6 +13,8 @@ pub struct SCookieResponse {
     pub payload: Option<Vec<u8>>, // 5120,
 }
 
+const MAX_PAYLOAD_SIZE: i32 = 5120;
+
 impl ServerPacket for SCookieResponse {
     fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError> {
         let key = bytebuf.get_string()?;
@@ -27,22 +29,16 @@ impl ServerPacket for SCookieResponse {
             });
         }
 
-        let payload_length = bytebuf
-            .get_option(|v| v.get_var_int())?
-            .ok_or_else(|| de::Error::custom("Failed to parse payload length"))?;
-
+        let payload_length = bytebuf.get_var_int()?;
         let length = payload_length.0;
 
-        if length > 5120 {
+        if length > MAX_PAYLOAD_SIZE {
             return Err(de::Error::custom(
                 "Payload exceeds the maximum allowed size (5120 bytes)",
             ));
         }
 
-        let payload = bytebuf
-            .get_option(|v| v.copy_to_bytes(length as usize))?
-            .ok_or_else(|| de::Error::custom("Payload missing"))?
-            .to_vec();
+        let payload = bytebuf.copy_to_bytes(length as usize)?.to_vec();
 
         Ok(Self {
             key,

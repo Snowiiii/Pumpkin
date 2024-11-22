@@ -5,12 +5,12 @@ use serde::Serialize;
 #[derive(Serialize)]
 #[client_packet("login:cookie_request")]
 /// Requests a cookie that was previously stored.
-pub struct CCookieRequest {
-    key: Identifier,
+pub struct CCookieRequest<'a> {
+    key: &'a Identifier,
 }
 
-impl CCookieRequest {
-    pub fn new(key: Identifier) -> Self {
+impl<'a> CCookieRequest<'a> {
+    pub fn new(key: &'a Identifier) -> Self {
         Self { key }
     }
 }

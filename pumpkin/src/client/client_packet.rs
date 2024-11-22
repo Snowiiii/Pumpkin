@@ -1,6 +1,17 @@
+use crate::{
+    client::authentication::{self, offline_uuid, validate_textures, GameProfile},
+    entity::player::{ChatMode, Hand},
+    proxy::{
+        bungeecord,
+        velocity::{self, velocity_login},
+    },
+    server::{Server, CURRENT_MC_VERSION},
+};
 use num_traits::FromPrimitive;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::TextComponent;
+use pumpkin_protocol::server::config::SCookieResponse as SCCookieResponse;
+use pumpkin_protocol::server::login::SCookieResponse as SLCookieResponse;
 use pumpkin_protocol::{
     client::{
         config::{CConfigAddResourcePack, CFinishConfig, CKnownPacks, CRegistryData},
@@ -13,19 +24,9 @@ use pumpkin_protocol::{
         login::{SEncryptionResponse, SLoginPluginResponse, SLoginStart},
         status::SStatusPingRequest,
     },
-    ConnectionState, KnownPack, CURRENT_MC_PROTOCOL,
+    ConnectionState, KnownPack, VarInt, CURRENT_MC_PROTOCOL,
 };
 use uuid::Uuid;
-
-use crate::{
-    client::authentication::{self, offline_uuid, validate_textures, GameProfile},
-    entity::player::{ChatMode, Hand},
-    proxy::{
-        bungeecord,
-        velocity::{self, velocity_login},
-    },
-    server::{Server, CURRENT_MC_VERSION},
-};
 
 use super::{authentication::AuthError, Client, PlayerConfig};
 
@@ -251,6 +252,17 @@ impl Client {
         Err(AuthError::MissingAuthClient)
     }
 
+    #[expect(clippy::unused_async)]
+    pub async fn handle_login_cookie_response(&self, packet: SLCookieResponse) {
+        // TODO: allow plugins to access this
+        log::debug!(
+            "Received cookie_response[login]: key: \"{}\", has_payload: \"{}\", payload_length: \"{}\"",
+            packet.key,
+            packet.has_payload,
+            packet.payload_length.unwrap_or(VarInt::from(0)).0
+        );
+    }
+
     pub async fn handle_plugin_response(&self, plugin_response: SLoginPluginResponse) {
         log::debug!("Handling plugin");
         let velocity_config = &ADVANCED_CONFIG.proxy.velocity;
@@ -340,6 +352,17 @@ impl Client {
                 Err(e) => self.kick(&e.to_string()).await,
             }
         }
+    }
+
+    #[expect(clippy::unused_async)]
+    pub async fn handle_config_cookie_response(&self, packet: SCCookieResponse) {
+        // TODO: allow plugins to access this
+        log::debug!(
+            "Received cookie_response[config]: key: \"{}\", has_payload: \"{}\", payload_length: \"{}\"",
+            packet.key,
+            packet.has_payload,
+            packet.payload_length.unwrap_or(VarInt::from(0)).0
+        );
     }
 
     pub async fn handle_known_packs(&self, server: &Server, _config_acknowledged: SKnownPacks) {
