@@ -6,11 +6,7 @@ use crate::{SoundCategory, VarInt};
 #[derive(Serialize)]
 #[client_packet("play:sound_entity")]
 pub struct CEntitySoundEffect {
-    sound_id: VarInt,
-    // TODO: add sound from name
-    // sound_name: Option<&'a str>,
-    // has_fixed_range: Option<bool>,
-    // range: Option<f32>,
+    sound_event: VarInt,
     sound_category: VarInt,
     entity_id: VarInt,
     volume: f32,
@@ -20,7 +16,7 @@ pub struct CEntitySoundEffect {
 
 impl CEntitySoundEffect {
     pub fn new(
-        sound_id: VarInt,
+        sound_event: VarInt,
         sound_category: SoundCategory,
         entity_id: VarInt,
         volume: f32,
@@ -28,7 +24,7 @@ impl CEntitySoundEffect {
         seed: f64,
     ) -> Self {
         Self {
-            sound_id: VarInt(sound_id.0 + 1),
+            sound_event: VarInt(sound_event.0 + 1),
             sound_category: VarInt(sound_category as i32),
             entity_id,
             volume,
