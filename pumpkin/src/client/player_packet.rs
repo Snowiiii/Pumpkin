@@ -57,8 +57,7 @@ impl std::fmt::Display for BlockPlacingError {
 impl PumpkinError for BlockPlacingError {
     fn is_kick(&self) -> bool {
         match self {
-            Self::BlockOutOfReach => false,
-            Self::BlockOutOfWold => false,
+            Self::BlockOutOfReach | Self::BlockOutOfWold => false,
             Self::InvalidBlockFace => true,
         }
     }
@@ -73,8 +72,7 @@ impl PumpkinError for BlockPlacingError {
 
     fn client_kick_reason(&self) -> Option<String> {
         match self {
-            Self::BlockOutOfReach => None,
-            Self::BlockOutOfWold => None,
+            Self::BlockOutOfReach | Self::BlockOutOfWold => None,
             Self::InvalidBlockFace => Some("Invalid block face".into()),
         }
     }
