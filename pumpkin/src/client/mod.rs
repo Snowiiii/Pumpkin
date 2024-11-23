@@ -435,8 +435,7 @@ impl Client {
                 self.handle_login_acknowledged(server).await;
             }
             SLCookieResponse::PACKET_ID => {
-                self.handle_login_cookie_response(SLCookieResponse::read(bytebuf)?)
-                    .await;
+                self.handle_login_cookie_response(SLCookieResponse::read(bytebuf)?);
             }
             _ => {
                 log::error!(
@@ -473,8 +472,7 @@ impl Client {
                     .await;
             }
             SCCookieResponse::PACKET_ID => {
-                self.handle_config_cookie_response(SCCookieResponse::read(bytebuf)?)
-                    .await;
+                self.handle_config_cookie_response(SCCookieResponse::read(bytebuf)?);
             }
             _ => {
                 log::error!(

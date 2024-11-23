@@ -252,8 +252,7 @@ impl Client {
         Err(AuthError::MissingAuthClient)
     }
 
-    #[expect(clippy::unused_async)]
-    pub async fn handle_login_cookie_response(&self, packet: SLCookieResponse) {
+    pub fn handle_login_cookie_response(&self, packet: SLCookieResponse) {
         // TODO: allow plugins to access this
         log::debug!(
             "Received cookie_response[login]: key: \"{}\", has_payload: \"{}\", payload_length: \"{}\"",
@@ -354,8 +353,7 @@ impl Client {
         }
     }
 
-    #[expect(clippy::unused_async)]
-    pub async fn handle_config_cookie_response(&self, packet: SCCookieResponse) {
+    pub fn handle_config_cookie_response(&self, packet: SCCookieResponse) {
         // TODO: allow plugins to access this
         log::debug!(
             "Received cookie_response[config]: key: \"{}\", has_payload: \"{}\", payload_length: \"{}\"",

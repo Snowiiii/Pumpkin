@@ -796,8 +796,7 @@ impl Player {
                     .await;
             }
             SPCookieResponse::PACKET_ID => {
-                self.handle_cookie_response(SPCookieResponse::read(bytebuf)?)
-                    .await;
+                self.handle_cookie_response(SPCookieResponse::read(bytebuf)?);
             }
             _ => {
                 log::warn!("Failed to handle player packet id {}", packet.id.0);
