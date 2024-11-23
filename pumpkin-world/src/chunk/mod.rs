@@ -181,8 +181,8 @@ impl ChunkBlocks {
     }
 
     /// Gets the given block in the chunk
-    pub fn get_block(&self, position: ChunkRelativeBlockCoordinates) -> u16 {
-        self.blocks[Self::convert_index(position)]
+    pub fn get_block(&self, position: ChunkRelativeBlockCoordinates) -> Option<u16> {
+        self.blocks.get(Self::convert_index(position)).copied()
     }
 
     /// Sets the given block in the chunk, returning the old block

@@ -1,35 +1,25 @@
-use std::sync::LazyLock;
+use std::{collections::HashMap, sync::LazyLock};
 
 use serde::Deserialize;
 
 const ITEMS_JSON: &str = include_str!("../../../assets/items.json");
 
-pub static ITEMS: LazyLock<Vec<Item>> = LazyLock::new(|| {
+pub static ITEMS: LazyLock<HashMap<String, Item>> = LazyLock::new(|| {
     serde_json::from_str(ITEMS_JSON).expect("Could not parse items.json registry.")
 });
 
-pub fn get_item<'a>(name: &str) -> Option<&'a Item> {
-    ITEMS.iter().find(|item| item.name == name)
+pub fn get_item(name: &str) -> Option<&Item> {
+    ITEMS.get(name)
 }
 
-#[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
 pub struct Item {
     pub id: u16,
-    pub name: String,
-    translation_key: String,
-    pub max_stack: i8,
-    max_durability: u16,
-    break_sound: String,
-    food: Option<FoodComponent>,
+    pub components: ItemComponents,
 }
 
-#[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
-struct FoodComponent {
-    hunger: u16,
-    saturation: f32,
-    always_edible: bool,
-    meat: bool,
-    snack: bool,
+pub struct ItemComponents {
+    #[serde(rename = "minecraft:max_stack_size")]
+    pub max_stack_size: u8,
 }

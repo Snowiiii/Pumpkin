@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 pumpkin-core = { path = "../pumpkin-core" }
+pumpkin-config = { path = "../pumpkin-config" }
 pumpkin-macros = { path = "../pumpkin-macros" }
 
 tokio.workspace = true

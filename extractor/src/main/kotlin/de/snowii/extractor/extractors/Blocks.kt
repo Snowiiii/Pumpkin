@@ -30,6 +30,7 @@ class Blocks : Extractor.Extractor {
             blockJson.addProperty("id", Registries.BLOCK.getRawId(block))
             blockJson.addProperty("name", Registries.BLOCK.getId(block).toString())
             blockJson.addProperty("translation_key", block.translationKey)
+            blockJson.addProperty("hardness", block.hardness)
             blockJson.addProperty("item_id", Registries.ITEM.getRawId(block.asItem()))
 
             val propsJson = JsonArray()
@@ -69,9 +70,7 @@ class Blocks : Extractor.Extractor {
 
                 val collisionShapeIdxsJson = JsonArray()
                 for (box in state.getCollisionShape(EmptyBlockView.INSTANCE, BlockPos.ORIGIN).boundingBoxes) {
-                    val collisionShape = Box(box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ)
-
-                    val idx = shapes.putIfAbsent(collisionShape, shapes.size)
+                    val idx = shapes.putIfAbsent(box, shapes.size)
                     collisionShapeIdxsJson.add(Objects.requireNonNullElseGet(idx) { shapes.size - 1 })
                 }
 

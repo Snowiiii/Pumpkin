@@ -37,7 +37,7 @@ tokio = { version = "1.41", features = [
     "signal",
 ] }
 
-thiserror = "1.0"
+thiserror = "2"
 num-traits = "0.2"
 num-derive = "0.4"
 

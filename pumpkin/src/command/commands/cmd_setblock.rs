@@ -43,6 +43,7 @@ impl CommandExecutor for SetblockExecutor {
         let block_state_id = block.default_state_id;
         let pos = BlockPosArgumentConsumer::find_arg(args, ARG_BLOCK_POS)?;
         let mode = self.0;
+        // TODO: allow console to use the command (seed sender.world)
         let world = sender.world().ok_or(CommandError::InvalidRequirement)?;
 
         let success = match mode {
@@ -56,11 +57,12 @@ impl CommandExecutor for SetblockExecutor {
                 true
             }
             Mode::Keep => match world.get_block_state(pos).await {
-                Some(old_state) if old_state.air => {
+                Ok(old_state) if old_state.air => {
                     world.set_block_state(pos, block_state_id).await;
                     true
                 }
-                _ => false,
+                Ok(_) => false,
+                Err(e) => return Err(CommandError::OtherPumpkin(e.into())),
             },
         };
 

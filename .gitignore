@@ -106,6 +106,9 @@ Cargo.lock
 plugins/*
 world/*
 
+# docker-compose
+data/*
+
 # project's configurations
 configuration.toml
 features.toml
