@@ -18,7 +18,7 @@ pub fn get_state_by_state_id<'a>(id: u16) -> Option<&'a State> {
 
 pub fn get_block_by_state_id<'a>(id: u16) -> Option<&'a Block> {
     let state = get_state_by_state_id(id)?;
-    Some(get_block_by_id(state.block_id)?)
+    get_block_by_id(state.block_id)
 }
 
 pub fn get_block_and_state_by_state_id<'a>(id: u16) -> Option<(&'a Block, &'a State)> {

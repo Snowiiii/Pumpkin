@@ -67,12 +67,10 @@ static BLOCKS: LazyLock<JsonTopLevel> = LazyLock::new(|| {
 });
 
 pub(crate) fn include_blocks_impl(_item: TokenStream) -> TokenStream {
-
     let mut blocks = Vec::with_capacity(BLOCKS.blocks.len());
     let mut all_states = Vec::new();
 
     for block in &BLOCKS.blocks {
-
         let id = block.id;
         let item_id = block.item_id;
         let hardness = block.hardness;
@@ -86,7 +84,6 @@ pub(crate) fn include_blocks_impl(_item: TokenStream) -> TokenStream {
         };
 
         let properties = block.properties.iter().map(|p| {
-
             let p_name = &p.name;
             let p_values = &p.values;
 
@@ -99,7 +96,6 @@ pub(crate) fn include_blocks_impl(_item: TokenStream) -> TokenStream {
         });
 
         let state_indices = block.states.iter().map(|s| {
-
             let s_id = s.id;
             let s_air = s.air;
             let s_luminance = s.luminance;
@@ -153,7 +149,7 @@ pub(crate) fn include_blocks_impl(_item: TokenStream) -> TokenStream {
     let block_count = blocks.len();
     let state_count = all_states.len();
 
-    let quote = quote::quote! { 
+    let quote = quote::quote! {
         pub static BLOCKS: [pumpkin_core::registries::blocks::Block; #block_count ] = [ #(#blocks),* ];
         pub static BLOCK_STATES: [pumpkin_core::registries::blocks::State; #state_count ] = [ #(#all_states),* ];
     };

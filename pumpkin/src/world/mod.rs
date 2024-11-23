@@ -14,9 +14,12 @@ use crate::{
     error::PumpkinError,
 };
 use pumpkin_config::BasicConfiguration;
-use pumpkin_core::{math::vector2::Vector2, registries::blocks::{Block, State}};
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
+use pumpkin_core::{
+    math::vector2::Vector2,
+    registries::blocks::{Block, State},
+};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_protocol::{
     client::play::{CBlockUpdate, CSoundEffect, CWorldEvent},
@@ -697,19 +700,13 @@ impl World {
     }
 
     /// Gets the Block from the Block Registry, Returns None if the Block has not been found
-    pub async fn get_block(
-        &self,
-        position: WorldPosition,
-    ) -> Result<&Block, GetBlockError> {
+    pub async fn get_block(&self, position: WorldPosition) -> Result<&Block, GetBlockError> {
         let id = self.get_block_state_id(position).await?;
         get_block_by_state_id(id).ok_or(GetBlockError::InvalidBlockId)
     }
 
     /// Gets the Block state from the Block Registry, Returns None if the Block state has not been found
-    pub async fn get_block_state(
-        &self,
-        position: WorldPosition,
-    ) -> Result<&State, GetBlockError> {
+    pub async fn get_block_state(&self, position: WorldPosition) -> Result<&State, GetBlockError> {
         let id = self.get_block_state_id(position).await?;
         get_state_by_state_id(id).ok_or(GetBlockError::InvalidBlockId)
     }
@@ -718,13 +715,7 @@ impl World {
     pub async fn get_block_and_block_state(
         &self,
         position: WorldPosition,
-    ) -> Result<
-        (
-            &Block,
-            &State,
-        ),
-        GetBlockError,
-    > {
+    ) -> Result<(&Block, &State), GetBlockError> {
         let id = self.get_block_state_id(position).await?;
         get_block_and_state_by_state_id(id).ok_or(GetBlockError::InvalidBlockId)
     }
