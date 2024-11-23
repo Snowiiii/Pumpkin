@@ -1,3 +1,4 @@
+use num_traits::ToPrimitive;
 use crate::{Identifier, VarInt};
 use pumpkin_macros::client_packet;
 use serde::Serialize;
@@ -16,7 +17,7 @@ impl<'a> CStoreCookie<'a> {
     pub fn new(key: &'a Identifier, payload: &'a Vec<u8>) -> Self {
         Self {
             key,
-            payload_length: &VarInt::from(payload.len()),
+            payload_length: &VarInt(payload.len() as i32),
             payload,
         }
     }
