@@ -1,4 +1,3 @@
-use num_traits::ToPrimitive;
 use crate::{Identifier, VarInt};
 use pumpkin_macros::client_packet;
 use serde::Serialize;
@@ -9,15 +8,15 @@ use serde::Serialize;
 #[client_packet("play:store_cookie")]
 pub struct CStoreCookie<'a> {
     key: &'a Identifier,
-    payload_length: &'a VarInt,
-    payload: &'a Vec<u8>, // 5120,
+    payload_length: VarInt,
+    payload: &'a [u8], // 5120,
 }
 
 impl<'a> CStoreCookie<'a> {
-    pub fn new(key: &'a Identifier, payload: &'a Vec<u8>) -> Self {
+    pub fn new(key: &'a Identifier, payload: &'a [u8]) -> Self {
         Self {
             key,
-            payload_length: &VarInt(payload.len() as i32),
+            payload_length: VarInt(payload.len() as i32),
             payload,
         }
     }

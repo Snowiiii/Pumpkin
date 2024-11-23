@@ -24,7 +24,6 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
-use pumpkin_protocol::client::play::{CSetEntityMetadata, Metadata};
 use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
 use pumpkin_protocol::server::play::{SClickContainer, SKeepAlive};
 use pumpkin_protocol::{
