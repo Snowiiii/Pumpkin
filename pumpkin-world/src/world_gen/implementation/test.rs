@@ -1,4 +1,7 @@
-use std::{num::Wrapping, ops::SubAssign};
+use std::{
+    num::Wrapping,
+    ops::{AddAssign, SubAssign},
+};
 
 use dashmap::{DashMap, Entry};
 use num_traits::Zero;
@@ -110,13 +113,19 @@ impl GeneratorInit for TestTerrainGenerator {
 impl TerrainGenerator for TestTerrainGenerator {
     fn prepare_chunk(&self, at: &Vector2<i32>) {
         let entry = self.chunks.entry(*at);
-        if let Entry::Vacant(entry) = entry {
-            let mut proto_chunk = ProtoChunk::new(*at, self.seed.0 as u64);
-            //let inst = std::time::Instant::now();
-            //println!("Populating chunk: {:?}", at);
-            proto_chunk.populate_noise();
-            //println!("Done populating chunk: {:?} ({:?})", at, inst.elapsed());
-            entry.insert((proto_chunk, Wrapping(1)));
+        match entry {
+            Entry::Vacant(entry) => {
+                let mut proto_chunk = ProtoChunk::new(*at, self.seed.0 as u64);
+                //let inst = std::time::Instant::now();
+                //println!("Populating chunk: {:?}", at);
+                proto_chunk.populate_noise();
+                //println!("Done populating chunk: {:?} ({:?})", at, inst.elapsed());
+                entry.insert((proto_chunk, Wrapping(1)));
+            }
+            Entry::Occupied(mut entry) => {
+                let (_, count) = entry.get_mut();
+                count.add_assign(1);
+            }
         }
     }
 
