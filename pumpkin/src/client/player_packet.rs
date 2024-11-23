@@ -45,6 +45,7 @@ fn modulus(a: f32, b: f32) -> f32 {
 pub enum BlockPlacingError {
     BlockOutOfReach,
     InvalidBlockFace,
+    BlockOutOfWold
 }
 
 impl std::fmt::Display for BlockPlacingError {
@@ -57,19 +58,21 @@ impl PumpkinError for BlockPlacingError {
     fn is_kick(&self) -> bool {
         match self {
             Self::BlockOutOfReach => false,
+            Self::BlockOutOfWold => false,
             Self::InvalidBlockFace => true,
         }
     }
 
     fn severity(&self) -> log::Level {
         match self {
-            Self::BlockOutOfReach | Self::InvalidBlockFace => log::Level::Warn,
+            Self::BlockOutOfReach | Self::BlockOutOfWold | Self::InvalidBlockFace => log::Level::Warn,
         }
     }
 
     fn client_kick_reason(&self) -> Option<String> {
         match self {
             Self::BlockOutOfReach => None,
+            Self::BlockOutOfWold => None,
             Self::InvalidBlockFace => Some("Invalid block face".into()),
         }
     }
@@ -646,6 +649,14 @@ impl Player {
 
                         world_pos
                     };
+
+                    //check max world build height
+                    if world_pos.0.y > 319 {
+                        self.client
+                            .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
+                            .await;
+                        return Err(BlockPlacingError::BlockOutOfWold.into());
+                    }
 
                     let block_bounding_box = BoundingBox::from_block(&world_pos);
                     let bounding_box = entity.bounding_box.load();
