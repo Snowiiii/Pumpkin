@@ -13,10 +13,10 @@ pub struct CStoreCookie<'a> {
 }
 
 impl<'a> CStoreCookie<'a> {
-    pub fn new(key: &'a Identifier, payload_length: &'a VarInt, payload: &'a Vec<u8>) -> Self {
+    pub fn new(key: &'a Identifier, payload: &'a Vec<u8>) -> Self {
         Self {
             key,
-            payload_length,
+            payload_length: &VarInt::from(payload.len()),
             payload,
         }
     }
