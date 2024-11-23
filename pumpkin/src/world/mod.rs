@@ -14,7 +14,7 @@ use crate::{
     error::PumpkinError,
 };
 use pumpkin_config::BasicConfiguration;
-use pumpkin_core::math::vector2::Vector2;
+use pumpkin_core::{math::vector2::Vector2, registries::blocks::{Block, State}};
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
@@ -700,7 +700,7 @@ impl World {
     pub async fn get_block(
         &self,
         position: WorldPosition,
-    ) -> Result<&pumpkin_world::block::block_registry::Block, GetBlockError> {
+    ) -> Result<&Block, GetBlockError> {
         let id = self.get_block_state_id(position).await?;
         get_block_by_state_id(id).ok_or(GetBlockError::InvalidBlockId)
     }
@@ -709,7 +709,7 @@ impl World {
     pub async fn get_block_state(
         &self,
         position: WorldPosition,
-    ) -> Result<&pumpkin_world::block::block_registry::State, GetBlockError> {
+    ) -> Result<&State, GetBlockError> {
         let id = self.get_block_state_id(position).await?;
         get_state_by_state_id(id).ok_or(GetBlockError::InvalidBlockId)
     }
@@ -720,8 +720,8 @@ impl World {
         position: WorldPosition,
     ) -> Result<
         (
-            &pumpkin_world::block::block_registry::Block,
-            &pumpkin_world::block::block_registry::State,
+            &Block,
+            &State,
         ),
         GetBlockError,
     > {

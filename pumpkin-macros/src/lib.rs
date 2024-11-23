@@ -61,11 +61,6 @@ pub fn particle(item: TokenStream) -> TokenStream {
 
 mod blocks;
 #[proc_macro]
-pub fn blocks(item: TokenStream) -> TokenStream {
-    blocks::blocks_impl(item)
-}
-
-#[proc_macro]
-pub fn block_states(item: TokenStream) -> TokenStream {
-    blocks::block_states_impl(item)
+pub fn include_blocks(item: TokenStream) -> TokenStream {
+    blocks::include_blocks_impl(item)
 }
