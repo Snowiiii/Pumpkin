@@ -1,0 +1,13 @@
+arguments=--init-script /home/work/.cache/nvim/jdtls/Pumpkin/config/org.eclipse.osgi/55/0/.cp/gradle/init/init.gradle
+auto.sync=false
+build.scans.enabled=false
+connection.gradle.distribution=GRADLE_DISTRIBUTION(WRAPPER)
+connection.project.dir=
+eclipse.preferences.version=1
+gradle.user.home=
+java.home=/usr/lib/jvm/java-23-openjdk
+jvm.arguments=
+offline.mode=false
+override.workspace.settings=true
+show.console.view=true
+show.executions.view=true

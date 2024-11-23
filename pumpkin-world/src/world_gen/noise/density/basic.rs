@@ -197,6 +197,7 @@ impl ImmutableComponentFunctionImpl for YClampedFunction {
     }
 }
 
+// TODO: Implement structures (this is a place holder for that)
 pub struct BeardifierFunction {}
 
 impl BeardifierFunction {

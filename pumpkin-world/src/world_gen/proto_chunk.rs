@@ -9,7 +9,6 @@ use crate::{
         positions::chunk_pos,
         sampler::FluidLevelSampler,
     },
-    WORLD_HEIGHT,
 };
 
 use super::{
@@ -59,9 +58,10 @@ impl ProtoChunk {
         // TODO: Customize these
         let sampler = FluidLevelSampler::Chunk(StandardChunkFluidLevelSampler {
             bottom_fluid: FluidLevel::new(-54, *LAVA_BLOCK),
-            top_fluid: FluidLevel::new(62, *WATER_BLOCK),
+            top_fluid: FluidLevel::new(63, *WATER_BLOCK),
         });
 
+        let height = generation_shape.height() as usize;
         let sampler = ChunkNoiseGenerator::new(
             horizontal_cell_count,
             chunk_pos::start_block_x(&chunk_pos),
@@ -76,22 +76,19 @@ impl ProtoChunk {
         Self {
             chunk_pos,
             sampler,
-            flat_block_map: vec![
-                BlockState::AIR;
-                CHUNK_DIM as usize * CHUNK_DIM as usize * WORLD_HEIGHT
-            ],
+            flat_block_map: vec![BlockState::AIR; CHUNK_DIM as usize * CHUNK_DIM as usize * height],
         }
     }
 
     #[inline]
-    fn local_pos_to_index(local_pos: &Vector3<i32>) -> usize {
+    fn local_pos_to_index(&self, local_pos: &Vector3<i32>) -> usize {
         #[cfg(debug_assertions)]
         {
             assert!(local_pos.x >= 0 && local_pos.x <= 15);
-            assert!(local_pos.y < WORLD_HEIGHT as i32 && local_pos.y >= 0);
+            assert!(local_pos.y < self.sampler.height() as i32 && local_pos.y >= 0);
             assert!(local_pos.z >= 0 && local_pos.z <= 15);
         }
-        WORLD_HEIGHT * CHUNK_DIM as usize * local_pos.x as usize
+        self.sampler.height() as usize * CHUNK_DIM as usize * local_pos.x as usize
             + CHUNK_DIM as usize * local_pos.y as usize
             + local_pos.z as usize
     }
@@ -103,10 +100,10 @@ impl ProtoChunk {
             local_pos.y - self.sampler.min_y() as i32,
             local_pos.z & 15,
         );
-        if local_pos.y < 0 || local_pos.y >= WORLD_HEIGHT as i32 {
+        if local_pos.y < 0 || local_pos.y >= self.sampler.height() as i32 {
             BlockState::AIR
         } else {
-            self.flat_block_map[Self::local_pos_to_index(&local_pos)]
+            self.flat_block_map[self.local_pos_to_index(&local_pos)]
         }
     }
 
@@ -162,12 +159,15 @@ impl ProtoChunk {
                                 #[cfg(debug_assertions)]
                                 {
                                     assert!(local_pos.x < 16 && local_pos.x >= 0);
-                                    assert!(local_pos.y < WORLD_HEIGHT as i32 && local_pos.y >= 0);
+                                    assert!(
+                                        local_pos.y < self.sampler.height() as i32
+                                            && local_pos.y >= 0
+                                    );
                                     assert!(local_pos.z < 16 && local_pos.z >= 0);
                                 }
                                 //println!("Putting {:?}: {:?}", local_pos, block_state);
-                                self.flat_block_map[Self::local_pos_to_index(&local_pos)] =
-                                    block_state;
+                                let index = self.local_pos_to_index(&local_pos);
+                                self.flat_block_map[index] = block_state;
                             }
                         }
                     }
@@ -194,5 +194,30 @@ impl ProtoChunk {
 
     fn start_block_z(&self) -> i32 {
         start_block_z(&self.chunk_pos)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use itertools::Itertools;
+    use pumpkin_core::math::vector2::Vector2;
+
+    use super::ProtoChunk;
+
+    #[test]
+    fn test_no_blend_no_beard() {
+        let expected_data: Vec<u16> =
+            serde_json::from_str(include_str!("../../assets/no_blend_no_beard_0_0.chunk"))
+                .expect("failed to decode array");
+        let mut chunk = ProtoChunk::new(Vector2::new(0, 0), 0);
+        chunk.populate_noise();
+        assert_eq!(
+            expected_data,
+            chunk
+                .flat_block_map
+                .into_iter()
+                .map(|state| state.state_id)
+                .collect_vec()
+        );
     }
 }
