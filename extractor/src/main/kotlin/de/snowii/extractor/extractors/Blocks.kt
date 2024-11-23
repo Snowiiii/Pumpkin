@@ -6,6 +6,7 @@ import com.google.gson.JsonObject
 import de.snowii.extractor.Extractor
 import net.minecraft.registry.Registries
 import net.minecraft.server.MinecraftServer
+import net.minecraft.block.Block;
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Box
 import net.minecraft.world.EmptyBlockView
@@ -62,7 +63,7 @@ class Blocks : Extractor.Extractor {
                 stateJson.addProperty("replaceable", state.isReplaceable)
 
                 if (block.defaultState == state) {
-                    blockJson.addProperty("default_state_id", id)
+                    blockJson.addProperty("default_state_id", Block.getRawIdFromState(state))
                 }
 
                 val collisionShapeIdxsJson = JsonArray()
