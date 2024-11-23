@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use super::PlayerConfig;
 use crate::{
     command::CommandSender,
     entity::player::{ChatMode, Hand, Player},
@@ -33,9 +34,8 @@ use pumpkin_protocol::{
     },
 };
 use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
-use thiserror::Error;
 use pumpkin_world::item::item_registry::get_item_by_id;
-use super::PlayerConfig;
+use thiserror::Error;
 
 fn modulus(a: f32, b: f32) -> f32 {
     ((a % b) + b) % b
@@ -604,7 +604,7 @@ impl Player {
     pub async fn handle_use_item_on(
         &self,
         use_item_on: SUseItemOn,
-        server: &Server
+        server: &Server,
     ) -> Result<(), Box<dyn PumpkinError>> {
         let location = use_item_on.location;
 
@@ -618,7 +618,7 @@ impl Player {
             let entity = &self.living_entity.entity;
             let world = &entity.world;
             let item_slot = inventory.held_item_mut();
-            
+
             if let Some(item) = item_slot {
                 let block = get_block_by_item(item.item_id);
                 // check if item is a block, Because Not every item can be placed :D
@@ -664,17 +664,26 @@ impl Player {
                     let block = world.get_block(location).await;
                     let Some(item) = get_item_by_id(item.item_id) else {
                         //TODO: Proper error handling here
-                        return Ok(())
+                        return Ok(());
                     };
+
+                    drop(inventory); // This is necessary because else we still have a lock when opening ui elements
                     if let Ok(block) = block {
-                        server.interactive_blocks.on_use_with_item(block, &self, location, item).await;
+                        server
+                            .interactive_blocks
+                            .on_use_with_item(block, &self, location, item, server)
+                            .await;
                     }
                 }
-                
             } else {
+                drop(inventory);
+
                 let block = world.get_block(location).await;
                 if let Ok(block) = block {
-                    server.interactive_blocks.on_use(block, &self, location).await;
+                    server
+                        .interactive_blocks
+                        .on_use(block, &self, location, server)
+                        .await;
                 }
             }
 

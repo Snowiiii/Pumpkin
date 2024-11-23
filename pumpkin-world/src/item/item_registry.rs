@@ -1,21 +1,21 @@
-use std::{collections::HashMap, sync::LazyLock};
+use std::sync::LazyLock;
 
 use serde::Deserialize;
 
 const ITEMS_JSON: &str = include_str!("../../../assets/items.json");
 
-pub static ITEMS: LazyLock<HashMap<String, Item>> = LazyLock::new(|| {
+pub static ITEMS: LazyLock<Vec<Item>> = LazyLock::new(|| {
     serde_json::from_str(ITEMS_JSON).expect("Could not parse items.json registry.")
 });
 
 pub fn get_item(name: &str) -> Option<&Item> {
-    ITEMS.get(name)
+    ITEMS.iter().find(|item| item.name == name)
 }
 
 pub fn get_item_by_id<'a>(id: u16) -> Option<&'a Item> {
-    let item = ITEMS.iter().find(|item| item.1.id == id);
+    let item = ITEMS.iter().find(|item| item.id == id);
     if let Some(item) = item {
-        return Some(item.1)
+        return Some(item);
     }
     None
 }
@@ -23,6 +23,7 @@ pub fn get_item_by_id<'a>(id: u16) -> Option<&'a Item> {
 #[derive(Deserialize, Clone, Debug)]
 pub struct Item {
     pub id: u16,
+    pub name: String,
     pub components: ItemComponents,
 }
 

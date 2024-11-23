@@ -21,13 +21,15 @@ use std::{
 use tokio::sync::{Mutex, RwLock};
 
 use crate::client::EncryptionError;
+use crate::world::block::interactive::{
+    default_interactive_block_manager, InteractiveBlockManager,
+};
 use crate::{
     client::Client,
     command::{default_dispatcher, dispatcher::CommandDispatcher},
     entity::player::Player,
     world::World,
 };
-use crate::world::block::interactive::{default_interactive_block_manager, InteractiveBlockManager};
 
 mod connection_cache;
 mod key_store;

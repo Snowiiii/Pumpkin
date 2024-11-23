@@ -51,9 +51,9 @@ use tokio::{
 };
 use worldborder::Worldborder;
 
+pub mod block;
 pub mod scoreboard;
 pub mod worldborder;
-pub mod block;
 
 type ChunkReceiver = (
     Vec<(Vector2<i32>, JoinHandle<()>)>,
@@ -172,11 +172,13 @@ impl World {
     }
 
     pub async fn play_record(&self, record_id: i32, position: WorldPosition) {
-        self.broadcast_packet_all(&CLevelEvent::new(1010, position, record_id, false)).await;
+        self.broadcast_packet_all(&CLevelEvent::new(1010, position, record_id, false))
+            .await;
     }
-    
+
     pub async fn stop_record(&self, position: WorldPosition) {
-        self.broadcast_packet_all(&CLevelEvent::new(1011, position, 0, false)).await;
+        self.broadcast_packet_all(&CLevelEvent::new(1011, position, 0, false))
+            .await;
     }
 
     pub async fn tick(&self) {
