@@ -9,6 +9,7 @@ members = [
     "pumpkin-protocol/",
     "pumpkin-registry/",
     "pumpkin-world",
+    "pumpkin-data",
     "pumpkin/",
 ]
 

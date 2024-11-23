@@ -33,13 +33,8 @@ use pumpkin_protocol::{
     ClientPacket, VarInt,
 };
 use pumpkin_world::chunk::ChunkData;
+use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
 use pumpkin_world::level::Level;
-use pumpkin_world::{
-    block::block_registry::{
-        get_block_and_state_by_state_id, get_block_by_state_id, get_state_by_state_id,
-    },
-    coordinates::ChunkRelativeBlockCoordinates,
-};
 use rand::{thread_rng, Rng};
 use scoreboard::Scoreboard;
 use thiserror::Error;
@@ -702,13 +697,15 @@ impl World {
     /// Gets the Block from the Block Registry, Returns None if the Block has not been found
     pub async fn get_block(&self, position: WorldPosition) -> Result<&Block, GetBlockError> {
         let id = self.get_block_state_id(position).await?;
-        get_block_by_state_id(id).ok_or(GetBlockError::InvalidBlockId)
+        pumpkin_world::block::block_registry::get_block_by_state_id(id)
+            .ok_or(GetBlockError::InvalidBlockId)
     }
 
     /// Gets the Block state from the Block Registry, Returns None if the Block state has not been found
     pub async fn get_block_state(&self, position: WorldPosition) -> Result<&State, GetBlockError> {
         let id = self.get_block_state_id(position).await?;
-        get_state_by_state_id(id).ok_or(GetBlockError::InvalidBlockId)
+        pumpkin_world::block::block_registry::get_state_by_state_id(id)
+            .ok_or(GetBlockError::InvalidBlockId)
     }
 
     /// Gets the Block + Block state from the Block Registry, Returns None if the Block state has not been found
@@ -717,6 +714,7 @@ impl World {
         position: WorldPosition,
     ) -> Result<(&Block, &State), GetBlockError> {
         let id = self.get_block_state_id(position).await?;
-        get_block_and_state_by_state_id(id).ok_or(GetBlockError::InvalidBlockId)
+        pumpkin_world::block::block_registry::get_block_and_state_by_state_id(id)
+            .ok_or(GetBlockError::InvalidBlockId)
     }
 }

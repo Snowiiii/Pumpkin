@@ -20,6 +20,7 @@ pumpkin-entity = { path = "../pumpkin-entity" }
 pumpkin-protocol = { path = "../pumpkin-protocol" }
 pumpkin-registry = { path = "../pumpkin-registry" }
 pumpkin-macros = { path = "../pumpkin-macros" }
+pumpkin-data = { path = "../pumpkin-data" }
 
 itertools.workspace = true
 log.workspace = true

@@ -1,0 +1,8 @@
+[package]
+name = "pumpkin-data"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+pumpkin-macros = { path = "../pumpkin-macros" }
+pumpkin-core = { path = "../pumpkin-core" }

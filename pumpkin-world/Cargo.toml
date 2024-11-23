@@ -7,6 +7,7 @@ edition.workspace = true
 pumpkin-core = { path = "../pumpkin-core" }
 pumpkin-config = { path = "../pumpkin-config" }
 pumpkin-macros = { path = "../pumpkin-macros" }
+pumpkin-data = { path = "../pumpkin-data" }
 
 tokio.workspace = true
 rayon.workspace = true

@@ -1,11 +1,9 @@
+use crate::{command::dispatcher::CommandError, server::Server};
 use async_trait::async_trait;
 use pumpkin_core::registries::blocks::Block;
 use pumpkin_protocol::client::play::{
     CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
 };
-use pumpkin_world::block::block_registry;
-
-use crate::{command::dispatcher::CommandError, server::Server};
 
 use super::{
     super::{
@@ -73,7 +71,7 @@ impl<'a> FindArg<'a> for BlockArgumentConsumer {
 
     fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
-            Some(Arg::Block(name)) => match block_registry::get_block(name) {
+            Some(Arg::Block(name)) => match pumpkin_world::block::block_registry::get_block(name) {
                 Some(block) => Ok(block),
                 None => Err(CommandError::GeneralCommandIssue(format!(
                     "Block {name} does not exist."

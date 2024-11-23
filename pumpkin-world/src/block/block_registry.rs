@@ -1,7 +1,5 @@
 use pumpkin_core::registries::blocks::{Block, State};
-use pumpkin_macros::include_blocks;
-
-include_blocks! {}
+use pumpkin_data::block::{BLOCKS, BLOCK_STATES};
 
 /// todo: make O(1)
 pub fn get_block(registry_id: &str) -> Option<&Block> {
