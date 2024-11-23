@@ -45,7 +45,7 @@ fn modulus(a: f32, b: f32) -> f32 {
 pub enum BlockPlacingError {
     BlockOutOfReach,
     InvalidBlockFace,
-    BlockOutOfWold
+    BlockOutOfWold,
 }
 
 impl std::fmt::Display for BlockPlacingError {
@@ -65,7 +65,9 @@ impl PumpkinError for BlockPlacingError {
 
     fn severity(&self) -> log::Level {
         match self {
-            Self::BlockOutOfReach | Self::BlockOutOfWold | Self::InvalidBlockFace => log::Level::Warn,
+            Self::BlockOutOfReach | Self::BlockOutOfWold | Self::InvalidBlockFace => {
+                log::Level::Warn
+            }
         }
     }
 
