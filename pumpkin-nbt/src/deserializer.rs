@@ -172,7 +172,7 @@ impl<'de, 'a, T: Buf> MapAccess<'de> for CompoundAccess<'a, 'de, T> {
     {
         let tag = self.de.input.get_u8();
         self.de.tag_to_deserialize = Some(tag);
-        
+
         if tag == END_ID {
             return Ok(None);
         }

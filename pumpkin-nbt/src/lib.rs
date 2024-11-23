@@ -8,8 +8,8 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use cesu8::Cesu8DecodingError;
 use compound::NbtCompound;
 use serde::{de, ser};
-use tag::NbtTag;
 use serde::{Deserialize, Deserializer};
+use tag::NbtTag;
 use thiserror::Error;
 
 pub mod compound;

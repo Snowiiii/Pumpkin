@@ -1,10 +1,9 @@
+use fastnbt::LongArray;
+use pumpkin_core::math::vector2::Vector2;
+use serde::{Deserialize, Serialize};
 use std::cmp::max;
 use std::collections::HashMap;
 use std::ops::Index;
-use pumpkin_nbt::LongArray;
-use bytes::BytesMut;
-use pumpkin_core::math::vector2::Vector2;
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
@@ -78,18 +77,18 @@ struct PaletteEntry {
 
 #[derive(Deserialize, Debug, Clone)]
 struct ChunkSectionBlockStates {
-    #[serde(with = "LongArray")]
-    data: Option<Vec<i64>>,
+    //  #[serde(with = "LongArray")]
+    data: Option<LongArray>,
     palette: Vec<PaletteEntry>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct ChunkHeightmaps {
-    #[serde(with = "LongArray")]
-    motion_blocking: Vec<i64>,
-    #[serde(with = "LongArray")]
-    world_surface: Vec<i64>,
+    // #[serde(with = "LongArray")]
+    motion_blocking: LongArray,
+    // #[serde(with = "LongArray")]
+    world_surface: LongArray,
 }
 
 #[derive(Deserialize, Debug)]
@@ -146,8 +145,8 @@ impl Default for ChunkHeightmaps {
     fn default() -> Self {
         Self {
             // 0 packed into an i64 7 times.
-            motion_blocking: vec![0; 37],
-            world_surface: vec![0; 37],
+            motion_blocking: LongArray::new(vec![0; 37]),
+            world_surface: LongArray::new(vec![0; 37]),
         }
     }
 }
@@ -234,15 +233,14 @@ impl Index<ChunkRelativeBlockCoordinates> for ChunkBlocks {
 
 impl ChunkData {
     pub fn from_bytes(chunk_data: Vec<u8>, at: Vector2<i32>) -> Result<Self, ChunkParsingError> {
-        let mut data = BytesMut::from(chunk_data.as_slice());
-        if pumpkin_nbt::deserializer::from_bytes::<ChunkStatus>(&mut data)
+        if fastnbt::from_bytes::<ChunkStatus>(&chunk_data)
             .map_err(|_| ChunkParsingError::FailedReadStatus)?
             != ChunkStatus::Full
         {
             return Err(ChunkParsingError::ChunkNotGenerated);
         }
 
-        let chunk_data = pumpkin_nbt::deserializer::from_bytes::<ChunkNbt>(&mut data)
+        let chunk_data = fastnbt::from_bytes::<ChunkNbt>(chunk_data.as_slice())
             .map_err(|e| ChunkParsingError::ErrorDeserializingChunk(e.to_string()))?;
 
         // this needs to be boxed, otherwise it will cause a stack-overflow
