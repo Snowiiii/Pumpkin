@@ -68,7 +68,7 @@ pub struct SyncedRegistry {
     #[serde(rename = "minecraft:enchantment")]
     enchantment: IndexMap<String, Enchantment>,
     #[serde(rename = "minecraft:jukebox_song")]
-    jukebox_song: IndexMap<String, JukeboxSong>,
+    pub jukebox_song: IndexMap<String, JukeboxSong>,
     #[serde(rename = "minecraft:instrument")]
     instrument: IndexMap<String, Instrument>,
 }

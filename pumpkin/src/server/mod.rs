@@ -27,6 +27,7 @@ use crate::{
     entity::player::Player,
     world::World,
 };
+use crate::world::block::interactive::{default_interactive_block_manager, InteractiveBlockManager};
 
 mod connection_cache;
 mod key_store;
@@ -44,6 +45,8 @@ pub struct Server {
     server_branding: CachedBranding,
     /// Saves and Dispatches commands to appropriate handlers.
     pub command_dispatcher: Arc<CommandDispatcher<'static>>,
+    /// Saves and calls interactive blocks
+    pub interactive_blocks: Arc<InteractiveBlockManager>,
     /// Manages multiple worlds within the server.
     pub worlds: Vec<Arc<World>>,
     // All the dimensions that exists on the server,
@@ -100,6 +103,7 @@ impl Server {
                 DimensionType::TheEnd,
             ],
             command_dispatcher,
+            interactive_blocks: default_interactive_block_manager(),
             auth_client,
             key_store: KeyStore::new(),
             server_listing: Mutex::new(CachedStatus::new()),
