@@ -1,15 +1,15 @@
-use std::sync::Arc;
-
 use pumpkin_core::random::{legacy_rand::LegacyRand, RandomImpl};
 
 use crate::world_gen::noise::simplex::SimplexNoiseSampler;
 
 use super::{
-    Applier, ApplierImpl, DensityFunction, DensityFunctionImpl, NoisePos, NoisePosImpl, Visitor,
-    VisitorImpl,
+    component_functions::{
+        ApplierImpl, ComponentFunctionImpl, ImmutableComponentFunctionImpl,
+        SharedConverterEnvironment,
+    },
+    NoisePosImpl,
 };
 
-#[derive(Clone)]
 pub struct EndIslandFunction {
     sampler: SimplexNoiseSampler,
 }
@@ -56,24 +56,18 @@ impl EndIslandFunction {
     }
 }
 
-impl<'a> DensityFunctionImpl<'a> for EndIslandFunction {
-    fn fill(&self, densities: &mut [f64], applier: &Applier) {
-        applier.fill(densities, &DensityFunction::EndIsland(self.clone()))
-    }
+impl ComponentFunctionImpl for EndIslandFunction {}
 
-    fn sample(&self, pos: &NoisePos) -> f64 {
+impl ImmutableComponentFunctionImpl for EndIslandFunction {
+    fn sample(&self, pos: &super::NoisePos) -> f64 {
         (Self::sample_2d(&self.sampler, pos.x() / 8, pos.z() / 8) as f64 - 8f64) / 128f64
     }
 
-    fn min(&self) -> f64 {
-        -0.84375f64
+    fn fill(&self, arr: &mut [f64], applier: &mut dyn ApplierImpl) {
+        applier.fill(arr, self);
     }
 
-    fn max(&self) -> f64 {
-        0.5625f64
-    }
-
-    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
-        visitor.apply(Arc::new(DensityFunction::EndIsland(self.clone())))
+    fn shared_environment(&self) -> SharedConverterEnvironment {
+        SharedConverterEnvironment::End
     }
 }

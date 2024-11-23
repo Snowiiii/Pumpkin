@@ -1,30 +1,38 @@
-use std::sync::Arc;
+use std::{marker::PhantomData, sync::Arc};
 
 use pumpkin_core::random::{xoroshiro128::Xoroshiro, RandomGenerator, RandomImpl};
 
-use crate::world_gen::noise::{
-    clamped_lerp,
-    perlin::{DoublePerlinNoiseParameters, DoublePerlinNoiseSampler, OctavePerlinNoiseSampler},
+use crate::{
+    match_ref_implementations,
+    world_gen::noise::{
+        clamped_lerp,
+        perlin::{DoublePerlinNoiseParameters, DoublePerlinNoiseSampler, OctavePerlinNoiseSampler},
+    },
 };
 
 use super::{
-    Applier, ApplierImpl, DensityFunction, DensityFunctionImpl, NoisePos, NoisePosImpl, Visitor,
-    VisitorImpl,
+    component_functions::{
+        ApplierImpl, ComponentFunctionImpl, ComponentReference, ComponentReferenceImplementation,
+        ConverterEnvironment, ConverterImpl, DensityFunctionEnvironment, EnvironmentApplierImpl,
+        ImmutableComponentFunctionImpl, MutableComponentFunctionImpl, MutableComponentReference,
+        OwnedConverterEnvironment, SharedComponentReference, SharedConverterEnvironment,
+    },
+    NoisePos, NoisePosImpl,
 };
 
-pub(crate) struct InternalNoise<'a> {
-    data: DoublePerlinNoiseParameters<'a>,
-    sampler: Option<DoublePerlinNoiseSampler>,
+pub(crate) struct InternalNoise {
+    pub(crate) parameters: &'static DoublePerlinNoiseParameters,
+    pub(crate) sampler: Option<DoublePerlinNoiseSampler>,
 }
 
-impl<'a> InternalNoise<'a> {
+impl InternalNoise {
     pub(crate) fn new(
-        data: DoublePerlinNoiseParameters<'a>,
-        function: Option<DoublePerlinNoiseSampler>,
+        parameters: &'static DoublePerlinNoiseParameters,
+        sampler: Option<DoublePerlinNoiseSampler>,
     ) -> Self {
         Self {
-            data,
-            sampler: function,
+            parameters,
+            sampler,
         }
     }
 
@@ -34,24 +42,16 @@ impl<'a> InternalNoise<'a> {
             None => 0f64,
         }
     }
-
-    pub(crate) fn max_value(&self) -> f64 {
-        match &self.sampler {
-            Some(sampler) => sampler.max_value(),
-            None => 2f64,
-        }
-    }
 }
 
-#[derive(Clone)]
-pub struct NoiseFunction<'a> {
-    pub(crate) noise: Arc<InternalNoise<'a>>,
-    xz_scale: f64,
-    y_scale: f64,
+pub struct NoiseFunction {
+    pub(crate) noise: Arc<InternalNoise>,
+    pub(crate) xz_scale: f64,
+    pub(crate) y_scale: f64,
 }
 
-impl<'a> NoiseFunction<'a> {
-    pub fn new(noise: Arc<InternalNoise<'a>>, xz_scale: f64, y_scale: f64) -> Self {
+impl NoiseFunction {
+    pub fn new(noise: Arc<InternalNoise>, xz_scale: f64, y_scale: f64) -> Self {
         Self {
             noise,
             xz_scale,
@@ -60,7 +60,10 @@ impl<'a> NoiseFunction<'a> {
     }
 }
 
-impl<'a> DensityFunctionImpl<'a> for NoiseFunction<'a> {
+impl ComponentFunctionImpl for NoiseFunction {}
+
+impl ImmutableComponentFunctionImpl for NoiseFunction {
+    #[inline]
     fn sample(&self, pos: &NoisePos) -> f64 {
         self.noise.sample(
             pos.x() as f64 * self.xz_scale,
@@ -69,107 +72,245 @@ impl<'a> DensityFunctionImpl<'a> for NoiseFunction<'a> {
         )
     }
 
-    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
-        applier.fill(densities, &DensityFunction::Noise(self.clone()))
+    #[inline]
+    fn fill(&self, arr: &mut [f64], applier: &mut dyn ApplierImpl) {
+        applier.fill(arr, self);
     }
 
-    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
-        visitor.apply(Arc::new(DensityFunction::Noise(self.clone())))
-    }
-
-    fn max(&self) -> f64 {
-        self.noise.max_value()
-    }
-
-    fn min(&self) -> f64 {
-        -self.max()
+    fn shared_environment(&self) -> SharedConverterEnvironment {
+        SharedConverterEnvironment::Noise(self)
     }
 }
 
 #[derive(Clone)]
-pub struct ShiftedNoiseFunction<'a> {
-    shift_x: Arc<DensityFunction<'a>>,
-    shift_y: Arc<DensityFunction<'a>>,
-    shift_z: Arc<DensityFunction<'a>>,
-    noise: Arc<InternalNoise<'a>>,
-    xz_scale: f64,
-    y_scale: f64,
+pub(crate) struct ShiftedNoiseUntypedData {
+    pub(crate) xz_scale: f64,
+    pub(crate) y_scale: f64,
 }
 
-impl<'a> ShiftedNoiseFunction<'a> {
+pub struct ShiftedNoiseFunction<
+    E: DensityFunctionEnvironment,
+    R1: ComponentReference<E>,
+    R2: ComponentReference<E>,
+    R3: ComponentReference<E>,
+> {
+    pub(crate) shift_x: R1,
+    pub(crate) shift_y: R2,
+    pub(crate) shift_z: R3,
+    pub(crate) noise: Arc<InternalNoise>,
+    pub(crate) data: ShiftedNoiseUntypedData,
+    _dummy: PhantomData<E>,
+}
+
+impl<
+        E: DensityFunctionEnvironment,
+        R1: ComponentReference<E>,
+        R2: ComponentReference<E>,
+        R3: ComponentReference<E>,
+    > From<ShiftedNoiseFunction<E, R1, R2, R3>> for MutableComponentReference<E>
+{
+    fn from(value: ShiftedNoiseFunction<E, R1, R2, R3>) -> Self {
+        Self(Box::new(value))
+    }
+}
+
+impl<
+        E: DensityFunctionEnvironment,
+        R1: ComponentReference<E>,
+        R2: ComponentReference<E>,
+        R3: ComponentReference<E>,
+    > ShiftedNoiseFunction<E, R1, R2, R3>
+{
     pub fn new(
-        shift_x: Arc<DensityFunction<'a>>,
-        shift_y: Arc<DensityFunction<'a>>,
-        shift_z: Arc<DensityFunction<'a>>,
+        shift_x: R1,
+        shift_y: R2,
+        shift_z: R3,
         xz_scale: f64,
         y_scale: f64,
-        noise: Arc<InternalNoise<'a>>,
+        noise: Arc<InternalNoise>,
     ) -> Self {
         Self {
             shift_x,
             shift_y,
             shift_z,
             noise,
-            xz_scale,
-            y_scale,
+            data: ShiftedNoiseUntypedData { xz_scale, y_scale },
+            _dummy: PhantomData::<E> {},
+        }
+    }
+
+    pub fn create_new_ref(
+        x: ComponentReferenceImplementation<E>,
+        y: ComponentReferenceImplementation<E>,
+        z: ComponentReferenceImplementation<E>,
+        noise: Arc<InternalNoise>,
+        data: &ShiftedNoiseUntypedData,
+    ) -> ComponentReferenceImplementation<E> {
+        match (x, y, z) {
+            (
+                ComponentReferenceImplementation::Shared(shared_x),
+                ComponentReferenceImplementation::Shared(shared_y),
+                ComponentReferenceImplementation::Shared(shared_z),
+            ) => ShiftedNoiseFunction::<
+                E,
+                SharedComponentReference,
+                SharedComponentReference,
+                SharedComponentReference,
+            >::new(
+                shared_x,
+                shared_y,
+                shared_z,
+                data.xz_scale,
+                data.y_scale,
+                noise,
+            )
+            .into(),
+            (x, y, z) => {
+                match_ref_implementations!(
+                    (ref_x, x),
+                    (ref_y, y),
+                    (ref_z, z);
+                    {
+                        ComponentReferenceImplementation::Mutable(
+                            MutableComponentReference(Box::new(
+                                ShiftedNoiseFunction::new(
+                                    ref_x,
+                                    ref_y,
+                                    ref_z,
+                                    data.xz_scale,
+                                    data.y_scale,
+                                    noise
+                                )
+                            ))
+                        )
+                    }
+                )
+            }
         }
     }
 }
 
-impl<'a> DensityFunctionImpl<'a> for ShiftedNoiseFunction<'a> {
+impl<
+        E: DensityFunctionEnvironment,
+        R1: ComponentReference<E>,
+        R2: ComponentReference<E>,
+        R3: ComponentReference<E>,
+    > ComponentFunctionImpl for ShiftedNoiseFunction<E, R1, R2, R3>
+{
+}
+
+impl<
+        E: DensityFunctionEnvironment,
+        R1: ComponentReference<E>,
+        R2: ComponentReference<E>,
+        R3: ComponentReference<E>,
+    > MutableComponentFunctionImpl<E> for ShiftedNoiseFunction<E, R1, R2, R3>
+{
+    fn sample_mut(&mut self, pos: &NoisePos, env: &E) -> f64 {
+        let x_pos = (pos.x() as f64) * self.data.xz_scale + self.shift_x.sample_mut(pos, env);
+        let y_pos = (pos.y() as f64) * self.data.y_scale + self.shift_y.sample_mut(pos, env);
+        let z_pos = (pos.z() as f64) * self.data.xz_scale + self.shift_z.sample_mut(pos, env);
+
+        self.noise.sample(x_pos, y_pos, z_pos)
+    }
+
+    #[inline]
+    fn fill_mut(&mut self, arr: &mut [f64], applier: &mut dyn EnvironmentApplierImpl<Env = E>) {
+        applier.fill_mut(arr, self);
+    }
+
+    fn environment(&self) -> ConverterEnvironment<E> {
+        ConverterEnvironment::ShiftedNoise(
+            &self.shift_x,
+            &self.shift_y,
+            &self.shift_z,
+            &self.noise,
+            &self.data,
+        )
+    }
+
+    fn into_environment(self: Box<Self>) -> OwnedConverterEnvironment<E> {
+        OwnedConverterEnvironment::ShiftedNoise(
+            self.shift_x.wrapped_ref(),
+            self.shift_y.wrapped_ref(),
+            self.shift_z.wrapped_ref(),
+            self.noise,
+            self.data,
+        )
+    }
+
+    fn convert(
+        self: Box<Self>,
+        converter: &mut dyn ConverterImpl<E>,
+    ) -> ComponentReferenceImplementation<E> {
+        Self::create_new_ref(
+            self.shift_x.convert(converter),
+            self.shift_y.convert(converter),
+            self.shift_z.convert(converter),
+            converter
+                .convert_noise(&self.noise)
+                .unwrap_or_else(|| self.noise.clone()),
+            &self.data,
+        )
+    }
+
+    fn clone_to_new_ref(&self) -> ComponentReferenceImplementation<E> {
+        Self::create_new_ref(
+            self.shift_x.clone_to_new_ref(),
+            self.shift_y.clone_to_new_ref(),
+            self.shift_z.clone_to_new_ref(),
+            self.noise.clone(),
+            &self.data,
+        )
+    }
+}
+
+impl<E: DensityFunctionEnvironment> ImmutableComponentFunctionImpl
+    for ShiftedNoiseFunction<
+        E,
+        SharedComponentReference,
+        SharedComponentReference,
+        SharedComponentReference,
+    >
+{
     fn sample(&self, pos: &NoisePos) -> f64 {
-        let d = (pos.x() as f64).mul_add(self.xz_scale, self.shift_x.sample(pos));
-        let e = (pos.y() as f64).mul_add(self.y_scale, self.shift_y.sample(pos));
-        let f = (pos.z() as f64).mul_add(self.xz_scale, self.shift_z.sample(pos));
+        let x_pos = (pos.x() as f64) * self.data.xz_scale + self.shift_x.sample(pos);
+        let y_pos = (pos.y() as f64) * self.data.y_scale + self.shift_y.sample(pos);
+        let z_pos = (pos.z() as f64) * self.data.xz_scale + self.shift_z.sample(pos);
 
-        self.noise.sample(d, e, f)
+        self.noise.sample(x_pos, y_pos, z_pos)
     }
 
-    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
-        applier.fill(densities, &DensityFunction::ShiftedNoise(self.clone()))
+    #[inline]
+    fn fill(&self, arr: &mut [f64], applier: &mut dyn ApplierImpl) {
+        applier.fill(arr, self);
     }
 
-    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
-        let new_x = self.shift_x.apply(visitor);
-        let new_y = self.shift_y.apply(visitor);
-        let new_z = self.shift_z.apply(visitor);
-        let new_noise = visitor.apply_internal_noise(self.noise.clone());
-
-        Arc::new(DensityFunction::ShiftedNoise(ShiftedNoiseFunction {
-            shift_x: new_x,
-            shift_y: new_y,
-            shift_z: new_z,
-            xz_scale: self.xz_scale,
-            y_scale: self.y_scale,
-            noise: new_noise,
-        }))
-    }
-
-    fn max(&self) -> f64 {
-        self.noise.max_value()
-    }
-
-    fn min(&self) -> f64 {
-        -self.max()
+    fn shared_environment(&self) -> SharedConverterEnvironment {
+        SharedConverterEnvironment::ShiftedNoise(
+            &self.shift_x,
+            &self.shift_y,
+            &self.shift_z,
+            &self.noise,
+            &self.data,
+        )
     }
 }
 
-#[derive(Clone)]
-pub struct InterpolatedNoiseSampler {
-    lower: Arc<OctavePerlinNoiseSampler>,
-    upper: Arc<OctavePerlinNoiseSampler>,
-    interpolation: Arc<OctavePerlinNoiseSampler>,
-    xz_scale_scaled: f64,
-    y_scale_scaled: f64,
-    xz_factor: f64,
-    y_factor: f64,
-    smear_scale: f64,
-    max_value: f64,
-    xz_scale: f64,
-    y_scale: f64,
+pub struct InterpolatedNoiseFunction {
+    pub(crate) lower: Arc<OctavePerlinNoiseSampler>,
+    pub(crate) upper: Arc<OctavePerlinNoiseSampler>,
+    pub(crate) interpolation: Arc<OctavePerlinNoiseSampler>,
+    pub(crate) xz_scale_scaled: f64,
+    pub(crate) y_scale_scaled: f64,
+    pub(crate) xz_factor: f64,
+    pub(crate) y_factor: f64,
+    pub(crate) smear_scale: f64,
+    pub(crate) xz_scale: f64,
+    pub(crate) y_scale: f64,
 }
 
-impl InterpolatedNoiseSampler {
+impl InterpolatedNoiseFunction {
     fn create_from_random(
         rand: &mut RandomGenerator,
         xz_scale: f64,
@@ -185,9 +326,9 @@ impl InterpolatedNoiseSampler {
             OctavePerlinNoiseSampler::calculate_amplitudes(&(-7..=0).collect::<Vec<i32>>());
 
         Self::new(
-            OctavePerlinNoiseSampler::new(rand, start_1, &amplitudes_1),
-            OctavePerlinNoiseSampler::new(rand, start_1, &amplitudes_1),
-            OctavePerlinNoiseSampler::new(rand, start_2, &amplitudes_2),
+            OctavePerlinNoiseSampler::new(rand, start_1, &amplitudes_1, true),
+            OctavePerlinNoiseSampler::new(rand, start_1, &amplitudes_1, true),
+            OctavePerlinNoiseSampler::new(rand, start_2, &amplitudes_2, true),
             xz_scale,
             y_scale,
             xz_factor,
@@ -214,7 +355,7 @@ impl InterpolatedNoiseSampler {
         y_factor: f64,
         smear_scale: f64,
     ) -> Self {
-        let mut rand = RandomGenerator::LegacyXoroshiro(Xoroshiro::from_seed(0));
+        let mut rand = RandomGenerator::Xoroshiro(Xoroshiro::from_seed(0));
         Self::create_from_random(
             &mut rand,
             xz_scale,
@@ -237,11 +378,6 @@ impl InterpolatedNoiseSampler {
         smear_scale: f64,
     ) -> Self {
         let y_scale_scaled = 684.412f64 * y_scale;
-        let max_value = OctavePerlinNoiseSampler::get_total_amplitude(
-            y_scale_scaled + 2f64,
-            lower.persistence,
-            &lower.amplitudes,
-        );
         Self {
             lower: Arc::new(lower),
             upper: Arc::new(upper),
@@ -253,12 +389,13 @@ impl InterpolatedNoiseSampler {
             smear_scale,
             y_scale_scaled,
             xz_scale_scaled: 684.412f64 * xz_scale,
-            max_value,
         }
     }
 }
 
-impl<'a> DensityFunctionImpl<'a> for InterpolatedNoiseSampler {
+impl ComponentFunctionImpl for InterpolatedNoiseFunction {}
+
+impl ImmutableComponentFunctionImpl for InterpolatedNoiseFunction {
     fn sample(&self, pos: &NoisePos) -> f64 {
         let d = pos.x() as f64 * self.xz_scale_scaled;
         let e = pos.y() as f64 * self.y_scale_scaled;
@@ -322,19 +459,12 @@ impl<'a> DensityFunctionImpl<'a> for InterpolatedNoiseSampler {
         clamped_lerp(l / 512f64, m / 512f64, q) / 128f64
     }
 
-    fn max(&self) -> f64 {
-        self.max_value
+    #[inline]
+    fn fill(&self, arr: &mut [f64], applier: &mut dyn ApplierImpl) {
+        applier.fill(arr, self);
     }
 
-    fn min(&self) -> f64 {
-        -self.max()
-    }
-
-    fn fill(&self, densities: &mut [f64], applier: &Applier) {
-        applier.fill(densities, &DensityFunction::InterpolatedNoise(self.clone()))
-    }
-
-    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
-        visitor.apply(Arc::new(DensityFunction::InterpolatedNoise(self.clone())))
+    fn shared_environment(&self) -> SharedConverterEnvironment {
+        SharedConverterEnvironment::InterpolatedNoise(self)
     }
 }

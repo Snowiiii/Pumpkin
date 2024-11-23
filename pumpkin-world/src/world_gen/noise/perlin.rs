@@ -1,8 +1,9 @@
-use itertools::Itertools;
-use num_traits::{Pow, Zero};
-use pumpkin_core::random::{RandomDeriverImpl, RandomGenerator, RandomImpl};
+use std::{hash::Hash, sync::Arc};
 
-use super::{dot, lerp3, GRADIENTS};
+use num_traits::{Pow, ToBytes};
+use pumpkin_core::random::RandomGenerator;
+
+use super::{lerp3, GRADIENTS};
 
 pub struct PerlinNoiseSampler {
     permutation: Box<[u8]>,
@@ -11,8 +12,26 @@ pub struct PerlinNoiseSampler {
     z_origin: f64,
 }
 
+impl PartialEq for PerlinNoiseSampler {
+    fn eq(&self, other: &Self) -> bool {
+        self.permutation == other.permutation
+            && self.x_origin.to_le_bytes() == other.x_origin.to_le_bytes()
+            && self.y_origin.to_le_bytes() == other.y_origin.to_le_bytes()
+            && self.z_origin.to_le_bytes() == other.z_origin.to_le_bytes()
+    }
+}
+
+impl Hash for PerlinNoiseSampler {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.permutation.hash(state);
+        self.x_origin.to_le_bytes().hash(state);
+        self.y_origin.to_le_bytes().hash(state);
+        self.z_origin.to_le_bytes().hash(state);
+    }
+}
+
 impl PerlinNoiseSampler {
-    pub fn new(random: &mut impl RandomImpl) -> Self {
+    pub fn new(random: &mut RandomGenerator) -> Self {
         let x_origin = random.next_f64() * 256f64;
         let y_origin = random.next_f64() * 256f64;
         let z_origin = random.next_f64() * 256f64;
@@ -46,13 +65,13 @@ impl PerlinNoiseSampler {
         let trans_y = y + self.y_origin;
         let trans_z = z + self.z_origin;
 
-        let x_int = trans_x.floor() as i32;
-        let y_int = trans_y.floor() as i32;
-        let z_int = trans_z.floor() as i32;
+        let x_int = trans_x.floor();
+        let y_int = trans_y.floor();
+        let z_int = trans_z.floor();
 
-        let x_dec = trans_x - x_int as f64;
-        let y_dec = trans_y - y_int as f64;
-        let z_dec = trans_z - z_int as f64;
+        let x_dec = trans_x - x_int;
+        let y_dec = trans_y - y_int;
+        let z_dec = trans_z - z_int;
 
         let y_noise = if y_scale != 0f64 {
             let raw_y_dec = if y_max >= 0f64 && y_max < y_dec {
@@ -65,17 +84,28 @@ impl PerlinNoiseSampler {
             0f64
         };
 
-        self.sample(x_int, y_int, z_int, x_dec, y_dec - y_noise, z_dec, y_dec)
+        self.sample(
+            x_int as i32,
+            y_int as i32,
+            z_int as i32,
+            x_dec,
+            y_dec - y_noise,
+            z_dec,
+            y_dec,
+        )
     }
 
+    #[inline]
     fn grad(hash: i32, x: f64, y: f64, z: f64) -> f64 {
-        dot(&GRADIENTS[(hash & 15) as usize], x, y, z)
+        GRADIENTS[(hash & 15) as usize].dot(x, y, z)
     }
 
+    #[inline]
     fn perlin_fade(value: f64) -> f64 {
         value * value * value * (value * (value * 6f64 - 15f64) + 10f64)
     }
 
+    #[inline]
     fn map(&self, input: i32) -> i32 {
         self.permutation[(input & 0xFF) as usize] as i32
     }
@@ -151,12 +181,40 @@ impl PerlinNoiseSampler {
 }
 
 pub struct OctavePerlinNoiseSampler {
-    octave_samplers: Vec<Option<PerlinNoiseSampler>>,
-    pub(crate) amplitudes: Vec<f64>,
+    octave_samplers: Box<[Option<PerlinNoiseSampler>]>,
+    pub(crate) amplitudes: Box<[f64]>,
     first_octave: i32,
     pub(crate) persistence: f64,
     lacunarity: f64,
     max_value: f64,
+}
+
+impl PartialEq for OctavePerlinNoiseSampler {
+    fn eq(&self, other: &Self) -> bool {
+        self.octave_samplers == other.octave_samplers
+            && self.amplitudes.len() == other.amplitudes.len()
+            && self
+                .amplitudes
+                .iter()
+                .zip(other.amplitudes.iter())
+                .all(|(a1, a2)| a1.to_le_bytes() == a2.to_le_bytes())
+            && self.first_octave == other.first_octave
+            && self.lacunarity.to_le_bytes() == other.lacunarity.to_le_bytes()
+            && self.max_value.to_le_bytes() == other.max_value.to_le_bytes()
+    }
+}
+
+impl Hash for OctavePerlinNoiseSampler {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.octave_samplers.hash(state);
+        self.amplitudes
+            .iter()
+            .for_each(|amp| amp.to_le_bytes().hash(state));
+        self.first_octave.hash(state);
+        self.persistence.to_le_bytes().hash(state);
+        self.lacunarity.to_le_bytes().hash(state);
+        self.max_value.to_le_bytes().hash(state);
+    }
 }
 
 impl OctavePerlinNoiseSampler {
@@ -183,9 +241,7 @@ impl OctavePerlinNoiseSampler {
     }
 
     pub fn maintain_precision(value: f64) -> f64 {
-        (value / 3.3554432E7f64 + 0.5f64)
-            .floor()
-            .mul_add(-3.3554432E7f64, value)
+        (value / 3.3554432E7f64 + 0.5f64).floor() * -3.3554432E7f64 + value
     }
 
     pub fn calculate_amplitudes(octaves: &[i32]) -> (i32, Vec<f64>) {
@@ -208,7 +264,12 @@ impl OctavePerlinNoiseSampler {
         (-i, double_list)
     }
 
-    pub fn new(random: &mut RandomGenerator, first_octave: i32, amplitudes: &[f64]) -> Self {
+    pub fn new(
+        random: &mut RandomGenerator,
+        first_octave: i32,
+        amplitudes: &[f64],
+        legacy: bool,
+    ) -> Self {
         let i = amplitudes.len();
         let j = -first_octave;
 
@@ -217,39 +278,32 @@ impl OctavePerlinNoiseSampler {
             samplers.push(None);
         }
 
-        match random {
-            RandomGenerator::Xoroshiro(random) => {
-                let splitter = random.next_splitter();
-                for k in 0..i {
-                    if amplitudes[k] != 0f64 {
-                        let l = first_octave + k as i32;
-                        samplers[k] = Some(PerlinNoiseSampler::new(
-                            &mut splitter.split_string(&format!("octave_{}", l)),
-                        ));
-                    }
+        if legacy {
+            let sampler = PerlinNoiseSampler::new(random);
+            if j >= 0 && j < i as i32 {
+                let d = amplitudes[j as usize];
+                if d != 0f64 {
+                    samplers[j as usize] = Some(sampler);
                 }
             }
-            RandomGenerator::LegacyXoroshiro(random) => {
-                let sampler = PerlinNoiseSampler::new(random);
-                if j >= 0 && j < i as i32 {
-                    let d = amplitudes[j as usize];
-                    if d != 0f64 {
-                        samplers[j as usize] = Some(sampler);
-                    }
-                }
 
-                for kx in (0..j as usize).rev() {
-                    if kx < i {
-                        let e = amplitudes[kx];
-                        if e != 0f64 {
-                            samplers[kx] = Some(PerlinNoiseSampler::new(random));
-                        } else {
-                            random.skip(262);
-                        }
+            for kx in (0..j as usize).rev() {
+                if kx < i {
+                    let e = amplitudes[kx];
+                    if e != 0f64 {
+                        samplers[kx] = Some(PerlinNoiseSampler::new(random));
                     } else {
                         random.skip(262);
                     }
+                } else {
+                    random.skip(262);
                 }
+            }
+
+            #[cfg(debug_assertions)]
+            {
+                use itertools::Itertools;
+                use num_traits::Zero;
 
                 if let Ok(length1) = samplers.iter().filter(|x| x.is_some()).try_len() {
                     if let Ok(length2) = amplitudes.iter().filter(|x| !x.is_zero()).try_len() {
@@ -258,44 +312,23 @@ impl OctavePerlinNoiseSampler {
                 }
                 assert!(j >= i as i32 - 1);
             }
-            // TODO: This is exactly the same code as LegacyXoroshiro path
-            // Is there a way to combine somehow?
-            RandomGenerator::Legacy(random) => {
-                let sampler = PerlinNoiseSampler::new(random);
-                if j >= 0 && j < i as i32 {
-                    let d = amplitudes[j as usize];
-                    if d != 0f64 {
-                        samplers[j as usize] = Some(sampler);
-                    }
+        } else {
+            let splitter = random.next_splitter();
+            for k in 0..i {
+                if amplitudes[k] != 0f64 {
+                    let l = first_octave + k as i32;
+                    samplers[k] = Some(PerlinNoiseSampler::new(
+                        &mut splitter.split_string(&format!("octave_{}", l)),
+                    ));
                 }
-
-                for kx in (0..j as usize).rev() {
-                    if kx < i {
-                        let e = amplitudes[kx];
-                        if e != 0f64 {
-                            samplers[kx] = Some(PerlinNoiseSampler::new(random));
-                        } else {
-                            random.skip(262);
-                        }
-                    } else {
-                        random.skip(262);
-                    }
-                }
-
-                if let Ok(length1) = samplers.iter().filter(|x| x.is_some()).try_len() {
-                    if let Ok(length2) = amplitudes.iter().filter(|x| !x.is_zero()).try_len() {
-                        assert_eq!(length1, length2);
-                    }
-                }
-                assert!(j >= i as i32 - 1);
             }
         }
 
         let persistence = 2f64.pow((i as i32).wrapping_sub(1) as f64) / (2f64.pow(i as f64) - 1f64);
         let max_value = Self::get_total_amplitude(2f64, persistence, amplitudes);
         Self {
-            octave_samplers: samplers,
-            amplitudes: amplitudes.to_vec(),
+            octave_samplers: samplers.into(),
+            amplitudes: amplitudes.into(),
             first_octave,
             persistence,
             lacunarity: 2f64.pow((-j) as f64),
@@ -329,26 +362,81 @@ impl OctavePerlinNoiseSampler {
     }
 }
 
-#[derive(Clone)]
-pub struct DoublePerlinNoiseParameters<'a> {
+pub struct DoublePerlinNoiseParameters {
     first_octave: i32,
-    amplitudes: &'a [f64],
+    amplitudes: &'static [f64],
+    id: &'static str,
 }
 
-impl<'a> DoublePerlinNoiseParameters<'a> {
-    pub fn new(first_octave: i32, amplitudes: &'a [f64]) -> Self {
-        Self {
-            first_octave,
-            amplitudes,
-        }
+impl Hash for DoublePerlinNoiseParameters {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.first_octave.hash(state);
+        self.amplitudes
+            .iter()
+            .for_each(|amp| amp.to_le_bytes().hash(state));
+        self.id.hash(state);
     }
 }
 
+impl PartialEq for DoublePerlinNoiseParameters {
+    fn eq(&self, other: &Self) -> bool {
+        self.first_octave == other.first_octave
+            && self.amplitudes.len() == other.amplitudes.len()
+            && self
+                .amplitudes
+                .iter()
+                .zip(other.amplitudes.iter())
+                .all(|(a1, a2)| a1.to_le_bytes() == a2.to_le_bytes())
+            && self.id == other.id
+    }
+}
+
+impl Eq for DoublePerlinNoiseParameters {}
+
+impl DoublePerlinNoiseParameters {
+    pub(crate) const fn new(
+        first_octave: i32,
+        amplitudes: &'static [f64],
+        id: &'static str,
+    ) -> Self {
+        Self {
+            first_octave,
+            amplitudes,
+            id,
+        }
+    }
+
+    pub fn id(&self) -> &'static str {
+        self.id
+    }
+}
+
+#[derive(Clone)]
 pub struct DoublePerlinNoiseSampler {
-    first_sampler: OctavePerlinNoiseSampler,
-    second_sampler: OctavePerlinNoiseSampler,
+    first_sampler: Arc<OctavePerlinNoiseSampler>,
+    second_sampler: Arc<OctavePerlinNoiseSampler>,
     amplitude: f64,
     max_value: f64,
+}
+
+impl PartialEq for DoublePerlinNoiseSampler {
+    fn eq(&self, other: &Self) -> bool {
+        self.first_sampler == other.first_sampler
+            && self.second_sampler == other.second_sampler
+            && self.amplitude.to_le_bytes() == other.amplitude.to_le_bytes()
+            && self.max_value.to_le_bytes() == other.max_value.to_le_bytes()
+    }
+}
+
+impl Eq for DoublePerlinNoiseSampler {}
+
+impl Hash for DoublePerlinNoiseSampler {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.first_sampler.hash(state);
+        self.second_sampler.hash(state);
+        self.amplitude.to_le_bytes().hash(state);
+        self.max_value.to_le_bytes().hash(state);
+    }
 }
 
 impl DoublePerlinNoiseSampler {
@@ -360,12 +448,16 @@ impl DoublePerlinNoiseSampler {
         self.max_value
     }
 
-    pub fn new(rand: &mut RandomGenerator, parameters: &DoublePerlinNoiseParameters) -> Self {
+    pub fn new(
+        rand: &mut RandomGenerator,
+        parameters: &DoublePerlinNoiseParameters,
+        legacy: bool,
+    ) -> Self {
         let first_octave = parameters.first_octave;
         let amplitudes = parameters.amplitudes;
 
-        let first_sampler = OctavePerlinNoiseSampler::new(rand, first_octave, amplitudes);
-        let second_sampler = OctavePerlinNoiseSampler::new(rand, first_octave, amplitudes);
+        let first_sampler = OctavePerlinNoiseSampler::new(rand, first_octave, amplitudes, legacy);
+        let second_sampler = OctavePerlinNoiseSampler::new(rand, first_octave, amplitudes, legacy);
 
         let mut j = i32::MAX;
         let mut k = i32::MIN;
@@ -381,8 +473,8 @@ impl DoublePerlinNoiseSampler {
         let max_value = (first_sampler.max_value + second_sampler.max_value) * amplitude;
 
         Self {
-            first_sampler,
-            second_sampler,
+            first_sampler: first_sampler.into(),
+            second_sampler: second_sampler.into(),
             amplitude,
             max_value,
         }
@@ -399,11 +491,11 @@ impl DoublePerlinNoiseSampler {
 
 #[cfg(test)]
 mod double_perlin_noise_sampler_test {
-    use pumpkin_core::random::{legacy_rand::LegacyRand, xoroshiro128::Xoroshiro, RandomImpl};
-
-    use crate::world_gen::noise::perlin::{
-        DoublePerlinNoiseParameters, DoublePerlinNoiseSampler, RandomGenerator,
+    use pumpkin_core::random::{
+        legacy_rand::LegacyRand, xoroshiro128::Xoroshiro, RandomGenerator, RandomImpl,
     };
+
+    use crate::world_gen::noise::perlin::{DoublePerlinNoiseParameters, DoublePerlinNoiseSampler};
 
     #[test]
     fn sample_legacy() {
@@ -411,11 +503,8 @@ mod double_perlin_noise_sampler_test {
         assert_eq!(rand.next_i32(), -1302745855);
 
         let mut rand_gen = RandomGenerator::Legacy(rand);
-        let params = DoublePerlinNoiseParameters {
-            first_octave: 0,
-            amplitudes: &[4f64],
-        };
-        let sampler = DoublePerlinNoiseSampler::new(&mut rand_gen, &params);
+        let params = DoublePerlinNoiseParameters::new(0, &[4f64], "");
+        let sampler = DoublePerlinNoiseSampler::new(&mut rand_gen, &params, true);
 
         let values = [
             (
@@ -512,12 +601,9 @@ mod double_perlin_noise_sampler_test {
 
         let mut rand_gen = RandomGenerator::Xoroshiro(rand);
 
-        let params = DoublePerlinNoiseParameters {
-            first_octave: 1,
-            amplitudes: &[2f64, 4f64],
-        };
+        let params = DoublePerlinNoiseParameters::new(1, &[2f64, 4f64], "");
 
-        let sampler = DoublePerlinNoiseSampler::new(&mut rand_gen, &params);
+        let sampler = DoublePerlinNoiseSampler::new(&mut rand_gen, &params, false);
 
         let values = [
             (
@@ -610,9 +696,9 @@ mod double_perlin_noise_sampler_test {
 
 #[cfg(test)]
 mod octave_perline_noise_sampler_test {
-    use pumpkin_core::random::{legacy_rand::LegacyRand, xoroshiro128::Xoroshiro, RandomImpl};
-
-    use crate::world_gen::noise::perlin::RandomGenerator;
+    use pumpkin_core::random::{
+        legacy_rand::LegacyRand, xoroshiro128::Xoroshiro, RandomGenerator, RandomImpl,
+    };
 
     use super::OctavePerlinNoiseSampler;
 
@@ -626,7 +712,7 @@ mod octave_perline_noise_sampler_test {
         assert_eq!(amplitudes, [1f64, 1f64, 1f64]);
 
         let mut rand_gen = RandomGenerator::Xoroshiro(rand);
-        let sampler = OctavePerlinNoiseSampler::new(&mut rand_gen, start, &amplitudes);
+        let sampler = OctavePerlinNoiseSampler::new(&mut rand_gen, start, &amplitudes, false);
 
         assert_eq!(sampler.first_octave, 1);
         assert_eq!(sampler.persistence, 0.5714285714285714f64);
@@ -661,7 +747,7 @@ mod octave_perline_noise_sampler_test {
         assert_eq!(amplitudes, [1f64]);
 
         let mut rand_gen = RandomGenerator::Legacy(rand);
-        let sampler = OctavePerlinNoiseSampler::new(&mut rand_gen, start, &amplitudes);
+        let sampler = OctavePerlinNoiseSampler::new(&mut rand_gen, start, &amplitudes, true);
         assert_eq!(sampler.first_octave, 0);
         assert_eq!(sampler.persistence, 1f64);
         assert_eq!(sampler.lacunarity, 1f64);
@@ -688,7 +774,7 @@ mod octave_perline_noise_sampler_test {
 
         let (start, amplitudes) = OctavePerlinNoiseSampler::calculate_amplitudes(&[1, 2, 3]);
         let mut rand_gen = RandomGenerator::Xoroshiro(rand);
-        let sampler = OctavePerlinNoiseSampler::new(&mut rand_gen, start, &amplitudes);
+        let sampler = OctavePerlinNoiseSampler::new(&mut rand_gen, start, &amplitudes, false);
 
         let values = [
             (
@@ -783,13 +869,13 @@ mod octave_perline_noise_sampler_test {
 mod perlin_noise_sampler_test {
     use std::ops::Deref;
 
-    use pumpkin_core::random::{xoroshiro128::Xoroshiro, RandomImpl};
+    use pumpkin_core::random::{xoroshiro128::Xoroshiro, RandomGenerator, RandomImpl};
 
     use crate::world_gen::noise::perlin::PerlinNoiseSampler;
 
     #[test]
     fn test_create() {
-        let mut rand = Xoroshiro::from_seed(111);
+        let mut rand = RandomGenerator::Xoroshiro(Xoroshiro::from_seed(111));
         assert_eq!(rand.next_i32(), -1467508761);
 
         let sampler = PerlinNoiseSampler::new(&mut rand);
@@ -818,7 +904,7 @@ mod perlin_noise_sampler_test {
 
     #[test]
     fn test_no_y() {
-        let mut rand = Xoroshiro::from_seed(111);
+        let mut rand = RandomGenerator::Xoroshiro(Xoroshiro::from_seed(111));
         assert_eq!(rand.next_i32(), -1467508761);
         let sampler = PerlinNoiseSampler::new(&mut rand);
 
@@ -988,7 +1074,7 @@ mod perlin_noise_sampler_test {
 
     #[test]
     fn test_no_fade() {
-        let mut rand = Xoroshiro::from_seed(111);
+        let mut rand = RandomGenerator::Xoroshiro(Xoroshiro::from_seed(111));
         assert_eq!(rand.next_i32(), -1467508761);
         let sampler = PerlinNoiseSampler::new(&mut rand);
 

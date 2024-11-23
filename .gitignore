@@ -124,4 +124,10 @@ docs/.vitepress/dist
 docs/.vitepress/cache
 node_modules
 
+<<<<<<< HEAD
+# Benchmarking
+*perf.data*
+*flamegraph.svg
+=======
 run/
+>>>>>>> master

@@ -1,13 +1,198 @@
-use pumpkin_core::math::vector3::Vector3;
+use pumpkin_core::math::{vector2::Vector2, vector3::Vector3};
 
-use crate::block::block_state::BlockState;
+use crate::{
+    block::BlockState,
+    world_gen::{
+        chunk_noise::CHUNK_DIM,
+        generation_shapes::GenerationShape,
+        noise::{config::NoiseConfig, router::OVERWORLD_NOISE_ROUTER},
+        positions::chunk_pos,
+        sampler::FluidLevelSampler,
+    },
+    WORLD_HEIGHT,
+};
+
+use super::{
+    chunk_noise::{ChunkNoiseGenerator, LAVA_BLOCK, STONE_BLOCK, WATER_BLOCK},
+    positions::chunk_pos::{start_block_x, start_block_z},
+    sampler::{FluidLevel, FluidLevelSamplerImpl},
+};
+
+pub struct StandardChunkFluidLevelSampler {
+    pub top_fluid: FluidLevel,
+    pub bottom_fluid: FluidLevel,
+}
+
+impl FluidLevelSamplerImpl for StandardChunkFluidLevelSampler {
+    fn get_fluid_level(&self, _x: i32, y: i32, _z: i32) -> FluidLevel {
+        if y < self
+            .top_fluid
+            .max_y_exclusive()
+            .min(self.bottom_fluid.max_y_exclusive())
+        {
+            self.bottom_fluid.clone()
+        } else {
+            self.top_fluid.clone()
+        }
+    }
+}
 
 pub struct ProtoChunk {
+    chunk_pos: Vector2<i32>,
+    sampler: ChunkNoiseGenerator,
+    // These are local positions
+    flat_block_map: Vec<BlockState>,
     // may want to use chunk status
 }
 
 impl ProtoChunk {
-    pub fn get_block_state(&self, _pos: &Vector3<i32>) -> BlockState {
-        unimplemented!()
+    pub fn new(chunk_pos: Vector2<i32>) -> Self {
+        // TODO: Don't hardcode these
+
+        let base_router = &OVERWORLD_NOISE_ROUTER;
+
+        let generation_shape = GenerationShape::SURFACE;
+        let config = NoiseConfig::new(0, base_router);
+
+        let horizontal_cell_count = CHUNK_DIM / generation_shape.horizontal_cell_block_count();
+
+        // TODO: Customize these
+        let sampler = FluidLevelSampler::Chunk(StandardChunkFluidLevelSampler {
+            bottom_fluid: FluidLevel::new(-54, *LAVA_BLOCK),
+            top_fluid: FluidLevel::new(62, *WATER_BLOCK),
+        });
+
+        let sampler = ChunkNoiseGenerator::new(
+            horizontal_cell_count,
+            chunk_pos::start_block_x(&chunk_pos),
+            chunk_pos::start_block_z(&chunk_pos),
+            generation_shape,
+            &config,
+            sampler,
+            true,
+            true,
+        );
+
+        Self {
+            chunk_pos,
+            sampler,
+            flat_block_map: vec![
+                BlockState::AIR;
+                CHUNK_DIM as usize * CHUNK_DIM as usize * WORLD_HEIGHT
+            ],
+        }
+    }
+
+    #[inline]
+    fn local_pos_to_index(local_pos: &Vector3<i32>) -> usize {
+        #[cfg(debug_assertions)]
+        {
+            assert!(local_pos.x >= 0 && local_pos.x <= 15);
+            assert!(local_pos.y < WORLD_HEIGHT as i32 && local_pos.y >= 0);
+            assert!(local_pos.z >= 0 && local_pos.z <= 15);
+        }
+        WORLD_HEIGHT * CHUNK_DIM as usize * local_pos.x as usize
+            + CHUNK_DIM as usize * local_pos.y as usize
+            + local_pos.z as usize
+    }
+
+    #[inline]
+    pub fn get_block_state(&self, local_pos: &Vector3<i32>) -> BlockState {
+        let local_pos = Vector3::new(
+            local_pos.x & 15,
+            local_pos.y - self.sampler.min_y() as i32,
+            local_pos.z & 15,
+        );
+        if local_pos.y < 0 || local_pos.y >= WORLD_HEIGHT as i32 {
+            BlockState::AIR
+        } else {
+            self.flat_block_map[Self::local_pos_to_index(&local_pos)]
+        }
+    }
+
+    pub fn populate_noise(&mut self) {
+        let horizontal_cell_block_count = self.sampler.horizontal_cell_block_count();
+        let vertical_cell_block_count = self.sampler.vertical_cell_block_count();
+
+        let horizonal_cells = CHUNK_DIM / horizontal_cell_block_count;
+
+        let min_y = self.sampler.min_y();
+        let minimum_cell_y = min_y / vertical_cell_block_count as i8;
+        let cell_height = self.sampler.height() / vertical_cell_block_count as u16;
+
+        self.sampler.sample_start_density();
+        for cell_x in 0..horizonal_cells {
+            self.sampler.sample_end_density(cell_x);
+
+            for cell_z in 0..horizonal_cells {
+                for cell_y in (0..cell_height).rev() {
+                    self.sampler.on_sampled_cell_corners(cell_y, cell_z);
+                    for local_y in (0..vertical_cell_block_count).rev() {
+                        let block_y = (minimum_cell_y as i32 + cell_y as i32)
+                            * vertical_cell_block_count as i32
+                            + local_y as i32;
+                        let delta_y = local_y as f64 / vertical_cell_block_count as f64;
+                        self.sampler.interpolate_y(block_y, delta_y);
+
+                        for local_x in 0..horizontal_cell_block_count {
+                            let block_x = self.start_block_x()
+                                + cell_x as i32 * horizontal_cell_block_count as i32
+                                + local_x as i32;
+                            let delta_x = local_x as f64 / horizontal_cell_block_count as f64;
+                            self.sampler.interpolate_x(block_x, delta_x);
+
+                            for local_z in 0..horizontal_cell_block_count {
+                                let block_z = self.start_block_z()
+                                    + cell_z as i32 * horizontal_cell_block_count as i32
+                                    + local_z as i32;
+                                let delta_z = local_z as f64 / horizontal_cell_block_count as f64;
+                                self.sampler.interpolate_z(block_z, delta_z);
+
+                                // TODO: Change default block
+                                let block_state =
+                                    self.sampler.sample_block_state().unwrap_or(*STONE_BLOCK);
+                                //log::debug!("Sampled block state in {:?}", inst.elapsed());
+
+                                let local_pos = Vector3 {
+                                    x: block_x & 15,
+                                    y: block_y - min_y as i32,
+                                    z: block_z & 15,
+                                };
+
+                                #[cfg(debug_assertions)]
+                                {
+                                    assert!(local_pos.x < 16 && local_pos.x >= 0);
+                                    assert!(local_pos.y < WORLD_HEIGHT as i32 && local_pos.y >= 0);
+                                    assert!(local_pos.z < 16 && local_pos.z >= 0);
+                                }
+                                //println!("Putting {:?}: {:?}", local_pos, block_state);
+                                self.flat_block_map[Self::local_pos_to_index(&local_pos)] =
+                                    block_state;
+                            }
+                        }
+                    }
+                }
+            }
+
+            self.sampler.swap_buffers();
+        }
+
+        self.sampler.stop_interpolation();
+    }
+
+    fn start_cell_x(&self) -> i32 {
+        self.start_block_x() / self.sampler.horizontal_cell_block_count() as i32
+    }
+
+    fn start_cell_z(&self) -> i32 {
+        self.start_block_z() / self.sampler.horizontal_cell_block_count() as i32
+    }
+
+    fn start_block_x(&self) -> i32 {
+        start_block_x(&self.chunk_pos)
+    }
+
+    fn start_block_z(&self) -> i32 {
+        start_block_z(&self.chunk_pos)
     }
 }
