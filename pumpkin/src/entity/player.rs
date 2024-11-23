@@ -768,16 +768,12 @@ impl Player {
     pub async fn process_packets(self: &Arc<Self>, server: &Arc<Server>) {
         let mut packets = self.client.client_packets_queue.lock().await;
         while let Some(mut packet) = packets.pop_back() {
-            #[cfg(debug_assertions)]
-            let inst = std::time::Instant::now();
             tokio::select! {
                 () = self.await_cancel() => {
                     log::debug!("Canceling player packet processing");
                     return;
                 },
                 packet_result = self.handle_play_packet(server, &mut packet) => {
-                    #[cfg(debug_assertions)]
-                    log::debug!("Handled play packet in {:?}", inst.elapsed());
                     match packet_result {
                         Ok(()) => {}
                         Err(e) => {
