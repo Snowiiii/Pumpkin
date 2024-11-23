@@ -95,12 +95,14 @@ impl BiomeGenerator for TestBiomeGenerator {
 
 pub(crate) struct TestTerrainGenerator {
     chunks: DashMap<Vector2<i32>, (ProtoChunk, Wrapping<u8>)>,
+    seed: Seed,
 }
 
 impl GeneratorInit for TestTerrainGenerator {
-    fn new(_: Seed) -> Self {
+    fn new(seed: Seed) -> Self {
         Self {
             chunks: DashMap::new(),
+            seed,
         }
     }
 }
@@ -109,7 +111,7 @@ impl TerrainGenerator for TestTerrainGenerator {
     fn prepare_chunk(&self, at: &Vector2<i32>) {
         let entry = self.chunks.entry(*at);
         if let Entry::Vacant(entry) = entry {
-            let mut proto_chunk = ProtoChunk::new(*at);
+            let mut proto_chunk = ProtoChunk::new(*at, self.seed.0 as u64);
             //let inst = std::time::Instant::now();
             //println!("Populating chunk: {:?}", at);
             proto_chunk.populate_noise();

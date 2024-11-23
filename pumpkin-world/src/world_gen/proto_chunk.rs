@@ -46,13 +46,13 @@ pub struct ProtoChunk {
 }
 
 impl ProtoChunk {
-    pub fn new(chunk_pos: Vector2<i32>) -> Self {
+    pub fn new(chunk_pos: Vector2<i32>, seed: u64) -> Self {
         // TODO: Don't hardcode these
 
         let base_router = &OVERWORLD_NOISE_ROUTER;
 
         let generation_shape = GenerationShape::SURFACE;
-        let config = NoiseConfig::new(0, base_router);
+        let config = NoiseConfig::new(seed, base_router);
 
         let horizontal_cell_count = CHUNK_DIM / generation_shape.horizontal_cell_block_count();
 
