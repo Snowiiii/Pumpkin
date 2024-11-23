@@ -41,6 +41,8 @@ thiserror = "2"
 num-traits = "0.2"
 num-derive = "0.4"
 
+bytes = "1.8"
+
 # Concurrency/Parallelism and Synchronization
 rayon = "1.10.0"
 parking_lot = { version = "0.12.3", features = ["send_guard"] }

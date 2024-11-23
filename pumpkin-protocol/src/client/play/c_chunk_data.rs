@@ -15,8 +15,7 @@ impl<'a> ClientPacket for CChunkData<'a> {
         buf.put_i32(self.0.position.z);
 
         let heightmap_nbt =
-            fastnbt::to_bytes_with_opts(&self.0.blocks.heightmap, fastnbt::SerOpts::network_nbt())
-                .unwrap();
+            pumpkin_nbt::serializer::to_bytes_unnamed(&self.0.blocks.heightmap).unwrap();
         // Heightmaps
         buf.put_slice(&heightmap_nbt);
 
