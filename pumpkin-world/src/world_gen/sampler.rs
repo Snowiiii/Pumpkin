@@ -140,7 +140,7 @@ pub struct WorldAquiferSampler {
     start_z: i32,
     size_z: usize,
     levels: Box<[Option<FluidLevel>]>,
-    positions: Box<[Option<u64>]>,
+    packed_positions: Box<[Option<i64>]>,
 }
 
 impl WorldAquiferSampler {
@@ -204,7 +204,7 @@ impl WorldAquiferSampler {
             start_z,
             size_z,
             levels: vec![None; cache_size].into(),
-            positions: vec![None; cache_size].into(),
+            packed_positions: vec![None; cache_size].into(),
         }
     }
 
@@ -284,7 +284,7 @@ impl WorldAquiferSampler {
 
     fn get_water_level(
         &mut self,
-        packed: u64,
+        packed: i64,
         height_estimator: &mut ChunkNoiseDensityFunctions,
         env: &ChunkNoiseState,
     ) -> FluidLevel {
@@ -523,14 +523,14 @@ impl AquiferSamplerImpl for WorldAquiferSampler {
                             let z_pos = scaled_z + offset_z;
                             let index = self.index(x_pos, y_pos, z_pos);
 
-                            if self.positions[index].is_none() {
+                            if self.packed_positions[index].is_none() {
                                 let mut random = self.random_deriver.split_pos(x_pos, y_pos, z_pos);
                                 let rand_x = x_pos * 16 + random.next_bounded_i32(10);
                                 let rand_y = y_pos * 12 + random.next_bounded_i32(9);
                                 let rand_z = z_pos * 16 + random.next_bounded_i32(10);
                                 let packed_pos =
                                     block_pos::packed(&Vector3::new(rand_x, rand_y, rand_z));
-                                self.positions[index] = Some(packed_pos);
+                                self.packed_positions[index] = Some(packed_pos);
                             }
                         }
                     }
@@ -544,7 +544,7 @@ impl AquiferSamplerImpl for WorldAquiferSampler {
                         let z_pos = scaled_z + offset_z;
                         let index = self.index(x_pos, y_pos, z_pos);
 
-                        let packed_random = self.positions[index].unwrap();
+                        let packed_random = self.packed_positions[index].unwrap();
 
                         let local_x = block_pos::unpack_x(packed_random) - i;
                         let local_y = block_pos::unpack_y(packed_random) - j;
