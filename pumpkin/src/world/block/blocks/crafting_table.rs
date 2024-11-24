@@ -1,16 +1,46 @@
 use crate::entity::player::Player;
 use crate::server::Server;
-use crate::world::block::interactive::Interactive;
+use crate::world::block::block_manager::{BlockManager, InteractiveBlock};
+use crate::world::block::pumpkin_block::{BlockMetadata, PumpkinBlock};
 use async_trait::async_trait;
 use pumpkin_core::math::position::WorldPosition;
 use pumpkin_inventory::{CraftingTable, OpenContainer, WindowType};
 use pumpkin_world::item::item_registry::Item;
+use std::sync::Arc;
 
 pub struct CraftingTableBlock;
 
+impl BlockMetadata for CraftingTableBlock {
+    const NAMESPACE: &'static str = "minecraft";
+    const ID: &'static str = "crafting_table";
+}
+
+impl PumpkinBlock for CraftingTableBlock {
+    fn register(self, block_manager: &mut BlockManager) {
+        let block = Arc::new(self);
+        block_manager.register_block_interactable(block);
+    }
+}
+
 #[async_trait]
-impl Interactive for CraftingTableBlock {
+impl InteractiveBlock for CraftingTableBlock {
     async fn on_use<'a>(&self, player: &Player, _location: WorldPosition, server: &Server) {
+        self.open_crafting_screen(player, server).await;
+    }
+
+    async fn on_use_with_item<'a>(
+        &self,
+        player: &Player,
+        _location: WorldPosition,
+        _item: &Item,
+        server: &Server,
+    ) {
+        self.open_crafting_screen(player, server).await;
+    }
+}
+
+impl CraftingTableBlock {
+    pub async fn open_crafting_screen(&self, player: &Player, server: &Server) {
         //TODO: Adjust /craft command to real crafting table
         let entity_id = player.entity_id();
         player.open_container.store(Some(1));
@@ -26,14 +56,5 @@ impl Interactive for CraftingTableBlock {
         player
             .open_container(server, WindowType::CraftingTable)
             .await;
-    }
-
-    async fn on_use_with_item<'a>(
-        &self,
-        _player: &Player,
-        _location: WorldPosition,
-        _item: &Item,
-        _server: &Server,
-    ) {
     }
 }

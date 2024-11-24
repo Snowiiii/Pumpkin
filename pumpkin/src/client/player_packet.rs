@@ -660,6 +660,8 @@ impl Player {
                     self.client
                         .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
                         .await;
+
+                    //server.
                 } else {
                     let block = world.get_block(location).await;
                     let Some(item) = get_item_by_id(item.item_id) else {
@@ -671,7 +673,7 @@ impl Player {
                     if let Ok(block) = block {
                         server
                             .interactive_blocks
-                            .on_use_with_item(block, &self, location, item, server)
+                            .on_use_with_item(block, self, location, item, server)
                             .await;
                     }
                 }
@@ -682,7 +684,7 @@ impl Player {
                 if let Ok(block) = block {
                     server
                         .interactive_blocks
-                        .on_use(block, &self, location, server)
+                        .on_use(block, self, location, server)
                         .await;
                 }
             }

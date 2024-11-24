@@ -20,7 +20,7 @@ use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
-use pumpkin_protocol::client::play::{CLevelEvent, CSetBorderLerpSize};
+use pumpkin_protocol::client::play::CLevelEvent;
 use pumpkin_protocol::{
     client::play::{CBlockUpdate, CRespawn, CSoundEffect, CWorldEvent},
     SoundCategory,
