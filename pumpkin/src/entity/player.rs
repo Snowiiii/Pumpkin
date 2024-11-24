@@ -369,6 +369,7 @@ impl Player {
             world
                 .play_sound(
                     sound!("minecraft:entity.player.attack.nodamage"),
+                    None,
                     SoundCategory::Players,
                     &pos,
                 )
@@ -379,6 +380,7 @@ impl Player {
         world
             .play_sound(
                 sound!("minecraft:entity.player.hurt"),
+                None,
                 SoundCategory::Players,
                 &pos,
             )
