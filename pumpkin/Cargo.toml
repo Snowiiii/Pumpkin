@@ -74,8 +74,18 @@ sysinfo = "0.32.0"
 
 # commands
 async-trait = "0.1.83"
+
 [build-dependencies]
 git-version = "0.3.9"
+
+[dev-dependencies]
+# benchmarks
+criterion = "0.3"
+
+[[bench]]
+name = "registry_bench"
+harness = false
+
 # This makes it so the entire project doesn't recompile on each build on linux.
 [target.'cfg(target_os = "windows")'.build-dependencies]
 tauri-winres= "0.1.1"

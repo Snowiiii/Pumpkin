@@ -1,12 +1,22 @@
+use std::collections::HashMap;
+use std::sync::LazyLock;
+
 use pumpkin_core::registries::blocks::{Block, State};
 use pumpkin_data::block::BLOCKS;
 use pumpkin_data::block_state::BLOCK_STATES;
 use pumpkin_data::block_state_collision_shapes::BLOCK_STATE_COLLISION_SHAPES;
 
-/// todo: make O(1)
-/// do we even need this to be O(1)?
+static BLOCKS_HASH_MAP: LazyLock<HashMap<&str, usize>> = LazyLock::new(|| {
+    let mut map = HashMap::new();
+    for (i, block) in BLOCKS.iter().enumerate() {
+        map.insert(block.name, i);
+    }
+    map
+});
+
 pub fn get_block(registry_id: &str) -> Option<&Block> {
-    BLOCKS.iter().find(|b| b.name == registry_id)
+    let idx = BLOCKS_HASH_MAP.get(registry_id)?;
+    BLOCKS.get(*idx)
 }
 
 pub fn get_block_by_id<'a>(id: u16) -> Option<&'a Block> {
