@@ -15,8 +15,8 @@ use crate::{
     error::PumpkinError,
     server::Server,
 };
-use level_time::LevelTime;
 use itertools::Itertools;
+use level_time::LevelTime;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
