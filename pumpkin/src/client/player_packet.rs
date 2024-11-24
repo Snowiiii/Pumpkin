@@ -672,7 +672,7 @@ impl Player {
                     drop(inventory); // This is necessary because else we still have a lock when opening ui elements
                     if let Ok(block) = block {
                         server
-                            .interactive_blocks
+                            .block_manager
                             .on_use_with_item(block, self, location, item, server)
                             .await;
                     }
@@ -683,7 +683,7 @@ impl Player {
                 let block = world.get_block(location).await;
                 if let Ok(block) = block {
                     server
-                        .interactive_blocks
+                        .block_manager
                         .on_use(block, self, location, server)
                         .await;
                 }

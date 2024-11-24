@@ -8,7 +8,7 @@ mod blocks;
 pub mod pumpkin_block;
 
 #[must_use]
-pub fn default_interactive_block_manager() -> Arc<BlockManager> {
+pub fn default_block_manager() -> Arc<BlockManager> {
     let mut manager = BlockManager::default();
 
     manager.register(JukeboxBlock);
