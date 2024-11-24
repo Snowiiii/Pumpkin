@@ -117,66 +117,73 @@ impl ProtoChunk {
         let minimum_cell_y = min_y / vertical_cell_block_count as i8;
         let cell_height = self.sampler.height() / vertical_cell_block_count as u16;
 
-        self.sampler.sample_start_density();
-        for cell_x in 0..horizonal_cells {
-            self.sampler.sample_end_density(cell_x);
+        // Safety
+        //
+        // Owned density functions are only invoked in `sampler.sample_block_state`:
+        //     - Everything in this block is ran from the same thread
+        //     - All unsafe functions are encapsulated and no mutable references are leaked
+        unsafe {
+            self.sampler.sample_start_density();
+            for cell_x in 0..horizonal_cells {
+                self.sampler.sample_end_density(cell_x);
 
-            for cell_z in 0..horizonal_cells {
-                for cell_y in (0..cell_height).rev() {
-                    self.sampler.on_sampled_cell_corners(cell_y, cell_z);
-                    for local_y in (0..vertical_cell_block_count).rev() {
-                        let block_y = (minimum_cell_y as i32 + cell_y as i32)
-                            * vertical_cell_block_count as i32
-                            + local_y as i32;
-                        let delta_y = local_y as f64 / vertical_cell_block_count as f64;
-                        self.sampler.interpolate_y(block_y, delta_y);
+                for cell_z in 0..horizonal_cells {
+                    for cell_y in (0..cell_height).rev() {
+                        self.sampler.on_sampled_cell_corners(cell_y, cell_z);
+                        for local_y in (0..vertical_cell_block_count).rev() {
+                            let block_y = (minimum_cell_y as i32 + cell_y as i32)
+                                * vertical_cell_block_count as i32
+                                + local_y as i32;
+                            let delta_y = local_y as f64 / vertical_cell_block_count as f64;
+                            self.sampler.interpolate_y(block_y, delta_y);
 
-                        for local_x in 0..horizontal_cell_block_count {
-                            let block_x = self.start_block_x()
-                                + cell_x as i32 * horizontal_cell_block_count as i32
-                                + local_x as i32;
-                            let delta_x = local_x as f64 / horizontal_cell_block_count as f64;
-                            self.sampler.interpolate_x(block_x, delta_x);
+                            for local_x in 0..horizontal_cell_block_count {
+                                let block_x = self.start_block_x()
+                                    + cell_x as i32 * horizontal_cell_block_count as i32
+                                    + local_x as i32;
+                                let delta_x = local_x as f64 / horizontal_cell_block_count as f64;
+                                self.sampler.interpolate_x(block_x, delta_x);
 
-                            for local_z in 0..horizontal_cell_block_count {
-                                let block_z = self.start_block_z()
-                                    + cell_z as i32 * horizontal_cell_block_count as i32
-                                    + local_z as i32;
-                                let delta_z = local_z as f64 / horizontal_cell_block_count as f64;
-                                self.sampler.interpolate_z(block_z, delta_z);
+                                for local_z in 0..horizontal_cell_block_count {
+                                    let block_z = self.start_block_z()
+                                        + cell_z as i32 * horizontal_cell_block_count as i32
+                                        + local_z as i32;
+                                    let delta_z =
+                                        local_z as f64 / horizontal_cell_block_count as f64;
+                                    self.sampler.interpolate_z(block_z, delta_z);
 
-                                // TODO: Change default block
-                                let block_state =
-                                    self.sampler.sample_block_state().unwrap_or(*STONE_BLOCK);
-                                //log::debug!("Sampled block state in {:?}", inst.elapsed());
+                                    // TODO: Change default block
+                                    let block_state =
+                                        self.sampler.sample_block_state().unwrap_or(*STONE_BLOCK);
+                                    //log::debug!("Sampled block state in {:?}", inst.elapsed());
 
-                                let local_pos = Vector3 {
-                                    x: block_x & 15,
-                                    y: block_y - min_y as i32,
-                                    z: block_z & 15,
-                                };
+                                    let local_pos = Vector3 {
+                                        x: block_x & 15,
+                                        y: block_y - min_y as i32,
+                                        z: block_z & 15,
+                                    };
 
-                                #[cfg(debug_assertions)]
-                                {
-                                    assert!(local_pos.x < 16 && local_pos.x >= 0);
-                                    assert!(
-                                        local_pos.y < self.sampler.height() as i32
-                                            && local_pos.y >= 0
-                                    );
-                                    assert!(local_pos.z < 16 && local_pos.z >= 0);
+                                    #[cfg(debug_assertions)]
+                                    {
+                                        assert!(local_pos.x < 16 && local_pos.x >= 0);
+                                        assert!(
+                                            local_pos.y < self.sampler.height() as i32
+                                                && local_pos.y >= 0
+                                        );
+                                        assert!(local_pos.z < 16 && local_pos.z >= 0);
+                                    }
+                                    //println!("Putting {:?}: {:?}", local_pos, block_state);
+                                    let index = self.local_pos_to_index(&local_pos);
+                                    self.flat_block_map[index] = block_state;
                                 }
-                                //println!("Putting {:?}: {:?}", local_pos, block_state);
-                                let index = self.local_pos_to_index(&local_pos);
-                                self.flat_block_map[index] = block_state;
                             }
                         }
                     }
                 }
+
+                self.sampler.swap_buffers();
             }
-
-            self.sampler.swap_buffers();
         }
-
         self.sampler.stop_interpolation();
     }
 

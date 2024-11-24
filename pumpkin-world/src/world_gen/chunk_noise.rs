@@ -2,7 +2,6 @@ use std::{collections::HashMap, hash::Hash, mem, num::Wrapping, ops::AddAssign, 
 
 use lazy_static::lazy_static;
 use num_traits::Zero;
-use parking_lot::Mutex;
 use pumpkin_core::math::{floor_div, vector2::Vector2, vector3::Vector3};
 
 use crate::{
@@ -139,20 +138,9 @@ impl<R: ComponentReference<ChunkNoiseState>> MutableComponentFunctionImpl<ChunkN
     }
 
     fn clone_to_new_ref(&self) -> ComponentReferenceImplementation<ChunkNoiseState> {
-        match_ref_implementations!(
-            (delegate, self.delegate.clone_to_new_ref());
-            {
-                MutableComponentReference(Box::new(
-                    ChunkCacheOnceFunction {
-                        delegate,
-                        sample_unique_index: self.sample_unique_index,
-                        cache_once_unique_index: self.cache_once_unique_index,
-                        last_sample_result: self.last_sample_result,
-                        cache: self.cache.clone(),
-                    }
-                )).into()
-            }
-        )
+        // WARNING: Implementing this might invalidate the unsafe variants for `ChunkNoiseGenerator`
+        // Make sure you fulling understand these before making an implementation for this!
+        unreachable!()
     }
 }
 
@@ -253,17 +241,9 @@ impl<R: ComponentReference<ChunkNoiseState>> MutableComponentFunctionImpl<ChunkN
     }
 
     fn clone_to_new_ref(&self) -> ComponentReferenceImplementation<ChunkNoiseState> {
-        match_ref_implementations!(
-            (delegate, self.delegate.clone_to_new_ref());
-            {
-                MutableComponentReference(Box::new(
-                   ChunkFlatCacheFunction {
-                    delegate,
-                    cache: self.cache.clone(),
-                }
-                )).into()
-            }
-        )
+        // WARNING: Implementing this might invalidate the unsafe variants for `ChunkNoiseGenerator`
+        // Make sure you fulling understand these before making an implementation for this!
+        unreachable!()
     }
 }
 
@@ -345,6 +325,8 @@ impl MutableComponentFunctionImpl<ChunkNoiseState> for ChunkCellCacheFunction {
     }
 
     fn clone_to_new_ref(&self) -> ComponentReferenceImplementation<ChunkNoiseState> {
+        // WARNING: Implementing this might invalidate the unsafe variants for `ChunkNoiseGenerator`
+        // Make sure you fulling understand these before making an implementation for this!
         unreachable!()
     }
 }
@@ -409,18 +391,9 @@ impl<R: ComponentReference<ChunkNoiseState>> MutableComponentFunctionImpl<ChunkN
     }
 
     fn clone_to_new_ref(&self) -> ComponentReferenceImplementation<ChunkNoiseState> {
-        match_ref_implementations!(
-            (delegate, self.delegate.clone_to_new_ref());
-            {
-                MutableComponentReference(Box::new(
-                    Chunk2DCacheFunction {
-                        delegate,
-                        last_sampled_column: self.last_sampled_column,
-                        last_result: self.last_result,
-                    }
-                )).into()
-            }
-        )
+        // WARNING: Implementing this might invalidate the unsafe variants for `ChunkNoiseGenerator`
+        // Make sure you fulling understand these before making an implementation for this!
+        unreachable!()
     }
 }
 
@@ -577,14 +550,15 @@ impl MutableComponentFunctionImpl<ChunkNoiseState> for ChunkInterpolatorFunction
     }
 
     fn clone_to_new_ref(&self) -> ComponentReferenceImplementation<ChunkNoiseState> {
+        // WARNING: Implementing this might invalidate the unsafe variants for `ChunkNoiseGenerator`
+        // Make sure you fulling understand these before making an implementation for this!
         unreachable!()
     }
 }
 
-// TODO: Can we do this without mutexes?
 struct CachedFunctions {
-    interpolators: Vec<Arc<Mutex<ChunkInterpolatorFunction>>>,
-    caches: Vec<Arc<Mutex<ChunkCellCacheFunction>>>,
+    interpolators: Vec<*const ChunkInterpolatorFunction>,
+    caches: Vec<*const ChunkCellCacheFunction>,
     cached_results:
         HashMap<SharedComponentReference, ComponentReferenceImplementation<ChunkNoiseState>>,
 }
@@ -604,52 +578,6 @@ impl<'a> ChunkNoiseWrappedFunctionConverter<'a> {
 
     fn consume(self) -> CachedFunctions {
         self.functions
-    }
-}
-
-struct WrappedMutexFunction {
-    wrapped: Arc<Mutex<dyn MutableComponentFunctionImpl<ChunkNoiseState>>>,
-}
-
-impl ComponentFunctionImpl for WrappedMutexFunction {}
-
-impl MutableComponentFunctionImpl<ChunkNoiseState> for WrappedMutexFunction {
-    fn sample_mut(&mut self, pos: &NoisePos, env: &ChunkNoiseState) -> f64 {
-        let mut wrapped = self.wrapped.lock();
-
-        wrapped.sample_mut(pos, env)
-    }
-
-    fn fill_mut(
-        &mut self,
-        arr: &mut [f64],
-        applier: &mut dyn EnvironmentApplierImpl<Env = ChunkNoiseState>,
-    ) {
-        let mut wrapped = self.wrapped.lock();
-
-        wrapped.fill_mut(arr, applier);
-    }
-
-    fn convert(
-        self: Box<Self>,
-        _converter: &mut dyn ConverterImpl<ChunkNoiseState>,
-    ) -> ComponentReferenceImplementation<ChunkNoiseState> {
-        unreachable!()
-    }
-
-    fn environment(&self) -> ConverterEnvironment<ChunkNoiseState> {
-        ConverterEnvironment::ChunkNoise
-    }
-
-    fn into_environment(self: Box<Self>) -> OwnedConverterEnvironment<ChunkNoiseState> {
-        unreachable!()
-    }
-
-    fn clone_to_new_ref(&self) -> ComponentReferenceImplementation<ChunkNoiseState> {
-        MutableComponentReference(Box::new(WrappedMutexFunction {
-            wrapped: self.wrapped.clone(),
-        }))
-        .into()
     }
 }
 
@@ -714,23 +642,30 @@ impl<'a> ConverterImpl<ChunkNoiseState> for ChunkNoiseWrappedFunctionConverter<'
                     new_ref.into()
                 }
                 WrapperType::CellCache => {
-                    let function = Arc::new(Mutex::new(ChunkCellCacheFunction::new(
+                    let function = Box::new(ChunkCellCacheFunction::new(
                         wrapped.boxed(),
                         self.shared_data,
-                    )));
-                    self.functions.caches.push(function.clone());
-
-                    MutableComponentReference(Box::new(WrappedMutexFunction { wrapped: function }))
-                        .into()
+                    ));
+                    // Take the pointer of the function wrapped by the box. This function is now on
+                    // the heap, so this ptr will not change even when the box is moved.
+                    //
+                    // Just reading a pointer is not unsafe.
+                    let ptr: *const ChunkCellCacheFunction = &*function;
+                    self.functions.caches.push(ptr);
+                    MutableComponentReference(function).into()
                 }
                 WrapperType::Interpolated => {
-                    let function = Arc::new(Mutex::new(ChunkInterpolatorFunction::new(
+                    let function = Box::new(ChunkInterpolatorFunction::new(
                         wrapped.boxed(),
                         self.shared_data,
-                    )));
-                    self.functions.interpolators.push(function.clone());
-                    MutableComponentReference(Box::new(WrappedMutexFunction { wrapped: function }))
-                        .into()
+                    ));
+                    // Take the pointer of the function wrapped by the box. This function is now on
+                    // the heap, so this ptr will not change even when the box is moved.
+                    //
+                    // Just reading a pointer is not unsafe.
+                    let ptr: *const ChunkInterpolatorFunction = &*function;
+                    self.functions.interpolators.push(ptr);
+                    MutableComponentReference(function).into()
                 }
             },
             _ => unreachable!(),
@@ -1016,11 +951,29 @@ pub struct ChunkNoiseGenerator {
     generation_shape: GenerationShape,
 
     shared: ChunkNoiseState,
-    //TODO: Handle without mutexs somehow
-    cell_caches: Box<[Arc<Mutex<ChunkCellCacheFunction>>]>,
-    interpolators: Box<[Arc<Mutex<ChunkInterpolatorFunction>>]>,
+    /// # Safety
+    ///
+    /// Only populate with CellCellCacheFunctions that we own
+    cell_caches: Box<[*const ChunkCellCacheFunction]>,
+    /// # Safety
+    ///
+    /// Only populate with ChunkInterpolatorFunctions that we own
+    interpolators: Box<[*const ChunkInterpolatorFunction]>,
     density_functions: ChunkNoiseDensityFunctions,
 }
+
+/// # Safety
+///
+/// The caller must ensure that this will not be ran while the
+/// associated function is sampling, and that this is and function
+/// samples are ran from the same thread unsafe functions are run from.
+unsafe impl Sync for ChunkNoiseGenerator {}
+/// # Safety
+///
+/// The caller must ensure that this will not be ran while the
+/// associated function is sampling, and that this is and function
+/// samples are ran from the same thread unsafe functions are run from.
+unsafe impl Send for ChunkNoiseGenerator {}
 
 impl ChunkNoiseGenerator {
     #[allow(clippy::too_many_arguments)]
@@ -1182,20 +1135,47 @@ impl ChunkNoiseGenerator {
         self.shared.is_interpolating = false;
     }
 
-    pub fn sample_start_density(&mut self) {
+    /// Fills all pointed to interpolator functions' start caches
+    ///
+    /// # Safety
+    ///
+    /// The pointers will be valid as the associated functions are owned by us
+    ///
+    /// The caller must ensure that this will not be ran while the
+    /// associated interpolator function is sampling, and that this is and all interpolator function
+    /// samples are ran from the same thread.
+    pub unsafe fn sample_start_density(&mut self) {
         assert!(!self.shared.is_interpolating);
         self.shared.is_interpolating = true;
         self.shared.sample_unique_index.set_zero();
         self.sample_density(true, self.shared.start_cell_pos.x);
     }
 
-    pub fn sample_end_density(&mut self, cell_x: u8) {
+    /// Fills all pointed to interpolator functions' end caches
+    ///
+    /// # Safety
+    ///
+    /// The pointers will be valid as the associated functions are owned by us
+    ///
+    /// The caller must ensure that this will not be ran while the
+    /// associated interpolator function is sampling, and that this is and all interpolator function
+    /// samples are ran from the same thread.
+    pub unsafe fn sample_end_density(&mut self, cell_x: u8) {
         self.sample_density(false, self.shared.start_cell_pos.x + cell_x as i32 + 1);
         self.shared.start_block_pos.x = (self.shared.start_cell_pos.x + cell_x as i32)
             * self.horizontal_cell_block_count() as i32;
     }
 
-    fn sample_density(&mut self, start: bool, current_x: i32) {
+    /// Fills all pointed to interpolator functions' caches
+    ///
+    /// # Safety
+    ///
+    /// The pointers will be valid as the associated functions are owned by us
+    ///
+    /// The caller must ensure that this will not be ran while the
+    /// associated interpolator function is sampling, and that this is and all interpolator function
+    /// samples are ran from the same thread.
+    unsafe fn sample_density(&mut self, start: bool, current_x: i32) {
         self.shared.start_block_pos.x = current_x * self.horizontal_cell_block_count() as i32;
         self.shared.cell_block_pos.x = 0;
 
@@ -1206,12 +1186,7 @@ impl ChunkNoiseGenerator {
 
             self.shared.cache_once_unique_index.add_assign(1);
             for interpolator in &self.interpolators {
-                let mut interpolator = interpolator.lock();
-
-                let mut y_buf = vec![0f64; self.shared.vertical_cell_count as usize + 1];
-
-                let mut applier = ChunkNoiseInterpolationApplier::new(&mut self.shared);
-                interpolator.fill_mut(&mut y_buf, &mut applier);
+                let interpolator = interpolator.cast_mut().as_mut().unwrap();
 
                 let interp_buf = if start {
                     let start_index =
@@ -1225,54 +1200,98 @@ impl ChunkNoiseGenerator {
                         [start_index..=start_index + self.shared.vertical_cell_count as usize]
                 };
 
-                interp_buf.copy_from_slice(&y_buf);
+                let mut applier = ChunkNoiseInterpolationApplier::new(&mut self.shared);
+
+                interpolator.delegate.fill_mut(interp_buf, &mut applier);
             }
         }
         self.shared.cache_once_unique_index.add_assign(1);
     }
 
-    pub fn interpolate_y(&mut self, block_y: i32, delta: f64) {
+    /// Interpolates based on the y block for all pointed density functions
+    ///
+    /// # Safety
+    ///
+    /// The pointers will be valid as the associated functions are owned by us
+    ///
+    /// The caller must ensure that this will not be ran while the
+    /// associated interpolator function is sampling, and that this is and all interpolator function
+    /// samples are ran from the same thread.
+    pub unsafe fn interpolate_y(&mut self, block_y: i32, delta: f64) {
         self.shared.cell_block_pos.y = (block_y - self.shared.start_block_pos.y) as u8;
 
         for interpolator in &self.interpolators {
-            let mut interpolator = interpolator.lock();
+            let interpolator = interpolator.cast_mut().as_mut().unwrap();
             interpolator.interpolate_y(delta);
         }
     }
 
-    pub fn interpolate_x(&mut self, block_x: i32, delta: f64) {
+    /// Interpolates based on the x block for all pointed density functions
+    ///
+    /// # Safety
+    ///
+    /// The pointers will be valid as the associated functions are owned by us
+    ///
+    /// The caller must ensure that this will not be ran while the
+    /// associated interpolator function is sampling, and that this is and all interpolator function
+    /// samples are ran from the same thread.
+    pub unsafe fn interpolate_x(&mut self, block_x: i32, delta: f64) {
         self.shared.cell_block_pos.x = (block_x - self.shared.start_block_pos.x) as u8;
 
         for interpolator in &self.interpolators {
-            let mut interpolator = interpolator.lock();
-
+            let interpolator = interpolator.cast_mut().as_mut().unwrap();
             interpolator.interpolate_x(delta);
         }
     }
 
-    pub fn interpolate_z(&mut self, block_z: i32, delta: f64) {
+    /// Interpolates based on the z block for all pointed density functions
+    ///
+    /// # Safety
+    ///
+    /// The pointers will be valid as the associated functions are owned by us
+    ///
+    /// The caller must ensure that this will not be ran while the
+    /// associated interpolator function is sampling, and that this is and all interpolator function
+    /// samples are ran from the same thread.
+    pub unsafe fn interpolate_z(&mut self, block_z: i32, delta: f64) {
         self.shared.cell_block_pos.z = (block_z - self.shared.start_block_pos.z) as u8;
         self.shared.sample_unique_index.add_assign(1);
 
         for interpolator in &self.interpolators {
-            let mut interpolator = interpolator.lock();
-
+            let interpolator = interpolator.cast_mut().as_mut().unwrap();
             interpolator.interpolate_z(delta);
         }
     }
 
-    pub fn swap_buffers(&self) {
+    /// Swaps start and end buffers for all pointed density functions
+    ///
+    /// # Safety
+    ///
+    /// The pointers will be valid as the associated functions are owned by us
+    ///
+    /// The caller must ensure that this will not be ran while the
+    /// associated interpolator function is sampling, and that this is and all interpolator function
+    /// samples are ran from the same thread.
+    pub unsafe fn swap_buffers(&self) {
         for interpolator in &self.interpolators {
-            let mut interpolator = interpolator.lock();
-
+            let interpolator = interpolator.cast_mut().as_mut().unwrap();
             interpolator.swap_buffers();
         }
     }
 
-    pub fn on_sampled_cell_corners(&mut self, cell_y: u16, cell_z: u8) {
+    /// Populates interpolation caches for all pointed density functions, also fills the cell cache
+    /// for all pointed to cell cache functions
+    ///
+    /// # Safety
+    ///
+    /// The pointers will be valid as the associated functions are owned by us
+    ///
+    /// The caller must ensure that this will not be ran while the
+    /// associated interpolator function is sampling, and that this is and all interpolator function
+    /// samples are ran from the same thread.
+    pub unsafe fn on_sampled_cell_corners(&mut self, cell_y: u16, cell_z: u8) {
         for interpolator in &self.interpolators {
-            let mut interpolator = interpolator.lock();
-
+            let interpolator = interpolator.cast_mut().as_mut().unwrap();
             interpolator.on_sampled_cell_corners(cell_y, cell_z, &self.shared);
         }
 
@@ -1284,12 +1303,10 @@ impl ChunkNoiseGenerator {
         self.shared.cache_once_unique_index.add_assign(1);
 
         for cell_cache in &self.cell_caches {
-            let mut cell_cache = cell_cache.lock();
-
-            let mut new_cache = ChunkCellCacheFunction::create_cache(&self.shared);
+            let cell_cache = cell_cache.cast_mut().as_mut().unwrap();
             let mut applier = ChunkNoiseApplier::new(&mut self.shared);
-            cell_cache.delegate.fill_mut(&mut new_cache, &mut applier);
-            cell_cache.cache = new_cache.into();
+            let cache = &mut cell_cache.cache;
+            cell_cache.delegate.fill_mut(cache, &mut applier);
         }
 
         self.shared.cache_once_unique_index.add_assign(1);

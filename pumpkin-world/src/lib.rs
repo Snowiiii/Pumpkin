@@ -71,47 +71,52 @@ pub fn bench_create_and_populate_noise() {
     let minimum_cell_y = min_y / vertical_cell_block_count as i8;
     let cell_height = sampler.height() / vertical_cell_block_count as u16;
 
-    sampler.sample_start_density();
-    for cell_x in 0..horizonal_cells {
-        sampler.sample_end_density(cell_x);
+    // Safety
+    //
+    // See `ProtoChunk::populate_noise`
+    unsafe {
+        sampler.sample_start_density();
+        for cell_x in 0..horizonal_cells {
+            sampler.sample_end_density(cell_x);
 
-        for cell_z in 0..horizonal_cells {
-            for cell_y in (0..cell_height).rev() {
-                sampler.on_sampled_cell_corners(cell_y, cell_z);
-                for local_y in (0..vertical_cell_block_count).rev() {
-                    let block_y = (minimum_cell_y as i32 + cell_y as i32)
-                        * vertical_cell_block_count as i32
-                        + local_y as i32;
-                    let delta_y = local_y as f64 / vertical_cell_block_count as f64;
-                    sampler.interpolate_y(block_y, delta_y);
+            for cell_z in 0..horizonal_cells {
+                for cell_y in (0..cell_height).rev() {
+                    sampler.on_sampled_cell_corners(cell_y, cell_z);
+                    for local_y in (0..vertical_cell_block_count).rev() {
+                        let block_y = (minimum_cell_y as i32 + cell_y as i32)
+                            * vertical_cell_block_count as i32
+                            + local_y as i32;
+                        let delta_y = local_y as f64 / vertical_cell_block_count as f64;
+                        sampler.interpolate_y(block_y, delta_y);
 
-                    for local_x in 0..horizontal_cell_block_count {
-                        let block_x =
-                            cell_x as i32 * horizontal_cell_block_count as i32 + local_x as i32;
-                        let delta_x = local_x as f64 / horizontal_cell_block_count as f64;
-                        sampler.interpolate_x(block_x, delta_x);
+                        for local_x in 0..horizontal_cell_block_count {
+                            let block_x =
+                                cell_x as i32 * horizontal_cell_block_count as i32 + local_x as i32;
+                            let delta_x = local_x as f64 / horizontal_cell_block_count as f64;
+                            sampler.interpolate_x(block_x, delta_x);
 
-                        for local_z in 0..horizontal_cell_block_count {
-                            let block_z =
-                                cell_z as i32 * horizontal_cell_block_count as i32 + local_z as i32;
-                            let delta_z = local_z as f64 / horizontal_cell_block_count as f64;
-                            sampler.interpolate_z(block_z, delta_z);
+                            for local_z in 0..horizontal_cell_block_count {
+                                let block_z = cell_z as i32 * horizontal_cell_block_count as i32
+                                    + local_z as i32;
+                                let delta_z = local_z as f64 / horizontal_cell_block_count as f64;
+                                sampler.interpolate_z(block_z, delta_z);
 
-                            // TODO: Change default block
-                            let _block_state = sampler
-                                .sample_block_state()
-                                .unwrap_or(BlockState::new("minecraft:stone").unwrap());
-                            //log::debug!("Sampled block state in {:?}", inst.elapsed());
+                                // TODO: Change default block
+                                let _block_state = sampler
+                                    .sample_block_state()
+                                    .unwrap_or(BlockState::new("minecraft:stone").unwrap());
+                                //log::debug!("Sampled block state in {:?}", inst.elapsed());
 
-                            //println!("Putting {:?}: {:?}", local_pos, block_state);
-                            //self.block_map.insert(local_pos, block_state);
+                                //println!("Putting {:?}: {:?}", local_pos, block_state);
+                                //self.block_map.insert(local_pos, block_state);
+                            }
                         }
                     }
                 }
             }
-        }
 
-        sampler.swap_buffers();
+            sampler.swap_buffers();
+        }
     }
 
     sampler.stop_interpolation();

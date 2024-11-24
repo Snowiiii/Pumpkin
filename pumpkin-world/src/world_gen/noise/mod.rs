@@ -207,7 +207,6 @@ where
     (value - start) / (end - start)
 }
 
-#[inline]
 pub fn clamped_lerp(start: f64, end: f64, delta: f64) -> f64 {
     if delta < 0f64 {
         start
@@ -231,7 +230,6 @@ where
     lerp(lerp_progress(value, old_start, old_end), new_start, new_end)
 }
 
-#[inline]
 pub fn lerp2(delta_x: f64, delta_y: f64, x0y0: f64, x1y0: f64, x0y1: f64, x1y1: f64) -> f64 {
     lerp(
         delta_y,
@@ -241,7 +239,6 @@ pub fn lerp2(delta_x: f64, delta_y: f64, x0y0: f64, x1y0: f64, x0y1: f64, x1y1: 
 }
 
 #[allow(clippy::too_many_arguments)]
-#[inline]
 pub fn lerp3(
     delta_x: f64,
     delta_y: f64,
