@@ -46,6 +46,11 @@ class Blocks : Extractor.Extractor {
             blockJson.add("properties", propsJson)
             blockJson.addProperty("default_state_id", Block.getRawIdFromState(block.defaultState))
 
+            val minStateId = block.stateManager.states.minOf { Block.getRawIdFromState(it) }
+            val maxStateId = block.stateManager.states.maxOf { Block.getRawIdFromState(it) }
+            blockJson.addProperty("first_state_id", minStateId)
+            blockJson.addProperty("last_state_id", maxStateId)
+
             blocksJson.add(blockJson)
         }
 
