@@ -1,11 +1,18 @@
 use pumpkin_api::{Plugin, PluginMetadata};
-use std::{collections::HashMap, fs, io, path::Path};
+use std::{collections::HashMap, fs, path::Path};
 
 pub struct PluginManager<'s> {
     plugins: HashMap<String, (PluginMetadata<'s>, Box<dyn Plugin>, libloading::Library)>,
 }
 
+impl Default for PluginManager<'_> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PluginManager<'_> {
+    #[must_use]
     pub fn new() -> Self {
         PluginManager {
             plugins: HashMap::new(),
@@ -21,22 +28,13 @@ impl PluginManager<'_> {
             if !entry.as_ref().unwrap().path().is_file() {
                 continue;
             }
-            let err = self.try_load_plugin(entry.unwrap().path().as_path());
-            if let Err(err) = err {
-                return Err(format!("Failed to load plugin: {}", err));
-            }
+            self.try_load_plugin(entry.unwrap().path().as_path());
         }
 
         Ok(())
     }
 
-    fn try_load_plugin(&mut self, path: &Path) -> Result<(), io::Error> {
-        let library = unsafe { libloading::Library::new(path).unwrap() };
-
-        let plugin_fn = unsafe { library.get::<fn() -> Box<dyn Plugin>>(b"plugin").unwrap() };
-        let metadata: &PluginMetadata =
-            unsafe { &**library.get::<*const PluginMetadata>(b"METADATA").unwrap() };
-
+    fn try_load_plugin(&mut self, path: &Path) {
         struct Logger {
             plugin_name: String,
         }
@@ -66,6 +64,12 @@ impl PluginManager<'_> {
             }
         }
 
+        let library = unsafe { libloading::Library::new(path).unwrap() };
+
+        let plugin_fn = unsafe { library.get::<fn() -> Box<dyn Plugin>>(b"plugin").unwrap() };
+        let metadata: &PluginMetadata =
+            unsafe { &**library.get::<*const PluginMetadata>(b"METADATA").unwrap() };
+
         let context = Context { metadata };
         let _ = plugin_fn().on_load(&context);
 
@@ -73,10 +77,9 @@ impl PluginManager<'_> {
             metadata.name.to_string(),
             (metadata.clone(), plugin_fn(), library),
         );
-
-        Ok(())
     }
 
+    #[must_use]
     pub fn get_plugin(
         &self,
         name: &str,
@@ -85,7 +88,7 @@ impl PluginManager<'_> {
     }
 
     pub fn list_plugins(&self) {
-        for (_, (metadata, _, _)) in &self.plugins {
+        for (metadata, _, _) in self.plugins.values() {
             println!(
                 "{}: {} v{} by {}",
                 metadata.id,
