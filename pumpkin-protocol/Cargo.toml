@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+pumpkin-nbt = { path = "../pumpkin-nbt" }
 pumpkin-config = { path = "../pumpkin-config" }
 pumpkin-macros = { path = "../pumpkin-macros" }
 pumpkin-world = { path = "../pumpkin-world" }
@@ -25,5 +26,3 @@ flate2 = "1.0"
 # encryption
 aes = "0.8.4"
 cfb8 = "0.8.1"
-
-fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
