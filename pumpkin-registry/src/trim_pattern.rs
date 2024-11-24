@@ -5,5 +5,5 @@ pub struct TrimPattern {
     asset_id: String,
     template_item: String,
     //  description: TextComponent<'static>,
-    decal: u8,
+    decal: bool,
 }
