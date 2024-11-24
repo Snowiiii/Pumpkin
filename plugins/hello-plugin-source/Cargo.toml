@@ -1,0 +1,13 @@
+[workspace]
+
+[package]
+name = "hello-plugin-source"
+edition = "2021"
+version = "0.1.0"
+
+[lib]
+crate-type = ["dylib"]
+
+[dependencies]
+pumpkin-api = { path = "../../pumpkin-api" }
+pumpkin-api-macros = { path = "../../pumpkin-api-macros" }
