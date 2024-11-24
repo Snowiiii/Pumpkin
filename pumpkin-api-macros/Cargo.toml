@@ -1,0 +1,14 @@
+[package]
+name = "pumpkin-api-macros"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2.0.89", features = ["full"] }
+quote = "1.0.37"
+proc-macro2 = "1.0.92"
+once_cell = "1.20.2"
+pumpkin-api = { path = "../pumpkin-api" }
