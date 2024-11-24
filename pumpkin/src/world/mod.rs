@@ -20,7 +20,7 @@ use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_protocol::{
     client::play::{CBlockUpdate, CSoundEffect, CWorldEvent},
-    SoundCategory, SoundEvent,
+    SoundCategory,
 };
 use pumpkin_protocol::{
     client::play::{
@@ -146,14 +146,13 @@ impl World {
     pub async fn play_sound(
         &self,
         sound_id: u16,
-        sound_event: Option<SoundEvent>,
         category: SoundCategory,
         posistion: &Vector3<f64>,
     ) {
         let seed = thread_rng().gen::<f64>();
         self.broadcast_packet_all(&CSoundEffect::new(
             VarInt(i32::from(sound_id)),
-            sound_event,
+            None,
             category,
             posistion.x,
             posistion.y,
