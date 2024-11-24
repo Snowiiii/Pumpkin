@@ -1,0 +1,6 @@
+[package]
+name = "pumpkin-api"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
