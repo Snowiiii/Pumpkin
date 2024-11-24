@@ -1,7 +1,5 @@
-use std::{
-    collections::HashMap, fs, io, path::Path
-};
 use pumpkin_api::{Plugin, PluginMetadata};
+use std::{collections::HashMap, fs, io, path::Path};
 
 pub struct PluginManager<'s> {
     plugins: HashMap<String, (PluginMetadata<'s>, Box<dyn Plugin>, libloading::Library)>,
@@ -36,7 +34,8 @@ impl PluginManager<'_> {
         let library = unsafe { libloading::Library::new(path).unwrap() };
 
         let plugin_fn = unsafe { library.get::<fn() -> Box<dyn Plugin>>(b"plugin").unwrap() };
-        let metadata: &PluginMetadata = unsafe { &**library.get::<*const PluginMetadata>(b"METADATA").unwrap() };
+        let metadata: &PluginMetadata =
+            unsafe { &**library.get::<*const PluginMetadata>(b"METADATA").unwrap() };
 
         struct Logger {
             plugin_name: String,
@@ -70,18 +69,30 @@ impl PluginManager<'_> {
         let context = Context { metadata };
         let _ = plugin_fn().on_load(&context);
 
-        self.plugins.insert(metadata.name.to_string(), (metadata.clone(), plugin_fn(), library));
+        self.plugins.insert(
+            metadata.name.to_string(),
+            (metadata.clone(), plugin_fn(), library),
+        );
 
         Ok(())
     }
 
-    pub fn get_plugin(&self, name: &str) -> Option<&(PluginMetadata, Box<dyn Plugin>, libloading::Library)> {
+    pub fn get_plugin(
+        &self,
+        name: &str,
+    ) -> Option<&(PluginMetadata, Box<dyn Plugin>, libloading::Library)> {
         self.plugins.get(name)
     }
 
     pub fn list_plugins(&self) {
         for (_, (metadata, _, _)) in &self.plugins {
-            println!("{}: {} v{} by {}", metadata.id, metadata.name, metadata.version, metadata.authors.join(", "));
+            println!(
+                "{}: {} v{} by {}",
+                metadata.id,
+                metadata.name,
+                metadata.version,
+                metadata.authors.join(", ")
+            );
         }
     }
 }

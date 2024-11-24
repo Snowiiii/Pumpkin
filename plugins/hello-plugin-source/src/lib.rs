@@ -1,7 +1,13 @@
 use pumpkin_api::*;
-use pumpkin_api_macros::{plugin_method, plugin_impl};
+use pumpkin_api_macros::{plugin_impl, plugin_method};
 
-plugin_metadata!("Plugin name", "plugin-id", "1.0.0", &["Author Name"], "Description");
+plugin_metadata!(
+    "Plugin name",
+    "plugin-id",
+    "1.0.0",
+    &["Author Name"],
+    "Description"
+);
 
 #[plugin_method]
 fn on_load(&mut self, server: &dyn PluginContext) -> Result<(), String> {

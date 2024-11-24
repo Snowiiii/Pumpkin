@@ -44,12 +44,12 @@ pub mod command;
 pub mod entity;
 pub mod error;
 pub mod lan_broadcast;
+pub mod plugin;
 pub mod proxy;
 pub mod query;
 pub mod rcon;
 pub mod server;
 pub mod world;
-pub mod plugin;
 
 fn scrub_address(ip: &str) -> String {
     use pumpkin_config::BASIC_CONFIG;
@@ -236,7 +236,9 @@ async fn main() -> io::Result<()> {
 
     // Plugins
     let mut plugin_manager = plugin::PluginManager::new();
-    plugin_manager.load_plugins().expect("Failed to load plugins");
+    plugin_manager
+        .load_plugins()
+        .expect("Failed to load plugins");
 
     plugin_manager.list_plugins();
 

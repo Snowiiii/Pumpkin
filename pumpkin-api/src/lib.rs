@@ -7,7 +7,7 @@ pub struct PluginMetadata<'s> {
     /// The version of the plugin.
     pub version: &'s str,
     /// The authors of the plugin.
-    pub authors: &'s[&'s str],
+    pub authors: &'s [&'s str],
     /// A description of the plugin.
     pub description: Option<&'s str>,
 }
