@@ -1738,29 +1738,11 @@
       "angry_texture": "minecraft:entity/wolf/wolf_angry",
       "biomes": "minecraft:taiga"
     },
-    "minecraft:rusty": {
-      "wild_texture": "minecraft:entity/wolf/wolf_rusty",
-      "tame_texture": "minecraft:entity/wolf/wolf_rusty_tame",
-      "angry_texture": "minecraft:entity/wolf/wolf_rusty_angry",
-      "biomes": "#minecraft:is_jungle"
-    },
     "minecraft:snowy": {
       "wild_texture": "minecraft:entity/wolf/wolf_snowy",
       "tame_texture": "minecraft:entity/wolf/wolf_snowy_tame",
       "angry_texture": "minecraft:entity/wolf/wolf_snowy_angry",
       "biomes": "minecraft:grove"
-    },
-    "minecraft:spotted": {
-      "wild_texture": "minecraft:entity/wolf/wolf_spotted",
-      "tame_texture": "minecraft:entity/wolf/wolf_spotted_tame",
-      "angry_texture": "minecraft:entity/wolf/wolf_spotted_angry",
-      "biomes": "#minecraft:is_savanna"
-    },
-    "minecraft:striped": {
-      "wild_texture": "minecraft:entity/wolf/wolf_striped",
-      "tame_texture": "minecraft:entity/wolf/wolf_striped_tame",
-      "angry_texture": "minecraft:entity/wolf/wolf_striped_angry",
-      "biomes": "#minecraft:is_badlands"
     },
     "minecraft:woods": {
       "wild_texture": "minecraft:entity/wolf/wolf_woods",
