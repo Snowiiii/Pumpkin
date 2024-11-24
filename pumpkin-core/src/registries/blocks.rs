@@ -34,7 +34,7 @@ pub struct State {
     pub burnable: bool,
     pub opacity: Option<u32>,
     pub replaceable: bool,
-    pub collision_shapes: &'static [u16],
+    //pub collision_shapes: &'static [u16],
     pub block_entity_type: Option<u32>,
 }
 

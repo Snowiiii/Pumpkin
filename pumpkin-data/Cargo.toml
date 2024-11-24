@@ -4,5 +4,13 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-pumpkin-macros = { path = "../pumpkin-macros" }
 pumpkin-core = { path = "../pumpkin-core" }
+
+[build-dependencies]
+proc-macro2.workspace = true
+quote.workspace = true
+syn.workspace = true
+prettyplease.workspace = true
+
+serde.workspace = true
+serde_json.workspace = true

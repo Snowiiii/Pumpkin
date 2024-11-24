@@ -1,7 +1,10 @@
+use std::env;
+use std::path::Path;
+
 use std::sync::LazyLock;
 
-use proc_macro::TokenStream;
 use serde::Deserialize;
+use std::io::Write;
 
 #[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
@@ -62,13 +65,22 @@ struct JsonShape {
 }
 
 static BLOCKS: LazyLock<JsonTopLevel> = LazyLock::new(|| {
-    serde_json::from_str(include_str!("../../assets/blocks.json"))
+    serde_json::from_str(include_str!("../assets/blocks.json"))
         .expect("Could not parse blocks.json registry.")
 });
 
-pub(crate) fn include_blocks_impl(_item: TokenStream) -> TokenStream {
+fn main() {
+    println!("cargo::rerun-if-changed=../assets");
+
+    let out_dir_name = env::var_os("OUT_DIR").unwrap();
+    let out_path = Path::new(&out_dir_name);
+    generate_blocks(out_path);
+}
+
+fn generate_blocks(dir: &Path) {
     let mut blocks = Vec::with_capacity(BLOCKS.blocks.len());
     let mut all_states = Vec::new();
+    let mut all_state_collsion_shapes = Vec::new();
 
     for block in &BLOCKS.blocks {
         let id = block.id;
@@ -88,7 +100,7 @@ pub(crate) fn include_blocks_impl(_item: TokenStream) -> TokenStream {
             let p_values = &p.values;
 
             quote::quote! {
-                pumpkin_core::registries::blocks::Property {
+                Property {
                     name: #p_name,
                     values: &[ #(#p_values),* ],
                 }
@@ -111,8 +123,8 @@ pub(crate) fn include_blocks_impl(_item: TokenStream) -> TokenStream {
                 None => quote::quote! { None },
             };
 
-            let state_tokens = quote::quote! {
-                pumpkin_core::registries::blocks::State {
+            all_states.push(quote::quote! {
+                State {
                     id: #s_id,
                     block_id: #id,
                     air: #s_air,
@@ -120,17 +132,20 @@ pub(crate) fn include_blocks_impl(_item: TokenStream) -> TokenStream {
                     burnable: #s_burnable,
                     opacity: #s_opacity,
                     replaceable: #s_replaceable,
-                    collision_shapes: &[ #(#s_collision_shapes),* ],
+                    //collision_shapes: &[ #(#s_collision_shapes),* ],
                     block_entity_type: #s_block_entity_type,
                 }
-            };
+            });
 
-            all_states.push(state_tokens);
+            all_state_collsion_shapes.push(quote::quote! {
+                &[ #(#s_collision_shapes),* ]
+            });
+
             s.id
         });
 
         let block_tokens = quote::quote! {
-            pumpkin_core::registries::blocks::Block {
+            Block {
                 id: #id,
                 item_id: #item_id,
                 hardness: #hardness,
@@ -146,13 +161,50 @@ pub(crate) fn include_blocks_impl(_item: TokenStream) -> TokenStream {
         blocks.push(block_tokens);
     }
 
+    // module for blocks
     let block_count = blocks.len();
-    let state_count = all_states.len();
-
-    let quote = quote::quote! {
-        pub static BLOCKS: [pumpkin_core::registries::blocks::Block; #block_count ] = [ #(#blocks),* ];
-        pub static BLOCK_STATES: [pumpkin_core::registries::blocks::State; #state_count ] = [ #(#all_states),* ];
+    let block_tokens = quote::quote! {
+        use pumpkin_core::registries::blocks::Block;
+        use pumpkin_core::registries::blocks::Property;
+        pub static BLOCKS: [Block; #block_count ] = [ #(#blocks),* ];
     };
+    let mut block_file =
+        std::fs::File::create(dir.join("block_data.rs")).expect("Failed to create file");
+    block_file
+        .write_all(
+            prettyplease::unparse(&syn::parse2(block_tokens).expect("Failed to parse TokenStream"))
+                .as_bytes(),
+        )
+        .expect("Failed to write to file");
 
-    quote.into()
+    // module for block states
+    let state_count = all_states.len();
+    let state_tokens = quote::quote! {
+        use pumpkin_core::registries::blocks::State;
+        pub static BLOCK_STATES: [State; #state_count ] = [ #(#all_states),* ];
+    };
+    let mut state_file =
+        std::fs::File::create(dir.join("state_data.rs")).expect("Failed to create file");
+    state_file
+        .write_all(
+            prettyplease::unparse(&syn::parse2(state_tokens).expect("Failed to parse TokenStream"))
+                .as_bytes(),
+        )
+        .expect("Failed to write to file");
+
+    // seperate module for block state collision shapes so they can be compiled in parallel
+    let state_collision_shape_tokens = quote::quote! {
+        pub static BLOCK_STATE_COLLISION_SHAPES: [&'static [u16]; #state_count ] = [ #(#all_state_collsion_shapes),* ];
+    };
+    let mut state_collision_shape_file =
+        std::fs::File::create(dir.join("state_collision_shape_data.rs"))
+            .expect("Failed to create file");
+    state_collision_shape_file
+        .write_all(
+            prettyplease::unparse(
+                &syn::parse2(state_collision_shape_tokens).expect("Failed to parse TokenStream"),
+            )
+            .as_bytes(),
+        )
+        .expect("Failed to write to file");
 }
