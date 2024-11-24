@@ -1,0 +1,227 @@
+[
+  {
+    "id": 0,
+    "ident": "minecraft:furnace",
+    "name": "furnace"
+  },
+  {
+    "id": 1,
+    "ident": "minecraft:chest",
+    "name": "chest"
+  },
+  {
+    "id": 2,
+    "ident": "minecraft:trapped_chest",
+    "name": "trapped_chest"
+  },
+  {
+    "id": 3,
+    "ident": "minecraft:ender_chest",
+    "name": "ender_chest"
+  },
+  {
+    "id": 4,
+    "ident": "minecraft:jukebox",
+    "name": "jukebox"
+  },
+  {
+    "id": 5,
+    "ident": "minecraft:dispenser",
+    "name": "dispenser"
+  },
+  {
+    "id": 6,
+    "ident": "minecraft:dropper",
+    "name": "dropper"
+  },
+  {
+    "id": 7,
+    "ident": "minecraft:sign",
+    "name": "sign"
+  },
+  {
+    "id": 8,
+    "ident": "minecraft:hanging_sign",
+    "name": "hanging_sign"
+  },
+  {
+    "id": 9,
+    "ident": "minecraft:mob_spawner",
+    "name": "mob_spawner"
+  },
+  {
+    "id": 10,
+    "ident": "minecraft:creaking_heart",
+    "name": "creaking_heart"
+  },
+  {
+    "id": 11,
+    "ident": "minecraft:piston",
+    "name": "piston"
+  },
+  {
+    "id": 12,
+    "ident": "minecraft:brewing_stand",
+    "name": "brewing_stand"
+  },
+  {
+    "id": 13,
+    "ident": "minecraft:enchanting_table",
+    "name": "enchanting_table"
+  },
+  {
+    "id": 14,
+    "ident": "minecraft:end_portal",
+    "name": "end_portal"
+  },
+  {
+    "id": 15,
+    "ident": "minecraft:beacon",
+    "name": "beacon"
+  },
+  {
+    "id": 16,
+    "ident": "minecraft:skull",
+    "name": "skull"
+  },
+  {
+    "id": 17,
+    "ident": "minecraft:daylight_detector",
+    "name": "daylight_detector"
+  },
+  {
+    "id": 18,
+    "ident": "minecraft:hopper",
+    "name": "hopper"
+  },
+  {
+    "id": 19,
+    "ident": "minecraft:comparator",
+    "name": "comparator"
+  },
+  {
+    "id": 20,
+    "ident": "minecraft:banner",
+    "name": "banner"
+  },
+  {
+    "id": 21,
+    "ident": "minecraft:structure_block",
+    "name": "structure_block"
+  },
+  {
+    "id": 22,
+    "ident": "minecraft:end_gateway",
+    "name": "end_gateway"
+  },
+  {
+    "id": 23,
+    "ident": "minecraft:command_block",
+    "name": "command_block"
+  },
+  {
+    "id": 24,
+    "ident": "minecraft:shulker_box",
+    "name": "shulker_box"
+  },
+  {
+    "id": 25,
+    "ident": "minecraft:bed",
+    "name": "bed"
+  },
+  {
+    "id": 26,
+    "ident": "minecraft:conduit",
+    "name": "conduit"
+  },
+  {
+    "id": 27,
+    "ident": "minecraft:barrel",
+    "name": "barrel"
+  },
+  {
+    "id": 28,
+    "ident": "minecraft:smoker",
+    "name": "smoker"
+  },
+  {
+    "id": 29,
+    "ident": "minecraft:blast_furnace",
+    "name": "blast_furnace"
+  },
+  {
+    "id": 30,
+    "ident": "minecraft:lectern",
+    "name": "lectern"
+  },
+  {
+    "id": 31,
+    "ident": "minecraft:bell",
+    "name": "bell"
+  },
+  {
+    "id": 32,
+    "ident": "minecraft:jigsaw",
+    "name": "jigsaw"
+  },
+  {
+    "id": 33,
+    "ident": "minecraft:campfire",
+    "name": "campfire"
+  },
+  {
+    "id": 34,
+    "ident": "minecraft:beehive",
+    "name": "beehive"
+  },
+  {
+    "id": 35,
+    "ident": "minecraft:sculk_sensor",
+    "name": "sculk_sensor"
+  },
+  {
+    "id": 36,
+    "ident": "minecraft:calibrated_sculk_sensor",
+    "name": "calibrated_sculk_sensor"
+  },
+  {
+    "id": 37,
+    "ident": "minecraft:sculk_catalyst",
+    "name": "sculk_catalyst"
+  },
+  {
+    "id": 38,
+    "ident": "minecraft:sculk_shrieker",
+    "name": "sculk_shrieker"
+  },
+  {
+    "id": 39,
+    "ident": "minecraft:chiseled_bookshelf",
+    "name": "chiseled_bookshelf"
+  },
+  {
+    "id": 40,
+    "ident": "minecraft:brushable_block",
+    "name": "brushable_block"
+  },
+  {
+    "id": 41,
+    "ident": "minecraft:decorated_pot",
+    "name": "decorated_pot"
+  },
+  {
+    "id": 42,
+    "ident": "minecraft:crafter",
+    "name": "crafter"
+  },
+  {
+    "id": 43,
+    "ident": "minecraft:trial_spawner",
+    "name": "trial_spawner"
+  },
+  {
+    "id": 44,
+    "ident": "minecraft:vault",
+    "name": "vault"
+  }
+]

@@ -32,6 +32,11 @@ class Extractor : ModInitializer {
             Tags(),
             Items(),
             Blocks(),
+            BlockStates(),
+            BlockStateCollisionShapes(),
+            BlockStateProperties(),
+            BlockEntities(),
+            BlockCollisionShapes(),
         )
 
         val outputDirectory: Path

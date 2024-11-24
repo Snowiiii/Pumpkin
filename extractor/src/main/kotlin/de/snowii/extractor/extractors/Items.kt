@@ -21,11 +21,24 @@ class Items : Extractor.Extractor {
     override fun extract(server: MinecraftServer): JsonElement {
         val itemsJson = JsonObject()
 
+        if (Item.BLOCK_ITEMS.values.size == Item.BLOCK_ITEMS.values.toSet().size)
+            throw Exception("some items are associated with multiple blocks and neither Pumpkin nor this extractor can handle that")
+
+        val blockItems = Item.BLOCK_ITEMS.toList().associate { (b, i) ->
+            val itemId = Registries.ITEM.getRawId(i.asItem())
+            val blockId = Registries.BLOCK.getRawId(b)
+            itemId to blockId
+        }
+
         for (item in server.registryManager.getOrThrow(RegistryKeys.ITEM).streamEntries().toList()) {
             val itemJson = JsonObject()
             val realItem: Item = item.value()
 
-            itemJson.addProperty("id", Registries.ITEM.getRawId(realItem))
+            val itemId = Registries.ITEM.getRawId(realItem)
+            itemJson.addProperty("id", itemId)
+
+            blockItems[itemId]?.let { blockId -> itemJson.addProperty("block_id", blockId) }
+
             itemJson.add(
                 "components",
                 ComponentMap.CODEC.encodeStart(
