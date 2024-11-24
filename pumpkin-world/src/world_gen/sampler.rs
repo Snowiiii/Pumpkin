@@ -511,80 +511,55 @@ impl AquiferSamplerImpl for WorldAquiferSampler {
             if fluid_level.get_block_state(j).of_block(LAVA_BLOCK.block_id) {
                 Some(*LAVA_BLOCK)
             } else {
-                let l = floor_div(i - 5, 16);
-                let m = floor_div(j + 1, 12);
-                let n = floor_div(k - 5, 16);
+                let scaled_x = floor_div(i - 5, 16);
+                let scaled_y = floor_div(j + 1, 12);
+                let scaled_z = floor_div(k - 5, 16);
 
-                let mut o = i32::MAX;
-                let mut p = i32::MAX;
-                let mut q = i32::MAX;
-                let mut r = i32::MAX;
+                for offset_x in 0..=1 {
+                    for offset_y in -1..=1 {
+                        for offset_z in 0..=1 {
+                            let x_pos = scaled_x + offset_x;
+                            let y_pos = scaled_y + offset_y;
+                            let z_pos = scaled_z + offset_z;
+                            let index = self.index(x_pos, y_pos, z_pos);
 
-                let mut s = 0;
-                let mut t = 0;
-                let mut u = 0;
-                let mut v = 0;
-
-                for w in 0..=1 {
-                    for x in -1..=1 {
-                        for y in 0..=1 {
-                            let z = l + w;
-                            let aa = m + x;
-                            let ab = n + y;
-
-                            let ac = self.index(z, aa, ab);
-                            let ad = self.positions[ac];
-
-                            let ae = if let Some(packed) = ad {
-                                packed
-                            } else {
-                                let mut random = self.random_deriver.split_pos(z, aa, ab);
-                                let block_x = z * 16 + random.next_bounded_i32(10);
-                                let block_y = aa * 12 + random.next_bounded_i32(9);
-                                let block_z = ab * 16 + random.next_bounded_i32(10);
-
-                                let packed =
-                                    block_pos::packed(&Vector3::new(block_x, block_y, block_z));
-                                self.positions[ac] = Some(packed);
-                                packed
-                            };
-
-                            let af = block_pos::unpack_x(ae) - i;
-                            let ag = block_pos::unpack_y(ae) - j;
-                            let ah = block_pos::unpack_z(ae) - k;
-
-                            let ai = af * af + ag * ag + ah * ah;
-                            if o >= ai {
-                                v = u;
-                                u = t;
-                                t = s;
-                                s = ae;
-                                r = q;
-                                q = p;
-                                p = o;
-                                o = ai;
-                            } else if p >= ai {
-                                v = u;
-                                u = t;
-                                t = ae;
-                                r = q;
-                                q = p;
-                                p = ai;
-                            } else if q >= ai {
-                                v = u;
-                                u = ae;
-                                r = q;
-                                q = ai;
-                            } else if r >= ai {
-                                v = ae;
-                                r = ai;
+                            if self.positions[index].is_none() {
+                                let mut random = self.random_deriver.split_pos(x_pos, y_pos, z_pos);
+                                let rand_x = x_pos * 16 + random.next_bounded_i32(10);
+                                let rand_y = y_pos * 12 + random.next_bounded_i32(9);
+                                let rand_z = z_pos * 16 + random.next_bounded_i32(10);
+                                let packed_pos =
+                                    block_pos::packed(&Vector3::new(rand_x, rand_y, rand_z));
+                                self.positions[index] = Some(packed_pos);
                             }
                         }
                     }
                 }
 
-                let fluid_level2 = self.get_water_level(s, height_estimator, state);
-                let d = Self::max_distance(o, p);
+                // This is just the first 4 iterations of the above loop
+                let hypot_packed_block = [(0, -1, 0), (0, -1, 1), (0, 0, 0), (0, 0, 1)].map(
+                    |(offset_x, offset_y, offset_z)| {
+                        let x_pos = scaled_x + offset_x;
+                        let y_pos = scaled_y + offset_y;
+                        let z_pos = scaled_z + offset_z;
+                        let index = self.index(x_pos, y_pos, z_pos);
+
+                        let packed_random = self.positions[index].unwrap();
+
+                        let local_x = block_pos::unpack_x(packed_random) - i;
+                        let local_y = block_pos::unpack_y(packed_random) - j;
+                        let local_z = block_pos::unpack_z(packed_random) - k;
+
+                        (
+                            packed_random,
+                            local_x * local_x + local_y * local_y + local_z * local_z,
+                        )
+                    },
+                );
+
+                let fluid_level2 =
+                    self.get_water_level(hypot_packed_block[0].0, height_estimator, state);
+                let d = Self::max_distance(hypot_packed_block[0].1, hypot_packed_block[1].1);
                 let block_state = fluid_level2.get_block_state(j);
 
                 if d <= 0f64 {
@@ -600,7 +575,8 @@ impl AquiferSamplerImpl for WorldAquiferSampler {
                     Some(block_state)
                 } else {
                     let mut mutable_f64 = None;
-                    let fluid_level3 = self.get_water_level(t, height_estimator, state);
+                    let fluid_level3 =
+                        self.get_water_level(hypot_packed_block[1].0, height_estimator, state);
                     let e = d * self.calculate_density(
                         pos,
                         &mut mutable_f64,
@@ -608,11 +584,14 @@ impl AquiferSamplerImpl for WorldAquiferSampler {
                         fluid_level3.clone(),
                         state,
                     );
+
                     if density + e > 0f64 {
                         None
                     } else {
-                        let fluid_level4 = self.get_water_level(u, height_estimator, state);
-                        let f = Self::max_distance(o, q);
+                        let fluid_level4 =
+                            self.get_water_level(hypot_packed_block[2].0, height_estimator, state);
+                        let f =
+                            Self::max_distance(hypot_packed_block[0].1, hypot_packed_block[2].1);
                         if f > 0f64 {
                             let g = d
                                 * f
@@ -628,7 +607,8 @@ impl AquiferSamplerImpl for WorldAquiferSampler {
                             }
                         }
 
-                        let g = Self::max_distance(p, q);
+                        let g =
+                            Self::max_distance(hypot_packed_block[1].1, hypot_packed_block[2].1);
                         if g > 0f64 {
                             let h = d
                                 * g
@@ -645,8 +625,6 @@ impl AquiferSamplerImpl for WorldAquiferSampler {
                         }
 
                         //TODO Handle fluid tick
-                        let _ = v;
-
                         Some(block_state)
                     }
                 }
