@@ -126,5 +126,3 @@ node_modules
 
 run/
 
-# Don't set EULA each time
-!run/eula.txt
