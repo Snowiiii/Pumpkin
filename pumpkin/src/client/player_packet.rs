@@ -361,7 +361,7 @@ impl Player {
                     Hand::Off => Animation::SwingOffhand,
                 };
                 let id = self.entity_id();
-                let world = &self.living_entity.entity.world;
+                let world = self.world();
                 world
                     .broadcast_packet_except(
                         &[self.gameprofile.id],
@@ -449,7 +449,7 @@ impl Player {
                 if self.living_entity.health.load() > 0.0 {
                     return;
                 }
-                self.respawn(false).await;
+                self.world().respawn_player(self, false).await;
                 // TODO: hardcore set spectator
             }
             1 => {

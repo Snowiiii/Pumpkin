@@ -7,7 +7,7 @@ use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::{Container, OpenContainer};
 use pumpkin_protocol::client::login::CEncryptionRequest;
 use pumpkin_protocol::{client::config::CPluginMessage, ClientPacket};
-use pumpkin_registry::Registry;
+use pumpkin_registry::{DimensionType, Registry};
 use pumpkin_world::dimension::Dimension;
 use rand::prelude::SliceRandom;
 use std::collections::HashMap;
@@ -46,6 +46,8 @@ pub struct Server {
     pub command_dispatcher: Arc<CommandDispatcher<'static>>,
     /// Manages multiple worlds within the server.
     pub worlds: Vec<Arc<World>>,
+    // All the dimensions that exists on the server,
+    pub dimensions: Vec<DimensionType>,
     /// Caches game registries for efficient access.
     pub cached_registry: Vec<Registry>,
     /// Tracks open containers used for item interactions.
@@ -77,10 +79,13 @@ impl Server {
         // First register default command, after that plugins can put in their own
         let command_dispatcher = default_dispatcher();
 
-        let world = World::load(Dimension::OverWorld.into_level(
-            // TODO: load form config
-            "./world".parse().unwrap(),
-        ));
+        let world = World::load(
+            Dimension::OverWorld.into_level(
+                // TODO: load form config
+                "./world".parse().unwrap(),
+            ),
+            DimensionType::Overworld,
+        );
         Self {
             cached_registry: Registry::get_synced(),
             open_containers: RwLock::new(HashMap::new()),
@@ -88,6 +93,12 @@ impl Server {
             // 0 is invalid
             entity_id: 2.into(),
             worlds: vec![Arc::new(world)],
+            dimensions: vec![
+                DimensionType::Overworld,
+                DimensionType::OverworldCaves,
+                DimensionType::TheNether,
+                DimensionType::TheEnd,
+            ],
             command_dispatcher,
             auth_client,
             key_store: KeyStore::new(),

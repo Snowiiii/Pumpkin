@@ -1,10 +1,9 @@
-use std::cmp::max;
-use std::collections::HashMap;
-use std::ops::Index;
-
 use fastnbt::LongArray;
 use pumpkin_core::math::vector2::Vector2;
 use serde::{Deserialize, Serialize};
+use std::cmp::max;
+use std::collections::HashMap;
+use std::ops::Index;
 use thiserror::Error;
 
 use crate::{
@@ -78,6 +77,7 @@ struct PaletteEntry {
 
 #[derive(Deserialize, Debug, Clone)]
 struct ChunkSectionBlockStates {
+    //  #[serde(with = "LongArray")]
     data: Option<LongArray>,
     palette: Vec<PaletteEntry>,
 }
@@ -85,7 +85,9 @@ struct ChunkSectionBlockStates {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct ChunkHeightmaps {
+    // #[serde(with = "LongArray")]
     motion_blocking: LongArray,
+    // #[serde(with = "LongArray")]
     world_surface: LongArray,
 }
 
@@ -269,8 +271,7 @@ impl ChunkData {
                     continue;
                 }
                 Some(d) => d,
-            }
-            .into_inner();
+            };
 
             // How many bits each block has in one of the pallete u64s
             let block_bit_size = {

@@ -301,7 +301,7 @@ async fn main() -> io::Result<()> {
             {
                 let (player, world) = server.add_player(client).await;
                 world
-                    .spawn_player(&BASIC_CONFIG, player.clone(), &server.command_dispatcher)
+                    .spawn_player(&BASIC_CONFIG, player.clone(), &server)
                     .await;
 
                 // poll Player
