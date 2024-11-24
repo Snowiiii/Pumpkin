@@ -76,9 +76,8 @@ pub struct IDOrSoundEvent {
 
 #[derive(Serialize)]
 pub struct SoundEvent {
-    sound_name: Option<String>,
-    has_fixed_range: Option<bool>,
-    range: Option<f32>,
+    pub sound_name: String,
+    pub range: Option<f32>,
 }
 
 pub struct RawPacket {
