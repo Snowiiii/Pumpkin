@@ -153,7 +153,7 @@ impl World {
         let seed = thread_rng().gen::<f64>();
         self.broadcast_packet_all(&CSoundEffect::new(
             VarInt(i32::from(sound_id)),
-			sound_event,
+            sound_event,
             category,
             posistion.x,
             posistion.y,

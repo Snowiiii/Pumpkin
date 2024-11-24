@@ -70,13 +70,13 @@ pub enum SoundCategory {
 
 #[derive(Serialize)]
 pub struct IDOrSoundEvent {
-	pub id: VarInt,
-	pub sound_event: Option<SoundEvent>
+    pub id: VarInt,
+    pub sound_event: Option<SoundEvent>,
 }
 
 #[derive(Serialize)]
 pub struct SoundEvent {
-	sound_name: Option<String>,
+    sound_name: Option<String>,
     has_fixed_range: Option<bool>,
     range: Option<f32>,
 }
