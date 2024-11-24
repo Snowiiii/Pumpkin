@@ -32,7 +32,7 @@ use pumpkin_protocol::{
         SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status,
     },
 };
-use pumpkin_world::block::BlockFace;
+use pumpkin_world::{block::{block_registry, BlockFace}, item::item_registry};
 use thiserror::Error;
 
 use super::PlayerConfig;
@@ -616,7 +616,11 @@ impl Player {
             let mut inventory = self.inventory.lock().await;
             let item_slot = inventory.held_item_mut();
             if let Some(item) = item_slot {
-                let block = pumpkin_world::block::block_registry::get_block_by_item(item.item_id);
+
+                let block = item_registry::get_item_by_id(item.item_id).and_then(|it| 
+                    block_registry::get_block_by_id(it.block_id)
+                );
+
                 // check if item is a block, Because Not every item can be placed :D
                 if let Some(block) = block {
                     let entity = &self.living_entity.entity;

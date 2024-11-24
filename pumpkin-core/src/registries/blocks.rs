@@ -8,12 +8,12 @@ pub struct Block {
     pub name: &'static str,
     pub properties: &'static [Property],
     pub default_state_id: u16,
-    pub states: &'static [u16],
+    pub first_state_id: u16,
+    pub last_state_id: u16,
 }
 
-#[expect(dead_code)]
 #[derive(Debug)]
-struct BlockEntityKind {
+pub struct BlockEntityKind {
     pub id: u32,
     pub ident: &'static str,
     pub name: &'static str,
@@ -34,13 +34,11 @@ pub struct State {
     pub burnable: bool,
     pub opacity: Option<u32>,
     pub replaceable: bool,
-    //pub collision_shapes: &'static [u16],
     pub block_entity_type: Option<u32>,
 }
 
-#[expect(dead_code)]
 #[derive(Debug)]
-struct Shape {
+pub struct Shape {
     pub min_x: f64,
     pub min_y: f64,
     pub min_z: f64,
