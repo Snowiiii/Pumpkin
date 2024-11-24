@@ -1,6 +1,7 @@
-use std::{hash::Hash, sync::Arc};
+use std::sync::Arc;
 
-use num_traits::{Pow, ToBytes};
+use itertools::{izip, Itertools};
+use num_traits::Pow;
 use pumpkin_core::random::RandomGenerator;
 
 use super::{lerp3, GRADIENTS};
@@ -10,24 +11,6 @@ pub struct PerlinNoiseSampler {
     x_origin: f64,
     y_origin: f64,
     z_origin: f64,
-}
-
-impl PartialEq for PerlinNoiseSampler {
-    fn eq(&self, other: &Self) -> bool {
-        self.permutation == other.permutation
-            && self.x_origin.to_le_bytes() == other.x_origin.to_le_bytes()
-            && self.y_origin.to_le_bytes() == other.y_origin.to_le_bytes()
-            && self.z_origin.to_le_bytes() == other.z_origin.to_le_bytes()
-    }
-}
-
-impl Hash for PerlinNoiseSampler {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.permutation.hash(state);
-        self.x_origin.to_le_bytes().hash(state);
-        self.y_origin.to_le_bytes().hash(state);
-        self.z_origin.to_le_bytes().hash(state);
-    }
 }
 
 impl PerlinNoiseSampler {
@@ -56,6 +39,7 @@ impl PerlinNoiseSampler {
         }
     }
 
+    #[inline]
     pub fn sample_flat_y(&self, x: f64, y: f64, z: f64) -> f64 {
         self.sample_no_fade(x, y, z, 0f64, 0f64)
     }
@@ -65,13 +49,13 @@ impl PerlinNoiseSampler {
         let trans_y = y + self.y_origin;
         let trans_z = z + self.z_origin;
 
-        let x_int = trans_x.floor();
-        let y_int = trans_y.floor();
-        let z_int = trans_z.floor();
+        let x_floor = trans_x.floor();
+        let y_floor = trans_y.floor();
+        let z_floor = trans_z.floor();
 
-        let x_dec = trans_x - x_int;
-        let y_dec = trans_y - y_int;
-        let z_dec = trans_z - z_int;
+        let x_dec = trans_x - x_floor;
+        let y_dec = trans_y - y_floor;
+        let z_dec = trans_z - z_floor;
 
         let y_noise = if y_scale != 0f64 {
             let raw_y_dec = if y_max >= 0f64 && y_max < y_dec {
@@ -85,9 +69,9 @@ impl PerlinNoiseSampler {
         };
 
         self.sample(
-            x_int as i32,
-            y_int as i32,
-            z_int as i32,
+            x_floor as i32,
+            y_floor as i32,
+            z_floor as i32,
             x_dec,
             y_dec - y_noise,
             z_dec,
@@ -182,39 +166,11 @@ impl PerlinNoiseSampler {
 
 pub struct OctavePerlinNoiseSampler {
     octave_samplers: Box<[Option<PerlinNoiseSampler>]>,
-    pub(crate) amplitudes: Box<[f64]>,
+    amplitudes: Box<[f64]>,
     first_octave: i32,
-    pub(crate) persistence: f64,
-    lacunarity: f64,
+    persistences: Box<[f64]>,
+    lacunarities: Box<[f64]>,
     max_value: f64,
-}
-
-impl PartialEq for OctavePerlinNoiseSampler {
-    fn eq(&self, other: &Self) -> bool {
-        self.octave_samplers == other.octave_samplers
-            && self.amplitudes.len() == other.amplitudes.len()
-            && self
-                .amplitudes
-                .iter()
-                .zip(other.amplitudes.iter())
-                .all(|(a1, a2)| a1.to_le_bytes() == a2.to_le_bytes())
-            && self.first_octave == other.first_octave
-            && self.lacunarity.to_le_bytes() == other.lacunarity.to_le_bytes()
-            && self.max_value.to_le_bytes() == other.max_value.to_le_bytes()
-    }
-}
-
-impl Hash for OctavePerlinNoiseSampler {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.octave_samplers.hash(state);
-        self.amplitudes
-            .iter()
-            .for_each(|amp| amp.to_le_bytes().hash(state));
-        self.first_octave.hash(state);
-        self.persistence.to_le_bytes().hash(state);
-        self.lacunarity.to_le_bytes().hash(state);
-        self.max_value.to_le_bytes().hash(state);
-    }
 }
 
 impl OctavePerlinNoiseSampler {
@@ -240,6 +196,7 @@ impl OctavePerlinNoiseSampler {
         d
     }
 
+    #[inline]
     pub fn maintain_precision(value: f64) -> f64 {
         (value / 3.3554432E7f64 + 0.5f64).floor() * -3.3554432E7f64 + value
     }
@@ -324,38 +281,56 @@ impl OctavePerlinNoiseSampler {
             }
         }
 
-        let persistence = 2f64.pow((i as i32).wrapping_sub(1) as f64) / (2f64.pow(i as f64) - 1f64);
+        let mut persistence =
+            2f64.pow((i as i32).wrapping_sub(1) as f64) / (2f64.pow(i as f64) - 1f64);
+        let mut lacunarity = 2f64.pow((-j) as f64);
         let max_value = Self::get_total_amplitude(2f64, persistence, amplitudes);
+
+        let persistences = (0..amplitudes.len())
+            .map(|_| {
+                let result = persistence;
+                persistence /= 2f64;
+                result
+            })
+            .collect_vec();
+        let lacunarities = (0..amplitudes.len())
+            .map(|_| {
+                let result = lacunarity;
+                lacunarity *= 2f64;
+                result
+            })
+            .collect_vec();
+
         Self {
             octave_samplers: samplers.into(),
             amplitudes: amplitudes.into(),
             first_octave,
-            persistence,
-            lacunarity: 2f64.pow((-j) as f64),
+            persistences: persistences.into(),
+            lacunarities: lacunarities.into(),
             max_value,
         }
     }
 
     pub fn sample(&self, x: f64, y: f64, z: f64) -> f64 {
         let mut d = 0f64;
-        let mut e = self.lacunarity;
-        let mut f = self.persistence;
 
-        for (sampler, amplitude) in self.octave_samplers.iter().zip(self.amplitudes.iter()) {
+        for (sampler, amplitude, persistence, lacunarity) in izip!(
+            &self.octave_samplers,
+            &self.amplitudes,
+            &self.persistences,
+            &self.lacunarities
+        ) {
             if let Some(sampler) = sampler {
                 let g = sampler.sample_no_fade(
-                    Self::maintain_precision(x * e),
-                    Self::maintain_precision(y * e),
-                    Self::maintain_precision(z * e),
+                    Self::maintain_precision(x * lacunarity),
+                    Self::maintain_precision(y * lacunarity),
+                    Self::maintain_precision(z * lacunarity),
                     0f64,
                     0f64,
                 );
 
-                d += amplitude * g * f;
+                d += amplitude * g * persistence;
             }
-
-            e *= 2f64;
-            f /= 2f64;
         }
 
         d
@@ -367,31 +342,6 @@ pub struct DoublePerlinNoiseParameters {
     amplitudes: &'static [f64],
     id: &'static str,
 }
-
-impl Hash for DoublePerlinNoiseParameters {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.first_octave.hash(state);
-        self.amplitudes
-            .iter()
-            .for_each(|amp| amp.to_le_bytes().hash(state));
-        self.id.hash(state);
-    }
-}
-
-impl PartialEq for DoublePerlinNoiseParameters {
-    fn eq(&self, other: &Self) -> bool {
-        self.first_octave == other.first_octave
-            && self.amplitudes.len() == other.amplitudes.len()
-            && self
-                .amplitudes
-                .iter()
-                .zip(other.amplitudes.iter())
-                .all(|(a1, a2)| a1.to_le_bytes() == a2.to_le_bytes())
-            && self.id == other.id
-    }
-}
-
-impl Eq for DoublePerlinNoiseParameters {}
 
 impl DoublePerlinNoiseParameters {
     pub(crate) const fn new(
@@ -417,26 +367,6 @@ pub struct DoublePerlinNoiseSampler {
     second_sampler: Arc<OctavePerlinNoiseSampler>,
     amplitude: f64,
     max_value: f64,
-}
-
-impl PartialEq for DoublePerlinNoiseSampler {
-    fn eq(&self, other: &Self) -> bool {
-        self.first_sampler == other.first_sampler
-            && self.second_sampler == other.second_sampler
-            && self.amplitude.to_le_bytes() == other.amplitude.to_le_bytes()
-            && self.max_value.to_le_bytes() == other.max_value.to_le_bytes()
-    }
-}
-
-impl Eq for DoublePerlinNoiseSampler {}
-
-impl Hash for DoublePerlinNoiseSampler {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.first_sampler.hash(state);
-        self.second_sampler.hash(state);
-        self.amplitude.to_le_bytes().hash(state);
-        self.max_value.to_le_bytes().hash(state);
-    }
 }
 
 impl DoublePerlinNoiseSampler {
@@ -715,8 +645,8 @@ mod octave_perline_noise_sampler_test {
         let sampler = OctavePerlinNoiseSampler::new(&mut rand_gen, start, &amplitudes, false);
 
         assert_eq!(sampler.first_octave, 1);
-        assert_eq!(sampler.persistence, 0.5714285714285714f64);
-        assert_eq!(sampler.lacunarity, 2f64);
+        assert_eq!(sampler.persistences[0], 0.5714285714285714f64);
+        assert_eq!(sampler.lacunarities[0], 2f64);
         assert_eq!(sampler.max_value, 2f64);
 
         let coords = [
@@ -749,8 +679,8 @@ mod octave_perline_noise_sampler_test {
         let mut rand_gen = RandomGenerator::Legacy(rand);
         let sampler = OctavePerlinNoiseSampler::new(&mut rand_gen, start, &amplitudes, true);
         assert_eq!(sampler.first_octave, 0);
-        assert_eq!(sampler.persistence, 1f64);
-        assert_eq!(sampler.lacunarity, 1f64);
+        assert_eq!(sampler.persistences[0], 1f64);
+        assert_eq!(sampler.lacunarities[0], 1f64);
         assert_eq!(sampler.max_value, 2f64);
 
         let coords = [(226.220117499588, 32.67924779023767, 202.84067325597647)];

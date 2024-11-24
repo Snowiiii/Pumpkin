@@ -191,6 +191,7 @@ pub mod built_in_noise_params {
         DoublePerlinNoiseParameters::new(-4, &[1f64], "minecraft:nether_state_selector");
 }
 
+#[inline]
 pub fn lerp<T>(delta: T, start: T, end: T) -> T
 where
     T: Float,
@@ -198,6 +199,7 @@ where
     start + delta * (end - start)
 }
 
+#[inline]
 pub fn lerp_progress<T>(value: T, start: T, end: T) -> T
 where
     T: Float,
@@ -205,6 +207,7 @@ where
     (value - start) / (end - start)
 }
 
+#[inline]
 pub fn clamped_lerp(start: f64, end: f64, delta: f64) -> f64 {
     if delta < 0f64 {
         start
@@ -215,10 +218,12 @@ pub fn clamped_lerp(start: f64, end: f64, delta: f64) -> f64 {
     }
 }
 
+#[inline]
 pub fn clamped_map(value: f64, old_start: f64, old_end: f64, new_start: f64, new_end: f64) -> f64 {
     clamped_lerp(new_start, new_end, lerp_progress(value, old_start, old_end))
 }
 
+#[inline]
 pub fn map<T>(value: T, old_start: T, old_end: T, new_start: T, new_end: T) -> T
 where
     T: Float,
@@ -226,6 +231,7 @@ where
     lerp(lerp_progress(value, old_start, old_end), new_start, new_end)
 }
 
+#[inline]
 pub fn lerp2(delta_x: f64, delta_y: f64, x0y0: f64, x1y0: f64, x0y1: f64, x1y1: f64) -> f64 {
     lerp(
         delta_y,
@@ -235,6 +241,7 @@ pub fn lerp2(delta_x: f64, delta_y: f64, x0y0: f64, x1y0: f64, x0y1: f64, x1y1: 
 }
 
 #[allow(clippy::too_many_arguments)]
+#[inline]
 pub fn lerp3(
     delta_x: f64,
     delta_y: f64,
