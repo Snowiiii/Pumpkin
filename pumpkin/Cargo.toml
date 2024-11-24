@@ -12,6 +12,7 @@ LegalCopyright = "Copyright © 2024 Aleksander Medvedev"
 
 [dependencies]
 # pumpkin
+pumpkin-api = { path = "../pumpkin-api" }
 pumpkin-core = { path = "../pumpkin-core" }
 pumpkin-config = { path = "../pumpkin-config" }
 pumpkin-inventory = { path = "../pumpkin-inventory" }
@@ -73,6 +74,9 @@ sysinfo = "0.32.0"
 
 # commands
 async-trait = "0.1.83"
+
+# plugins
+libloading = "0.8.5"
 [build-dependencies]
 git-version = "0.3.9"
 # This makes it so the entire project doesn't recompile on each build on linux.

@@ -49,6 +49,7 @@ pub mod query;
 pub mod rcon;
 pub mod server;
 pub mod world;
+pub mod plugin;
 
 fn scrub_address(ip: &str) -> String {
     use pumpkin_config::BASIC_CONFIG;
@@ -232,6 +233,12 @@ async fn main() -> io::Result<()> {
 
     let server = Arc::new(Server::new());
     let mut ticker = Ticker::new(BASIC_CONFIG.tps);
+
+    // Plugins
+    let mut plugin_manager = plugin::PluginManager::new();
+    plugin_manager.load_plugins().expect("Failed to load plugins");
+
+    plugin_manager.list_plugins();
 
     log::info!("Started Server took {}ms", time.elapsed().as_millis());
     log::info!("You now can connect to the server, Listening on {}", addr);
