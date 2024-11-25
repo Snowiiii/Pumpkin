@@ -39,6 +39,7 @@ use std::time::Instant;
 use sysinfo::{CpuRefreshKind, System};
 // Setup some tokens to allow us to identify which event is for which socket.
 
+pub mod block;
 pub mod client;
 pub mod command;
 pub mod entity;

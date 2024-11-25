@@ -1,6 +1,6 @@
-use crate::world::block::block_manager::BlockManager;
-use crate::world::block::blocks::crafting_table::CraftingTableBlock;
-use crate::world::block::blocks::jukebox::JukeboxBlock;
+use crate::block::block_manager::BlockManager;
+use crate::block::blocks::crafting_table::CraftingTableBlock;
+use crate::block::blocks::jukebox::JukeboxBlock;
 use std::sync::Arc;
 
 pub mod block_manager;

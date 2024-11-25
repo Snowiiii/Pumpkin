@@ -20,9 +20,9 @@ use std::{
 };
 use tokio::sync::{Mutex, RwLock};
 
+use crate::block::block_manager::BlockManager;
+use crate::block::default_block_manager;
 use crate::client::EncryptionError;
-use crate::world::block::block_manager::BlockManager;
-use crate::world::block::default_block_manager;
 use crate::{
     client::Client,
     command::{default_dispatcher, dispatcher::CommandDispatcher},

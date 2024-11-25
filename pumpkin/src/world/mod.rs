@@ -51,7 +51,6 @@ use tokio::{
 };
 use worldborder::Worldborder;
 
-pub mod block;
 pub mod scoreboard;
 pub mod worldborder;
 

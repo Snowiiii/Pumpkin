@@ -1,12 +1,10 @@
+use crate::block::pumpkin_block::{BlockMetadata, PumpkinBlock};
 use crate::entity::player::Player;
 use crate::server::Server;
-use crate::world::block::block_manager::{BlockManager, InteractiveBlock};
-use crate::world::block::pumpkin_block::{BlockMetadata, PumpkinBlock};
 use async_trait::async_trait;
 use pumpkin_core::math::position::WorldPosition;
 use pumpkin_inventory::{CraftingTable, OpenContainer, WindowType};
 use pumpkin_world::item::item_registry::Item;
-use std::sync::Arc;
 
 pub struct CraftingTableBlock;
 
@@ -15,15 +13,8 @@ impl BlockMetadata for CraftingTableBlock {
     const ID: &'static str = "crafting_table";
 }
 
-impl PumpkinBlock for CraftingTableBlock {
-    fn register(self, block_manager: &mut BlockManager) {
-        let block = Arc::new(self);
-        block_manager.register_block_interactable(block);
-    }
-}
-
 #[async_trait]
-impl InteractiveBlock for CraftingTableBlock {
+impl PumpkinBlock for CraftingTableBlock {
     async fn on_use<'a>(&self, player: &Player, _location: WorldPosition, server: &Server) {
         self.open_crafting_screen(player, server).await;
     }
