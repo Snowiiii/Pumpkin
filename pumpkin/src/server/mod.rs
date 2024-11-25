@@ -167,7 +167,10 @@ impl Server {
             }
         }
 
-        self.plugin_manager.lock().await.emit_player_join(&player, world);
+        self.plugin_manager
+            .lock()
+            .await
+            .emit_player_join(&player, world);
 
         (player, world.clone())
     }

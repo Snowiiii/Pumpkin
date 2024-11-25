@@ -130,7 +130,10 @@ pub fn plugin_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
         .filter_map(|method_str| method_str.parse().ok())
         .collect();
 
-    let event_names = events.iter().map(|event| quote::quote!(#event)).collect::<Vec<_>>();
+    let event_names = events
+        .iter()
+        .map(|event| quote::quote!(#event))
+        .collect::<Vec<_>>();
 
     // Combine the original struct definition with the impl block and plugin() function
     let expanded = quote! {

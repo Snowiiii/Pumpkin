@@ -6,7 +6,15 @@ use std::{collections::HashMap, fs, path::Path};
 use crate::{entity::player::Player, world::World};
 
 pub struct PluginManager {
-    plugins: HashMap<String, (PluginMetadata<'static>, Box<dyn Plugin>, Box<dyn Hooks>, libloading::Library)>,
+    plugins: HashMap<
+        String,
+        (
+            PluginMetadata<'static>,
+            Box<dyn Plugin>,
+            Box<dyn Hooks>,
+            libloading::Library,
+        ),
+    >,
 }
 
 impl Default for PluginManager {
@@ -103,7 +111,12 @@ impl PluginManager {
     pub fn get_plugin(
         &self,
         name: &str,
-    ) -> Option<&(PluginMetadata, Box<dyn Plugin>, Box<dyn Hooks>, libloading::Library)> {
+    ) -> Option<&(
+        PluginMetadata,
+        Box<dyn Plugin>,
+        Box<dyn Hooks>,
+        libloading::Library,
+    )> {
         self.plugins.get(name)
     }
 
