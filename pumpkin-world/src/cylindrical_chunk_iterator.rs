@@ -1,6 +1,6 @@
 use pumpkin_core::math::vector2::Vector2;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Cylindrical {
     pub center: Vector2<i32>,
     pub view_distance: u8,
