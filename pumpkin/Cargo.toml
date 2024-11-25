@@ -10,9 +10,11 @@ FileDescription = "Pumpkin"
 OriginalFilename = "pumpkin.exe"
 LegalCopyright = "Copyright © 2024 Aleksander Medvedev"
 
+# Required to expose pumpkin plugin API
+[lib]
+
 [dependencies]
 # pumpkin
-pumpkin-api = { path = "../pumpkin-api" }
 pumpkin-core = { path = "../pumpkin-core" }
 pumpkin-config = { path = "../pumpkin-config" }
 pumpkin-inventory = { path = "../pumpkin-inventory" }

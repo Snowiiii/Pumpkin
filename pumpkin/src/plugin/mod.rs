@@ -1,13 +1,61 @@
-use pumpkin_api::{Plugin, PluginMetadata};
+pub mod api;
+
+pub use api::*;
 use std::{collections::HashMap, fs, path::Path};
 
+use crate::{entity::player::Player, world::World};
+
 pub struct PluginManager<'s> {
-    plugins: HashMap<String, (PluginMetadata<'s>, Box<dyn Plugin>, libloading::Library)>,
+    plugins: HashMap<String, (PluginMetadata<'s>, Box<dyn Plugin>, Box<dyn Hooks>, libloading::Library)>,
 }
 
 impl Default for PluginManager<'_> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+struct PluginLogger {
+    plugin_name: String,
+}
+
+impl Logger for PluginLogger {
+    fn info(&self, message: &str) {
+        log::info!("[{}] {}", self.plugin_name, message);
+    }
+
+    fn warn(&self, message: &str) {
+        log::warn!("[{}] {}", self.plugin_name, message);
+    }
+
+    fn error(&self, message: &str) {
+        log::error!("[{}] {}", self.plugin_name, message);
+    }
+}
+
+struct Context<'a> {
+    metadata: &'a PluginMetadata<'a>,
+}
+impl PluginContext for Context<'_> {
+    fn get_logger(&self) -> Box<dyn Logger> {
+        Box::new(PluginLogger {
+            plugin_name: self.metadata.name.to_string(),
+        })
+    }
+}
+
+struct Event<'a> {
+    player: &'a Player,
+    world: &'a World,
+}
+
+impl PlayerConnectionEvent for Event<'_> {
+    fn get_player(&self) -> &Player {
+        self.player
+    }
+
+    fn get_world(&self) -> &World {
+        self.world
     }
 }
 
@@ -35,38 +83,10 @@ impl PluginManager<'_> {
     }
 
     fn try_load_plugin(&mut self, path: &Path) {
-        struct Logger {
-            plugin_name: String,
-        }
-
-        impl pumpkin_api::Logger for Logger {
-            fn info(&self, message: &str) {
-                log::info!("[{}] {}", self.plugin_name, message);
-            }
-
-            fn warn(&self, message: &str) {
-                log::warn!("[{}] {}", self.plugin_name, message);
-            }
-
-            fn error(&self, message: &str) {
-                log::error!("[{}] {}", self.plugin_name, message);
-            }
-        }
-
-        struct Context<'a> {
-            metadata: &'a PluginMetadata<'a>,
-        }
-        impl pumpkin_api::PluginContext for Context<'_> {
-            fn get_logger(&self) -> Box<dyn pumpkin_api::Logger> {
-                Box::new(Logger {
-                    plugin_name: self.metadata.name.to_string(),
-                })
-            }
-        }
-
         let library = unsafe { libloading::Library::new(path).unwrap() };
 
         let plugin_fn = unsafe { library.get::<fn() -> Box<dyn Plugin>>(b"plugin").unwrap() };
+        let hooks_fn = unsafe { library.get::<fn() -> Box<dyn Hooks>>(b"hooks").unwrap() };
         let metadata: &PluginMetadata =
             unsafe { &**library.get::<*const PluginMetadata>(b"METADATA").unwrap() };
 
@@ -75,7 +95,7 @@ impl PluginManager<'_> {
 
         self.plugins.insert(
             metadata.name.to_string(),
-            (metadata.clone(), plugin_fn(), library),
+            (metadata.clone(), plugin_fn(), hooks_fn(), library),
         );
     }
 
@@ -83,12 +103,12 @@ impl PluginManager<'_> {
     pub fn get_plugin(
         &self,
         name: &str,
-    ) -> Option<&(PluginMetadata, Box<dyn Plugin>, libloading::Library)> {
+    ) -> Option<&(PluginMetadata, Box<dyn Plugin>, Box<dyn Hooks>, libloading::Library)> {
         self.plugins.get(name)
     }
 
     pub fn list_plugins(&self) {
-        for (metadata, _, _) in self.plugins.values() {
+        for (metadata, _, _, _) in self.plugins.values() {
             println!(
                 "{}: {} v{} by {}",
                 metadata.id,
@@ -96,6 +116,16 @@ impl PluginManager<'_> {
                 metadata.version,
                 metadata.authors.join(", ")
             );
+        }
+    }
+
+    pub fn emit_player_join(&mut self, player: &Player, world: &World) {
+        for (metadata, _, hooks, _) in self.plugins.values_mut() {
+            if hooks.registered_events().unwrap().contains(&"player_join") {
+                let context = Context { metadata };
+                let event = Event { player, world };
+                let _ = hooks.as_mut().on_player_join(&context, &event);
+            }
         }
     }
 }

@@ -1,3 +1,9 @@
+pub mod context;
+pub mod events;
+
+pub use context::*;
+pub use events::*;
+
 #[derive(Debug, Clone)]
 pub struct PluginMetadata<'s> {
     /// The name of the plugin.
@@ -20,21 +26,11 @@ pub trait Plugin: Send + Sync + 'static {
     fn on_unload(&mut self, server: &dyn PluginContext) -> Result<(), String>;
 }
 
-pub trait PluginContext {
-    fn get_logger(&self) -> Box<dyn Logger>;
-}
-
-pub trait Logger {
-    fn info(&self, message: &str);
-    fn warn(&self, message: &str);
-    fn error(&self, message: &str);
-}
-
 #[macro_export]
 macro_rules! plugin_metadata {
     ($name:expr, $id:expr, $version:expr, $authors:expr, $description:expr) => {
         #[no_mangle]
-        pub static METADATA: PluginMetadata = PluginMetadata {
+        pub static METADATA: pumpkin::plugin::PluginMetadata = pumpkin::plugin::PluginMetadata {
             name: $name,
             id: $id,
             version: $version,

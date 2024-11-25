@@ -69,12 +69,12 @@ pub fn plugin_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
     let expanded = quote! {
         #input_struct
 
-        impl pumpkin_api::Plugin for #struct_ident {
+        impl pumpkin::plugin::Plugin for #struct_ident {
             #(#methods)*
         }
 
         #[no_mangle]
-        pub fn plugin() -> Box<dyn pumpkin_api::Plugin> {
+        pub fn plugin() -> Box<dyn pumpkin::plugin::Plugin> {
             Box::new(#struct_ident {})
         }
     };

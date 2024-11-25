@@ -9,5 +9,5 @@ version = "0.1.0"
 crate-type = ["dylib"]
 
 [dependencies]
-pumpkin-api = { path = "../../pumpkin-api" }
+pumpkin = { path = "../../pumpkin" }
 pumpkin-api-macros = { path = "../../pumpkin-api-macros" }

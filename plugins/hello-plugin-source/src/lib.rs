@@ -1,4 +1,5 @@
-use pumpkin_api::*;
+use pumpkin::plugin::*;
+use pumpkin::plugin_metadata;
 use pumpkin_api_macros::{plugin_impl, plugin_method};
 
 plugin_metadata!(
