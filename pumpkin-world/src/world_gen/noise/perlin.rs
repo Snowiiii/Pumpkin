@@ -7,7 +7,7 @@ use pumpkin_core::random::RandomGenerator;
 use super::{lerp3, GRADIENTS};
 
 pub struct PerlinNoiseSampler {
-    permutation: Box<[u8]>,
+    permutation: [u8; 256],
     x_origin: f64,
     y_origin: f64,
     z_origin: f64,
@@ -32,7 +32,7 @@ impl PerlinNoiseSampler {
         }
 
         Self {
-            permutation: Box::new(permutation),
+            permutation,
             x_origin,
             y_origin,
             z_origin,
@@ -797,8 +797,6 @@ mod octave_perline_noise_sampler_test {
 
 #[cfg(test)]
 mod perlin_noise_sampler_test {
-    use std::ops::Deref;
-
     use pumpkin_core::random::{xoroshiro128::Xoroshiro, RandomGenerator, RandomImpl};
 
     use crate::world_gen::noise::perlin::PerlinNoiseSampler;
@@ -829,7 +827,7 @@ mod perlin_noise_sampler_test {
             151, 157, 247, 223, 198, 55, 188, 96, 0, 182, 49, 190, 156, 10, 215, 252, 131, 137,
             184, 176, 136, 81, 44, 213, 253, 144, 225, 5,
         ];
-        assert_eq!(sampler.permutation.deref(), permutation);
+        assert_eq!(sampler.permutation, permutation);
     }
 
     #[test]
