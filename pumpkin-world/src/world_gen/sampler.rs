@@ -140,7 +140,7 @@ pub struct WorldAquiferSampler {
     start_z: i32,
     size_z: usize,
     levels: Box<[Option<FluidLevel>]>,
-    packed_positions: Box<[Option<i64>]>,
+    packed_positions: Box<[i64]>,
 }
 
 impl WorldAquiferSampler {
@@ -188,6 +188,28 @@ impl WorldAquiferSampler {
         let size_z = (end_z - start_z) as usize + 1;
 
         let cache_size = size_x * size_y * size_z;
+
+        let mut packed_positions = vec![0; cache_size];
+
+        for offset_x in 0..size_x {
+            for offset_y in 0..size_y {
+                for offset_z in 0..size_z {
+                    let x = start_x + offset_x as i32;
+                    let y = start_y as i32 + offset_y as i32;
+                    let z = start_z + offset_z as i32;
+
+                    let mut random = random_deriver.split_pos(x, y, z);
+                    let rand_x = x * 16 + random.next_bounded_i32(10);
+                    let rand_y = y * 12 + random.next_bounded_i32(9);
+                    let rand_z = z * 16 + random.next_bounded_i32(10);
+
+                    let index = (offset_y * size_z + offset_z) * size_x + offset_x;
+                    packed_positions[index] =
+                        block_pos::packed(&Vector3::new(rand_x, rand_y, rand_z));
+                }
+            }
+        }
+
         Self {
             barrier_noise,
             fluid_level_floodedness,
@@ -204,7 +226,7 @@ impl WorldAquiferSampler {
             start_z,
             size_z,
             levels: vec![None; cache_size].into(),
-            packed_positions: vec![None; cache_size].into(),
+            packed_positions: packed_positions.into(),
         }
     }
 
@@ -515,27 +537,6 @@ impl AquiferSamplerImpl for WorldAquiferSampler {
                 let scaled_y = floor_div(j + 1, 12);
                 let scaled_z = floor_div(k - 5, 16);
 
-                for offset_x in 0..=1 {
-                    for offset_y in -1..=1 {
-                        for offset_z in 0..=1 {
-                            let x_pos = scaled_x + offset_x;
-                            let y_pos = scaled_y + offset_y;
-                            let z_pos = scaled_z + offset_z;
-                            let index = self.index(x_pos, y_pos, z_pos);
-
-                            if self.packed_positions[index].is_none() {
-                                let mut random = self.random_deriver.split_pos(x_pos, y_pos, z_pos);
-                                let rand_x = x_pos * 16 + random.next_bounded_i32(10);
-                                let rand_y = y_pos * 12 + random.next_bounded_i32(9);
-                                let rand_z = z_pos * 16 + random.next_bounded_i32(10);
-                                let packed_pos =
-                                    block_pos::packed(&Vector3::new(rand_x, rand_y, rand_z));
-                                self.packed_positions[index] = Some(packed_pos);
-                            }
-                        }
-                    }
-                }
-
                 // This is just the first 4 iterations of the above loop
                 let hypot_packed_block = [(0, -1, 0), (0, -1, 1), (0, 0, 0), (0, 0, 1)].map(
                     |(offset_x, offset_y, offset_z)| {
@@ -544,7 +545,7 @@ impl AquiferSamplerImpl for WorldAquiferSampler {
                         let z_pos = scaled_z + offset_z;
                         let index = self.index(x_pos, y_pos, z_pos);
 
-                        let packed_random = self.packed_positions[index].unwrap();
+                        let packed_random = self.packed_positions[index];
 
                         let local_x = block_pos::unpack_x(packed_random) - i;
                         let local_y = block_pos::unpack_y(packed_random) - j;
