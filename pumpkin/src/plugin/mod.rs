@@ -5,11 +5,11 @@ use std::{collections::HashMap, fs, path::Path};
 
 use crate::{entity::player::Player, world::World};
 
-pub struct PluginManager<'s> {
-    plugins: HashMap<String, (PluginMetadata<'s>, Box<dyn Plugin>, Box<dyn Hooks>, libloading::Library)>,
+pub struct PluginManager {
+    plugins: HashMap<String, (PluginMetadata<'static>, Box<dyn Plugin>, Box<dyn Hooks>, libloading::Library)>,
 }
 
-impl Default for PluginManager<'_> {
+impl Default for PluginManager {
     fn default() -> Self {
         Self::new()
     }
@@ -59,7 +59,7 @@ impl PlayerConnectionEvent for Event<'_> {
     }
 }
 
-impl PluginManager<'_> {
+impl PluginManager {
     #[must_use]
     pub fn new() -> Self {
         PluginManager {
@@ -120,10 +120,10 @@ impl PluginManager<'_> {
     }
 
     pub fn emit_player_join(&mut self, player: &Player, world: &World) {
+        let event = Event { player, world };
         for (metadata, _, hooks, _) in self.plugins.values_mut() {
             if hooks.registered_events().unwrap().contains(&"player_join") {
                 let context = Context { metadata };
-                let event = Event { player, world };
                 let _ = hooks.as_mut().on_player_join(&context, &event);
             }
         }
