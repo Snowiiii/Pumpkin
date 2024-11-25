@@ -537,26 +537,41 @@ impl AquiferSamplerImpl for WorldAquiferSampler {
                 let scaled_y = floor_div(j + 1, 12);
                 let scaled_z = floor_div(k - 5, 16);
 
-                // This is just the first 4 iterations of the above loop
-                let hypot_packed_block = [(0, -1, 0), (0, -1, 1), (0, 0, 0), (0, 0, 1)].map(
-                    |(offset_x, offset_y, offset_z)| {
-                        let x_pos = scaled_x + offset_x;
-                        let y_pos = scaled_y + offset_y;
-                        let z_pos = scaled_z + offset_z;
-                        let index = self.index(x_pos, y_pos, z_pos);
+                // The 4 closest positions, closest to furthest
+                let mut hypot_packed_block = [(0, i32::MAX); 4];
+                for offset_x in 0..=1 {
+                    for offset_y in -1..=1 {
+                        for offset_z in 0..=1 {
+                            let x_pos = scaled_x + offset_x;
+                            let y_pos = scaled_y + offset_y;
+                            let z_pos = scaled_z + offset_z;
+                            let index = self.index(x_pos, y_pos, z_pos);
 
-                        let packed_random = self.packed_positions[index];
+                            let packed_random = self.packed_positions[index];
 
-                        let local_x = block_pos::unpack_x(packed_random) - i;
-                        let local_y = block_pos::unpack_y(packed_random) - j;
-                        let local_z = block_pos::unpack_z(packed_random) - k;
+                            let local_x = block_pos::unpack_x(packed_random) - i;
+                            let local_y = block_pos::unpack_y(packed_random) - j;
+                            let local_z = block_pos::unpack_z(packed_random) - k;
 
-                        (
-                            packed_random,
-                            local_x * local_x + local_y * local_y + local_z * local_z,
-                        )
-                    },
-                );
+                            let hypot_squared =
+                                local_x * local_x + local_y * local_y + local_z * local_z;
+
+                            if hypot_packed_block[0].1 >= hypot_squared {
+                                hypot_packed_block.rotate_right(1);
+                                hypot_packed_block[0] = (packed_random, hypot_squared);
+                            } else if hypot_packed_block[1].1 >= hypot_squared {
+                                hypot_packed_block[3] = hypot_packed_block[2];
+                                hypot_packed_block[2] = hypot_packed_block[1];
+                                hypot_packed_block[1] = (packed_random, hypot_squared);
+                            } else if hypot_packed_block[2].1 >= hypot_squared {
+                                hypot_packed_block[3] = hypot_packed_block[2];
+                                hypot_packed_block[2] = (packed_random, hypot_squared);
+                            } else if hypot_packed_block[3].1 >= hypot_squared {
+                                hypot_packed_block[3] = (packed_random, hypot_squared);
+                            }
+                        }
+                    }
+                }
 
                 let fluid_level2 =
                     self.get_water_level(hypot_packed_block[0].0, height_estimator, state);
