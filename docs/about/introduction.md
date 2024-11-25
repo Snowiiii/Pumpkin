@@ -3,7 +3,12 @@
 Pumpkin is a Minecraft server built entirely in **Rust**, offering a fast, efficient,
 and customizable experience. It prioritizes performance and player enjoyment while adhering to the core mechanics of the game.
 
-![image](https://github.com/user-attachments/assets/7e2e865e-b150-4675-a2d5-b52f9900378e)
+<picture>
+  <source srcset="/assets/introduction-preview-2560x1440.png" media="(min-width: 2560px)">
+  <source srcset="/assets/introduction-preview-1280x720.png" media="(min-width: 1280px)">
+  <source srcset="/assets/introduction-preview-640x360.png" media="(min-width: 640px)">
+  <img src="/assets/introduction-preview-1280x720.png" alt="Preview">
+</picture>
 
 ## What Pumpkin wants to achieve
 
