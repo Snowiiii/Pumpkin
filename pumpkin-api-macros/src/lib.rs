@@ -78,7 +78,7 @@ pub fn plugin_event(attr: TokenStream, item: TokenStream) -> TokenStream {
         .unwrap()
         .entry(struct_name)
         .or_default()
-        .push("\"".to_owned() + &fn_name.to_string().trim_start_matches("on_").to_string() + "\"");
+        .push("\"".to_owned() + fn_name.to_string().trim_start_matches("on_") + "\"");
 
     TokenStream::new()
 }
