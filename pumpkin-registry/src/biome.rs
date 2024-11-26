@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Biome {
-    has_precipitation: i8,
+    has_precipitation: bool,
     temperature: f32,
     #[serde(skip_serializing_if = "Option::is_none")]
     temperature_modifier: Option<String>,
@@ -67,5 +67,5 @@ struct Music {
     sound: String,
     min_delay: i32,
     max_delay: i32,
-    replace_current_music: i8,
+    replace_current_music: bool,
 }

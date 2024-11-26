@@ -4,6 +4,13 @@ use crate::Identifier;
 
 #[derive(serde::Serialize)]
 #[client_packet("config:cookie_request")]
-pub struct CCookieRequest {
-    key: Identifier,
+/// Requests a cookie that was previously stored.
+pub struct CCookieRequest<'a> {
+    key: &'a Identifier,
+}
+
+impl<'a> CCookieRequest<'a> {
+    pub fn new(key: &'a Identifier) -> Self {
+        Self { key }
+    }
 }

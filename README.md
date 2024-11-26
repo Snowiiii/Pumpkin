@@ -42,13 +42,14 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Server Brand
   - [ ] Server Links
   - [x] Set Resource Pack
-  - [ ] Cookies
+  - [x] Cookies
 - World
   - [x] World Joining
   - [x] Player Tab-list
   - [x] World Loading
   - [x] Lighting
   - [x] Entity Spawning
+  - [x] Bossbar
   - [x] Chunk Loading
   - [x] Chunk Generation
   - [ ] World Time

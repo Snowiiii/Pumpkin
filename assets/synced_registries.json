@@ -1,7 +1,7 @@
 {
   "minecraft:worldgen/biome": {
     "minecraft:badlands": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 2.0,
       "downfall": 0.0,
       "effects": {
@@ -15,7 +15,7 @@
           "sound": "minecraft:music.overworld.badlands",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 7254527,
         "foliage_color": 10387789,
@@ -26,7 +26,7 @@
       }
     },
     "minecraft:bamboo_jungle": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.95,
       "downfall": 0.9,
       "effects": {
@@ -40,7 +40,7 @@
           "sound": "minecraft:music.overworld.bamboo_jungle",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 7842047,
         "fog_color": 12638463,
@@ -49,7 +49,7 @@
       }
     },
     "minecraft:basalt_deltas": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 2.0,
       "downfall": 0.0,
       "effects": {
@@ -67,7 +67,7 @@
           "sound": "minecraft:music.nether.basalt_deltas",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "particle": {
           "options": {
@@ -83,7 +83,7 @@
       }
     },
     "minecraft:beach": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.8,
       "downfall": 0.4,
       "effects": {
@@ -100,7 +100,7 @@
       }
     },
     "minecraft:birch_forest": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.6,
       "downfall": 0.6,
       "effects": {
@@ -114,7 +114,7 @@
           "sound": "minecraft:music.overworld.forest",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 8037887,
         "fog_color": 12638463,
@@ -123,7 +123,7 @@
       }
     },
     "minecraft:cherry_grove": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.5,
       "downfall": 0.8,
       "effects": {
@@ -137,7 +137,7 @@
           "sound": "minecraft:music.overworld.cherry_grove",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 8103167,
         "foliage_color": 11983713,
@@ -148,7 +148,7 @@
       }
     },
     "minecraft:cold_ocean": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.5,
       "downfall": 0.5,
       "effects": {
@@ -165,7 +165,7 @@
       }
     },
     "minecraft:crimson_forest": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 2.0,
       "downfall": 0.0,
       "effects": {
@@ -183,7 +183,7 @@
           "sound": "minecraft:music.nether.crimson_forest",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "particle": {
           "options": {
@@ -199,7 +199,7 @@
       }
     },
     "minecraft:dark_forest": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.7,
       "downfall": 0.8,
       "effects": {
@@ -213,7 +213,7 @@
           "sound": "minecraft:music.overworld.forest",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "grass_color_modifier": "dark_forest",
         "sky_color": 7972607,
@@ -223,7 +223,7 @@
       }
     },
     "minecraft:deep_cold_ocean": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.5,
       "downfall": 0.5,
       "effects": {
@@ -240,7 +240,7 @@
       }
     },
     "minecraft:deep_dark": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.8,
       "downfall": 0.4,
       "effects": {
@@ -254,7 +254,7 @@
           "sound": "minecraft:music.overworld.deep_dark",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 7907327,
         "fog_color": 12638463,
@@ -263,7 +263,7 @@
       }
     },
     "minecraft:deep_frozen_ocean": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.5,
       "temperature_modifier": "frozen",
       "downfall": 0.5,
@@ -281,7 +281,7 @@
       }
     },
     "minecraft:deep_lukewarm_ocean": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.5,
       "downfall": 0.5,
       "effects": {
@@ -298,7 +298,7 @@
       }
     },
     "minecraft:deep_ocean": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.5,
       "downfall": 0.5,
       "effects": {
@@ -315,7 +315,7 @@
       }
     },
     "minecraft:desert": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 2.0,
       "downfall": 0.0,
       "effects": {
@@ -329,7 +329,7 @@
           "sound": "minecraft:music.overworld.desert",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 7254527,
         "fog_color": 12638463,
@@ -338,7 +338,7 @@
       }
     },
     "minecraft:dripstone_caves": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.8,
       "downfall": 0.4,
       "effects": {
@@ -352,7 +352,7 @@
           "sound": "minecraft:music.overworld.dripstone_caves",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 7907327,
         "fog_color": 12638463,
@@ -361,7 +361,7 @@
       }
     },
     "minecraft:end_barrens": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 0.5,
       "downfall": 0.5,
       "effects": {
@@ -378,7 +378,7 @@
       }
     },
     "minecraft:end_highlands": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 0.5,
       "downfall": 0.5,
       "effects": {
@@ -395,7 +395,7 @@
       }
     },
     "minecraft:end_midlands": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 0.5,
       "downfall": 0.5,
       "effects": {
@@ -412,7 +412,7 @@
       }
     },
     "minecraft:eroded_badlands": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 2.0,
       "downfall": 0.0,
       "effects": {
@@ -426,7 +426,7 @@
           "sound": "minecraft:music.overworld.badlands",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 7254527,
         "foliage_color": 10387789,
@@ -437,7 +437,7 @@
       }
     },
     "minecraft:flower_forest": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.7,
       "downfall": 0.8,
       "effects": {
@@ -451,7 +451,7 @@
           "sound": "minecraft:music.overworld.flower_forest",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 7972607,
         "fog_color": 12638463,
@@ -460,7 +460,7 @@
       }
     },
     "minecraft:forest": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.7,
       "downfall": 0.8,
       "effects": {
@@ -474,7 +474,7 @@
           "sound": "minecraft:music.overworld.forest",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 7972607,
         "fog_color": 12638463,
@@ -483,7 +483,7 @@
       }
     },
     "minecraft:frozen_ocean": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.0,
       "temperature_modifier": "frozen",
       "downfall": 0.5,
@@ -501,7 +501,7 @@
       }
     },
     "minecraft:frozen_peaks": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": -0.7,
       "downfall": 0.9,
       "effects": {
@@ -515,7 +515,7 @@
           "sound": "minecraft:music.overworld.frozen_peaks",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 8756735,
         "fog_color": 12638463,
@@ -524,7 +524,7 @@
       }
     },
     "minecraft:frozen_river": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.0,
       "downfall": 0.5,
       "effects": {
@@ -541,7 +541,7 @@
       }
     },
     "minecraft:grove": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": -0.2,
       "downfall": 0.8,
       "effects": {
@@ -555,7 +555,7 @@
           "sound": "minecraft:music.overworld.grove",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 8495359,
         "fog_color": 12638463,
@@ -564,7 +564,7 @@
       }
     },
     "minecraft:ice_spikes": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.0,
       "downfall": 0.5,
       "effects": {
@@ -581,7 +581,7 @@
       }
     },
     "minecraft:jagged_peaks": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": -0.7,
       "downfall": 0.9,
       "effects": {
@@ -595,7 +595,7 @@
           "sound": "minecraft:music.overworld.jagged_peaks",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 8756735,
         "fog_color": 12638463,
@@ -604,7 +604,7 @@
       }
     },
     "minecraft:jungle": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.95,
       "downfall": 0.9,
       "effects": {
@@ -618,7 +618,7 @@
           "sound": "minecraft:music.overworld.jungle",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 7842047,
         "fog_color": 12638463,
@@ -627,7 +627,7 @@
       }
     },
     "minecraft:lukewarm_ocean": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.5,
       "downfall": 0.5,
       "effects": {
@@ -644,7 +644,7 @@
       }
     },
     "minecraft:lush_caves": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.5,
       "downfall": 0.5,
       "effects": {
@@ -658,7 +658,7 @@
           "sound": "minecraft:music.overworld.lush_caves",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 8103167,
         "fog_color": 12638463,
@@ -667,7 +667,7 @@
       }
     },
     "minecraft:mangrove_swamp": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.8,
       "downfall": 0.9,
       "effects": {
@@ -681,7 +681,7 @@
           "sound": "minecraft:music.overworld.swamp",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "grass_color_modifier": "swamp",
         "sky_color": 7907327,
@@ -692,7 +692,7 @@
       }
     },
     "minecraft:meadow": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.5,
       "downfall": 0.8,
       "effects": {
@@ -706,7 +706,7 @@
           "sound": "minecraft:music.overworld.meadow",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 8103167,
         "fog_color": 12638463,
@@ -715,7 +715,7 @@
       }
     },
     "minecraft:mushroom_fields": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.9,
       "downfall": 1.0,
       "effects": {
@@ -732,7 +732,7 @@
       }
     },
     "minecraft:nether_wastes": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 2.0,
       "downfall": 0.0,
       "effects": {
@@ -750,7 +750,7 @@
           "sound": "minecraft:music.nether.nether_wastes",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "ambient_sound": "minecraft:ambient.nether_wastes.loop",
         "sky_color": 7254527,
@@ -760,7 +760,7 @@
       }
     },
     "minecraft:ocean": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.5,
       "downfall": 0.5,
       "effects": {
@@ -777,7 +777,7 @@
       }
     },
     "minecraft:old_growth_birch_forest": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.6,
       "downfall": 0.6,
       "effects": {
@@ -791,7 +791,7 @@
           "sound": "minecraft:music.overworld.forest",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 8037887,
         "fog_color": 12638463,
@@ -800,7 +800,7 @@
       }
     },
     "minecraft:old_growth_pine_taiga": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.3,
       "downfall": 0.8,
       "effects": {
@@ -814,7 +814,7 @@
           "sound": "minecraft:music.overworld.old_growth_taiga",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 8168447,
         "fog_color": 12638463,
@@ -823,7 +823,7 @@
       }
     },
     "minecraft:old_growth_spruce_taiga": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.25,
       "downfall": 0.8,
       "effects": {
@@ -837,7 +837,7 @@
           "sound": "minecraft:music.overworld.old_growth_taiga",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 8233983,
         "fog_color": 12638463,
@@ -846,7 +846,7 @@
       }
     },
     "minecraft:plains": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.8,
       "downfall": 0.4,
       "effects": {
@@ -863,7 +863,7 @@
       }
     },
     "minecraft:river": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.5,
       "downfall": 0.5,
       "effects": {
@@ -880,7 +880,7 @@
       }
     },
     "minecraft:savanna": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 2.0,
       "downfall": 0.0,
       "effects": {
@@ -897,7 +897,7 @@
       }
     },
     "minecraft:savanna_plateau": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 2.0,
       "downfall": 0.0,
       "effects": {
@@ -914,7 +914,7 @@
       }
     },
     "minecraft:small_end_islands": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 0.5,
       "downfall": 0.5,
       "effects": {
@@ -931,7 +931,7 @@
       }
     },
     "minecraft:snowy_beach": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.05,
       "downfall": 0.3,
       "effects": {
@@ -948,7 +948,7 @@
       }
     },
     "minecraft:snowy_plains": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.0,
       "downfall": 0.5,
       "effects": {
@@ -965,7 +965,7 @@
       }
     },
     "minecraft:snowy_slopes": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": -0.3,
       "downfall": 0.9,
       "effects": {
@@ -979,7 +979,7 @@
           "sound": "minecraft:music.overworld.snowy_slopes",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 8560639,
         "fog_color": 12638463,
@@ -988,7 +988,7 @@
       }
     },
     "minecraft:snowy_taiga": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": -0.5,
       "downfall": 0.4,
       "effects": {
@@ -1005,7 +1005,7 @@
       }
     },
     "minecraft:soul_sand_valley": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 2.0,
       "downfall": 0.0,
       "effects": {
@@ -1023,7 +1023,7 @@
           "sound": "minecraft:music.nether.soul_sand_valley",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "particle": {
           "options": {
@@ -1039,7 +1039,7 @@
       }
     },
     "minecraft:sparse_jungle": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.95,
       "downfall": 0.8,
       "effects": {
@@ -1053,7 +1053,7 @@
           "sound": "minecraft:music.overworld.sparse_jungle",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 7842047,
         "fog_color": 12638463,
@@ -1062,7 +1062,7 @@
       }
     },
     "minecraft:stony_peaks": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 1.0,
       "downfall": 0.3,
       "effects": {
@@ -1076,7 +1076,7 @@
           "sound": "minecraft:music.overworld.stony_peaks",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 7776511,
         "fog_color": 12638463,
@@ -1085,7 +1085,7 @@
       }
     },
     "minecraft:stony_shore": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.2,
       "downfall": 0.3,
       "effects": {
@@ -1102,7 +1102,7 @@
       }
     },
     "minecraft:sunflower_plains": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.8,
       "downfall": 0.4,
       "effects": {
@@ -1119,7 +1119,7 @@
       }
     },
     "minecraft:swamp": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.8,
       "downfall": 0.9,
       "effects": {
@@ -1133,7 +1133,7 @@
           "sound": "minecraft:music.overworld.swamp",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "grass_color_modifier": "swamp",
         "sky_color": 7907327,
@@ -1144,7 +1144,7 @@
       }
     },
     "minecraft:taiga": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.25,
       "downfall": 0.8,
       "effects": {
@@ -1161,7 +1161,7 @@
       }
     },
     "minecraft:the_end": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 0.5,
       "downfall": 0.5,
       "effects": {
@@ -1178,7 +1178,7 @@
       }
     },
     "minecraft:the_void": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 0.5,
       "downfall": 0.5,
       "effects": {
@@ -1195,7 +1195,7 @@
       }
     },
     "minecraft:warm_ocean": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.5,
       "downfall": 0.5,
       "effects": {
@@ -1212,7 +1212,7 @@
       }
     },
     "minecraft:warped_forest": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 2.0,
       "downfall": 0.0,
       "effects": {
@@ -1230,7 +1230,7 @@
           "sound": "minecraft:music.nether.warped_forest",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "particle": {
           "options": {
@@ -1246,7 +1246,7 @@
       }
     },
     "minecraft:windswept_forest": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.2,
       "downfall": 0.3,
       "effects": {
@@ -1263,7 +1263,7 @@
       }
     },
     "minecraft:windswept_gravelly_hills": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.2,
       "downfall": 0.3,
       "effects": {
@@ -1280,7 +1280,7 @@
       }
     },
     "minecraft:windswept_hills": {
-      "has_precipitation": 1,
+      "has_precipitation": true,
       "temperature": 0.2,
       "downfall": 0.3,
       "effects": {
@@ -1297,7 +1297,7 @@
       }
     },
     "minecraft:windswept_savanna": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 2.0,
       "downfall": 0.0,
       "effects": {
@@ -1314,7 +1314,7 @@
       }
     },
     "minecraft:wooded_badlands": {
-      "has_precipitation": 0,
+      "has_precipitation": false,
       "temperature": 2.0,
       "downfall": 0.0,
       "effects": {
@@ -1328,7 +1328,7 @@
           "sound": "minecraft:music.overworld.badlands",
           "min_delay": 12000,
           "max_delay": 24000,
-          "replace_current_music": 0
+          "replace_current_music": false
         },
         "sky_color": 7254527,
         "foliage_color": 10387789,
@@ -1380,7 +1380,7 @@
           "content"
         ],
         "style": {
-          "italic": 1,
+          "italic": true,
           "color": "gray"
         }
       },
@@ -1400,7 +1400,7 @@
           "content"
         ],
         "style": {
-          "italic": 1,
+          "italic": true,
           "color": "gray"
         }
       },
@@ -1470,7 +1470,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.bolt"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:coast": {
       "asset_id": "minecraft:coast",
@@ -1478,7 +1478,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.coast"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:dune": {
       "asset_id": "minecraft:dune",
@@ -1486,7 +1486,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.dune"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:eye": {
       "asset_id": "minecraft:eye",
@@ -1494,7 +1494,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.eye"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:flow": {
       "asset_id": "minecraft:flow",
@@ -1502,7 +1502,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.flow"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:host": {
       "asset_id": "minecraft:host",
@@ -1510,7 +1510,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.host"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:raiser": {
       "asset_id": "minecraft:raiser",
@@ -1518,7 +1518,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.raiser"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:rib": {
       "asset_id": "minecraft:rib",
@@ -1526,7 +1526,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.rib"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:sentry": {
       "asset_id": "minecraft:sentry",
@@ -1534,7 +1534,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.sentry"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:shaper": {
       "asset_id": "minecraft:shaper",
@@ -1542,7 +1542,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.shaper"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:silence": {
       "asset_id": "minecraft:silence",
@@ -1550,7 +1550,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.silence"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:snout": {
       "asset_id": "minecraft:snout",
@@ -1558,7 +1558,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.snout"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:spire": {
       "asset_id": "minecraft:spire",
@@ -1566,7 +1566,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.spire"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:tide": {
       "asset_id": "minecraft:tide",
@@ -1574,7 +1574,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.tide"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:vex": {
       "asset_id": "minecraft:vex",
@@ -1582,7 +1582,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.vex"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:ward": {
       "asset_id": "minecraft:ward",
@@ -1590,7 +1590,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.ward"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:wayfinder": {
       "asset_id": "minecraft:wayfinder",
@@ -1598,7 +1598,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.wayfinder"
       },
-      "decal": 0
+      "decal": false
     },
     "minecraft:wild": {
       "asset_id": "minecraft:wild",
@@ -1606,7 +1606,7 @@
       "description": {
         "translate": "trim_pattern.minecraft.wild"
       },
-      "decal": 0
+      "decal": false
     }
   },
   "minecraft:trim_material": {
@@ -2388,91 +2388,91 @@
       "infiniburn": "#minecraft:infiniburn_overworld",
       "effects": "minecraft:overworld",
       "ambient_light": 0.0,
-      "piglin_safe": 0,
-      "has_raids": 1,
+      "piglin_safe": false,
+      "has_raids": true,
       "monster_spawn_light_level": {
         "min_inclusive": 0,
         "max_inclusive": 7,
         "type": "minecraft:uniform"
       },
       "monster_spawn_block_light_limit": 0,
-      "respawn_anchor_works": 0,
+      "respawn_anchor_works": false,
       "min_y": -64,
       "height": 384,
       "logical_height": 384,
-      "ultrawarm": 0,
-      "natural": 1,
+      "ultrawarm": false,
+      "natural": true,
       "coordinate_scale": 1.0,
-      "bed_works": 1,
-      "has_skylight": 1,
-      "has_ceiling": 0
+      "bed_works": true,
+      "has_skylight": true,
+      "has_ceiling": false
     },
     "minecraft:overworld_caves": {
       "infiniburn": "#minecraft:infiniburn_overworld",
       "effects": "minecraft:overworld",
       "ambient_light": 0.0,
-      "piglin_safe": 0,
-      "has_raids": 1,
+      "piglin_safe": false,
+      "has_raids": true,
       "monster_spawn_light_level": {
         "min_inclusive": 0,
         "max_inclusive": 7,
         "type": "minecraft:uniform"
       },
       "monster_spawn_block_light_limit": 0,
-      "respawn_anchor_works": 0,
+      "respawn_anchor_works": false,
       "min_y": -64,
       "height": 384,
       "logical_height": 384,
-      "ultrawarm": 0,
-      "natural": 1,
+      "ultrawarm": false,
+      "natural": true,
       "coordinate_scale": 1.0,
-      "bed_works": 1,
-      "has_skylight": 1,
-      "has_ceiling": 1
+      "bed_works": true,
+      "has_skylight": true,
+      "has_ceiling": true
     },
     "minecraft:the_end": {
       "infiniburn": "#minecraft:infiniburn_end",
       "effects": "minecraft:the_end",
       "ambient_light": 0.0,
-      "piglin_safe": 0,
-      "has_raids": 1,
+      "piglin_safe": false,
+      "has_raids": true,
       "monster_spawn_light_level": {
         "min_inclusive": 0,
         "max_inclusive": 7,
         "type": "minecraft:uniform"
       },
       "monster_spawn_block_light_limit": 0,
-      "respawn_anchor_works": 0,
+      "respawn_anchor_works": false,
       "min_y": 0,
       "height": 256,
       "logical_height": 256,
-      "ultrawarm": 0,
-      "natural": 0,
+      "ultrawarm": false,
+      "natural": false,
       "coordinate_scale": 1.0,
-      "bed_works": 0,
+      "bed_works": false,
       "fixed_time": 6000,
-      "has_skylight": 0,
-      "has_ceiling": 0
+      "has_skylight": false,
+      "has_ceiling": false
     },
     "minecraft:the_nether": {
       "infiniburn": "#minecraft:infiniburn_nether",
       "effects": "minecraft:the_nether",
       "ambient_light": 0.1,
-      "piglin_safe": 1,
-      "has_raids": 0,
+      "piglin_safe": true,
+      "has_raids": false,
       "monster_spawn_light_level": 7,
       "monster_spawn_block_light_limit": 15,
-      "respawn_anchor_works": 1,
+      "respawn_anchor_works": true,
       "min_y": 0,
       "height": 256,
       "logical_height": 128,
-      "ultrawarm": 1,
-      "natural": 0,
+      "ultrawarm": true,
+      "natural": false,
       "coordinate_scale": 8.0,
-      "bed_works": 0,
+      "bed_works": false,
       "fixed_time": 18000,
-      "has_skylight": 0,
-      "has_ceiling": 1
+      "has_skylight": false,
+      "has_ceiling": true
     }
   },
   "minecraft:damage_type": {
@@ -3013,7 +3013,7 @@
                 },
                 {
                   "predicate": {
-                    "is_direct": 1
+                    "is_direct": true
                   },
                   "condition": "minecraft:damage_source_properties"
                 }
@@ -3095,11 +3095,11 @@
                 "tags": [
                   {
                     "id": "minecraft:is_explosion",
-                    "expected": 1
+                    "expected": true
                   },
                   {
                     "id": "minecraft:bypasses_invulnerability",
-                    "expected": 0
+                    "expected": false
                   }
                 ]
               },
@@ -3184,7 +3184,7 @@
             "requirements": {
               "terms": [
                 {
-                  "thundering": 1,
+                  "thundering": true,
                   "condition": "minecraft:weather_check"
                 },
                 {
@@ -3196,7 +3196,7 @@
                 },
                 {
                   "predicate": {
-                    "can_see_sky": 1
+                    "can_see_sky": true
                   },
                   "condition": "minecraft:location_check"
                 },
@@ -3231,13 +3231,13 @@
             "requirements": {
               "terms": [
                 {
-                  "thundering": 1,
+                  "thundering": true,
                   "condition": "minecraft:weather_check"
                 },
                 {
                   "predicate": {
                     "location": {
-                      "can_see_sky": 1
+                      "can_see_sky": true
                     }
                   },
                   "entity": "this",
@@ -3395,11 +3395,11 @@
                 "tags": [
                   {
                     "id": "minecraft:is_fall",
-                    "expected": 1
+                    "expected": true
                   },
                   {
                     "id": "minecraft:bypasses_invulnerability",
-                    "expected": 0
+                    "expected": false
                   }
                 ]
               },
@@ -3444,7 +3444,7 @@
             },
             "requirements": {
               "predicate": {
-                "is_direct": 1
+                "is_direct": true
               },
               "condition": "minecraft:damage_source_properties"
             }
@@ -3502,11 +3502,11 @@
                     "tags": [
                       {
                         "id": "minecraft:is_fire",
-                        "expected": 1
+                        "expected": true
                       },
                       {
                         "id": "minecraft:bypasses_invulnerability",
-                        "expected": 0
+                        "expected": false
                       }
                     ]
                   },
@@ -3599,11 +3599,11 @@
                 "tags": [
                   {
                     "id": "minecraft:burn_from_stepping",
-                    "expected": 1
+                    "expected": true
                   },
                   {
                     "id": "minecraft:bypasses_invulnerability",
-                    "expected": 0
+                    "expected": false
                   }
                 ]
               },
@@ -3670,7 +3670,7 @@
             "requirements": {
               "predicate": {
                 "flags": {
-                  "is_on_ground": 1
+                  "is_on_ground": true
                 }
               },
               "entity": "this",
@@ -4126,11 +4126,11 @@
                 "tags": [
                   {
                     "id": "minecraft:is_projectile",
-                    "expected": 1
+                    "expected": true
                   },
                   {
                     "id": "minecraft:bypasses_invulnerability",
-                    "expected": 0
+                    "expected": false
                   }
                 ]
               },
@@ -4176,7 +4176,7 @@
                 "tags": [
                   {
                     "id": "minecraft:bypasses_invulnerability",
-                    "expected": 0
+                    "expected": false
                   }
                 ]
               },
@@ -4514,13 +4514,13 @@
                     {
                       "terms": [
                         {
-                          "active": 1,
+                          "active": true,
                           "condition": "minecraft:enchantment_active_check"
                         },
                         {
                           "predicate": {
                             "flags": {
-                              "is_flying": 0
+                              "is_flying": false
                             }
                           },
                           "entity": "this",
@@ -4542,7 +4542,7 @@
                             {
                               "predicate": {
                                 "flags": {
-                                  "is_on_ground": 0
+                                  "is_on_ground": false
                                 }
                               },
                               "entity": "this",
@@ -4557,7 +4557,7 @@
                     {
                       "terms": [
                         {
-                          "active": 0,
+                          "active": false,
                           "condition": "minecraft:enchantment_active_check"
                         },
                         {
@@ -4568,7 +4568,7 @@
                               }
                             },
                             "flags": {
-                              "is_flying": 0
+                              "is_flying": false
                             }
                           },
                           "entity": "this",
@@ -4606,7 +4606,7 @@
                       }
                     },
                     "flags": {
-                      "is_on_ground": 1
+                      "is_on_ground": true
                     }
                   },
                   "entity": "this",
@@ -4648,8 +4648,8 @@
                   }
                 },
                 "flags": {
-                  "is_flying": 0,
-                  "is_on_ground": 1
+                  "is_flying": false,
+                  "is_on_ground": true
                 },
                 "movement": {
                   "horizontal_speed": {
@@ -4687,8 +4687,8 @@
                       }
                     },
                     "flags": {
-                      "is_flying": 0,
-                      "is_on_ground": 1
+                      "is_flying": false,
+                      "is_on_ground": true
                     },
                     "movement": {
                       "horizontal_speed": {
@@ -4988,7 +4988,7 @@
             "requirements": {
               "predicate": {
                 "flags": {
-                  "is_flying": 0
+                  "is_flying": false
                 },
                 "movement": {
                   "fall_distance": {

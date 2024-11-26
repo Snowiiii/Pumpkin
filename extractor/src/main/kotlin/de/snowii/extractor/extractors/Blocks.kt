@@ -4,13 +4,13 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import de.snowii.extractor.Extractor
+import net.minecraft.block.Block
 import net.minecraft.registry.Registries
 import net.minecraft.server.MinecraftServer
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Box
 import net.minecraft.world.EmptyBlockView
 import java.util.*
-
 
 class Blocks : Extractor.Extractor {
     override fun fileName(): String {
@@ -21,7 +21,6 @@ class Blocks : Extractor.Extractor {
         val topLevelJson = JsonObject()
 
         val blocksJson = JsonArray()
-        var stateIdCounter = 0
 
         val shapes: LinkedHashMap<Box, Int> = LinkedHashMap()
 
@@ -52,9 +51,7 @@ class Blocks : Extractor.Extractor {
             val statesJson = JsonArray()
             for (state in block.stateManager.states) {
                 val stateJson = JsonObject()
-                val id = stateIdCounter
-                stateIdCounter++
-                stateJson.addProperty("id", id)
+                stateJson.addProperty("id", Block.getRawIdFromState(state))
                 stateJson.addProperty("air", state.isAir)
                 stateJson.addProperty("luminance", state.luminance)
                 stateJson.addProperty("burnable", state.isBurnable)
@@ -65,7 +62,7 @@ class Blocks : Extractor.Extractor {
                 stateJson.addProperty("replaceable", state.isReplaceable)
 
                 if (block.defaultState == state) {
-                    blockJson.addProperty("default_state_id", id)
+                    blockJson.addProperty("default_state_id", Block.getRawIdFromState(state))
                 }
 
                 val collisionShapeIdxsJson = JsonArray()
