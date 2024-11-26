@@ -44,7 +44,8 @@ export default defineConfig({
           { text: "Introduction", link: "/config/introduction" },
           { text: "Basic", link: "/config/basic" },
           { text: "Advanced", link: "/config/advanced" },
-          { text: "Proxy", link: "/config/proxy"}
+          { text: "Proxy", link: "/config/proxy"},
+          { text: "Authentication", link: "/config/authentication"},
           { text: "Compression", link: "/config/compression"},
         ],
       },
