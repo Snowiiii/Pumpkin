@@ -36,6 +36,7 @@ export default defineConfig({
           { text: "Proxy", link: "/config/proxy"},
           { text: "Authentication", link: "/config/authentication"},
           { text: "Compression", link: "/config/compression"},
+          { text: "Resource Pack", link: "/config/resource-pack"},
         ],
       },
       {
