@@ -743,7 +743,7 @@ impl World {
         self.remove_entity(&player.living_entity.entity).await;
 
         let mut event_data = PlayerConnection {
-            player: &player,
+            player,
             world: self,
             is_cancelled: false,
             is_join: false,
