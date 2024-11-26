@@ -15,5 +15,6 @@ pub mod cmd_seed;
 pub mod cmd_setblock;
 pub mod cmd_stop;
 pub mod cmd_teleport;
+pub mod cmd_time;
 pub mod cmd_transfer;
 pub mod cmd_worldborder;
