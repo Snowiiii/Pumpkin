@@ -53,7 +53,7 @@ impl LevelTime {
 
     #[must_use]
     pub const fn query_daytime(&self) -> i64 {
-        self.time_of_day
+        self.time_of_day % 24000
     }
 
     #[must_use]
@@ -63,6 +63,6 @@ impl LevelTime {
 
     #[must_use]
     pub const fn query_day(&self) -> i64 {
-        self.time_of_day % 24000
+        self.time_of_day / 24000
     }
 }
