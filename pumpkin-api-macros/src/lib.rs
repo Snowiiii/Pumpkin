@@ -66,6 +66,14 @@ pub fn plugin_event(attr: TokenStream, item: TokenStream) -> TokenStream {
     }
     .to_string();
 
+    let event = quote! {
+        pumpkin::plugin::EventDescriptor {
+            name: "#fn_name",
+            priority: pumpkin::plugin::EventPriority::Normal,
+            blocking: false,
+        }
+    }.to_string();
+
     PLUGIN_HOOKS
         .lock()
         .unwrap()
@@ -78,7 +86,7 @@ pub fn plugin_event(attr: TokenStream, item: TokenStream) -> TokenStream {
         .unwrap()
         .entry(struct_name)
         .or_default()
-        .push("\"".to_owned() + fn_name.to_string().trim_start_matches("on_") + "\"");
+        .push(event);
 
     TokenStream::new()
 }
@@ -130,13 +138,16 @@ pub fn plugin_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
         .filter_map(|method_str| method_str.parse().ok())
         .collect();
 
-    let event_names = events
-        .iter()
-        .map(|event| quote::quote!(#event))
-        .collect::<Vec<_>>();
-
     // Combine the original struct definition with the impl block and plugin() function
     let expanded = quote! {
+        #[no_mangle]
+        pub static METADATA: pumpkin::plugin::PluginMetadata = pumpkin::plugin::PluginMetadata {
+            name: env!("CARGO_PKG_NAME"),
+            version: env!("CARGO_PKG_VERSION"),
+            authors: env!("CARGO_PKG_AUTHORS"),
+            description: env!("CARGO_PKG_DESCRIPTION"),
+        };
+
         #input_struct
 
         impl pumpkin::plugin::Plugin for #struct_ident {
@@ -144,8 +155,8 @@ pub fn plugin_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
 
         impl pumpkin::plugin::Hooks for #struct_ident {
-            fn registered_events(&self) -> Result<&'static [&'static str], String> {
-                static EVENTS: &[&str] = &[#(#event_names),*];
+            fn registered_events(&self) -> Result<&'static [pumpkin::plugin::EventDescriptor], String> {
+                static EVENTS: &[EventDescriptor] = &[#(#events),*];
                 Ok(EVENTS)
             }
 
