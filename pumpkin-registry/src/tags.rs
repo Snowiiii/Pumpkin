@@ -8,31 +8,31 @@ use crate::IngredientType;
 
 #[derive(Deserialize, Eq, PartialEq, Hash)]
 pub enum TagCategory {
-    #[serde(rename = "minecraft:instrument")]
+    #[serde(rename = "instrument")]
     Instrument,
-    #[serde(rename = "minecraft:worldgen/biome")]
+    #[serde(rename = "worldgen/biome")]
     WorldGenBiome,
-    #[serde(rename = "minecraft:point_of_interest_type")]
+    #[serde(rename = "point_of_interest_type")]
     PointOfInterest,
-    #[serde(rename = "minecraft:entity_type")]
+    #[serde(rename = "entity_type")]
     Entity,
-    #[serde(rename = "minecraft:damage_type")]
+    #[serde(rename = "damage_type")]
     DamageType,
-    #[serde(rename = "minecraft:banner_pattern")]
+    #[serde(rename = "banner_pattern")]
     BannerPattern,
-    #[serde(rename = "minecraft:block")]
+    #[serde(rename = "block")]
     Block,
-    #[serde(rename = "minecraft:fluid")]
+    #[serde(rename = "fluid")]
     Fluid,
-    #[serde(rename = "minecraft:enchantment")]
+    #[serde(rename = "enchantment")]
     Enchantment,
-    #[serde(rename = "minecraft:cat_variant")]
+    #[serde(rename = "cat_variant")]
     Cat,
-    #[serde(rename = "minecraft:painting_variant")]
+    #[serde(rename = "painting_variant")]
     Painting,
-    #[serde(rename = "minecraft:item")]
+    #[serde(rename = "item")]
     Item,
-    #[serde(rename = "minecraft:game_event")]
+    #[serde(rename = "game_event")]
     GameEvent,
 }
 

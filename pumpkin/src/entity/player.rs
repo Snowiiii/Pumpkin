@@ -368,7 +368,7 @@ impl Player {
         {
             world
                 .play_sound(
-                    sound!("minecraft:entity.player.attack.nodamage"),
+                    sound!("entity.player.attack.nodamage"),
                     SoundCategory::Players,
                     &pos,
                 )
@@ -377,11 +377,7 @@ impl Player {
         }
 
         world
-            .play_sound(
-                sound!("minecraft:entity.player.hurt"),
-                SoundCategory::Players,
-                &pos,
-            )
+            .play_sound(sound!("entity.player.hurt"), SoundCategory::Players, &pos)
             .await;
 
         let attack_type = AttackType::new(self, attack_cooldown_progress).await;
