@@ -74,7 +74,7 @@ pub fn plugin_event(attr: TokenStream, item: TokenStream) -> TokenStream {
                             "Normal" => quote! { pumpkin::plugin::EventPriority::Normal },
                             "Low" => quote! { pumpkin::plugin::EventPriority::Low },
                             "Lowest" => quote! { pumpkin::plugin::EventPriority::Lowest },
-                            _ => priority
+                            _ => priority,
                         };
                     }
                     "blocking" => {
