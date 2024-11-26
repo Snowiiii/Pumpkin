@@ -12,7 +12,9 @@ use crate::{
         Entity,
     },
     error::PumpkinError,
+    plugin::api::events::PlayerConnection,
     server::Server,
+    PLUGIN_MANAGER,
 };
 use itertools::Itertools;
 use pumpkin_config::BasicConfiguration;
@@ -685,14 +687,27 @@ impl World {
         let mut current_players = self.current_players.lock().await;
         current_players.insert(uuid, player.clone());
 
-        // Handle join message
-        // TODO: Config
-        let msg_txt = format!("{} joined the game.", player.gameprofile.name.as_str());
-        let msg_comp = TextComponent::text(msg_txt.as_str()).color_named(NamedColor::Yellow);
-        for player in current_players.values() {
-            player.send_system_message(&msg_comp).await;
+        let mut event_data = PlayerConnection {
+            player: &player.clone(),
+            world: self,
+            is_cancelled: false,
+            is_join: true,
+        };
+
+        if !PLUGIN_MANAGER
+            .lock()
+            .unwrap()
+            .emit::<PlayerConnection>("player_join", &mut event_data)
+        {
+            // Handle join message
+            // TODO: Config
+            let msg_txt = format!("{} joined the game.", player.gameprofile.name.as_str());
+            let msg_comp = TextComponent::text(msg_txt.as_str()).color_named(NamedColor::Yellow);
+            for player in current_players.values() {
+                player.send_system_message(&msg_comp).await;
+            }
+            log::info!("{}", msg_comp.to_pretty_console());
         }
-        log::info!("{}", msg_comp.to_pretty_console());
     }
 
     /// Removes a player from the world and broadcasts a disconnect message if enabled.
@@ -727,15 +742,28 @@ impl World {
         .await;
         self.remove_entity(&player.living_entity.entity).await;
 
-        // Send disconnect message / quit message to players in the same world
-        // TODO: Config
-        let disconn_msg_txt = format!("{} left the game.", player.gameprofile.name.as_str());
-        let disconn_msg_cmp =
-            TextComponent::text(disconn_msg_txt.as_str()).color_named(NamedColor::Yellow);
-        for player in self.current_players.lock().await.values() {
-            player.send_system_message(&disconn_msg_cmp).await;
+        let mut event_data = PlayerConnection {
+            player: &player,
+            world: self,
+            is_cancelled: false,
+            is_join: false,
+        };
+
+        if !PLUGIN_MANAGER
+            .lock()
+            .unwrap()
+            .emit::<PlayerConnection>("player_leave", &mut event_data)
+        {
+            // Send disconnect message / quit message to players in the same world
+            // TODO: Config
+            let disconn_msg_txt = format!("{} left the game.", player.gameprofile.name.as_str());
+            let disconn_msg_cmp =
+                TextComponent::text(disconn_msg_txt.as_str()).color_named(NamedColor::Yellow);
+            for player in self.current_players.lock().await.values() {
+                player.send_system_message(&disconn_msg_cmp).await;
+            }
+            log::info!("{}", disconn_msg_cmp.to_pretty_console());
         }
-        log::info!("{}", disconn_msg_cmp.to_pretty_console());
     }
 
     pub async fn remove_entity(&self, entity: &Entity) {
