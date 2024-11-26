@@ -4,6 +4,7 @@ use std::{
     sync::Arc,
 };
 
+pub mod level_time;
 pub mod player_chunker;
 
 use crate::{
@@ -17,6 +18,7 @@ use crate::{
 };
 use itertools::Itertools;
 use pumpkin_config::{BasicConfiguration, ADVANCED_CONFIG};
+use level_time::LevelTime;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
@@ -52,6 +54,8 @@ use tokio::{
 };
 use worldborder::Worldborder;
 
+pub mod bossbar;
+pub mod custom_bossbar;
 pub mod scoreboard;
 pub mod worldborder;
 
@@ -104,6 +108,8 @@ pub struct World {
     pub scoreboard: Mutex<Scoreboard>,
     /// The world's worldborder, defining the playable area and controlling its expansion or contraction.
     pub worldborder: Mutex<Worldborder>,
+    /// The world's time, including counting ticks for weather, time cycles and statistics
+    pub level_time: Mutex<LevelTime>,
     /// The type of dimension the world is in
     pub dimension_type: DimensionType,
     // TODO: entities
@@ -177,6 +183,7 @@ impl World {
             current_players: Arc::new(Mutex::new(HashMap::new())),
             scoreboard: Mutex::new(Scoreboard::new()),
             worldborder: Mutex::new(Worldborder::new(0.0, 0.0, 29_999_984.0, 0, 0, 0)),
+            level_time: Mutex::new(LevelTime::new()),
             dimension_type,
         }
     }
@@ -232,6 +239,13 @@ impl World {
     }
 
     pub async fn tick(&self) {
+        // world ticks
+        let mut level_time = self.level_time.lock().await;
+        level_time.tick_time();
+        if level_time.world_age % 20 == 0 {
+            level_time.send_time(self).await;
+        }
+        // player ticks
         let current_players = self.current_players.lock().await;
         for player in current_players.values() {
             player.tick().await;
@@ -456,6 +470,12 @@ impl World {
 
         // Spawn in initial chunks
         player_chunker::player_join(self, player.clone()).await;
+
+        // if let Some(bossbars) = self..lock().await.get_player_bars(&player.gameprofile.id) {
+        //     for bossbar in bossbars {
+        //         player.send_bossbar(bossbar).await;
+        //     }
+        // }
     }
 
     pub async fn respawn_player(&self, player: &Arc<Player>, alive: bool) {
