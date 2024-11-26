@@ -2,28 +2,6 @@ use pumpkin_macros::client_packet;
 
 use crate::{ClientPacket, IDOrSoundEvent, SoundCategory, SoundEvent, VarInt};
 
-impl ClientPacket for CSoundEffect {
-    fn write(&self, bytebuf: &mut crate::bytebuf::ByteBuffer) {
-        bytebuf.put_var_int(&self.sound_event.id);
-        if self.sound_event.id.0 == 0 {
-            if let Some(test) = &self.sound_event.sound_event {
-                bytebuf.put_string(&test.sound_name);
-
-                bytebuf.put_option(&test.range, |p, v| {
-                    p.put_f32(*v);
-                });
-            }
-        }
-        bytebuf.put_var_int(&self.sound_category);
-        bytebuf.put_i32(self.effect_position_x);
-        bytebuf.put_i32(self.effect_position_y);
-        bytebuf.put_i32(self.effect_position_z);
-        bytebuf.put_f32(self.volume);
-        bytebuf.put_f32(self.pitch);
-        bytebuf.put_f64(self.seed);
-    }
-}
-
 #[client_packet("play:sound")]
 pub struct CSoundEffect {
     sound_event: IDOrSoundEvent,
@@ -62,5 +40,27 @@ impl CSoundEffect {
             pitch,
             seed,
         }
+    }
+}
+
+impl ClientPacket for CSoundEffect {
+    fn write(&self, bytebuf: &mut crate::bytebuf::ByteBuffer) {
+        bytebuf.put_var_int(&self.sound_event.id);
+        if self.sound_event.id.0 == 0 {
+            if let Some(test) = &self.sound_event.sound_event {
+                bytebuf.put_string(&test.sound_name);
+
+                bytebuf.put_option(&test.range, |p, v| {
+                    p.put_f32(*v);
+                });
+            }
+        }
+        bytebuf.put_var_int(&self.sound_category);
+        bytebuf.put_i32(self.effect_position_x);
+        bytebuf.put_i32(self.effect_position_y);
+        bytebuf.put_i32(self.effect_position_z);
+        bytebuf.put_f32(self.volume);
+        bytebuf.put_f32(self.pitch);
+        bytebuf.put_f64(self.seed);
     }
 }
