@@ -21,7 +21,6 @@ use std::{
 use tokio::sync::{Mutex, RwLock};
 
 use crate::client::EncryptionError;
-use crate::plugin::PluginManager;
 use crate::{
     client::Client,
     command::{default_dispatcher, dispatcher::CommandDispatcher},
@@ -58,8 +57,6 @@ pub struct Server {
     entity_id: AtomicI32,
     /// Manages authentication with a authentication server, if enabled.
     pub auth_client: Option<reqwest::Client>,
-    /// Plugin manager
-    pub plugin_manager: Mutex<PluginManager>,
 }
 
 impl Server {
@@ -90,14 +87,6 @@ impl Server {
             DimensionType::Overworld,
         );
 
-        // Plugins
-        let mut plugin_manager = PluginManager::new();
-        plugin_manager
-            .load_plugins()
-            .expect("Failed to load plugins");
-
-        plugin_manager.list_plugins();
-
         Self {
             cached_registry: Registry::get_synced(),
             open_containers: RwLock::new(HashMap::new()),
@@ -116,7 +105,6 @@ impl Server {
             key_store: KeyStore::new(),
             server_listing: Mutex::new(CachedStatus::new()),
             server_branding: CachedBranding::new(),
-            plugin_manager: Mutex::new(plugin_manager),
         }
     }
 
@@ -166,11 +154,6 @@ impl Server {
                 self.server_listing.lock().await.add_player();
             }
         }
-
-        self.plugin_manager
-            .lock()
-            .await
-            .emit_player_join(&player, world);
 
         (player, world.clone())
     }
