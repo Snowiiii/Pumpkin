@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::LazyLock};
+use std::sync::LazyLock;
 
 use banner_pattern::BannerPattern;
 use biome::Biome;
@@ -6,7 +6,7 @@ use chat_type::ChatType;
 use damage_type::DamageType;
 use dimension::Dimension;
 use enchantment::Enchantment;
-use fastnbt::SerOpts;
+use indexmap::IndexMap;
 use instrument::Instrument;
 use jukebox_song::JukeboxSong;
 use paint::Painting;
@@ -48,29 +48,49 @@ pub struct Registry {
 #[derive(Serialize, Deserialize)]
 pub struct SyncedRegistry {
     #[serde(rename = "minecraft:worldgen/biome")]
-    biome: HashMap<String, Biome>,
+    biome: IndexMap<String, Biome>,
     #[serde(rename = "minecraft:chat_type")]
-    chat_type: HashMap<String, ChatType>,
+    chat_type: IndexMap<String, ChatType>,
     #[serde(rename = "minecraft:trim_pattern")]
-    trim_pattern: HashMap<String, TrimPattern>,
+    trim_pattern: IndexMap<String, TrimPattern>,
     #[serde(rename = "minecraft:trim_material")]
-    trim_material: HashMap<String, TrimMaterial>,
+    trim_material: IndexMap<String, TrimMaterial>,
     #[serde(rename = "minecraft:wolf_variant")]
-    wolf_variant: HashMap<String, WolfVariant>,
+    wolf_variant: IndexMap<String, WolfVariant>,
     #[serde(rename = "minecraft:painting_variant")]
-    painting_variant: HashMap<String, Painting>,
+    painting_variant: IndexMap<String, Painting>,
     #[serde(rename = "minecraft:dimension_type")]
-    dimension_type: HashMap<String, Dimension>,
+    dimension_type: IndexMap<String, Dimension>,
     #[serde(rename = "minecraft:damage_type")]
-    damage_type: HashMap<String, DamageType>,
+    damage_type: IndexMap<String, DamageType>,
     #[serde(rename = "minecraft:banner_pattern")]
-    banner_pattern: HashMap<String, BannerPattern>,
+    banner_pattern: IndexMap<String, BannerPattern>,
     #[serde(rename = "minecraft:enchantment")]
-    enchantment: HashMap<String, Enchantment>,
+    enchantment: IndexMap<String, Enchantment>,
     #[serde(rename = "minecraft:jukebox_song")]
-    jukebox_song: HashMap<String, JukeboxSong>,
+    jukebox_song: IndexMap<String, JukeboxSong>,
     #[serde(rename = "minecraft:instrument")]
-    instrument: HashMap<String, Instrument>,
+    instrument: IndexMap<String, Instrument>,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(u8)]
+pub enum DimensionType {
+    Overworld,
+    OverworldCaves,
+    TheEnd,
+    TheNether,
+}
+
+impl DimensionType {
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Overworld => "minecraft:overworld",
+            Self::OverworldCaves => "minecraft:overworld_caves",
+            Self::TheEnd => "minecraft:the_end",
+            Self::TheNether => "minecraft:the_nether",
+        }
+    }
 }
 
 impl Registry {
@@ -80,7 +100,7 @@ impl Registry {
             .iter()
             .map(|s| RegistryEntry {
                 entry_id: s.0,
-                data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+                data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
             })
             .collect();
         let biome = Registry {
@@ -93,7 +113,7 @@ impl Registry {
             .iter()
             .map(|s| RegistryEntry {
                 entry_id: s.0,
-                data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+                data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
             })
             .collect();
         let chat_type = Registry {
@@ -106,7 +126,7 @@ impl Registry {
         //     .iter()
         //     .map(|s| RegistryEntry {
         //         entry_id: s.0,
-        //         data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+        //         data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
         //     })
         //     .collect();
         // let trim_pattern = Registry {
@@ -119,7 +139,7 @@ impl Registry {
         //     .iter()
         //     .map(|s| RegistryEntry {
         //         entry_id: s.0,
-        //         data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+        //         data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
         //     })
         //     .collect();
         // let trim_material = Registry {
@@ -135,7 +155,7 @@ impl Registry {
                 let varient = s.1.clone();
                 RegistryEntry {
                     entry_id: s.0,
-                    data: fastnbt::to_bytes_with_opts(&varient, SerOpts::network_nbt()).unwrap(),
+                    data: pumpkin_nbt::serializer::to_bytes_unnamed(&varient).unwrap(),
                 }
             })
             .collect();
@@ -149,7 +169,7 @@ impl Registry {
             .iter()
             .map(|s| RegistryEntry {
                 entry_id: s.0,
-                data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+                data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
             })
             .collect();
         let painting_variant = Registry {
@@ -162,7 +182,7 @@ impl Registry {
             .iter()
             .map(|s| RegistryEntry {
                 entry_id: s.0,
-                data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+                data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
             })
             .collect();
         let dimension_type = Registry {
@@ -175,7 +195,7 @@ impl Registry {
             .iter()
             .map(|s| RegistryEntry {
                 entry_id: s.0,
-                data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+                data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
             })
             .collect();
         let damage_type = Registry {
@@ -188,7 +208,7 @@ impl Registry {
             .iter()
             .map(|s| RegistryEntry {
                 entry_id: s.0,
-                data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+                data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
             })
             .collect();
         let banner_pattern = Registry {
@@ -202,7 +222,7 @@ impl Registry {
         //     .iter()
         //     .map(|s| RegistryEntry {
         //         entry_id: s.0,
-        //         data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+        //         data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
         //     })
         //     .collect();
         // let enchantment = Registry {
@@ -215,7 +235,7 @@ impl Registry {
         //     .iter()
         //     .map(|s| RegistryEntry {
         //         entry_id: s.0,
-        //         data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+        //         data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
         //     })
         //     .collect();
         // let jukebox_song = Registry {
@@ -228,7 +248,7 @@ impl Registry {
         //     .iter()
         //     .map(|s| RegistryEntry {
         //         entry_id: s.0,
-        //         data: fastnbt::to_bytes_with_opts(&s.1, SerOpts::network_nbt()).unwrap(),
+        //         data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
         //     })
         //     .collect();
         // let instrument = Registry {

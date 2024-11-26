@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::{
     command::CommandSender,
     entity::player::{ChatMode, Hand, Player},
+    error::PumpkinError,
     server::Server,
     world::player_chunker,
 };
@@ -15,9 +16,11 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_inventory::{InventoryError, WindowType};
+use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
 use pumpkin_protocol::{
     client::play::CCommandSuggestions,
     server::play::{SCloseContainer, SCommandSuggestion, SKeepAlive, SSetPlayerGround, SUseItem},
+    VarInt,
 };
 use pumpkin_protocol::{
     client::play::{
@@ -32,11 +35,49 @@ use pumpkin_protocol::{
     },
 };
 use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
+use thiserror::Error;
 
 use super::PlayerConfig;
 
 fn modulus(a: f32, b: f32) -> f32 {
     ((a % b) + b) % b
+}
+
+#[derive(Debug, Error)]
+pub enum BlockPlacingError {
+    BlockOutOfReach,
+    InvalidBlockFace,
+    BlockOutOfWold,
+}
+
+impl std::fmt::Display for BlockPlacingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
+impl PumpkinError for BlockPlacingError {
+    fn is_kick(&self) -> bool {
+        match self {
+            Self::BlockOutOfReach | Self::BlockOutOfWold => false,
+            Self::InvalidBlockFace => true,
+        }
+    }
+
+    fn severity(&self) -> log::Level {
+        match self {
+            Self::BlockOutOfReach | Self::BlockOutOfWold | Self::InvalidBlockFace => {
+                log::Level::Warn
+            }
+        }
+    }
+
+    fn client_kick_reason(&self) -> Option<String> {
+        match self {
+            Self::BlockOutOfReach | Self::BlockOutOfWold => None,
+            Self::InvalidBlockFace => Some("Invalid block face".into()),
+        }
+    }
 }
 
 /// Handles all Play Packets send by a real Player
@@ -325,7 +366,7 @@ impl Player {
                     Hand::Off => Animation::SwingOffhand,
                 };
                 let id = self.entity_id();
-                let world = &self.living_entity.entity.world;
+                let world = self.world();
                 world
                     .broadcast_packet_except(
                         &[self.gameprofile.id],
@@ -413,7 +454,7 @@ impl Player {
                 if self.living_entity.health.load() > 0.0 {
                     return;
                 }
-                self.respawn(false).await;
+                self.world().respawn_player(self, false).await;
                 // TODO: hardcore set spectator
             }
             1 => {
@@ -565,12 +606,15 @@ impl Player {
             .await;
     }
 
-    pub async fn handle_use_item_on(&self, use_item_on: SUseItemOn) {
+    pub async fn handle_use_item_on(
+        &self,
+        use_item_on: SUseItemOn,
+    ) -> Result<(), Box<dyn PumpkinError>> {
         let location = use_item_on.location;
 
         if !self.can_interact_with_block_at(&location, 1.0) {
             // TODO: maybe log?
-            return;
+            return Err(BlockPlacingError::BlockOutOfReach.into());
         }
 
         if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
@@ -592,7 +636,30 @@ impl Player {
                         }
                     }
 
-                    let world_pos = WorldPosition(location.0 + face.to_offset());
+                    let clicked_world_pos = WorldPosition(location.0);
+                    let clicked_block_state = world.get_block_state(clicked_world_pos).await?;
+
+                    let world_pos = if clicked_block_state.replaceable {
+                        clicked_world_pos
+                    } else {
+                        let world_pos = WorldPosition(location.0 + face.to_offset());
+                        let previous_block_state = world.get_block_state(world_pos).await?;
+
+                        if !previous_block_state.replaceable {
+                            return Ok(());
+                        }
+
+                        world_pos
+                    };
+
+                    //check max world build height
+                    if world_pos.0.y > 319 {
+                        self.client
+                            .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
+                            .await;
+                        return Err(BlockPlacingError::BlockOutOfWold.into());
+                    }
+
                     let block_bounding_box = BoundingBox::from_block(&world_pos);
                     let bounding_box = entity.bounding_box.load();
                     //TODO: Make this check for every entity in that posistion
@@ -606,8 +673,10 @@ impl Player {
                     .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
                     .await;
             }
+
+            Ok(())
         } else {
-            self.kick(TextComponent::text("Invalid block face")).await;
+            Err(BlockPlacingError::InvalidBlockFace.into())
         }
     }
 
@@ -694,5 +763,15 @@ impl Player {
         );
 
         self.client.send_packet(&response).await;
+    }
+
+    pub fn handle_cookie_response(&self, packet: SPCookieResponse) {
+        // TODO: allow plugins to access this
+        log::debug!(
+            "Received cookie_response[play]: key: \"{}\", has_payload: \"{}\", payload_length: \"{}\"",
+            packet.key,
+            packet.has_payload,
+            packet.payload_length.unwrap_or(VarInt::from(0)).0
+        );
     }
 }

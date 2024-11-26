@@ -24,14 +24,14 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
-use pumpkin_protocol::client::play::{CSetEntityMetadata, Metadata};
+use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
 use pumpkin_protocol::server::play::{SClickContainer, SKeepAlive};
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
         CCombatDeath, CEntityStatus, CGameEvent, CHurtAnimation, CKeepAlive, CPlayDisconnect,
-        CPlayerAbilities, CPlayerInfoUpdate, CRespawn, CSetHealth, CSpawnEntity,
-        CSyncPlayerPosition, CSystemChatMessage, GameEvent, PlayerAction,
+        CPlayerAbilities, CPlayerInfoUpdate, CSetHealth, CSyncPlayerPosition, CSystemChatMessage,
+        GameEvent, PlayerAction,
     },
     server::play::{
         SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SClientTickEnd,
@@ -53,7 +53,7 @@ use crate::{
         Client, PlayerConfig,
     },
     server::Server,
-    world::{player_chunker, World},
+    world::World,
 };
 use crate::{error::PumpkinError, world::player_chunker::get_view_distance};
 
@@ -225,7 +225,7 @@ impl Player {
     /// Removes the Player out of the current World
     #[allow(unused_variables)]
     pub async fn remove(&self) {
-        let world = &self.living_entity.entity.world;
+        let world = self.world();
         // Abort pending chunks here too because we might clean up before chunk tasks are done
         self.abort_chunks("closed");
 
@@ -343,14 +343,14 @@ impl Player {
             "Removed player id {} ({}) ({} chunks remain cached)",
             self.gameprofile.name,
             self.client.id,
-            self.living_entity.entity.world.get_cached_chunk_len()
+            self.world().get_cached_chunk_len()
         );
 
-        //self.living_entity.entity.world.level.list_cached();
+        //self.world().level.list_cached();
     }
 
     pub async fn attack(&self, victim: &Arc<Self>) {
-        let world = &self.living_entity.entity.world;
+        let world = self.world();
         let victim_entity = &victim.living_entity.entity;
         let attacker_entity = &self.living_entity.entity;
         let config = &ADVANCED_CONFIG.pvp;
@@ -392,7 +392,10 @@ impl Player {
             damage *= 1.5;
         }
 
-        victim.living_entity.damage(damage).await;
+        victim
+            .living_entity
+            .damage(damage, 34) // PlayerAttack
+            .await;
 
         let mut knockback_strength = 1.0;
         match attack_type {
@@ -473,6 +476,10 @@ impl Player {
         self.living_entity.entity.entity_id
     }
 
+    pub const fn world(&self) -> &Arc<World> {
+        &self.living_entity.entity.world
+    }
+
     /// Updates the current abilities the Player has
     pub async fn send_abilties_update(&self) {
         let mut b = 0i8;
@@ -518,104 +525,6 @@ impl Player {
     /// get the players permission level
     pub fn permission_lvl(&self) -> PermissionLvl {
         self.permission_lvl
-    }
-
-    pub async fn respawn(self: &Arc<Self>, alive: bool) {
-        let last_pos = self.living_entity.last_pos.load();
-        let death_location = WorldPosition(Vector3::new(
-            last_pos.x.round() as i32,
-            last_pos.y.round() as i32,
-            last_pos.z.round() as i32,
-        ));
-
-        let data_kept = u8::from(alive);
-
-        self.client
-            .send_packet(&CRespawn::new(
-                0.into(),
-                "minecraft:overworld",
-                0, // seed
-                self.gamemode.load() as u8,
-                self.gamemode.load() as i8,
-                false,
-                false,
-                Some(("minecraft:overworld", death_location)),
-                0.into(),
-                0.into(),
-                data_kept,
-            ))
-            .await;
-
-        log::debug!("Sending player abilities to {}", self.gameprofile.name);
-        self.send_abilties_update().await;
-
-        self.send_permission_lvl_update().await;
-
-        let world = &self.living_entity.entity.world;
-
-        // teleport
-        let x = 10.0;
-        let z = 10.0;
-        let top = world.get_top_block(Vector2::new(x as i32, z as i32)).await;
-        let position = Vector3::new(x, f64::from(top + 1), z);
-        let yaw = 10.0;
-        let pitch = 10.0;
-
-        log::debug!("Sending player teleport to {}", self.gameprofile.name);
-        self.teleport(position, yaw, pitch).await;
-
-        self.living_entity.last_pos.store(position);
-
-        // TODO: difficulty, exp bar, status effect
-
-        let world = &self.living_entity.entity.world;
-        world
-            .worldborder
-            .lock()
-            .await
-            .init_client(&self.client)
-            .await;
-
-        // TODO: world spawn (compass stuff)
-
-        self.client
-            .send_packet(&CGameEvent::new(GameEvent::StartWaitingChunks, 0.0))
-            .await;
-
-        let entity = &self.living_entity.entity;
-        let entity_id = entity.entity_id;
-
-        let skin_parts = self.config.lock().await.skin_parts;
-        let entity_metadata_packet =
-            CSetEntityMetadata::new(entity_id.into(), Metadata::new(17, VarInt(0), &skin_parts));
-
-        world
-            .broadcast_packet_except(
-                &[self.gameprofile.id],
-                // TODO: add velo
-                &CSpawnEntity::new(
-                    entity.entity_id.into(),
-                    self.gameprofile.id,
-                    (EntityType::Player as i32).into(),
-                    position.x,
-                    position.y,
-                    position.z,
-                    pitch,
-                    yaw,
-                    yaw,
-                    0.into(),
-                    0.0,
-                    0.0,
-                    0.0,
-                ),
-            )
-            .await;
-
-        player_chunker::player_join(world, self.clone()).await;
-        world.broadcast_packet_all(&entity_metadata_packet).await;
-        // update commands
-
-        self.set_health(20.0, 20, 20.0).await;
     }
 
     /// yaw and pitch in degrees
@@ -878,12 +787,15 @@ impl Player {
                 self.handle_swing_arm(SSwingArm::read(bytebuf)?).await;
             }
             SUseItemOn::PACKET_ID => {
-                self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await;
+                self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await?;
             }
             SUseItem::PACKET_ID => self.handle_use_item(&SUseItem::read(bytebuf)?),
             SCommandSuggestion::PACKET_ID => {
                 self.handle_command_suggestion(SCommandSuggestion::read(bytebuf)?, server)
                     .await;
+            }
+            SPCookieResponse::PACKET_ID => {
+                self.handle_cookie_response(SPCookieResponse::read(bytebuf)?);
             }
             _ => {
                 log::warn!("Failed to handle player packet id {}", packet.id.0);
