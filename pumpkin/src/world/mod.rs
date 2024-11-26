@@ -17,8 +17,8 @@ use crate::{
     server::Server,
 };
 use itertools::Itertools;
-use pumpkin_config::{BasicConfiguration, ADVANCED_CONFIG};
 use level_time::LevelTime;
+use pumpkin_config::{BasicConfiguration, ADVANCED_CONFIG};
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
