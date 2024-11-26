@@ -28,17 +28,6 @@ export default defineConfig({
         ],
       },
       {
-        text: "Developers",
-        items: [
-          { text: "Contributing", link: "/developer/contributing", },
-          { text: "Introduction", link: "/developer/introduction" },
-          { text: "Networking", link: "/developer/networking" },
-          { text: "Authentication", link: "/developer/authentication" },
-          { text: "RCON", link: "/developer/rcon" },
-          { text: "World", link: "developer/world"},
-        ],
-      },      
-      {
         text: "Configuration",
         items: [
           { text: "Introduction", link: "/config/introduction" },
@@ -49,6 +38,17 @@ export default defineConfig({
           { text: "Compression", link: "/config/compression"},
         ],
       },
+      {
+        text: "Developers",
+        items: [
+          { text: "Contributing", link: "/developer/contributing", },
+          { text: "Introduction", link: "/developer/introduction" },
+          { text: "Networking", link: "/developer/networking" },
+          { text: "Authentication", link: "/developer/authentication" },
+          { text: "RCON", link: "/developer/rcon" },
+          { text: "World", link: "developer/world"},
+        ],
+      },      
       {
         text: "Troubleshooting",
         items: [
