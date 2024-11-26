@@ -3,12 +3,10 @@ pub mod api;
 pub use api::*;
 use std::{collections::HashMap, fs, path::Path};
 
-use crate::{entity::player::Player, world::World};
-
 type PluginData = (
     PluginMetadata<'static>,
     Box<dyn Plugin>,
-    Box<dyn Hooks>,
+    Box<dyn events::Hooks>,
     libloading::Library,
 );
 
@@ -51,21 +49,6 @@ impl PluginContext for Context<'_> {
     }
 }
 
-struct Event<'a> {
-    player: &'a Player,
-    world: &'a World,
-}
-
-impl PlayerConnectionEvent for Event<'_> {
-    fn get_player(&self) -> &Player {
-        self.player
-    }
-
-    fn get_world(&self) -> &World {
-        self.world
-    }
-}
-
 impl PluginManager {
     #[must_use]
     pub fn new() -> Self {
@@ -93,7 +76,11 @@ impl PluginManager {
         let library = unsafe { libloading::Library::new(path).unwrap() };
 
         let plugin_fn = unsafe { library.get::<fn() -> Box<dyn Plugin>>(b"plugin").unwrap() };
-        let hooks_fn = unsafe { library.get::<fn() -> Box<dyn Hooks>>(b"hooks").unwrap() };
+        let hooks_fn = unsafe {
+            library
+                .get::<fn() -> Box<dyn events::Hooks>>(b"hooks")
+                .unwrap()
+        };
         let metadata: &PluginMetadata =
             unsafe { &**library.get::<*const PluginMetadata>(b"METADATA").unwrap() };
 
@@ -114,22 +101,81 @@ impl PluginManager {
     pub fn list_plugins(&self) {
         for (metadata, _, _, _) in self.plugins.values() {
             println!(
-                "{}: {} v{} by {}",
-                metadata.id,
-                metadata.name,
-                metadata.version,
-                metadata.authors.join(", ")
+                "{} v{} by {}",
+                metadata.name, metadata.version, metadata.authors
             );
         }
     }
 
-    pub fn emit_player_join(&mut self, player: &Player, world: &World) {
-        let event = Event { player, world };
+    pub fn emit<T: events::Event>(&mut self, event_name: &str, event_data: &mut T) -> bool {
+        let mut blocking_hooks = Vec::new();
+        let mut non_blocking_hooks = Vec::new();
+
         for (metadata, _, hooks, _) in self.plugins.values_mut() {
-            if hooks.registered_events().unwrap().contains(&"player_join") {
+            if hooks
+                .registered_events()
+                .unwrap()
+                .iter()
+                .any(|e| e.name == event_name)
+            {
                 let context = Context { metadata };
-                let _ = hooks.as_mut().on_player_join(&context, &event);
+                if hooks
+                    .registered_events()
+                    .unwrap()
+                    .iter()
+                    .any(|e| e.name == event_name && e.blocking)
+                {
+                    blocking_hooks.push((context, hooks));
+                } else {
+                    non_blocking_hooks.push((context, hooks));
+                }
             }
         }
+
+        blocking_hooks.sort_by(|a, b| {
+            b.1.registered_events()
+                .unwrap()
+                .iter()
+                .find(|e| e.name == event_name)
+                .unwrap()
+                .priority
+                .cmp(
+                    &a.1.registered_events()
+                        .unwrap()
+                        .iter()
+                        .find(|e| e.name == event_name)
+                        .unwrap()
+                        .priority,
+                )
+        });
+        non_blocking_hooks.sort_by(|a, b| {
+            b.1.registered_events()
+                .unwrap()
+                .iter()
+                .find(|e| e.name == event_name)
+                .unwrap()
+                .priority
+                .cmp(
+                    &a.1.registered_events()
+                        .unwrap()
+                        .iter()
+                        .find(|e| e.name == event_name)
+                        .unwrap()
+                        .priority,
+                )
+        });
+
+        for (context, hooks) in blocking_hooks {
+            let _ = event_data.handle(&context, hooks.as_mut());
+            if event_data.is_cancelled() {
+                return true;
+            }
+        }
+
+        for (context, hooks) in non_blocking_hooks {
+            let _ = event_data.handle(&context, hooks.as_mut());
+        }
+
+        false
     }
 }
