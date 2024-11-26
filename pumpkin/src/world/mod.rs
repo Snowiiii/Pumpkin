@@ -50,6 +50,8 @@ use tokio::{
 };
 use worldborder::Worldborder;
 
+pub mod bossbar;
+pub mod custom_bossbar;
 pub mod scoreboard;
 pub mod worldborder;
 
@@ -387,6 +389,12 @@ impl World {
 
         // Spawn in initial chunks
         player_chunker::player_join(self, player.clone()).await;
+
+        // if let Some(bossbars) = self..lock().await.get_player_bars(&player.gameprofile.id) {
+        //     for bossbar in bossbars {
+        //         player.send_bossbar(bossbar).await;
+        //     }
+        // }
     }
 
     pub async fn respawn_player(&self, player: &Arc<Player>, alive: bool) {

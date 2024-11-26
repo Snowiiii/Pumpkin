@@ -2,7 +2,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::command::commands::cmd_seed;
-use crate::command::commands::cmd_transfer;
+use crate::command::commands::{cmd_bossbar, cmd_transfer};
 use crate::command::dispatcher::CommandDispatcher;
 use crate::entity::player::{PermissionLvl, Player};
 use crate::server::Server;
@@ -112,6 +112,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     let mut dispatcher = CommandDispatcher::default();
 
     dispatcher.register(cmd_pumpkin::init_command_tree());
+    dispatcher.register(cmd_bossbar::init_command_tree());
     dispatcher.register(cmd_say::init_command_tree());
     dispatcher.register(cmd_gamemode::init_command_tree());
     dispatcher.register(cmd_stop::init_command_tree());

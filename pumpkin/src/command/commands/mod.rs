@@ -1,3 +1,4 @@
+pub mod cmd_bossbar;
 pub mod cmd_clear;
 pub mod cmd_craft;
 pub mod cmd_echest;
