@@ -1,4 +1,3 @@
-use std::sync::LazyLock;
 use std::{
     collections::{hash_map::Entry, HashMap, VecDeque},
     sync::Arc,
@@ -18,12 +17,11 @@ use crate::{
 };
 use itertools::Itertools;
 use level_time::LevelTime;
-use pumpkin_config::{BasicConfiguration, ADVANCED_CONFIG};
+use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
-use pumpkin_protocol::client::play::{CServerLinks, Label, Link, LinkType};
 use pumpkin_protocol::{
     client::play::{CBlockUpdate, CRespawn, CSoundEffect, CWorldEvent},
     SoundCategory,
@@ -114,66 +112,6 @@ pub struct World {
     pub dimension_type: DimensionType,
     // TODO: entities
 }
-
-static LINKS: LazyLock<Vec<Link>> = LazyLock::new(|| {
-    let mut links: Vec<Link> = Vec::new();
-
-    let bug_report = &ADVANCED_CONFIG.server_links.bug_report;
-    if !bug_report.is_empty() {
-        links.push(Link::new(Label::BuiltIn(LinkType::BugReport), bug_report));
-    }
-
-    let support = &ADVANCED_CONFIG.server_links.support;
-    if !support.is_empty() {
-        links.push(Link::new(Label::BuiltIn(LinkType::Support), support));
-    }
-
-    let status = &ADVANCED_CONFIG.server_links.status;
-    if !status.is_empty() {
-        links.push(Link::new(Label::BuiltIn(LinkType::Status), status));
-    }
-
-    let feedback = &ADVANCED_CONFIG.server_links.feedback;
-    if !feedback.is_empty() {
-        links.push(Link::new(Label::BuiltIn(LinkType::Feedback), feedback));
-    }
-
-    let community = &ADVANCED_CONFIG.server_links.community;
-    if !community.is_empty() {
-        links.push(Link::new(Label::BuiltIn(LinkType::Community), community));
-    }
-
-    let website = &ADVANCED_CONFIG.server_links.website;
-    if !website.is_empty() {
-        links.push(Link::new(Label::BuiltIn(LinkType::Website), website));
-    }
-
-    let forums = &ADVANCED_CONFIG.server_links.forums;
-    if !forums.is_empty() {
-        links.push(Link::new(Label::BuiltIn(LinkType::Forums), forums));
-    }
-
-    let news = &ADVANCED_CONFIG.server_links.news;
-    if !news.is_empty() {
-        links.push(Link::new(Label::BuiltIn(LinkType::News), news));
-    }
-
-    let announcements = &ADVANCED_CONFIG.server_links.announcements;
-    if !announcements.is_empty() {
-        links.push(Link::new(
-            Label::BuiltIn(LinkType::Announcements),
-            announcements,
-        ));
-    }
-
-    for (key, value) in &ADVANCED_CONFIG.server_links.custom {
-        links.push(Link::new(
-            Label::TextComponent(TextComponent::text(key)),
-            value,
-        ));
-    }
-    links
-});
 
 impl World {
     #[must_use]
@@ -319,13 +257,6 @@ impl World {
         // permissions, i. e. the commands a player may use
         player.send_permission_lvl_update().await;
         client_cmd_suggestions::send_c_commands_packet(&player, command_dispatcher).await;
-
-        if ADVANCED_CONFIG.server_links.enabled {
-            player
-                .client
-                .send_packet(&CServerLinks::new(&VarInt(LINKS.len() as i32), &LINKS))
-                .await;
-        }
 
         // teleport
         let mut position = Vector3::new(10.0, 120.0, 10.0);
