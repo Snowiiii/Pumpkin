@@ -47,7 +47,7 @@ fn modulus(a: f32, b: f32) -> f32 {
 pub enum BlockPlacingError {
     BlockOutOfReach,
     InvalidBlockFace,
-    BlockOutOfWold,
+    BlockOutOfWorld,
 }
 
 impl std::fmt::Display for BlockPlacingError {
@@ -59,14 +59,14 @@ impl std::fmt::Display for BlockPlacingError {
 impl PumpkinError for BlockPlacingError {
     fn is_kick(&self) -> bool {
         match self {
-            Self::BlockOutOfReach | Self::BlockOutOfWold => false,
+            Self::BlockOutOfReach | Self::BlockOutOfWorld => false,
             Self::InvalidBlockFace => true,
         }
     }
 
     fn severity(&self) -> log::Level {
         match self {
-            Self::BlockOutOfReach | Self::BlockOutOfWold | Self::InvalidBlockFace => {
+            Self::BlockOutOfReach | Self::BlockOutOfWorld | Self::InvalidBlockFace => {
                 log::Level::Warn
             }
         }
@@ -74,7 +74,7 @@ impl PumpkinError for BlockPlacingError {
 
     fn client_kick_reason(&self) -> Option<String> {
         match self {
-            Self::BlockOutOfReach | Self::BlockOutOfWold => None,
+            Self::BlockOutOfReach | Self::BlockOutOfWorld => None,
             Self::InvalidBlockFace => Some("Invalid block face".into()),
         }
     }
@@ -657,7 +657,7 @@ impl Player {
                         self.client
                             .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
                             .await;
-                        return Err(BlockPlacingError::BlockOutOfWold.into());
+                        return Err(BlockPlacingError::BlockOutOfWorld.into());
                     }
 
                     let block_bounding_box = BoundingBox::from_block(&world_pos);
