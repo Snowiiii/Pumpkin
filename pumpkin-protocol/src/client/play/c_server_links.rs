@@ -36,12 +36,12 @@ impl<'a> Serialize for Label<'a> {
 #[derive(Serialize)]
 pub struct Link<'a> {
     pub is_built_in: bool,
-    pub label: &'a Label<'a>,
+    pub label: Label<'a>,
     pub url: &'a String,
 }
 
 impl<'a> Link<'a> {
-    pub fn new(label: &'a Label, url: &'a String) -> Self {
+    pub fn new(label: Label<'a>, url: &'a String) -> Self {
         Self {
             is_built_in: match label {
                 Label::BuiltIn(_) => true,
