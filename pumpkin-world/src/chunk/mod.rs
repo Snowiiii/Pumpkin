@@ -1,5 +1,6 @@
-use fastnbt::LongArray;
+use bytes::BytesMut;
 use pumpkin_core::math::vector2::Vector2;
+use pumpkin_nbt::LongArray;
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
 use std::collections::HashMap;
@@ -77,18 +78,18 @@ struct PaletteEntry {
 
 #[derive(Deserialize, Debug, Clone)]
 struct ChunkSectionBlockStates {
-    //  #[serde(with = "LongArray")]
-    data: Option<LongArray>,
+    #[serde(with = "LongArray")]
+    data: Option<Vec<i64>>,
     palette: Vec<PaletteEntry>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct ChunkHeightmaps {
-    // #[serde(with = "LongArray")]
-    motion_blocking: LongArray,
-    // #[serde(with = "LongArray")]
-    world_surface: LongArray,
+    #[serde(with = "LongArray")]
+    motion_blocking: Vec<i64>,
+    #[serde(with = "LongArray")]
+    world_surface: Vec<i64>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -145,8 +146,8 @@ impl Default for ChunkHeightmaps {
     fn default() -> Self {
         Self {
             // 0 packed into an i64 7 times.
-            motion_blocking: LongArray::new(vec![0; 37]),
-            world_surface: LongArray::new(vec![0; 37]),
+            motion_blocking: vec![0; 37],
+            world_surface: vec![0; 37],
         }
     }
 }
@@ -233,14 +234,17 @@ impl Index<ChunkRelativeBlockCoordinates> for ChunkBlocks {
 
 impl ChunkData {
     pub fn from_bytes(chunk_data: Vec<u8>, at: Vector2<i32>) -> Result<Self, ChunkParsingError> {
-        if fastnbt::from_bytes::<ChunkStatus>(&chunk_data)
+        let mut buf = BytesMut::with_capacity(chunk_data.len());
+        buf.copy_from_slice(&chunk_data);
+
+        if pumpkin_nbt::deserializer::from_bytes::<ChunkStatus>(&mut buf)
             .map_err(|_| ChunkParsingError::FailedReadStatus)?
             != ChunkStatus::Full
         {
             return Err(ChunkParsingError::ChunkNotGenerated);
         }
 
-        let chunk_data = fastnbt::from_bytes::<ChunkNbt>(chunk_data.as_slice())
+        let chunk_data = pumpkin_nbt::deserializer::from_bytes::<ChunkNbt>(&mut buf)
             .map_err(|e| ChunkParsingError::ErrorDeserializingChunk(e.to_string()))?;
 
         // this needs to be boxed, otherwise it will cause a stack-overflow
