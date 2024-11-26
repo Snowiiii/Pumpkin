@@ -13,7 +13,7 @@ use crate::world_gen::{
         },
         vertical_range_choice,
     },
-    sampler::vein_type,
+    ore_sampler::vein_type,
 };
 
 use super::{

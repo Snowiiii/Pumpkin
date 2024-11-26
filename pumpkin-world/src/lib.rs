@@ -1,10 +1,10 @@
 use block::BlockState;
 use world_gen::{
+    aquifer_sampler::{FluidLevel, FluidLevelSampler},
     chunk_noise::{ChunkNoiseGenerator, LAVA_BLOCK, WATER_BLOCK},
     generation_shapes::GenerationShape,
     noise::{config::NoiseConfig, router::OVERWORLD_NOISE_ROUTER},
     proto_chunk::StandardChunkFluidLevelSampler,
-    sampler::{FluidLevel, FluidLevelSampler},
 };
 
 pub mod biome;

@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+pub mod aquifer_sampler;
 mod blender;
 pub mod chunk_noise;
 pub mod generation_shapes;
@@ -8,9 +9,9 @@ mod generic_generator;
 pub mod height_limit;
 mod implementation;
 pub mod noise;
+pub mod ore_sampler;
 mod positions;
 pub mod proto_chunk;
-pub mod sampler;
 mod seed;
 
 pub use generator::WorldGenerator;

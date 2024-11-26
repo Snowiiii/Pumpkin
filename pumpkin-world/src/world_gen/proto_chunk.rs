@@ -7,14 +7,13 @@ use crate::{
         generation_shapes::GenerationShape,
         noise::{config::NoiseConfig, router::OVERWORLD_NOISE_ROUTER},
         positions::chunk_pos,
-        sampler::FluidLevelSampler,
     },
 };
 
 use super::{
+    aquifer_sampler::{FluidLevel, FluidLevelSampler, FluidLevelSamplerImpl},
     chunk_noise::{ChunkNoiseGenerator, LAVA_BLOCK, STONE_BLOCK, WATER_BLOCK},
     positions::chunk_pos::{start_block_x, start_block_z},
-    sampler::{FluidLevel, FluidLevelSamplerImpl},
 };
 
 pub struct StandardChunkFluidLevelSampler {
@@ -226,5 +225,43 @@ mod test {
                 .map(|state| state.state_id)
                 .collect_vec()
         );
+    }
+
+    #[test]
+    fn test_no_blend_no_beard_aquifer() {
+        let expected_data: Vec<u16> =
+            serde_json::from_str(include_str!("../../assets/no_blend_no_beard_7_4.chunk"))
+                .expect("failed to decode array");
+        let mut chunk = ProtoChunk::new(Vector2::new(7, 4), 0);
+        chunk.populate_noise();
+
+        let mut fail = false;
+        for (index, (s1, s2)) in chunk
+            .flat_block_map
+            .into_iter()
+            .map(|state| state.state_id)
+            .zip(expected_data)
+            .enumerate()
+        {
+            if s1 != s2 {
+                let _ = index;
+                //println!("{}: {} vs {}", index, s1, s2);
+                //assert!(false);
+                fail = true;
+            }
+        }
+
+        assert!(!fail);
+
+        /*
+        assert_eq!(
+            expected_data,
+            chunk
+                .flat_block_map
+                .into_iter()
+                .map(|state| state.state_id)
+                .collect_vec()
+        );
+        */
     }
 }

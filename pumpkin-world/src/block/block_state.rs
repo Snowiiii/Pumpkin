@@ -1,9 +1,15 @@
 use super::block_registry::{get_block, get_state_by_state_id};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq)]
 pub struct BlockState {
     pub state_id: u16,
     pub block_id: u16,
+}
+
+impl PartialEq for BlockState {
+    fn eq(&self, other: &Self) -> bool {
+        self.state_id == other.state_id
+    }
 }
 
 impl BlockState {

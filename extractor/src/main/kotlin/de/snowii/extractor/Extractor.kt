@@ -1,5 +1,6 @@
 package de.snowii.extractor
 
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import de.snowii.extractor.extractors.*
@@ -32,6 +33,7 @@ class Extractor : ModInitializer {
             Tags(),
             Items(),
             Blocks(),
+            Tests(),
         )
 
         val outputDirectory: Path
@@ -49,7 +51,7 @@ class Extractor : ModInitializer {
                 try {
                     val out = outputDirectory.resolve(ext.fileName())
                     val fileWriter = FileWriter(out.toFile(), StandardCharsets.UTF_8)
-                    gson.toJson(ext.extract(server), fileWriter)
+                    (ext.gson_builder() ?: gson).toJson(ext.extract(server), fileWriter)
                     fileWriter.close()
                     logger.info("Wrote " + out.toAbsolutePath())
                 } catch (e: java.lang.Exception) {
@@ -64,5 +66,9 @@ class Extractor : ModInitializer {
 
         @Throws(Exception::class)
         fun extract(server: MinecraftServer): JsonElement
+
+        fun gson_builder(): Gson? {
+            return null
+        }
     }
 }
