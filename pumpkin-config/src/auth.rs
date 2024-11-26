@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 pub struct AuthenticationConfig {
     /// Whether to use Mojang authentication.
     pub enabled: bool,
-    pub auth_url: String,
+    pub auth_url: Option<String>,
     pub prevent_proxy_connections: bool,
-    pub prevent_proxy_connection_auth_url: String,
+    pub prevent_proxy_connection_auth_url: Option<String>,
     /// Player profile handling.
     pub player_profile: PlayerProfileConfig,
     /// Texture handling.
@@ -22,8 +22,8 @@ impl Default for AuthenticationConfig {
             prevent_proxy_connections: false,
             player_profile: Default::default(),
             textures: Default::default(),
-            auth_url: "https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}".to_string(),
-            prevent_proxy_connection_auth_url: "https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}".to_string(),
+            auth_url: None,
+            prevent_proxy_connection_auth_url: None,
         }
     }
 }

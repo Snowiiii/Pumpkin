@@ -59,16 +59,24 @@ pub async fn authenticate(
 ) -> Result<GameProfile, AuthError> {
     assert!(ADVANCED_CONFIG.authentication.enabled);
     let address = if ADVANCED_CONFIG.authentication.prevent_proxy_connections {
-        ADVANCED_CONFIG
+        let auth_url = ADVANCED_CONFIG
             .authentication
-            .auth_url
+            .prevent_proxy_connection_auth_url
+            .as_deref()
+            .unwrap_or("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}&ip={ip}");
+
+        auth_url
             .replace("{username}", username)
             .replace("{server_hash}", server_hash)
-            .replace("{}", &ip.to_string())
+            .replace("{ip}", &ip.to_string())
     } else {
-        ADVANCED_CONFIG
+        let auth_url = ADVANCED_CONFIG
             .authentication
             .auth_url
+            .as_deref()
+            .unwrap_or("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={server_hash}");
+
+        auth_url
             .replace("{username}", username)
             .replace("{server_hash}", server_hash)
     };

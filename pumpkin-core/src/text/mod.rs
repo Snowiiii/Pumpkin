@@ -4,7 +4,6 @@ use std::borrow::Cow;
 use click::ClickEvent;
 use color::Color;
 use colored::Colorize;
-use fastnbt::SerOpts;
 use hover::HoverEvent;
 use serde::{Deserialize, Serialize};
 use style::Style;
@@ -113,31 +112,31 @@ impl<'a> TextComponent<'a> {
 
     /// Makes the text bold
     pub fn bold(mut self) -> Self {
-        self.style.bold = Some(1);
+        self.style.bold = Some(true);
         self
     }
 
     /// Makes the text italic
     pub fn italic(mut self) -> Self {
-        self.style.italic = Some(1);
+        self.style.italic = Some(true);
         self
     }
 
     /// Makes the text underlined
     pub fn underlined(mut self) -> Self {
-        self.style.underlined = Some(1);
+        self.style.underlined = Some(true);
         self
     }
 
     /// Makes the text strikethrough
     pub fn strikethrough(mut self) -> Self {
-        self.style.strikethrough = Some(1);
+        self.style.strikethrough = Some(true);
         self
     }
 
     /// Makes the text obfuscated
     pub fn obfuscated(mut self) -> Self {
-        self.style.obfuscated = Some(1);
+        self.style.obfuscated = Some(true);
         self
     }
 
@@ -175,7 +174,10 @@ impl<'a> TextComponent<'a> {
         };
         // dbg!(&serde_json::to_string(&astruct));
 
-        fastnbt::to_bytes_with_opts(&astruct, SerOpts::network_nbt()).unwrap()
+        // TODO
+        pumpkin_nbt::serializer::to_bytes_unnamed(&astruct)
+            .unwrap()
+            .to_vec()
     }
 }
 

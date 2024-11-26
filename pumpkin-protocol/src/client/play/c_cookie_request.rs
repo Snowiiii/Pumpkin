@@ -1,9 +1,9 @@
-use pumpkin_macros::client_packet;
-
 use crate::Identifier;
+use pumpkin_macros::client_packet;
+use serde::Serialize;
 
-#[derive(serde::Serialize)]
-#[client_packet("config:cookie_request")]
+#[derive(Serialize)]
+#[client_packet("play:cookie_request")]
 /// Requests a cookie that was previously stored.
 pub struct CCookieRequest<'a> {
     key: &'a Identifier,

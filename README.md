@@ -42,7 +42,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Server Brand
   - [x] Server Links
   - [x] Set Resource Pack
-  - [ ] Cookies
+  - [x] Cookies
 - World
   - [x] World Joining
   - [x] Player Tab-list

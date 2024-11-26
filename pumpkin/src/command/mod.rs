@@ -1,6 +1,7 @@
 use std::fmt;
 use std::sync::Arc;
 
+use crate::command::commands::cmd_seed;
 use crate::command::commands::cmd_transfer;
 use crate::command::dispatcher::CommandDispatcher;
 use crate::entity::player::{PermissionLvl, Player};
@@ -9,8 +10,9 @@ use crate::world::World;
 use args::ConsumedArgs;
 use async_trait::async_trait;
 use commands::{
-    cmd_clear, cmd_craft, cmd_echest, cmd_gamemode, cmd_give, cmd_help, cmd_kick, cmd_kill,
-    cmd_list, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_worldborder,
+    cmd_clear, cmd_craft, cmd_echest, cmd_fill, cmd_gamemode, cmd_give, cmd_help, cmd_kick,
+    cmd_kill, cmd_list, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport,
+    cmd_worldborder,
 };
 use dispatcher::CommandError;
 use pumpkin_core::math::vector3::Vector3;
@@ -98,6 +100,7 @@ impl<'a> CommandSender<'a> {
     #[must_use]
     pub fn world(&self) -> Option<&World> {
         match self {
+            // TODO: maybe return first world when console
             CommandSender::Console | CommandSender::Rcon(..) => None,
             CommandSender::Player(p) => Some(&p.living_entity.entity.world),
         }
@@ -123,7 +126,9 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_list::init_command_tree());
     dispatcher.register(cmd_clear::init_command_tree());
     dispatcher.register(cmd_setblock::init_command_tree());
+    dispatcher.register(cmd_seed::init_command_tree());
     dispatcher.register(cmd_transfer::init_command_tree());
+    dispatcher.register(cmd_fill::init_command_tree());
 
     Arc::new(dispatcher)
 }
