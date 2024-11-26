@@ -49,6 +49,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] World Loading
   - [x] Lighting
   - [x] Entity Spawning
+  - [x] Bossbar
   - [x] Chunk Loading
   - [x] Chunk Generation
   - [ ] World Time
