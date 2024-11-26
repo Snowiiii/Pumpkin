@@ -10,7 +10,8 @@ use std::{
 use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
 use num_derive::{FromPrimitive, ToPrimitive};
-use pumpkin_config::ADVANCED_CONFIG;
+use parking_lot::RwLock;
+use pumpkin_config::{op::OpLevel, ADVANCED_CONFIG, OPERATOR_CONFIG};
 use pumpkin_core::{
     math::{
         boundingbox::{BoundingBox, BoundingBoxSize},
@@ -158,7 +159,7 @@ pub struct Player {
     cancel_tasks: Notify,
 
     /// the players op permission level
-    permission_lvl: PermissionLvl,
+    permission_lvl: parking_lot::RwLock<PermissionLvl>,
 }
 
 impl Player {
@@ -180,6 +181,8 @@ impl Player {
             },
             |profile| profile,
         );
+
+        let gameprofile_clone = gameprofile.clone();
         let config = client.config.lock().await.clone().unwrap_or_default();
         let view_distance = config.view_distance;
         let bounding_box_size = BoundingBoxSize {
@@ -218,8 +221,15 @@ impl Player {
             pending_chunks: Arc::new(parking_lot::Mutex::new(HashMap::new())),
             pending_chunk_batch: parking_lot::Mutex::new(HashMap::new()),
             cancel_tasks: Notify::new(),
-            // TODO: change this
-            permission_lvl: PermissionLvl::Four,
+            // Minecraft has no why to change the default permission level of new players.
+            // Minecrafts default permission level is 0
+            permission_lvl: OPERATOR_CONFIG
+                .read()
+                .await
+                .ops
+                .iter()
+                .find(|op| op.uuid == gameprofile_clone.id)
+                .map_or(parking_lot::RwLock::new(PermissionLvl::Zero), |op| parking_lot::RwLock::new(op.level.into())),
         }
     }
 
@@ -506,20 +516,22 @@ impl Player {
         self.client
             .send_packet(&CEntityStatus::new(
                 self.entity_id(),
-                24 + self.permission_lvl as i8,
+                24 + self.permission_lvl() as i8,
             ))
             .await;
     }
 
     /// sets the players permission level and syncs it with the client
-    pub async fn set_permission_lvl(&mut self, lvl: PermissionLvl) {
-        self.permission_lvl = lvl;
+    pub async fn set_permission_lvl(&self, lvl: PermissionLvl) {
+        let mut level = self.permission_lvl.write();
+        *level = lvl;
         self.send_permission_lvl_update().await;
     }
 
+
     /// get the players permission level
     pub fn permission_lvl(&self) -> PermissionLvl {
-        self.permission_lvl
+        self.permission_lvl.read().clone()
     }
 
     /// yaw and pitch in degrees
@@ -862,4 +874,16 @@ pub enum PermissionLvl {
     Two = 2,
     Three = 3,
     Four = 4,
+}
+
+impl From<OpLevel> for PermissionLvl {
+    fn from(op: OpLevel) -> Self {
+        match op {
+            OpLevel::None => PermissionLvl::Zero,
+            OpLevel::Basic => PermissionLvl::One,
+            OpLevel::Moderator => PermissionLvl::Two,
+            OpLevel::Admin => PermissionLvl::Three,
+            OpLevel::Owner => PermissionLvl::Four,
+        }
+    }
 }

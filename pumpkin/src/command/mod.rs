@@ -9,6 +9,7 @@ use crate::server::Server;
 use crate::world::World;
 use args::ConsumedArgs;
 use async_trait::async_trait;
+use commands::cmd_op;
 use commands::{
     cmd_clear, cmd_craft, cmd_echest, cmd_fill, cmd_gamemode, cmd_give, cmd_help, cmd_kick,
     cmd_kill, cmd_list, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_time,
@@ -131,6 +132,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_seed::init_command_tree());
     dispatcher.register(cmd_transfer::init_command_tree());
     dispatcher.register(cmd_fill::init_command_tree());
+    dispatcher.register(cmd_op::init_command_tree());
 
     Arc::new(dispatcher)
 }

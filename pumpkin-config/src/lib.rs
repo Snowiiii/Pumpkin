@@ -1,5 +1,6 @@
 use log::warn;
 use logging::LoggingConfig;
+use op::Op;
 use pumpkin_core::{Difficulty, GameMode};
 use query::QueryConfig;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -13,6 +14,7 @@ use std::{
 
 pub mod auth;
 pub mod logging;
+pub mod op;
 pub mod proxy;
 pub mod query;
 pub mod resource_pack;
@@ -35,10 +37,19 @@ mod server_links;
 use proxy::ProxyConfig;
 use resource_pack::ResourcePackConfig;
 
+pub static OPERATOR_CONFIG: LazyLock<tokio::sync::RwLock<OperatorConfig>> =
+    LazyLock::new(|| tokio::sync::RwLock::new(OperatorConfig::load()));
+
 pub static ADVANCED_CONFIG: LazyLock<AdvancedConfiguration> =
     LazyLock::new(AdvancedConfiguration::load);
 
 pub static BASIC_CONFIG: LazyLock<BasicConfiguration> = LazyLock::new(BasicConfiguration::load);
+
+#[derive(Deserialize, Serialize, Default)]
+#[serde(transparent)]
+pub struct OperatorConfig {
+    pub ops: Vec<op::Op>,
+}
 
 /// The idea is that Pumpkin should very customizable.
 /// You can Enable or Disable Features depending on your needs.
@@ -76,6 +87,8 @@ pub struct BasicConfiguration {
     pub simulation_distance: u8,
     /// The default game difficulty.
     pub default_difficulty: Difficulty,
+    /// The operator level set by the /op command
+    pub op_permission_level: op::OpLevel,
     /// Whether the Nether dimension is enabled.
     pub allow_nether: bool,
     /// Whether the server is in hardcore mode.
@@ -106,6 +119,7 @@ impl Default for BasicConfiguration {
             view_distance: 10,
             simulation_distance: 10,
             default_difficulty: Difficulty::Normal,
+            op_permission_level: op::OpLevel::Owner,
             allow_nether: true,
             hardcore: false,
             online_mode: true,
@@ -120,7 +134,7 @@ impl Default for BasicConfiguration {
     }
 }
 
-trait LoadConfiguration {
+trait LoadTomlConfiguration {
     fn load() -> Self
     where
         Self: Sized + Default + Serialize + DeserializeOwned,
@@ -160,7 +174,84 @@ trait LoadConfiguration {
     fn validate(&self);
 }
 
-impl LoadConfiguration for AdvancedConfiguration {
+pub trait LoadJSONConfiguration {
+    fn load() -> Self
+    where
+        Self: Sized + Default + Serialize + for<'de> Deserialize<'de>,
+    {
+        let path = Self::get_path();
+
+        let config = if path.exists() {
+            let file_content = fs::read_to_string(&path)
+                .unwrap_or_else(|_| panic!("Couldn't read configuration file at {:?}", path));
+
+            serde_json::from_str(&file_content).unwrap_or_else(|err| {
+                panic!(
+                    "Couldn't parse config at {:?}. Reason: {}. This is probably caused by a config update. Just delete the old config and restart.",
+                    path, err
+                )
+            })
+        } else {
+            let content = Self::default();
+
+            if let Err(err) = fs::write(&path, serde_json::to_string_pretty(&content).unwrap()) {
+                eprintln!(
+                    "Couldn't write default config to {:?}. Reason: {}. This is probably caused by a config update. Just delete the old config and restart.",
+                    path, err
+                );
+            }
+
+            content
+        };
+
+        config.validate();
+        config
+    }
+
+    fn get_path() -> &'static Path;
+
+    fn validate(&self);
+}
+
+pub trait SaveJSONConfiguration: LoadJSONConfiguration {
+    async fn save(&self)
+    where
+        Self: Sized + Default + Serialize + for<'de> Deserialize<'de>,
+    {
+        let path = <Self as LoadJSONConfiguration>::get_path();
+
+        let content = match serde_json::to_string_pretty(self) {
+            Ok(content) => content,
+            Err(err) => {
+                warn!(
+                    "Couldn't serialize operator config to {:?}. Reason: {}",
+                    path, err
+                );
+                return;
+            }
+        };
+
+        if let Err(err) = tokio::fs::write(path, content).await {
+            warn!(
+                "Couldn't write operator config to {:?}. Reason: {}",
+                path, err
+            );
+        }
+    }
+}
+
+impl LoadJSONConfiguration for OperatorConfig {
+    fn get_path() -> &'static Path {
+        Path::new("ops.json")
+    }
+    fn validate(&self) {
+        // TODO: Validate the operator configuration
+    }
+}
+
+impl SaveJSONConfiguration for OperatorConfig {}
+
+impl LoadTomlConfiguration for AdvancedConfiguration {
     fn get_path() -> &'static Path {
         Path::new("features.toml")
     }
@@ -170,7 +261,22 @@ impl LoadConfiguration for AdvancedConfiguration {
     }
 }
 
-impl LoadConfiguration for BasicConfiguration {
+// impl OperatorConfig {
+
+//     pub async fn reload()  where Self: LoadJSONConfiguration {
+//         let mut config = OPERATOR_CONFIG.write().await;
+//         *config = OperatorConfig::load();
+//     }
+
+//     pub async fn save(&self) where Self: SaveJSONConfiguration {
+//         Box::pin(async move {
+//             self.save().await;
+//         }).await
+//     }
+
+// }
+
+impl LoadTomlConfiguration for BasicConfiguration {
     fn get_path() -> &'static Path {
         Path::new("configuration.toml")
     }
