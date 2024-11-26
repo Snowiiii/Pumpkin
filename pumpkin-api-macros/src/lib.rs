@@ -52,11 +52,43 @@ pub fn plugin_event(attr: TokenStream, item: TokenStream) -> TokenStream {
     let fn_output = &input_fn.sig.output;
     let fn_body = &input_fn.block;
 
-    let struct_name = if attr.is_empty() {
-        "MyPlugin".to_string()
-    } else {
-        attr.to_string().trim().to_string()
-    };
+    let mut struct_name = "MyPlugin".to_string();
+    let mut priority = quote! { pumpkin::plugin::EventPriority::Normal };
+    let mut blocking = quote! { false };
+
+    if !attr.is_empty() {
+        let attr_string = attr.to_string();
+        for pair in attr_string.split(',').map(str::trim) {
+            if let Some((key, value)) = pair.split_once('=') {
+                let key = key.trim();
+                let value = value.trim().trim_matches('"');
+
+                match key {
+                    "struct_name" => {
+                        struct_name = value.to_string();
+                    }
+                    "priority" => {
+                        priority = match value {
+                            "Highest" => quote! { pumpkin::plugin::EventPriority::Highest },
+                            "High" => quote! { pumpkin::plugin::EventPriority::High },
+                            "Normal" => quote! { pumpkin::plugin::EventPriority::Normal },
+                            "Low" => quote! { pumpkin::plugin::EventPriority::Low },
+                            "Lowest" => quote! { pumpkin::plugin::EventPriority::Lowest },
+                            _ => priority
+                        };
+                    }
+                    "blocking" => {
+                        blocking = match value {
+                            "true" => quote! { true },
+                            "false" => quote! { false },
+                            _ => blocking,
+                        };
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
 
     let method = quote! {
         #[allow(unused_mut)]
@@ -66,13 +98,17 @@ pub fn plugin_event(attr: TokenStream, item: TokenStream) -> TokenStream {
     }
     .to_string();
 
+    let binding = fn_name.to_string().to_owned();
+    let fn_name_quoted = binding.trim_start_matches("on_");
+
     let event = quote! {
         pumpkin::plugin::EventDescriptor {
-            name: "#fn_name",
-            priority: pumpkin::plugin::EventPriority::Normal,
-            blocking: false,
+            name: #fn_name_quoted,
+            priority: #priority,
+            blocking: #blocking,
         }
-    }.to_string();
+    }
+    .to_string();
 
     PLUGIN_HOOKS
         .lock()
