@@ -224,8 +224,7 @@ mod tests {
 
     /// Helper function to encrypt data using AES-128 CFB-8 mode
     fn encrypt_aes128(data: &[u8], key: &[u8; 16], iv: &[u8; 16]) -> Vec<u8> {
-        let encryptor =
-            Cfb8Encryptor::<Aes128>::new_from_slices(key, iv).expect("Invalid key/iv");
+        let encryptor = Cfb8Encryptor::<Aes128>::new_from_slices(key, iv).expect("Invalid key/iv");
         let mut encrypted = data.to_vec();
         encryptor.encrypt(&mut encrypted);
         encrypted

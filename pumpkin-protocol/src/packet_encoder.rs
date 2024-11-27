@@ -255,8 +255,7 @@ mod tests {
 
     /// Helper function to decrypt data using AES-128 CFB-8 mode
     fn decrypt_aes128(encrypted_data: &[u8], key: &[u8; 16], iv: &[u8; 16]) -> Vec<u8> {
-        let decryptor =
-            Cfb8Decryptor::<Aes128>::new_from_slices(key, iv).expect("Invalid key/iv");
+        let decryptor = Cfb8Decryptor::<Aes128>::new_from_slices(key, iv).expect("Invalid key/iv");
         let mut decrypted = encrypted_data.to_vec();
         decryptor.decrypt(&mut decrypted);
         decrypted
