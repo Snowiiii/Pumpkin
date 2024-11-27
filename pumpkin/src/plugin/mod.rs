@@ -1,7 +1,7 @@
 pub mod api;
 
 pub use api::*;
-use std::{collections::HashMap, fs, path::Path};
+use std::{any::Any, collections::HashMap, fs, path::Path};
 
 type PluginData = (
     PluginMetadata<'static>,
@@ -107,7 +107,7 @@ impl PluginManager {
         }
     }
 
-    pub fn emit<T: events::Event>(&mut self, event_name: &str, event_data: &mut T) -> bool {
+    pub fn emit<T: Any>(&mut self, event_name: &str, event: &T) -> bool {
         let mut blocking_hooks = Vec::new();
         let mut non_blocking_hooks = Vec::new();
 
@@ -165,15 +165,60 @@ impl PluginManager {
                 )
         });
 
+        let event = event as &dyn Any;
+
         for (context, hooks) in blocking_hooks {
-            let _ = event_data.handle(&context, hooks.as_mut());
-            if event_data.is_cancelled() {
-                return true;
+            let r = match event_name {
+                "player_join" => {
+                    if let Some(event) = event.downcast_ref::<crate::entity::player::Player>() {
+                        hooks.on_player_join(&context, event)
+                    } else {
+                        Ok(false)
+                    }
+                }
+                "player_leave" => {
+                    if let Some(event) = event.downcast_ref::<crate::entity::player::Player>() {
+                        hooks.on_player_leave(&context, event)
+                    } else {
+                        Ok(false)
+                    }
+                }
+                _ => Ok(false),
+            };
+            match r {
+                Ok(true) => return true,
+                Err(e) => {
+                    log::error!("Error in plugin: {}", e);
+                }
+                _ => {}
             }
         }
 
         for (context, hooks) in non_blocking_hooks {
-            let _ = event_data.handle(&context, hooks.as_mut());
+            let r = match event_name {
+                "player_join" => {
+                    if let Some(event) = event.downcast_ref::<crate::entity::player::Player>() {
+                        hooks.on_player_join(&context, event)
+                    } else {
+                        Ok(false)
+                    }
+                }
+                "player_leave" => {
+                    if let Some(event) = event.downcast_ref::<crate::entity::player::Player>() {
+                        hooks.on_player_leave(&context, event)
+                    } else {
+                        Ok(false)
+                    }
+                }
+                _ => Ok(false),
+            };
+            match r {
+                Ok(true) => continue,
+                Err(e) => {
+                    log::error!("Error in plugin: {}", e);
+                }
+                _ => {}
+            }
         }
 
         false

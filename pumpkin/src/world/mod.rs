@@ -12,7 +12,6 @@ use crate::{
         Entity,
     },
     error::PumpkinError,
-    plugin::api::events::PlayerConnection,
     server::Server,
     PLUGIN_MANAGER,
 };
@@ -687,17 +686,10 @@ impl World {
         let mut current_players = self.current_players.lock().await;
         current_players.insert(uuid, player.clone());
 
-        let mut event_data = PlayerConnection {
-            player: &player.clone(),
-            world: self,
-            is_cancelled: false,
-            is_join: true,
-        };
-
         if !PLUGIN_MANAGER
             .lock()
             .unwrap()
-            .emit::<PlayerConnection>("player_join", &mut event_data)
+            .emit::<Player>("player_join", &player.clone())
         {
             // Handle join message
             // TODO: Config
@@ -742,17 +734,10 @@ impl World {
         .await;
         self.remove_entity(&player.living_entity.entity).await;
 
-        let mut event_data = PlayerConnection {
-            player,
-            world: self,
-            is_cancelled: false,
-            is_join: false,
-        };
-
         if !PLUGIN_MANAGER
             .lock()
             .unwrap()
-            .emit::<PlayerConnection>("player_leave", &mut event_data)
+            .emit::<Player>("player_leave", &player)
         {
             // Send disconnect message / quit message to players in the same world
             // TODO: Config
