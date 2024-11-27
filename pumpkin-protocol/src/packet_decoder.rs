@@ -207,17 +207,9 @@ mod tests {
     use super::*;
     use aes::Aes128;
     use cfb8::cipher::AsyncStreamCipher;
-    use cfb8::{Decryptor as Cfb8Decryptor, Encryptor as Cfb8Encryptor};
+    use cfb8::Encryptor as Cfb8Encryptor;
     use libdeflater::{CompressionLvl, Compressor};
     use std::io::Cursor;
-
-    /// Helper function to encode a VarInt into bytes using ByteBuffer
-    fn encode_varint(value: i32) -> Vec<u8> {
-        let varint = VarInt(value);
-        let mut cursor = Cursor::new(Vec::new());
-        varint.encode(&mut cursor).expect("VarInt encoding failed");
-        cursor.into_inner()
-    }
 
     /// Helper function to compress data using libdeflater's Zlib compressor
     fn compress_zlib(data: &[u8]) -> Vec<u8> {
@@ -232,20 +224,11 @@ mod tests {
 
     /// Helper function to encrypt data using AES-128 CFB-8 mode
     fn encrypt_aes128(data: &[u8], key: &[u8; 16], iv: &[u8; 16]) -> Vec<u8> {
-        let mut encryptor =
+        let encryptor =
             Cfb8Encryptor::<Aes128>::new_from_slices(key, iv).expect("Invalid key/iv");
         let mut encrypted = data.to_vec();
         encryptor.encrypt(&mut encrypted);
         encrypted
-    }
-
-    /// Helper function to decrypt data using AES-128 CFB-8 mode
-    fn decrypt_aes128(encrypted_data: &[u8], key: &[u8; 16], iv: &[u8; 16]) -> Vec<u8> {
-        let mut decryptor =
-            Cfb8Decryptor::<Aes128>::new_from_slices(key, iv).expect("Invalid key/iv");
-        let mut decrypted = encrypted_data.to_vec();
-        decryptor.decrypt(&mut decrypted);
-        decrypted
     }
 
     /// Helper function to build a packet with optional compression and encryption
@@ -266,7 +249,7 @@ mod tests {
             data_to_compress.put_slice(payload);
 
             // Compress the combined data
-            let compressed_payload = compress_zlib(&data_to_compress.buf());
+            let compressed_payload = compress_zlib(data_to_compress.buf());
             let data_len = data_to_compress.buf().len() as i32; // 1 + payload.len()
             let data_len_varint = VarInt(data_len);
             buffer.put_var_int(&data_len_varint);
@@ -292,7 +275,7 @@ mod tests {
         // Create a new buffer for the entire packet
         let mut packet = Vec::new();
         packet.extend_from_slice(&packet_length_encoded);
-        packet.extend_from_slice(&buffer.buf());
+        packet.extend_from_slice(buffer.buf());
 
         // Encrypt if key and iv are provided
         if let (Some(k), Some(v)) = (key, iv) {
@@ -420,7 +403,6 @@ mod tests {
     #[test]
     fn test_decode_with_invalid_compressed_data() {
         // Sample packet data: packet_id = 5, payload_len = 10, but compressed data is invalid
-        let packet_id = 5;
         let data_len = 10; // Expected decompressed size
         let invalid_compressed_data = vec![0xFF, 0xFF, 0xFF]; // Invalid Zlib data
 
@@ -437,7 +419,7 @@ mod tests {
         // Create a new buffer for the entire packet
         let mut packet_buffer = ByteBuffer::empty();
         packet_buffer.put_var_int(&packet_len_varint);
-        packet_buffer.put_slice(&buffer.buf());
+        packet_buffer.put_slice(buffer.buf());
 
         let packet_bytes = packet_buffer.buf().to_vec();
 
@@ -489,7 +471,6 @@ mod tests {
         // Sample packet data: packet_id = 8, payload = "A" repeated (MAX_PACKET_SIZE - 1) times
         let packet_id = 8;
         let payload = vec![0x41u8; (MAX_PACKET_SIZE - 1) as usize]; // "A" repeated
-        let payload_len = payload.len() as i32;
 
         // Build the packet with compression enabled
         let packet = build_packet(packet_id, &payload, true, None, None);
