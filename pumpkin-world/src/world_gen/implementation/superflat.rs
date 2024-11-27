@@ -1,4 +1,5 @@
 use pumpkin_core::math::vector2::Vector2;
+use pumpkin_macros::block_state;
 
 use crate::{
     biome::Biome,
@@ -54,9 +55,9 @@ impl TerrainGenerator for SuperflatTerrainGenerator {
     /*
     fn generate_block(&self, at: BlockCoordinates, _: Biome) -> BlockState {
         match *at.y {
-            -64 => BlockState::new("bedrock").unwrap(),
-            -63..=-62 => BlockState::new("dirt").unwrap(),
-            -61 => BlockState::new("grass_block").unwrap(),
+            -64 => block_state!("bedrock"),
+            -63..=-62 => block_state!("dirt"),
+            -61 => block_state!("grass_block"),
             _ => BlockState::AIR,
         }
     }

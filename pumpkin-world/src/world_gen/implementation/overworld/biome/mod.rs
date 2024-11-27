@@ -1,5 +1,7 @@
 use std::ops::Add;
 
+use pumpkin_macros::block_state;
+
 use crate::{block::BlockState, coordinates::ChunkRelativeBlockCoordinates};
 
 pub mod plains;
@@ -25,7 +27,7 @@ pub fn generate_tree(
                     y: (chunk_relative_coordinates.y.add(y as i16)).into(),
                     z: z.add(dz as u8).into(),
                 };
-                tree_blocks.push((block_coordinates, BlockState::new("oak_log").unwrap()));
+                tree_blocks.push((block_coordinates, block_state!("oak_log")));
             }
         }
     }
@@ -40,7 +42,7 @@ pub fn generate_tree(
                     y: (chunk_relative_coordinates.y.add(y as i16)).into(),
                     z: z.add(dz as u8).into(),
                 };
-                tree_blocks.push((block_coordinates, BlockState::new("oak_leaves").unwrap()));
+                tree_blocks.push((block_coordinates, block_state!("oak_leaves")));
             }
         }
     }
