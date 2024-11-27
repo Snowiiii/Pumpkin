@@ -21,8 +21,9 @@ num-derive.workspace = true
 
 bytes = "1.8"
 
-flate2 = "1.0"
-
 # encryption
 aes = "0.8.4"
 cfb8 = "0.8.1"
+
+# decryption
+libdeflater = "1.22.0"
