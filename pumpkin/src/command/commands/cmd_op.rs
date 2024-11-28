@@ -60,10 +60,6 @@ impl CommandExecutor for OpExecutor {
             let message = format!("Made {player_name} a server operator.");
             let msg = TextComponent::text(&message);
             sender.send_message(msg).await;
-            log::warn!(
-                "{} has been made a server operator. Please level and rejoin to see the changes...",
-                player_name
-            );
         }
 
         Ok(())
