@@ -39,6 +39,7 @@ export default defineConfig({
           { text: "Resource Pack", link: "/config/resource-pack"},
           { text: "Commands", link: "/config/commands"},
           { text: "RCON", link: "/config/rcon"},
+          { text: "PVP", link: "/config/pvp"},
         ],
       },
       {
