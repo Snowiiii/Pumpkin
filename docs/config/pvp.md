@@ -57,7 +57,7 @@ swing = true
 By default all PVP options are enabled to match vanilla behavior.
 
 :::code-group
-```toml [features.toml] {2}
+```toml [features.toml]
 [pvp]
 enabled = true
 hurt_animation = true
