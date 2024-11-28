@@ -10,7 +10,6 @@ use std::{
 use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
 use num_derive::{FromPrimitive, ToPrimitive};
-use parking_lot::RwLock;
 use pumpkin_config::{op::OpLevel, ADVANCED_CONFIG, OPERATOR_CONFIG};
 use pumpkin_core::{
     math::{
@@ -159,7 +158,7 @@ pub struct Player {
     cancel_tasks: Notify,
 
     /// the players op permission level
-    permission_lvl: parking_lot::RwLock<PermissionLvl>,
+    permission_lvl: parking_lot::Mutex<PermissionLvl>,
 }
 
 impl Player {
@@ -229,7 +228,9 @@ impl Player {
                 .ops
                 .iter()
                 .find(|op| op.uuid == gameprofile_clone.id)
-                .map_or(parking_lot::RwLock::new(PermissionLvl::Zero), |op| parking_lot::RwLock::new(op.level.into())),
+                .map_or(parking_lot::Mutex::new(PermissionLvl::Zero), |op| {
+                    parking_lot::Mutex::new(op.level.into())
+                }),
         }
     }
 
@@ -523,15 +524,17 @@ impl Player {
 
     /// sets the players permission level and syncs it with the client
     pub async fn set_permission_lvl(&self, lvl: PermissionLvl) {
-        let mut level = self.permission_lvl.write();
-        *level = lvl;
+        {
+            let mut level = self.permission_lvl.lock();
+            *level = lvl;
+        }
+
         self.send_permission_lvl_update().await;
     }
 
-
     /// get the players permission level
     pub fn permission_lvl(&self) -> PermissionLvl {
-        self.permission_lvl.read().clone()
+        *self.permission_lvl.lock()
     }
 
     /// yaw and pitch in degrees

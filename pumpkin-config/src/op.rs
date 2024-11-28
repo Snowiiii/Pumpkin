@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize,Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 #[repr(u8)]
 pub enum OpLevel {
     None = 0,
-    Basic = 1,    
-    Moderator = 2, 
+    Basic = 1,
+    Moderator = 2,
     Admin = 3,
     Owner = 4,
 }

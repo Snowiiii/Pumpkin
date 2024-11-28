@@ -49,18 +49,21 @@ impl CommandExecutor for OpExecutor {
             } else {
                 config.ops.push(op_entry);
             }
-            config.save().await;
+            config.save();
 
             // TODO: can't fully implement until require can accept async closures
-            // player
-            //     .set_permission_lvl(BASIC_CONFIG.op_permission_level.into())
-            //     .await;
+            player
+                .set_permission_lvl(BASIC_CONFIG.op_permission_level.into())
+                .await;
 
             let player_name = player.gameprofile.name.clone();
-            let message = format!("Made {} a server operator.", player_name);
+            let message = format!("Made {player_name} a server operator.");
             let msg = TextComponent::text(&message);
             sender.send_message(msg).await;
-            log::warn!("{} has been made a server operator. Please level and rejoin to see the changes...", player_name);
+            log::warn!(
+                "{} has been made a server operator. Please level and rejoin to see the changes...",
+                player_name
+            );
         }
 
         Ok(())

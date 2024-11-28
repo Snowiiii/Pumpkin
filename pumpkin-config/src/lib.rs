@@ -1,6 +1,5 @@
 use log::warn;
 use logging::LoggingConfig;
-use op::Op;
 use pumpkin_core::{Difficulty, GameMode};
 use query::QueryConfig;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -182,7 +181,7 @@ pub trait LoadJSONConfiguration {
         let path = Self::get_path();
 
         let config = if path.exists() {
-            let file_content = fs::read_to_string(&path)
+            let file_content = fs::read_to_string(path)
                 .unwrap_or_else(|_| panic!("Couldn't read configuration file at {:?}", path));
 
             serde_json::from_str(&file_content).unwrap_or_else(|err| {
@@ -194,7 +193,7 @@ pub trait LoadJSONConfiguration {
         } else {
             let content = Self::default();
 
-            if let Err(err) = fs::write(&path, serde_json::to_string_pretty(&content).unwrap()) {
+            if let Err(err) = fs::write(path, serde_json::to_string_pretty(&content).unwrap()) {
                 eprintln!(
                     "Couldn't write default config to {:?}. Reason: {}. This is probably caused by a config update. Just delete the old config and restart.",
                     path, err
@@ -214,7 +213,9 @@ pub trait LoadJSONConfiguration {
 }
 
 pub trait SaveJSONConfiguration: LoadJSONConfiguration {
-    async fn save(&self)
+    // suppress clippy warning
+
+    fn save(&self)
     where
         Self: Sized + Default + Serialize + for<'de> Deserialize<'de>,
     {
@@ -231,7 +232,7 @@ pub trait SaveJSONConfiguration: LoadJSONConfiguration {
             }
         };
 
-        if let Err(err) = tokio::fs::write(path, content).await {
+        if let Err(err) = fs::write(path, content) {
             warn!(
                 "Couldn't write operator config to {:?}. Reason: {}",
                 path, err
