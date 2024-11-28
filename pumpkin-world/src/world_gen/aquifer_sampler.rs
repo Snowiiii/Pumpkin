@@ -469,7 +469,6 @@ impl WorldAquiferSampler {
         density: f64,
     ) -> Option<BlockState> {
         if density > 0f64 {
-            //println!("None 1");
             None
         } else {
             let i = pos.x();
@@ -478,7 +477,6 @@ impl WorldAquiferSampler {
 
             let fluid_level = self.fluid_level.get_fluid_level(i, j, k);
             if fluid_level.get_block_state(j).of_block(LAVA_BLOCK.block_id) {
-                //println!("Some 1");
                 Some(*LAVA_BLOCK)
             } else {
                 let scaled_x = floor_div(i - 5, 16);
@@ -530,7 +528,7 @@ impl WorldAquiferSampler {
 
                 if d <= 0f64 {
                     // TODO: Handle fluid tick
-                    //println!("Some 2");
+
                     Some(block_state)
                 } else if block_state.of_block(WATER_BLOCK.block_id)
                     && self
@@ -539,7 +537,6 @@ impl WorldAquiferSampler {
                         .get_block_state(j - 1)
                         .of_block(LAVA_BLOCK.block_id)
                 {
-                    //println!("Some 3");
                     Some(block_state)
                 } else {
                     let barrier_sample = self.barrier_noise.sample_mut(pos, state);
@@ -553,7 +550,6 @@ impl WorldAquiferSampler {
                     );
 
                     if density + e > 0f64 {
-                        //println!("None 2");
                         None
                     } else {
                         let fluid_level4 =
@@ -570,7 +566,6 @@ impl WorldAquiferSampler {
                                     fluid_level4.clone(),
                                 );
                             if density + g > 0f64 {
-                                //println!("None 3");
                                 return None;
                             }
                         }
@@ -587,13 +582,12 @@ impl WorldAquiferSampler {
                                     fluid_level4,
                                 );
                             if density + h > 0f64 {
-                                //println!("None 4");
                                 return None;
                             }
                         }
 
                         //TODO Handle fluid tick
-                        //println!("Some 4");
+
                         Some(block_state)
                     }
                 }

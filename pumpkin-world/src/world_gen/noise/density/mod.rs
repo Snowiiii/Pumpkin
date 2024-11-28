@@ -78,8 +78,10 @@ pub mod built_in_density_function {
 
     use lazy_static::lazy_static;
 
-    use crate::world_gen::noise::built_in_noise_params;
+    use crate::world_gen::noise::built_in_noise_params::{self};
     use crate::world_gen::positions::{MAX_COLUMN_HEIGHT, MIN_HEIGHT};
+
+    use pumpkin_core::math::floor_div;
 
     use super::{apply_blending, noise_in_range, vertical_range_choice};
 
@@ -458,30 +460,30 @@ pub mod built_in_density_function {
         };
         pub static ref SLOPED_CHEESE_END: SharedComponentReference =
             EndIslandFunction::new(0).add(BASE_3D_NOISE_END.clone());
-        pub static ref CAVES_SPAGHETTI_ROUGHNESS_FUNCTION_OVERWORLD: SharedComponentReference =
+        pub static ref CAVES_SPAGHETTI_ROUGHNESS_FUNCTION_OVERWORLD: SharedComponentReference = {
+            let function = NoiseFunction::new(
+                Arc::new(InternalNoise::new(
+                    &built_in_noise_params::SPAGHETTI_ROUGHNESS,
+                    None,
+                )),
+                1f64,
+                1f64,
+            );
+
+            let function2 = noise_in_range(
+                &built_in_noise_params::SPAGHETTI_ROUGHNESS_MODULATOR,
+                1f64,
+                1f64,
+                0f64,
+                -0.1f64,
+            );
+
             WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
-                noise_in_range(
-                    &built_in_noise_params::SPAGHETTI_ROUGHNESS_MODULATOR,
-                    1f64,
-                    1f64,
-                    0f64,
-                    -0.1f64
-                )
-                .mul(
-                    Into::<SharedComponentReference>::into(NoiseFunction::new(
-                        Arc::new(InternalNoise::new(
-                            &built_in_noise_params::SPAGHETTI_ROUGHNESS,
-                            None
-                        )),
-                        1f64,
-                        1f64
-                    ))
-                    .abs()
-                    .add_const(-0.4f64)
-                ),
+                function2.mul(function.abs().add_const(-0.4f64)),
                 WrapperType::OnceCache,
             )
-            .into();
+            .into()
+        };
         pub static ref CAVES_SPAGHETTI_2D_THICKNESS_MODULAR_OVERWORLD: SharedComponentReference =
             WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
                 noise_in_range(
@@ -517,13 +519,15 @@ pub mod built_in_density_function {
                 &built_in_noise_params::SPAGHETTI_2D_ELEVATION,
                 1f64,
                 0f64,
-                ((-64i32) / 8i32) as f64,
+                floor_div(-64, 8) as f64,
                 8f64,
             );
 
             let function4 = CAVES_SPAGHETTI_2D_THICKNESS_MODULAR_OVERWORLD.clone();
 
-            let function5 = function3.add(YClampedFunction::new(-64, 320, 8f64, -40f64).abs());
+            let function5 = function3
+                .add(YClampedFunction::new(-64, 320, 8f64, -40f64).into())
+                .abs();
 
             let function6 = function5.add(function4.clone()).cube();
 

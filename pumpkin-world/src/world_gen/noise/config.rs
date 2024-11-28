@@ -17,7 +17,7 @@ use super::{
     router::BaseRouter,
 };
 
-struct LegacyChunkNoiseVisitor {
+pub(crate) struct LegacyChunkNoiseVisitor {
     random_deriver: RandomDeriver,
     seed: u64,
 
@@ -25,7 +25,7 @@ struct LegacyChunkNoiseVisitor {
 }
 
 impl LegacyChunkNoiseVisitor {
-    fn new(random_deriver: RandomDeriver, seed: u64) -> Self {
+    pub(crate) fn new(random_deriver: RandomDeriver, seed: u64) -> Self {
         Self {
             random_deriver,
             seed,
@@ -143,11 +143,26 @@ impl NoiseConfig {
 
 #[cfg(test)]
 mod test {
+    use pumpkin_core::{
+        assert_eq_delta,
+        random::{xoroshiro128::Xoroshiro, RandomDeriver, RandomImpl},
+    };
+
     use crate::world_gen::noise::{
         config::NoiseConfig,
-        density::{NoisePos, UnblendedNoisePos},
+        density::{
+            built_in_density_function::{
+                BASE_3D_NOISE_OVERWORLD, CAVES_ENTRANCES_OVERWORLD, CAVES_NOODLE_OVERWORLD,
+                CAVES_PILLARS_OVERWORLD, CAVES_SPAGHETTI_2D_THICKNESS_MODULAR_OVERWORLD,
+                CAVES_SPAGHETTI_ROUGHNESS_FUNCTION_OVERWORLD, DEPTH_OVERWORLD, FACTOR_OVERWORLD,
+                OFFSET_OVERWORLD, SLOPED_CHEESE_OVERWORLD,
+            },
+            NoisePos, UnblendedNoisePos,
+        },
         router::OVERWORLD_NOISE_ROUTER,
     };
+
+    use super::LegacyChunkNoiseVisitor;
 
     #[test]
     fn test_normal_surface_noisified() {
@@ -568,6 +583,238 @@ mod test {
         for ((x, y, z), value) in values {
             let pos = &NoisePos::Unblended(UnblendedNoisePos::new(x, y, z));
             assert_eq!(router.vein_gap.sample(pos), value);
+        }
+    }
+
+    #[test]
+    fn test_final_density_samples() {
+        let expected_data: Vec<(i32, i32, i32, f64)> =
+            serde_json::from_str(include_str!("../../../assets/final_density_dump_7_4.json"))
+                .expect("failed to decode array");
+
+        let config = NoiseConfig::new(0, &OVERWORLD_NOISE_ROUTER);
+        let function = config.router().final_density.clone();
+
+        for (x, y, z, sample) in expected_data {
+            let pos = &NoisePos::Unblended(UnblendedNoisePos::new(x, y, z));
+            assert_eq_delta!(function.sample(pos), sample, f64::EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_converted_sloped_cheese() {
+        let mut rand = Xoroshiro::from_seed(0);
+        let mut converter =
+            LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
+
+        let expected_data: Vec<(i32, i32, i32, f64)> = serde_json::from_str(include_str!(
+            "../../../assets/converted_sloped_cheese_7_4.json"
+        ))
+        .expect("failed to decode array");
+
+        let function = SLOPED_CHEESE_OVERWORLD
+            .maybe_convert(&mut converter)
+            .unwrap()
+            .assert_shared();
+
+        for (x, y, z, sample) in expected_data {
+            let pos = NoisePos::Unblended(UnblendedNoisePos::new(x, y, z));
+            assert_eq_delta!(function.sample(&pos), sample, f64::EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_converted_factor() {
+        let mut rand = Xoroshiro::from_seed(0);
+        let mut converter =
+            LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
+
+        let expected_data: Vec<(i32, i32, i32, f64)> =
+            serde_json::from_str(include_str!("../../../assets/converted_factor_7_4.json"))
+                .expect("failed to decode array");
+
+        let function = FACTOR_OVERWORLD
+            .maybe_convert(&mut converter)
+            .unwrap()
+            .assert_shared();
+
+        for (x, y, z, sample) in expected_data {
+            let pos = NoisePos::Unblended(UnblendedNoisePos::new(x, y, z));
+            assert_eq_delta!(function.sample(&pos), sample, f64::EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_converted_depth() {
+        let mut rand = Xoroshiro::from_seed(0);
+        let mut converter =
+            LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
+
+        let expected_data: Vec<(i32, i32, i32, f64)> =
+            serde_json::from_str(include_str!("../../../assets/converted_depth_7_4.json"))
+                .expect("failed to decode array");
+
+        let function = DEPTH_OVERWORLD
+            .maybe_convert(&mut converter)
+            .unwrap()
+            .assert_shared();
+
+        for (x, y, z, sample) in expected_data {
+            let pos = NoisePos::Unblended(UnblendedNoisePos::new(x, y, z));
+            assert_eq_delta!(function.sample(&pos), sample, f64::EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_converted_offset() {
+        let mut rand = Xoroshiro::from_seed(0);
+        let mut converter =
+            LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
+
+        let expected_data: Vec<(i32, i32, i32, f64)> =
+            serde_json::from_str(include_str!("../../../assets/converted_offset_7_4.json"))
+                .expect("failed to decode array");
+
+        let function = OFFSET_OVERWORLD
+            .maybe_convert(&mut converter)
+            .unwrap()
+            .assert_shared();
+
+        for (x, y, z, sample) in expected_data {
+            let pos = NoisePos::Unblended(UnblendedNoisePos::new(x, y, z));
+            assert_eq_delta!(function.sample(&pos), sample, f64::EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_converted_3d_overworld() {
+        let mut rand = Xoroshiro::from_seed(0);
+        let mut converter =
+            LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
+
+        let expected_data: Vec<(i32, i32, i32, f64)> = serde_json::from_str(include_str!(
+            "../../../assets/converted_3d_overworld_7_4.json"
+        ))
+        .expect("failed to decode array");
+
+        let function = BASE_3D_NOISE_OVERWORLD
+            .maybe_convert(&mut converter)
+            .unwrap()
+            .assert_shared();
+
+        for (x, y, z, sample) in expected_data {
+            let pos = NoisePos::Unblended(UnblendedNoisePos::new(x, y, z));
+            assert_eq_delta!(function.sample(&pos), sample, f64::EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_converted_cave_entrances_overworld() {
+        let mut rand = Xoroshiro::from_seed(0);
+        let mut converter =
+            LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
+
+        let expected_data: Vec<(i32, i32, i32, f64)> = serde_json::from_str(include_str!(
+            "../../../assets/converted_cave_entrances_overworld_7_4.json"
+        ))
+        .expect("failed to decode array");
+
+        let function = CAVES_ENTRANCES_OVERWORLD
+            .maybe_convert(&mut converter)
+            .unwrap()
+            .assert_shared();
+
+        for (x, y, z, sample) in expected_data {
+            let pos = NoisePos::Unblended(UnblendedNoisePos::new(x, y, z));
+            assert_eq_delta!(function.sample(&pos), sample, f64::EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_converted_cave_spaghetti_rough_overworld() {
+        let mut rand = Xoroshiro::from_seed(0);
+        let mut converter =
+            LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
+
+        let expected_data: Vec<(i32, i32, i32, f64)> = serde_json::from_str(include_str!(
+            "../../../assets/converted_cave_spaghetti_rough_overworld_7_4.json"
+        ))
+        .expect("failed to decode array");
+
+        let function = CAVES_SPAGHETTI_ROUGHNESS_FUNCTION_OVERWORLD
+            .maybe_convert(&mut converter)
+            .unwrap()
+            .assert_shared();
+
+        for (x, y, z, sample) in expected_data {
+            let pos = NoisePos::Unblended(UnblendedNoisePos::new(x, y, z));
+            assert_eq_delta!(function.sample(&pos), sample, f64::EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_converted_cave_noodle() {
+        let mut rand = Xoroshiro::from_seed(0);
+        let mut converter =
+            LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
+
+        let expected_data: Vec<(i32, i32, i32, f64)> = serde_json::from_str(include_str!(
+            "../../../assets/converted_cave_noodle_7_4.json"
+        ))
+        .expect("failed to decode array");
+
+        let function = CAVES_NOODLE_OVERWORLD
+            .maybe_convert(&mut converter)
+            .unwrap()
+            .assert_shared();
+
+        for (x, y, z, sample) in expected_data {
+            let pos = NoisePos::Unblended(UnblendedNoisePos::new(x, y, z));
+            assert_eq_delta!(function.sample(&pos), sample, f64::EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_converted_cave_pillar() {
+        let mut rand = Xoroshiro::from_seed(0);
+        let mut converter =
+            LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
+
+        let expected_data: Vec<(i32, i32, i32, f64)> = serde_json::from_str(include_str!(
+            "../../../assets/converted_cave_pillar_7_4.json"
+        ))
+        .expect("failed to decode array");
+
+        let function = CAVES_PILLARS_OVERWORLD
+            .maybe_convert(&mut converter)
+            .unwrap()
+            .assert_shared();
+
+        for (x, y, z, sample) in expected_data {
+            let pos = NoisePos::Unblended(UnblendedNoisePos::new(x, y, z));
+            assert_eq_delta!(function.sample(&pos), sample, f64::EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_converted_cave_spaghetti_2d_thickness() {
+        let mut rand = Xoroshiro::from_seed(0);
+        let mut converter =
+            LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
+
+        let expected_data: Vec<(i32, i32, i32, f64)> = serde_json::from_str(include_str!(
+            "../../../assets/converted_cave_spaghetti_2d_thicc_7_4.json"
+        ))
+        .expect("failed to decode array");
+
+        let function = CAVES_SPAGHETTI_2D_THICKNESS_MODULAR_OVERWORLD
+            .maybe_convert(&mut converter)
+            .unwrap()
+            .assert_shared();
+
+        for (x, y, z, sample) in expected_data {
+            let pos = NoisePos::Unblended(UnblendedNoisePos::new(x, y, z));
+            assert_eq_delta!(function.sample(&pos), sample, f64::EPSILON);
         }
     }
 }

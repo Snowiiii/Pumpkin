@@ -61,7 +61,7 @@ impl GenerationShape {
         if self.min_y >= 0 {
             self.height + self.min_y as u16
         } else {
-            self.height - self.min_y.unsigned_abs() as u16
+            (self.height as i32 + self.min_y as i32) as u16
         }
     }
 

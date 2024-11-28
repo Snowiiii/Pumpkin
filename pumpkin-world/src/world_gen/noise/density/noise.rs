@@ -319,6 +319,7 @@ impl InterpolatedNoiseFunction {
         y_factor: f64,
         smear_scale: f64,
     ) -> Self {
+        // TODO: This can be const
         let (start_1, amplitudes_1) =
             OctavePerlinNoiseSampler::calculate_amplitudes(&(-15..=0).collect::<Vec<i32>>());
 

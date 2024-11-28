@@ -110,5 +110,17 @@ mod test {
         assert_eq!(pos.x, block_pos::unpack_x(packed));
         assert_eq!(pos.y, block_pos::unpack_y(packed));
         assert_eq!(pos.z, block_pos::unpack_z(packed));
+
+        for x in -10..=10 {
+            for y in -10..=10 {
+                for z in -10..=10 {
+                    let pos = Vector3::new(x * 1000000, y * 10, z * 1000000);
+                    let packed = block_pos::packed(&pos);
+                    assert_eq!(pos.x, block_pos::unpack_x(packed));
+                    assert_eq!(pos.y, block_pos::unpack_y(packed));
+                    assert_eq!(pos.z, block_pos::unpack_z(packed));
+                }
+            }
+        }
     }
 }

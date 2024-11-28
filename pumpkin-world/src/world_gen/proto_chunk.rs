@@ -171,7 +171,6 @@ impl ProtoChunk {
                                         );
                                         assert!(local_pos.z < 16 && local_pos.z >= 0);
                                     }
-                                    //println!("Putting {:?}: {:?}", local_pos, block_state);
                                     let index = self.local_pos_to_index(&local_pos);
                                     self.flat_block_map[index] = block_state;
                                 }
@@ -235,25 +234,6 @@ mod test {
         let mut chunk = ProtoChunk::new(Vector2::new(7, 4), 0);
         chunk.populate_noise();
 
-        let mut fail = false;
-        for (index, (s1, s2)) in chunk
-            .flat_block_map
-            .into_iter()
-            .map(|state| state.state_id)
-            .zip(expected_data)
-            .enumerate()
-        {
-            if s1 != s2 {
-                let _ = index;
-                //println!("{}: {} vs {}", index, s1, s2);
-                //assert!(false);
-                fail = true;
-            }
-        }
-
-        assert!(!fail);
-
-        /*
         assert_eq!(
             expected_data,
             chunk
@@ -262,6 +242,5 @@ mod test {
                 .map(|state| state.state_id)
                 .collect_vec()
         );
-        */
     }
 }

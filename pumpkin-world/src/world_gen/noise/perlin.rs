@@ -45,17 +45,17 @@ impl PerlinNoiseSampler {
     }
 
     pub fn sample_no_fade(&self, x: f64, y: f64, z: f64, y_scale: f64, y_max: f64) -> f64 {
-        let trans_x = x + self.x_origin;
-        let trans_y = y + self.y_origin;
-        let trans_z = z + self.z_origin;
+        let true_x = x + self.x_origin;
+        let true_y = y + self.y_origin;
+        let true_z = z + self.z_origin;
 
-        let x_floor = trans_x.floor();
-        let y_floor = trans_y.floor();
-        let z_floor = trans_z.floor();
+        let x_floor = true_x.floor();
+        let y_floor = true_y.floor();
+        let z_floor = true_z.floor();
 
-        let x_dec = trans_x - x_floor;
-        let y_dec = trans_y - y_floor;
-        let z_dec = trans_z - z_floor;
+        let x_dec = true_x - x_floor;
+        let y_dec = true_y - y_floor;
+        let z_dec = true_z - z_floor;
 
         let y_noise = if y_scale != 0f64 {
             let raw_y_dec = if y_max >= 0f64 && y_max < y_dec {
@@ -63,7 +63,7 @@ impl PerlinNoiseSampler {
             } else {
                 y_dec
             };
-            (raw_y_dec / y_scale + 1.0E-7f32 as f64).floor() * y_scale
+            (raw_y_dec / y_scale + 1E-7f32 as f64).floor() * y_scale
         } else {
             0f64
         };
@@ -106,52 +106,22 @@ impl PerlinNoiseSampler {
         fade_local_y: f64,
     ) -> f64 {
         let i = self.map(x);
-        let j = self.map(x.wrapping_add(1));
-        let k = self.map(i.wrapping_add(y));
+        let j = self.map(x + 1);
+        let k = self.map(i + y);
+        let l = self.map(i + y + 1);
 
-        let l = self.map(i.wrapping_add(y).wrapping_add(1));
-        let m = self.map(j.wrapping_add(y));
-        let n = self.map(j.wrapping_add(y).wrapping_add(1));
+        let m = self.map(j + y);
+        let n = self.map(j + y + 1);
 
-        let d = Self::grad(self.map(k.wrapping_add(z)), local_x, local_y, local_z);
-        let e = Self::grad(
-            self.map(m.wrapping_add(z)),
-            local_x - 1f64,
-            local_y,
-            local_z,
-        );
-        let f = Self::grad(
-            self.map(l.wrapping_add(z)),
-            local_x,
-            local_y - 1f64,
-            local_z,
-        );
-        let g = Self::grad(
-            self.map(n.wrapping_add(z)),
-            local_x - 1f64,
-            local_y - 1f64,
-            local_z,
-        );
-        let h = Self::grad(
-            self.map(k.wrapping_add(z).wrapping_add(1)),
-            local_x,
-            local_y,
-            local_z - 1f64,
-        );
-        let o = Self::grad(
-            self.map(m.wrapping_add(z).wrapping_add(1)),
-            local_x - 1f64,
-            local_y,
-            local_z - 1f64,
-        );
-        let p = Self::grad(
-            self.map(l.wrapping_add(z).wrapping_add(1)),
-            local_x,
-            local_y - 1f64,
-            local_z - 1f64,
-        );
+        let d = Self::grad(self.map(k + z), local_x, local_y, local_z);
+        let e = Self::grad(self.map(m + z), local_x - 1f64, local_y, local_z);
+        let f = Self::grad(self.map(l + z), local_x, local_y - 1f64, local_z);
+        let g = Self::grad(self.map(n + z), local_x - 1f64, local_y - 1f64, local_z);
+        let h = Self::grad(self.map(k + z + 1), local_x, local_y, local_z - 1f64);
+        let o = Self::grad(self.map(m + z + 1), local_x - 1f64, local_y, local_z - 1f64);
+        let p = Self::grad(self.map(l + z + 1), local_x, local_y - 1f64, local_z - 1f64);
         let q = Self::grad(
-            self.map(n.wrapping_add(z).wrapping_add(1)),
+            self.map(n + z + 1),
             local_x - 1f64,
             local_y - 1f64,
             local_z - 1f64,
@@ -198,7 +168,7 @@ impl OctavePerlinNoiseSampler {
 
     #[inline]
     pub fn maintain_precision(value: f64) -> f64 {
-        (value / 3.3554432E7f64 + 0.5f64).floor() * -3.3554432E7f64 + value
+        value - (value / 3.3554432E7f64 + 0.5f64).floor() * 3.3554432E7f64
     }
 
     pub fn calculate_amplitudes(octaves: &[i32]) -> (i32, Vec<f64>) {
@@ -797,9 +767,14 @@ mod octave_perline_noise_sampler_test {
 
 #[cfg(test)]
 mod perlin_noise_sampler_test {
-    use pumpkin_core::random::{xoroshiro128::Xoroshiro, RandomGenerator, RandomImpl};
+    use pumpkin_core::{
+        assert_eq_delta,
+        random::{xoroshiro128::Xoroshiro, RandomDeriverImpl, RandomGenerator, RandomImpl},
+    };
 
     use crate::world_gen::noise::perlin::PerlinNoiseSampler;
+
+    use super::OctavePerlinNoiseSampler;
 
     #[test]
     fn test_create() {
@@ -997,6 +972,35 @@ mod perlin_noise_sampler_test {
 
         for ((x, y, z), sample) in values {
             assert_eq!(sampler.sample_flat_y(x, y, z), sample);
+        }
+    }
+
+    #[test]
+    fn test_no_y_chunk() {
+        let expected_data: Vec<(i32, i32, i32, f64)> =
+            serde_json::from_str(include_str!("../../../assets/perlin2_7_4.json"))
+                .expect("failed to decode array");
+
+        let mut rand = Xoroshiro::from_seed(0);
+        let splitter = rand.next_splitter();
+        let mut rand = RandomGenerator::Xoroshiro(splitter.split_string("minecraft:terrain"));
+        assert_eq!(rand.next_i32(), 1374487555);
+        let mut rand = RandomGenerator::Xoroshiro(splitter.split_string("minecraft:terrain"));
+
+        let (first, amplitudes) =
+            OctavePerlinNoiseSampler::calculate_amplitudes(&(-15..=0).collect::<Vec<i32>>());
+        let sampler = OctavePerlinNoiseSampler::new(&mut rand, first, &amplitudes, true);
+        let sampler = sampler.get_octave(0).unwrap();
+
+        assert_eq!(sampler.x_origin, 18.223354299069797);
+        assert_eq!(sampler.y_origin, 93.99298907803595);
+        assert_eq!(sampler.z_origin, 184.48198875745823);
+
+        for (x, y, z, sample) in expected_data {
+            let scale = 0.005;
+            let result =
+                sampler.sample_flat_y(x as f64 * scale, y as f64 * scale, z as f64 * scale);
+            assert_eq_delta!(result, sample, f64::EPSILON);
         }
     }
 
@@ -1211,6 +1215,122 @@ mod perlin_noise_sampler_test {
 
         for ((x, y, z, y_scale, y_max), sample) in values {
             assert_eq!(sampler.sample_no_fade(x, y, z, y_scale, y_max), sample);
+        }
+    }
+
+    #[test]
+    fn test_no_fade_chunk() {
+        let expected_data: Vec<(i32, i32, i32, f64)> =
+            serde_json::from_str(include_str!("../../../assets/perlin_7_4.json"))
+                .expect("failed to decode array");
+
+        let mut rand = Xoroshiro::from_seed(0);
+        let splitter = rand.next_splitter();
+        let mut rand = RandomGenerator::Xoroshiro(splitter.split_string("minecraft:terrain"));
+        assert_eq!(rand.next_i32(), 1374487555);
+        let mut rand = RandomGenerator::Xoroshiro(splitter.split_string("minecraft:terrain"));
+
+        let (first, amplitudes) =
+            OctavePerlinNoiseSampler::calculate_amplitudes(&(-15..=0).collect::<Vec<i32>>());
+        let sampler = OctavePerlinNoiseSampler::new(&mut rand, first, &amplitudes, true);
+        let sampler = sampler.get_octave(0).unwrap();
+
+        assert_eq!(sampler.x_origin, 18.223354299069797);
+        assert_eq!(sampler.y_origin, 93.99298907803595);
+        assert_eq!(sampler.z_origin, 184.48198875745823);
+
+        for (x, y, z, sample) in expected_data {
+            let scale = 0.005;
+            let max_y = scale * 2f64;
+            let result = sampler.sample_no_fade(
+                x as f64 * scale,
+                y as f64 * scale,
+                z as f64 * scale,
+                scale,
+                max_y,
+            );
+            assert_eq_delta!(result, sample, f64::EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_precision() {
+        let values = [
+            2.5E-4,
+            1.25E-4,
+            6.25E-5,
+            3.125E-5,
+            1.5625E-5,
+            7.8125E-6,
+            3.90625E-6,
+            1.953125E-6,
+            9.765625E-7,
+            4.8828125E-7,
+            2.44140625E-7,
+            1.220703125E-7,
+            6.103515625E-8,
+            3.0517578125E-8,
+            1.52587890625E-8,
+            7.62939453125E-9,
+            3.814697265625E-9,
+            1.9073486328125E-9,
+            9.5367431640625E-10,
+            4.76837158203125E-10,
+            2.384185791015625E-10,
+            1.1920928955078125E-10,
+            5.960464477539063E-11,
+            2.980232238769531E-11,
+            1.4901161193847657E-11,
+            7.450580596923828E-12,
+            3.725290298461914E-12,
+            1.862645149230957E-12,
+            9.313225746154785E-13,
+        ];
+        let mut value_iter = values.iter();
+
+        for x in 1..20 {
+            let mut f = 0.0005f64;
+            for _ in 0..x {
+                f /= 2f64;
+            }
+            let value = OctavePerlinNoiseSampler::maintain_precision(f);
+            assert_eq!(value, *value_iter.next().unwrap());
+        }
+    }
+
+    #[test]
+    fn test_calculate_amplitudes() {
+        let (first, amplitudes) =
+            OctavePerlinNoiseSampler::calculate_amplitudes(&(-15..=0).collect::<Vec<i32>>());
+
+        assert_eq!(first, -15);
+        assert_eq!(
+            amplitudes,
+            [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        );
+    }
+
+    #[test]
+    fn test_map() {
+        let expected_data: Vec<i32> =
+            serde_json::from_str(include_str!("../../../assets/perlin_map.json"))
+                .expect("failed to decode array");
+        let mut expected_iter = expected_data.iter();
+
+        let mut rand = Xoroshiro::from_seed(0);
+        let splitter = rand.next_splitter();
+        let mut rand = RandomGenerator::Xoroshiro(splitter.split_string("minecraft:terrain"));
+        assert_eq!(rand.next_i32(), 1374487555);
+        let mut rand = RandomGenerator::Xoroshiro(splitter.split_string("minecraft:terrain"));
+
+        let (first, amplitudes) =
+            OctavePerlinNoiseSampler::calculate_amplitudes(&(-15..=0).collect::<Vec<i32>>());
+        let sampler = OctavePerlinNoiseSampler::new(&mut rand, first, &amplitudes, true);
+        let sampler = sampler.get_octave(0).unwrap();
+
+        for x in -512..512 {
+            let y = sampler.map(x);
+            assert_eq!(y, *expected_iter.next().unwrap());
         }
     }
 }

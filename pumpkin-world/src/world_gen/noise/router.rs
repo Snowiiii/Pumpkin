@@ -370,7 +370,7 @@ impl BaseRouter {
             internal_density: apply_surface_slides(
                 amplified,
                 mapped_depth_overworld
-                    .add_const(-0.703125)
+                    .add_const(-0.703125f64)
                     .clamp(-64f64, 64f64),
             ),
             final_density: blended_cave_entrances_overworld,
@@ -412,7 +412,7 @@ fn apply_slides(
 ) -> SharedComponentReference {
     let function2 = YClampedFunction::new(
         y_min + y_max - top_rel_y_min,
-        y_min + y_max + -top_rel_y_max,
+        y_min + y_max - top_rel_y_max,
         1f64,
         0f64,
     );
@@ -474,11 +474,15 @@ fn create_caves(sloped_cheese: SharedComponentReference) -> SharedComponentRefer
 mod test {
     use std::sync::Arc;
 
-    use pumpkin_core::random::{legacy_rand::LegacyRand, RandomDeriver, RandomImpl};
+    use pumpkin_core::{
+        assert_eq_delta,
+        random::{legacy_rand::LegacyRand, xoroshiro128::Xoroshiro, RandomDeriver, RandomImpl},
+    };
 
     use crate::world_gen::noise::{
+        config::LegacyChunkNoiseVisitor,
         density::{
-            built_in_density_function::EROSION_OVERWORLD,
+            built_in_density_function::{EROSION_OVERWORLD, SLOPED_CHEESE_OVERWORLD},
             component_functions::{
                 ComponentReference, ComponentReferenceImplementation, ConversionResultPre,
                 ConverterEnvironment, ConverterImpl, NoEnvironment, OwnedConverterEnvironment,
@@ -490,7 +494,7 @@ mod test {
         router::OVERWORLD_NOISE_ROUTER,
     };
 
-    use super::apply_surface_slides;
+    use super::{apply_surface_slides, create_caves};
 
     pub struct TestConverter {
         pub splitter: RandomDeriver,
@@ -769,5 +773,26 @@ mod test {
             -0.07999999821186066f64
         );
         assert_eq!(OVERWORLD_NOISE_ROUTER.vein_gap.sample(pos), 0f64);
+    }
+
+    #[test]
+    fn test_converted_cave() {
+        let mut rand = Xoroshiro::from_seed(0);
+        let mut converter =
+            LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
+
+        let expected_data: Vec<(i32, i32, i32, f64)> =
+            serde_json::from_str(include_str!("../../../assets/converted_cave_7_4.json"))
+                .expect("failed to decode array");
+
+        let function = create_caves(SLOPED_CHEESE_OVERWORLD.clone())
+            .maybe_convert(&mut converter)
+            .unwrap()
+            .assert_shared();
+
+        for (x, y, z, sample) in expected_data {
+            let pos = NoisePos::Unblended(UnblendedNoisePos::new(x, y, z));
+            assert_eq_delta!(function.sample(&pos), sample, f64::EPSILON);
+        }
     }
 }
