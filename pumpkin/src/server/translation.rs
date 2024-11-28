@@ -28,7 +28,7 @@ pub fn translate<'a>(
     message: &'a str,
 ) -> Result<TextComponent<'a>, TranslationError> {
     if !config.enabled {
-        let path = format!("assets/lang/en_us/{}/en_us.json", config.version);
+        let path = "assets/lang/en_us/en_us.json";
         let translations = get_translations(path, message)?;
 
         return Ok(translations);
