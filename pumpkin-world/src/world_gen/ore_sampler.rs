@@ -94,16 +94,16 @@ pub mod vein_type {
 
     lazy_static! {
         pub static ref COPPER: VeinType = VeinType {
-            ore: BlockState::new("minecraft:copper_ore").unwrap(),
-            raw_ore: BlockState::new("minecraft:raw_copper_block").unwrap(),
-            stone: BlockState::new("minecraft:granite").unwrap(),
+            ore: BlockState::new("copper_ore").unwrap(),
+            raw_ore: BlockState::new("raw_copper_block").unwrap(),
+            stone: BlockState::new("granite").unwrap(),
             min_y: 0,
             max_y: 50,
         };
         pub static ref IRON: VeinType = VeinType {
-            ore: BlockState::new("minecraft:deepslate_iron_ore").unwrap(),
-            raw_ore: BlockState::new("minecraft:raw_iron_block").unwrap(),
-            stone: BlockState::new("minecraft:tuff").unwrap(),
+            ore: BlockState::new("deepslate_iron_ore").unwrap(),
+            raw_ore: BlockState::new("raw_iron_block").unwrap(),
+            stone: BlockState::new("tuff").unwrap(),
             min_y: -60,
             max_y: -8,
         };

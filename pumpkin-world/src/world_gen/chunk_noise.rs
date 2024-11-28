@@ -42,9 +42,9 @@ use super::{
 };
 
 lazy_static! {
-    pub static ref STONE_BLOCK: BlockState = BlockState::new("minecraft:stone").unwrap();
-    pub static ref LAVA_BLOCK: BlockState = BlockState::new("minecraft:lava").unwrap();
-    pub static ref WATER_BLOCK: BlockState = BlockState::new("minecraft:water").unwrap();
+    pub static ref STONE_BLOCK: BlockState = BlockState::new("stone").unwrap();
+    pub static ref LAVA_BLOCK: BlockState = BlockState::new("lava").unwrap();
+    pub static ref WATER_BLOCK: BlockState = BlockState::new("water").unwrap();
 }
 
 pub struct ChunkCacheOnceFunction<R: ComponentReference<ChunkNoiseState>> {
