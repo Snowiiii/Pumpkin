@@ -68,6 +68,18 @@ pub enum SoundCategory {
     Voice,
 }
 
+#[derive(Serialize)]
+pub struct IDOrSoundEvent {
+    pub id: VarInt,
+    pub sound_event: Option<SoundEvent>,
+}
+
+#[derive(Serialize)]
+pub struct SoundEvent {
+    pub sound_name: String,
+    pub range: Option<f32>,
+}
+
 pub struct RawPacket {
     pub id: VarInt,
     pub bytebuf: ByteBuffer,
