@@ -97,7 +97,6 @@ pub mod built_in_noise_params {
     );
     pub const ORE_VEININESS: DoublePerlinNoiseParameters =
         DoublePerlinNoiseParameters::new(-8, &[1f64], "minecraft:ore_veininess");
-
     pub const ORE_VEIN_A: DoublePerlinNoiseParameters =
         DoublePerlinNoiseParameters::new(-7, &[1f64], "minecraft:ore_vein_a");
     pub const ORE_VEIN_B: DoublePerlinNoiseParameters =

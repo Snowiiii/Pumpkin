@@ -15,7 +15,7 @@ impl<'a> CBossEvent<'a> {
     }
 }
 
-impl<'a> ClientPacket for CBossEvent<'a> {
+impl ClientPacket for CBossEvent<'_> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_uuid(&self.uuid);
         let action = &self.action;

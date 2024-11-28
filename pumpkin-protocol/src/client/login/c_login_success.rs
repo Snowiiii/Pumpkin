@@ -19,7 +19,7 @@ impl<'a> CLoginSuccess<'a> {
     }
 }
 
-impl<'a> ClientPacket for CLoginSuccess<'a> {
+impl ClientPacket for CLoginSuccess<'_> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_uuid(self.uuid);
         bytebuf.put_string(self.username);

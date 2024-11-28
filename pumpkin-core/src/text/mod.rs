@@ -85,7 +85,7 @@ impl<'a> TextComponent<'a> {
     }
 }
 
-impl<'a> serde::Serialize for TextComponent<'a> {
+impl serde::Serialize for TextComponent<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -155,6 +155,13 @@ impl<'a> TextComponent<'a> {
     /// Allows for a tooltip to be displayed when the player hovers their mouse over text.
     pub fn hover_event(mut self, event: HoverEvent<'a>) -> Self {
         self.style.hover_event = Some(event);
+        self
+    }
+
+    /// Allows you to change the font of the text.
+    /// Default fonts: `minecraft:default`, `minecraft:uniform`, `minecraft:alt`, `minecraft:illageralt`
+    pub fn font(mut self, identifier: String) -> Self {
+        self.style.font = Some(identifier);
         self
     }
 

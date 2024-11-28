@@ -11,7 +11,7 @@ use args::ConsumedArgs;
 use async_trait::async_trait;
 use commands::{
     cmd_clear, cmd_craft, cmd_echest, cmd_fill, cmd_gamemode, cmd_give, cmd_help, cmd_kick,
-    cmd_kill, cmd_list, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport,
+    cmd_kill, cmd_list, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_time,
     cmd_worldborder,
 };
 use dispatcher::CommandError;
@@ -32,7 +32,7 @@ pub enum CommandSender<'a> {
     Player(Arc<Player>),
 }
 
-impl<'a> fmt::Display for CommandSender<'a> {
+impl fmt::Display for CommandSender<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -123,6 +123,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_kick::init_command_tree());
     dispatcher.register(cmd_worldborder::init_command_tree());
     dispatcher.register(cmd_teleport::init_command_tree());
+    dispatcher.register(cmd_time::init_command_tree());
     dispatcher.register(cmd_give::init_command_tree());
     dispatcher.register(cmd_list::init_command_tree());
     dispatcher.register(cmd_clear::init_command_tree());

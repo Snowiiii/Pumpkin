@@ -25,10 +25,7 @@ pub fn generate_tree(
                     y: (chunk_relative_coordinates.y.add(y as i16)).into(),
                     z: z.add(dz as u8).into(),
                 };
-                tree_blocks.push((
-                    block_coordinates,
-                    BlockState::new("minecraft:oak_log").unwrap(),
-                ));
+                tree_blocks.push((block_coordinates, BlockState::new("oak_log").unwrap()));
             }
         }
     }
@@ -43,10 +40,7 @@ pub fn generate_tree(
                     y: (chunk_relative_coordinates.y.add(y as i16)).into(),
                     z: z.add(dz as u8).into(),
                 };
-                tree_blocks.push((
-                    block_coordinates,
-                    BlockState::new("minecraft:oak_leaves").unwrap(),
-                ));
+                tree_blocks.push((block_coordinates, BlockState::new("oak_leaves").unwrap()));
             }
         }
     }

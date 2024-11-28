@@ -40,7 +40,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 - Player Configuration
   - [x] Registries (biome types, paintings, dimensions)
   - [x] Server Brand
-  - [ ] Server Links
+  - [x] Server Links
   - [x] Set Resource Pack
   - [x] Cookies
 - World
@@ -52,7 +52,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Bossbar
   - [x] Chunk Loading
   - [x] Chunk Generation
-  - [ ] World Time
+  - [x] World Time
   - [x] Scoreboard
   - [x] World Borders
   - [ ] World Saving

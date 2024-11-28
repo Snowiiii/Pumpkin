@@ -34,7 +34,7 @@ class Items : Extractor.Extractor {
                 ).getOrThrow()
             )
 
-            itemsJson.add(Registries.ITEM.getId(realItem).toString(), itemJson)
+            itemsJson.add(Registries.ITEM.getId(realItem).path, itemJson)
         }
         return itemsJson
     }

@@ -13,7 +13,7 @@ impl<'a> CKnownPacks<'a> {
     }
 }
 
-impl<'a> ClientPacket for CKnownPacks<'a> {
+impl ClientPacket for CKnownPacks<'_> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_list::<KnownPack>(self.known_packs, |p, v| {
             p.put_string(v.namespace);

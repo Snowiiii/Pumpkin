@@ -35,6 +35,9 @@ pub struct Style<'a> {
     /// Allows for a tooltip to be displayed when the player hovers their mouse over text.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hover_event: Option<HoverEvent<'a>>,
+    /// Allows you to change the font of the text.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font: Option<String>,
 }
 
 impl<'a> Style<'a> {
@@ -93,6 +96,13 @@ impl<'a> Style<'a> {
     /// Allows for a tooltip to be displayed when the player hovers their mouse over text.
     pub fn hover_event(mut self, event: HoverEvent<'a>) -> Self {
         self.hover_event = Some(event);
+        self
+    }
+
+    /// Allows you to change the font of the text.
+    /// Default fonts: `minecraft:default`, `minecraft:uniform`, `minecraft:alt`, `minecraft:illageralt`
+    pub fn font(mut self, identifier: String) -> Self {
+        self.font = Some(identifier);
         self
     }
 }

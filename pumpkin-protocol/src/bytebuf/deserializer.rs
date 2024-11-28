@@ -31,7 +31,7 @@ impl<'a> Deserializer<'a> {
     }
 }
 
-impl<'a, 'de> de::Deserializer<'de> for Deserializer<'a> {
+impl<'de> de::Deserializer<'de> for Deserializer<'_> {
     type Error = DeserializerError;
 
     fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value, Self::Error>

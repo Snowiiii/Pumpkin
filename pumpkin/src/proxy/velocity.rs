@@ -1,3 +1,6 @@
+/// Proxy implementation for Velocity <https://papermc.io/software/velocity> by `PaperMC`
+/// Sadly `PaperMC` does not care about 3th Parties providing support for Velocity, There is no documentation.
+/// I had to understand the Code logic by looking at `PaperMC`'s Velocity implementation: <https://github.com/PaperMC/Paper/blob/master/patches/server/0731-Add-Velocity-IP-Forwarding-Support.patch>
 use std::net::{IpAddr, SocketAddr};
 
 use bytes::{BufMut, BytesMut};
@@ -12,10 +15,6 @@ use sha2::Sha256;
 use thiserror::Error;
 
 use crate::client::{authentication::GameProfile, Client};
-
-/// Proxy implementation for Velocity <https://papermc.io/software/velocity> by `PaperMC`
-/// Sadly `PaperMC` does not care about 3th Parties providing support for Velocity, There is no documentation.
-/// I had to understand the Code logic by looking at `PaperMC`'s Velocity implementation: <https://github.com/PaperMC/Paper/blob/master/patches/server/0731-Add-Velocity-IP-Forwarding-Support.patch>
 
 type HmacSha256 = Hmac<Sha256>;
 

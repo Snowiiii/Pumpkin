@@ -20,7 +20,7 @@ class SyncedRegistries : Extractor.Extractor {
         val json = JsonObject()
         registries.forEach { entry ->
             json.add(
-                entry.key().value.toString(),
+                entry.key().value.path,
                 mapJson(entry, server.registryManager, server.combinedDynamicRegistries)
             )
         }
@@ -37,7 +37,7 @@ class SyncedRegistries : Extractor.Extractor {
         val json = JsonObject()
         registry.streamEntries().forEach { entry ->
             json.add(
-                entry.key.orElseThrow().value.toString(),
+                entry.key.orElseThrow().value.path,
                 codec.encodeStart(
                     combinedRegistries.combinedRegistryManager.getOps(JsonOps.INSTANCE),
                     entry.value()

@@ -47,29 +47,18 @@ pub struct Registry {
 
 #[derive(Serialize, Deserialize)]
 pub struct SyncedRegistry {
-    #[serde(rename = "minecraft:worldgen/biome")]
+    #[serde(rename = "worldgen/biome")]
     biome: IndexMap<String, Biome>,
-    #[serde(rename = "minecraft:chat_type")]
     chat_type: IndexMap<String, ChatType>,
-    #[serde(rename = "minecraft:trim_pattern")]
     trim_pattern: IndexMap<String, TrimPattern>,
-    #[serde(rename = "minecraft:trim_material")]
     trim_material: IndexMap<String, TrimMaterial>,
-    #[serde(rename = "minecraft:wolf_variant")]
     wolf_variant: IndexMap<String, WolfVariant>,
-    #[serde(rename = "minecraft:painting_variant")]
     painting_variant: IndexMap<String, Painting>,
-    #[serde(rename = "minecraft:dimension_type")]
     dimension_type: IndexMap<String, Dimension>,
-    #[serde(rename = "minecraft:damage_type")]
     damage_type: IndexMap<String, DamageType>,
-    #[serde(rename = "minecraft:banner_pattern")]
     banner_pattern: IndexMap<String, BannerPattern>,
-    #[serde(rename = "minecraft:enchantment")]
     enchantment: IndexMap<String, Enchantment>,
-    #[serde(rename = "minecraft:jukebox_song")]
     jukebox_song: IndexMap<String, JukeboxSong>,
-    #[serde(rename = "minecraft:instrument")]
     instrument: IndexMap<String, Instrument>,
 }
 

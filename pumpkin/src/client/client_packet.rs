@@ -1,3 +1,4 @@
+use super::{authentication::AuthError, Client, PlayerConfig};
 use crate::{
     client::authentication::{self, offline_uuid, validate_textures, GameProfile},
     entity::player::{ChatMode, Hand},
@@ -10,6 +11,7 @@ use crate::{
 use num_traits::FromPrimitive;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::TextComponent;
+use pumpkin_protocol::client::config::{CServerLinks, Label, Link, LinkType};
 use pumpkin_protocol::server::config::SCookieResponse as SCCookieResponse;
 use pumpkin_protocol::server::login::SCookieResponse as SLCookieResponse;
 use pumpkin_protocol::{
@@ -26,9 +28,68 @@ use pumpkin_protocol::{
     },
     ConnectionState, KnownPack, VarInt, CURRENT_MC_PROTOCOL,
 };
+use std::sync::LazyLock;
 use uuid::Uuid;
 
-use super::{authentication::AuthError, Client, PlayerConfig};
+static LINKS: LazyLock<Vec<Link>> = LazyLock::new(|| {
+    let mut links: Vec<Link> = Vec::new();
+
+    let bug_report = &ADVANCED_CONFIG.server_links.bug_report;
+    if !bug_report.is_empty() {
+        links.push(Link::new(Label::BuiltIn(LinkType::BugReport), bug_report));
+    }
+
+    let support = &ADVANCED_CONFIG.server_links.support;
+    if !support.is_empty() {
+        links.push(Link::new(Label::BuiltIn(LinkType::Support), support));
+    }
+
+    let status = &ADVANCED_CONFIG.server_links.status;
+    if !status.is_empty() {
+        links.push(Link::new(Label::BuiltIn(LinkType::Status), status));
+    }
+
+    let feedback = &ADVANCED_CONFIG.server_links.feedback;
+    if !feedback.is_empty() {
+        links.push(Link::new(Label::BuiltIn(LinkType::Feedback), feedback));
+    }
+
+    let community = &ADVANCED_CONFIG.server_links.community;
+    if !community.is_empty() {
+        links.push(Link::new(Label::BuiltIn(LinkType::Community), community));
+    }
+
+    let website = &ADVANCED_CONFIG.server_links.website;
+    if !website.is_empty() {
+        links.push(Link::new(Label::BuiltIn(LinkType::Website), website));
+    }
+
+    let forums = &ADVANCED_CONFIG.server_links.forums;
+    if !forums.is_empty() {
+        links.push(Link::new(Label::BuiltIn(LinkType::Forums), forums));
+    }
+
+    let news = &ADVANCED_CONFIG.server_links.news;
+    if !news.is_empty() {
+        links.push(Link::new(Label::BuiltIn(LinkType::News), news));
+    }
+
+    let announcements = &ADVANCED_CONFIG.server_links.announcements;
+    if !announcements.is_empty() {
+        links.push(Link::new(
+            Label::BuiltIn(LinkType::Announcements),
+            announcements,
+        ));
+    }
+
+    for (key, value) in &ADVANCED_CONFIG.server_links.custom {
+        links.push(Link::new(
+            Label::TextComponent(TextComponent::text(key)),
+            value,
+        ));
+    }
+    links
+});
 
 /// Processes incoming Packets from the Client to the Server
 /// Implements the `Client` Packets
@@ -305,6 +366,11 @@ impl Client {
             );
 
             self.send_packet(&resource_pack).await;
+        }
+
+        if ADVANCED_CONFIG.server_links.enabled {
+            self.send_packet(&CServerLinks::new(&VarInt(LINKS.len() as i32), &LINKS))
+                .await;
         }
 
         // known data packs

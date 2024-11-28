@@ -23,12 +23,14 @@ pub use compression::CompressionConfig;
 pub use lan_broadcast::LANBroadcastConfig;
 pub use pvp::PVPConfig;
 pub use rcon::RCONConfig;
+pub use server_links::ServerLinksConfig;
 
 mod commands;
 pub mod compression;
 mod lan_broadcast;
 mod pvp;
 mod rcon;
+mod server_links;
 
 use proxy::ProxyConfig;
 use resource_pack::ResourcePackConfig;
@@ -55,6 +57,7 @@ pub struct AdvancedConfiguration {
     pub pvp: PVPConfig,
     pub logging: LoggingConfig,
     pub query: QueryConfig,
+    pub server_links: ServerLinksConfig,
     pub lan_broadcast: LANBroadcastConfig,
 }
 
