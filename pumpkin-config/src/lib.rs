@@ -24,8 +24,8 @@ pub use compression::CompressionConfig;
 pub use lan_broadcast::LANBroadcastConfig;
 pub use pvp::PVPConfig;
 pub use rcon::RCONConfig;
-pub use translation::TranslationConfig;
 pub use server_links::ServerLinksConfig;
+pub use translation::TranslationConfig;
 
 mod commands;
 pub mod compression;
