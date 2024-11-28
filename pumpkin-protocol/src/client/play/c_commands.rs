@@ -17,7 +17,7 @@ impl<'a> CCommands<'a> {
     }
 }
 
-impl<'a> ClientPacket for CCommands<'a> {
+impl ClientPacket for CCommands<'_> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_list(&self.nodes, |bytebuf, node: &ProtoNode| {
             node.write_to(bytebuf)
@@ -46,7 +46,7 @@ pub enum ProtoNodeType<'a> {
     },
 }
 
-impl<'a> ProtoNode<'a> {
+impl ProtoNode<'_> {
     const FLAG_IS_EXECUTABLE: u8 = 4;
     const FLAG_HAS_REDIRECT: u8 = 8;
     const FLAG_HAS_SUGGESTION_TYPE: u8 = 16;
@@ -181,7 +181,7 @@ pub enum ProtoCmdArgParser<'a> {
     Uuid,
 }
 
-impl<'a> ProtoCmdArgParser<'a> {
+impl ProtoCmdArgParser<'_> {
     pub const ENTITY_FLAG_ONLY_SINGLE: u8 = 1;
     pub const ENTITY_FLAG_PLAYERS_ONLY: u8 = 2;
 

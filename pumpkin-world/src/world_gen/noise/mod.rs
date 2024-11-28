@@ -70,7 +70,7 @@ pub struct BuiltInNoiseParams<'a> {
     nether_state_selector: DoublePerlinNoiseParameters<'a>,
 }
 
-impl<'a> BuiltInNoiseParams<'a> {
+impl BuiltInNoiseParams<'_> {
     pub fn new() -> Self {
         Self {
             temperature: DoublePerlinNoiseParameters::new(

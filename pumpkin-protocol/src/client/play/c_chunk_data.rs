@@ -7,7 +7,7 @@ use pumpkin_world::{chunk::ChunkData, DIRECT_PALETTE_BITS};
 #[client_packet("play:level_chunk_with_light")]
 pub struct CChunkData<'a>(pub &'a ChunkData);
 
-impl<'a> ClientPacket for CChunkData<'a> {
+impl ClientPacket for CChunkData<'_> {
     fn write(&self, buf: &mut crate::bytebuf::ByteBuffer) {
         // Chunk X
         buf.put_i32(self.0.position.x);

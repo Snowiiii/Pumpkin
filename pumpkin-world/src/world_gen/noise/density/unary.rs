@@ -65,7 +65,7 @@ pub struct UnaryFunction<'a> {
 }
 
 impl<'a> UnaryFunction<'a> {
-    pub(crate) fn create(action: UnaryType, input: Arc<DensityFunction<'a>>) -> UnaryFunction {
+    pub(crate) fn create(action: UnaryType, input: Arc<DensityFunction<'a>>) -> UnaryFunction<'a> {
         let base_min = input.min();
         let new_min = Self::internal_apply(&action, base_min);
         let new_max = Self::internal_apply(&action, input.max());

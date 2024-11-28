@@ -145,8 +145,9 @@ impl ChunkReader for AnvilChunkReader {
         // TODO: check checksum to make sure chunk is not corrupted
         let header = file_buf.drain(0..5).collect_vec();
 
-        let compression = Compression::from_byte(header[4])
-            .ok_or_else(|| ChunkReadingError::Compression(CompressionError::UnknownCompression))?;
+        let compression = Compression::from_byte(header[4]).ok_or(
+            ChunkReadingError::Compression(CompressionError::UnknownCompression),
+        )?;
 
         let size = u32::from_be_bytes(header[..4].try_into().unwrap());
 

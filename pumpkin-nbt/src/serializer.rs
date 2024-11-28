@@ -100,7 +100,7 @@ where
     Ok(())
 }
 
-impl<'a> ser::Serializer for &'a mut Serializer {
+impl ser::Serializer for &mut Serializer {
     type Ok = ();
     type Error = Error;
 
@@ -368,7 +368,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
 }
 
-impl<'a> ser::SerializeSeq for &'a mut Serializer {
+impl ser::SerializeSeq for &mut Serializer {
     type Ok = ();
     type Error = Error;
 
@@ -386,7 +386,7 @@ impl<'a> ser::SerializeSeq for &'a mut Serializer {
     }
 }
 
-impl<'a> ser::SerializeStruct for &'a mut Serializer {
+impl ser::SerializeStruct for &mut Serializer {
     type Ok = ();
     type Error = Error;
 
@@ -404,7 +404,7 @@ impl<'a> ser::SerializeStruct for &'a mut Serializer {
     }
 }
 
-impl<'a> ser::SerializeMap for &'a mut Serializer {
+impl ser::SerializeMap for &mut Serializer {
     type Ok = ();
     type Error = Error;
 

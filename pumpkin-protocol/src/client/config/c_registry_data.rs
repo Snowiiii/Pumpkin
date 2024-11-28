@@ -23,7 +23,7 @@ pub struct RegistryEntry<'a> {
     pub data: BytesMut,
 }
 
-impl<'a> ClientPacket for CRegistryData<'a> {
+impl ClientPacket for CRegistryData<'_> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_string(self.registry_id);
         bytebuf.put_list::<RegistryEntry>(self.entries, |p, v| {

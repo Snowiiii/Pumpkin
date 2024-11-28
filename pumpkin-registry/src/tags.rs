@@ -82,7 +82,7 @@ impl<'de> Deserialize<'de> for TagType {
         D: Deserializer<'de>,
     {
         struct TagVisitor;
-        impl<'de> Visitor<'de> for TagVisitor {
+        impl Visitor<'_> for TagVisitor {
             type Value = TagType;
             fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
                 write!(formatter, "valid tag")
