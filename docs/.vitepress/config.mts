@@ -42,6 +42,7 @@ export default defineConfig({
           { text: "PVP", link: "/config/pvp"},
           { text: "Logging", link: "/config/logging"},
           { text: "Query", link: "/config/query"},
+          { text: "LAN Broadcast", link: "/config/lan-broadcast"},
         ],
       },
       {
