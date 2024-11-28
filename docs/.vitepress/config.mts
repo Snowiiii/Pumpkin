@@ -40,6 +40,7 @@ export default defineConfig({
           { text: "Commands", link: "/config/commands"},
           { text: "RCON", link: "/config/rcon"},
           { text: "PVP", link: "/config/pvp"},
+          { text: "Logging", link: "/config/logging"},
         ],
       },
       {
