@@ -3,19 +3,27 @@ use std::{
     sync::Arc,
 };
 
+pub mod level_time;
 pub mod player_chunker;
 
-use crate::entity::{
-    player::{ChunkHandleWrapper, Player},
-    Entity,
+use crate::{
+    command::client_cmd_suggestions,
+    entity::{
+        player::{ChunkHandleWrapper, Player},
+        Entity,
+    },
+    error::PumpkinError,
+    server::Server,
 };
+use itertools::Itertools;
+use level_time::LevelTime;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_protocol::{
-    client::play::{CBlockUpdate, CSoundEffect, CWorldEvent},
+    client::play::{CBlockUpdate, CRespawn, CSoundEffect, CWorldEvent},
     SoundCategory,
 };
 use pumpkin_protocol::{
@@ -25,11 +33,18 @@ use pumpkin_protocol::{
     },
     ClientPacket, VarInt,
 };
+use pumpkin_registry::DimensionType;
 use pumpkin_world::chunk::ChunkData;
-use pumpkin_world::coordinates::ChunkRelativeBlockCoordinates;
 use pumpkin_world::level::Level;
+use pumpkin_world::{
+    block::block_registry::{
+        get_block_and_state_by_state_id, get_block_by_state_id, get_state_by_state_id,
+    },
+    coordinates::ChunkRelativeBlockCoordinates,
+};
 use rand::{thread_rng, Rng};
 use scoreboard::Scoreboard;
+use thiserror::Error;
 use tokio::sync::{mpsc::Receiver, Mutex};
 use tokio::{
     sync::{mpsc, RwLock},
@@ -37,6 +52,8 @@ use tokio::{
 };
 use worldborder::Worldborder;
 
+pub mod bossbar;
+pub mod custom_bossbar;
 pub mod scoreboard;
 pub mod worldborder;
 
@@ -44,6 +61,32 @@ type ChunkReceiver = (
     Vec<(Vector2<i32>, JoinHandle<()>)>,
     Receiver<Arc<RwLock<ChunkData>>>,
 );
+
+#[derive(Debug, Error)]
+pub enum GetBlockError {
+    BlockOutOfWorldBounds,
+    InvalidBlockId,
+}
+
+impl std::fmt::Display for GetBlockError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
+impl PumpkinError for GetBlockError {
+    fn is_kick(&self) -> bool {
+        false
+    }
+
+    fn severity(&self) -> log::Level {
+        log::Level::Warn
+    }
+
+    fn client_kick_reason(&self) -> Option<String> {
+        None
+    }
+}
 
 /// Represents a Minecraft world, containing entities, players, and the underlying level data.
 ///
@@ -63,17 +106,23 @@ pub struct World {
     pub scoreboard: Mutex<Scoreboard>,
     /// The world's worldborder, defining the playable area and controlling its expansion or contraction.
     pub worldborder: Mutex<Worldborder>,
+    /// The world's time, including counting ticks for weather, time cycles and statistics
+    pub level_time: Mutex<LevelTime>,
+    /// The type of dimension the world is in
+    pub dimension_type: DimensionType,
     // TODO: entities
 }
 
 impl World {
     #[must_use]
-    pub fn load(level: Level) -> Self {
+    pub fn load(level: Level, dimension_type: DimensionType) -> Self {
         Self {
             level: Arc::new(level),
             current_players: Arc::new(Mutex::new(HashMap::new())),
             scoreboard: Mutex::new(Scoreboard::new()),
             worldborder: Mutex::new(Worldborder::new(0.0, 0.0, 29_999_984.0, 0, 0, 0)),
+            level_time: Mutex::new(LevelTime::new()),
+            dimension_type,
         }
     }
 
@@ -128,6 +177,13 @@ impl World {
     }
 
     pub async fn tick(&self) {
+        // world ticks
+        let mut level_time = self.level_time.lock().await;
+        level_time.tick_time();
+        if level_time.world_age % 20 == 0 {
+            level_time.send_time(self).await;
+        }
+        // player ticks
         let current_players = self.current_players.lock().await;
         for player in current_players.values() {
             player.tick().await;
@@ -138,9 +194,11 @@ impl World {
     pub async fn get_top_block(&self, position: Vector2<i32>) -> i32 {
         for y in (-64..=319).rev() {
             let pos = WorldPosition(Vector3::new(position.x, y, position.z));
-            let block = self.get_block(pos).await;
-            if block == 0 || block == 750 || block == 751 {
-                continue;
+            let block = self.get_block_state(pos).await;
+            if let Ok(block) = block {
+                if block.air {
+                    continue;
+                }
             }
             return y;
         }
@@ -148,7 +206,19 @@ impl World {
     }
 
     #[expect(clippy::too_many_lines)]
-    pub async fn spawn_player(&self, base_config: &BasicConfiguration, player: Arc<Player>) {
+    pub async fn spawn_player(
+        &self,
+        base_config: &BasicConfiguration,
+        player: Arc<Player>,
+        server: &Server,
+    ) {
+        let command_dispatcher = &server.command_dispatcher;
+        let dimensions = &server
+            .dimensions
+            .iter()
+            .map(DimensionType::name)
+            .collect_vec();
+
         // This code follows the vanilla packet order
         let entity_id = player.entity_id();
         let gamemode = player.gamemode.load();
@@ -164,15 +234,15 @@ impl World {
             .send_packet(&CLogin::new(
                 entity_id,
                 base_config.hardcore,
-                &["minecraft:overworld"],
+                dimensions,
                 base_config.max_players.into(),
                 base_config.view_distance.into(), //  TODO: view distance
                 base_config.simulation_distance.into(), // TODO: sim view dinstance
                 false,
                 true,
                 false,
-                0.into(),
-                "minecraft:overworld",
+                (self.dimension_type as u8).into(),
+                self.dimension_type.name(),
                 0, // seed
                 gamemode as u8,
                 base_config.default_gamemode as i8,
@@ -184,15 +254,9 @@ impl World {
                 false,
             ))
             .await;
-
-        // player abilities
-        // TODO: this is for debug purpose, remove later
-        log::debug!("Sending player abilities to {}", player.gameprofile.name);
-        {
-            let mut abilities = player.abilities.lock().await;
-            abilities.allow_flying = true;
-        }
-        player.send_abilties_update().await;
+        // permissions, i. e. the commands a player may use
+        player.send_permission_lvl_update().await;
+        client_cmd_suggestions::send_c_commands_packet(&player, command_dispatcher).await;
 
         // teleport
         let mut position = Vector3::new(10.0, 120.0, 10.0);
@@ -337,6 +401,112 @@ impl World {
 
         // Spawn in initial chunks
         player_chunker::player_join(self, player.clone()).await;
+
+        // if let Some(bossbars) = self..lock().await.get_player_bars(&player.gameprofile.id) {
+        //     for bossbar in bossbars {
+        //         player.send_bossbar(bossbar).await;
+        //     }
+        // }
+    }
+
+    pub async fn respawn_player(&self, player: &Arc<Player>, alive: bool) {
+        let last_pos = player.living_entity.last_pos.load();
+        let death_dimension = player.world().dimension_type.name();
+        let death_location = WorldPosition(Vector3::new(
+            last_pos.x.round() as i32,
+            last_pos.y.round() as i32,
+            last_pos.z.round() as i32,
+        ));
+
+        let data_kept = u8::from(alive);
+
+        // TODO: switch world in player entity to new world
+
+        player
+            .client
+            .send_packet(&CRespawn::new(
+                (self.dimension_type as u8).into(),
+                self.dimension_type.name(),
+                0, // seed
+                player.gamemode.load() as u8,
+                player.gamemode.load() as i8,
+                false,
+                false,
+                Some((death_dimension, death_location)),
+                0.into(),
+                0.into(),
+                data_kept,
+            ))
+            .await;
+
+        log::debug!("Sending player abilities to {}", player.gameprofile.name);
+        player.send_abilties_update().await;
+
+        player.send_permission_lvl_update().await;
+
+        // teleport
+        let mut position = Vector3::new(10.0, 120.0, 10.0);
+        let yaw = 10.0;
+        let pitch = 10.0;
+
+        let top = self
+            .get_top_block(Vector2::new(position.x as i32, position.z as i32))
+            .await;
+        position.y = f64::from(top + 1);
+
+        log::debug!("Sending player teleport to {}", player.gameprofile.name);
+        player.teleport(position, yaw, pitch).await;
+
+        player.living_entity.last_pos.store(position);
+
+        // TODO: difficulty, exp bar, status effect
+
+        self.worldborder
+            .lock()
+            .await
+            .init_client(&player.client)
+            .await;
+
+        // TODO: world spawn (compass stuff)
+
+        player
+            .client
+            .send_packet(&CGameEvent::new(GameEvent::StartWaitingChunks, 0.0))
+            .await;
+
+        let entity = &player.living_entity.entity;
+        let entity_id = entity.entity_id;
+
+        let skin_parts = player.config.lock().await.skin_parts;
+        let entity_metadata_packet =
+            CSetEntityMetadata::new(entity_id.into(), Metadata::new(17, VarInt(0), &skin_parts));
+
+        self.broadcast_packet_except(
+            &[player.gameprofile.id],
+            // TODO: add velo
+            &CSpawnEntity::new(
+                entity.entity_id.into(),
+                player.gameprofile.id,
+                (EntityType::Player as i32).into(),
+                position.x,
+                position.y,
+                position.z,
+                pitch,
+                yaw,
+                yaw,
+                0.into(),
+                0.0,
+                0.0,
+                0.0,
+            ),
+        )
+        .await;
+
+        player_chunker::player_join(self, player.clone()).await;
+        self.broadcast_packet_all(&entity_metadata_packet).await;
+        // update commands
+
+        player.set_health(20.0, 20, 20.0).await;
     }
 
     pub fn mark_chunks_as_not_watched(&self, chunks: &[Vector2<i32>]) -> Vec<Vector2<i32>> {
@@ -592,17 +762,28 @@ impl World {
         self.broadcast_packet_all(&CRemoveEntities::new(&[entity.entity_id.into()]))
             .await;
     }
-    pub async fn set_block(&self, position: WorldPosition, block_id: u16) {
+
+    /// Sets a block
+    pub async fn set_block_state(&self, position: WorldPosition, block_state_id: u16) -> u16 {
         let (chunk_coordinate, relative_coordinates) = position.chunk_and_chunk_relative_position();
 
         // Since we divide by 16 remnant can never exceed u8
         let relative = ChunkRelativeBlockCoordinates::from(relative_coordinates);
 
         let chunk = self.receive_chunk(chunk_coordinate).await;
-        chunk.write().await.blocks.set_block(relative, block_id);
+        let replaced_block_state_id = chunk
+            .write()
+            .await
+            .blocks
+            .set_block(relative, block_state_id);
 
-        self.broadcast_packet_all(&CBlockUpdate::new(&position, i32::from(block_id).into()))
-            .await;
+        self.broadcast_packet_all(&CBlockUpdate::new(
+            &position,
+            i32::from(block_state_id).into(),
+        ))
+        .await;
+
+        replaced_block_state_id
     }
 
     // Stream the chunks (don't collect them and then do stuff with them)
@@ -620,18 +801,64 @@ impl World {
             .expect("Channel closed for unknown reason")
     }
 
-    pub async fn break_block(&self, position: WorldPosition) {
-        self.set_block(position, 0).await;
+    pub async fn break_block(&self, position: WorldPosition, cause: Option<&Player>) {
+        let broken_block_state_id = self.set_block_state(position, 0).await;
 
-        self.broadcast_packet_all(&CWorldEvent::new(2001, &position, 11, false))
-            .await;
+        let particles_packet =
+            CWorldEvent::new(2001, &position, broken_block_state_id.into(), false);
+
+        match cause {
+            Some(player) => {
+                self.broadcast_packet_except(&[player.gameprofile.id], &particles_packet)
+                    .await;
+            }
+            None => self.broadcast_packet_all(&particles_packet).await,
+        }
     }
 
-    pub async fn get_block(&self, position: WorldPosition) -> u16 {
+    pub async fn get_block_state_id(&self, position: WorldPosition) -> Result<u16, GetBlockError> {
         let (chunk, relative) = position.chunk_and_chunk_relative_position();
         let relative = ChunkRelativeBlockCoordinates::from(relative);
         let chunk = self.receive_chunk(chunk).await;
-        let chunk = chunk.read().await;
-        chunk.blocks.get_block(relative)
+        let chunk: tokio::sync::RwLockReadGuard<ChunkData> = chunk.read().await;
+
+        let Some(id) = chunk.blocks.get_block(relative) else {
+            return Err(GetBlockError::BlockOutOfWorldBounds);
+        };
+
+        Ok(id)
+    }
+
+    /// Gets the Block from the Block Registry, Returns None if the Block has not been found
+    pub async fn get_block(
+        &self,
+        position: WorldPosition,
+    ) -> Result<&pumpkin_world::block::block_registry::Block, GetBlockError> {
+        let id = self.get_block_state_id(position).await?;
+        get_block_by_state_id(id).ok_or(GetBlockError::InvalidBlockId)
+    }
+
+    /// Gets the Block state from the Block Registry, Returns None if the Block state has not been found
+    pub async fn get_block_state(
+        &self,
+        position: WorldPosition,
+    ) -> Result<&pumpkin_world::block::block_registry::State, GetBlockError> {
+        let id = self.get_block_state_id(position).await?;
+        get_state_by_state_id(id).ok_or(GetBlockError::InvalidBlockId)
+    }
+
+    /// Gets the Block + Block state from the Block Registry, Returns None if the Block state has not been found
+    pub async fn get_block_and_block_state(
+        &self,
+        position: WorldPosition,
+    ) -> Result<
+        (
+            &pumpkin_world::block::block_registry::Block,
+            &pumpkin_world::block::block_registry::State,
+        ),
+        GetBlockError,
+    > {
+        let id = self.get_block_state_id(position).await?;
+        get_block_and_state_by_state_id(id).ok_or(GetBlockError::InvalidBlockId)
     }
 }

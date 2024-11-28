@@ -5,13 +5,17 @@ edition.workspace = true
 
 [dependencies]
 pumpkin-protocol = { path = "../pumpkin-protocol" }
+pumpkin-nbt = { path = "../pumpkin-nbt" }
 pumpkin-core = { path = "../pumpkin-core" }
+
+indexmap = { version = "2.6.0", features = ["serde"] }
 
 serde.workspace = true
 serde_json.workspace = true
 
+rayon.workspace = true
+
 num-traits.workspace = true
 num-derive.workspace = true
 
-# nbt
-fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
+itertools.workspace = true

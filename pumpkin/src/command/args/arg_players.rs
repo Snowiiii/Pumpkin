@@ -1,18 +1,34 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use pumpkin_protocol::client::play::{
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
+};
 
-use crate::command::dispatcher::InvalidTreeError;
+use crate::command::dispatcher::CommandError;
 use crate::command::tree::RawArgs;
 use crate::command::CommandSender;
 use crate::entity::player::Player;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::{Arg, DefaultNameArgConsumer, FindArg};
+use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// Select zero, one or multiple players
 pub(crate) struct PlayersArgumentConsumer;
+
+impl GetClientSideArgParser for PlayersArgumentConsumer {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        // todo: investigate why this does not accept target selectors
+        ProtoCmdArgParser::Entity {
+            flags: ProtoCmdArgParser::ENTITY_FLAG_PLAYERS_ONLY,
+        }
+    }
+
+    fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
+        None
+    }
+}
 
 #[async_trait]
 impl ArgumentConsumer for PlayersArgumentConsumer {
@@ -22,7 +38,9 @@ impl ArgumentConsumer for PlayersArgumentConsumer {
         server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
-        let players = match args.pop()? {
+        let s = args.pop()?;
+
+        let players = match s {
             "@s" => match src {
                 CommandSender::Player(p) => Some(vec![p.clone()]),
                 _ => None,
@@ -47,6 +65,15 @@ impl ArgumentConsumer for PlayersArgumentConsumer {
 
         players.map(Arg::Players)
     }
+
+    async fn suggest<'a>(
+        &self,
+        _sender: &CommandSender<'a>,
+        _server: &'a Server,
+        _input: &'a str,
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
+        Ok(None)
+    }
 }
 
 impl DefaultNameArgConsumer for PlayersArgumentConsumer {
@@ -62,15 +89,10 @@ impl DefaultNameArgConsumer for PlayersArgumentConsumer {
 impl<'a> FindArg<'a> for PlayersArgumentConsumer {
     type Data = &'a [Arc<Player>];
 
-    fn find_arg(
-        args: &'a super::ConsumedArgs,
-        name: &'a str,
-    ) -> Result<Self::Data, InvalidTreeError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::Players(data)) => Ok(data),
-            _ => Err(InvalidTreeError::InvalidConsumptionError(Some(
-                name.to_string(),
-            ))),
+            _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),
         }
     }
 }

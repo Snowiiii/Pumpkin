@@ -2,7 +2,7 @@ use pumpkin_macros::client_packet;
 
 use crate::{bytebuf::ByteBuffer, ClientPacket, KnownPack};
 
-#[client_packet("configuration:select_known_packs")]
+#[client_packet("config:select_known_packs")]
 pub struct CKnownPacks<'a> {
     known_packs: &'a [KnownPack<'a>],
 }

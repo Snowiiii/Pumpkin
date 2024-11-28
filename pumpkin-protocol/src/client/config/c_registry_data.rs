@@ -1,8 +1,9 @@
+use bytes::BytesMut;
 use pumpkin_macros::client_packet;
 
 use crate::{bytebuf::ByteBuffer, ClientPacket};
 
-#[client_packet("configuration:registry_data")]
+#[client_packet("config:registry_data")]
 pub struct CRegistryData<'a> {
     registry_id: &'a str,
     entries: &'a [RegistryEntry<'a>],
@@ -19,7 +20,7 @@ impl<'a> CRegistryData<'a> {
 
 pub struct RegistryEntry<'a> {
     pub entry_id: &'a str,
-    pub data: Vec<u8>,
+    pub data: BytesMut,
 }
 
 impl<'a> ClientPacket for CRegistryData<'a> {

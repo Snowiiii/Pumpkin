@@ -64,13 +64,13 @@ impl LivingEntity {
             .await;
     }
 
-    pub async fn damage(&self, amount: f32) {
+    // TODO add damage_type enum
+    pub async fn damage(&self, amount: f32, damage_type: u8) {
         self.entity
             .world
             .broadcast_packet_all(&CDamageEvent::new(
                 self.entity.entity_id.into(),
-                // TODO add damage_type id
-                0.into(),
+                damage_type.into(),
                 None,
                 None,
                 None,
@@ -78,10 +78,11 @@ impl LivingEntity {
             .await;
 
         let new_health = (self.health.load() - amount).max(0.0);
-        self.set_health(new_health).await;
 
         if new_health == 0.0 {
             self.kill().await;
+        } else {
+            self.set_health(new_health).await;
         }
     }
 
@@ -129,7 +130,7 @@ impl LivingEntity {
                 return;
             }
 
-            self.damage(damage).await;
+            self.damage(damage, 10).await; // Fall
         } else if y_diff < 0.0 {
             self.fall_distance.store(0.0);
         } else {
@@ -142,6 +143,8 @@ impl LivingEntity {
     ///
     /// This is similar to `kill` but Spawn Particles, Animation and plays death sound
     pub async fn kill(&self) {
+        self.set_health(0.0).await;
+
         // Spawns death smoke particles
         self.entity
             .world

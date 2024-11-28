@@ -7,7 +7,7 @@ use pumpkin_core::text::TextComponent;
 
 use crate::{
     command::{
-        args::ConsumedArgs, tree::CommandTree, CommandExecutor, CommandSender, InvalidTreeError,
+        args::ConsumedArgs, tree::CommandTree, CommandError, CommandExecutor, CommandSender,
     },
     entity::player::Player,
 };
@@ -25,7 +25,7 @@ impl CommandExecutor for ListExecutor {
         sender: &mut CommandSender<'a>,
         server: &crate::server::Server,
         _args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let players: Vec<Arc<Player>> = server.get_all_players().await;
 
         let message = if players.is_empty() {

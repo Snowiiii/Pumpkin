@@ -16,6 +16,12 @@ members = [
 version = "0.1.0"
 edition = "2021"
 
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev]
+opt-level = 1
+
 [profile.release]
 lto = true
 codegen-units = 1
@@ -37,9 +43,11 @@ tokio = { version = "1.41", features = [
     "signal",
 ] }
 
-thiserror = "1.0"
+thiserror = "2"
 num-traits = "0.2"
 num-derive = "0.4"
+
+bytes = "1.8"
 
 # Concurrency/Parallelism and Synchronization
 rayon = "1.10.0"

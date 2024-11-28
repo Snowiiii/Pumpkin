@@ -3,8 +3,8 @@ use pumpkin_core::text::TextComponent;
 
 use crate::command::args::arg_command::CommandTreeArgumentConsumer;
 use crate::command::args::{Arg, ConsumedArgs};
-use crate::command::dispatcher::InvalidTreeError;
-use crate::command::dispatcher::InvalidTreeError::InvalidConsumptionError;
+use crate::command::dispatcher::CommandError;
+use crate::command::dispatcher::CommandError::InvalidConsumption;
 use crate::command::tree::{Command, CommandTree};
 use crate::command::tree_builder::argument;
 use crate::command::{CommandExecutor, CommandSender};
@@ -25,9 +25,9 @@ impl CommandExecutor for CommandHelpExecutor {
         sender: &mut CommandSender<'a>,
         _server: &Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let Some(Arg::CommandTree(tree)) = args.get(&ARG_COMMAND) else {
-            return Err(InvalidConsumptionError(Some(ARG_COMMAND.into())));
+            return Err(InvalidConsumption(Some(ARG_COMMAND.into())));
         };
 
         sender
@@ -52,7 +52,7 @@ impl CommandExecutor for BaseHelpExecutor {
         sender: &mut CommandSender<'a>,
         server: &Server,
         _args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let mut keys: Vec<&str> = server.command_dispatcher.commands.keys().copied().collect();
         keys.sort_unstable();
 

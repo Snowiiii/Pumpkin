@@ -60,7 +60,7 @@ impl RCONClient {
     }
 
     /// Returns if client is closed or not
-    pub async fn handle(&mut self, server: &Server, password: &str) -> bool {
+    pub async fn handle(&mut self, server: &Arc<Server>, password: &str) -> bool {
         if !self.closed {
             match self.read_bytes().await {
                 // Stream closed, so we can't reply, so we just close everything.
@@ -80,7 +80,7 @@ impl RCONClient {
         self.closed
     }
 
-    async fn poll(&mut self, server: &Server, password: &str) -> Result<(), PacketError> {
+    async fn poll(&mut self, server: &Arc<Server>, password: &str) -> Result<(), PacketError> {
         let Some(packet) = self.receive_packet().await? else {
             return Ok(());
         };

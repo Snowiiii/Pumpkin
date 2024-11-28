@@ -1,5 +1,4 @@
 use std::{
-    cmp::min,
     collections::{HashMap, VecDeque},
     sync::{
         atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU32, AtomicU8},
@@ -10,41 +9,44 @@ use std::{
 
 use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
-use num_derive::FromPrimitive;
+use num_derive::{FromPrimitive, ToPrimitive};
 use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::{
-    math::{boundingbox::BoundingBox, position::WorldPosition, vector2::Vector2, vector3::Vector3},
+    math::{
+        boundingbox::{BoundingBox, BoundingBoxSize},
+        position::WorldPosition,
+        vector2::Vector2,
+        vector3::Vector3,
+    },
     text::TextComponent,
     GameMode,
 };
 use pumpkin_entity::{entity_type::EntityType, EntityId};
-use pumpkin_inventory::{player::PlayerInventory, InventoryError};
+use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
+use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
+use pumpkin_protocol::server::play::{SClickContainer, SKeepAlive};
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
-        CCombatDeath, CGameEvent, CHurtAnimation, CKeepAlive, CPlayDisconnect, CPlayerAbilities,
-        CPlayerInfoUpdate, CRespawn, CSetContainerSlot, CSetHealth, CSpawnEntity,
-        CSyncPlayerPosition, CSystemChatMessage, GameEvent, PlayerAction,
+        CCombatDeath, CEntityStatus, CGameEvent, CHurtAnimation, CKeepAlive, CPlayDisconnect,
+        CPlayerAbilities, CPlayerInfoUpdate, CSetHealth, CSyncPlayerPosition, CSystemChatMessage,
+        GameEvent, PlayerAction,
     },
     server::play::{
         SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SClientTickEnd,
-        SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerInput,
-        SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
-        SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
+        SCommandSuggestion, SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction,
+        SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
+        SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
     },
     RawPacket, ServerPacket, SoundCategory, VarInt,
 };
+use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
 use tokio::sync::{Mutex, Notify};
 use tokio::task::JoinHandle;
 
-use pumpkin_protocol::server::play::SKeepAlive;
-use pumpkin_world::{
-    cylindrical_chunk_iterator::Cylindrical,
-    item::{item_registry::Item, ItemStack},
-};
-
 use super::Entity;
+use crate::error::PumpkinError;
 use crate::{
     client::{
         authentication::GameProfile,
@@ -52,9 +54,8 @@ use crate::{
         Client, PlayerConfig,
     },
     server::Server,
-    world::{player_chunker, World},
+    world::World,
 };
-use crate::{error::PumpkinError, world::player_chunker::get_view_distance};
 
 use super::living::LivingEntity;
 
@@ -134,7 +135,7 @@ pub struct Player {
     /// The pending teleport information, including the teleport ID and target location.
     pub awaiting_teleport: Mutex<Option<(VarInt, Vector3<f64>)>>,
     /// The coordinates of the chunk section the player is currently watching.
-    pub watched_section: AtomicCell<Vector3<i32>>,
+    pub watched_section: AtomicCell<Cylindrical>,
     /// Did we send a keep alive Packet and wait for the response?
     pub wait_for_keep_alive: AtomicBool,
     /// Whats the keep alive packet payload we send, The client should responde with the same id
@@ -155,6 +156,9 @@ pub struct Player {
 
     /// Tell tasks to stop if we are closing
     cancel_tasks: Notify,
+
+    /// the players op permission level
+    permission_lvl: PermissionLvl,
 }
 
 impl Player {
@@ -177,12 +181,20 @@ impl Player {
             |profile| profile,
         );
         let config = client.config.lock().await.clone().unwrap_or_default();
+        let view_distance = config.view_distance;
+        let bounding_box_size = BoundingBoxSize {
+            width: 0.6,
+            height: 1.8,
+        };
+
         Self {
             living_entity: LivingEntity::new(Entity::new(
                 entity_id,
                 world,
                 EntityType::Player,
                 1.62,
+                AtomicCell::new(BoundingBox::new_default(&bounding_box_size)),
+                AtomicCell::new(bounding_box_size),
             )),
             config: Mutex::new(config),
             gameprofile,
@@ -198,7 +210,7 @@ impl Player {
             teleport_id_count: AtomicI32::new(0),
             abilities: Mutex::new(Abilities::default()),
             gamemode: AtomicCell::new(gamemode),
-            watched_section: AtomicCell::new(Vector3::new(0, 0, 0)),
+            watched_section: AtomicCell::new(Cylindrical::new(Vector2::new(0, 0), view_distance)),
             wait_for_keep_alive: AtomicBool::new(false),
             keep_alive_id: AtomicI64::new(0),
             last_keep_alive_time: AtomicCell::new(std::time::Instant::now()),
@@ -206,13 +218,15 @@ impl Player {
             pending_chunks: Arc::new(parking_lot::Mutex::new(HashMap::new())),
             pending_chunk_batch: parking_lot::Mutex::new(HashMap::new()),
             cancel_tasks: Notify::new(),
+            // TODO: change this
+            permission_lvl: PermissionLvl::Four,
         }
     }
 
     /// Removes the Player out of the current World
     #[allow(unused_variables)]
     pub async fn remove(&self) {
-        let world = &self.living_entity.entity.world;
+        let world = self.world();
         // Abort pending chunks here too because we might clean up before chunk tasks are done
         self.abort_chunks("closed");
 
@@ -220,9 +234,7 @@ impl Player {
 
         world.remove_player(self).await;
 
-        let watched = self.watched_section.load();
-        let view_distance = get_view_distance(self).await;
-        let cylindrical = Cylindrical::new(Vector2::new(watched.x, watched.z), view_distance);
+        let cylindrical = self.watched_section.load();
 
         // NOTE: This all must be synchronous to make sense! The chunks are handled asynhrously.
         // Non-async code is atomic to async code
@@ -330,14 +342,14 @@ impl Player {
             "Removed player id {} ({}) ({} chunks remain cached)",
             self.gameprofile.name,
             self.client.id,
-            self.living_entity.entity.world.get_cached_chunk_len()
+            self.world().get_cached_chunk_len()
         );
 
-        //self.living_entity.entity.world.level.list_cached();
+        //self.world().level.list_cached();
     }
 
     pub async fn attack(&self, victim: &Arc<Self>) {
-        let world = &self.living_entity.entity.world;
+        let world = self.world();
         let victim_entity = &victim.living_entity.entity;
         let attacker_entity = &self.living_entity.entity;
         let config = &ADVANCED_CONFIG.pvp;
@@ -355,7 +367,7 @@ impl Player {
         {
             world
                 .play_sound(
-                    sound!("minecraft:entity.player.attack.nodamage"),
+                    sound!("entity.player.attack.nodamage"),
                     SoundCategory::Players,
                     &pos,
                 )
@@ -364,11 +376,7 @@ impl Player {
         }
 
         world
-            .play_sound(
-                sound!("minecraft:entity.player.hurt"),
-                SoundCategory::Players,
-                &pos,
-            )
+            .play_sound(sound!("entity.player.hurt"), SoundCategory::Players, &pos)
             .await;
 
         let attack_type = AttackType::new(self, attack_cooldown_progress).await;
@@ -379,7 +387,10 @@ impl Player {
             damage *= 1.5;
         }
 
-        victim.living_entity.damage(damage).await;
+        victim
+            .living_entity
+            .damage(damage, 34) // PlayerAttack
+            .await;
 
         let mut knockback_strength = 1.0;
         match attack_type {
@@ -460,6 +471,10 @@ impl Player {
         self.living_entity.entity.entity_id
     }
 
+    pub const fn world(&self) -> &Arc<World> {
+        &self.living_entity.entity.world
+    }
+
     /// Updates the current abilities the Player has
     pub async fn send_abilties_update(&self) {
         let mut b = 0i8;
@@ -486,96 +501,25 @@ impl Player {
             .await;
     }
 
-    pub async fn respawn(self: &Arc<Self>, alive: bool) {
-        let last_pos = self.living_entity.last_pos.load();
-        let death_location = WorldPosition(Vector3::new(
-            last_pos.x.round() as i32,
-            last_pos.y.round() as i32,
-            last_pos.z.round() as i32,
-        ));
-
-        let data_kept = u8::from(alive);
-
+    /// syncs the players permission level with the client
+    pub async fn send_permission_lvl_update(&self) {
         self.client
-            .send_packet(&CRespawn::new(
-                0.into(),
-                "minecraft:overworld",
-                0, // seed
-                self.gamemode.load() as u8,
-                self.gamemode.load() as i8,
-                false,
-                false,
-                Some(("minecraft:overworld", death_location)),
-                0.into(),
-                0.into(),
-                data_kept,
+            .send_packet(&CEntityStatus::new(
+                self.entity_id(),
+                24 + self.permission_lvl as i8,
             ))
             .await;
+    }
 
-        log::debug!("Sending player abilities to {}", self.gameprofile.name);
-        self.send_abilties_update().await;
+    /// sets the players permission level and syncs it with the client
+    pub async fn set_permission_lvl(&mut self, lvl: PermissionLvl) {
+        self.permission_lvl = lvl;
+        self.send_permission_lvl_update().await;
+    }
 
-        let world = &self.living_entity.entity.world;
-
-        // teleport
-        let mut position = Vector3::new(10.0, 120.0, 10.0);
-        let yaw = 10.0;
-        let pitch = 10.0;
-
-        let top = world
-            .get_top_block(Vector2::new(position.x as i32, position.z as i32))
-            .await;
-        position.y = f64::from(top + 1);
-
-        log::debug!("Sending player teleport to {}", self.gameprofile.name);
-        self.teleport(position, yaw, pitch).await;
-
-        self.living_entity.last_pos.store(position);
-
-        // TODO: difficulty, exp bar, status effect
-
-        let world = &self.living_entity.entity.world;
-        world
-            .worldborder
-            .lock()
-            .await
-            .init_client(&self.client)
-            .await;
-
-        // TODO: world spawn (compass stuff)
-
-        self.client
-            .send_packet(&CGameEvent::new(GameEvent::StartWaitingChunks, 0.0))
-            .await;
-
-        let entity = &self.living_entity.entity;
-        world
-            .broadcast_packet_except(
-                &[self.gameprofile.id],
-                // TODO: add velo
-                &CSpawnEntity::new(
-                    entity.entity_id.into(),
-                    self.gameprofile.id,
-                    (EntityType::Player as i32).into(),
-                    position.x,
-                    position.y,
-                    position.z,
-                    pitch,
-                    yaw,
-                    yaw,
-                    0.into(),
-                    0.0,
-                    0.0,
-                    0.0,
-                ),
-            )
-            .await;
-
-        player_chunker::player_join(world, self.clone()).await;
-
-        // update commands
-
-        self.set_health(20.0, 20, 20.0).await;
+    /// get the players permission level
+    pub fn permission_lvl(&self) -> PermissionLvl {
+        self.permission_lvl
     }
 
     /// yaw and pitch in degrees
@@ -737,7 +681,7 @@ impl Player {
                 },
                 packet_result = self.handle_play_packet(server, &mut packet) => {
                     #[cfg(debug_assertions)]
-                    log::debug!("Handled play packet in {:?}", inst.elapsed());
+                    log::trace!("Handled play packet in {:?}", inst.elapsed());
                     match packet_result {
                         Ok(()) => {}
                         Err(e) => {
@@ -822,6 +766,10 @@ impl Player {
                 self.handle_player_command(SPlayerCommand::read(bytebuf)?)
                     .await;
             }
+            SClickContainer::PACKET_ID => {
+                self.handle_click_container(server, SClickContainer::read(bytebuf)?)
+                    .await?;
+            }
             SSetHeldItem::PACKET_ID => {
                 self.handle_set_held_item(SSetHeldItem::read(bytebuf)?)
                     .await;
@@ -834,9 +782,16 @@ impl Player {
                 self.handle_swing_arm(SSwingArm::read(bytebuf)?).await;
             }
             SUseItemOn::PACKET_ID => {
-                self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await;
+                self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await?;
             }
             SUseItem::PACKET_ID => self.handle_use_item(&SUseItem::read(bytebuf)?),
+            SCommandSuggestion::PACKET_ID => {
+                self.handle_command_suggestion(SCommandSuggestion::read(bytebuf)?, server)
+                    .await;
+            }
+            SPCookieResponse::PACKET_ID => {
+                self.handle_cookie_response(SPCookieResponse::read(bytebuf)?);
+            }
             _ => {
                 log::warn!("Failed to handle player packet id {}", packet.id.0);
                 // TODO: We give an error if all play packets are implemented
@@ -844,90 +799,6 @@ impl Player {
             }
         };
         Ok(())
-    }
-
-    /// Syncs inventory slot with client.
-    pub async fn send_inventory_slot_update(
-        &self,
-        inventory: &mut PlayerInventory,
-        slot_index: usize,
-    ) -> Result<(), InventoryError> {
-        let slot = (&*inventory.get_slot(slot_index)?).into();
-
-        // Returns previous value
-        let i = inventory
-            .state_id
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let packet = CSetContainerSlot::new(
-            PlayerInventory::CONTAINER_ID,
-            (i + 1) as i32,
-            slot_index,
-            &slot,
-        );
-        self.client.send_packet(&packet).await;
-
-        Ok(())
-    }
-
-    /// Add items to inventory if there's space, else drop them to the ground.
-    ///
-    /// This method automatically syncs changes with the client.
-    pub async fn give_items(&self, item: &Item, count: u32) {
-        let mut remaining_items: u32 = count;
-        let max_stack_size = item.max_stack as u8;
-
-        let mut inventory = self.inventory.lock().await;
-
-        // try filling existing ItemStacks first
-        for slot_index in (36..45).chain(9..36) {
-            let Some(stack) = inventory.get_slot(slot_index).unwrap() else {
-                continue;
-            };
-
-            if stack.item_id != item.id {
-                continue;
-            }
-
-            if stack.item_count < max_stack_size {
-                let space = max_stack_size - stack.item_count;
-                let deposit_amount = min(remaining_items, space.into());
-
-                stack.item_count += deposit_amount as u8;
-                remaining_items -= deposit_amount;
-
-                self.send_inventory_slot_update(&mut inventory, slot_index)
-                    .await
-                    .unwrap();
-
-                if remaining_items == 0 {
-                    return;
-                }
-            }
-        }
-
-        // then try filling empty slots
-        for slot_index in (36..45).chain(9..36) {
-            let slot = inventory.get_slot(slot_index).unwrap();
-
-            if slot.is_some() {
-                continue;
-            }
-
-            let deposit_amount = min(remaining_items, max_stack_size.into());
-
-            *slot = Some(ItemStack::new(deposit_amount as u8, item.id));
-            remaining_items -= deposit_amount;
-
-            self.send_inventory_slot_update(&mut inventory, slot_index)
-                .await
-                .unwrap();
-
-            if remaining_items == 0 {
-                return;
-            }
-        }
-
-        log::warn!("{remaining_items} items ({}) were discarded because dropping them to the ground is not implemented", item.name);
     }
 }
 
@@ -980,4 +851,15 @@ pub enum ChatMode {
     CommandsOnly,
     /// All messages should be hidden
     Hidden,
+}
+
+/// the player's permission level
+#[derive(FromPrimitive, ToPrimitive, Clone, Copy)]
+#[repr(i8)]
+pub enum PermissionLvl {
+    Zero = 0,
+    One = 1,
+    Two = 2,
+    Three = 3,
+    Four = 4,
 }

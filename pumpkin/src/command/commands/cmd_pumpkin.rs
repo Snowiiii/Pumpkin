@@ -4,16 +4,20 @@ use pumpkin_protocol::CURRENT_MC_PROTOCOL;
 
 use crate::{
     command::{
-        args::ConsumedArgs, tree::CommandTree, CommandExecutor, CommandSender, InvalidTreeError,
+        args::ConsumedArgs, tree::CommandTree, CommandError, CommandExecutor, CommandSender,
     },
     server::CURRENT_MC_VERSION,
+    GIT_VERSION,
 };
 
-const NAMES: [&str; 1] = ["pumpkin"];
+const NAMES: [&str; 2] = ["pumpkin", "version"];
 
 const DESCRIPTION: &str = "Display information about Pumpkin.";
 
 struct PumpkinExecutor;
+
+const CARGO_PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
+const CARGO_PKG_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 
 #[async_trait]
 impl CommandExecutor for PumpkinExecutor {
@@ -22,14 +26,13 @@ impl CommandExecutor for PumpkinExecutor {
         sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         _args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
-        let version = env!("CARGO_PKG_VERSION");
-        let description = env!("CARGO_PKG_DESCRIPTION");
-
-        sender.send_message(TextComponent::text(
-             &format!("Pumpkin {version}, {description} (Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL})")
-         ).color_named(NamedColor::Green)).await;
-
+    ) -> Result<(), CommandError> {
+        sender
+            .send_message(
+                TextComponent::text(&format!("Pumpkin {CARGO_PKG_VERSION} ({GIT_VERSION}), {CARGO_PKG_DESCRIPTION} (Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL})", ))
+                .color_named(NamedColor::Green),
+            )
+            .await;
         Ok(())
     }
 }

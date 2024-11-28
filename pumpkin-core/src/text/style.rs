@@ -6,29 +6,26 @@ use super::{
     hover::HoverEvent,
 };
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
 pub struct Style<'a> {
     /// Changes the color to render the content
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub bold: Option<u8>,
+    pub bold: Option<bool>,
     /// Whether to render the content in italic.
-    /// Keep in mind that booleans are represented as bytes in nbt
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub italic: Option<u8>,
+    pub italic: Option<bool>,
     /// Whether to render the content in underlined.
-    /// Keep in mind that booleans are represented as bytes in nbt
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub underlined: Option<u8>,
+    pub underlined: Option<bool>,
     /// Whether to render the content in strikethrough.
-    /// Keep in mind that booleans are represented as bytes in nbt
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub strikethrough: Option<u8>,
+    pub strikethrough: Option<bool>,
     /// Whether to render the content in obfuscated.
-    /// Keep in mind that booleans are represented as bytes in nbt
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub obfuscated: Option<u8>,
+    pub obfuscated: Option<bool>,
     /// When the text is shift-clicked by a player, this string is inserted in their chat input. It does not overwrite any existing text the player was writing. This only works in chat messages
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub insertion: Option<String>,
@@ -38,6 +35,9 @@ pub struct Style<'a> {
     /// Allows for a tooltip to be displayed when the player hovers their mouse over text.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hover_event: Option<HoverEvent<'a>>,
+    /// Allows you to change the font of the text.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font: Option<String>,
 }
 
 impl<'a> Style<'a> {
@@ -53,31 +53,31 @@ impl<'a> Style<'a> {
 
     /// Makes the text bold
     pub fn bold(mut self) -> Self {
-        self.bold = Some(1);
+        self.bold = Some(true);
         self
     }
 
     /// Makes the text italic
     pub fn italic(mut self) -> Self {
-        self.italic = Some(1);
+        self.italic = Some(true);
         self
     }
 
     /// Makes the text underlined
     pub fn underlined(mut self) -> Self {
-        self.underlined = Some(1);
+        self.underlined = Some(true);
         self
     }
 
     /// Makes the text strikethrough
     pub fn strikethrough(mut self) -> Self {
-        self.strikethrough = Some(1);
+        self.strikethrough = Some(true);
         self
     }
 
     /// Makes the text obfuscated
     pub fn obfuscated(mut self) -> Self {
-        self.obfuscated = Some(1);
+        self.obfuscated = Some(true);
         self
     }
 
@@ -96,6 +96,13 @@ impl<'a> Style<'a> {
     /// Allows for a tooltip to be displayed when the player hovers their mouse over text.
     pub fn hover_event(mut self, event: HoverEvent<'a>) -> Self {
         self.hover_event = Some(event);
+        self
+    }
+
+    /// Allows you to change the font of the text.
+    /// Default fonts: `minecraft:default`, `minecraft:uniform`, `minecraft:alt`, `minecraft:illageralt`
+    pub fn font(mut self, identifier: String) -> Self {
+        self.font = Some(identifier);
         self
     }
 }
