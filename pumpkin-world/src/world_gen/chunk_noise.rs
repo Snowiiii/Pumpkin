@@ -582,7 +582,7 @@ impl<'a> ChunkNoiseWrappedFunctionConverter<'a> {
     }
 }
 
-impl<'a> ConverterImpl<ChunkNoiseState> for ChunkNoiseWrappedFunctionConverter<'a> {
+impl ConverterImpl<ChunkNoiseState> for ChunkNoiseWrappedFunctionConverter<'_> {
     fn convert_noise(&mut self, _noise: &Arc<InternalNoise>) -> Option<Arc<InternalNoise>> {
         None
     }
@@ -711,7 +711,7 @@ impl<'a> ChunkNoiseInterpolationApplier<'a> {
     }
 }
 
-impl<'a> EnvironmentApplierImpl for ChunkNoiseInterpolationApplier<'a> {
+impl EnvironmentApplierImpl for ChunkNoiseInterpolationApplier<'_> {
     type Env = ChunkNoiseState;
 
     fn fill_mut(
@@ -742,7 +742,7 @@ impl<'a> EnvironmentApplierImpl for ChunkNoiseInterpolationApplier<'a> {
     }
 }
 
-impl<'a> ApplierImpl for ChunkNoiseInterpolationApplier<'a> {
+impl ApplierImpl for ChunkNoiseInterpolationApplier<'_> {
     fn at(&mut self, index: usize) -> NoisePos {
         self.shared.start_block_pos.y = (index as i32 + self.shared.minimum_cell_y as i32)
             * self.shared.vertical_cell_block_count as i32;
@@ -778,7 +778,7 @@ impl<'a> ChunkNoiseApplier<'a> {
     }
 }
 
-impl<'a> EnvironmentApplierImpl for ChunkNoiseApplier<'a> {
+impl EnvironmentApplierImpl for ChunkNoiseApplier<'_> {
     type Env = ChunkNoiseState;
 
     fn fill_mut(
@@ -813,7 +813,7 @@ impl<'a> EnvironmentApplierImpl for ChunkNoiseApplier<'a> {
     }
 }
 
-impl<'a> ApplierImpl for ChunkNoiseApplier<'a> {
+impl ApplierImpl for ChunkNoiseApplier<'_> {
     fn at(&mut self, index: usize) -> NoisePos {
         let cell_block_z = index % self.shared.horizontal_cell_block_count as usize;
         let xy_chunk = index / self.shared.horizontal_cell_block_count as usize;
