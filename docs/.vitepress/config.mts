@@ -37,6 +37,7 @@ export default defineConfig({
           { text: "Authentication", link: "/config/authentication"},
           { text: "Compression", link: "/config/compression"},
           { text: "Resource Pack", link: "/config/resource-pack"},
+          { text: "Commands", link: "/config/commands"},
         ],
       },
       {
