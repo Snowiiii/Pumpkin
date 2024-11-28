@@ -85,9 +85,9 @@ pub fn get_block_by_item<'a>(item_id: u16) -> Option<&'a Block> {
 #[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
 pub struct TopLevel {
-    pub blocks: Vec<Block>,
+    block_entity_types: Vec<String>,
     shapes: Vec<Shape>,
-    block_entity_types: Vec<BlockEntityKind>,
+    pub blocks: Vec<Block>,
 }
 #[derive(Deserialize, Clone, Debug)]
 pub struct Block {
@@ -100,13 +100,6 @@ pub struct Block {
     pub properties: Vec<Property>,
     pub default_state_id: u16,
     pub states: Vec<State>,
-}
-#[expect(dead_code)]
-#[derive(Deserialize, Clone, Debug)]
-struct BlockEntityKind {
-    id: u32,
-    ident: String,
-    name: String,
 }
 #[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
@@ -128,10 +121,6 @@ pub struct State {
 #[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
 struct Shape {
-    min_x: f64,
-    min_y: f64,
-    min_z: f64,
-    max_x: f64,
-    max_y: f64,
-    max_z: f64,
+    min: [f32; 3],
+    max: [f32; 3],
 }

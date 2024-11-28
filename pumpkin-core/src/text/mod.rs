@@ -158,6 +158,13 @@ impl<'a> TextComponent<'a> {
         self
     }
 
+    /// Allows you to change the font of the text.
+    /// Default fonts: `minecraft:default`, `minecraft:uniform`, `minecraft:alt`, `minecraft:illageralt`
+    pub fn font(mut self, identifier: String) -> Self {
+        self.style.font = Some(identifier);
+        self
+    }
+
     pub fn encode(&self) -> Vec<u8> {
         // TODO: Somehow fix this ugly mess
         #[derive(serde::Serialize)]

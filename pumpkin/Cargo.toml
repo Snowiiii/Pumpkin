@@ -44,7 +44,7 @@ rand = "0.8.5"
 num-bigint = "0.4"
 
 # encryption
-rsa = "0.9.6"
+rsa = "0.9.7"
 rsa-der = "0.3.0"
 
 # authentication
@@ -69,7 +69,6 @@ png = "0.17.14"
 # logging
 simple_logger = { version = "5.0.0", features = ["threads"] }
 time = "0.3.36"
-sysinfo = "0.32.0"
 
 # commands
 async-trait = "0.1.83"

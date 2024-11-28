@@ -16,6 +16,12 @@ members = [
 version = "0.1.0"
 edition = "2021"
 
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev]
+opt-level = 1
+
 [profile.release]
 lto = true
 codegen-units = 1
