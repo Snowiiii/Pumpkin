@@ -41,6 +41,7 @@ export default defineConfig({
           { text: "RCON", link: "/config/rcon"},
           { text: "PVP", link: "/config/pvp"},
           { text: "Logging", link: "/config/logging"},
+          { text: "Query", link: "/config/query"},
         ],
       },
       {
