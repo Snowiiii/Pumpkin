@@ -3,7 +3,7 @@ Compression is used to reduce the size of packets. This is benefical to reduce b
 
 ## Configuring Compression
 
-### `enabled`: Boolean
+#### `enabled`: Boolean
 Weather packet compression is enabled or not.
 
 > [!TIP]
@@ -16,7 +16,7 @@ enabled = true
 ```
 :::
 
-### `threshold`: Integer (0-1024)
+#### `threshold`: Integer (0-1024)
 
 The minimum packet size before the server attempts to compress the packet.
 
@@ -30,7 +30,7 @@ threshold = 256
 ```
 :::
 
-### `level`: Integer (0-9)
+#### `level`: Integer (0-9)
 
 A value between 0 to 9: 0 to disable compression, 1 being the fastest compression (at the cost of size), and 9 being maximum compression (at the cost of speed).
 

@@ -142,7 +142,7 @@ cape = true
 ```
 :::
 
-### `elytra`: Boolean
+#### `elytra`: Boolean
 Weather to use player elytras or not.
 
 :::code-group
