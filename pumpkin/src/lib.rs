@@ -1,8 +1,9 @@
-use std::sync::{LazyLock, Mutex};
+use std::sync::LazyLock;
 
 use client::Client;
 use plugin::PluginManager;
 use pumpkin_core::text::TextComponent;
+use tokio::sync::Mutex;
 
 pub mod client;
 pub mod command;

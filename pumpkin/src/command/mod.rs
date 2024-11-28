@@ -11,7 +11,7 @@ use args::ConsumedArgs;
 use async_trait::async_trait;
 use commands::{
     cmd_clear, cmd_craft, cmd_echest, cmd_fill, cmd_gamemode, cmd_give, cmd_help, cmd_kick,
-    cmd_kill, cmd_list, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport,
+    cmd_kill, cmd_list, cmd_plugins, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport,
     cmd_worldborder,
 };
 use dispatcher::CommandError;
@@ -120,6 +120,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_craft::init_command_tree());
     dispatcher.register(cmd_kill::init_command_tree());
     dispatcher.register(cmd_kick::init_command_tree());
+    dispatcher.register(cmd_plugins::init_command_tree());
     dispatcher.register(cmd_worldborder::init_command_tree());
     dispatcher.register(cmd_teleport::init_command_tree());
     dispatcher.register(cmd_give::init_command_tree());

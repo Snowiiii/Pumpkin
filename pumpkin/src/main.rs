@@ -24,9 +24,10 @@ use plugin::PluginManager;
 use server::{ticker::Ticker, Server};
 use std::{
     io::{self},
-    sync::{LazyLock, Mutex},
+    sync::LazyLock,
 };
 use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::sync::Mutex;
 #[cfg(not(unix))]
 use tokio::signal::ctrl_c;
 #[cfg(unix)]
@@ -241,7 +242,7 @@ async fn main() -> io::Result<()> {
     let server = Arc::new(Server::new());
     let mut ticker = Ticker::new(BASIC_CONFIG.tps);
 
-    PLUGIN_MANAGER.lock().unwrap().load_plugins().unwrap();
+    PLUGIN_MANAGER.lock().await.load_plugins().unwrap();
 
     log::info!("Started Server took {}ms", time.elapsed().as_millis());
     log::info!("You now can connect to the server, Listening on {}", addr);

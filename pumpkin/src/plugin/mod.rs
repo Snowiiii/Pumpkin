@@ -1,17 +1,18 @@
 pub mod api;
 
 pub use api::*;
-use std::{any::Any, collections::HashMap, fs, path::Path};
+use std::{any::Any, fs, path::Path};
 
 type PluginData = (
     PluginMetadata<'static>,
     Box<dyn Plugin>,
     Box<dyn events::Hooks>,
     libloading::Library,
+    bool,
 );
 
 pub struct PluginManager {
-    plugins: HashMap<String, PluginData>,
+    plugins: Vec<PluginData>,
 }
 
 impl Default for PluginManager {
@@ -53,7 +54,7 @@ impl PluginManager {
     #[must_use]
     pub fn new() -> Self {
         PluginManager {
-            plugins: HashMap::new(),
+            plugins: vec![],
         }
     }
 
@@ -85,33 +86,30 @@ impl PluginManager {
             unsafe { &**library.get::<*const PluginMetadata>(b"METADATA").unwrap() };
 
         let context = Context { metadata };
-        let _ = plugin_fn().on_load(&context);
+        let res = plugin_fn().on_load(&context);
+        let mut loaded = true;
+        if let Err(e) = res {
+            log::error!("Error loading plugin: {}", e);
+            loaded = false;
+        }
 
-        self.plugins.insert(
-            metadata.name.to_string(),
-            (metadata.clone(), plugin_fn(), hooks_fn(), library),
+        self.plugins.push(
+            (metadata.clone(), plugin_fn(), hooks_fn(), library, loaded),
         );
     }
 
-    #[must_use]
-    pub fn get_plugin(&self, name: &str) -> Option<&PluginData> {
-        self.plugins.get(name)
-    }
-
-    pub fn list_plugins(&self) {
-        for (metadata, _, _, _) in self.plugins.values() {
-            println!(
-                "{} v{} by {}",
-                metadata.name, metadata.version, metadata.authors
-            );
-        }
+    pub fn list_plugins(&self) -> Vec<(&PluginMetadata, &bool)> {
+        return self.plugins.iter().map(|(metadata, _, _, _, loaded)| (metadata, loaded)).collect();
     }
 
     pub fn emit<T: Any>(&mut self, event_name: &str, event: &T) -> bool {
         let mut blocking_hooks = Vec::new();
         let mut non_blocking_hooks = Vec::new();
 
-        for (metadata, _, hooks, _) in self.plugins.values_mut() {
+        for (metadata, _, hooks, _, loaded) in self.plugins.iter_mut() {
+            if !*loaded {
+                continue;
+            }
             if hooks
                 .registered_events()
                 .unwrap()

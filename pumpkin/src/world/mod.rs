@@ -688,7 +688,7 @@ impl World {
 
         if !PLUGIN_MANAGER
             .lock()
-            .unwrap()
+            .await
             .emit::<Player>("player_join", &player.clone())
         {
             // Handle join message
@@ -736,7 +736,7 @@ impl World {
 
         if !PLUGIN_MANAGER
             .lock()
-            .unwrap()
+            .await
             .emit::<Player>("player_leave", &player)
         {
             // Send disconnect message / quit message to players in the same world
