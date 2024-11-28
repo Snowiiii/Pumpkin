@@ -10,8 +10,9 @@ use crate::command::args::ConsumedArgs;
 use crate::command::args::FindArg;
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, literal, require};
-use crate::command::InvalidTreeError;
+use crate::command::CommandError;
 use crate::command::{CommandExecutor, CommandSender};
+use crate::entity::player::PermissionLvl;
 
 const NAMES: [&str; 2] = ["teleport", "tp"];
 const DESCRIPTION: &str = "Teleports entities, including players."; // todo
@@ -58,7 +59,7 @@ impl CommandExecutor for TpEntitiesToEntityExecutor {
         _sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
         let destination = EntityArgumentConsumer::find_arg(args, ARG_DESTINATION)?;
@@ -83,7 +84,7 @@ impl CommandExecutor for TpEntitiesToPosFacingPosExecutor {
         _sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
         let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
@@ -108,7 +109,7 @@ impl CommandExecutor for TpEntitiesToPosFacingEntityExecutor {
         _sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
         let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
@@ -135,7 +136,7 @@ impl CommandExecutor for TpEntitiesToPosWithRotationExecutor {
         _sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
         let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
@@ -159,7 +160,7 @@ impl CommandExecutor for TpEntitiesToPosExecutor {
         _sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
         let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
@@ -183,7 +184,7 @@ impl CommandExecutor for TpSelfToEntityExecutor {
         sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let destination = EntityArgumentConsumer::find_arg(args, ARG_DESTINATION)?;
         let pos = destination.living_entity.entity.pos.load();
 
@@ -215,7 +216,7 @@ impl CommandExecutor for TpSelfToPosExecutor {
         sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         match sender {
             CommandSender::Player(player) => {
                 let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
@@ -238,7 +239,13 @@ impl CommandExecutor for TpSelfToPosExecutor {
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| sender.permission_lvl() >= 2)
+        require(&|sender| sender.has_permission_lvl(PermissionLvl::Two))
+            .with_child(
+                argument(ARG_LOCATION, &Position3DArgumentConsumer).execute(&TpSelfToPosExecutor),
+            )
+            .with_child(
+                argument(ARG_DESTINATION, &EntityArgumentConsumer).execute(&TpSelfToEntityExecutor),
+            )
             .with_child(
                 argument(ARG_TARGETS, &EntitiesArgumentConsumer)
                     .with_child(
@@ -266,12 +273,6 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
                         argument(ARG_DESTINATION, &EntityArgumentConsumer)
                             .execute(&TpEntitiesToEntityExecutor),
                     ),
-            )
-            .with_child(
-                argument(ARG_LOCATION, &Position3DArgumentConsumer).execute(&TpSelfToPosExecutor),
-            )
-            .with_child(
-                argument(ARG_DESTINATION, &EntityArgumentConsumer).execute(&TpSelfToEntityExecutor),
             ),
     )
 }

@@ -4,7 +4,6 @@ use std::borrow::Cow;
 use click::ClickEvent;
 use color::Color;
 use colored::Colorize;
-use fastnbt::SerOpts;
 use hover::HoverEvent;
 use serde::{Deserialize, Serialize};
 use style::Style;
@@ -14,13 +13,15 @@ pub mod color;
 pub mod hover;
 pub mod style;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(transparent)]
+// TODO: Use this instead of TextComponent alone to allow for example text with different colors
+// TODO: Allow to mix TextComponent and String
 pub struct Text<'a>(pub Box<TextComponent<'a>>);
 
 // Represents a Text component
 // Reference: https://wiki.vg/Text_formatting#Text_components
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct TextComponent<'a> {
     /// The actual text
@@ -74,6 +75,12 @@ impl<'a> TextComponent<'a> {
         if style.strikethrough.is_some() {
             text = text.strikethrough().to_string();
         }
+        if style.click_event.is_some() {
+            if let Some(ClickEvent::OpenUrl(url)) = style.click_event {
+                //TODO: check if term supports hyperlinks before
+                text = format!("\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\", url, text).to_string()
+            }
+        }
         text
     }
 }
@@ -98,33 +105,38 @@ impl<'a> TextComponent<'a> {
         self
     }
 
+    pub fn color_rgb(mut self, color: color::RGBColor) -> Self {
+        self.style.color = Some(Color::Rgb(color));
+        self
+    }
+
     /// Makes the text bold
     pub fn bold(mut self) -> Self {
-        self.style.bold = Some(1);
+        self.style.bold = Some(true);
         self
     }
 
     /// Makes the text italic
     pub fn italic(mut self) -> Self {
-        self.style.italic = Some(1);
+        self.style.italic = Some(true);
         self
     }
 
     /// Makes the text underlined
     pub fn underlined(mut self) -> Self {
-        self.style.underlined = Some(1);
+        self.style.underlined = Some(true);
         self
     }
 
     /// Makes the text strikethrough
     pub fn strikethrough(mut self) -> Self {
-        self.style.strikethrough = Some(1);
+        self.style.strikethrough = Some(true);
         self
     }
 
     /// Makes the text obfuscated
     pub fn obfuscated(mut self) -> Self {
-        self.style.obfuscated = Some(1);
+        self.style.obfuscated = Some(true);
         self
     }
 
@@ -146,6 +158,13 @@ impl<'a> TextComponent<'a> {
         self
     }
 
+    /// Allows you to change the font of the text.
+    /// Default fonts: `minecraft:default`, `minecraft:uniform`, `minecraft:alt`, `minecraft:illageralt`
+    pub fn font(mut self, identifier: String) -> Self {
+        self.style.font = Some(identifier);
+        self
+    }
+
     pub fn encode(&self) -> Vec<u8> {
         // TODO: Somehow fix this ugly mess
         #[derive(serde::Serialize)]
@@ -162,11 +181,14 @@ impl<'a> TextComponent<'a> {
         };
         // dbg!(&serde_json::to_string(&astruct));
 
-        fastnbt::to_bytes_with_opts(&astruct, SerOpts::network_nbt()).unwrap()
+        // TODO
+        pumpkin_nbt::serializer::to_bytes_unnamed(&astruct)
+            .unwrap()
+            .to_vec()
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(untagged)]
 pub enum TextContent<'a> {
     /// Raw Text
@@ -184,6 +206,6 @@ pub enum TextContent<'a> {
         separator: Option<Cow<'a, str>>,
     },
     /// A keybind identifier
-    /// https://minecraft.fandom.com/wiki/Controls#Configurable_controls
+    /// https://minecraft.wiki/w/Controls#Configurable_controls
     Keybind { keybind: Cow<'a, str> },
 }

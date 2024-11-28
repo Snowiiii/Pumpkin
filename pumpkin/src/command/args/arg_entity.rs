@@ -1,15 +1,18 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use pumpkin_protocol::client::play::{
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
+};
 
-use crate::command::dispatcher::InvalidTreeError;
+use crate::command::dispatcher::CommandError;
 use crate::command::tree::RawArgs;
 use crate::command::CommandSender;
 use crate::entity::player::Player;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::{Arg, DefaultNameArgConsumer, FindArg};
+use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// todo: implement for entitites that aren't players
 ///
@@ -17,6 +20,19 @@ use super::{Arg, DefaultNameArgConsumer, FindArg};
 ///
 /// Use [`super::arg_entities::EntitiesArgumentConsumer`] when there may be multiple targets.
 pub(crate) struct EntityArgumentConsumer;
+
+impl GetClientSideArgParser for EntityArgumentConsumer {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        // todo: investigate why this does not accept target selectors
+        ProtoCmdArgParser::Entity {
+            flags: ProtoCmdArgParser::ENTITY_FLAG_ONLY_SINGLE,
+        }
+    }
+
+    fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType> {
+        None
+    }
+}
 
 #[async_trait]
 impl ArgumentConsumer for EntityArgumentConsumer {
@@ -51,6 +67,15 @@ impl ArgumentConsumer for EntityArgumentConsumer {
 
         entity.map(Arg::Entity)
     }
+
+    async fn suggest<'a>(
+        &self,
+        _sender: &CommandSender<'a>,
+        _server: &'a Server,
+        _input: &'a str,
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
+        Ok(None)
+    }
 }
 
 impl DefaultNameArgConsumer for EntityArgumentConsumer {
@@ -66,15 +91,10 @@ impl DefaultNameArgConsumer for EntityArgumentConsumer {
 impl<'a> FindArg<'a> for EntityArgumentConsumer {
     type Data = Arc<Player>;
 
-    fn find_arg(
-        args: &'a super::ConsumedArgs,
-        name: &'a str,
-    ) -> Result<Self::Data, InvalidTreeError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::Entity(data)) => Ok(data.clone()),
-            _ => Err(InvalidTreeError::InvalidConsumptionError(Some(
-                name.to_string(),
-            ))),
+            _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),
         }
     }
 }

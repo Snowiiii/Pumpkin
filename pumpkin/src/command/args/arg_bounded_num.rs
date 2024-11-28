@@ -2,14 +2,15 @@ use core::f64;
 use std::str::FromStr;
 
 use async_trait::async_trait;
+use pumpkin_protocol::client::play::{CommandSuggestion, ProtoCmdArgParser};
 
-use crate::command::dispatcher::InvalidTreeError;
+use crate::command::dispatcher::CommandError;
 use crate::command::tree::RawArgs;
 use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::{Arg, DefaultNameArgConsumer, FindArg};
+use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// Consumes a single generic num, but only if it's in bounds.
 pub(crate) struct BoundedNumArgumentConsumer<T: ToFromNumber> {
@@ -19,7 +20,10 @@ pub(crate) struct BoundedNumArgumentConsumer<T: ToFromNumber> {
 }
 
 #[async_trait]
-impl<T: ToFromNumber> ArgumentConsumer for BoundedNumArgumentConsumer<T> {
+impl<T: ToFromNumber> ArgumentConsumer for BoundedNumArgumentConsumer<T>
+where
+    BoundedNumArgumentConsumer<T>: GetClientSideArgParser,
+{
     async fn consume<'a>(
         &self,
         _src: &CommandSender<'a>,
@@ -42,16 +46,23 @@ impl<T: ToFromNumber> ArgumentConsumer for BoundedNumArgumentConsumer<T> {
 
         Some(Arg::Num(Ok(x.to_number())))
     }
+
+    async fn suggest<'a>(
+        &self,
+        _sender: &CommandSender<'a>,
+        _server: &'a Server,
+        _input: &'a str,
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
+        Ok(None)
+    }
 }
 
 impl<'a, T: ToFromNumber> FindArg<'a> for BoundedNumArgumentConsumer<T> {
     type Data = Result<T, NotInBounds>;
 
-    fn find_arg(args: &super::ConsumedArgs, name: &str) -> Result<Self::Data, InvalidTreeError> {
+    fn find_arg(args: &super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         let Some(Arg::Num(result)) = args.get(name) else {
-            return Err(InvalidTreeError::InvalidConsumptionError(Some(
-                name.to_string(),
-            )));
+            return Err(CommandError::InvalidConsumption(Some(name.to_string())));
         };
 
         let data: Self::Data = match result {
@@ -59,9 +70,7 @@ impl<'a, T: ToFromNumber> FindArg<'a> for BoundedNumArgumentConsumer<T> {
                 if let Some(x) = T::from_number(num) {
                     Ok(x)
                 } else {
-                    return Err(InvalidTreeError::InvalidConsumptionError(Some(
-                        name.to_string(),
-                    )));
+                    return Err(CommandError::InvalidConsumption(Some(name.to_string())));
                 }
             }
             Err(()) => Err(()),
@@ -79,7 +88,7 @@ pub(crate) enum Number {
     F32(f32),
     I32(i32),
     #[allow(unused)]
-    U32(u32),
+    I64(i64),
 }
 
 impl<T: ToFromNumber> BoundedNumArgumentConsumer<T> {
@@ -126,6 +135,21 @@ impl ToFromNumber for f64 {
     }
 }
 
+impl GetClientSideArgParser for BoundedNumArgumentConsumer<f64> {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::Double {
+            min: self.min_inclusive,
+            max: self.max_inclusive,
+        }
+    }
+
+    fn get_client_side_suggestion_type_override(
+        &self,
+    ) -> Option<pumpkin_protocol::client::play::ProtoCmdArgSuggestionType> {
+        None
+    }
+}
+
 impl ToFromNumber for f32 {
     fn to_number(self) -> Number {
         Number::F32(self)
@@ -136,6 +160,21 @@ impl ToFromNumber for f32 {
             Number::F32(x) => Some(*x),
             _ => None,
         }
+    }
+}
+
+impl GetClientSideArgParser for BoundedNumArgumentConsumer<f32> {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::Float {
+            min: self.min_inclusive,
+            max: self.max_inclusive,
+        }
+    }
+
+    fn get_client_side_suggestion_type_override(
+        &self,
+    ) -> Option<pumpkin_protocol::client::play::ProtoCmdArgSuggestionType> {
+        None
     }
 }
 
@@ -152,20 +191,53 @@ impl ToFromNumber for i32 {
     }
 }
 
-impl ToFromNumber for u32 {
+impl GetClientSideArgParser for BoundedNumArgumentConsumer<i32> {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::Integer {
+            min: self.min_inclusive,
+            max: self.max_inclusive,
+        }
+    }
+
+    fn get_client_side_suggestion_type_override(
+        &self,
+    ) -> Option<pumpkin_protocol::client::play::ProtoCmdArgSuggestionType> {
+        None
+    }
+}
+
+impl ToFromNumber for i64 {
     fn to_number(self) -> Number {
-        Number::U32(self)
+        Number::I64(self)
     }
 
     fn from_number(arg: &Number) -> Option<Self> {
         match arg {
-            Number::U32(x) => Some(*x),
+            Number::I64(x) => Some(*x),
             _ => None,
         }
     }
 }
 
-impl<T: ToFromNumber> DefaultNameArgConsumer for BoundedNumArgumentConsumer<T> {
+impl GetClientSideArgParser for BoundedNumArgumentConsumer<i64> {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::Long {
+            min: self.min_inclusive,
+            max: self.max_inclusive,
+        }
+    }
+
+    fn get_client_side_suggestion_type_override(
+        &self,
+    ) -> Option<pumpkin_protocol::client::play::ProtoCmdArgSuggestionType> {
+        None
+    }
+}
+
+impl<T: ToFromNumber> DefaultNameArgConsumer for BoundedNumArgumentConsumer<T>
+where
+    BoundedNumArgumentConsumer<T>: ArgumentConsumer,
+{
     fn default_name(&self) -> &'static str {
         // setting a single default name for all BoundedNumArgumentConsumer variants is probably a bad idea since it would lead to confusion
         self.name.expect("Only use *_default variants of methods with a BoundedNumArgumentConsumer that has a name.")

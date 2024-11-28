@@ -3,19 +3,25 @@ use std::sync::Arc;
 use crate::{
     command::CommandSender,
     entity::player::{ChatMode, Hand, Player},
+    error::PumpkinError,
     server::Server,
     world::player_chunker,
 };
 use num_traits::FromPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
-use pumpkin_core::math::position::WorldPosition;
+use pumpkin_core::math::{boundingbox::BoundingBox, position::WorldPosition};
 use pumpkin_core::{
     math::{vector3::Vector3, wrap_degrees},
     text::TextComponent,
     GameMode,
 };
 use pumpkin_inventory::{InventoryError, WindowType};
-use pumpkin_protocol::server::play::{SCloseContainer, SKeepAlive, SSetPlayerGround, SUseItem};
+use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
+use pumpkin_protocol::{
+    client::play::CCommandSuggestions,
+    server::play::{SCloseContainer, SCommandSuggestion, SKeepAlive, SSetPlayerGround, SUseItem},
+    VarInt,
+};
 use pumpkin_protocol::{
     client::play::{
         Animation, CAcknowledgeBlockChange, CEntityAnimation, CHeadRot, CPingResponse,
@@ -29,11 +35,49 @@ use pumpkin_protocol::{
     },
 };
 use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
+use thiserror::Error;
 
 use super::PlayerConfig;
 
 fn modulus(a: f32, b: f32) -> f32 {
     ((a % b) + b) % b
+}
+
+#[derive(Debug, Error)]
+pub enum BlockPlacingError {
+    BlockOutOfReach,
+    InvalidBlockFace,
+    BlockOutOfWorld,
+}
+
+impl std::fmt::Display for BlockPlacingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
+impl PumpkinError for BlockPlacingError {
+    fn is_kick(&self) -> bool {
+        match self {
+            Self::BlockOutOfReach | Self::BlockOutOfWorld => false,
+            Self::InvalidBlockFace => true,
+        }
+    }
+
+    fn severity(&self) -> log::Level {
+        match self {
+            Self::BlockOutOfReach | Self::BlockOutOfWorld | Self::InvalidBlockFace => {
+                log::Level::Warn
+            }
+        }
+    }
+
+    fn client_kick_reason(&self) -> Option<String> {
+        match self {
+            Self::BlockOutOfReach | Self::BlockOutOfWorld => None,
+            Self::InvalidBlockFace => Some("Invalid block face".into()),
+        }
+    }
 }
 
 /// Handles all Play Packets send by a real Player
@@ -234,7 +278,11 @@ impl Player {
             .await;
     }
 
-    pub async fn handle_chat_command(self: &Arc<Self>, server: &Server, command: SChatCommand) {
+    pub async fn handle_chat_command(
+        self: &Arc<Self>,
+        server: &Arc<Server>,
+        command: SChatCommand,
+    ) {
         let dispatcher = server.command_dispatcher.clone();
         dispatcher
             .handle_command(
@@ -318,7 +366,7 @@ impl Player {
                     Hand::Off => Animation::SwingOffhand,
                 };
                 let id = self.entity_id();
-                let world = &self.living_entity.entity.world;
+                let world = self.world();
                 world
                     .broadcast_packet_except(
                         &[self.gameprofile.id],
@@ -339,7 +387,12 @@ impl Player {
             return;
         }
 
-        // TODO: filter message & validation
+        if message.chars().any(|c| c == '§' || c < ' ' || c == '\x7F') {
+            self.kick(TextComponent::text("Illegal characters in chat"))
+                .await;
+            return;
+        }
+
         let gameprofile = &self.gameprofile;
         log::info!("<chat>{}: {}", gameprofile.name, message);
 
@@ -401,7 +454,7 @@ impl Player {
                 if self.living_entity.health.load() > 0.0 {
                     return;
                 }
-                self.respawn(false).await;
+                self.world().respawn_player(self, false).await;
                 // TODO: hardcore set spectator
             }
             1 => {
@@ -442,7 +495,11 @@ impl Player {
                         .await;
                     return;
                 };
-
+                if victim.living_entity.health.load() <= 0.0 {
+                    // you can trigger this from a non-modded / innocent client client,
+                    // so we shouldn't kick the player
+                    return;
+                }
                 self.attack(&victim).await;
             }
             ActionType::Interact | ActionType::InteractAt => {
@@ -468,10 +525,9 @@ impl Player {
                     if self.gamemode.load() == GameMode::Creative {
                         let location = player_action.location;
                         // Block break & block break sound
-                        // TODO: currently this is always dirt replace it
                         let entity = &self.living_entity.entity;
                         let world = &entity.world;
-                        world.break_block(location).await;
+                        world.break_block(location, Some(self)).await;
                     }
                 }
                 Status::CancelledDigging => {
@@ -498,10 +554,9 @@ impl Player {
                         return;
                     }
                     // Block break & block break sound
-                    // TODO: currently this is always dirt replace it
                     let entity = &self.living_entity.entity;
                     let world = &entity.world;
-                    world.break_block(location).await;
+                    world.break_block(location, Some(self)).await;
                     // TODO: Send this every tick
                     self.client
                         .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence))
@@ -551,35 +606,77 @@ impl Player {
             .await;
     }
 
-    pub async fn handle_use_item_on(&self, use_item_on: SUseItemOn) {
+    pub async fn handle_use_item_on(
+        &self,
+        use_item_on: SUseItemOn,
+    ) -> Result<(), Box<dyn PumpkinError>> {
         let location = use_item_on.location;
 
         if !self.can_interact_with_block_at(&location, 1.0) {
             // TODO: maybe log?
-            return;
+            return Err(BlockPlacingError::BlockOutOfReach.into());
         }
 
         if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
-            if let Some(item) = self.inventory.lock().await.held_item() {
+            let mut inventory = self.inventory.lock().await;
+            let item_slot = inventory.held_item_mut();
+            if let Some(item) = item_slot {
                 let block = get_block_by_item(item.item_id);
                 // check if item is a block, Because Not every item can be placed :D
                 if let Some(block) = block {
                     let entity = &self.living_entity.entity;
                     let world = &entity.world;
 
-                    world
-                        .set_block(
-                            WorldPosition(location.0 + face.to_offset()),
-                            block.default_state_id,
-                        )
-                        .await;
+                    // TODO: Config
+                    // Decrease Block count
+                    if self.gamemode.load() != GameMode::Creative {
+                        item.item_count -= 1;
+                        if item.item_count == 0 {
+                            *item_slot = None;
+                        }
+                    }
+
+                    let clicked_world_pos = WorldPosition(location.0);
+                    let clicked_block_state = world.get_block_state(clicked_world_pos).await?;
+
+                    let world_pos = if clicked_block_state.replaceable {
+                        clicked_world_pos
+                    } else {
+                        let world_pos = WorldPosition(location.0 + face.to_offset());
+                        let previous_block_state = world.get_block_state(world_pos).await?;
+
+                        if !previous_block_state.replaceable {
+                            return Ok(());
+                        }
+
+                        world_pos
+                    };
+
+                    //check max world build height
+                    if world_pos.0.y > 319 {
+                        self.client
+                            .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
+                            .await;
+                        return Err(BlockPlacingError::BlockOutOfWorld.into());
+                    }
+
+                    let block_bounding_box = BoundingBox::from_block(&world_pos);
+                    let bounding_box = entity.bounding_box.load();
+                    //TODO: Make this check for every entity in that posistion
+                    if !bounding_box.intersects(&block_bounding_box) {
+                        world
+                            .set_block_state(world_pos, block.default_state_id)
+                            .await;
+                    }
                 }
                 self.client
                     .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
                     .await;
             }
+
+            Ok(())
         } else {
-            self.kick(TextComponent::text("Invalid block face")).await;
+            Err(BlockPlacingError::InvalidBlockFace.into())
         }
     }
 
@@ -604,15 +701,15 @@ impl Player {
         if self.gamemode.load() != GameMode::Creative {
             return Err(InventoryError::PermissionError);
         }
-        let valid_slot = packet.slot >= 1 && packet.slot <= 45;
+        let valid_slot = packet.slot >= 0 && packet.slot <= 45;
         if valid_slot {
             self.inventory.lock().await.set_slot(
-                packet.slot as u16,
+                packet.slot as usize,
                 packet.clicked_item.to_item(),
                 true,
             )?;
         };
-        // TODO: The Item was droped per drag and drop,
+        // TODO: The Item was dropped per drag and drop,
         Ok(())
     }
 
@@ -625,11 +722,9 @@ impl Player {
             return;
         };
         // window_id 0 represents both 9x1 Generic AND inventory here
-        self.inventory
-            .lock()
-            .await
-            .state_id
-            .store(0, std::sync::atomic::Ordering::Relaxed);
+        let mut inventory = self.inventory.lock().await;
+
+        inventory.state_id = 0;
         let open_container = self.open_container.load();
         if let Some(id) = open_container {
             let mut open_containers = server.open_containers.write().await;
@@ -638,5 +733,45 @@ impl Player {
             }
             self.open_container.store(None);
         }
+    }
+
+    pub async fn handle_command_suggestion(
+        self: &Arc<Self>,
+        packet: SCommandSuggestion,
+        server: &Arc<Server>,
+    ) {
+        let mut src = CommandSender::Player(self.clone());
+        let Some(cmd) = &packet.command.get(1..) else {
+            return;
+        };
+
+        let Some((last_word_start, _)) = cmd.char_indices().rfind(|(_, c)| c.is_whitespace())
+        else {
+            return;
+        };
+
+        let suggestions = server
+            .command_dispatcher
+            .find_suggestions(&mut src, server, cmd)
+            .await;
+
+        let response = CCommandSuggestions::new(
+            packet.id,
+            (last_word_start + 2).into(),
+            (cmd.len() - last_word_start - 1).into(),
+            suggestions,
+        );
+
+        self.client.send_packet(&response).await;
+    }
+
+    pub fn handle_cookie_response(&self, packet: SPCookieResponse) {
+        // TODO: allow plugins to access this
+        log::debug!(
+            "Received cookie_response[play]: key: \"{}\", has_payload: \"{}\", payload_length: \"{}\"",
+            packet.key,
+            packet.has_payload,
+            packet.payload_length.unwrap_or(VarInt::from(0)).0
+        );
     }
 }

@@ -30,17 +30,19 @@ use tokio::signal::unix::{signal, SignalKind};
 
 use std::sync::Arc;
 
+use crate::server::CURRENT_MC_VERSION;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
+use pumpkin_protocol::CURRENT_MC_PROTOCOL;
 use rcon::RCONServer;
 use std::time::Instant;
-
 // Setup some tokens to allow us to identify which event is for which socket.
 
 pub mod client;
 pub mod command;
 pub mod entity;
 pub mod error;
+pub mod lan_broadcast;
 pub mod proxy;
 pub mod query;
 pub mod rcon;
@@ -62,6 +64,9 @@ fn init_logger() {
     use pumpkin_config::ADVANCED_CONFIG;
     if ADVANCED_CONFIG.logging.enabled {
         let mut logger = simple_logger::SimpleLogger::new();
+        logger = logger.with_timestamp_format(time::macros::format_description!(
+            "[year]-[month]-[day] [hour]:[minute]:[second]"
+        ));
 
         if !ADVANCED_CONFIG.logging.timestamp {
             logger = logger.without_timestamps();
@@ -90,9 +95,14 @@ const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> L
     }
 }
 
+const CARGO_PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
+const GIT_VERSION: &str = env!("GIT_VERSION");
+
 #[tokio::main]
+#[expect(clippy::too_many_lines)]
 async fn main() -> io::Result<()> {
     init_logger();
+
     // let rt = tokio::runtime::Builder::new_multi_thread()
     //     .enable_all()
     //     .build()
@@ -112,6 +122,24 @@ async fn main() -> io::Result<()> {
         // TODO: Gracefully exit?
         std::process::exit(1);
     }));
+
+    log::info!("Starting Pumpkin {CARGO_PKG_VERSION} ({GIT_VERSION}) for Minecraft {CURRENT_MC_VERSION} (Protocol {CURRENT_MC_PROTOCOL})",);
+
+    log::debug!(
+        "Build info: FAMILY: \"{}\", OS: \"{}\", ARCH: \"{}\", BUILD: \"{}\"",
+        std::env::consts::FAMILY,
+        std::env::consts::OS,
+        std::env::consts::ARCH,
+        if cfg!(debug_assertions) {
+            "Debug"
+        } else {
+            "Release"
+        }
+    );
+
+    log::warn!("Pumpkin is currently under heavy development!");
+    log::info!("Report Issues on https://github.com/Snowiiii/Pumpkin/issues");
+    log::info!("Join our Discord for community support https://discord.com/invite/wT8XjrjKkf");
 
     let time = Instant::now();
 
@@ -146,6 +174,11 @@ async fn main() -> io::Result<()> {
     if ADVANCED_CONFIG.query.enabled {
         log::info!("Query protocol enabled. Starting...");
         tokio::spawn(query::start_query_handler(server.clone(), addr));
+    }
+
+    if ADVANCED_CONFIG.lan_broadcast.enabled {
+        log::info!("LAN broadcast enabled. Starting...");
+        tokio::spawn(lan_broadcast::start_lan_broadcast(addr));
     }
 
     {
@@ -192,7 +225,10 @@ async fn main() -> io::Result<()> {
                 .load(std::sync::atomic::Ordering::Relaxed)
             {
                 let (player, world) = server.add_player(client).await;
-                world.spawn_player(&BASIC_CONFIG, player.clone()).await;
+                world
+                    .spawn_player(&BASIC_CONFIG, player.clone(), &server)
+                    .await;
+
                 // poll Player
                 while !player
                     .client
