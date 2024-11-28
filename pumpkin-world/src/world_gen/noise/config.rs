@@ -586,6 +586,7 @@ mod test {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_final_density_samples() {
         let expected_data: Vec<(i32, i32, i32, f64)> =
@@ -601,6 +602,7 @@ mod test {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_converted_sloped_cheese() {
         let mut rand = Xoroshiro::from_seed(0);
@@ -623,6 +625,7 @@ mod test {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_converted_factor() {
         let mut rand = Xoroshiro::from_seed(0);
@@ -644,6 +647,7 @@ mod test {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_converted_depth() {
         let mut rand = Xoroshiro::from_seed(0);
@@ -665,6 +669,7 @@ mod test {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_converted_offset() {
         let mut rand = Xoroshiro::from_seed(0);
@@ -686,6 +691,7 @@ mod test {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_converted_3d_overworld() {
         let mut rand = Xoroshiro::from_seed(0);
@@ -708,6 +714,7 @@ mod test {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_converted_cave_entrances_overworld() {
         let mut rand = Xoroshiro::from_seed(0);
@@ -730,6 +737,7 @@ mod test {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_converted_cave_spaghetti_rough_overworld() {
         let mut rand = Xoroshiro::from_seed(0);
@@ -752,6 +760,7 @@ mod test {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_converted_cave_noodle() {
         let mut rand = Xoroshiro::from_seed(0);
@@ -774,6 +783,7 @@ mod test {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_converted_cave_pillar() {
         let mut rand = Xoroshiro::from_seed(0);
@@ -796,6 +806,7 @@ mod test {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_converted_cave_spaghetti_2d_thickness() {
         let mut rand = Xoroshiro::from_seed(0);

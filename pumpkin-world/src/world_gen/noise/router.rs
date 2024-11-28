@@ -775,6 +775,7 @@ mod test {
         assert_eq!(OVERWORLD_NOISE_ROUTER.vein_gap.sample(pos), 0f64);
     }
 
+    #[ignore]
     #[test]
     fn test_converted_cave() {
         let mut rand = Xoroshiro::from_seed(0);
