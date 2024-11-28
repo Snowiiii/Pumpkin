@@ -38,6 +38,7 @@ export default defineConfig({
           { text: "Compression", link: "/config/compression"},
           { text: "Resource Pack", link: "/config/resource-pack"},
           { text: "Commands", link: "/config/commands"},
+          { text: "RCON", link: "/config/rcon"},
         ],
       },
       {
