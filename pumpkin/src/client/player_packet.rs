@@ -632,6 +632,8 @@ impl Player {
                         }
                     }
 
+                    drop(inventory);
+
                     let clicked_world_pos = WorldPosition(location.0);
                     let clicked_block_state = world.get_block_state(clicked_world_pos).await?;
 
@@ -654,6 +656,10 @@ impl Player {
                     if !bounding_box.intersects(&block_bounding_box) {
                         world
                             .set_block_state(world_pos, block.default_state_id)
+                            .await;
+                        server
+                            .block_manager
+                            .on_placed(block, self, world_pos, server)
                             .await;
                     }
 
