@@ -53,12 +53,10 @@ impl PluginContext for Context<'_> {
 impl PluginManager {
     #[must_use]
     pub fn new() -> Self {
-        PluginManager {
-            plugins: vec![],
-        }
+        PluginManager { plugins: vec![] }
     }
 
-    pub fn load_plugins(&mut self) -> Result<(), String> {
+    pub async fn load_plugins(&mut self) -> Result<(), String> {
         const PLUGIN_DIR: &str = "./plugins";
 
         let dir_entires = fs::read_dir(PLUGIN_DIR);
@@ -67,13 +65,13 @@ impl PluginManager {
             if !entry.as_ref().unwrap().path().is_file() {
                 continue;
             }
-            self.try_load_plugin(entry.unwrap().path().as_path());
+            self.try_load_plugin(entry.unwrap().path().as_path()).await;
         }
 
         Ok(())
     }
 
-    fn try_load_plugin(&mut self, path: &Path) {
+    async fn try_load_plugin(&mut self, path: &Path) {
         let library = unsafe { libloading::Library::new(path).unwrap() };
 
         let plugin_fn = unsafe { library.get::<fn() -> Box<dyn Plugin>>(b"plugin").unwrap() };
@@ -93,16 +91,19 @@ impl PluginManager {
             loaded = false;
         }
 
-        self.plugins.push(
-            (metadata.clone(), plugin_fn(), hooks_fn(), library, loaded),
-        );
+        self.plugins
+            .push((metadata.clone(), plugin_fn(), hooks_fn(), library, loaded));
     }
 
-    pub fn list_plugins(&self) -> Vec<(&PluginMetadata, &bool)> {
-        return self.plugins.iter().map(|(metadata, _, _, _, loaded)| (metadata, loaded)).collect();
+    pub async fn list_plugins(&self) -> Vec<(&PluginMetadata, &bool)> {
+        return self
+            .plugins
+            .iter()
+            .map(|(metadata, _, _, _, loaded)| (metadata, loaded))
+            .collect();
     }
 
-    pub fn emit<T: Any>(&mut self, event_name: &str, event: &T) -> bool {
+    pub async fn emit<T: Any + Send + Sync>(&mut self, event_name: &str, event: &T) -> bool {
         let mut blocking_hooks = Vec::new();
         let mut non_blocking_hooks = Vec::new();
 
@@ -163,7 +164,7 @@ impl PluginManager {
                 )
         });
 
-        let event = event as &dyn Any;
+        let event = event as &(dyn Any + Sync + Send);
 
         for (context, hooks) in blocking_hooks {
             let r = match event_name {
@@ -171,19 +172,19 @@ impl PluginManager {
                     if let Some(event) = event.downcast_ref::<crate::entity::player::Player>() {
                         hooks.on_player_join(&context, event)
                     } else {
-                        Ok(false)
+                        Box::pin(async { Ok(false) })
                     }
                 }
                 "player_leave" => {
                     if let Some(event) = event.downcast_ref::<crate::entity::player::Player>() {
                         hooks.on_player_leave(&context, event)
                     } else {
-                        Ok(false)
+                        Box::pin(async { Ok(false) })
                     }
                 }
-                _ => Ok(false),
+                _ => Box::pin(async { Ok(false) }),
             };
-            match r {
+            match r.await {
                 Ok(true) => return true,
                 Err(e) => {
                     log::error!("Error in plugin: {}", e);
@@ -198,19 +199,19 @@ impl PluginManager {
                     if let Some(event) = event.downcast_ref::<crate::entity::player::Player>() {
                         hooks.on_player_join(&context, event)
                     } else {
-                        Ok(false)
+                        Box::pin(async { Ok(false) })
                     }
                 }
                 "player_leave" => {
                     if let Some(event) = event.downcast_ref::<crate::entity::player::Player>() {
                         hooks.on_player_leave(&context, event)
                     } else {
-                        Ok(false)
+                        Box::pin(async { Ok(false) })
                     }
                 }
-                _ => Ok(false),
+                _ => Box::pin(async { Ok(false) }),
             };
-            match r {
+            match r.await {
                 Ok(true) => continue,
                 Err(e) => {
                     log::error!("Error in plugin: {}", e);

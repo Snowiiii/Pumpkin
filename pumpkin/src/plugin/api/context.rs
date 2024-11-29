@@ -1,4 +1,4 @@
-pub trait PluginContext {
+pub trait PluginContext: Send + Sync {
     fn get_logger(&self) -> Box<dyn Logger>;
 }
 

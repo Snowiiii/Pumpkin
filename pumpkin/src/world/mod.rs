@@ -686,20 +686,26 @@ impl World {
         let mut current_players = self.current_players.lock().await;
         current_players.insert(uuid, player.clone());
 
-        if !PLUGIN_MANAGER
-            .lock()
-            .await
-            .emit::<Player>("player_join", &player.clone())
-        {
-            // Handle join message
-            // TODO: Config
-            let msg_txt = format!("{} joined the game.", player.gameprofile.name.as_str());
-            let msg_comp = TextComponent::text(msg_txt.as_str()).color_named(NamedColor::Yellow);
-            for player in current_players.values() {
-                player.send_system_message(&msg_comp).await;
+        let current_players = self.current_players.clone();
+        tokio::spawn(async move {
+            if !PLUGIN_MANAGER
+                .lock()
+                .await
+                .emit::<Player>("player_join", &player.clone())
+                .await
+            {
+                // Handle join message
+                // TODO: Config
+                let msg_txt = format!("{} joined the game.", player.gameprofile.name.as_str());
+                let msg_comp =
+                    TextComponent::text(msg_txt.as_str()).color_named(NamedColor::Yellow);
+                let players = current_players.lock().await;
+                for player in players.values() {
+                    player.send_system_message(&msg_comp).await;
+                }
+                log::info!("{}", msg_comp.to_pretty_console());
             }
-            log::info!("{}", msg_comp.to_pretty_console());
-        }
+        });
     }
 
     /// Removes a player from the world and broadcasts a disconnect message if enabled.
@@ -738,6 +744,7 @@ impl World {
             .lock()
             .await
             .emit::<Player>("player_leave", &player)
+            .await
         {
             // Send disconnect message / quit message to players in the same world
             // TODO: Config

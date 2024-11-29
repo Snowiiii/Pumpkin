@@ -1,3 +1,5 @@
+use async_trait::async_trait;
+
 use crate::entity::player::Player;
 
 use super::PluginContext;
@@ -17,26 +19,27 @@ pub struct EventDescriptor {
     pub blocking: bool,
 }
 
+#[async_trait]
 pub trait Hooks: Send + Sync + 'static {
     /// Returns an array of events that the
     fn registered_events(&self) -> Result<&'static [EventDescriptor], String> {
         Ok(&[])
     }
 
-    /// Called when the plugin is loaded.
-    fn on_player_join(
+    /// Called when a player joins the server.
+    async fn on_player_join(
         &mut self,
         _server: &dyn PluginContext,
-        _event: &Player,
+        _player: &Player,
     ) -> Result<bool, String> {
         Ok(false)
     }
 
-    /// Called when the plugin is unloaded.
-    fn on_player_leave(
+    /// Called when a player leaves the server.
+    async fn on_player_leave(
         &mut self,
         _server: &dyn PluginContext,
-        _event: &Player,
+        _player: &Player,
     ) -> Result<bool, String> {
         Ok(false)
     }
