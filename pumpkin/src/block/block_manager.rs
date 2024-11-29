@@ -7,6 +7,13 @@ use pumpkin_world::item::item_registry::Item;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+pub enum BlockActionResult {
+    /// Allow other actions to be executed
+    Continue,
+    /// Block other actions
+    Consume,
+}
+
 #[derive(Default)]
 pub struct BlockManager {
     blocks: HashMap<String, Arc<dyn PumpkinBlock>>,
@@ -38,13 +45,14 @@ impl BlockManager {
         location: WorldPosition,
         item: &Item,
         server: &Server,
-    ) {
+    ) -> BlockActionResult {
         let pumpkin_block = self.get_pumpkin_block(block);
         if let Some(pumpkin_block) = pumpkin_block {
-            pumpkin_block
+            return pumpkin_block
                 .on_use_with_item(player, location, item, server)
                 .await;
         }
+        BlockActionResult::Continue
     }
 
     pub async fn on_placed(

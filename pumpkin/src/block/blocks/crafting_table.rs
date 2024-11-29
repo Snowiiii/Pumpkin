@@ -1,3 +1,4 @@
+use crate::block::block_manager::BlockActionResult;
 use crate::block::pumpkin_block::PumpkinBlock;
 use crate::entity::player::Player;
 use crate::server::Server;
@@ -22,8 +23,9 @@ impl PumpkinBlock for CraftingTableBlock {
         _location: WorldPosition,
         _item: &Item,
         server: &Server,
-    ) {
+    ) -> BlockActionResult {
         self.open_crafting_screen(player, server).await;
+        BlockActionResult::Consume
     }
 }
 

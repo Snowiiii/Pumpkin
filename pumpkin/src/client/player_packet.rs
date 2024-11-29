@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use super::PlayerConfig;
+use crate::block::block_manager::BlockActionResult;
 use crate::{
     command::CommandSender,
     entity::player::{ChatMode, Hand, Player},
@@ -48,6 +49,7 @@ pub enum BlockPlacingError {
     BlockOutOfReach,
     InvalidBlockFace,
     BlockOutOfWorld,
+    InventoryInvalid,
 }
 
 impl std::fmt::Display for BlockPlacingError {
@@ -60,7 +62,7 @@ impl PumpkinError for BlockPlacingError {
     fn is_kick(&self) -> bool {
         match self {
             Self::BlockOutOfReach | Self::BlockOutOfWorld => false,
-            Self::InvalidBlockFace => true,
+            Self::InvalidBlockFace | Self::InventoryInvalid => true,
         }
     }
 
@@ -69,6 +71,7 @@ impl PumpkinError for BlockPlacingError {
             Self::BlockOutOfReach | Self::BlockOutOfWorld | Self::InvalidBlockFace => {
                 log::Level::Warn
             }
+            Self::InventoryInvalid => log::Level::Error,
         }
     }
 
@@ -76,6 +79,7 @@ impl PumpkinError for BlockPlacingError {
         match self {
             Self::BlockOutOfReach | Self::BlockOutOfWorld => None,
             Self::InvalidBlockFace => Some("Invalid block face".into()),
+            Self::InventoryInvalid => Some("Held item invalid".into()),
         }
     }
 }
@@ -619,25 +623,47 @@ impl Player {
         }
 
         if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
-            let mut inventory = self.inventory.lock().await;
+            let inventory = self.inventory.lock().await;
             let entity = &self.living_entity.entity;
             let world = &entity.world;
-            let item_slot = inventory.held_item_mut();
+            let item_slot = inventory.held_item();
 
-            if let Some(item) = item_slot {
-                let block = get_block_by_item(item.item_id);
+            if let Some(item_stack) = item_slot {
+                let item_stack = *item_stack;
+                drop(inventory);
+
+                if let Some(item) = get_item_by_id(item_stack.item_id) {
+                    if let Ok(block) = world.get_block(location).await {
+                        let result = server
+                            .block_manager
+                            .on_use_with_item(block, self, location, item, server)
+                            .await;
+                        match result {
+                            BlockActionResult::Continue => {}
+                            BlockActionResult::Consume => {
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+
                 // check if item is a block, Because Not every item can be placed :D
-                if let Some(block) = block {
+                if let Some(block) = get_block_by_item(item_stack.item_id) {
                     // TODO: Config
                     // Decrease Block count
                     if self.gamemode.load() != GameMode::Creative {
-                        item.item_count -= 1;
-                        if item.item_count == 0 {
+                        let mut inventory = self.inventory.lock().await;
+                        let item_slot = inventory.held_item_mut();
+                        // This should never be possible
+                        let Some(item_stack) = item_slot else {
+                            return Err(BlockPlacingError::InventoryInvalid.into());
+                        };
+                        item_stack.item_count -= 1;
+                        if item_stack.item_count == 0 {
                             *item_slot = None;
                         }
+                        drop(inventory);
                     }
-
-                    drop(inventory);
 
                     let clicked_world_pos = WorldPosition(location.0);
                     let clicked_block_state = world.get_block_state(clicked_world_pos).await?;
@@ -679,26 +705,8 @@ impl Player {
                     self.client
                         .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
                         .await;
-
-                    //server.
-                } else {
-                    let block = world.get_block(location).await;
-                    let Some(item) = get_item_by_id(item.item_id) else {
-                        //TODO: Proper error handling here
-                        return Ok(());
-                    };
-
-                    drop(inventory); // This is necessary because else we still have a lock when opening ui elements
-                    if let Ok(block) = block {
-                        server
-                            .block_manager
-                            .on_use_with_item(block, self, location, item, server)
-                            .await;
-                    }
                 }
             } else {
-                drop(inventory);
-
                 let block = world.get_block(location).await;
                 if let Ok(block) = block {
                     server

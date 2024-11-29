@@ -1,3 +1,4 @@
+use crate::block::block_manager::BlockActionResult;
 use crate::entity::player::Player;
 use crate::server::Server;
 use async_trait::async_trait;
@@ -21,7 +22,8 @@ pub trait PumpkinBlock: Send + Sync {
         _location: WorldPosition,
         _item: &Item,
         _server: &Server,
-    ) {
+    ) -> BlockActionResult {
+        BlockActionResult::Continue
     }
 
     async fn on_placed<'a>(&self, _player: &Player, _location: WorldPosition, _server: &Server) {}

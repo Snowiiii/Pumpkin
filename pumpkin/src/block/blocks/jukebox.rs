@@ -1,3 +1,4 @@
+use crate::block::block_manager::BlockActionResult;
 use crate::block::pumpkin_block::PumpkinBlock;
 use crate::entity::player::Player;
 use crate::server::Server;
@@ -25,24 +26,26 @@ impl PumpkinBlock for JukeboxBlock {
         location: WorldPosition,
         item: &Item,
         _server: &Server,
-    ) {
+    ) -> BlockActionResult {
         let world = &player.living_entity.entity.world;
 
         let Some(jukebox_playable) = &item.components.jukebox_playable else {
-            return;
+            return BlockActionResult::Continue;
         };
 
         let Some(song) = jukebox_playable.song.split(':').nth(1) else {
-            return;
+            return BlockActionResult::Continue;
         };
 
         let Some(jukebox_song) = SYNCED_REGISTRIES.jukebox_song.get_index_of(song) else {
             log::error!("Jukebox playable song not registered!");
-            return;
+            return BlockActionResult::Continue;
         };
 
         //TODO: Update block state and block nbt
 
         world.play_record(jukebox_song as i32, location).await;
+
+        BlockActionResult::Consume
     }
 }
