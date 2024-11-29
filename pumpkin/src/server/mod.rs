@@ -1,7 +1,10 @@
 use connection_cache::{CachedBranding, CachedStatus};
+use crossbeam::atomic::AtomicCell;
 use key_store::KeyStore;
 use pumpkin_config::BASIC_CONFIG;
+use pumpkin_core::math::boundingbox::{BoundingBox, BoundingBoxSize};
 use pumpkin_core::GameMode;
+use pumpkin_entity::entity_type::EntityType;
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::{Container, OpenContainer};
@@ -19,8 +22,11 @@ use std::{
     time::Duration,
 };
 use tokio::sync::{Mutex, RwLock};
+use uuid::Uuid;
 
 use crate::client::EncryptionError;
+use crate::entity::living::LivingEntity;
+use crate::entity::Entity;
 use crate::world::custom_bossbar::CustomBossbars;
 use crate::{
     client::Client,
@@ -164,6 +170,31 @@ impl Server {
     pub async fn remove_player(&self) {
         // TODO: Config if we want decrease online
         self.server_listing.lock().await.remove_player();
+    }
+
+    // TODO: move to world
+    pub fn add_mob(&self, entity_type: EntityType) -> (Arc<LivingEntity>, Arc<World>, Uuid) {
+        let entity_id = self.new_entity_id();
+        // Basically the default world
+        // TODO: select default from config
+        let world = &self.worlds[0];
+
+        // TODO: set per each mob
+        let bounding_box_size = BoundingBoxSize {
+            width: 0.6,
+            height: 1.8,
+        };
+
+        let mob = Arc::new(LivingEntity::new(Entity::new(
+            entity_id,
+            world.clone(),
+            entity_type,
+            1.62,
+            AtomicCell::new(BoundingBox::new_default(&bounding_box_size)),
+            AtomicCell::new(bounding_box_size),
+        )));
+
+        (mob, world.clone(), uuid::Uuid::new_v4())
     }
 
     pub async fn try_get_container(

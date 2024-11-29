@@ -15,12 +15,15 @@ use pumpkin_core::{
     text::TextComponent,
     GameMode,
 };
+use pumpkin_entity::entity_type::EntityType;
 use pumpkin_inventory::{InventoryError, WindowType};
-use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
 use pumpkin_protocol::{
     client::play::CCommandSuggestions,
     server::play::{SCloseContainer, SCommandSuggestion, SKeepAlive, SSetPlayerGround, SUseItem},
     VarInt,
+};
+use pumpkin_protocol::{
+    client::play::CSpawnEntity, server::play::SCookieResponse as SPCookieResponse,
 };
 use pumpkin_protocol::{
     client::play::{
@@ -34,7 +37,11 @@ use pumpkin_protocol::{
         SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status,
     },
 };
-use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
+use pumpkin_world::{
+    block::{block_registry::get_block_by_item, BlockFace},
+    entity::entity_registry::get_entity_id,
+    item::item_registry::get_spawn_egg,
+};
 use thiserror::Error;
 
 use super::PlayerConfig;
@@ -608,9 +615,11 @@ impl Player {
 
     pub async fn handle_use_item_on(
         &self,
+        server: &Arc<Server>,
         use_item_on: SUseItemOn,
     ) -> Result<(), Box<dyn PumpkinError>> {
         let location = use_item_on.location;
+        let mut should_try_decrement: bool = false;
 
         if !self.can_interact_with_block_at(&location, 1.0) {
             // TODO: maybe log?
@@ -621,12 +630,20 @@ impl Player {
             let mut inventory = self.inventory.lock().await;
             let item_slot = inventory.held_item_mut();
             if let Some(item) = item_slot {
-                let block = get_block_by_item(item.item_id);
                 // check if item is a block, Because Not every item can be placed :D
-                if let Some(block) = block {
-                    let entity = &self.living_entity.entity;
-                    let world = &entity.world;
+                if let Some(block) = get_block_by_item(item.item_id) {
+                    should_try_decrement = self
+                        .run_is_block_place(block.default_state_id, use_item_on, location, &face)
+                        .await?;
+                }
+                // check if item is a spawn egg
+                if let Some(item_t) = get_spawn_egg(item.item_id) {
+                    should_try_decrement = self
+                        .run_is_spawn_egg(item_t, server, location, &face)
+                        .await?;
+                };
 
+                if should_try_decrement {
                     // TODO: Config
                     // Decrease Block count
                     if self.gamemode.load() != GameMode::Creative {
@@ -635,49 +652,107 @@ impl Player {
                             *item_slot = None;
                         }
                     }
-
-                    let clicked_world_pos = WorldPosition(location.0);
-                    let clicked_block_state = world.get_block_state(clicked_world_pos).await?;
-
-                    let world_pos = if clicked_block_state.replaceable {
-                        clicked_world_pos
-                    } else {
-                        let world_pos = WorldPosition(location.0 + face.to_offset());
-                        let previous_block_state = world.get_block_state(world_pos).await?;
-
-                        if !previous_block_state.replaceable {
-                            return Ok(());
-                        }
-
-                        world_pos
-                    };
-
-                    //check max world build height
-                    if world_pos.0.y > 319 {
-                        self.client
-                            .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
-                            .await;
-                        return Err(BlockPlacingError::BlockOutOfWorld.into());
-                    }
-
-                    let block_bounding_box = BoundingBox::from_block(&world_pos);
-                    let bounding_box = entity.bounding_box.load();
-                    //TODO: Make this check for every entity in that posistion
-                    if !bounding_box.intersects(&block_bounding_box) {
-                        world
-                            .set_block_state(world_pos, block.default_state_id)
-                            .await;
-                    }
                 }
-                self.client
-                    .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
-                    .await;
             }
-
             Ok(())
         } else {
             Err(BlockPlacingError::InvalidBlockFace.into())
         }
+    }
+
+    async fn run_is_spawn_egg(
+        &self,
+        item_t: String,
+        server: &Server,
+        location: WorldPosition,
+        face: &BlockFace,
+    ) -> Result<bool, Box<dyn PumpkinError>> {
+        // check if spawn egg has corresponding entity name
+        if let Some(spawn_item_name) = get_entity_id(&item_t) {
+            // TODO: should be facing player
+            let yaw = 10.0;
+            let pitch = 10.0;
+            // TODO: should be at precise spot not just the block location
+            let world_pos = WorldPosition(location.0 + face.to_offset());
+
+            let (mob, _world, uuid) = server.add_mob(EntityType::Chicken);
+
+            self.client
+                .send_packet(&CSpawnEntity::new(
+                    VarInt(mob.entity.entity_id),
+                    uuid,
+                    // VarInt(server.new_entity_id()),
+                    // uuid::Uuid::new_v4(),
+                    VarInt((*spawn_item_name).into()),
+                    // (EntityType::Sheep as i32).into(),
+                    world_pos.0.x.into(),
+                    world_pos.0.y.into(),
+                    world_pos.0.z.into(),
+                    pitch,
+                    yaw,
+                    yaw,
+                    0.into(),
+                    0.0,
+                    0.0,
+                    0.0,
+                ))
+                .await;
+
+            // TODO: send update inventory command?
+
+            // TODO: send/configure additional commands/data based on type of entity (horse, slime, etc)
+        } else {
+            // TODO: fix
+            return Err(BlockPlacingError::BlockOutOfWorld.into());
+        };
+
+        Ok(true)
+    }
+
+    async fn run_is_block_place(
+        &self,
+        block: u16,
+        use_item_on: SUseItemOn,
+        location: WorldPosition,
+        face: &BlockFace,
+    ) -> Result<bool, Box<dyn PumpkinError>> {
+        let entity = &self.living_entity.entity;
+        let world = &entity.world;
+
+        let clicked_world_pos = WorldPosition(location.0);
+        let clicked_block_state = world.get_block_state(clicked_world_pos).await?;
+
+        let world_pos = if clicked_block_state.replaceable {
+            clicked_world_pos
+        } else {
+            let world_pos = WorldPosition(location.0 + face.to_offset());
+            let previous_block_state = world.get_block_state(world_pos).await?;
+
+            if !previous_block_state.replaceable {
+                return Ok(true);
+            }
+
+            world_pos
+        };
+
+        //check max world build height
+        if world_pos.0.y > 319 {
+            self.client
+                .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
+                .await;
+            return Err(BlockPlacingError::BlockOutOfWorld.into());
+        }
+
+        let block_bounding_box = BoundingBox::from_block(&world_pos);
+        let bounding_box = entity.bounding_box.load();
+        //TODO: Make this check for every entity in that posistion
+        if !bounding_box.intersects(&block_bounding_box) {
+            world.set_block_state(world_pos, block).await;
+        }
+        self.client
+            .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
+            .await;
+        Ok(true)
     }
 
     pub fn handle_use_item(&self, _use_item: &SUseItem) {
