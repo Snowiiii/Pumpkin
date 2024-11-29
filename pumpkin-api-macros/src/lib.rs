@@ -92,7 +92,7 @@ pub fn plugin_event(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let method = quote! {
         #[allow(unused_mut)]
-        fn #fn_name(#fn_inputs) #fn_output {
+        async fn #fn_name(#fn_inputs) #fn_output {
             #fn_body
         }
     }
@@ -190,6 +190,7 @@ pub fn plugin_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
             #(#methods)*
         }
 
+        #[async_trait::async_trait]
         impl pumpkin::plugin::Hooks for #struct_ident {
             fn registered_events(&self) -> Result<&'static [pumpkin::plugin::EventDescriptor], String> {
                 static EVENTS: &[EventDescriptor] = &[#(#events),*];
