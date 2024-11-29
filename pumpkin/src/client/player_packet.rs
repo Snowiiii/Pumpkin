@@ -707,6 +707,7 @@ impl Player {
                         .await;
                 }
             } else {
+                drop(inventory);
                 let block = world.get_block(location).await;
                 if let Ok(block) = block {
                     server
