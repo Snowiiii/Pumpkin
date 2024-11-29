@@ -10,4 +10,6 @@ crate-type = ["dylib"]
 
 [dependencies]
 pumpkin = { path = "../../pumpkin" }
+pumpkin-core = { path = "../../pumpkin-core" }
 pumpkin-api-macros = { path = "../../pumpkin-api-macros" }
+async-trait = "0.1.83"
