@@ -187,7 +187,15 @@ impl<'a> TextComponent<'a> {
             #[serde(rename = "extra")]
             extra: Vec<&'a TempStruct<'a>>,
         }
-        let temp_extra: Vec<TempStruct> = self.extra.iter().map(|x| TempStruct { text: &x.content, style: &x.style, extra: vec![] }).collect();
+        let temp_extra: Vec<TempStruct> = self
+            .extra
+            .iter()
+            .map(|x| TempStruct {
+                text: &x.content,
+                style: &x.style,
+                extra: vec![],
+            })
+            .collect();
         let temp_extra_refs: Vec<&TempStruct> = temp_extra.iter().collect();
         let astruct = TempStruct {
             text: &self.content,
