@@ -24,7 +24,7 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
-use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
+use pumpkin_protocol::server::play::{SCookieResponse as SPCookieResponse, SPlayPingRequest};
 use pumpkin_protocol::server::play::{SClickContainer, SKeepAlive};
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
@@ -765,6 +765,9 @@ impl Player {
             SPlayerCommand::PACKET_ID => {
                 self.handle_player_command(SPlayerCommand::read(bytebuf)?)
                     .await;
+            }
+            SPlayPingRequest::PACKET_ID => {
+                self.handle_play_ping_request(SPlayPingRequest::read(bytebuf)?).await;
             }
             SClickContainer::PACKET_ID => {
                 self.handle_click_container(server, SClickContainer::read(bytebuf)?)
