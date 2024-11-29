@@ -1,17 +1,19 @@
-use crate::block::pumpkin_block::{BlockMetadata, PumpkinBlock};
+use crate::block::pumpkin_block::PumpkinBlock;
 use crate::entity::player::Player;
 use crate::server::Server;
 use async_trait::async_trait;
 use pumpkin_core::math::position::WorldPosition;
 use pumpkin_inventory::{CraftingTable, OpenContainer, WindowType};
+use pumpkin_macros::pumpkin_block;
 use pumpkin_world::item::item_registry::Item;
 
+#[pumpkin_block("minecraft:crafting_table")]
 pub struct CraftingTableBlock;
 
-impl BlockMetadata for CraftingTableBlock {
-    const NAMESPACE: &'static str = "minecraft";
-    const ID: &'static str = "crafting_table";
-}
+// impl BlockMetadata for CraftingTableBlock {
+//     const NAMESPACE: &'static str = "minecraft";
+//     const ID: &'static str = "crafting_table";
+// }
 
 #[async_trait]
 impl PumpkinBlock for CraftingTableBlock {

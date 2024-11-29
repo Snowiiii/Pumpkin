@@ -1,17 +1,14 @@
-use crate::block::pumpkin_block::{BlockMetadata, PumpkinBlock};
+use crate::block::pumpkin_block::PumpkinBlock;
 use crate::entity::player::Player;
 use crate::server::Server;
 use async_trait::async_trait;
 use pumpkin_core::math::position::WorldPosition;
+use pumpkin_macros::pumpkin_block;
 use pumpkin_registry::SYNCED_REGISTRIES;
 use pumpkin_world::item::item_registry::Item;
 
+#[pumpkin_block("minecraft:jukebox")]
 pub struct JukeboxBlock;
-
-impl BlockMetadata for JukeboxBlock {
-    const NAMESPACE: &'static str = "minecraft";
-    const ID: &'static str = "jukebox";
-}
 
 #[async_trait]
 impl PumpkinBlock for JukeboxBlock {

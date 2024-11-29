@@ -42,6 +42,32 @@ pub fn server_packet(input: TokenStream, item: TokenStream) -> TokenStream {
     gen.into()
 }
 
+#[proc_macro_attribute]
+pub fn pumpkin_block(input: TokenStream, item: TokenStream) -> TokenStream {
+    let ast: syn::DeriveInput = syn::parse(item.clone()).unwrap();
+    let name = &ast.ident;
+    let (impl_generics, ty_generics, _) = ast.generics.split_for_impl();
+
+    let input_string = input.to_string();
+    let packet_name = input_string.trim_matches('"');
+    let packet_name_split: Vec<&str> = packet_name.split(":").collect();
+
+    let namespace = packet_name_split[0];
+    let id = packet_name_split[1];
+
+    let item: proc_macro2::TokenStream = item.into();
+
+    let gen = quote! {
+        #item
+        impl #impl_generics crate::block::pumpkin_block::BlockMetadata for #name #ty_generics {
+            const NAMESPACE: &'static str = #namespace;
+            const ID: &'static str = #id;
+        }
+    };
+
+    gen.into()
+}
+
 mod screen;
 #[proc_macro]
 pub fn screen(item: TokenStream) -> TokenStream {
