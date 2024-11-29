@@ -10,11 +10,6 @@ use pumpkin_world::item::item_registry::Item;
 #[pumpkin_block("minecraft:crafting_table")]
 pub struct CraftingTableBlock;
 
-// impl BlockMetadata for CraftingTableBlock {
-//     const NAMESPACE: &'static str = "minecraft";
-//     const ID: &'static str = "crafting_table";
-// }
-
 #[async_trait]
 impl PumpkinBlock for CraftingTableBlock {
     async fn on_use<'a>(&self, player: &Player, _location: WorldPosition, server: &Server) {
