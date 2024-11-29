@@ -35,10 +35,11 @@ impl PumpkinBlock for JukeboxBlock {
             return;
         };
 
-        let Some(jukebox_song) = SYNCED_REGISTRIES
-            .jukebox_song
-            .get_index_of(jukebox_playable.song.as_str())
-        else {
+        let Some(song) = jukebox_playable.song.split(':').nth(1) else {
+            return;
+        };
+
+        let Some(jukebox_song) = SYNCED_REGISTRIES.jukebox_song.get_index_of(song) else {
             log::error!("Jukebox playable song not registered!");
             return;
         };

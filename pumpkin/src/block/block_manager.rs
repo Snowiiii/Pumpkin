@@ -25,7 +25,7 @@ impl BlockManager {
         location: WorldPosition,
         server: &Server,
     ) {
-        let pumpkin_block = self.blocks.get(block.name.as_str());
+        let pumpkin_block = self.get_pumpkin_block(block);
         if let Some(pumpkin_block) = pumpkin_block {
             pumpkin_block.on_use(player, location, server).await;
         }
@@ -39,7 +39,7 @@ impl BlockManager {
         item: &Item,
         server: &Server,
     ) {
-        let pumpkin_block = self.blocks.get(block.name.as_str());
+        let pumpkin_block = self.get_pumpkin_block(block);
         if let Some(pumpkin_block) = pumpkin_block {
             pumpkin_block
                 .on_use_with_item(player, location, item, server)
@@ -54,9 +54,15 @@ impl BlockManager {
         location: WorldPosition,
         server: &Server,
     ) {
-        let pumpkin_block = self.blocks.get(block.name.as_str());
+        let pumpkin_block = self.get_pumpkin_block(block);
         if let Some(pumpkin_block) = pumpkin_block {
             pumpkin_block.on_placed(player, location, server).await;
         }
+    }
+
+    #[must_use]
+    pub fn get_pumpkin_block(&self, block: &Block) -> Option<&Arc<dyn PumpkinBlock>> {
+        self.blocks
+            .get(format!("minecraft:{}", block.name).as_str())
     }
 }

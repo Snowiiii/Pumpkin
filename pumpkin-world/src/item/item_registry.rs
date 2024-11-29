@@ -24,7 +24,6 @@ pub fn get_item_by_id<'a>(id: u16) -> Option<&'a Item> {
 #[derive(Deserialize, Clone, Debug)]
 pub struct Item {
     pub id: u16,
-    pub name: String,
     pub components: ItemComponents,
 }
 
