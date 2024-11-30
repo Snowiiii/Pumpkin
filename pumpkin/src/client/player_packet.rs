@@ -670,7 +670,7 @@ impl Player {
                     // TODO: Config
                     // Decrease Block count
                     if self.gamemode.load() != GameMode::Creative {
-                        let mut inventory = self.inventory.lock().await;
+                        let mut inventory = self.inventory().lock().await;
                         let item_slot = inventory.held_item_mut();
                         // This should never be possible
                         let Some(item_stack) = item_slot else {
