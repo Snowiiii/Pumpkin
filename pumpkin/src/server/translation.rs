@@ -6,7 +6,7 @@ use std::{
     path::PathBuf,
 };
 
-use pumpkin_config::TranslationConfig;
+use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::text::{style::Style, TextComponent, TextContent};
 use serde_json::Value;
 use thiserror::Error;
@@ -23,10 +23,8 @@ pub enum TranslationError {
     JsonParse,
 }
 
-pub fn translate<'a>(
-    config: &TranslationConfig,
-    message: &'a str,
-) -> Result<TextComponent<'a>, TranslationError> {
+pub fn translate(message: &'_ str) -> Result<TextComponent<'_>, TranslationError> {
+    let config = &ADVANCED_CONFIG.translation;
     if !config.enabled {
         let path = "assets/lang/en_us/en_us.json";
         let translations = get_translations(path, message)?;
