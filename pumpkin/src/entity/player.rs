@@ -100,7 +100,7 @@ pub type PlayerPendingChunks =
 /// A `Player` is a special type of entity that represents a human player connected to the server.
 pub struct Player {
     /// The underlying living entity object that represents the player.
-    pub living_entity: LivingEntity,
+    pub living_entity: LivingEntity<PlayerInventory>,
     /// The player's game profile information, including their username and UUID.
     pub gameprofile: GameProfile,
     /// The client connection associated with the player.
@@ -113,8 +113,6 @@ pub struct Player {
     pub food: AtomicI32,
     /// The player's food saturation level.
     pub food_saturation: AtomicCell<f32>,
-    /// The player's inventory, containing items and equipment.
-    pub inventory: Mutex<PlayerInventory>,
     /// The ID of the currently open container (if any).
     pub open_container: AtomicCell<Option<u64>>,
     /// The item currently being held by the player.
@@ -188,14 +186,17 @@ impl Player {
         };
 
         Self {
-            living_entity: LivingEntity::new(Entity::new(
-                entity_id,
-                world,
-                EntityType::Player,
-                1.62,
-                AtomicCell::new(BoundingBox::new_default(&bounding_box_size)),
-                AtomicCell::new(bounding_box_size),
-            )),
+            living_entity: LivingEntity::new_with_container(
+                Entity::new(
+                    entity_id,
+                    world,
+                    EntityType::Player,
+                    1.62,
+                    AtomicCell::new(BoundingBox::new_default(&bounding_box_size)),
+                    AtomicCell::new(bounding_box_size),
+                ),
+                PlayerInventory::new(),
+            ),
             config: Mutex::new(config),
             gameprofile,
             client,
@@ -204,7 +205,6 @@ impl Player {
             food: AtomicI32::new(20),
             food_saturation: AtomicCell::new(20.0),
             current_block_destroy_stage: AtomicU8::new(0),
-            inventory: Mutex::new(PlayerInventory::new()),
             open_container: AtomicCell::new(None),
             carried_item: AtomicCell::new(None),
             teleport_id_count: AtomicI32::new(0),
@@ -221,6 +221,13 @@ impl Player {
             // TODO: change this
             permission_lvl: PermissionLvl::Four,
         }
+    }
+
+    pub fn inventory(&self) -> &Mutex<PlayerInventory> {
+        self.living_entity
+            .inventory
+            .as_ref()
+            .expect("Player always has inventory")
     }
 
     /// Removes the Player out of the current World
