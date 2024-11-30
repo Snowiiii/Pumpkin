@@ -143,23 +143,28 @@ impl NoiseConfig {
 
 #[cfg(test)]
 mod test {
+    use std::{fs, path::Path};
+
     use pumpkin_core::{
         assert_eq_delta,
         random::{xoroshiro128::Xoroshiro, RandomDeriver, RandomImpl},
     };
 
-    use crate::world_gen::noise::{
-        config::NoiseConfig,
-        density::{
-            built_in_density_function::{
-                BASE_3D_NOISE_OVERWORLD, CAVES_ENTRANCES_OVERWORLD, CAVES_NOODLE_OVERWORLD,
-                CAVES_PILLARS_OVERWORLD, CAVES_SPAGHETTI_2D_THICKNESS_MODULAR_OVERWORLD,
-                CAVES_SPAGHETTI_ROUGHNESS_FUNCTION_OVERWORLD, DEPTH_OVERWORLD, FACTOR_OVERWORLD,
-                OFFSET_OVERWORLD, SLOPED_CHEESE_OVERWORLD,
+    use crate::{
+        read_data_from_file,
+        world_gen::noise::{
+            config::NoiseConfig,
+            density::{
+                built_in_density_function::{
+                    BASE_3D_NOISE_OVERWORLD, CAVES_ENTRANCES_OVERWORLD, CAVES_NOODLE_OVERWORLD,
+                    CAVES_PILLARS_OVERWORLD, CAVES_SPAGHETTI_2D_THICKNESS_MODULAR_OVERWORLD,
+                    CAVES_SPAGHETTI_ROUGHNESS_FUNCTION_OVERWORLD, DEPTH_OVERWORLD,
+                    FACTOR_OVERWORLD, OFFSET_OVERWORLD, SLOPED_CHEESE_OVERWORLD,
+                },
+                NoisePos, UnblendedNoisePos,
             },
-            NoisePos, UnblendedNoisePos,
+            router::OVERWORLD_NOISE_ROUTER,
         },
-        router::OVERWORLD_NOISE_ROUTER,
     };
 
     use super::LegacyChunkNoiseVisitor;
@@ -586,12 +591,10 @@ mod test {
         }
     }
 
-    #[ignore]
     #[test]
     fn test_final_density_samples() {
         let expected_data: Vec<(i32, i32, i32, f64)> =
-            serde_json::from_str(include_str!("../../../assets/final_density_dump_7_4.json"))
-                .expect("failed to decode array");
+            read_data_from_file!("../../../assets/final_density_dump_7_4.json");
 
         let config = NoiseConfig::new(0, &OVERWORLD_NOISE_ROUTER);
         let function = config.router().final_density.clone();
@@ -602,17 +605,14 @@ mod test {
         }
     }
 
-    #[ignore]
     #[test]
     fn test_converted_sloped_cheese() {
         let mut rand = Xoroshiro::from_seed(0);
         let mut converter =
             LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
 
-        let expected_data: Vec<(i32, i32, i32, f64)> = serde_json::from_str(include_str!(
-            "../../../assets/converted_sloped_cheese_7_4.json"
-        ))
-        .expect("failed to decode array");
+        let expected_data: Vec<(i32, i32, i32, f64)> =
+            read_data_from_file!("../../../assets/converted_sloped_cheese_7_4.json");
 
         let function = SLOPED_CHEESE_OVERWORLD
             .maybe_convert(&mut converter)
@@ -625,7 +625,6 @@ mod test {
         }
     }
 
-    #[ignore]
     #[test]
     fn test_converted_factor() {
         let mut rand = Xoroshiro::from_seed(0);
@@ -633,8 +632,7 @@ mod test {
             LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
 
         let expected_data: Vec<(i32, i32, i32, f64)> =
-            serde_json::from_str(include_str!("../../../assets/converted_factor_7_4.json"))
-                .expect("failed to decode array");
+            read_data_from_file!("../../../assets/converted_factor_7_4.json");
 
         let function = FACTOR_OVERWORLD
             .maybe_convert(&mut converter)
@@ -647,7 +645,6 @@ mod test {
         }
     }
 
-    #[ignore]
     #[test]
     fn test_converted_depth() {
         let mut rand = Xoroshiro::from_seed(0);
@@ -655,8 +652,7 @@ mod test {
             LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
 
         let expected_data: Vec<(i32, i32, i32, f64)> =
-            serde_json::from_str(include_str!("../../../assets/converted_depth_7_4.json"))
-                .expect("failed to decode array");
+            read_data_from_file!("../../../assets/converted_depth_7_4.json");
 
         let function = DEPTH_OVERWORLD
             .maybe_convert(&mut converter)
@@ -669,7 +665,6 @@ mod test {
         }
     }
 
-    #[ignore]
     #[test]
     fn test_converted_offset() {
         let mut rand = Xoroshiro::from_seed(0);
@@ -677,8 +672,7 @@ mod test {
             LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
 
         let expected_data: Vec<(i32, i32, i32, f64)> =
-            serde_json::from_str(include_str!("../../../assets/converted_offset_7_4.json"))
-                .expect("failed to decode array");
+            read_data_from_file!("../../../assets/converted_offset_7_4.json");
 
         let function = OFFSET_OVERWORLD
             .maybe_convert(&mut converter)
@@ -691,17 +685,14 @@ mod test {
         }
     }
 
-    #[ignore]
     #[test]
     fn test_converted_3d_overworld() {
         let mut rand = Xoroshiro::from_seed(0);
         let mut converter =
             LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
 
-        let expected_data: Vec<(i32, i32, i32, f64)> = serde_json::from_str(include_str!(
-            "../../../assets/converted_3d_overworld_7_4.json"
-        ))
-        .expect("failed to decode array");
+        let expected_data: Vec<(i32, i32, i32, f64)> =
+            read_data_from_file!("../../../assets/converted_3d_overworld_7_4.json");
 
         let function = BASE_3D_NOISE_OVERWORLD
             .maybe_convert(&mut converter)
@@ -714,17 +705,14 @@ mod test {
         }
     }
 
-    #[ignore]
     #[test]
     fn test_converted_cave_entrances_overworld() {
         let mut rand = Xoroshiro::from_seed(0);
         let mut converter =
             LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
 
-        let expected_data: Vec<(i32, i32, i32, f64)> = serde_json::from_str(include_str!(
-            "../../../assets/converted_cave_entrances_overworld_7_4.json"
-        ))
-        .expect("failed to decode array");
+        let expected_data: Vec<(i32, i32, i32, f64)> =
+            read_data_from_file!("../../../assets/converted_cave_entrances_overworld_7_4.json");
 
         let function = CAVES_ENTRANCES_OVERWORLD
             .maybe_convert(&mut converter)
@@ -737,17 +725,15 @@ mod test {
         }
     }
 
-    #[ignore]
     #[test]
     fn test_converted_cave_spaghetti_rough_overworld() {
         let mut rand = Xoroshiro::from_seed(0);
         let mut converter =
             LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
 
-        let expected_data: Vec<(i32, i32, i32, f64)> = serde_json::from_str(include_str!(
+        let expected_data: Vec<(i32, i32, i32, f64)> = read_data_from_file!(
             "../../../assets/converted_cave_spaghetti_rough_overworld_7_4.json"
-        ))
-        .expect("failed to decode array");
+        );
 
         let function = CAVES_SPAGHETTI_ROUGHNESS_FUNCTION_OVERWORLD
             .maybe_convert(&mut converter)
@@ -760,17 +746,14 @@ mod test {
         }
     }
 
-    #[ignore]
     #[test]
     fn test_converted_cave_noodle() {
         let mut rand = Xoroshiro::from_seed(0);
         let mut converter =
             LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
 
-        let expected_data: Vec<(i32, i32, i32, f64)> = serde_json::from_str(include_str!(
-            "../../../assets/converted_cave_noodle_7_4.json"
-        ))
-        .expect("failed to decode array");
+        let expected_data: Vec<(i32, i32, i32, f64)> =
+            read_data_from_file!("../../../assets/converted_cave_noodle_7_4.json");
 
         let function = CAVES_NOODLE_OVERWORLD
             .maybe_convert(&mut converter)
@@ -783,17 +766,14 @@ mod test {
         }
     }
 
-    #[ignore]
     #[test]
     fn test_converted_cave_pillar() {
         let mut rand = Xoroshiro::from_seed(0);
         let mut converter =
             LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
 
-        let expected_data: Vec<(i32, i32, i32, f64)> = serde_json::from_str(include_str!(
-            "../../../assets/converted_cave_pillar_7_4.json"
-        ))
-        .expect("failed to decode array");
+        let expected_data: Vec<(i32, i32, i32, f64)> =
+            read_data_from_file!("../../../assets/converted_cave_pillar_7_4.json");
 
         let function = CAVES_PILLARS_OVERWORLD
             .maybe_convert(&mut converter)
@@ -806,17 +786,14 @@ mod test {
         }
     }
 
-    #[ignore]
     #[test]
     fn test_converted_cave_spaghetti_2d_thickness() {
         let mut rand = Xoroshiro::from_seed(0);
         let mut converter =
             LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
 
-        let expected_data: Vec<(i32, i32, i32, f64)> = serde_json::from_str(include_str!(
-            "../../../assets/converted_cave_spaghetti_2d_thicc_7_4.json"
-        ))
-        .expect("failed to decode array");
+        let expected_data: Vec<(i32, i32, i32, f64)> =
+            read_data_from_file!("../../../assets/converted_cave_spaghetti_2d_thicc_7_4.json");
 
         let function = CAVES_SPAGHETTI_2D_THICKNESS_MODULAR_OVERWORLD
             .maybe_convert(&mut converter)

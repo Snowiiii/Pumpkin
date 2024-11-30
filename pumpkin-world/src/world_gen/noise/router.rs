@@ -472,26 +472,29 @@ fn create_caves(sloped_cheese: SharedComponentReference) -> SharedComponentRefer
 
 #[cfg(test)]
 mod test {
-    use std::sync::Arc;
+    use std::{fs, path::Path, sync::Arc};
 
     use pumpkin_core::{
         assert_eq_delta,
         random::{legacy_rand::LegacyRand, xoroshiro128::Xoroshiro, RandomDeriver, RandomImpl},
     };
 
-    use crate::world_gen::noise::{
-        config::LegacyChunkNoiseVisitor,
-        density::{
-            built_in_density_function::{EROSION_OVERWORLD, SLOPED_CHEESE_OVERWORLD},
-            component_functions::{
-                ComponentReference, ComponentReferenceImplementation, ConversionResultPre,
-                ConverterEnvironment, ConverterImpl, NoEnvironment, OwnedConverterEnvironment,
+    use crate::{
+        read_data_from_file,
+        world_gen::noise::{
+            config::LegacyChunkNoiseVisitor,
+            density::{
+                built_in_density_function::{EROSION_OVERWORLD, SLOPED_CHEESE_OVERWORLD},
+                component_functions::{
+                    ComponentReference, ComponentReferenceImplementation, ConversionResultPre,
+                    ConverterEnvironment, ConverterImpl, NoEnvironment, OwnedConverterEnvironment,
+                },
+                noise::InternalNoise,
+                NoisePos, UnblendedNoisePos,
             },
-            noise::InternalNoise,
-            NoisePos, UnblendedNoisePos,
+            perlin::DoublePerlinNoiseSampler,
+            router::OVERWORLD_NOISE_ROUTER,
         },
-        perlin::DoublePerlinNoiseSampler,
-        router::OVERWORLD_NOISE_ROUTER,
     };
 
     use super::{apply_surface_slides, create_caves};
@@ -775,7 +778,6 @@ mod test {
         assert_eq!(OVERWORLD_NOISE_ROUTER.vein_gap.sample(pos), 0f64);
     }
 
-    #[ignore]
     #[test]
     fn test_converted_cave() {
         let mut rand = Xoroshiro::from_seed(0);
@@ -783,8 +785,7 @@ mod test {
             LegacyChunkNoiseVisitor::new(RandomDeriver::Xoroshiro(rand.next_splitter()), 0);
 
         let expected_data: Vec<(i32, i32, i32, f64)> =
-            serde_json::from_str(include_str!("../../../assets/converted_cave_7_4.json"))
-                .expect("failed to decode array");
+            read_data_from_file!("../../../assets/converted_cave_7_4.json");
 
         let function = create_caves(SLOPED_CHEESE_OVERWORLD.clone())
             .maybe_convert(&mut converter)

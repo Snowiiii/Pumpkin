@@ -416,17 +416,20 @@ impl<E: DensityFunctionEnvironment> ImmutableComponentFunctionImpl
 
 #[cfg(test)]
 mod test {
-    use crate::world_gen::noise::density::{
-        component_functions::ImmutableComponentFunctionImpl, NoisePos, UnblendedNoisePos,
+    use std::{fs, path::Path};
+
+    use crate::{
+        read_data_from_file,
+        world_gen::noise::density::{
+            component_functions::ImmutableComponentFunctionImpl, NoisePos, UnblendedNoisePos,
+        },
     };
 
     use super::YClampedFunction;
 
     #[test]
     fn test_y_clamped() {
-        let expected_data: Vec<f64> =
-            serde_json::from_str(include_str!("../../../../assets/y_clamp.json"))
-                .expect("failed to decode array");
+        let expected_data: Vec<f64> = read_data_from_file!("../../../../assets/y_clamp.json");
         let mut expected_iter = expected_data.iter();
 
         let function = YClampedFunction::new(-64, 320, 1.5, -1.5);

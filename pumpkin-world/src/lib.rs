@@ -22,6 +22,25 @@ pub const WORLD_LOWEST_Y: i16 = -64;
 pub const WORLD_MAX_Y: i16 = WORLD_HEIGHT as i16 - WORLD_LOWEST_Y.abs();
 pub const DIRECT_PALETTE_BITS: u32 = 15;
 
+#[macro_export]
+macro_rules! read_data_from_file {
+    ($path:expr) => {
+        serde_json::from_str(
+            &fs::read_to_string(
+                Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .parent()
+                    .unwrap()
+                    .join(file!())
+                    .parent()
+                    .unwrap()
+                    .join($path),
+            )
+            .expect("no data file"),
+        )
+        .expect("failed to decode array")
+    };
+}
+
 // TODO: is there a way to do in-file benches?
 pub fn bench_create_chunk_noise_overworld() {
     let config = NoiseConfig::new(0, &OVERWORLD_NOISE_ROUTER);

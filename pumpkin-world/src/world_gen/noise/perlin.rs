@@ -767,12 +767,14 @@ mod octave_perline_noise_sampler_test {
 
 #[cfg(test)]
 mod perlin_noise_sampler_test {
+    use std::{fs, path::Path};
+
     use pumpkin_core::{
         assert_eq_delta,
         random::{xoroshiro128::Xoroshiro, RandomDeriverImpl, RandomGenerator, RandomImpl},
     };
 
-    use crate::world_gen::noise::perlin::PerlinNoiseSampler;
+    use crate::{read_data_from_file, world_gen::noise::perlin::PerlinNoiseSampler};
 
     use super::OctavePerlinNoiseSampler;
 
@@ -978,8 +980,7 @@ mod perlin_noise_sampler_test {
     #[test]
     fn test_no_y_chunk() {
         let expected_data: Vec<(i32, i32, i32, f64)> =
-            serde_json::from_str(include_str!("../../../assets/perlin2_7_4.json"))
-                .expect("failed to decode array");
+            read_data_from_file!("../../../assets/perlin2_7_4.json");
 
         let mut rand = Xoroshiro::from_seed(0);
         let splitter = rand.next_splitter();
@@ -1221,8 +1222,7 @@ mod perlin_noise_sampler_test {
     #[test]
     fn test_no_fade_chunk() {
         let expected_data: Vec<(i32, i32, i32, f64)> =
-            serde_json::from_str(include_str!("../../../assets/perlin_7_4.json"))
-                .expect("failed to decode array");
+            read_data_from_file!("../../../assets/perlin_7_4.json");
 
         let mut rand = Xoroshiro::from_seed(0);
         let splitter = rand.next_splitter();
@@ -1312,9 +1312,7 @@ mod perlin_noise_sampler_test {
 
     #[test]
     fn test_map() {
-        let expected_data: Vec<i32> =
-            serde_json::from_str(include_str!("../../../assets/perlin_map.json"))
-                .expect("failed to decode array");
+        let expected_data: Vec<i32> = read_data_from_file!("../../../assets/perlin_map.json");
         let mut expected_iter = expected_data.iter();
 
         let mut rand = Xoroshiro::from_seed(0);

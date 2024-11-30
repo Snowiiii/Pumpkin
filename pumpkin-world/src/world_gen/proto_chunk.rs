@@ -214,16 +214,19 @@ impl ProtoChunk {
 
 #[cfg(test)]
 mod test {
+    use std::{fs, path::Path};
+
     use itertools::Itertools;
     use pumpkin_core::math::vector2::Vector2;
+
+    use crate::read_data_from_file;
 
     use super::ProtoChunk;
 
     #[test]
     fn test_no_blend_no_beard() {
         let expected_data: Vec<u16> =
-            serde_json::from_str(include_str!("../../assets/no_blend_no_beard_0_0.chunk"))
-                .expect("failed to decode array");
+            read_data_from_file!("../../assets/no_blend_no_beard_0_0.chunk");
         let mut chunk = ProtoChunk::new(Vector2::new(0, 0), 0);
         chunk.populate_noise();
         assert_eq!(
@@ -239,8 +242,7 @@ mod test {
     #[test]
     fn test_no_blend_no_beard_aquifer() {
         let expected_data: Vec<u16> =
-            serde_json::from_str(include_str!("../../assets/no_blend_no_beard_7_4.chunk"))
-                .expect("failed to decode array");
+            read_data_from_file!("../../assets/no_blend_no_beard_7_4.chunk");
         let mut chunk = ProtoChunk::new(Vector2::new(7, 4), 0);
         chunk.populate_noise();
 
