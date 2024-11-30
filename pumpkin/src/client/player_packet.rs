@@ -512,7 +512,7 @@ impl Player {
         }
     }
 
-    pub async fn handle_player_action(&self, player_action: SPlayerAction) {
+    pub async fn handle_player_action(&self, player_action: SPlayerAction, server: &Server) {
         match Status::from_i32(player_action.status.0) {
             Some(status) => match status {
                 Status::StartedDigging => {
@@ -531,7 +531,16 @@ impl Player {
                         // Block break & block break sound
                         let entity = &self.living_entity.entity;
                         let world = &entity.world;
+                        let block = world.get_block(location).await;
+
                         world.break_block(location, Some(self)).await;
+
+                        if let Ok(block) = block {
+                            server
+                                .block_manager
+                                .on_broken(block, self, location, server)
+                                .await;
+                        }
                     }
                 }
                 Status::CancelledDigging => {
@@ -560,7 +569,16 @@ impl Player {
                     // Block break & block break sound
                     let entity = &self.living_entity.entity;
                     let world = &entity.world;
+                    let block = world.get_block(location).await;
+
                     world.break_block(location, Some(self)).await;
+
+                    if let Ok(block) = block {
+                        server
+                            .block_manager
+                            .on_broken(block, self, location, server)
+                            .await;
+                    }
                     // TODO: Send this every tick
                     self.client
                         .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence))

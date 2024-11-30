@@ -759,7 +759,7 @@ impl Player {
                     .await;
             }
             SPlayerAction::PACKET_ID => {
-                self.handle_player_action(SPlayerAction::read(bytebuf)?)
+                self.handle_player_action(SPlayerAction::read(bytebuf)?, server)
                     .await;
             }
             SPlayerCommand::PACKET_ID => {

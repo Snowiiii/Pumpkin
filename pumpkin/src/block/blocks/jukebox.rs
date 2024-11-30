@@ -48,4 +48,11 @@ impl PumpkinBlock for JukeboxBlock {
 
         BlockActionResult::Consume
     }
+
+    async fn on_broken<'a>(&self, player: &Player, location: WorldPosition, _server: &Server) {
+        // For now just stop the music at this position
+        let world = &player.living_entity.entity.world;
+
+        world.stop_record(location).await;
+    }
 }
