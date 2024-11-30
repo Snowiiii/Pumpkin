@@ -57,7 +57,7 @@ where
     }
 }
 
-impl<'a, T: ToFromNumber> FindArg<'a> for BoundedNumArgumentConsumer<T> {
+impl<T: ToFromNumber> FindArg<'_> for BoundedNumArgumentConsumer<T> {
     type Data = Result<T, NotInBounds>;
 
     fn find_arg(args: &super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {

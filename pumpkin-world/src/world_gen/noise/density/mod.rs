@@ -875,7 +875,7 @@ pub struct Unused<'a> {
     _x: &'a str,
 }
 
-impl<'a> NoisePosImpl for Unused<'a> {
+impl NoisePosImpl for Unused<'_> {
     fn x(&self) -> i32 {
         todo!()
     }

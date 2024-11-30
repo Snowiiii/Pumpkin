@@ -94,7 +94,7 @@ impl<'a> TextComponent<'a> {
     }
 }
 
-impl<'a> serde::Serialize for TextComponent<'a> {
+impl serde::Serialize for TextComponent<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
