@@ -91,7 +91,7 @@ impl<'a> TextComponent<'a> {
             }
         }
         for child in self.extra {
-            text = text + &*child.to_pretty_console();
+            text += &*child.to_pretty_console();
         }
         text
     }
