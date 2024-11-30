@@ -31,6 +31,8 @@ pub struct TextComponent<'a> {
     /// Also has `ClickEvent
     #[serde(flatten)]
     pub style: Style<'a>,
+    /// Extra text components
+    pub extra: Vec<TextComponent<'a>>,
 }
 
 impl<'a> TextComponent<'a> {
@@ -38,6 +40,7 @@ impl<'a> TextComponent<'a> {
         Self {
             content: TextContent::Text { text: text.into() },
             style: Style::default(),
+            extra: vec![],
         }
     }
 
@@ -45,7 +48,13 @@ impl<'a> TextComponent<'a> {
         Self {
             content: TextContent::Text { text: text.into() },
             style: Style::default(),
+            extra: vec![],
         }
+    }
+
+    pub fn add_child(mut self, child: TextComponent<'a>) -> Self {
+        self.extra.push(child);
+        self
     }
 
     pub fn to_pretty_console(self) -> String {
@@ -85,7 +94,7 @@ impl<'a> TextComponent<'a> {
     }
 }
 
-impl<'a> serde::Serialize for TextComponent<'a> {
+impl serde::Serialize for TextComponent<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -174,12 +183,27 @@ impl<'a> TextComponent<'a> {
             text: &'a TextContent<'a>,
             #[serde(flatten)]
             style: &'a Style<'a>,
+            #[serde(default, skip_serializing_if = "Vec::is_empty")]
+            #[serde(rename = "extra")]
+            extra: Vec<&'a TempStruct<'a>>,
         }
+        let temp_extra: Vec<TempStruct> = self
+            .extra
+            .iter()
+            .map(|x| TempStruct {
+                text: &x.content,
+                style: &x.style,
+                extra: vec![],
+            })
+            .collect();
+        let temp_extra_refs: Vec<&TempStruct> = temp_extra.iter().collect();
         let astruct = TempStruct {
             text: &self.content,
             style: &self.style,
+            extra: temp_extra_refs,
         };
         // dbg!(&serde_json::to_string(&astruct));
+        // dbg!(pumpkin_nbt::serializer::to_bytes_unnamed(&astruct).unwrap().to_vec());
 
         // TODO
         pumpkin_nbt::serializer::to_bytes_unnamed(&astruct)

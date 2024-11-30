@@ -641,7 +641,7 @@ impl Player {
         }
 
         if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
-            let inventory = self.inventory.lock().await;
+            let inventory = self.inventory().lock().await;
             let entity = &self.living_entity.entity;
             let world = &entity.world;
             let item_slot = inventory.held_item();
@@ -752,7 +752,7 @@ impl Player {
             self.kick(TextComponent::text("Invalid held slot")).await;
             return;
         }
-        self.inventory.lock().await.set_selected(slot as usize);
+        self.inventory().lock().await.set_selected(slot as usize);
     }
 
     pub async fn handle_set_creative_slot(
@@ -764,7 +764,7 @@ impl Player {
         }
         let valid_slot = packet.slot >= 0 && packet.slot <= 45;
         if valid_slot {
-            self.inventory.lock().await.set_slot(
+            self.inventory().lock().await.set_slot(
                 packet.slot as usize,
                 packet.clicked_item.to_item(),
                 true,
@@ -783,7 +783,7 @@ impl Player {
             return;
         };
         // window_id 0 represents both 9x1 Generic AND inventory here
-        let mut inventory = self.inventory.lock().await;
+        let mut inventory = self.inventory().lock().await;
 
         inventory.state_id = 0;
         let open_container = self.open_container.load();

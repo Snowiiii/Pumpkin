@@ -27,7 +27,7 @@ impl<'a> CCommandSuggestions<'a> {
     }
 }
 
-impl<'a> ClientPacket for CCommandSuggestions<'a> {
+impl ClientPacket for CCommandSuggestions<'_> {
     fn write(&self, bytebuf: &mut crate::bytebuf::ByteBuffer) {
         bytebuf.put_var_int(&self.id);
         bytebuf.put_var_int(&self.start);

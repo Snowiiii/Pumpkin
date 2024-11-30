@@ -32,7 +32,7 @@ pub enum CommandSender<'a> {
     Player(Arc<Player>),
 }
 
-impl<'a> fmt::Display for CommandSender<'a> {
+impl fmt::Display for CommandSender<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
