@@ -33,6 +33,7 @@ export default defineConfig({
           { text: "Contributing", link: "/developer/contributing", },
           { text: "Introduction", link: "/developer/introduction" },
           { text: "Networking", link: "/developer/networking" },
+          { text: "Extractor", link: "/developer/extractor"},
           { text: "Authentication", link: "/developer/authentication" },
           { text: "RCON", link: "/developer/rcon" },
           { text: "World", link: "developer/world"},
