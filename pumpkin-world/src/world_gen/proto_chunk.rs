@@ -17,17 +17,27 @@ use super::{
 };
 
 pub struct StandardChunkFluidLevelSampler {
-    pub top_fluid: FluidLevel,
-    pub bottom_fluid: FluidLevel,
+    top_fluid: FluidLevel,
+    bottom_fluid: FluidLevel,
+    bottom_y: i32,
+}
+
+impl StandardChunkFluidLevelSampler {
+    pub fn new(top_fluid: FluidLevel, bottom_fluid: FluidLevel) -> Self {
+        let bottom_y = top_fluid
+            .max_y_exclusive()
+            .min(bottom_fluid.max_y_exclusive());
+        Self {
+            top_fluid,
+            bottom_fluid,
+            bottom_y,
+        }
+    }
 }
 
 impl FluidLevelSamplerImpl for StandardChunkFluidLevelSampler {
     fn get_fluid_level(&self, _x: i32, y: i32, _z: i32) -> FluidLevel {
-        if y < self
-            .top_fluid
-            .max_y_exclusive()
-            .min(self.bottom_fluid.max_y_exclusive())
-        {
+        if y < self.bottom_y {
             self.bottom_fluid.clone()
         } else {
             self.top_fluid.clone()
@@ -55,10 +65,10 @@ impl ProtoChunk {
         let horizontal_cell_count = CHUNK_DIM / generation_shape.horizontal_cell_block_count();
 
         // TODO: Customize these
-        let sampler = FluidLevelSampler::Chunk(StandardChunkFluidLevelSampler {
-            bottom_fluid: FluidLevel::new(-54, *LAVA_BLOCK),
-            top_fluid: FluidLevel::new(63, *WATER_BLOCK),
-        });
+        let sampler = FluidLevelSampler::Chunk(StandardChunkFluidLevelSampler::new(
+            FluidLevel::new(63, *WATER_BLOCK),
+            FluidLevel::new(-54, *LAVA_BLOCK),
+        ));
 
         let height = generation_shape.height() as usize;
         let sampler = ChunkNoiseGenerator::new(

@@ -26,10 +26,10 @@ pub const DIRECT_PALETTE_BITS: u32 = 15;
 pub fn bench_create_chunk_noise_overworld() {
     let config = NoiseConfig::new(0, &OVERWORLD_NOISE_ROUTER);
     let generation_shape = GenerationShape::SURFACE;
-    let sampler = FluidLevelSampler::Chunk(StandardChunkFluidLevelSampler {
-        bottom_fluid: FluidLevel::new(-54, *LAVA_BLOCK),
-        top_fluid: FluidLevel::new(62, *WATER_BLOCK),
-    });
+    let sampler = FluidLevelSampler::Chunk(StandardChunkFluidLevelSampler::new(
+        FluidLevel::new(63, *WATER_BLOCK),
+        FluidLevel::new(-54, *LAVA_BLOCK),
+    ));
 
     ChunkNoiseGenerator::new(
         16 / generation_shape.horizontal_cell_block_count(),

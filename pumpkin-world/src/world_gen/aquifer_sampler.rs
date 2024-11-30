@@ -484,9 +484,9 @@ impl WorldAquiferSampler {
                 let scaled_z = floor_div(k - 5, 16);
 
                 // The 4 closest positions, closest to furthest
-                let mut hypot_packed_block = [(0, i32::MAX); 4];
-                for offset_x in 0..=1 {
-                    for offset_y in -1..=1 {
+                let mut hypot_packed_block = [(0, i32::MAX); 3];
+                for offset_y in -1..=1 {
+                    for offset_x in 0..=1 {
                         for offset_z in 0..=1 {
                             let x_pos = scaled_x + offset_x;
                             let y_pos = scaled_y + offset_y;
@@ -503,19 +503,14 @@ impl WorldAquiferSampler {
                                 local_x * local_x + local_y * local_y + local_z * local_z;
 
                             if hypot_packed_block[0].1 >= hypot_squared {
-                                hypot_packed_block[3] = hypot_packed_block[2];
                                 hypot_packed_block[2] = hypot_packed_block[1];
                                 hypot_packed_block[1] = hypot_packed_block[0];
                                 hypot_packed_block[0] = (packed_random, hypot_squared);
                             } else if hypot_packed_block[1].1 >= hypot_squared {
-                                hypot_packed_block[3] = hypot_packed_block[2];
                                 hypot_packed_block[2] = hypot_packed_block[1];
                                 hypot_packed_block[1] = (packed_random, hypot_squared);
                             } else if hypot_packed_block[2].1 >= hypot_squared {
-                                hypot_packed_block[3] = hypot_packed_block[2];
                                 hypot_packed_block[2] = (packed_random, hypot_squared);
-                            } else if hypot_packed_block[3].1 >= hypot_squared {
-                                hypot_packed_block[3] = (packed_random, hypot_squared);
                             }
                         }
                     }
@@ -689,10 +684,10 @@ mod test {
         let shape = GenerationShape::SURFACE;
         let chunk_pos = Vector2::new(7, 4);
         let config = NoiseConfig::new(0, &OVERWORLD_NOISE_ROUTER);
-        let sampler = FluidLevelSampler::Chunk(StandardChunkFluidLevelSampler {
-            bottom_fluid: FluidLevel::new(-54, *LAVA_BLOCK),
-            top_fluid: FluidLevel::new(63, *WATER_BLOCK),
-        });
+        let sampler = FluidLevelSampler::Chunk(StandardChunkFluidLevelSampler::new(
+            FluidLevel::new(63, *WATER_BLOCK),
+            FluidLevel::new(-54, *LAVA_BLOCK),
+        ));
         let noise = ChunkNoiseGenerator::new(
             16 / shape.horizontal_cell_block_count(),
             chunk_pos::start_block_x(&chunk_pos),

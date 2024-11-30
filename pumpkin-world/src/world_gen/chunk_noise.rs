@@ -1396,10 +1396,10 @@ mod test {
         let shape = GenerationShape::SURFACE;
         let chunk_pos = Vector2::new(7, 4);
         let config = NoiseConfig::new(0, &OVERWORLD_NOISE_ROUTER);
-        let sampler = FluidLevelSampler::Chunk(StandardChunkFluidLevelSampler {
-            bottom_fluid: FluidLevel::new(-54, *LAVA_BLOCK),
-            top_fluid: FluidLevel::new(63, *WATER_BLOCK),
-        });
+        let sampler = FluidLevelSampler::Chunk(StandardChunkFluidLevelSampler::new(
+            FluidLevel::new(63, *WATER_BLOCK),
+            FluidLevel::new(-54, *LAVA_BLOCK),
+        ));
         let mut noise = ChunkNoiseGenerator::new(
             16 / shape.horizontal_cell_block_count(),
             chunk_pos::start_block_x(&chunk_pos),
