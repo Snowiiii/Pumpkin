@@ -35,7 +35,7 @@ gradle runServer
 
 ### Add an Extractor
 
-1. Copy the `Particles.kt` file
+1. The simplest way to add a new extractor is to copy one (for example the `Particles.kt` file)
 2. Rename the file to your new registry
 3. Modify the file to add the required information according the internal structure of the Minecraft `Registry`
 4. Add the new filename to the `extractors` variable in the `Extractor.kt` file
