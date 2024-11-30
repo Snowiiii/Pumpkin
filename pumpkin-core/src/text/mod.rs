@@ -90,6 +90,9 @@ impl<'a> TextComponent<'a> {
                 text = format!("\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\", url, text).to_string()
             }
         }
+        for child in self.extra {
+            text = text + &*child.to_pretty_console();
+        }
         text
     }
 }
