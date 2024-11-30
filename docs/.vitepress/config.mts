@@ -28,6 +28,23 @@ export default defineConfig({
         ],
       },
       {
+        text: "Configuration",
+        items: [
+          { text: "Introduction", link: "/config/introduction" },
+          { text: "Basic", link: "/config/basic" },
+          { text: "Proxy", link: "/config/proxy"},
+          { text: "Authentication", link: "/config/authentication"},
+          { text: "Compression", link: "/config/compression"},
+          { text: "Resource Pack", link: "/config/resource-pack"},
+          { text: "Commands", link: "/config/commands"},
+          { text: "RCON", link: "/config/rcon"},
+          { text: "PVP", link: "/config/pvp"},
+          { text: "Logging", link: "/config/logging"},
+          { text: "Query", link: "/config/query"},
+          { text: "LAN Broadcast", link: "/config/lan-broadcast"},
+        ],
+      },
+      {
         text: "Developers",
         items: [
           { text: "Contributing", link: "/developer/contributing", },
@@ -38,14 +55,6 @@ export default defineConfig({
           { text: "World", link: "developer/world"},
         ],
       },      
-      {
-        text: "Configuration",
-        items: [
-          { text: "Introduction", link: "/config/introduction" },
-          { text: "Basic", link: "/config/basic" },
-          { text: "Advanced", link: "/config/advanced" },
-        ],
-      },
       {
         text: "Troubleshooting",
         items: [
