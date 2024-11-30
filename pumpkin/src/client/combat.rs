@@ -29,7 +29,7 @@ impl AttackType {
         let sprinting = entity.sprinting.load(std::sync::atomic::Ordering::Relaxed);
         let on_ground = entity.on_ground.load(std::sync::atomic::Ordering::Relaxed);
         let sword = player
-            .inventory
+            .inventory()
             .lock()
             .await
             .held_item()

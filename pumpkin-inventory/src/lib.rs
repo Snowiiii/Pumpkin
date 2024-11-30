@@ -128,6 +128,34 @@ pub trait Container: Sync + Send {
     fn recipe_used(&mut self) {}
 }
 
+pub struct EmptyContainer;
+
+impl Container for EmptyContainer {
+    fn window_type(&self) -> &'static WindowType {
+        unreachable!(
+            "you should never be able to get here because this type is always wrapped in an option"
+        );
+    }
+
+    fn window_name(&self) -> &'static str {
+        unreachable!(
+            "you should never be able to get here because this type is always wrapped in an option"
+        );
+    }
+
+    fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
+        unreachable!(
+            "you should never be able to get here because this type is always wrapped in an option"
+        );
+    }
+
+    fn all_slots_ref(&self) -> Vec<Option<&ItemStack>> {
+        unreachable!(
+            "you should never be able to get here because this type is always wrapped in an option"
+        );
+    }
+}
+
 pub fn handle_item_take(
     carried_item: &mut Option<ItemStack>,
     item_slot: &mut Option<ItemStack>,
