@@ -24,6 +24,7 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
+use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
 use pumpkin_protocol::server::play::{SClickContainer, SKeepAlive};
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
@@ -45,6 +46,7 @@ use tokio::sync::{Mutex, Notify};
 use tokio::task::JoinHandle;
 
 use super::Entity;
+use crate::error::PumpkinError;
 use crate::{
     client::{
         authentication::GameProfile,
@@ -54,7 +56,6 @@ use crate::{
     server::Server,
     world::World,
 };
-use crate::{error::PumpkinError, world::player_chunker::get_view_distance};
 
 use super::living::LivingEntity;
 
@@ -134,7 +135,7 @@ pub struct Player {
     /// The pending teleport information, including the teleport ID and target location.
     pub awaiting_teleport: Mutex<Option<(VarInt, Vector3<f64>)>>,
     /// The coordinates of the chunk section the player is currently watching.
-    pub watched_section: AtomicCell<Vector3<i32>>,
+    pub watched_section: AtomicCell<Cylindrical>,
     /// Did we send a keep alive Packet and wait for the response?
     pub wait_for_keep_alive: AtomicBool,
     /// Whats the keep alive packet payload we send, The client should responde with the same id
@@ -180,6 +181,7 @@ impl Player {
             |profile| profile,
         );
         let config = client.config.lock().await.clone().unwrap_or_default();
+        let view_distance = config.view_distance;
         let bounding_box_size = BoundingBoxSize {
             width: 0.6,
             height: 1.8,
@@ -208,7 +210,7 @@ impl Player {
             teleport_id_count: AtomicI32::new(0),
             abilities: Mutex::new(Abilities::default()),
             gamemode: AtomicCell::new(gamemode),
-            watched_section: AtomicCell::new(Vector3::new(0, 0, 0)),
+            watched_section: AtomicCell::new(Cylindrical::new(Vector2::new(0, 0), view_distance)),
             wait_for_keep_alive: AtomicBool::new(false),
             keep_alive_id: AtomicI64::new(0),
             last_keep_alive_time: AtomicCell::new(std::time::Instant::now()),
@@ -232,9 +234,7 @@ impl Player {
 
         world.remove_player(self).await;
 
-        let watched = self.watched_section.load();
-        let view_distance = get_view_distance(self).await;
-        let cylindrical = Cylindrical::new(Vector2::new(watched.x, watched.z), view_distance);
+        let cylindrical = self.watched_section.load();
 
         // NOTE: This all must be synchronous to make sense! The chunks are handled asynhrously.
         // Non-async code is atomic to async code
@@ -367,7 +367,7 @@ impl Player {
         {
             world
                 .play_sound(
-                    sound!("minecraft:entity.player.attack.nodamage"),
+                    sound!("entity.player.attack.nodamage"),
                     SoundCategory::Players,
                     &pos,
                 )
@@ -376,11 +376,7 @@ impl Player {
         }
 
         world
-            .play_sound(
-                sound!("minecraft:entity.player.hurt"),
-                SoundCategory::Players,
-                &pos,
-            )
+            .play_sound(sound!("entity.player.hurt"), SoundCategory::Players, &pos)
             .await;
 
         let attack_type = AttackType::new(self, attack_cooldown_progress).await;
@@ -685,7 +681,7 @@ impl Player {
                 },
                 packet_result = self.handle_play_packet(server, &mut packet) => {
                     #[cfg(debug_assertions)]
-                    log::debug!("Handled play packet in {:?}", inst.elapsed());
+                    log::trace!("Handled play packet in {:?}", inst.elapsed());
                     match packet_result {
                         Ok(()) => {}
                         Err(e) => {
@@ -792,6 +788,9 @@ impl Player {
             SCommandSuggestion::PACKET_ID => {
                 self.handle_command_suggestion(SCommandSuggestion::read(bytebuf)?, server)
                     .await;
+            }
+            SPCookieResponse::PACKET_ID => {
+                self.handle_cookie_response(SPCookieResponse::read(bytebuf)?);
             }
             _ => {
                 log::warn!("Failed to handle player packet id {}", packet.id.0);

@@ -66,7 +66,7 @@ impl<'a> BlendDensityFunction<'a> {
     }
 }
 
-impl<'a> BlendDensityFunction<'a> {
+impl BlendDensityFunction<'_> {
     fn apply_density(&self, pos: &NoisePos, density: f64) -> f64 {
         pos.get_blender().apply_blend_density(pos, density)
     }

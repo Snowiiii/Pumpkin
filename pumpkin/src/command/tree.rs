@@ -81,7 +81,7 @@ struct TraverseAllPathsIter<'a> {
     todo: VecDeque<(usize, usize)>,
 }
 
-impl<'a> Iterator for TraverseAllPathsIter<'a> {
+impl Iterator for TraverseAllPathsIter<'_> {
     type Item = Vec<usize>;
 
     fn next(&mut self) -> Option<Self::Item> {

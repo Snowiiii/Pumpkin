@@ -2,7 +2,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::command::commands::cmd_seed;
-use crate::command::commands::cmd_transfer;
+use crate::command::commands::{cmd_bossbar, cmd_transfer};
 use crate::command::dispatcher::CommandDispatcher;
 use crate::entity::player::{PermissionLvl, Player};
 use crate::server::Server;
@@ -11,7 +11,7 @@ use args::ConsumedArgs;
 use async_trait::async_trait;
 use commands::{
     cmd_clear, cmd_craft, cmd_echest, cmd_fill, cmd_gamemode, cmd_give, cmd_help, cmd_kick,
-    cmd_kill, cmd_list, cmd_plugins, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport,
+    cmd_kill, cmd_list, cmd_plugins, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_time,
     cmd_worldborder,
 };
 use dispatcher::CommandError;
@@ -32,7 +32,7 @@ pub enum CommandSender<'a> {
     Player(Arc<Player>),
 }
 
-impl<'a> fmt::Display for CommandSender<'a> {
+impl fmt::Display for CommandSender<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -112,6 +112,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     let mut dispatcher = CommandDispatcher::default();
 
     dispatcher.register(cmd_pumpkin::init_command_tree());
+    dispatcher.register(cmd_bossbar::init_command_tree());
     dispatcher.register(cmd_say::init_command_tree());
     dispatcher.register(cmd_gamemode::init_command_tree());
     dispatcher.register(cmd_stop::init_command_tree());
@@ -123,6 +124,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_plugins::init_command_tree());
     dispatcher.register(cmd_worldborder::init_command_tree());
     dispatcher.register(cmd_teleport::init_command_tree());
+    dispatcher.register(cmd_time::init_command_tree());
     dispatcher.register(cmd_give::init_command_tree());
     dispatcher.register(cmd_list::init_command_tree());
     dispatcher.register(cmd_clear::init_command_tree());

@@ -4,13 +4,13 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import de.snowii.extractor.Extractor
+import net.minecraft.block.Block
 import net.minecraft.registry.Registries
 import net.minecraft.server.MinecraftServer
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Box
 import net.minecraft.world.EmptyBlockView
 import java.util.*
-
 
 class Blocks : Extractor.Extractor {
     override fun fileName(): String {
@@ -21,14 +21,13 @@ class Blocks : Extractor.Extractor {
         val topLevelJson = JsonObject()
 
         val blocksJson = JsonArray()
-        var stateIdCounter = 0
 
         val shapes: LinkedHashMap<Box, Int> = LinkedHashMap()
 
         for (block in Registries.BLOCK) {
             val blockJson = JsonObject()
             blockJson.addProperty("id", Registries.BLOCK.getRawId(block))
-            blockJson.addProperty("name", Registries.BLOCK.getId(block).toString())
+            blockJson.addProperty("name", Registries.BLOCK.getId(block).path)
             blockJson.addProperty("translation_key", block.translationKey)
             blockJson.addProperty("hardness", block.hardness)
             blockJson.addProperty("item_id", Registries.ITEM.getRawId(block.asItem()))
@@ -52,9 +51,7 @@ class Blocks : Extractor.Extractor {
             val statesJson = JsonArray()
             for (state in block.stateManager.states) {
                 val stateJson = JsonObject()
-                val id = stateIdCounter
-                stateIdCounter++
-                stateJson.addProperty("id", id)
+                stateJson.addProperty("id", Block.getRawIdFromState(state))
                 stateJson.addProperty("air", state.isAir)
                 stateJson.addProperty("luminance", state.luminance)
                 stateJson.addProperty("burnable", state.isBurnable)
@@ -65,7 +62,7 @@ class Blocks : Extractor.Extractor {
                 stateJson.addProperty("replaceable", state.isReplaceable)
 
                 if (block.defaultState == state) {
-                    blockJson.addProperty("default_state_id", id)
+                    blockJson.addProperty("default_state_id", Block.getRawIdFromState(state))
                 }
 
                 val collisionShapeIdxsJson = JsonArray()
@@ -91,23 +88,22 @@ class Blocks : Extractor.Extractor {
 
         val blockEntitiesJson = JsonArray()
         for (blockEntity in Registries.BLOCK_ENTITY_TYPE) {
-            val blockEntityJson = JsonObject()
-            blockEntityJson.addProperty("id", Registries.BLOCK_ENTITY_TYPE.getRawId(blockEntity))
-            blockEntityJson.addProperty("ident", Registries.BLOCK_ENTITY_TYPE.getId(blockEntity).toString())
-            blockEntityJson.addProperty("name", Registries.BLOCK_ENTITY_TYPE.getId(blockEntity)!!.path)
-
-            blockEntitiesJson.add(blockEntityJson)
+            blockEntitiesJson.add(Registries.BLOCK_ENTITY_TYPE.getId(blockEntity)!!.path)
         }
 
         val shapesJson = JsonArray()
         for (shape in shapes.keys) {
             val shapeJson = JsonObject()
-            shapeJson.addProperty("min_x", shape.minX)
-            shapeJson.addProperty("min_y", shape.minY)
-            shapeJson.addProperty("min_z", shape.minZ)
-            shapeJson.addProperty("max_x", shape.maxX)
-            shapeJson.addProperty("max_y", shape.maxY)
-            shapeJson.addProperty("max_z", shape.maxZ)
+            val min = JsonArray()
+            min.add(shape.minX)
+            min.add(shape.minY)
+            min.add(shape.minZ)
+            val max = JsonArray()
+            max.add(shape.maxX)
+            max.add(shape.maxY)
+            max.add(shape.maxZ)
+            shapeJson.add("min", min)
+            shapeJson.add("max", max)
             shapesJson.add(shapeJson)
         }
 

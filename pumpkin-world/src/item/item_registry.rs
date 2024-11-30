@@ -9,7 +9,7 @@ pub static ITEMS: LazyLock<HashMap<String, Item>> = LazyLock::new(|| {
 });
 
 pub fn get_item(name: &str) -> Option<&Item> {
-    ITEMS.get(name)
+    ITEMS.get(&name.replace("minecraft:", ""))
 }
 
 #[derive(Deserialize, Clone, Debug)]

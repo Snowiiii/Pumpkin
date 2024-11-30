@@ -42,7 +42,7 @@ class Extractor : ModInitializer {
             return
         }
 
-        val gson = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().serializeNulls().create()
+        val gson = GsonBuilder().disableHtmlEscaping().create()
 
         ServerLifecycleEvents.SERVER_STARTED.register(ServerLifecycleEvents.ServerStarted { server: MinecraftServer ->
             for (ext in extractors) {
