@@ -503,7 +503,10 @@ impl Client {
                     return true;
                 }
                 Ok(None) => (), //log::debug!("Waiting for more data to complete packet..."),
-                Err(err) => log::warn!("Failed to decode packet for: {}", err.to_string()),
+                Err(err) => {
+                    log::warn!("Failed to decode packet for: {}", err.to_string());
+                    return true; // return to avoid reserving additional bytes
+                }
             }
 
             dec.reserve(4096);
