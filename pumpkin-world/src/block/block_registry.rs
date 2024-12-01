@@ -70,8 +70,6 @@ pub fn get_shapes_by_block_state(block_state_id: u16) -> Option<Vec<&'static Sha
 
 #[cfg(test)]
 mod tests {
-    use std::u16;
-
     use pumpkin_macros::block_entity_id;
     use pumpkin_macros::block_id;
     use pumpkin_macros::block_state_id;

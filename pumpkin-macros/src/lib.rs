@@ -89,7 +89,7 @@ pub fn block_entity_id(item: TokenStream) -> TokenStream {
     use std::hash::{DefaultHasher, Hash, Hasher};
     let mut hasher = DefaultHasher::new();
     item.to_string().hash(&mut hasher);
-    let id = hasher.finish() as u16;
+    let id = hasher.finish() as u32;
     quote::quote! { #id }.into()
 }
 

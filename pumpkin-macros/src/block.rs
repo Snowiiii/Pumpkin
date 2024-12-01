@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::str::FromStr;
 use std::sync::LazyLock;
 
 use proc_macro::TokenStream;
@@ -43,8 +42,12 @@ pub(super) fn block_id_impl(item: TokenStream) -> TokenStream {
         .get(&identifier)
         .expect(&format!("block {identifier:?} does not exist"));
 
-    // integer literal without type information
-    TokenStream::from_str(&format!("{id}")).unwrap()
+    let id = *id as u16;
+
+    quote::quote! {
+        #id
+    }
+    .into()
 }
 
 pub(super) fn block_state_id_impl(item: TokenStream) -> TokenStream {
@@ -57,8 +60,10 @@ pub(super) fn block_state_id_impl(item: TokenStream) -> TokenStream {
     let block = &BLOCKS[*block_id];
     let id = block.default_state_id;
 
-    // integer literal without type information
-    TokenStream::from_str(&format!("{id}")).unwrap()
+    quote::quote! {
+        #id
+    }
+    .into()
 }
 
 pub(super) fn block_entity_id_impl(item: TokenStream) -> TokenStream {
@@ -68,6 +73,10 @@ pub(super) fn block_entity_id_impl(item: TokenStream) -> TokenStream {
         .get(&identifier)
         .expect(&format!("block enitity {identifier:?} does not exist"));
 
-    // integer literal without type information
-    TokenStream::from_str(&format!("{id}")).unwrap()
+    let id = *id as u32;
+
+    quote::quote! {
+        #id
+    }
+    .into()
 }
