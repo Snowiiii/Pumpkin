@@ -1,10 +1,10 @@
 use noise::Perlin;
 use pumpkin_core::math::vector2::Vector2;
+use pumpkin_macros::block_state_id;
 use rand::Rng;
 
 use crate::{
     biome::Biome,
-    block::BlockState,
     chunk::ChunkBlocks,
     coordinates::{BlockCoordinates, ChunkRelativeBlockCoordinates, XZBlockCoordinates},
     world_gen::{
@@ -55,25 +55,13 @@ impl PerlinTerrainGenerator for PlainsTerrainGenerator {
 
         let y = *at.y;
         if y == -64 {
-            blocks.set_block(
-                coordinates,
-                BlockState::new("minecraft:bedrock").unwrap().state_id,
-            );
+            blocks.set_block(coordinates, block_state_id!("minecraft:bedrock"));
         } else if y >= -63 && y <= begin_stone_height {
-            blocks.set_block(
-                coordinates,
-                BlockState::new("minecraft:stone").unwrap().state_id,
-            );
+            blocks.set_block(coordinates, block_state_id!("minecraft:stone"));
         } else if y >= begin_stone_height && y < begin_dirt_height {
-            blocks.set_block(
-                coordinates,
-                BlockState::new("minecraft:dirt").unwrap().state_id,
-            );
+            blocks.set_block(coordinates, block_state_id!("minecraft:dirt"));
         } else if y == chunk_height - 2 {
-            blocks.set_block(
-                coordinates,
-                BlockState::new("minecraft:grass_block").unwrap().state_id,
-            );
+            blocks.set_block(coordinates, block_state_id!("minecraft:grass_block"));
         } else if y == chunk_height - 1 {
             // TODO: generate flowers and grass
             let grass: u8 = rand::thread_rng().gen_range(0..7);
@@ -82,42 +70,24 @@ impl PerlinTerrainGenerator for PlainsTerrainGenerator {
                 if flower == 6 {
                     match rand::thread_rng().gen_range(0..4) {
                         0 => {
-                            blocks.set_block(
-                                coordinates,
-                                BlockState::new("minecraft:dandelion").unwrap().state_id,
-                            );
+                            blocks.set_block(coordinates, block_state_id!("minecraft:dandelion"));
                         }
                         1 => {
-                            blocks.set_block(
-                                coordinates,
-                                BlockState::new("minecraft:oxeye_daisy").unwrap().state_id,
-                            );
+                            blocks.set_block(coordinates, block_state_id!("minecraft:oxeye_daisy"));
                         }
                         2 => {
-                            blocks.set_block(
-                                coordinates,
-                                BlockState::new("minecraft:cornflower").unwrap().state_id,
-                            );
+                            blocks.set_block(coordinates, block_state_id!("minecraft:cornflower"));
                         }
                         3 => {
-                            blocks.set_block(
-                                coordinates,
-                                BlockState::new("minecraft:poppy").unwrap().state_id,
-                            );
+                            blocks.set_block(coordinates, block_state_id!("minecraft:poppy"));
                         }
                         _ => {
-                            blocks.set_block(
-                                coordinates,
-                                BlockState::new("minecraft:azure_bluet").unwrap().state_id,
-                            );
+                            blocks.set_block(coordinates, block_state_id!("minecraft:azure_bluet"));
                         }
                     }
                 } else {
                     // TODO: Tall grass, Tall grass data called `half`, There is `upper` and `lower`
-                    blocks.set_block(
-                        coordinates,
-                        BlockState::new("minecraft:short_grass").unwrap().state_id,
-                    );
+                    blocks.set_block(coordinates, block_state_id!("minecraft:short_grass"));
                 }
             }
         }

@@ -152,14 +152,9 @@ fn generate_block_entities() {
     let block_entities: Vec<_> = json_data
         .into_iter()
         .map(|(ident, id)| {
-            let name = ident
-                .split(':')
-                .nth(1)
-                .expect("identifier should contain a colon");
             quote::quote! {
                 BlockEntityKind {
                     id: #id,
-                    name: #name,
                     ident: #ident,
                 }
             }

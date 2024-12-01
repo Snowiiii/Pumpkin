@@ -58,3 +58,55 @@ mod particle;
 pub fn particle(item: TokenStream) -> TokenStream {
     particle::particle_impl(item)
 }
+
+// clippy only gets a hash of the input so pumpkin-data doesn't have to be compiled just for clippy -- this should possibly be reconsidered
+#[cfg(not(clippy))]
+mod block;
+
+#[cfg(clippy)]
+#[proc_macro]
+pub fn block_id(item: TokenStream) -> TokenStream {
+    use std::hash::{DefaultHasher, Hash, Hasher};
+    let mut hasher = DefaultHasher::new();
+    item.to_string().hash(&mut hasher);
+    let id = hasher.finish() as u16;
+    quote::quote! { #id }.into()
+}
+
+#[cfg(clippy)]
+#[proc_macro]
+pub fn block_state_id(item: TokenStream) -> TokenStream {
+    use std::hash::{DefaultHasher, Hash, Hasher};
+    let mut hasher = DefaultHasher::new();
+    item.to_string().hash(&mut hasher);
+    let id = hasher.finish() as u16;
+    quote::quote! { #id }.into()
+}
+
+#[cfg(clippy)]
+#[proc_macro]
+pub fn block_entity_id(item: TokenStream) -> TokenStream {
+    use std::hash::{DefaultHasher, Hash, Hasher};
+    let mut hasher = DefaultHasher::new();
+    item.to_string().hash(&mut hasher);
+    let id = hasher.finish() as u16;
+    quote::quote! { #id }.into()
+}
+
+#[cfg(not(clippy))]
+#[proc_macro]
+pub fn block_id(item: TokenStream) -> TokenStream {
+    block::block_id_impl(item)
+}
+
+#[cfg(not(clippy))]
+#[proc_macro]
+pub fn block_state_id(item: TokenStream) -> TokenStream {
+    block::block_state_id_impl(item)
+}
+
+#[cfg(not(clippy))]
+#[proc_macro]
+pub fn block_entity_id(item: TokenStream) -> TokenStream {
+    block::block_entity_id_impl(item)
+}

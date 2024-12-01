@@ -16,7 +16,6 @@ pub struct Block {
 pub struct BlockEntityKind {
     pub id: u32,
     pub ident: &'static str,
-    pub name: &'static str,
 }
 
 #[derive(Debug)]

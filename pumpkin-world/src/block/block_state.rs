@@ -8,7 +8,8 @@ pub struct BlockState {
 impl BlockState {
     pub const AIR: BlockState = BlockState { state_id: 0 };
 
-    /// Get a Block from the Vanilla Block registry at Runtime
+    /// Get a Block from the Vanilla Block registry at Runtime.
+    /// If block name is known at compile time, use [`get_block_state`] macro instead.
     pub fn new(registry_id: &str) -> Option<Self> {
         let block = get_block(registry_id);
         block.map(|block| Self {
@@ -20,6 +21,17 @@ impl BlockState {
         self.state_id
     }
 }
+
+/// Get a [`BlockState`] from the Vanilla Block registry at compile time.
+macro_rules! get_block_state {
+    ($identifier:literal) => {
+        crate::block::BlockState {
+            state_id: pumpkin_macros::block_state_id!($identifier),
+        }
+    };
+}
+
+pub(crate) use get_block_state;
 
 #[cfg(test)]
 mod tests {
@@ -35,5 +47,15 @@ mod tests {
     fn does_exist() {
         let result = BlockState::new("minecraft:dirt");
         assert!(result.is_some());
+    }
+
+    #[test]
+    fn qualified_macro() {
+        get_block_state!("minecraft:dirt");
+    }
+
+    #[test]
+    fn unqualified_macro() {
+        get_block_state!("dirt");
     }
 }
