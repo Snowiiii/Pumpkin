@@ -17,17 +17,17 @@ class BlockCollisionShapes : Extractor.Extractor {
     }
 
     override fun extract(server: MinecraftServer): JsonElement {
-        val shapes = getShapes()
+        val shapes = getShapes().toList().sortedBy { (_, i) -> i }
 
         val shapesJson = JsonArray()
-        for (shape in shapes.keys) {
+        for ((box, _) in shapes) {
             val shapeJson = JsonObject()
-            shapeJson.addProperty("x1", shape.minX)
-            shapeJson.addProperty("y1", shape.minY)
-            shapeJson.addProperty("z1", shape.minZ)
-            shapeJson.addProperty("x2", shape.maxX)
-            shapeJson.addProperty("y2", shape.maxY)
-            shapeJson.addProperty("z2", shape.maxZ)
+            shapeJson.addProperty("x1", box.minX)
+            shapeJson.addProperty("y1", box.minY)
+            shapeJson.addProperty("z1", box.minZ)
+            shapeJson.addProperty("x2", box.maxX)
+            shapeJson.addProperty("y2", box.maxY)
+            shapeJson.addProperty("z2", box.maxZ)
             shapesJson.add(shapeJson)
         }
 
