@@ -59,7 +59,7 @@ pub fn particle(item: TokenStream) -> TokenStream {
     particle::particle_impl(item)
 }
 
-// clippy only gets a hash of the input so pumpkin-data doesn't have to be compiled just for clippy -- this should possibly be reconsidered
+/// clippy only gets a hash of the input so pumpkin-data doesn't have to be compiled just for clippy -- this should possibly be reconsidered
 #[cfg(not(clippy))]
 mod block;
 

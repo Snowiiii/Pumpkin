@@ -219,7 +219,7 @@ fn generate_blocks() {
         .into_iter()
         .map(|b| {
             let id = b.id;
-            let name = b.name;
+            let name = format!("minecraft:{}", b.name);
             let translation_key = b.translation_key;
             let hardness = b.hardness;
             let item_id = b.item_id;
