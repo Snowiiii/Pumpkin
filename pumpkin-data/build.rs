@@ -54,6 +54,7 @@ struct JsonShape {
 }
 
 fn main() {
+    // this reruns only when files in /assets changed, so only depend on such files!
     println!("cargo::rerun-if-changed=../assets");
 
     generate_blocks();
@@ -151,7 +152,10 @@ fn generate_block_entities() {
     let block_entities: Vec<_> = json_data
         .into_iter()
         .map(|(ident, id)| {
-            let name = ident.split(':').nth(1).expect("identifier should contain a colon");
+            let name = ident
+                .split(':')
+                .nth(1)
+                .expect("identifier should contain a colon");
             quote::quote! {
                 BlockEntityKind {
                     id: #id,
@@ -184,8 +188,8 @@ fn generate_block_states() {
             let (air, replacable) = (s.air, s.replaceable);
             let luminance = s.luminance;
             let burnable = s.burnable;
-            let opacity = to_option_tokens(s.opacity);
-            let block_entity = to_option_tokens(s.block_entity_type);
+            let opacity = option_to_tokens(s.opacity);
+            let block_entity = option_to_tokens(s.block_entity_type);
             quote::quote! {
                 State {
                     id: #id,
@@ -226,7 +230,7 @@ fn generate_blocks() {
             let default_state_id = b.default_state_id;
             let first_state_id = b.first_state_id;
             let last_state_id = b.last_state_id;
-            let wall_variant_id = to_option_tokens(b.wall_variant_id);
+            let wall_variant_id = option_to_tokens(b.wall_variant_id);
 
             let properties = b.properties.iter().map(|p| {
                 let p_name = &p.name;
@@ -282,7 +286,8 @@ fn save_to_file(name: &str, tokens: proc_macro2::TokenStream) {
         .expect("Failed to write to file");
 }
 
-fn to_option_tokens<T: quote::ToTokens>(option: Option<T>) -> proc_macro2::TokenStream {
+/// converts Option<T> into a constructor for its enum variant instead just its value/nothing
+fn option_to_tokens<T: quote::ToTokens>(option: Option<T>) -> proc_macro2::TokenStream {
     match option {
         Some(v) => quote::quote! { Some( #v ) },
         None => quote::quote! { None },

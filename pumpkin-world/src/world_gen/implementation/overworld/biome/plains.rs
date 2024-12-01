@@ -55,11 +55,20 @@ impl PerlinTerrainGenerator for PlainsTerrainGenerator {
 
         let y = *at.y;
         if y == -64 {
-            blocks.set_block(coordinates, BlockState::new("minecraft:bedrock").unwrap().state_id);
+            blocks.set_block(
+                coordinates,
+                BlockState::new("minecraft:bedrock").unwrap().state_id,
+            );
         } else if y >= -63 && y <= begin_stone_height {
-            blocks.set_block(coordinates, BlockState::new("minecraft:stone").unwrap().state_id);
+            blocks.set_block(
+                coordinates,
+                BlockState::new("minecraft:stone").unwrap().state_id,
+            );
         } else if y >= begin_stone_height && y < begin_dirt_height {
-            blocks.set_block(coordinates, BlockState::new("minecraft:dirt").unwrap().state_id);
+            blocks.set_block(
+                coordinates,
+                BlockState::new("minecraft:dirt").unwrap().state_id,
+            );
         } else if y == chunk_height - 2 {
             blocks.set_block(
                 coordinates,
@@ -91,8 +100,10 @@ impl PerlinTerrainGenerator for PlainsTerrainGenerator {
                             );
                         }
                         3 => {
-                            blocks
-                                .set_block(coordinates, BlockState::new("minecraft:poppy").unwrap().state_id);
+                            blocks.set_block(
+                                coordinates,
+                                BlockState::new("minecraft:poppy").unwrap().state_id,
+                            );
                         }
                         _ => {
                             blocks.set_block(
