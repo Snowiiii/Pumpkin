@@ -19,7 +19,7 @@ const DESCRIPTION: &str = "Clear yours or targets inventory.";
 const ARG_TARGET: &str = "target";
 
 async fn clear_player(target: &Player) -> usize {
-    let mut inventory = target.inventory.lock().await;
+    let mut inventory = target.inventory().lock().await;
 
     let slots = inventory.all_slots();
     let items_count = slots

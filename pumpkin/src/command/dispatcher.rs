@@ -137,7 +137,7 @@ impl<'a> CommandDispatcher<'a> {
         }
 
         let mut suggestions = Vec::from_iter(suggestions);
-        suggestions.sort_by(|a, b| a.suggestion.cmp(b.suggestion));
+        suggestions.sort_by(|a, b| a.suggestion.cmp(&b.suggestion));
         suggestions
     }
 

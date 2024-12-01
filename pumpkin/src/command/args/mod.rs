@@ -10,15 +10,18 @@ use pumpkin_protocol::client::play::{
     CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
 };
 
-use crate::{entity::player::Player, server::Server};
-
 use super::{
     dispatcher::CommandError,
     tree::{CommandTree, RawArgs},
     CommandSender,
 };
+use crate::world::bossbar::{BossbarColor, BossbarDivisions};
+use crate::{entity::player::Player, server::Server};
 
 pub(crate) mod arg_block;
+pub(crate) mod arg_bool;
+pub(crate) mod arg_bossbar_color;
+pub(crate) mod arg_bossbar_style;
 pub(crate) mod arg_bounded_num;
 pub(crate) mod arg_command;
 pub(crate) mod arg_entities;
@@ -30,6 +33,7 @@ pub(crate) mod arg_players;
 pub(crate) mod arg_position_2d;
 pub(crate) mod arg_position_3d;
 pub(crate) mod arg_postition_block;
+pub(crate) mod arg_resource_location;
 pub(crate) mod arg_rotation;
 pub(crate) mod arg_simple;
 mod coordinate;
@@ -81,9 +85,13 @@ pub(crate) enum Arg<'a> {
     GameMode(GameMode),
     CommandTree(&'a CommandTree<'a>),
     Item(String),
+    ResourceLocation(String),
     Block(String),
+    BossbarColor(BossbarColor),
+    BossbarStyle(BossbarDivisions),
     Msg(String),
     Num(Result<Number, NotInBounds>),
+    Bool(bool),
     #[allow(unused)]
     Simple(String),
 }

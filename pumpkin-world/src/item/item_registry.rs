@@ -21,7 +21,7 @@ pub static ITEMS_BY_ID: LazyLock<Vec<&Item>> = LazyLock::new(|| {
 });
 
 pub fn get_item(name: &str) -> Option<&Item> {
-    ITEMS.get(name)
+    ITEMS.get(&name.replace("minecraft:", ""))
 }
 
 pub fn get_item_by_id(id: u16) -> Option<&'static Item> {

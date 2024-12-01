@@ -16,9 +16,11 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_inventory::{InventoryError, WindowType};
+use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
 use pumpkin_protocol::{
     client::play::CCommandSuggestions,
     server::play::{SCloseContainer, SCommandSuggestion, SKeepAlive, SSetPlayerGround, SUseItem},
+    VarInt,
 };
 use pumpkin_protocol::{
     client::play::{
@@ -45,6 +47,7 @@ fn modulus(a: f32, b: f32) -> f32 {
 pub enum BlockPlacingError {
     BlockOutOfReach,
     InvalidBlockFace,
+    BlockOutOfWorld,
 }
 
 impl std::fmt::Display for BlockPlacingError {
@@ -56,20 +59,22 @@ impl std::fmt::Display for BlockPlacingError {
 impl PumpkinError for BlockPlacingError {
     fn is_kick(&self) -> bool {
         match self {
-            Self::BlockOutOfReach => false,
+            Self::BlockOutOfReach | Self::BlockOutOfWorld => false,
             Self::InvalidBlockFace => true,
         }
     }
 
     fn severity(&self) -> log::Level {
         match self {
-            Self::BlockOutOfReach | Self::InvalidBlockFace => log::Level::Warn,
+            Self::BlockOutOfReach | Self::BlockOutOfWorld | Self::InvalidBlockFace => {
+                log::Level::Warn
+            }
         }
     }
 
     fn client_kick_reason(&self) -> Option<String> {
         match self {
-            Self::BlockOutOfReach => None,
+            Self::BlockOutOfReach | Self::BlockOutOfWorld => None,
             Self::InvalidBlockFace => Some("Invalid block face".into()),
         }
     }
@@ -613,7 +618,7 @@ impl Player {
         }
 
         if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
-            let mut inventory = self.inventory.lock().await;
+            let mut inventory = self.inventory().lock().await;
             let item_slot = inventory.held_item_mut();
             if let Some(item) = item_slot {
                 let block =
@@ -649,6 +654,14 @@ impl Player {
                         world_pos
                     };
 
+                    //check max world build height
+                    if world_pos.0.y > 319 {
+                        self.client
+                            .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
+                            .await;
+                        return Err(BlockPlacingError::BlockOutOfWorld.into());
+                    }
+
                     let block_bounding_box = BoundingBox::from_block(&world_pos);
                     let bounding_box = entity.bounding_box.load();
                     //TODO: Make this check for every entity in that posistion
@@ -680,7 +693,7 @@ impl Player {
             self.kick(TextComponent::text("Invalid held slot")).await;
             return;
         }
-        self.inventory.lock().await.set_selected(slot as usize);
+        self.inventory().lock().await.set_selected(slot as usize);
     }
 
     pub async fn handle_set_creative_slot(
@@ -692,7 +705,7 @@ impl Player {
         }
         let valid_slot = packet.slot >= 0 && packet.slot <= 45;
         if valid_slot {
-            self.inventory.lock().await.set_slot(
+            self.inventory().lock().await.set_slot(
                 packet.slot as usize,
                 packet.clicked_item.to_item(),
                 true,
@@ -711,7 +724,7 @@ impl Player {
             return;
         };
         // window_id 0 represents both 9x1 Generic AND inventory here
-        let mut inventory = self.inventory.lock().await;
+        let mut inventory = self.inventory().lock().await;
 
         inventory.state_id = 0;
         let open_container = self.open_container.load();
@@ -752,5 +765,15 @@ impl Player {
         );
 
         self.client.send_packet(&response).await;
+    }
+
+    pub fn handle_cookie_response(&self, packet: SPCookieResponse) {
+        // TODO: allow plugins to access this
+        log::debug!(
+            "Received cookie_response[play]: key: \"{}\", has_payload: \"{}\", payload_length: \"{}\"",
+            packet.key,
+            packet.has_payload,
+            packet.payload_length.unwrap_or(VarInt::from(0)).0
+        );
     }
 }

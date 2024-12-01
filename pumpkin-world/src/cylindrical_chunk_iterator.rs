@@ -1,6 +1,6 @@
 use pumpkin_core::math::vector2::Vector2;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Cylindrical {
     pub center: Vector2<i32>,
     pub view_distance: u8,
@@ -68,7 +68,7 @@ impl Cylindrical {
         let min_leg = rel_x.min(rel_z) as i64;
 
         let hyp_sqr = max_leg * max_leg + min_leg * min_leg;
-        hyp_sqr < (self.view_distance * self.view_distance) as i64
+        hyp_sqr < (self.view_distance as i64 * self.view_distance as i64)
     }
 
     /// Returns an iterator of all chunks within this cylinder

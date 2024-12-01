@@ -33,7 +33,7 @@ mod tests {
 
     #[test]
     fn does_exist() {
-        let result = BlockState::new("minecraft:dirt");
+        let result = BlockState::new("dirt");
         assert!(result.is_some());
     }
 }

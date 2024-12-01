@@ -12,7 +12,6 @@ import net.minecraft.util.math.Box
 import net.minecraft.world.EmptyBlockView
 import java.util.*
 
-
 class Blocks : Extractor.Extractor {
     override fun fileName(): String {
         return "blocks.json"
@@ -24,7 +23,7 @@ class Blocks : Extractor.Extractor {
         for (block in Registries.BLOCK) {
             val blockJson = JsonObject()
             blockJson.addProperty("id", Registries.BLOCK.getRawId(block))
-            blockJson.addProperty("name", Registries.BLOCK.getId(block).toString())
+            blockJson.addProperty("name", Registries.BLOCK.getId(block).path)
             blockJson.addProperty("translation_key", block.translationKey)
             blockJson.addProperty("hardness", block.hardness)
             blockJson.addProperty("item_id", Registries.ITEM.getRawId(block.asItem()))

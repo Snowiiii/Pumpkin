@@ -6,8 +6,8 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct Packets {
-    serverbound: HashMap<String, HashMap<String, u8>>,
-    clientbound: HashMap<String, HashMap<String, u8>>,
+    serverbound: HashMap<String, Vec<String>>,
+    clientbound: HashMap<String, Vec<String>>,
 }
 
 static PACKETS: LazyLock<Packets> = LazyLock::new(|| {
@@ -24,7 +24,10 @@ pub(crate) fn packet_clientbound(item: TokenStream) -> proc_macro2::TokenStream 
         .get(packet_name_split[0])
         .expect("Invalid Phase");
     let id = phase
-        .get(packet_name_split[1])
+        .iter()
+        .enumerate()
+        .find(|s| s.1 == packet_name_split[1])
+        .map(|(i, _)| i)
         .expect("Invalid Packet name");
     quote! { #id }
 }
@@ -39,7 +42,10 @@ pub(crate) fn packet_serverbound(item: TokenStream) -> proc_macro2::TokenStream 
         .get(packet_name_split[0])
         .expect("Invalid Phase");
     let id = phase
-        .get(packet_name_split[1])
+        .iter()
+        .enumerate()
+        .find(|s| s.1 == packet_name_split[1])
+        .map(|(i, _)| i)
         .expect("Invalid Packet name");
     quote! { #id }
 }

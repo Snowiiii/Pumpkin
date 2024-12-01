@@ -30,7 +30,7 @@ impl<'a> CUpdateObjectives<'a> {
     }
 }
 
-impl<'a> ClientPacket for CUpdateObjectives<'a> {
+impl ClientPacket for CUpdateObjectives<'_> {
     fn write(&self, bytebuf: &mut crate::bytebuf::ByteBuffer) {
         bytebuf.put_string(self.objective_name);
         bytebuf.put_u8(self.mode);

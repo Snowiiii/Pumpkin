@@ -25,6 +25,7 @@ use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
 use pumpkin_protocol::server::play::{SClickContainer, SKeepAlive};
+use pumpkin_protocol::server::play::{SCookieResponse as SPCookieResponse, SPlayPingRequest};
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
@@ -45,6 +46,7 @@ use tokio::sync::{Mutex, Notify};
 use tokio::task::JoinHandle;
 
 use super::Entity;
+use crate::error::PumpkinError;
 use crate::{
     client::{
         authentication::GameProfile,
@@ -54,7 +56,6 @@ use crate::{
     server::Server,
     world::World,
 };
-use crate::{error::PumpkinError, world::player_chunker::get_view_distance};
 
 use super::living::LivingEntity;
 
@@ -99,7 +100,7 @@ pub type PlayerPendingChunks =
 /// A `Player` is a special type of entity that represents a human player connected to the server.
 pub struct Player {
     /// The underlying living entity object that represents the player.
-    pub living_entity: LivingEntity,
+    pub living_entity: LivingEntity<PlayerInventory>,
     /// The player's game profile information, including their username and UUID.
     pub gameprofile: GameProfile,
     /// The client connection associated with the player.
@@ -112,8 +113,6 @@ pub struct Player {
     pub food: AtomicI32,
     /// The player's food saturation level.
     pub food_saturation: AtomicCell<f32>,
-    /// The player's inventory, containing items and equipment.
-    pub inventory: Mutex<PlayerInventory>,
     /// The ID of the currently open container (if any).
     pub open_container: AtomicCell<Option<u64>>,
     /// The item currently being held by the player.
@@ -134,7 +133,7 @@ pub struct Player {
     /// The pending teleport information, including the teleport ID and target location.
     pub awaiting_teleport: Mutex<Option<(VarInt, Vector3<f64>)>>,
     /// The coordinates of the chunk section the player is currently watching.
-    pub watched_section: AtomicCell<Vector3<i32>>,
+    pub watched_section: AtomicCell<Cylindrical>,
     /// Did we send a keep alive Packet and wait for the response?
     pub wait_for_keep_alive: AtomicBool,
     /// Whats the keep alive packet payload we send, The client should responde with the same id
@@ -180,20 +179,24 @@ impl Player {
             |profile| profile,
         );
         let config = client.config.lock().await.clone().unwrap_or_default();
+        let view_distance = config.view_distance;
         let bounding_box_size = BoundingBoxSize {
             width: 0.6,
             height: 1.8,
         };
 
         Self {
-            living_entity: LivingEntity::new(Entity::new(
-                entity_id,
-                world,
-                EntityType::Player,
-                1.62,
-                AtomicCell::new(BoundingBox::new_default(&bounding_box_size)),
-                AtomicCell::new(bounding_box_size),
-            )),
+            living_entity: LivingEntity::new_with_container(
+                Entity::new(
+                    entity_id,
+                    world,
+                    EntityType::Player,
+                    1.62,
+                    AtomicCell::new(BoundingBox::new_default(&bounding_box_size)),
+                    AtomicCell::new(bounding_box_size),
+                ),
+                PlayerInventory::new(),
+            ),
             config: Mutex::new(config),
             gameprofile,
             client,
@@ -202,13 +205,12 @@ impl Player {
             food: AtomicI32::new(20),
             food_saturation: AtomicCell::new(20.0),
             current_block_destroy_stage: AtomicU8::new(0),
-            inventory: Mutex::new(PlayerInventory::new()),
             open_container: AtomicCell::new(None),
             carried_item: AtomicCell::new(None),
             teleport_id_count: AtomicI32::new(0),
             abilities: Mutex::new(Abilities::default()),
             gamemode: AtomicCell::new(gamemode),
-            watched_section: AtomicCell::new(Vector3::new(0, 0, 0)),
+            watched_section: AtomicCell::new(Cylindrical::new(Vector2::new(0, 0), view_distance)),
             wait_for_keep_alive: AtomicBool::new(false),
             keep_alive_id: AtomicI64::new(0),
             last_keep_alive_time: AtomicCell::new(std::time::Instant::now()),
@@ -219,6 +221,13 @@ impl Player {
             // TODO: change this
             permission_lvl: PermissionLvl::Four,
         }
+    }
+
+    pub fn inventory(&self) -> &Mutex<PlayerInventory> {
+        self.living_entity
+            .inventory
+            .as_ref()
+            .expect("Player always has inventory")
     }
 
     /// Removes the Player out of the current World
@@ -232,9 +241,7 @@ impl Player {
 
         world.remove_player(self).await;
 
-        let watched = self.watched_section.load();
-        let view_distance = get_view_distance(self).await;
-        let cylindrical = Cylindrical::new(Vector2::new(watched.x, watched.z), view_distance);
+        let cylindrical = self.watched_section.load();
 
         // NOTE: This all must be synchronous to make sense! The chunks are handled asynhrously.
         // Non-async code is atomic to async code
@@ -367,7 +374,7 @@ impl Player {
         {
             world
                 .play_sound(
-                    sound!("minecraft:entity.player.attack.nodamage"),
+                    sound!("entity.player.attack.nodamage"),
                     SoundCategory::Players,
                     &pos,
                 )
@@ -376,11 +383,7 @@ impl Player {
         }
 
         world
-            .play_sound(
-                sound!("minecraft:entity.player.hurt"),
-                SoundCategory::Players,
-                &pos,
-            )
+            .play_sound(sound!("entity.player.hurt"), SoundCategory::Players, &pos)
             .await;
 
         let attack_type = AttackType::new(self, attack_cooldown_progress).await;
@@ -685,7 +688,7 @@ impl Player {
                 },
                 packet_result = self.handle_play_packet(server, &mut packet) => {
                     #[cfg(debug_assertions)]
-                    log::debug!("Handled play packet in {:?}", inst.elapsed());
+                    log::trace!("Handled play packet in {:?}", inst.elapsed());
                     match packet_result {
                         Ok(()) => {}
                         Err(e) => {
@@ -770,6 +773,10 @@ impl Player {
                 self.handle_player_command(SPlayerCommand::read(bytebuf)?)
                     .await;
             }
+            SPlayPingRequest::PACKET_ID => {
+                self.handle_play_ping_request(SPlayPingRequest::read(bytebuf)?)
+                    .await;
+            }
             SClickContainer::PACKET_ID => {
                 self.handle_click_container(server, SClickContainer::read(bytebuf)?)
                     .await?;
@@ -792,6 +799,9 @@ impl Player {
             SCommandSuggestion::PACKET_ID => {
                 self.handle_command_suggestion(SCommandSuggestion::read(bytebuf)?, server)
                     .await;
+            }
+            SPCookieResponse::PACKET_ID => {
+                self.handle_cookie_response(SPCookieResponse::read(bytebuf)?);
             }
             _ => {
                 log::warn!("Failed to handle player packet id {}", packet.id.0);
