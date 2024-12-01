@@ -483,7 +483,7 @@ impl WorldAquiferSampler {
                 let scaled_y = floor_div(j + 1, 12);
                 let scaled_z = floor_div(k - 5, 16);
 
-                // The 4 closest positions, closest to furthest
+                // The 3 closest positions, closest to furthest
                 let mut hypot_packed_block = [(0, i32::MAX); 3];
                 for offset_y in -1..=1 {
                     for offset_x in 0..=1 {
@@ -502,15 +502,18 @@ impl WorldAquiferSampler {
                             let hypot_squared =
                                 local_x * local_x + local_y * local_y + local_z * local_z;
 
-                            if hypot_packed_block[0].1 >= hypot_squared {
-                                hypot_packed_block[2] = hypot_packed_block[1];
-                                hypot_packed_block[1] = hypot_packed_block[0];
-                                hypot_packed_block[0] = (packed_random, hypot_squared);
-                            } else if hypot_packed_block[1].1 >= hypot_squared {
+                            if hypot_packed_block[2].1 >= hypot_squared {
+                                hypot_packed_block[2] = (packed_random, hypot_squared);
+                            }
+
+                            if hypot_packed_block[1].1 >= hypot_squared {
                                 hypot_packed_block[2] = hypot_packed_block[1];
                                 hypot_packed_block[1] = (packed_random, hypot_squared);
-                            } else if hypot_packed_block[2].1 >= hypot_squared {
-                                hypot_packed_block[2] = (packed_random, hypot_squared);
+                            }
+
+                            if hypot_packed_block[0].1 >= hypot_squared {
+                                hypot_packed_block[1] = hypot_packed_block[0];
+                                hypot_packed_block[0] = (packed_random, hypot_squared);
                             }
                         }
                     }
