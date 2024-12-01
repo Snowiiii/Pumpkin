@@ -33,102 +33,61 @@ impl Default for PacketDecoder {
 }
 
 impl PacketDecoder {
-    /// Decodes the next packet from the buffer.
-    /// Returns `Ok(Some(RawPacket))` if a packet is successfully decoded.
-    /// Returns `Ok(None)` if more data is needed.
-    /// Returns `Err(PacketDecodeError)` if a critical error occurs.
     pub fn decode(&mut self) -> Result<Option<RawPacket>, PacketDecodeError> {
         let mut r = &self.buf[..];
 
-        // Attempt to decode the packet length as a VarInt
         let packet_len = match VarInt::decode_partial(&mut r) {
             Ok(len) => len,
-            Err(VarIntDecodeError::Incomplete) => return Ok(None), // Wait for more data
-            Err(VarIntDecodeError::TooLarge) => {
-                self.buf.advance(1); // Advance by one byte to avoid stalling
-                return Err(PacketDecodeError::MalformedLength);
-            }
+            Err(VarIntDecodeError::Incomplete) => return Ok(None),
+            Err(VarIntDecodeError::TooLarge) => Err(PacketDecodeError::MalformedLength)?,
         };
 
-        // Validate the packet length
         if !(0..=MAX_PACKET_SIZE).contains(&packet_len) {
-            let packet_len_len = VarInt(packet_len).written_size();
-            self.buf.advance(packet_len_len);
-            // Clear decompress_buf to prevent accumulation
-            self.decompress_buf.clear();
-            return Err(PacketDecodeError::OutOfBounds);
+            Err(PacketDecodeError::OutOfBounds)?
         }
 
-        // Check if the buffer has enough data for the entire packet
         if r.len() < packet_len as usize {
-            return Ok(None); // Wait for more data
+            // Not enough data arrived yet.
+            return Ok(None);
         }
 
         let packet_len_len = VarInt(packet_len).written_size();
 
-        let data;
+        let mut data;
         if self.compression {
-            // Slice to the packet length
             r = &r[..packet_len as usize];
 
-            // Decode the data length
-            let data_len = match VarInt::decode(&mut r) {
-                Ok(varint) => varint.0,
-                Err(_) => {
-                    // Advance past the entire packet to discard it
-                    self.buf.advance(packet_len_len + packet_len as usize);
-                    // Clear decompress_buf to prevent accumulation
-                    self.decompress_buf.clear();
-                    return Err(PacketDecodeError::TooLong);
-                }
-            };
+            let data_len = VarInt::decode(&mut r)
+                .map_err(|_| PacketDecodeError::TooLong)?
+                .0;
 
-            // Validate the data length
             if !(0..=MAX_PACKET_SIZE).contains(&data_len) {
-                let data_len_len = VarInt(data_len).written_size();
-                // Advance past the data_len VarInt and the rest of the packet
-                self.buf
-                    .advance(packet_len_len + data_len_len + (packet_len as usize - data_len_len));
-                // Clear decompress_buf to prevent accumulation
-                self.decompress_buf.clear();
-                return Err(PacketDecodeError::OutOfBounds);
+                Err(PacketDecodeError::OutOfBounds)?
             }
 
+            // Is this packet compressed?
             if data_len > 0 {
                 debug_assert!(self.decompress_buf.is_empty());
 
-                // Resize the decompression buffer
+                // Estimate the maximum decompressed size.
                 self.decompress_buf.resize(data_len as usize, 0);
 
-                // Perform decompression
-                let decompressed_size = match self
+                // Perform decompression using libdeflater
+                let decompressed_size = self
                     .decompressor
                     .zlib_decompress(r, &mut self.decompress_buf)
-                {
-                    Ok(size) => size,
-                    Err(e) => {
-                        // Advance past the entire packet to discard it
-                        self.buf.advance(packet_len_len + packet_len as usize);
-                        // Clear decompress_buf to prevent accumulation
-                        self.decompress_buf.clear();
-                        return Err(PacketDecodeError::from(e));
-                    }
-                };
+                    .map_err(PacketDecodeError::from)?;
 
                 if decompressed_size != data_len as usize {
-                    // Advance past the entire packet to discard it
-                    self.buf.advance(packet_len_len + packet_len as usize);
-                    // Clear decompress_buf to prevent accumulation
-                    self.decompress_buf.clear();
                     return Err(PacketDecodeError::FailedDecompression(format!(
                         "Expected {} bytes, got {} bytes",
                         data_len, decompressed_size
                     )));
                 }
-
                 self.decompress_buf.truncate(decompressed_size);
 
                 let total_packet_len = VarInt(packet_len).written_size() + packet_len as usize;
+
                 self.buf.advance(total_packet_len);
 
                 data = self.decompress_buf.split();
@@ -136,27 +95,21 @@ impl PacketDecoder {
                 debug_assert_eq!(data_len, 0);
 
                 let remaining_len = r.len();
-                self.buf.advance(packet_len_len + 1); // +1 for data_len VarInt
+
+                self.buf.advance(packet_len_len + 1);
+
                 data = self.buf.split_to(remaining_len);
             }
         } else {
-            // No compression
+            // no compression
             self.buf.advance(packet_len_len);
             data = self.buf.split_to(packet_len as usize);
         }
 
-        // Decode the packet ID
-        let packet_id = match VarInt::decode(&mut &data[..]) {
-            Ok(varint) => varint,
-            Err(_) => {
-                // Clear decompress_buf to prevent accumulation
-                self.decompress_buf.clear();
-                self.buf.advance(packet_len_len + packet_len as usize);
-                return Err(PacketDecodeError::DecodeID);
-            }
-        };
+        r = &data[..];
+        let packet_id = VarInt::decode(&mut r).map_err(|_| PacketDecodeError::DecodeID)?;
 
-        // At this point, `data` contains exactly the packet data
+        data.advance(data.len() - r.len());
         Ok(Some(RawPacket {
             id: packet_id,
             bytebuf: ByteBuffer::new(data),
