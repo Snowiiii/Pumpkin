@@ -39,7 +39,9 @@ fn token_stream_to_identifier(item: TokenStream) -> String {
 pub(super) fn block_id_impl(item: TokenStream) -> TokenStream {
     let identifier = token_stream_to_identifier(item);
 
-    let id = BLOCK_MAP.get(&identifier).expect(&format!("block {identifier:?} does not exist"));
+    let id = BLOCK_MAP
+        .get(&identifier)
+        .expect(&format!("block {identifier:?} does not exist"));
 
     // integer literal without type information
     TokenStream::from_str(&format!("{id}")).unwrap()
@@ -49,7 +51,9 @@ pub(super) fn block_state_id_impl(item: TokenStream) -> TokenStream {
     // todo: allow passing properties like in "oak_log[axis=z]"
     let identifier = token_stream_to_identifier(item);
 
-    let block_id = BLOCK_MAP.get(&identifier).expect(&format!("block {identifier:?} does not exist"));
+    let block_id = BLOCK_MAP
+        .get(&identifier)
+        .expect(&format!("block {identifier:?} does not exist"));
     let block = &BLOCKS[*block_id];
     let id = block.default_state_id;
 
@@ -60,7 +64,9 @@ pub(super) fn block_state_id_impl(item: TokenStream) -> TokenStream {
 pub(super) fn block_entity_id_impl(item: TokenStream) -> TokenStream {
     let identifier = token_stream_to_identifier(item);
 
-    let id = BLOCK_ENTITY_MAP.get(&identifier).expect(&format!("block enitity {identifier:?} does not exist"));
+    let id = BLOCK_ENTITY_MAP
+        .get(&identifier)
+        .expect(&format!("block enitity {identifier:?} does not exist"));
 
     // integer literal without type information
     TokenStream::from_str(&format!("{id}")).unwrap()

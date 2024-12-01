@@ -76,8 +76,8 @@ mod tests {
     use pumpkin_macros::block_id;
     use pumpkin_macros::block_state_id;
 
-    use super::get_block_by_id;
     use super::get_block;
+    use super::get_block_by_id;
 
     #[test]
     fn test_get_block() {
@@ -97,13 +97,16 @@ mod tests {
 
     #[test]
     fn test_blocks() {
-        let dirt_shapes = super::get_shape_ids_by_block_state(block_state_id!("minecraft:dirt")).unwrap();
+        let dirt_shapes =
+            super::get_shape_ids_by_block_state(block_state_id!("minecraft:dirt")).unwrap();
         assert!(dirt_shapes.len() == 1);
         assert!(super::get_shape_by_id(dirt_shapes[0]).is_some());
         assert!(super::get_shapes_by_block_state(block_state_id!("green_bed")).is_some());
 
         assert!(super::get_block_entity_kind_by_id(block_entity_id!("chest")).is_some());
-        assert!(super::get_block_entity_kind_by_id(block_entity_id!("minecraft:jukebox")).is_some());
+        assert!(
+            super::get_block_entity_kind_by_id(block_entity_id!("minecraft:jukebox")).is_some()
+        );
 
         assert!(super::get_block_and_state_by_state_id(block_state_id!("birch_log")).is_some());
         assert!(super::get_block_by_state_id(block_state_id!("purpur_block")).is_some());
