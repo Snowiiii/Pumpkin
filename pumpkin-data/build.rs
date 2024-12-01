@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 use std::path::Path;
 
@@ -16,13 +17,6 @@ pub struct JsonBlock {
     pub default_state_id: u16,
     pub first_state_id: u16,
     pub last_state_id: u16,
-}
-
-#[derive(Deserialize, Clone, Debug)]
-struct JsonBlockEntityKind {
-    id: u32,
-    ident: String,
-    name: String,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -45,11 +39,17 @@ pub struct JsonBlockState {
 
 #[derive(Deserialize, Clone, Debug)]
 struct JsonShape {
+    #[serde(rename = "x1")]
     min_x: f64,
+    #[serde(rename = "y1")]
     min_y: f64,
+    #[serde(rename = "z1")]
     min_z: f64,
+    #[serde(rename = "x2")]
     max_x: f64,
+    #[serde(rename = "y2")]
     max_y: f64,
+    #[serde(rename = "z2")]
     max_z: f64,
 }
 
@@ -144,16 +144,14 @@ fn generate_block_state_properties() {
 }
 
 fn generate_block_entities() {
-    let json_data: Vec<JsonBlockEntityKind> =
+    let json_data: HashMap<String, u32> =
         serde_json::from_str(include_str!("../assets/block_entities.json"))
             .expect("Could not parse json file.");
 
     let block_entities: Vec<_> = json_data
         .into_iter()
-        .map(|e| {
-            let id = e.id;
-            let name = e.name;
-            let ident = e.ident;
+        .map(|(ident, id)| {
+            let name = ident.split(':').nth(1).expect("identifier should contain a colon");
             quote::quote! {
                 BlockEntityKind {
                     id: #id,
