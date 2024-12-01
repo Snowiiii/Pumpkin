@@ -51,7 +51,7 @@ class Extractor : ModInitializer {
                 try {
                     val out = outputDirectory.resolve(ext.fileName())
                     val fileWriter = FileWriter(out.toFile(), StandardCharsets.UTF_8)
-                    (ext.gson_builder() ?: gson).toJson(ext.extract(server), fileWriter)
+                    gson.toJson(ext.extract(server), fileWriter)
                     fileWriter.close()
                     logger.info("Wrote " + out.toAbsolutePath())
                 } catch (e: java.lang.Exception) {
@@ -66,9 +66,5 @@ class Extractor : ModInitializer {
 
         @Throws(Exception::class)
         fun extract(server: MinecraftServer): JsonElement
-
-        fun gson_builder(): Gson? {
-            return null
-        }
     }
 }

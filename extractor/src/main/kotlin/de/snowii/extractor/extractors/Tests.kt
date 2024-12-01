@@ -108,10 +108,6 @@ class Tests : Extractor.Extractor {
 		return null;
 	}
 
-	override fun gson_builder(): Gson {
-		return GsonBuilder().create()
-	}
-
     // Dumps a chunk to an array of block state ids
     override fun extract(server: MinecraftServer): JsonElement {
         val topLevelJson = JsonArray()
