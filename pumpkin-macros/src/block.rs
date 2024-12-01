@@ -41,7 +41,7 @@ pub(super) fn block_id_impl(item: TokenStream) -> TokenStream {
 
     let id = BLOCK_MAP[&identifier];
 
-    // make this an integer literal without type information
+    // integer literal without type information
     TokenStream::from_str(&format!("{id}")).unwrap()
 }
 
@@ -53,7 +53,7 @@ pub(super) fn block_state_id_impl(item: TokenStream) -> TokenStream {
     let block = &BLOCKS[block_id];
     let id = block.default_state_id;
 
-    // make this an integer literal without type information
+    // integer literal without type information
     TokenStream::from_str(&format!("{id}")).unwrap()
 }
 
@@ -62,6 +62,6 @@ pub(super) fn block_entity_id_impl(item: TokenStream) -> TokenStream {
 
     let id = BLOCK_ENTITY_MAP[&identifier];
 
-    // make this an integer literal without type information
+    // integer literal without type information
     TokenStream::from_str(&format!("{id}")).unwrap()
 }

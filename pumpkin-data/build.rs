@@ -53,6 +53,7 @@ struct JsonShape {
     max_z: f64,
 }
 
+/// generate rust arrays from certain json asset files at compile time
 fn main() {
     // this reruns only when files in /assets changed, so only depend on such files!
     println!("cargo::rerun-if-changed=../assets");

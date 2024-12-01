@@ -1,3 +1,4 @@
+/// an array of all block shapes, indexed by their id
 #[cfg(not(clippy))]
 include!(concat!(env!("OUT_DIR"), "/block_shapes.rs"));
 
