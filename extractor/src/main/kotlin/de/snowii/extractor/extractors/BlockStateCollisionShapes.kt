@@ -22,16 +22,16 @@ class BlockStateCollisionShapes : Extractor.Extractor {
     }
 
     override fun extract(server: MinecraftServer): JsonElement {
-        val json = JsonArray()
+        val shapes = BlockCollisionShapes.getShapes()
 
-        var idx = 0
+        val json = JsonArray()
 
         for (block in Registries.BLOCK) {
             for (state in block.stateManager.states) {
                 val collisionShapeIdxsJson = JsonArray()
                 for (box in state.getCollisionShape(EmptyBlockView.INSTANCE, BlockPos.ORIGIN).boundingBoxes) {
+                    val idx = shapes[box]!!
                     collisionShapeIdxsJson.add(idx)
-                    idx++
                 }
                 json.add(collisionShapeIdxsJson)
             }

@@ -17,15 +17,7 @@ class BlockCollisionShapes : Extractor.Extractor {
     }
 
     override fun extract(server: MinecraftServer): JsonElement {
-        val shapes: LinkedHashMap<Box, Int> = LinkedHashMap()
-
-        for (block in Registries.BLOCK) {
-            for (state in block.stateManager.states) {
-                for (box in state.getCollisionShape(EmptyBlockView.INSTANCE, BlockPos.ORIGIN).boundingBoxes) {
-                    shapes.putIfAbsent(box, shapes.size)
-                }
-            }
-        }
+        val shapes = getShapes()
 
         val shapesJson = JsonArray()
         for (shape in shapes.keys) {
@@ -40,5 +32,21 @@ class BlockCollisionShapes : Extractor.Extractor {
         }
 
         return shapesJson
+    }
+
+    companion object {
+        fun getShapes(): Map<Box, Int> {
+            val shapes: LinkedHashMap<Box, Int> = LinkedHashMap()
+
+            for (block in Registries.BLOCK) {
+                for (state in block.stateManager.states) {
+                    for (box in state.getCollisionShape(EmptyBlockView.INSTANCE, BlockPos.ORIGIN).boundingBoxes) {
+                        shapes.putIfAbsent(box, shapes.size)
+                    }
+                }
+            }
+
+            return shapes
+        }
     }
 }
