@@ -1,6 +1,5 @@
 package de.snowii.extractor.extractors
 
-import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import de.snowii.extractor.Extractor
@@ -13,15 +12,11 @@ class BlockEntities : Extractor.Extractor {
     }
 
     override fun extract(server: MinecraftServer): JsonElement {
-        val blockEntitiesJson = JsonArray()
+        val blockEntitiesJson = JsonObject()
         for (blockEntity in Registries.BLOCK_ENTITY_TYPE) {
-            val blockEntityJson = JsonObject()
-
-            blockEntityJson.addProperty("id", Registries.BLOCK_ENTITY_TYPE.getRawId(blockEntity))
-            blockEntityJson.addProperty("ident", Registries.BLOCK_ENTITY_TYPE.getId(blockEntity).toString())
-            blockEntityJson.addProperty("name", Registries.BLOCK_ENTITY_TYPE.getId(blockEntity)!!.path)
-
-            blockEntitiesJson.add(blockEntityJson)
+            val identifier = Registries.BLOCK_ENTITY_TYPE.getId(blockEntity)!!.toString()
+            val id = Registries.BLOCK_ENTITY_TYPE.getRawId(blockEntity)
+            blockEntitiesJson.addProperty(identifier, id)
         }
         return blockEntitiesJson
     }

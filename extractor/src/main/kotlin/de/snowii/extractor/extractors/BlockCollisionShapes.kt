@@ -30,12 +30,12 @@ class BlockCollisionShapes : Extractor.Extractor {
         val shapesJson = JsonArray()
         for (shape in shapes.keys) {
             val shapeJson = JsonObject()
-            shapeJson.addProperty("min_x", shape.minX)
-            shapeJson.addProperty("min_y", shape.minY)
-            shapeJson.addProperty("min_z", shape.minZ)
-            shapeJson.addProperty("max_x", shape.maxX)
-            shapeJson.addProperty("max_y", shape.maxY)
-            shapeJson.addProperty("max_z", shape.maxZ)
+            shapeJson.addProperty("x1", shape.minX)
+            shapeJson.addProperty("y1", shape.minY)
+            shapeJson.addProperty("z1", shape.minZ)
+            shapeJson.addProperty("x2", shape.maxX)
+            shapeJson.addProperty("y2", shape.maxY)
+            shapeJson.addProperty("z2", shape.maxZ)
             shapesJson.add(shapeJson)
         }
 
