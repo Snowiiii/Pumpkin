@@ -42,9 +42,9 @@ impl TerrainGenerator for SuperflatTerrainGenerator {
     // TODO allow specifying which blocks should be at which height in the config.
     fn generate_block(&self, at: BlockCoordinates, _: Biome) -> BlockState {
         match *at.y {
-            -64 => BlockState::new("bedrock").unwrap(),
-            -63..=-62 => BlockState::new("dirt").unwrap(),
-            -61 => BlockState::new("grass_block").unwrap(),
+            -64 => BlockState::new("minecraft:bedrock").unwrap(),
+            -63..=-62 => BlockState::new("minecraft:dirt").unwrap(),
+            -61 => BlockState::new("minecraft:grass_block").unwrap(),
             _ => BlockState::AIR,
         }
     }

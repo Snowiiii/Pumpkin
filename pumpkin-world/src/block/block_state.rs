@@ -27,13 +27,13 @@ mod tests {
 
     #[test]
     fn not_existing() {
-        let result = BlockState::new("this_block_does_not_exist");
+        let result = BlockState::new("minecraft:this_block_does_not_exist");
         assert!(result.is_none());
     }
 
     #[test]
     fn does_exist() {
-        let result = BlockState::new("dirt");
+        let result = BlockState::new("minecraft:dirt");
         assert!(result.is_some());
     }
 }
