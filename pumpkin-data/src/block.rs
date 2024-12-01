@@ -1,4 +1,3 @@
-/// an array of all blocks, indexed by their id
 #[cfg(not(clippy))]
 include!(concat!(env!("OUT_DIR"), "/blocks.rs"));
 

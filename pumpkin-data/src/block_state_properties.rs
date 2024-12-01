@@ -1,4 +1,3 @@
-/// a lookup-array for the block property values of each block state
 #[cfg(not(clippy))]
 include!(concat!(env!("OUT_DIR"), "/block_state_properties.rs"));
 
