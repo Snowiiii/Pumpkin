@@ -24,7 +24,6 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
-use pumpkin_protocol::server::play::{SClickContainer, SKeepAlive};
 use pumpkin_protocol::server::play::{SCookieResponse as SPCookieResponse, SPlayPingRequest};
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
@@ -40,6 +39,10 @@ use pumpkin_protocol::{
         SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
     },
     RawPacket, ServerPacket, SoundCategory, VarInt,
+};
+use pumpkin_protocol::{
+    client::play::{CSetEntityMetadata, Metadata},
+    server::play::{SClickContainer, SKeepAlive},
 };
 use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
 use tokio::sync::{Mutex, Notify};
@@ -656,6 +659,24 @@ impl Player {
             .await;
     }
 
+    /// Send skin layers and used hand to all players
+    pub async fn update_client_information(&self) {
+        let config = self.config.lock().await;
+        let world = self.world();
+        world
+            .broadcast_packet_all(&CSetEntityMetadata::new(
+                self.entity_id().into(),
+                Metadata::new(17, 0.into(), config.skin_parts),
+            ))
+            .await;
+        world
+            .broadcast_packet_all(&CSetEntityMetadata::new(
+                self.entity_id().into(),
+                Metadata::new(18, 0.into(), config.main_hand as u8),
+            ))
+            .await;
+    }
+
     pub async fn send_system_message<'a>(&self, text: &TextComponent<'a>) {
         self.client
             .send_packet(&CSystemChatMessage::new(text, false))
@@ -845,16 +866,17 @@ impl Default for Abilities {
 }
 
 /// Represents the player's dominant hand.
-#[derive(FromPrimitive, Clone)]
+#[derive(Debug, FromPrimitive, Clone, Copy)]
+#[repr(u8)]
 pub enum Hand {
-    /// The player's primary hand (usually the right hand).
-    Main,
-    /// The player's off-hand (usually the left hand).
-    Off,
+    /// Usually the player's off-hand.
+    Left,
+    /// Usually the player's primary hand.
+    Right,
 }
 
 /// Represents the player's chat mode settings.
-#[derive(FromPrimitive, Clone)]
+#[derive(Debug, FromPrimitive, Clone)]
 pub enum ChatMode {
     /// Chat is enabled for the player.
     Enabled,
@@ -865,7 +887,7 @@ pub enum ChatMode {
 }
 
 /// the player's permission level
-#[derive(FromPrimitive, ToPrimitive, Clone, Copy)]
+#[derive(Debug, FromPrimitive, ToPrimitive, Clone, Copy)]
 #[repr(i8)]
 pub enum PermissionLvl {
     Zero = 0,
