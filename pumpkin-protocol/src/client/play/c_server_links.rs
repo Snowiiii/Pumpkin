@@ -21,7 +21,7 @@ pub enum Label<'a> {
     TextComponent(TextComponent<'a>),
 }
 
-impl<'a> Serialize for Label<'a> {
+impl Serialize for Label<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,

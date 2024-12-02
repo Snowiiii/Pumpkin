@@ -113,7 +113,7 @@ impl Server {
     }
 
     /// Adds a new player to the server.
-
+    ///
     /// This function takes an `Arc<Client>` representing the connected client and performs the following actions:
     ///
     /// 1. Generates a new entity ID for the player.
@@ -126,7 +126,7 @@ impl Server {
     /// # Arguments
     ///
     /// * `client`: An `Arc<Client>` representing the connected client.
-
+    ///
     /// # Returns
     ///
     /// A tuple containing:
@@ -302,7 +302,7 @@ impl Server {
         &'a self,
         verification_token: &'a [u8; 4],
         should_authenticate: bool,
-    ) -> CEncryptionRequest<'_> {
+    ) -> CEncryptionRequest<'a> {
         self.key_store
             .encryption_request("", verification_token, should_authenticate)
     }

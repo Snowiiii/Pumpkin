@@ -46,7 +46,7 @@ impl<'de> Deserialize<'de> for WorldPosition {
         D: serde::Deserializer<'de>,
     {
         struct Visitor;
-        impl<'a> serde::de::Visitor<'a> for Visitor {
+        impl serde::de::Visitor<'_> for Visitor {
             type Value = WorldPosition;
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                 formatter.write_str("An i64 int")
