@@ -439,7 +439,8 @@ impl Player {
             ChatMode::from_i32(client_information.chat_mode.into()),
         ) {
             let config = self.config.lock().await;
-            let update = config.main_hand != main_hand || config.skin_parts != client_information.skin_parts;
+            let update =
+                config.main_hand != main_hand || config.skin_parts != client_information.skin_parts;
 
             *self.config.lock().await = PlayerConfig {
                 locale: client_information.locale,
