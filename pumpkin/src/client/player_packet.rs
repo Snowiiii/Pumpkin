@@ -438,11 +438,11 @@ impl Player {
             Hand::from_i32(client_information.main_hand.into()),
             ChatMode::from_i32(client_information.chat_mode.into()),
         ) {
-            let config = self.config.lock().await;
+            let mut config = self.config.lock().await;
             let update =
                 config.main_hand != main_hand || config.skin_parts != client_information.skin_parts;
 
-            *self.config.lock().await = PlayerConfig {
+            *config = PlayerConfig {
                 locale: client_information.locale,
                 // A Negative view distance would be impossible and make no sense right ?, Mojang: Lets make is signed :D
                 view_distance: client_information.view_distance as u8,
@@ -453,6 +453,7 @@ impl Player {
                 text_filtering: client_information.text_filtering,
                 server_listing: client_information.server_listing,
             };
+            drop(config);
             if update {
                 self.update_client_information().await;
             }
