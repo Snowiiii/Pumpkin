@@ -97,8 +97,7 @@ impl PluginManager {
 
     #[must_use]
     pub fn list_plugins(&self) -> Vec<(&PluginMetadata, &bool)> {
-        self
-            .plugins
+        self.plugins
             .iter()
             .map(|(metadata, _, _, _, loaded)| (metadata, loaded))
             .collect()
