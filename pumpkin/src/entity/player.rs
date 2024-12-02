@@ -52,6 +52,7 @@ use crate::{
         combat::{self, player_attack_sound, AttackType},
         Client, PlayerConfig,
     },
+    command::{client_cmd_suggestions, dispatcher::CommandDispatcher},
     server::Server,
     world::World,
 };
@@ -523,13 +524,18 @@ impl Player {
     }
 
     /// sets the players permission level and syncs it with the client
-    pub async fn set_permission_lvl(&self, lvl: PermissionLvl) {
+    pub async fn set_permission_lvl(
+        self: &Arc<Self>,
+        lvl: PermissionLvl,
+        command_dispatcher: &Arc<CommandDispatcher<'static>>,
+    ) {
         {
             let mut level = self.permission_lvl.lock();
             *level = lvl;
         }
 
         self.send_permission_lvl_update().await;
+        client_cmd_suggestions::send_c_commands_packet(self, command_dispatcher).await;
     }
 
     /// get the players permission level

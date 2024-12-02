@@ -24,7 +24,7 @@ impl CommandExecutor for OpExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
-        _server: &crate::server::Server,
+        server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let mut config = OPERATOR_CONFIG.write().await;
@@ -52,9 +52,11 @@ impl CommandExecutor for OpExecutor {
             }
             config.save();
 
-            // TODO: can't fully implement until require can accept async closures
             player
-                .set_permission_lvl(BASIC_CONFIG.op_permission_level.into())
+                .set_permission_lvl(
+                    BASIC_CONFIG.op_permission_level.into(),
+                    &server.command_dispatcher,
+                )
                 .await;
 
             let player_name = player.gameprofile.name.clone();
