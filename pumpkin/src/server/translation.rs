@@ -4,12 +4,15 @@ use std::{
     fs::File,
     io::{BufRead, BufReader},
     path::PathBuf,
+    sync::LazyLock,
 };
 
 use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::text::{style::Style, TextComponent, TextContent};
 use serde_json::Value;
 use thiserror::Error;
+
+static PATH: LazyLock<&str> = LazyLock::new(|| "assets/lang/en_us/en_us.json");
 
 #[derive(Error, Debug)]
 pub enum TranslationError {
@@ -26,8 +29,7 @@ pub enum TranslationError {
 pub fn translate(message: &'_ str) -> Result<TextComponent<'_>, TranslationError> {
     let config = &ADVANCED_CONFIG.translation;
     if !config.enabled {
-        let path = "assets/lang/en_us/en_us.json";
-        let translations = get_translations(path, message)?;
+        let translations = get_translations(*PATH, message)?;
 
         return Ok(translations);
     }
