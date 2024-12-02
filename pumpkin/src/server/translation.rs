@@ -42,6 +42,7 @@ pub fn translate(message: &'_ str) -> Result<TextComponent<'_>, TranslationError
             },
 
             style: Style::default(),
+            extra: vec![],
         });
     }
 
@@ -67,6 +68,7 @@ fn get_translations(
             text: std::borrow::Cow::Owned(parsed_results),
         },
         style: Style::default(),
+        extra: vec![],
     };
 
     Ok(text_components)
