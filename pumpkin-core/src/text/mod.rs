@@ -183,22 +183,24 @@ impl<'a> TextComponent<'a> {
             style: &'a Style<'a>,
             #[serde(default, skip_serializing_if = "Vec::is_empty")]
             #[serde(rename = "extra")]
-            extra: Vec<&'a TempStruct<'a>>,
+            extra: Vec<TempStruct<'a>>,
         }
-        let temp_extra: Vec<TempStruct> = self
-            .extra
-            .iter()
-            .map(|x| TempStruct {
-                text: &x.content,
-                style: &x.style,
-                extra: vec![],
-            })
-            .collect();
-        let temp_extra_refs: Vec<&TempStruct> = temp_extra.iter().collect();
+        fn convert_extra<'a>(extra: &'a [TextComponent<'a>]) -> Vec<TempStruct<'a>> {
+            extra
+                .iter()
+                .map(|x| TempStruct {
+                    text: &x.content,
+                    style: &x.style,
+                    extra: convert_extra(&x.extra),
+                })
+                .collect()
+        }
+
+        let temp_extra = convert_extra(&self.extra);
         let astruct = TempStruct {
             text: &self.content,
             style: &self.style,
-            extra: temp_extra_refs,
+            extra: temp_extra,
         };
         // dbg!(&serde_json::to_string(&astruct));
         // dbg!(pumpkin_nbt::serializer::to_bytes_unnamed(&astruct).unwrap().to_vec());
