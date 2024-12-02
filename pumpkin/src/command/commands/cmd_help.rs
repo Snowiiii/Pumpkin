@@ -39,14 +39,59 @@ impl CommandExecutor for CommandHelpExecutor {
             return Err(InvalidConsumption(Some(ARG_COMMAND.into())));
         };
 
-        sender
-            .send_message(TextComponent::text(&format!(
-                "{} - {} Usage: {}",
-                tree.names.join("/"),
-                tree.description,
-                tree
-            )))
-            .await;
+        let command_names = tree.names.join(", /");
+        let usage = format!("{tree}");
+        let description = tree.description;
+
+        let header_text = format!(" Help - /{} ", tree.names[0]);
+
+        let mut message = TextComponent::text("")
+            .add_child(
+                TextComponent::text_string("-".repeat((52 - header_text.len()) / 2) + " ")
+                    .color_named(NamedColor::Yellow),
+            )
+            .add_child(TextComponent::text_string(header_text.clone()))
+            .add_child(
+                TextComponent::text_string(
+                    " ".to_owned().to_string() + &"-".repeat((52 - header_text.len()) / 2) + "\n",
+                )
+                .color_named(NamedColor::Yellow),
+            )
+            .add_child(
+                TextComponent::text("Command: ")
+                    .color_named(NamedColor::Aqua)
+                    .add_child(
+                        TextComponent::text_string(format!("/{}", command_names))
+                            .color_named(NamedColor::Gold)
+                            .bold(),
+                    )
+                    .add_child(TextComponent::text("\n").color_named(NamedColor::White))
+                    .click_event(ClickEvent::SuggestCommand(
+                        format!("/{}", tree.names[0]).into(),
+                    )),
+            )
+            .add_child(
+                TextComponent::text("Description: ")
+                    .color_named(NamedColor::Aqua)
+                    .add_child(
+                        TextComponent::text_string(format!("{description}\n"))
+                            .color_named(NamedColor::White),
+                    ),
+            )
+            .add_child(
+                TextComponent::text("Usage: ")
+                    .color_named(NamedColor::Aqua)
+                    .add_child(
+                        TextComponent::text_string(format!("{usage}\n"))
+                            .color_named(NamedColor::White),
+                    )
+                    .click_event(ClickEvent::SuggestCommand(format!("{tree}").into())),
+            );
+
+        message = message
+            .add_child(TextComponent::text_string("-".repeat(52)).color_named(NamedColor::Yellow));
+
+        sender.send_message(message).await;
 
         Ok(())
     }
