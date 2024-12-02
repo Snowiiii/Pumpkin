@@ -4,6 +4,8 @@
 name = "hello-plugin-source"
 edition = "2021"
 version = "0.1.0"
+authors = ["vyPal"]
+description = "An example plugin for Pumpkin"
 
 [lib]
 crate-type = ["dylib"]
