@@ -652,6 +652,7 @@ impl Player {
                         world_pos
                     };
 
+                    //TODO: Maybe put that in config?
                     //check max world build height
                     if world_pos.0.y > 319 {
                         self.client
@@ -661,17 +662,22 @@ impl Player {
                     }
 
                     let block_bounding_box = BoundingBox::from_block(&world_pos);
-                    let bounding_box = entity.bounding_box.load();
-                    //TODO: Make this check for every entity in that posistion
-                    if !bounding_box.intersects(&block_bounding_box) {
+
+                    //Search in 20 block radius
+                    let mut intersects = false;
+                    for player in world.get_nearby_players(entity.pos.load(), 20).await {
+                        let bounding_box = player.1.living_entity.entity.bounding_box.load();
+                        if bounding_box.intersects(&block_bounding_box) {
+                            intersects = true;
+                        }
+                    }
+
+                    if !intersects {
                         world
                             .set_block_state(world_pos, block.default_state_id)
                             .await;
                     }
                 }
-                self.client
-                    .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
-                    .await;
             }
 
             Ok(())
