@@ -97,11 +97,11 @@ impl PluginManager {
 
     #[must_use]
     pub fn list_plugins(&self) -> Vec<(&PluginMetadata, &bool)> {
-        return self
+        self
             .plugins
             .iter()
             .map(|(metadata, _, _, _, loaded)| (metadata, loaded))
-            .collect();
+            .collect()
     }
 
     pub async fn emit<T: Any + Send + Sync>(&mut self, event_name: &str, event: &T) -> bool {
