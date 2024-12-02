@@ -5,10 +5,10 @@ use crate::{
         tree_builder::{argument, require},
         CommandError, CommandExecutor, CommandSender,
     },
-    entity::player::PermissionLvl,
+    entity::player::PermissionLvl, server::json_config::{SaveJSONConfiguration, OPERATOR_CONFIG},
 };
 use async_trait::async_trait;
-use pumpkin_config::{op::Op, SaveJSONConfiguration, BASIC_CONFIG, OPERATOR_CONFIG};
+use pumpkin_config::{op::Op,BASIC_CONFIG};
 use pumpkin_core::text::TextComponent;
 use CommandError::InvalidConsumption;
 

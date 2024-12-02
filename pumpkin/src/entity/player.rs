@@ -10,7 +10,7 @@ use std::{
 use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
 use num_derive::{FromPrimitive, ToPrimitive};
-use pumpkin_config::{op::OpLevel, ADVANCED_CONFIG, OPERATOR_CONFIG};
+use pumpkin_config::{op::OpLevel, ADVANCED_CONFIG};
 use pumpkin_core::{
     math::{
         boundingbox::{BoundingBox, BoundingBoxSize},
@@ -46,7 +46,7 @@ use tokio::sync::{Mutex, Notify};
 use tokio::task::JoinHandle;
 
 use super::Entity;
-use crate::error::PumpkinError;
+use crate::{error::PumpkinError, server::json_config::OPERATOR_CONFIG};
 use crate::{
     client::{
         authentication::GameProfile,
