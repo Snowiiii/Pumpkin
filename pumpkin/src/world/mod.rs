@@ -764,7 +764,7 @@ impl World {
         if !PLUGIN_MANAGER
             .lock()
             .await
-            .emit::<Player>("player_leave", &player)
+            .emit::<Player>("player_leave", player)
             .await
         {
             // Send disconnect message / quit message to players in the same world

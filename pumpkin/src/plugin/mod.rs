@@ -56,7 +56,7 @@ impl PluginManager {
         PluginManager { plugins: vec![] }
     }
 
-    pub async fn load_plugins(&mut self) -> Result<(), String> {
+    pub fn load_plugins(&mut self) -> Result<(), String> {
         const PLUGIN_DIR: &str = "./plugins";
 
         let dir_entires = fs::read_dir(PLUGIN_DIR);
@@ -65,13 +65,13 @@ impl PluginManager {
             if !entry.as_ref().unwrap().path().is_file() {
                 continue;
             }
-            self.try_load_plugin(entry.unwrap().path().as_path()).await;
+            self.try_load_plugin(entry.unwrap().path().as_path());
         }
 
         Ok(())
     }
 
-    async fn try_load_plugin(&mut self, path: &Path) {
+    fn try_load_plugin(&mut self, path: &Path) {
         let library = unsafe { libloading::Library::new(path).unwrap() };
 
         let plugin_fn = unsafe { library.get::<fn() -> Box<dyn Plugin>>(b"plugin").unwrap() };
@@ -95,7 +95,8 @@ impl PluginManager {
             .push((metadata.clone(), plugin_fn(), hooks_fn(), library, loaded));
     }
 
-    pub async fn list_plugins(&self) -> Vec<(&PluginMetadata, &bool)> {
+    #[must_use]
+    pub fn list_plugins(&self) -> Vec<(&PluginMetadata, &bool)> {
         return self
             .plugins
             .iter()
@@ -107,7 +108,7 @@ impl PluginManager {
         let mut blocking_hooks = Vec::new();
         let mut non_blocking_hooks = Vec::new();
 
-        for (metadata, _, hooks, _, loaded) in self.plugins.iter_mut() {
+        for (metadata, _, hooks, _, loaded) in &mut self.plugins {
             if !*loaded {
                 continue;
             }
@@ -131,7 +132,7 @@ impl PluginManager {
             }
         }
 
-        blocking_hooks.sort_by(|a, b| {
+        let event_sort = |a: &(_, &mut Box<dyn Hooks>), b: &(_, &mut Box<dyn Hooks>)| {
             b.1.registered_events()
                 .unwrap()
                 .iter()
@@ -146,23 +147,10 @@ impl PluginManager {
                         .unwrap()
                         .priority,
                 )
-        });
-        non_blocking_hooks.sort_by(|a, b| {
-            b.1.registered_events()
-                .unwrap()
-                .iter()
-                .find(|e| e.name == event_name)
-                .unwrap()
-                .priority
-                .cmp(
-                    &a.1.registered_events()
-                        .unwrap()
-                        .iter()
-                        .find(|e| e.name == event_name)
-                        .unwrap()
-                        .priority,
-                )
-        });
+        };
+
+        blocking_hooks.sort_by(event_sort);
+        non_blocking_hooks.sort_by(event_sort);
 
         let event = event as &(dyn Any + Sync + Send);
 

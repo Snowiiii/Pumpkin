@@ -24,7 +24,7 @@ impl CommandExecutor for ListExecutor {
         _args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let plugin_manager = PLUGIN_MANAGER.lock().await;
-        let plugins = plugin_manager.list_plugins().await;
+        let plugins = plugin_manager.list_plugins();
 
         let message = if plugins.is_empty() {
             "There are no loaded plugins."
