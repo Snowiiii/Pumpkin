@@ -866,7 +866,7 @@ impl Default for Abilities {
 }
 
 /// Represents the player's dominant hand.
-#[derive(Debug, FromPrimitive, Clone, Copy)]
+#[derive(Debug, FromPrimitive, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Hand {
     /// Usually the player's off-hand.
