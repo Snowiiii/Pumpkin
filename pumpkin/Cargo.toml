@@ -12,6 +12,7 @@ LegalCopyright = "Copyright © 2024 Aleksander Medvedev"
 
 # Required to expose pumpkin plugin API
 [lib]
+doctest = false
 
 [dependencies]
 # pumpkin
