@@ -4,14 +4,14 @@ use num_traits::Float;
 
 use super::vector3::Vector3;
 
-#[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Hash, Eq, Default)]
 pub struct Vector2<T> {
     pub x: T,
     pub z: T,
 }
 
 impl<T: Math + Copy> Vector2<T> {
-    pub fn new(x: T, z: T) -> Self {
+    pub const fn new(x: T, z: T) -> Self {
         Vector2 { x, z }
     }
 
@@ -114,3 +114,4 @@ impl Math for f64 {}
 impl Math for f32 {}
 impl Math for i32 {}
 impl Math for i64 {}
+impl Math for i8 {}

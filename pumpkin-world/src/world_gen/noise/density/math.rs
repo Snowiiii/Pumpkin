@@ -1,268 +1,347 @@
-use std::sync::Arc;
+use std::marker::PhantomData;
 
-use log::warn;
+use crate::match_ref_implementations;
 
 use super::{
-    Applier, ApplierImpl, DensityFunction, DensityFunctionImpl, NoisePos, UnaryDensityFunction,
-    Visitor, VisitorImpl,
+    component_functions::{
+        ApplierImpl, ComponentFunctionImpl, ComponentReference, ComponentReferenceImplementation,
+        ConverterEnvironment, ConverterImpl, DensityFunctionEnvironment, EnvironmentApplierImpl,
+        ImmutableComponentFunctionImpl, MutableComponentFunctionImpl, MutableComponentReference,
+        NoEnvironment, OwnedConverterEnvironment, SharedComponentReference,
+        SharedConverterEnvironment,
+    },
+    NoisePos,
 };
 
-#[derive(Clone)]
-pub enum LinearType {
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+pub(crate) enum LinearType {
     Mul,
     Add,
 }
 
 #[derive(Clone)]
-pub struct LinearFunction<'a> {
-    action: LinearType,
-    input: Arc<DensityFunction<'a>>,
-    min: f64,
-    max: f64,
-    arg: f64,
+pub(crate) struct LinearUntypedData {
+    pub(crate) arg: f64,
+    pub(crate) action: LinearType,
 }
 
-impl<'a> DensityFunctionImpl<'a> for LinearFunction<'a> {
-    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
-        let new_function = self.input.apply(visitor);
-        let d = new_function.min();
-        let e = new_function.max();
+pub struct LinearFunction<E: DensityFunctionEnvironment, R: ComponentReference<E>> {
+    pub(crate) input: R,
+    pub(crate) data: LinearUntypedData,
+    _dummy: PhantomData<E>,
+}
 
-        let (f, g) = match self.action {
-            LinearType::Add => (d + self.arg, e + self.arg),
-            LinearType::Mul => {
-                if self.arg >= 0f64 {
-                    (d * self.arg, e * self.arg)
-                } else {
-                    (e * self.arg, d * self.arg)
-                }
-            }
-        };
-
-        Arc::new(DensityFunction::Linear(LinearFunction {
-            action: self.action.clone(),
-            input: new_function,
-            min: f,
-            max: g,
-            arg: self.arg,
-        }))
-    }
-
-    fn sample(&self, pos: &NoisePos) -> f64 {
-        self.apply_density(self.input.sample(pos))
-    }
-
-    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
-        self.input.fill(densities, applier);
-        densities
-            .iter_mut()
-            .for_each(|val| *val = self.apply_density(*val))
-    }
-
-    fn min(&self) -> f64 {
-        self.min
-    }
-
-    fn max(&self) -> f64 {
-        self.max
+impl<E: DensityFunctionEnvironment, R: ComponentReference<E>> From<LinearFunction<E, R>>
+    for MutableComponentReference<E>
+{
+    fn from(value: LinearFunction<E, R>) -> Self {
+        Self(Box::new(value))
     }
 }
 
-impl<'a> UnaryDensityFunction<'a> for LinearFunction<'a> {
+impl<E: DensityFunctionEnvironment, R: ComponentReference<E>> LinearFunction<E, R> {
+    pub fn new(action: LinearType, input: R, arg: f64) -> Self {
+        Self {
+            input,
+            data: LinearUntypedData { action, arg },
+            _dummy: PhantomData::<E> {},
+        }
+    }
+    #[inline]
     fn apply_density(&self, density: f64) -> f64 {
-        match self.action {
-            LinearType::Mul => density * self.arg,
-            LinearType::Add => density + self.arg,
+        match self.data.action {
+            LinearType::Mul => density * self.data.arg,
+            LinearType::Add => density + self.data.arg,
+        }
+    }
+
+    #[inline]
+    fn apply_fill(&self, arr: &mut [f64]) {
+        arr.iter_mut()
+            .for_each(|density| *density = self.apply_density(*density));
+    }
+
+    pub fn create_new_ref(
+        arg: ComponentReferenceImplementation<E>,
+        data: &LinearUntypedData,
+    ) -> ComponentReferenceImplementation<E> {
+        match arg {
+            ComponentReferenceImplementation::Shared(shared) => {
+                ComponentReferenceImplementation::Shared(
+                    LinearFunction::<NoEnvironment, SharedComponentReference>::new(
+                        data.action,
+                        shared,
+                        data.arg,
+                    )
+                    .into(),
+                )
+            }
+            ComponentReferenceImplementation::Mutable(owned) => {
+                ComponentReferenceImplementation::Mutable(
+                    LinearFunction::new(data.action, owned, data.arg).into(),
+                )
+            }
         }
     }
 }
 
-#[derive(Clone)]
-pub enum BinaryType {
+impl<E: DensityFunctionEnvironment, R: ComponentReference<E>> ComponentFunctionImpl
+    for LinearFunction<E, R>
+{
+}
+
+impl<E: DensityFunctionEnvironment, R: ComponentReference<E>> MutableComponentFunctionImpl<E>
+    for LinearFunction<E, R>
+{
+    #[inline]
+    fn sample_mut(&mut self, pos: &NoisePos, env: &E) -> f64 {
+        let density = self.input.sample_mut(pos, env);
+        self.apply_density(density)
+    }
+
+    #[inline]
+    fn fill_mut(&mut self, arr: &mut [f64], applier: &mut dyn EnvironmentApplierImpl<Env = E>) {
+        self.input.fill_mut(arr, applier);
+        self.apply_fill(arr);
+    }
+
+    fn environment(&self) -> ConverterEnvironment<E> {
+        ConverterEnvironment::Linear(&self.input, &self.data)
+    }
+
+    fn into_environment(self: Box<Self>) -> OwnedConverterEnvironment<E> {
+        OwnedConverterEnvironment::Linear(self.input.wrapped_ref(), self.data)
+    }
+
+    fn convert(
+        self: Box<Self>,
+        converter: &mut dyn ConverterImpl<E>,
+    ) -> ComponentReferenceImplementation<E> {
+        Self::create_new_ref(self.input.convert(converter), &self.data)
+    }
+
+    fn clone_to_new_ref(&self) -> ComponentReferenceImplementation<E> {
+        Self::create_new_ref(self.input.clone_to_new_ref(), &self.data)
+    }
+}
+
+impl<E: DensityFunctionEnvironment> ImmutableComponentFunctionImpl
+    for LinearFunction<E, SharedComponentReference>
+{
+    #[inline]
+    fn sample(&self, pos: &NoisePos) -> f64 {
+        let density = self.input.sample(pos);
+        self.apply_density(density)
+    }
+
+    #[inline]
+    fn fill(&self, arr: &mut [f64], applier: &mut dyn ApplierImpl) {
+        self.input.fill(arr, applier);
+        self.apply_fill(arr);
+    }
+
+    fn shared_environment(&self) -> SharedConverterEnvironment {
+        SharedConverterEnvironment::Linear(&self.input, &self.data)
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+pub(crate) enum BinaryType {
     Mul,
     Add,
     Min,
     Max,
 }
 
-#[derive(Clone)]
-pub struct BinaryFunction<'a> {
-    action: BinaryType,
-    arg1: Arc<DensityFunction<'a>>,
-    arg2: Arc<DensityFunction<'a>>,
-    min: f64,
-    max: f64,
+pub struct BinaryFunction<
+    E: DensityFunctionEnvironment,
+    R1: ComponentReference<E>,
+    R2: ComponentReference<E>,
+> {
+    pub(crate) binary_type: BinaryType,
+    pub(crate) arg1: R1,
+    pub(crate) arg2: R2,
+    _dummy: PhantomData<E>,
 }
 
-impl<'a> BinaryFunction<'a> {
-    pub fn create(
-        action: BinaryType,
-        arg1: Arc<DensityFunction<'a>>,
-        arg2: Arc<DensityFunction<'a>>,
-    ) -> DensityFunction<'a> {
-        let d = arg1.min();
-        let e = arg2.min();
-        let f = arg1.max();
-        let g = arg2.max();
+impl<E: DensityFunctionEnvironment, R1: ComponentReference<E>, R2: ComponentReference<E>>
+    From<BinaryFunction<E, R1, R2>> for MutableComponentReference<E>
+{
+    fn from(value: BinaryFunction<E, R1, R2>) -> Self {
+        Self(Box::new(value))
+    }
+}
 
-        match action {
-            BinaryType::Min | BinaryType::Max => {
-                if d >= e || e >= f {
-                    warn!("Density function does not overlap");
-                }
-            }
-            _ => {}
-        }
-
-        let h = match action {
-            BinaryType::Add => d + e,
-            BinaryType::Mul => {
-                if d > 0f64 && e > 0f64 {
-                    d * e
-                } else if f < 0f64 && g < 0f64 {
-                    f * g
-                } else {
-                    (d * g).min(f * e)
-                }
-            }
-            BinaryType::Min => d.min(e),
-            BinaryType::Max => d.max(e),
-        };
-
-        let i = match action {
-            BinaryType::Add => f + g,
-            BinaryType::Mul => {
-                if d > 0f64 && e > 0f64 {
-                    f * g
-                } else if f < 0f64 && g < 0f64 {
-                    d * e
-                } else {
-                    (d * e).max(f * g)
-                }
-            }
-            BinaryType::Min => f.min(g),
-            BinaryType::Max => f.max(g),
-        };
-
-        match action {
-            BinaryType::Mul | BinaryType::Add => {
-                let action = match action {
-                    BinaryType::Add => LinearType::Add,
-                    BinaryType::Mul => LinearType::Mul,
-                    _ => unreachable!(),
-                };
-
-                if let DensityFunction::Constant(func) = arg1.as_ref() {
-                    return DensityFunction::Linear(LinearFunction {
-                        action,
-                        input: arg2,
-                        min: h,
-                        max: i,
-                        arg: func.value,
-                    });
-                }
-
-                if let DensityFunction::Constant(func) = arg2.as_ref() {
-                    return DensityFunction::Linear(LinearFunction {
-                        action,
-                        input: arg1,
-                        min: h,
-                        max: i,
-                        arg: func.value,
-                    });
-                }
-            }
-            _ => {}
-        }
-
-        DensityFunction::Binary(BinaryFunction {
-            action,
+impl<E: DensityFunctionEnvironment, R1: ComponentReference<E>, R2: ComponentReference<E>>
+    BinaryFunction<E, R1, R2>
+{
+    pub fn new(binary_type: BinaryType, arg1: R1, arg2: R2) -> Self {
+        Self {
+            binary_type,
             arg1,
             arg2,
-            min: h,
-            max: i,
-        })
+            _dummy: PhantomData::<E> {},
+        }
+    }
+
+    #[inline]
+    fn apply_densities(&self, density1: f64, density2: f64) -> f64 {
+        match self.binary_type {
+            BinaryType::Add => density1 + density2,
+            BinaryType::Mul => density1 * density2,
+            BinaryType::Min => density1.min(density2),
+            BinaryType::Max => density1.max(density2),
+        }
+    }
+
+    pub fn create_new_ref(
+        arg1: ComponentReferenceImplementation<E>,
+        arg2: ComponentReferenceImplementation<E>,
+        action: BinaryType,
+    ) -> ComponentReferenceImplementation<E> {
+        match (arg1, arg2) {
+            (
+                ComponentReferenceImplementation::Shared(shared1),
+                ComponentReferenceImplementation::Shared(shared2),
+            ) => BinaryFunction::<E, SharedComponentReference, SharedComponentReference>::new(
+                action, shared1, shared2,
+            )
+            .into(),
+            (ref1, ref2) => {
+                match_ref_implementations!(
+                    (unwrapped1, ref1),
+                    (unwrapped2, ref2);
+                    {
+                        ComponentReferenceImplementation::Mutable(
+                            MutableComponentReference(Box::new(
+                                BinaryFunction::new(action, unwrapped1, unwrapped2)
+                            ))
+                        )
+                    }
+                )
+            }
+        }
     }
 }
 
-impl<'a> DensityFunctionImpl<'a> for BinaryFunction<'a> {
-    fn sample(&self, pos: &NoisePos) -> f64 {
-        let d = self.arg1.sample(pos);
-        let e = self.arg2.sample(pos);
+impl<E: DensityFunctionEnvironment, R1: ComponentReference<E>, R2: ComponentReference<E>>
+    ComponentFunctionImpl for BinaryFunction<E, R1, R2>
+{
+}
 
-        match self.action {
-            BinaryType::Add => d + e,
-            BinaryType::Mul => d * e,
-            BinaryType::Min => {
-                if d < self.arg2.min() {
-                    d
-                } else {
-                    d.min(e)
-                }
-            }
-            BinaryType::Max => {
-                if d > self.arg2.max() {
-                    d
-                } else {
-                    d.max(e)
-                }
-            }
-        }
+impl<E: DensityFunctionEnvironment, R1: ComponentReference<E>, R2: ComponentReference<E>>
+    MutableComponentFunctionImpl<E> for BinaryFunction<E, R1, R2>
+{
+    #[inline]
+    fn sample_mut(&mut self, pos: &NoisePos, env: &E) -> f64 {
+        let density1 = self.arg1.sample_mut(pos, env);
+        let density2 = self.arg2.sample_mut(pos, env);
+        self.apply_densities(density1, density2)
     }
 
-    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
-        self.arg1.fill(densities, applier);
-        match self.action {
+    fn fill_mut(&mut self, arr: &mut [f64], applier: &mut dyn EnvironmentApplierImpl<Env = E>) {
+        self.arg1.fill_mut(arr, applier);
+        match self.binary_type {
             BinaryType::Add => {
-                let mut ds = Vec::with_capacity(densities.len());
-                densities.iter().for_each(|_| ds.push(0f64));
-                self.arg2.fill(&mut ds, applier);
-                densities
-                    .iter_mut()
-                    .zip(ds)
-                    .for_each(|(real, temp)| *real += temp);
+                let mut densities2 = vec![0f64; arr.len()];
+                self.arg2.fill_mut(&mut densities2, applier);
+                arr.iter_mut()
+                    .zip(densities2)
+                    .for_each(|(returned, temp)| *returned += temp);
             }
             BinaryType::Mul => {
-                densities.iter_mut().enumerate().for_each(|(i, val)| {
+                arr.iter_mut().enumerate().for_each(|(i, val)| {
                     if *val != 0f64 {
-                        *val *= self.arg2.sample(&applier.at(i));
-                    };
+                        *val *= self.arg2.sample_mut(&applier.at(i), applier.env());
+                    }
                 });
             }
             BinaryType::Min => {
-                let e = self.arg2.min();
-
-                densities.iter_mut().enumerate().for_each(|(i, val)| {
-                    if *val >= e {
-                        *val = val.min(self.arg2.sample(&applier.at(i)));
-                    }
+                arr.iter_mut().enumerate().for_each(|(i, val)| {
+                    *val = val.min(self.arg2.sample_mut(&applier.at(i), applier.env()));
                 });
             }
             BinaryType::Max => {
-                let e = self.arg2.max();
-
-                densities.iter_mut().enumerate().for_each(|(i, val)| {
-                    if *val <= e {
-                        *val = val.max(self.arg2.sample(&applier.at(i)))
-                    }
+                arr.iter_mut().enumerate().for_each(|(i, val)| {
+                    *val = val.max(self.arg2.sample_mut(&applier.at(i), applier.env()));
                 });
             }
         }
     }
 
-    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
-        visitor.apply(Arc::new(BinaryFunction::create(
-            self.action.clone(),
-            self.arg1.apply(visitor),
-            self.arg2.apply(visitor),
-        )))
+    fn environment(&self) -> ConverterEnvironment<E> {
+        ConverterEnvironment::Binary(&self.arg1, &self.arg2, self.binary_type)
     }
 
-    fn max(&self) -> f64 {
-        self.max
+    fn into_environment(self: Box<Self>) -> OwnedConverterEnvironment<E> {
+        OwnedConverterEnvironment::Binary(
+            self.arg1.wrapped_ref(),
+            self.arg2.wrapped_ref(),
+            self.binary_type,
+        )
     }
 
-    fn min(&self) -> f64 {
-        self.min
+    fn convert(
+        self: Box<Self>,
+        converter: &mut dyn ConverterImpl<E>,
+    ) -> ComponentReferenceImplementation<E> {
+        Self::create_new_ref(
+            self.arg1.convert(converter),
+            self.arg2.convert(converter),
+            self.binary_type,
+        )
+    }
+
+    fn clone_to_new_ref(&self) -> ComponentReferenceImplementation<E> {
+        Self::create_new_ref(
+            self.arg1.clone_to_new_ref(),
+            self.arg2.clone_to_new_ref(),
+            self.binary_type,
+        )
+    }
+}
+
+impl<E: DensityFunctionEnvironment> ImmutableComponentFunctionImpl
+    for BinaryFunction<E, SharedComponentReference, SharedComponentReference>
+{
+    #[inline]
+    fn sample(&self, pos: &NoisePos) -> f64 {
+        let density1 = self.arg1.sample(pos);
+        let density2 = self.arg2.sample(pos);
+        self.apply_densities(density1, density2)
+    }
+
+    fn fill(&self, arr: &mut [f64], applier: &mut dyn ApplierImpl) {
+        self.arg1.fill(arr, applier);
+        match self.binary_type {
+            BinaryType::Add => {
+                let mut densities2 = vec![0f64; arr.len()];
+                self.arg2.fill(&mut densities2, applier);
+                arr.iter_mut()
+                    .zip(densities2)
+                    .for_each(|(returned, temp)| *returned += temp);
+            }
+            BinaryType::Mul => {
+                arr.iter_mut().enumerate().for_each(|(i, val)| {
+                    if *val != 0f64 {
+                        *val *= self.arg2.sample(&applier.at(i));
+                    }
+                });
+            }
+            BinaryType::Min => {
+                arr.iter_mut().enumerate().for_each(|(i, val)| {
+                    *val = val.min(self.arg2.sample(&applier.at(i)));
+                });
+            }
+            BinaryType::Max => {
+                arr.iter_mut().enumerate().for_each(|(i, val)| {
+                    *val = val.max(self.arg2.sample(&applier.at(i)));
+                });
+            }
+        }
+    }
+
+    fn shared_environment(&self) -> SharedConverterEnvironment {
+        SharedConverterEnvironment::Binary(&self.arg1, &self.arg2, self.binary_type)
     }
 }

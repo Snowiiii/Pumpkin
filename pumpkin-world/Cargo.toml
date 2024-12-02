@@ -22,6 +22,7 @@ num-traits.workspace = true
 num-derive.workspace = true
 futures = "0.3"
 dashmap = "6.1.0"
+lazy_static = "1.5.0"
 
 # Compression
 flate2 = "1.0"
@@ -35,3 +36,15 @@ fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 noise = "0.9.0"
 
 rand = "0.8.5"
+
+[dev-dependencies]
+criterion = { version = "0.5.1", features = ["html_reports"] }
+
+
+[[bench]]
+name = "chunk_noise"
+harness = false
+
+[[bench]]
+name = "chunk_noise_populate"
+harness = false
