@@ -29,11 +29,10 @@ pub use server_links::ServerLinksConfig;
 mod commands;
 pub mod compression;
 mod lan_broadcast;
+pub mod op;
 mod pvp;
 mod rcon;
 mod server_links;
-pub mod op;
-
 
 use proxy::ProxyConfig;
 use resource_pack::ResourcePackConfig;

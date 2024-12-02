@@ -29,13 +29,12 @@ use crate::{
     world::World,
 };
 
-pub mod json_config;
 mod connection_cache;
+pub mod json_config;
 mod key_store;
 pub mod ticker;
 
 pub const CURRENT_MC_VERSION: &str = "1.21.3";
-
 
 /// Represents a Minecraft server instance.
 pub struct Server {

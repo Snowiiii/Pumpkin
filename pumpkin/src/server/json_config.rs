@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 pub static OPERATOR_CONFIG: LazyLock<tokio::sync::RwLock<OperatorConfig>> =
     LazyLock::new(|| tokio::sync::RwLock::new(OperatorConfig::load()));
 
-
 #[derive(Deserialize, Serialize, Default)]
 #[serde(transparent)]
 pub struct OperatorConfig {
@@ -15,6 +14,7 @@ pub struct OperatorConfig {
 }
 
 pub trait LoadJSONConfiguration {
+    #[must_use]
     fn load() -> Self
     where
         Self: Sized + Default + Serialize + for<'de> Deserialize<'de>,
@@ -23,12 +23,11 @@ pub trait LoadJSONConfiguration {
 
         let config = if path.exists() {
             let file_content = fs::read_to_string(path)
-                .unwrap_or_else(|_| panic!("Couldn't read configuration file at {:?}", path));
+                .unwrap_or_else(|_| panic!("Couldn't read configuration file at {path:?}"));
 
             serde_json::from_str(&file_content).unwrap_or_else(|err| {
                 panic!(
-                    "Couldn't parse config at {:?}. Reason: {}. This is probably caused by a config update. Just delete the old config and restart.",
-                    path, err
+                    "Couldn't parse config at {path:?}. Reason: {err}. This is probably caused by a config update. Just delete the old config and restart.",
                 )
             })
         } else {
@@ -36,8 +35,7 @@ pub trait LoadJSONConfiguration {
 
             if let Err(err) = fs::write(path, serde_json::to_string_pretty(&content).unwrap()) {
                 eprintln!(
-                    "Couldn't write default config to {:?}. Reason: {}. This is probably caused by a config update. Just delete the old config and restart.",
-                    path, err
+                    "Couldn't write default config to {path:?}. Reason: {err}. This is probably caused by a config update. Just delete the old config and restart.", 
                 );
             }
 
@@ -90,6 +88,5 @@ impl LoadJSONConfiguration for OperatorConfig {
         // TODO: Validate the operator configuration
     }
 }
-
 
 impl SaveJSONConfiguration for OperatorConfig {}

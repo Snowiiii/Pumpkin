@@ -46,7 +46,6 @@ use tokio::sync::{Mutex, Notify};
 use tokio::task::JoinHandle;
 
 use super::Entity;
-use crate::{error::PumpkinError, server::json_config::OPERATOR_CONFIG};
 use crate::{
     client::{
         authentication::GameProfile,
@@ -56,6 +55,7 @@ use crate::{
     server::Server,
     world::World,
 };
+use crate::{error::PumpkinError, server::json_config::OPERATOR_CONFIG};
 
 use super::living::LivingEntity;
 
