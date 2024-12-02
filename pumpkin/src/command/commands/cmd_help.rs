@@ -61,7 +61,7 @@ impl CommandExecutor for CommandHelpExecutor {
                 TextComponent::text("Command: ")
                     .color_named(NamedColor::Aqua)
                     .add_child(
-                        TextComponent::text_string(format!("/{}", command_names))
+                        TextComponent::text_string(format!("/{command_names}"))
                             .color_named(NamedColor::Gold)
                             .bold(),
                     )
