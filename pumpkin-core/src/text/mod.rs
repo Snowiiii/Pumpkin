@@ -15,8 +15,6 @@ pub mod style;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(transparent)]
-// TODO: Use this instead of TextComponent alone to allow for example text with different colors
-// TODO: Allow to mix TextComponent and String
 pub struct Text<'a>(pub Box<TextComponent<'a>>);
 
 // Represents a Text component
