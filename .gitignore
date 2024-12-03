@@ -128,3 +128,7 @@ node_modules
 
 run/
 
+# Benchmarking
+*perf.data*
+*flamegraph.svg
+

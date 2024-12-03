@@ -1,7 +1,9 @@
+use std::hash::Hash;
+
 use num_traits::Pow;
 use pumpkin_core::random::{legacy_rand::LegacyRand, RandomImpl};
 
-use super::{dot, GRADIENTS};
+use super::GRADIENTS;
 
 #[derive(Clone)]
 pub struct SimplexNoiseSampler {
@@ -9,6 +11,26 @@ pub struct SimplexNoiseSampler {
     x_origin: f64,
     y_origin: f64,
     z_origin: f64,
+}
+
+impl PartialEq for SimplexNoiseSampler {
+    fn eq(&self, other: &Self) -> bool {
+        self.permutation == other.permutation
+            && self.x_origin.to_le_bytes() == other.x_origin.to_le_bytes()
+            && self.y_origin.to_le_bytes() == other.y_origin.to_le_bytes()
+            && self.z_origin.to_le_bytes() == other.z_origin.to_le_bytes()
+    }
+}
+
+impl Eq for SimplexNoiseSampler {}
+
+impl Hash for SimplexNoiseSampler {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.permutation.hash(state);
+        self.x_origin.to_le_bytes().hash(state);
+        self.y_origin.to_le_bytes().hash(state);
+        self.z_origin.to_le_bytes().hash(state);
+    }
 }
 
 impl SimplexNoiseSampler {
@@ -41,6 +63,7 @@ impl SimplexNoiseSampler {
         }
     }
 
+    #[inline]
     fn map(&self, input: i32) -> i32 {
         self.permutation[(input & 0xFF) as usize] as i32
     }
@@ -51,7 +74,7 @@ impl SimplexNoiseSampler {
             0f64
         } else {
             let d = d * d;
-            d * d * dot(&GRADIENTS[gradient_index], x, y, z)
+            d * d * GRADIENTS[gradient_index].dot(x, y, z)
         }
     }
 
@@ -71,8 +94,8 @@ impl SimplexNoiseSampler {
 
         let n = h - l as f64 + Self::UNSKEW_FACTOR_2D;
         let o = k - m as f64 + Self::UNSKEW_FACTOR_2D;
-        let p = 2f64.mul_add(Self::UNSKEW_FACTOR_2D, h - 1f64);
-        let q = 2f64.mul_add(Self::UNSKEW_FACTOR_2D, k - 1f64);
+        let p = 2f64 * Self::UNSKEW_FACTOR_2D + (h - 1f64);
+        let q = 2f64 * Self::UNSKEW_FACTOR_2D + (k - 1f64);
 
         let r = i & 0xFF;
         let s = j & 0xFF;
@@ -236,8 +259,8 @@ impl OctaveSimplexNoiseSampler {
         for sampler in self.octave_samplers.iter() {
             if let Some(sampler) = sampler {
                 d += sampler.sample_2d(
-                    x.mul_add(e, if use_origin { sampler.x_origin } else { 0f64 }),
-                    y.mul_add(e, if use_origin { sampler.y_origin } else { 0f64 }),
+                    x * e + if use_origin { sampler.x_origin } else { 0f64 },
+                    y * e + if use_origin { sampler.y_origin } else { 0f64 },
                 ) * f;
             }
 

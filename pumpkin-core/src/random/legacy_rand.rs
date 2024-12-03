@@ -8,11 +8,15 @@ pub struct LegacyRand {
 }
 
 impl LegacyRand {
-    fn next_random(&mut self) -> u64 {
-        let l = self.seed;
+    fn next_random(&mut self) -> i64 {
+        let l = self.seed as i64;
         let m = l.wrapping_mul(0x5DEECE66D).wrapping_add(11) & 0xFFFFFFFFFFFF;
-        self.seed = m;
+        self.seed = m as u64;
         m
+    }
+
+    fn next(&mut self, bits: u64) -> i32 {
+        (self.next_random() >> (48 - bits)) as i32
     }
 }
 
@@ -34,16 +38,12 @@ impl RandomImpl for LegacyRand {
         }
     }
 
-    fn next(&mut self, bits: u64) -> u64 {
-        self.next_random() >> (48 - bits)
-    }
-
     fn split(&mut self) -> Self {
         LegacyRand::from_seed(self.next_i64() as u64)
     }
 
     fn next_i32(&mut self) -> i32 {
-        self.next(32) as i32
+        self.next(32)
     }
 
     fn next_i64(&mut self) -> i64 {
@@ -59,7 +59,7 @@ impl RandomImpl for LegacyRand {
     fn next_f64(&mut self) -> f64 {
         let i = self.next(26);
         let j = self.next(27);
-        let l = (i << 27).wrapping_add(j);
+        let l = ((i as i64) << 27).wrapping_add(j as i64);
         l as f64 * 1.110223E-16f32 as f64
     }
 
@@ -78,10 +78,10 @@ impl RandomImpl for LegacyRand {
 
     fn next_bounded_i32(&mut self, bound: i32) -> i32 {
         if (bound & bound.wrapping_sub(1)) == 0 {
-            ((bound as u64).wrapping_mul(self.next(31)) >> 31) as i32
+            ((bound as i64).wrapping_mul(self.next(31) as i64) >> 31) as i32
         } else {
             loop {
-                let i = self.next(31) as i32;
+                let i = self.next(31);
                 let j = i % bound;
                 if (i.wrapping_sub(j).wrapping_add(bound.wrapping_sub(1))) >= 0 {
                     return j;
@@ -91,6 +91,7 @@ impl RandomImpl for LegacyRand {
     }
 }
 
+#[derive(Clone)]
 pub struct LegacySplitter {
     seed: u64,
 }
@@ -120,7 +121,7 @@ impl RandomDeriverImpl for LegacySplitter {
 
 #[cfg(test)]
 mod test {
-    use crate::random::{RandomDeriverImpl, RandomImpl};
+    use crate::random::{legacy_rand::LegacySplitter, RandomDeriverImpl, RandomImpl};
 
     use super::LegacyRand;
 
@@ -308,8 +309,19 @@ mod test {
     #[test]
     fn test_split() {
         let mut original_rand = LegacyRand::from_seed(0);
-        let mut new_rand = original_rand.split();
+        assert_eq!(original_rand.next_i64(), -4962768465676381896i64);
 
+        let mut original_rand = LegacyRand::from_seed(0);
+        {
+            let splitter: LegacySplitter = original_rand.next_splitter();
+            assert_eq!(splitter.seed, (-4962768465676381896i64) as u64);
+
+            let mut rand = splitter.split_string("minecraft:offset");
+            assert_eq!(rand.next_i32(), 103436829);
+        }
+
+        let mut original_rand = LegacyRand::from_seed(0);
+        let mut new_rand = original_rand.split();
         {
             let splitter = new_rand.next_splitter();
 
