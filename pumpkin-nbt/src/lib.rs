@@ -91,7 +91,6 @@ impl Nbt {
     }
 
     /// Reads NBT tag, that doesn't contain the name of root compound.
-    /// Used in [Network NBT](https://wiki.vg/NBT#Network_NBT_(Java_Edition)).
     pub fn read_unnamed(bytes: &mut impl Buf) -> Result<Nbt, Error> {
         let tag_type_id = bytes.get_u8();
 
@@ -124,7 +123,6 @@ impl Nbt {
     }
 
     /// Writes NBT tag, without name of root compound.
-    /// Used in [Network NBT](https://wiki.vg/NBT#Network_NBT_(Java_Edition)).
     pub fn write_unnamed(&self) -> Bytes {
         let mut bytes = BytesMut::new();
         bytes.put_u8(COMPOUND_ID);

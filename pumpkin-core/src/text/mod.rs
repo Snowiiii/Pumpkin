@@ -18,7 +18,6 @@ pub mod style;
 pub struct Text<'a>(pub Box<TextComponent<'a>>);
 
 // Represents a Text component
-// Reference: https://wiki.vg/Text_formatting#Text_components
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct TextComponent<'a> {

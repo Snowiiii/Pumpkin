@@ -15,7 +15,6 @@ pub mod window_property;
 pub use error::InventoryError;
 pub use open_container::*;
 
-/// https://wiki.vg/Inventory
 #[derive(Debug, FromPrimitive, Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
 pub enum WindowType {

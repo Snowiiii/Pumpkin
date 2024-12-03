@@ -43,4 +43,3 @@ Here we build Mojang's Textcomponent, Which is used across many places, Often wh
   - [x] Alt
   - [x] Illageralt
   
-Reference: https://wiki.vg/Text_formatting
