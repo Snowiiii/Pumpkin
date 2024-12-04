@@ -1,0 +1,79 @@
+[
+    {
+        "name": "converted_3d_overworld_7_4",
+        "seed": 0,
+        "x": 7,
+        "z": 4,
+        "registry_key": "overworld/base_3d_noise"
+    },
+    {
+        "name": "converted_cave_entrances_overworld_7_4",
+        "seed": 0,
+        "x": 7,
+        "z": 4,
+        "registry_key": "overworld/caves/entrances"
+    },
+    {
+        "name": "converted_cave_noodle_7_4",
+        "seed": 0,
+        "x": 7,
+        "z": 4,
+        "registry_key": "overworld/caves/noodle"
+    },
+    {
+        "name": "converted_cave_pillar_7_4",
+        "seed": 0,
+        "x": 7,
+        "z": 4,
+        "registry_key": "overworld/caves/pillars"
+    },
+    {
+        "name": "converted_spaghetti_2d_7_4",
+        "seed": 0,
+        "x": 7,
+        "z": 4,
+        "registry_key": "overworld/caves/spaghetti_2d"
+    },
+    {
+        "name": "converted_spaghetti_2d_thicc_7_4",
+        "seed": 0,
+        "x": 7,
+        "z": 4,
+        "registry_key": "overworld/caves/spaghetti_2d_thickness_modulator"
+    },
+    {
+        "name": "converted_cave_spaghetti_rough_overworld_7_4",
+        "seed": 0,
+        "x": 7,
+        "z": 4,
+        "registry_key": "overworld/caves/spaghetti_roughness_function"
+    },
+    {
+        "name": "converted_offset_7_4",
+        "seed": 0,
+        "x": 7,
+        "z": 4,
+        "registry_key": "overworld/offset"
+    },
+    {
+        "name": "converted_depth_7_4",
+        "seed": 0,
+        "x": 7,
+        "z": 4,
+        "registry_key": "overworld/depth"
+    },
+    {
+        "name": "converted_factor_7_4",
+        "seed": 0,
+        "x": 7,
+        "z": 4,
+        "registry_key": "overworld/factor"
+    },
+    {
+        "name": "converted_sloped_cheese_7_4",
+        "seed": 0,
+        "x": 7,
+        "z": 4,
+        "registry_key": "overworld/sloped_cheese"
+    }
+]

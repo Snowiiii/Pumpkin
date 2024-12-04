@@ -226,7 +226,7 @@ mod test {
     #[test]
     fn test_no_blend_no_beard() {
         let expected_data: Vec<u16> =
-            read_data_from_file!("../../assets/no_blend_no_beard_0_0.chunk");
+            read_data_from_file!("../../assets/no_blend_no_beard_0_0.json");
         let mut chunk = ProtoChunk::new(Vector2::new(0, 0), 0);
         chunk.populate_noise();
         assert_eq!(
@@ -242,7 +242,7 @@ mod test {
     #[test]
     fn test_no_blend_no_beard_aquifer() {
         let expected_data: Vec<u16> =
-            read_data_from_file!("../../assets/no_blend_no_beard_7_4.chunk");
+            read_data_from_file!("../../assets/no_blend_no_beard_7_4.json");
         let mut chunk = ProtoChunk::new(Vector2::new(7, 4), 0);
         chunk.populate_noise();
 
