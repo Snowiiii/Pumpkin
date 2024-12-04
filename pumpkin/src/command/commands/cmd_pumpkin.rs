@@ -50,7 +50,7 @@ impl CommandExecutor for PumpkinExecutor {
                     )
                     .add_child(
                         TextComponent::text(&format!(
-                            " (Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL})"
+                            " (Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL}) "
                         ))
                         .click_event(ClickEvent::CopyToClipboard(Cow::from(format!(
                             "(Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL})"
@@ -62,7 +62,7 @@ impl CommandExecutor for PumpkinExecutor {
                     )
                     .add_child(
                         TextComponent::text(&format!(
-                            " Github Repository"
+                            "Github Repository"
                         ))
                         .click_event(ClickEvent::OpenUrl(Cow::from(format!(
                             "https://github.com/Snowiiii/Pumpkin"
@@ -70,7 +70,7 @@ impl CommandExecutor for PumpkinExecutor {
                         .hover_event(HoverEvent::ShowText(Cow::from(
                             "Click to open link.",
                         )))
-                        .color_named(NamedColor::Blue).underlined(),
+                        .color_named(NamedColor::Blue).bold().underlined(),
                         
                         
 
