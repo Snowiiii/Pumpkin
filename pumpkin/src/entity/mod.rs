@@ -176,11 +176,11 @@ impl Entity {
         self.sneaking
             .store(sneaking, std::sync::atomic::Ordering::Relaxed);
         self.set_flag(Flag::Sneaking, sneaking).await;
-        // if sneaking {
-        //     self.set_pose(EntityPose::Crouching).await;
-        // } else {
-        //     self.set_pose(EntityPose::Standing).await;
-        // }
+        if sneaking {
+            self.set_pose(EntityPose::Crouching).await;
+        } else {
+            self.set_pose(EntityPose::Standing).await;
+        }
     }
 
     pub async fn set_sprinting(&self, sprinting: bool) {
@@ -218,7 +218,7 @@ impl Entity {
         let pose = pose as i32;
         let packet = CSetEntityMetadata::<VarInt>::new(
             self.entity_id.into(),
-            Metadata::new(6, 20.into(), (pose).into()),
+            Metadata::new(6, 21.into(), pose.into()),
         );
         self.world.broadcast_packet_all(&packet).await;
     }

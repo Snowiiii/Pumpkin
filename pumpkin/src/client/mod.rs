@@ -76,7 +76,7 @@ impl Default for PlayerConfig {
             chat_mode: ChatMode::Enabled,
             chat_colors: true,
             skin_parts: 0,
-            main_hand: Hand::Main,
+            main_hand: Hand::Right,
             text_filtering: false,
             server_listing: false,
         }
