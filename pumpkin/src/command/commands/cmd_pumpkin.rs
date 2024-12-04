@@ -61,19 +61,12 @@ impl CommandExecutor for PumpkinExecutor {
                         .color_named(NamedColor::Gold),
                     )
                     .add_child(
-                        TextComponent::text(&format!(
-                            "Github Repository"
-                        ))
-                        .click_event(ClickEvent::OpenUrl(Cow::from(format!(
-                            "https://github.com/Snowiiii/Pumpkin"
-                        ))))
-                        .hover_event(HoverEvent::ShowText(Cow::from(
-                            "Click to open link.",
-                        )))
-                        .color_named(NamedColor::Blue).bold().underlined(),
-                        
-                        
-
+                        TextComponent::text("Github Repository")
+                            .click_event(ClickEvent::OpenUrl(Cow::from("https://github.com/Snowiiii/Pumpkin")))
+                            .hover_event(HoverEvent::ShowText(Cow::from("Click to open link.")))
+                            .color_named(NamedColor::Blue)
+                            .bold()
+                            .underlined(),
                     ),
             )
             .await;
