@@ -20,23 +20,27 @@ pub(crate) fn block_state_impl(item: proc_macro::TokenStream) -> proc_macro::Tok
     let input_string = item.to_string();
     let registry_id = input_string.trim_matches('"');
 
-    let default_state_id = STATE_BY_REGISTRY_ID
+    let state = STATE_BY_REGISTRY_ID
         .get(registry_id)
-        .expect("Invalid registry id")
-        .default_state_id;
+        .expect("Invalid registry id");
+
+    let default_state_id = state.default_state_id;
+    let block_id = state.id;
 
     if std::env::var("CARGO_PKG_NAME").unwrap() == "pumpkin-world" {
         quote! {
             crate::block::BlockState {
-                state_id: #default_state_id
+                state_id: #default_state_id,
+                block_id: #block_id,
           }
         }
         .into()
     } else {
         quote! {
-          pumpkin_world::block::BlockState {
-            state_id: #default_state_id
-          }
+            pumpkin_world::block::BlockState {
+                state_id: #default_state_id,
+                block_id: #block_id,
+            }
         }
         .into()
     }

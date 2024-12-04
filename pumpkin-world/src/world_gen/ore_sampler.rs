@@ -88,26 +88,24 @@ pub struct VeinType {
 
 // One of the victims of removing compile time blocks
 pub mod vein_type {
-    use lazy_static::lazy_static;
+    use pumpkin_macros::block_state;
 
     use super::*;
 
-    lazy_static! {
-        pub static ref COPPER: VeinType = VeinType {
-            ore: BlockState::new("copper_ore").unwrap(),
-            raw_ore: BlockState::new("raw_copper_block").unwrap(),
-            stone: BlockState::new("granite").unwrap(),
-            min_y: 0,
-            max_y: 50,
-        };
-        pub static ref IRON: VeinType = VeinType {
-            ore: BlockState::new("deepslate_iron_ore").unwrap(),
-            raw_ore: BlockState::new("raw_iron_block").unwrap(),
-            stone: BlockState::new("tuff").unwrap(),
-            min_y: -60,
-            max_y: -8,
-        };
-        pub static ref MIN_Y: i32 = IRON.min_y;
-        pub static ref MAX_Y: i32 = COPPER.max_y;
-    }
+    pub const COPPER: VeinType = VeinType {
+        ore: block_state!("copper_ore"),
+        raw_ore: block_state!("raw_copper_block"),
+        stone: block_state!("granite"),
+        min_y: 0,
+        max_y: 50,
+    };
+    pub const IRON: VeinType = VeinType {
+        ore: block_state!("deepslate_iron_ore"),
+        raw_ore: block_state!("raw_iron_block"),
+        stone: block_state!("tuff"),
+        min_y: -60,
+        max_y: -8,
+    };
+    pub const MIN_Y: i32 = IRON.min_y;
+    pub const MAX_Y: i32 = COPPER.max_y;
 }

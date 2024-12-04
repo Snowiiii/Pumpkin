@@ -1,5 +1,4 @@
 use pumpkin_core::math::vector2::Vector2;
-use pumpkin_macros::block_state;
 
 use crate::{
     biome::Biome,
