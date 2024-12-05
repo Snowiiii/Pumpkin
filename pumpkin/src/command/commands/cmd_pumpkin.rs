@@ -71,6 +71,7 @@ impl CommandExecutor for PumpkinExecutor {
                             .bold()
                             .underlined(),
                     )
+                    // Added docs. and a space for spacing
                     .add_child(TextComponent::text(" "))
                     .add_child(
                         TextComponent::text("Docs")
