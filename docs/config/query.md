@@ -4,7 +4,7 @@ Query protocol is an simple way to query the server about its status. Pumpkin fu
 ## Configuring Query
 
 #### `enabled`: Boolean
-Weather to listen for query protocol requests or not.
+Whether to listen for query protocol requests or not.
 
 :::code-group
 ```toml [features.toml] {2}
@@ -14,7 +14,7 @@ enabled = true
 :::
 
 #### `port`: Integer (0-65535) (optional)
-What port to listen to query protocol requests. If not specified, uses the same port as the server.
+What port to listen to query protocol requests. If not specified, it uses the same port as the server.
 
 :::code-group
 ```toml [features.toml] {3}

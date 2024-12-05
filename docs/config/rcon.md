@@ -47,7 +47,7 @@ max_connections = 5
 
 ### Logging
 #### `log_logged_successfully`: Boolean
-Weather successful logins should be logged to console or not.
+Whether successful logins should be logged to console or not.
 
 :::code-group
 ```toml [features.toml] {2}
@@ -57,7 +57,7 @@ log_logged_successfully = true
 :::
 
 #### `log_wrong_password`: Boolean
-Weather wrong password attempts should be logged to console or not.
+Whether wrong password attempts should be logged to console or not.
 
 :::code-group
 ```toml [features.toml] {2}
@@ -67,7 +67,7 @@ log_logged_successfully = true
 :::
 
 #### `log_commands`: Boolean
-Weather to log commands ran from RCON to console or not.
+Whether to log commands ran from RCON to console or not.
 
 :::code-group
 ```toml [features.toml] {2}

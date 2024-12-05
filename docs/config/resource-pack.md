@@ -7,7 +7,7 @@ Servers can send resource packs to the client in order to change the appearance 
 ## Configuring Resource Pack
 
 #### `enabled`: Boolean
-Weather a resource pack is enabled or not.
+Whether a resource pack is enabled or not.
 
 :::code-group
 ```toml [features.toml] {2}
@@ -72,7 +72,7 @@ prompt_message = "[your message here]"
 :::
 
 #### `force`: Boolean
-Weather to force the client to download the resource pack or not. If the client declines the download, they will be kicked from the server.
+Whether to force the client to download the resource pack or not. If the client declines the download, they will be kicked from the server.
 
 :::code-group
 ```toml [features.toml] {3}

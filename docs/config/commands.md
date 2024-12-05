@@ -3,7 +3,7 @@ Pumpkin supports Vanilla commands and allows you to configure where they can be 
 
 ## Configuring Commands
 #### `use_console`: Boolean
-Weather commands from the console are accepted or not.
+Whether commands from the console are accepted or not.
 
 :::code-group
 ```toml [features.toml] {2}
@@ -13,7 +13,7 @@ use_console = false
 :::
 
 #### `log_console`: Boolean
-Weather commands from players should be logged into the console or not.
+Whether commands from players should be logged in the console or not.
 
 :::code-group
 ```toml [features.toml] {2}

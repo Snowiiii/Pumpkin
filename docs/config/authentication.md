@@ -9,7 +9,7 @@ Servers authenthicate with Mojang's session servers in order to ensure the clien
 
 #### `enabled`: Boolean
 
-Weather authenthication is enabled or not.
+Whether authenthication is enabled or not.
 
 :::code-group
 ```toml [features.toml] {2}
@@ -20,7 +20,7 @@ enabled = false
 
 #### `prevent_proxy_connections`: Boolean
 
-Weather to block proxy connections or not.
+Whether to block proxy connections or not.
 
 :::code-group
 ```toml [features.toml] {3}
@@ -123,7 +123,7 @@ allowed_url_domains = [".minecraft.net", ".mojang.com"]
 ### Texture Types
 
 #### `skin`: Boolean
-Weather to use player skins or not.
+Whether to use player skins or not.
 
 :::code-group
 ```toml [features.toml] {3}
@@ -133,7 +133,7 @@ skin = true
 :::
 
 #### `cape`: Boolean
-Weather to use player capes or not.
+Whether to use player capes or not.
 
 :::code-group
 ```toml [features.toml] {3}
@@ -143,7 +143,7 @@ cape = true
 :::
 
 #### `elytra`: Boolean
-Weather to use player elytras or not.
+Whether to use player elytras or not.
 
 :::code-group
 ```toml [features.toml] {3}

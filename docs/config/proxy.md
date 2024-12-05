@@ -24,7 +24,7 @@ enabled = true
 
 #### `enabled`: Boolean
 
-Weather Velocity support is enabled or not.
+Whether Velocity support is enabled or not.
 
 :::code-group
 ```toml [features.toml]{2}
@@ -48,7 +48,7 @@ secret = "[proxy secret here]"
 ### BungeeCord
 
 #### `enabled`: Boolean
-Weather BungeeCord support is enabled or not.
+Whether BungeeCord support is enabled or not.
 
 :::code-group
 ```toml [features.toml]{2}
