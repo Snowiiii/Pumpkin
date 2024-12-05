@@ -1,5 +1,6 @@
 pub mod context;
 pub mod events;
+pub mod types;
 
 pub use context::*;
 pub use events::*;
@@ -16,7 +17,7 @@ pub struct PluginMetadata<'s> {
     pub description: &'s str,
 }
 
-pub trait Plugin: Send + Sync + 'static {
+pub trait PluginMethods: Send + Sync + 'static {
     /// Called when the plugin is loaded.
     fn on_load(&mut self, _server: &dyn PluginContext) -> Result<(), String> {
         Ok(())
@@ -27,3 +28,5 @@ pub trait Plugin: Send + Sync + 'static {
         Ok(())
     }
 }
+
+pub trait Plugin: PluginMethods + Hooks {}

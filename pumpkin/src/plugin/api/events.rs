@@ -1,8 +1,6 @@
 use async_trait::async_trait;
 
-use crate::entity::player::Player;
-
-use super::PluginContext;
+use super::{types::player::PlayerEvent, PluginContext};
 
 #[derive(Eq, PartialEq, Ord, PartialOrd)]
 pub enum EventPriority {
@@ -30,7 +28,7 @@ pub trait Hooks: Send + Sync + 'static {
     async fn on_player_join(
         &mut self,
         _server: &dyn PluginContext,
-        _player: &Player,
+        _player: &PlayerEvent,
     ) -> Result<bool, String> {
         Ok(false)
     }
@@ -39,7 +37,7 @@ pub trait Hooks: Send + Sync + 'static {
     async fn on_player_leave(
         &mut self,
         _server: &dyn PluginContext,
-        _player: &Player,
+        _player: &PlayerEvent,
     ) -> Result<bool, String> {
         Ok(false)
     }

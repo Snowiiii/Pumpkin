@@ -6,7 +6,6 @@ use std::{any::Any, fs, path::Path};
 type PluginData = (
     PluginMetadata<'static>,
     Box<dyn Plugin>,
-    Box<dyn events::Hooks>,
     libloading::Library,
     bool,
 );
@@ -48,6 +47,14 @@ impl PluginContext for Context<'_> {
             plugin_name: self.metadata.name.to_string(),
         })
     }
+
+    fn get_data_folder(&self) -> String {
+        let path = format!("./plugins/{}", self.metadata.name);
+        if !Path::new(&path).exists() {
+            fs::create_dir_all(&path).unwrap();
+        }
+        path
+    }
 }
 
 impl PluginManager {
@@ -75,16 +82,12 @@ impl PluginManager {
         let library = unsafe { libloading::Library::new(path).unwrap() };
 
         let plugin_fn = unsafe { library.get::<fn() -> Box<dyn Plugin>>(b"plugin").unwrap() };
-        let hooks_fn = unsafe {
-            library
-                .get::<fn() -> Box<dyn events::Hooks>>(b"hooks")
-                .unwrap()
-        };
         let metadata: &PluginMetadata =
             unsafe { &**library.get::<*const PluginMetadata>(b"METADATA").unwrap() };
 
         let context = Context { metadata };
-        let res = plugin_fn().on_load(&context);
+        let mut plugin_box = plugin_fn();
+        let res = plugin_box.on_load(&context);
         let mut loaded = true;
         if let Err(e) = res {
             log::error!("Error loading plugin: {}", e);
@@ -92,14 +95,14 @@ impl PluginManager {
         }
 
         self.plugins
-            .push((metadata.clone(), plugin_fn(), hooks_fn(), library, loaded));
+            .push((metadata.clone(), plugin_box, library, loaded));
     }
 
     #[must_use]
     pub fn list_plugins(&self) -> Vec<(&PluginMetadata, &bool)> {
         self.plugins
             .iter()
-            .map(|(metadata, _, _, _, loaded)| (metadata, loaded))
+            .map(|(metadata, _, _, loaded)| (metadata, loaded))
             .collect()
     }
 
@@ -107,7 +110,7 @@ impl PluginManager {
         let mut blocking_hooks = Vec::new();
         let mut non_blocking_hooks = Vec::new();
 
-        for (metadata, _, hooks, _, loaded) in &mut self.plugins {
+        for (metadata, hooks, _, loaded) in &mut self.plugins {
             if !*loaded {
                 continue;
             }
@@ -131,7 +134,7 @@ impl PluginManager {
             }
         }
 
-        let event_sort = |a: &(_, &mut Box<dyn Hooks>), b: &(_, &mut Box<dyn Hooks>)| {
+        let event_sort = |a: &(_, &mut Box<dyn Plugin>), b: &(_, &mut Box<dyn Plugin>)| {
             b.1.registered_events()
                 .unwrap()
                 .iter()
@@ -156,14 +159,14 @@ impl PluginManager {
         for (context, hooks) in blocking_hooks {
             let r = match event_name {
                 "player_join" => {
-                    if let Some(event) = event.downcast_ref::<crate::entity::player::Player>() {
+                    if let Some(event) = event.downcast_ref::<types::player::PlayerEvent>() {
                         hooks.on_player_join(&context, event)
                     } else {
                         Box::pin(async { Ok(false) })
                     }
                 }
                 "player_leave" => {
-                    if let Some(event) = event.downcast_ref::<crate::entity::player::Player>() {
+                    if let Some(event) = event.downcast_ref::<types::player::PlayerEvent>() {
                         hooks.on_player_leave(&context, event)
                     } else {
                         Box::pin(async { Ok(false) })
@@ -183,14 +186,14 @@ impl PluginManager {
         for (context, hooks) in non_blocking_hooks {
             let r = match event_name {
                 "player_join" => {
-                    if let Some(event) = event.downcast_ref::<crate::entity::player::Player>() {
+                    if let Some(event) = event.downcast_ref::<types::player::PlayerEvent>() {
                         hooks.on_player_join(&context, event)
                     } else {
                         Box::pin(async { Ok(false) })
                     }
                 }
                 "player_leave" => {
-                    if let Some(event) = event.downcast_ref::<crate::entity::player::Player>() {
+                    if let Some(event) = event.downcast_ref::<types::player::PlayerEvent>() {
                         hooks.on_player_leave(&context, event)
                     } else {
                         Box::pin(async { Ok(false) })

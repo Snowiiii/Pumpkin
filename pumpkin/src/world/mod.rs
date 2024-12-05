@@ -13,6 +13,7 @@ use crate::{
         Entity,
     },
     error::PumpkinError,
+    plugin::types::player::{PlayerEvent, PlayerEventAction},
     server::Server,
     PLUGIN_MANAGER,
 };
@@ -709,10 +710,74 @@ impl World {
 
         let current_players = self.current_players.clone();
         tokio::spawn(async move {
+            let (send, mut recv) = mpsc::channel(1);
+            let player_event =
+                PlayerEvent::new(player.gameprofile.name.clone(), player.gameprofile.id, send);
+            let players_copy = current_players.lock().await.clone();
+            tokio::spawn(async move {
+                while let Some(action) = recv.recv().await {
+                    match action {
+                        PlayerEventAction::SendMessage {
+                            message,
+                            player_id,
+                            response,
+                        } => {
+                            if let Some(player) = players_copy.get(&player_id) {
+                                player.send_system_message(&message).await;
+                            }
+                            response.send(()).unwrap();
+                        }
+                        PlayerEventAction::Kick {
+                            reason,
+                            player_id,
+                            response,
+                        } => {
+                            if let Some(player) = players_copy.get(&player_id) {
+                                player.kick(reason).await;
+                            }
+                            response.send(()).unwrap();
+                        }
+                        PlayerEventAction::SetHealth {
+                            health,
+                            food,
+                            saturation,
+                            player_id,
+                            response,
+                        } => {
+                            if let Some(player) = players_copy.get(&player_id) {
+                                player.set_health(health, food, saturation).await;
+                            }
+                            response.send(()).unwrap();
+                        }
+                        PlayerEventAction::Kill {
+                            player_id,
+                            response,
+                        } => {
+                            if let Some(player) = players_copy.get(&player_id) {
+                                player.kill().await;
+                            }
+                            response.send(()).unwrap();
+                        }
+                        PlayerEventAction::SetGameMode {
+                            game_mode,
+                            player_id,
+                            response,
+                        } => {
+                            if let Some(player) = players_copy.get(&player_id) {
+                                player.set_gamemode(game_mode).await;
+                            }
+                            response.send(()).unwrap();
+                        }
+                    }
+                }
+            });
             if !PLUGIN_MANAGER
                 .lock()
                 .await
-                .emit::<Player>("player_join", &player.clone())
+                .emit::<crate::plugin::api::types::player::PlayerEvent>(
+                    "player_join",
+                    &player_event,
+                )
                 .await
             {
                 // Handle join message
@@ -760,11 +825,71 @@ impl World {
         )
         .await;
         self.remove_entity(&player.living_entity.entity).await;
-
+        let (send, mut recv) = mpsc::channel(1);
+        let player_event =
+            PlayerEvent::new(player.gameprofile.name.clone(), player.gameprofile.id, send);
+        let players_copy = self.current_players.lock().await.clone();
+        tokio::spawn(async move {
+            while let Some(action) = recv.recv().await {
+                match action {
+                    PlayerEventAction::SendMessage {
+                        message,
+                        player_id,
+                        response,
+                    } => {
+                        if let Some(player) = players_copy.get(&player_id) {
+                            player.send_system_message(&message).await;
+                        }
+                        response.send(()).unwrap();
+                    }
+                    PlayerEventAction::Kick {
+                        reason,
+                        player_id,
+                        response,
+                    } => {
+                        if let Some(player) = players_copy.get(&player_id) {
+                            player.kick(reason).await;
+                        }
+                        response.send(()).unwrap();
+                    }
+                    PlayerEventAction::SetHealth {
+                        health,
+                        food,
+                        saturation,
+                        player_id,
+                        response,
+                    } => {
+                        if let Some(player) = players_copy.get(&player_id) {
+                            player.set_health(health, food, saturation).await;
+                        }
+                        response.send(()).unwrap();
+                    }
+                    PlayerEventAction::Kill {
+                        player_id,
+                        response,
+                    } => {
+                        if let Some(player) = players_copy.get(&player_id) {
+                            player.kill().await;
+                        }
+                        response.send(()).unwrap();
+                    }
+                    PlayerEventAction::SetGameMode {
+                        game_mode,
+                        player_id,
+                        response,
+                    } => {
+                        if let Some(player) = players_copy.get(&player_id) {
+                            player.set_gamemode(game_mode).await;
+                        }
+                        response.send(()).unwrap();
+                    }
+                }
+            }
+        });
         if !PLUGIN_MANAGER
             .lock()
             .await
-            .emit::<Player>("player_leave", player)
+            .emit::<PlayerEvent>("player_leave", &player_event)
             .await
         {
             // Send disconnect message / quit message to players in the same world

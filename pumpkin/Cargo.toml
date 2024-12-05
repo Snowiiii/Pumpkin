@@ -79,6 +79,7 @@ async-trait = "0.1.83"
 
 # plugins
 libloading = "0.8.5"
+oneshot = "0.1.8"
 [build-dependencies]
 git-version = "0.3.9"
 # This makes it so the entire project doesn't recompile on each build on linux.
