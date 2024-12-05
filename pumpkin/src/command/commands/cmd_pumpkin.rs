@@ -71,9 +71,7 @@ impl CommandExecutor for PumpkinExecutor {
                             .bold()
                             .underlined(),
                     )
-                    .add_child(
-                        TextComponent::text(" ")
-                    )
+                    .add_child(TextComponent::text(" "))
                     .add_child(
                         TextComponent::text("Docs")
                             .click_event(ClickEvent::OpenUrl(Cow::from(
