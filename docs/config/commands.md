@@ -13,7 +13,7 @@ use_console = false
 :::
 
 #### `log_console`: Boolean
-Whether commands from players should be logged into the console or not.
+Whether commands from players should be logged in the console or not.
 
 :::code-group
 ```toml [features.toml] {2}
