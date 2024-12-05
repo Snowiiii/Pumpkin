@@ -4,7 +4,7 @@ Compression is used to reduce the size of packets. This is benefical to reduce b
 ## Configuring Compression
 
 #### `enabled`: Boolean
-Weather packet compression is enabled or not.
+Whether packet compression is enabled or not.
 
 > [!TIP]
 > It might be benefical to disable compression if the server is behind a proxy.
