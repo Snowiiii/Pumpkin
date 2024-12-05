@@ -19,11 +19,11 @@ tokio.workspace = true
 num-traits.workspace = true
 num-derive.workspace = true
 
-bytes = "1.8"
-
 # encryption
 aes = "0.8.4"
 cfb8 = "0.8.1"
 
 # decryption
 libdeflater = "1.22.0"
+
+bytes = "1.9"

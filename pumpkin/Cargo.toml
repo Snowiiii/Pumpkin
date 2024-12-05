@@ -11,7 +11,6 @@ OriginalFilename = "pumpkin.exe"
 LegalCopyright = "Copyright © 2024 Aleksander Medvedev"
 
 [dependencies]
-# pumpkin
 pumpkin-core = { path = "../pumpkin-core" }
 pumpkin-config = { path = "../pumpkin-config" }
 pumpkin-inventory = { path = "../pumpkin-inventory" }
@@ -37,10 +36,8 @@ parking_lot.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 
-bytes = "1.8"
-
+bytes = "1.9"
 rand = "0.8.5"
-
 num-bigint = "0.4"
 
 # encryption
@@ -49,13 +46,14 @@ rsa-der = "0.3.0"
 
 # authentication
 reqwest = { version = "0.12.9", default-features = false, features = [
-    "http2",
-    "json",
-    "macos-system-configuration",
-    "rustls-tls",
+  "http2",
+  "json",
+  "macos-system-configuration",
+  "rustls-tls",
 ] }
 
 sha1 = "0.10.6"
+# TODO: Where is this used and why pre.9 ?
 digest = "=0.11.0-pre.9"
 
 # velocity en
@@ -68,12 +66,13 @@ png = "0.17.14"
 
 # logging
 simple_logger = { version = "5.0.0", features = ["threads"] }
-time = "0.3.36"
+time = "0.3.37"
 
 # commands
 async-trait = "0.1.83"
+
 [build-dependencies]
 git-version = "0.3.9"
-# This makes it so the entire project doesn't recompile on each build on linux.
+
 [target.'cfg(target_os = "windows")'.build-dependencies]
-tauri-winres= "0.1.1"
+tauri-winres = "0.1.1"

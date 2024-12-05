@@ -4,17 +4,14 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-# For items
 pumpkin-world = { path = "../pumpkin-world" }
-pumpkin-registry = {path = "../pumpkin-registry"}
+pumpkin-registry = { path = "../pumpkin-registry" }
 pumpkin-macros = { path = "../pumpkin-macros" }
 
 log.workspace = true
 rayon.workspace = true
 itertools.workspace = true
-crossbeam.workspace = true
 tokio.workspace = true
 thiserror.workspace = true
-
 num-traits.workspace = true
 num-derive.workspace = true

@@ -9,7 +9,6 @@ proc-macro = true
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
-itertools.workspace = true
 
 proc-macro2 = "1.0"
 quote = "1.0"

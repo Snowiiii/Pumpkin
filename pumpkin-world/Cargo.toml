@@ -6,7 +6,6 @@ edition.workspace = true
 [dependencies]
 pumpkin-core = { path = "../pumpkin-core" }
 pumpkin-config = { path = "../pumpkin-config" }
-pumpkin-macros = { path = "../pumpkin-macros" }
 
 tokio.workspace = true
 rayon.workspace = true
@@ -16,25 +15,20 @@ thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 log.workspace = true
-parking_lot.workspace = true
-
 num-traits.workspace = true
 num-derive.workspace = true
-futures = "0.3"
-dashmap = "6.1.0"
-lazy_static = "1.5.0"
+
+# TODO: Change to pumpkin-nbt ?
+fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 
 # Compression
 flate2 = "1.0"
 lz4 = "1.28.0"
 
+dashmap = "6.1.0"
+lazy_static = "1.5.0"
 enum_dispatch = "0.3.13"
-derive-getters = "0.5.0"
-
-fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
-
 noise = "0.9.0"
-
 rand = "0.8.5"
 
 [dev-dependencies]

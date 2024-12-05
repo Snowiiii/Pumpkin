@@ -5,11 +5,11 @@ members = [
     "pumpkin-core",
     "pumpkin-entity",
     "pumpkin-inventory",
-    "pumpkin-macros/",
-    "pumpkin-protocol/",
-    "pumpkin-registry/",
+    "pumpkin-macros",
+    "pumpkin-protocol",
+    "pumpkin-registry",
     "pumpkin-world",
-    "pumpkin/",
+    "pumpkin",
 ]
 
 [workspace.package]
@@ -34,8 +34,17 @@ inherits = "release"
 debug = true
 
 [workspace.dependencies]
+# Concurrency/Parallelism and Synchronization
+rayon = "1.10.0"
+parking_lot = { version = "0.12.3", features = ["send_guard"] }
+crossbeam = "0.8.4"
+
+# Serialization/Deserialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
 log = "0.4"
-tokio = { version = "1.41", features = [
+tokio = { version = "1.42", features = [
     "fs",
     "io-util",
     "macros",
@@ -45,21 +54,10 @@ tokio = { version = "1.41", features = [
     "io-std",
     "signal",
 ] }
-
-thiserror = "2"
+itertools = "0.13.0"
+uuid = { version = "1.11.0", features = ["serde", "v3", "v4"] }
+bytes = "1.9"
 num-traits = "0.2"
 num-derive = "0.4"
-
-bytes = "1.8"
-
-# Concurrency/Parallelism and Synchronization
-rayon = "1.10.0"
-parking_lot = { version = "0.12.3", features = ["send_guard"] }
-crossbeam = "0.8.4"
-
-uuid = { version = "1.11.0", features = ["serde", "v3", "v4"] }
+thiserror = "2"
 derive_more = { version = "1.0.0", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
-itertools = "0.13.0"
