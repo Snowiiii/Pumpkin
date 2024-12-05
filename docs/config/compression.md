@@ -1,5 +1,5 @@
 # Compression
-Compression is used to reduce the size of packets. This is benefical to reduce bandwidth server side and also help players on slower internet connections.
+Compression is used to reduce the size of packets. This is benefical to reduce bandwidth server side and also to help players on slower internet connections.
 
 ## Configuring Compression
 
