@@ -23,7 +23,7 @@ body:
     id: version
     attributes:
       label: Server Software Version/Commit
-      description: What Server Software Version/Commit are you using?. Tip: Use the /pumpkin command    e 
+      description: What Server Software Version/Commit are you using?. Tip: Use the /pumpkin command 
       placeholder: "Example: 1.0.0/39b4cb3"
     validations:
       required: true
