@@ -1394,8 +1394,8 @@ mod test {
         let chunk_pos = Vector2::new(7, 4);
         let config = NoiseConfig::new(0, &OVERWORLD_NOISE_ROUTER);
         let sampler = FluidLevelSampler::Chunk(StandardChunkFluidLevelSampler::new(
-            FluidLevel::new(63, *WATER_BLOCK),
-            FluidLevel::new(-54, *LAVA_BLOCK),
+            FluidLevel::new(63, WATER_BLOCK),
+            FluidLevel::new(-54, LAVA_BLOCK),
         ));
         let mut noise = ChunkNoiseGenerator::new(
             16 / shape.horizontal_cell_block_count(),
