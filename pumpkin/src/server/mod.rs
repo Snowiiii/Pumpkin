@@ -1,6 +1,7 @@
 use connection_cache::{CachedBranding, CachedStatus};
 use key_store::KeyStore;
 use pumpkin_config::BASIC_CONFIG;
+use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::drag_handler::DragHandler;
@@ -89,6 +90,14 @@ impl Server {
             ),
             DimensionType::Overworld,
         );
+
+        // Spawn chunks are never unloaded
+        for x in -1..=1 {
+            for z in -1..=1 {
+                world.level.mark_chunk_as_newly_watched(Vector2::new(x, z));
+            }
+        }
+
         Self {
             cached_registry: Registry::get_synced(),
             open_containers: RwLock::new(HashMap::new()),
