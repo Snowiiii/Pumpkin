@@ -50,7 +50,7 @@ impl CommandExecutor for PumpkinExecutor {
                     )
                     .add_child(
                         TextComponent::text(&format!(
-                            " (Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL}) "
+                            " (Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL})"
                         ))
                         .click_event(ClickEvent::CopyToClipboard(Cow::from(format!(
                             "(Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL})"
