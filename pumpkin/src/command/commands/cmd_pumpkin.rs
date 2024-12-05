@@ -61,7 +61,7 @@ impl CommandExecutor for PumpkinExecutor {
                         .color_named(NamedColor::Gold),
                     )
                     .add_child(
-                        TextComponent::text("Github Repository")
+                        TextComponent::text(" Github Repository")
                             .click_event(ClickEvent::OpenUrl(Cow::from(
                                 "https://github.com/Snowiiii/Pumpkin",
                             )))
