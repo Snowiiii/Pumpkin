@@ -1,17 +1,44 @@
-use pumpkin::entity::player::Player;
 use pumpkin::plugin::*;
 use pumpkin_api_macros::{plugin_event, plugin_impl, plugin_method};
 use pumpkin_core::text::TextComponent;
-use pumpkin_core::GameMode;
+use pumpkin_core::text::color::NamedColor;
+use pumpkin::plugin::api::types::player::PlayerEvent;
+use std::fs;
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Config {
+    bans: Bans,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Bans {
+    players: Vec<String>,
+}
 
 #[plugin_method]
 fn on_load(&mut self, server: &dyn PluginContext) -> Result<(), String> {
+    let data_folder = server.get_data_folder();
+    if !fs::exists(format!("{}/data.toml", data_folder)).unwrap() {
+        let cfg = toml::to_string(&self.config).unwrap();
+        fs::write(format!("{}/data.toml", data_folder), cfg).unwrap();
+        server.get_logger().info(format!("Created config in {} with {:#?}", data_folder, self.config).as_str());
+    } else {
+        let data = fs::read_to_string(format!("{}/data.toml", data_folder)).unwrap();
+        self.config = toml::from_str(data.as_str()).unwrap();
+        server.get_logger().info(format!("Loaded config from {} with {:#?}", data_folder, self.config).as_str());
+    }
+
     server.get_logger().info("Plugin loaded!");
     Ok(())
 }
 
 #[plugin_method]
 fn on_unload(&mut self, server: &dyn PluginContext) -> Result<(), String> {
+    let data_folder = server.get_data_folder();
+    let cfg = toml::to_string(&self.config).unwrap();
+    fs::write(format!("{}/data.toml", data_folder), cfg).unwrap();
+
     server.get_logger().info("Plugin unloaded!");
     Ok(())
 }
@@ -20,16 +47,18 @@ fn on_unload(&mut self, server: &dyn PluginContext) -> Result<(), String> {
 async fn on_player_join(
     &mut self,
     server: &dyn PluginContext,
-    player: &Player,
+    player: &PlayerEvent,
 ) -> Result<bool, String> {
     server
         .get_logger()
-        .info(format!("Player {} joined the game", player.gameprofile.name).as_str());
-    /// TODO: Calling any method that involves sending packets to the player will cause the client to crash
-    //let _ = player.send_system_message(&TextComponent::text("Hello, world!")).await;
-    //player.set_gamemode(GameMode::Creative).await;
-    //player.kill().await;
-    // Returning true will block any other plugins from receiving this event
+        .info(format!("Player {} joined the game. Config is {:#?}", player.name, self.config).as_str());
+
+    if self.config.bans.players.contains(&player.name) {
+        let _ = player.kick(TextComponent::text("You are banned from the server")).await;
+        return Ok(true);
+    }
+
+    let _ = player.send_message(TextComponent::text_string(format!("Hello {}, welocme to the server", player.name)).color_named(NamedColor::Green)).await;
     Ok(true)
 }
 
@@ -37,13 +66,27 @@ async fn on_player_join(
 async fn on_player_leave(
     &mut self,
     server: &dyn PluginContext,
-    player: &Player,
+    player: &PlayerEvent,
 ) -> Result<bool, String> {
     server
         .get_logger()
-        .info(format!("Player {} left the game", player.gameprofile.name).as_str());
+        .info(format!("Player {} left the game", player.name).as_str());
     Ok(false)
 }
 
 #[plugin_impl]
-pub struct MyPlugin {}
+pub struct MyPlugin {
+    config: Config,
+}
+
+impl MyPlugin {
+    pub fn new() -> Self {
+        MyPlugin {
+            config: Config {
+                bans: Bans {
+                    players: vec![],
+                },
+            },
+        }
+    }
+}

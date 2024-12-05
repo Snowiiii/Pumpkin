@@ -14,4 +14,6 @@ crate-type = ["dylib"]
 pumpkin = { path = "../../pumpkin" }
 pumpkin-core = { path = "../../pumpkin-core" }
 pumpkin-api-macros = { path = "../../pumpkin-api-macros" }
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8.19"
 async-trait = "0.1.83"
