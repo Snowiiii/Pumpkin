@@ -4,7 +4,7 @@ Pumpkin allows you to customize what you want in your logs.
 ## Configuring Logging
 
 #### `enabled`: Boolean
-Weather logging is enabled or not.
+Whether logging is enabled or not.
 
 :::code-group
 ```toml [features.toml] {2}
@@ -31,7 +31,7 @@ level = "Debug"
 :::
 
 #### `env`: Boolean
-Weather to allow choosing the log level by setting the `RUST_LOG` environment variable or not.
+Whether to allow choosing the log level by setting the `RUST_LOG` environment variable or not.
 
 :::code-group
 ```toml [features.toml] {3}
@@ -42,7 +42,7 @@ env = true
 :::
 
 #### `threads`: Boolean
-Weather to print threads in the logging message or not.
+Whether to print threads in the logging message or not.
 
 :::code-group
 ```toml [features.toml] {3}
@@ -53,7 +53,7 @@ threads = false
 :::
 
 #### `color`: Boolean
-Weather to print with color to the console or not.
+Whether to print with color to the console or not.
 
 :::code-group
 ```toml [features.toml] {3}
@@ -64,7 +64,7 @@ color = false
 :::
 
 #### `timestamp`: Boolean
-Weather to print the timestamp in the meessage or not.
+Whether to print the timestamp in the meessage or not.
 
 :::code-group
 ```toml [features.toml] {3}
