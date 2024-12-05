@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 SCRIPT_DIR="$(dirname "$0")"
 EXTRACTOR_DIR="./extractor"
 MAPPER_FILE="$EXTRACTOR_DIR/file_map.dat"
@@ -19,5 +21,5 @@ while read -r line; do
 
     dest_dir="$(dirname "$second")"
     mkdir -p "$SCRIPT_DIR/$dest_dir"
-    mv "$EXTRACTOR_DIR/$first" "$SCRIPT_DIR/$second" || exit 1
+    mv "$EXTRACTOR_DIR/$first" "$SCRIPT_DIR/$second"
 done <"$MAPPER_FILE"

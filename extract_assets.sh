@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 SCRIPT_DIR="$(dirname "$0")"
 EXTRACTOR_DIR="./extractor"
 
@@ -9,7 +11,7 @@ if [ ! -d "$EXTRACTOR_DIR" ]; then
     exit 1
 fi
 
-bash "$EXTRACTOR_DIR/run_gradle.sh" || exit 1
-bash "$SCRIPT_DIR/move_assets.sh" || exit 1
+bash "$EXTRACTOR_DIR/run_gradle.sh"
+bash "$SCRIPT_DIR/move_assets.sh"
 
 rm -rf "$EXTRACTOR_DIR/run"
