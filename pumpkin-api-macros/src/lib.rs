@@ -186,7 +186,9 @@ pub fn plugin_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         #input_struct
 
-        impl pumpkin::plugin::Plugin for #struct_ident {
+        impl pumpkin::plugin::Plugin for #struct_ident {}
+
+        impl pumpkin::plugin::PluginMethods for #struct_ident {
             #(#methods)*
         }
 
@@ -202,12 +204,7 @@ pub fn plugin_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         #[no_mangle]
         pub fn plugin() -> Box<dyn pumpkin::plugin::Plugin> {
-            Box::new(#struct_ident {})
-        }
-
-        #[no_mangle]
-        pub fn hooks() -> Box<dyn pumpkin::plugin::Hooks> {
-            Box::new(#struct_ident {})
+            Box::new(#struct_ident::new())
         }
     };
 
