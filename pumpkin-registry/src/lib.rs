@@ -71,6 +71,12 @@ pub enum DimensionType {
     TheNether,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct DataPool<T> {
+    data: T,
+    weight: i32,
+}
+
 impl DimensionType {
     pub fn name(&self) -> &str {
         match self {

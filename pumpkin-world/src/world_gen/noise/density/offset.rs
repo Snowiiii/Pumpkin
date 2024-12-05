@@ -1,88 +1,71 @@
 use std::sync::Arc;
 
 use super::{
-    noise::InternalNoise, Applier, ApplierImpl, DensityFunction, DensityFunctionImpl, NoisePos,
-    NoisePosImpl, OffsetDensityFunction, Visitor, VisitorImpl,
+    component_functions::{
+        ApplierImpl, ComponentFunctionImpl, ImmutableComponentFunctionImpl,
+        SharedConverterEnvironment,
+    },
+    noise::InternalNoise,
+    NoisePos, NoisePosImpl,
 };
 
-#[derive(Clone)]
-pub struct ShiftAFunction<'a> {
-    offset: Arc<InternalNoise<'a>>,
+#[inline]
+fn sample_3d(noise: &InternalNoise, x: f64, y: f64, z: f64) -> f64 {
+    noise.sample(x * 0.25f64, y * 0.25f64, z * 0.25f64) * 4f64
 }
 
-impl<'a> ShiftAFunction<'a> {
-    pub fn new(offset: Arc<InternalNoise<'a>>) -> Self {
+pub struct ShiftAFunction {
+    pub(crate) offset: Arc<InternalNoise>,
+}
+
+impl ShiftAFunction {
+    pub fn new(offset: Arc<InternalNoise>) -> Self {
         Self { offset }
     }
 }
 
-impl<'a> OffsetDensityFunction<'a> for ShiftAFunction<'a> {
-    fn offset_noise(&self) -> &InternalNoise<'a> {
-        &self.offset
-    }
-}
+impl ComponentFunctionImpl for ShiftAFunction {}
 
-impl<'a> DensityFunctionImpl<'a> for ShiftAFunction<'a> {
+impl ImmutableComponentFunctionImpl for ShiftAFunction {
+    #[inline]
     fn sample(&self, pos: &NoisePos) -> f64 {
-        self.sample_3d(pos.x() as f64, 0f64, pos.z() as f64)
+        sample_3d(&self.offset, pos.x() as f64, 0f64, pos.z() as f64)
     }
 
-    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
-        visitor.apply(Arc::new(DensityFunction::ShiftA(ShiftAFunction {
-            offset: visitor.apply_internal_noise(self.offset.clone()),
-        })))
+    #[inline]
+    fn fill(&self, arr: &mut [f64], applier: &mut dyn ApplierImpl) {
+        applier.fill(arr, self);
     }
 
-    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
-        applier.fill(densities, &DensityFunction::ShiftA(self.clone()))
-    }
-
-    fn max(&self) -> f64 {
-        self.offset_noise().max_value() * 4f64
-    }
-
-    fn min(&self) -> f64 {
-        -self.max()
+    fn shared_environment(&self) -> SharedConverterEnvironment {
+        SharedConverterEnvironment::ShiftA(&self.offset)
     }
 }
 
-#[derive(Clone)]
-pub struct ShiftBFunction<'a> {
-    offset: Arc<InternalNoise<'a>>,
+pub struct ShiftBFunction {
+    pub(crate) offset: Arc<InternalNoise>,
 }
 
-impl<'a> ShiftBFunction<'a> {
-    pub fn new(offset: Arc<InternalNoise<'a>>) -> Self {
+impl ShiftBFunction {
+    pub fn new(offset: Arc<InternalNoise>) -> Self {
         Self { offset }
     }
 }
 
-impl<'a> OffsetDensityFunction<'a> for ShiftBFunction<'a> {
-    fn offset_noise(&self) -> &InternalNoise<'a> {
-        &self.offset
-    }
-}
+impl ComponentFunctionImpl for ShiftBFunction {}
 
-impl<'a> DensityFunctionImpl<'a> for ShiftBFunction<'a> {
+impl ImmutableComponentFunctionImpl for ShiftBFunction {
+    #[inline]
     fn sample(&self, pos: &NoisePos) -> f64 {
-        self.sample_3d(pos.z() as f64, pos.x() as f64, 0f64)
+        sample_3d(&self.offset, pos.z() as f64, pos.x() as f64, 0f64)
     }
 
-    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
-        visitor.apply(Arc::new(DensityFunction::ShiftB(ShiftBFunction {
-            offset: visitor.apply_internal_noise(self.offset.clone()),
-        })))
+    #[inline]
+    fn fill(&self, arr: &mut [f64], applier: &mut dyn ApplierImpl) {
+        applier.fill(arr, self);
     }
 
-    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
-        applier.fill(densities, &DensityFunction::ShiftB(self.clone()))
-    }
-
-    fn max(&self) -> f64 {
-        self.offset_noise().max_value() * 4f64
-    }
-
-    fn min(&self) -> f64 {
-        -self.max()
+    fn shared_environment(&self) -> SharedConverterEnvironment {
+        SharedConverterEnvironment::ShiftB(&self.offset)
     }
 }

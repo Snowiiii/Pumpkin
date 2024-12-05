@@ -359,25 +359,32 @@ impl Player {
     }
 
     pub async fn handle_swing_arm(&self, swing_arm: SSwingArm) {
-        match Hand::from_i32(swing_arm.hand.0) {
-            Some(hand) => {
-                let animation = match hand {
-                    Hand::Main => Animation::SwingMainArm,
-                    Hand::Off => Animation::SwingOffhand,
-                };
-                let id = self.entity_id();
-                let world = self.world();
-                world
-                    .broadcast_packet_except(
-                        &[self.gameprofile.id],
-                        &CEntityAnimation::new(id.into(), animation as u8),
-                    )
-                    .await;
-            }
-            None => {
+        let animation = match swing_arm.hand.0 {
+            0 => Animation::SwingMainArm,
+            1 => Animation::SwingOffhand,
+            _ => {
                 self.kick(TextComponent::text("Invalid hand")).await;
+                return;
             }
         };
+        // Invert hand if player is left handed
+        let animation = match self.config.lock().await.main_hand {
+            Hand::Left => match animation {
+                Animation::SwingMainArm => Animation::SwingOffhand,
+                Animation::SwingOffhand => Animation::SwingMainArm,
+                _ => unreachable!(),
+            },
+            Hand::Right => animation,
+        };
+
+        let id = self.entity_id();
+        let world = self.world();
+        world
+            .broadcast_packet_except(
+                &[self.gameprofile.id],
+                &CEntityAnimation::new(id.into(), animation as u8),
+            )
+            .await;
     }
 
     pub async fn handle_chat_message(&self, chat_message: SChatMessage) {
@@ -431,7 +438,11 @@ impl Player {
             Hand::from_i32(client_information.main_hand.into()),
             ChatMode::from_i32(client_information.chat_mode.into()),
         ) {
-            *self.config.lock().await = PlayerConfig {
+            let mut config = self.config.lock().await;
+            let update =
+                config.main_hand != main_hand || config.skin_parts != client_information.skin_parts;
+
+            *config = PlayerConfig {
                 locale: client_information.locale,
                 // A Negative view distance would be impossible and make no sense right ?, Mojang: Lets make is signed :D
                 view_distance: client_information.view_distance as u8,
@@ -442,6 +453,10 @@ impl Player {
                 text_filtering: client_information.text_filtering,
                 server_listing: client_information.server_listing,
             };
+            drop(config);
+            if update {
+                self.update_client_information().await;
+            }
         } else {
             self.kick(TextComponent::text("Invalid hand or chat type"))
                 .await;

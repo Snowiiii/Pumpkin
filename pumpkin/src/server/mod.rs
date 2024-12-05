@@ -33,7 +33,7 @@ mod connection_cache;
 mod key_store;
 pub mod ticker;
 
-pub const CURRENT_MC_VERSION: &str = "1.21.3";
+pub const CURRENT_MC_VERSION: &str = "1.21.4";
 
 /// Represents a Minecraft server instance.
 pub struct Server {

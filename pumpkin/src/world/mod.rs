@@ -290,6 +290,7 @@ impl World {
             }],
         ))
         .await;
+        player.update_client_information().await;
 
         // here we send all the infos of already joined players
         let mut entries = Vec::new();

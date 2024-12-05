@@ -76,7 +76,7 @@ impl Default for PlayerConfig {
             chat_mode: ChatMode::Enabled,
             chat_colors: true,
             skin_parts: 0,
-            main_hand: Hand::Main,
+            main_hand: Hand::Right,
             text_filtering: false,
             server_listing: false,
         }
@@ -503,7 +503,11 @@ impl Client {
                     return true;
                 }
                 Ok(None) => (), //log::debug!("Waiting for more data to complete packet..."),
-                Err(err) => log::warn!("Failed to decode packet for: {}", err.to_string()),
+                Err(err) => {
+                    log::warn!("Failed to decode packet for: {}", err.to_string());
+                    self.close();
+                    return false; // return to avoid reserving additional bytes
+                }
             }
 
             dec.reserve(4096);

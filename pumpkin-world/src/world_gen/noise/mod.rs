@@ -1,190 +1,196 @@
-use derive_getters::Getters;
 use num_traits::Float;
-use perlin::DoublePerlinNoiseParameters;
+pub mod config;
 pub mod density;
 pub mod perlin;
-mod router;
+pub mod router;
 mod simplex;
 
-#[derive(Getters)]
-pub struct BuiltInNoiseParams<'a> {
-    temperature: DoublePerlinNoiseParameters<'a>,
-    vegetation: DoublePerlinNoiseParameters<'a>,
-    continentalness: DoublePerlinNoiseParameters<'a>,
-    erosion: DoublePerlinNoiseParameters<'a>,
-    temperature_large: DoublePerlinNoiseParameters<'a>,
-    vegetation_large: DoublePerlinNoiseParameters<'a>,
-    continentalness_large: DoublePerlinNoiseParameters<'a>,
-    erosion_large: DoublePerlinNoiseParameters<'a>,
-    ridge: DoublePerlinNoiseParameters<'a>,
-    offset: DoublePerlinNoiseParameters<'a>,
-    aquifer_barrier: DoublePerlinNoiseParameters<'a>,
-    aquifer_fluid_level_floodedness: DoublePerlinNoiseParameters<'a>,
-    aquifer_lava: DoublePerlinNoiseParameters<'a>,
-    aquifer_fluid_level_spread: DoublePerlinNoiseParameters<'a>,
-    pillar: DoublePerlinNoiseParameters<'a>,
-    pillar_rareness: DoublePerlinNoiseParameters<'a>,
-    pillar_thickness: DoublePerlinNoiseParameters<'a>,
-    spaghetti_2d: DoublePerlinNoiseParameters<'a>,
-    spaghetti_2d_elevation: DoublePerlinNoiseParameters<'a>,
-    spaghetti_2d_modulator: DoublePerlinNoiseParameters<'a>,
-    spaghetti_2d_thickness: DoublePerlinNoiseParameters<'a>,
-    spaghetti_3d_1: DoublePerlinNoiseParameters<'a>,
-    spaghetti_3d_2: DoublePerlinNoiseParameters<'a>,
-    spaghetti_3d_rarity: DoublePerlinNoiseParameters<'a>,
-    spaghetti_3d_thickness: DoublePerlinNoiseParameters<'a>,
-    spaghetti_roughness: DoublePerlinNoiseParameters<'a>,
-    spaghetti_roughness_modulator: DoublePerlinNoiseParameters<'a>,
-    cave_entrance: DoublePerlinNoiseParameters<'a>,
-    cave_layer: DoublePerlinNoiseParameters<'a>,
-    cave_cheese: DoublePerlinNoiseParameters<'a>,
-    ore_veininess: DoublePerlinNoiseParameters<'a>,
-    ore_vein_a: DoublePerlinNoiseParameters<'a>,
-    ore_vein_b: DoublePerlinNoiseParameters<'a>,
-    ore_gap: DoublePerlinNoiseParameters<'a>,
-    noodle: DoublePerlinNoiseParameters<'a>,
-    noodle_thickness: DoublePerlinNoiseParameters<'a>,
-    noodle_ridge_a: DoublePerlinNoiseParameters<'a>,
-    noodle_ridge_b: DoublePerlinNoiseParameters<'a>,
-    jagged: DoublePerlinNoiseParameters<'a>,
-    surface: DoublePerlinNoiseParameters<'a>,
-    surface_secondary: DoublePerlinNoiseParameters<'a>,
-    clay_bands_offset: DoublePerlinNoiseParameters<'a>,
-    badlands_pillar: DoublePerlinNoiseParameters<'a>,
-    badlands_pillar_roof: DoublePerlinNoiseParameters<'a>,
-    badlands_surface: DoublePerlinNoiseParameters<'a>,
-    iceberg_pillar: DoublePerlinNoiseParameters<'a>,
-    iceberg_pillar_roof: DoublePerlinNoiseParameters<'a>,
-    iceberg_surface: DoublePerlinNoiseParameters<'a>,
-    surface_swamp: DoublePerlinNoiseParameters<'a>,
-    calcite: DoublePerlinNoiseParameters<'a>,
-    gravel: DoublePerlinNoiseParameters<'a>,
-    powder_snow: DoublePerlinNoiseParameters<'a>,
-    packed_ice: DoublePerlinNoiseParameters<'a>,
-    ice: DoublePerlinNoiseParameters<'a>,
-    soul_sand_layer: DoublePerlinNoiseParameters<'a>,
-    gravel_layer: DoublePerlinNoiseParameters<'a>,
-    patch: DoublePerlinNoiseParameters<'a>,
-    netherrack: DoublePerlinNoiseParameters<'a>,
-    nether_wart: DoublePerlinNoiseParameters<'a>,
-    nether_state_selector: DoublePerlinNoiseParameters<'a>,
+pub mod built_in_noise_params {
+    use super::perlin::DoublePerlinNoiseParameters;
+
+    pub const TEMPERATURE: DoublePerlinNoiseParameters = DoublePerlinNoiseParameters::new(
+        -10,
+        &[1.5f64, 0f64, 1f64, 0f64, 0f64, 0f64],
+        "minecraft:temperature",
+    );
+    pub const VEGETATION: DoublePerlinNoiseParameters = DoublePerlinNoiseParameters::new(
+        -8,
+        &[1f64, 1f64, 0f64, 0f64, 0f64, 0f64],
+        "minecraft:vegetation",
+    );
+    pub const CONTINENTALNESS: DoublePerlinNoiseParameters = DoublePerlinNoiseParameters::new(
+        -9,
+        &[1f64, 1f64, 2f64, 2f64, 2f64, 1f64, 1f64, 1f64, 1f64],
+        "minecraft:continentalness",
+    );
+    pub const EROSION: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-9, &[1f64, 1f64, 0f64, 1f64, 1f64], "minecraft:erosion");
+    pub const TEMPERATURE_LARGE: DoublePerlinNoiseParameters = DoublePerlinNoiseParameters::new(
+        -12,
+        &[1.5f64, 0f64, 1f64, 0f64, 0f64, 0f64],
+        "minecraft:temperature_large",
+    );
+    pub const VEGETATION_LARGE: DoublePerlinNoiseParameters = DoublePerlinNoiseParameters::new(
+        -10,
+        &[1f64, 1f64, 0f64, 0f64, 0f64, 0f64],
+        "minecraft:vegetation_large",
+    );
+    pub const CONTINENTALNESS_LARGE: DoublePerlinNoiseParameters = DoublePerlinNoiseParameters::new(
+        -11,
+        &[1f64, 1f64, 2f64, 2f64, 2f64, 1f64, 1f64, 1f64, 1f64],
+        "minecraft:continentalness_large",
+    );
+    pub const EROSION_LARGE: DoublePerlinNoiseParameters = DoublePerlinNoiseParameters::new(
+        -11,
+        &[1f64, 1f64, 0f64, 1f64, 1f64],
+        "minecraft:erosion_large",
+    );
+    pub const RIDGE: DoublePerlinNoiseParameters = DoublePerlinNoiseParameters::new(
+        -7,
+        &[1f64, 2f64, 1f64, 0f64, 0f64, 0f64],
+        "minecraft:ridge",
+    );
+    pub const OFFSET: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-3, &[1f64, 1f64, 1f64, 0f64], "minecraft:offset");
+    pub const AQUIFER_BARRIER: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-3, &[1f64], "minecraft:aquifer_barrier");
+    pub const AQUIFER_FLUID_LEVEL_FLOODEDNESS: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-7, &[1f64], "minecraft:aquifer_fluid_level_floodedness");
+    pub const AQUIFER_LAVA: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-1, &[1f64], "minecraft:aquifer_lava");
+    pub const AQUIFER_FLUID_LEVEL_SPREAD: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-5, &[1f64], "minecraft:aquifer_fluid_level_spread");
+    pub const PILLAR: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-7, &[1f64; 2], "minecraft:pillar");
+    pub const PILLAR_RARENESS: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-8, &[1f64], "minecraft:pillar_rareness");
+    pub const PILLAR_THICKNESS: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-8, &[1f64], "minecraft:pillar_thickness");
+    pub const SPAGHETTI_2D: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-7, &[1f64], "minecraft:spaghetti_2d");
+    pub const SPAGHETTI_2D_ELEVATION: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-8, &[1f64], "minecraft:spaghetti_2d_elevation");
+    pub const SPAGHETTI_2D_MODULATOR: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-11, &[1f64], "minecraft:spaghetti_2d_modulator");
+    pub const SPAGHETTI_2D_THICKNESS: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-11, &[1f64], "minecraft:spaghetti_2d_thickness");
+    pub const SPAGHETTI_3D_1: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-7, &[1f64], "minecraft:spaghetti_3d_1");
+    pub const SPAGHETTI_3D_2: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-7, &[1f64], "minecraft:spaghetti_3d_2");
+    pub const SPAGHETTI_3D_RARITY: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-11, &[1f64], "minecraft:spaghetti_3d_rarity");
+    pub const SPAGHETTI_3D_THICKNESS: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-8, &[1f64], "minecraft:spaghetti_3d_thickness");
+    pub const SPAGHETTI_ROUGHNESS: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-5, &[1f64], "minecraft:spaghetti_roughness");
+    pub const SPAGHETTI_ROUGHNESS_MODULATOR: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-8, &[1f64], "minecraft:spaghetti_roughness_modulator");
+    pub const CAVE_ENTRANCE: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-7, &[0.4f64, 0.5f64, 1f64], "minecraft:cave_entrance");
+    pub const CAVE_LAYER: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-8, &[1f64], "minecraft:cave_layer");
+    pub const CAVE_CHEESE: DoublePerlinNoiseParameters = DoublePerlinNoiseParameters::new(
+        -8,
+        &[0.5f64, 1f64, 2f64, 1f64, 2f64, 1f64, 0f64, 2f64, 0f64],
+        "minecraft:cave_cheese",
+    );
+    pub const ORE_VEININESS: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-8, &[1f64], "minecraft:ore_veininess");
+    pub const ORE_VEIN_A: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-7, &[1f64], "minecraft:ore_vein_a");
+    pub const ORE_VEIN_B: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-7, &[1f64], "minecraft:ore_vein_b");
+    pub const ORE_GAP: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-5, &[1f64], "minecraft:ore_gap");
+    pub const NOODLE: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-8, &[1f64], "minecraft:noodle");
+    pub const NOODLE_THICKNESS: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-8, &[1f64], "minecraft:noodle_thickness");
+    pub const NOODLE_RIDGE_A: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-7, &[1f64], "minecraft:noodle_ridge_a");
+    pub const NOODLE_RIDGE_B: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-7, &[1f64], "minecraft:noodle_ridge_b");
+
+    pub const JAGGED: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-16, &[1f64; 16], "minecraft:jagged");
+    pub const SURFACE: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-6, &[1f64; 3], "minecraft:surface");
+    pub const SURFACE_SECONDARY: DoublePerlinNoiseParameters = DoublePerlinNoiseParameters::new(
+        -6,
+        &[1f64, 1f64, 0f64, 1f64],
+        "minecraft:surface_secondary",
+    );
+    pub const CLAY_BANDS_OFFSET: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-8, &[1f64], "minecraft:clay_bands_offset");
+    pub const BADLANDS_PILLAR: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-2, &[1f64; 4], "minecraft:badlands_pillar");
+    pub const BADLANDS_PILLAR_ROOF: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-8, &[1f64], "minecraft:badlands_pillar_roof");
+    pub const BADLANDS_SURFACE: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-6, &[1f64; 3], "minecraft:badlands_surface");
+    pub const ICEBERG_PILLAR: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-6, &[1f64; 4], "minecraft:iceberg_pillar");
+    pub const ICEBERG_PILLAR_ROOF: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-3, &[1f64], "minecraft:iceberg_pillar_roof");
+    pub const ICEBERG_SURFACE: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-6, &[1f64; 3], "minecraft:iceberg_surface");
+    pub const SURFACE_SWAMP: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-2, &[1f64], "minecraft:surface_swamp");
+    pub const CALCITE: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-9, &[1f64; 4], "minecraft:calcite");
+    pub const GRAVEL: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-8, &[1f64; 4], "minecraft:gravel");
+    pub const POWDER_SNOW: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-6, &[1f64; 4], "minecraft:powder_snow");
+    pub const PACKED_ICE: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-7, &[1f64; 4], "minecraft:packed_ice");
+    pub const ICE: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-4, &[1f64; 4], "minecraft:ice");
+    pub const SOUL_SAND_LAYER: DoublePerlinNoiseParameters = DoublePerlinNoiseParameters::new(
+        -8,
+        &[
+            1f64,
+            1f64,
+            1f64,
+            1f64,
+            0f64,
+            0f64,
+            0f64,
+            0f64,
+            0.013333333333333334f64,
+        ],
+        "minecraft:soul_sand_layer",
+    );
+    pub const GRAVEL_LAYER: DoublePerlinNoiseParameters = DoublePerlinNoiseParameters::new(
+        -8,
+        &[
+            1f64,
+            1f64,
+            1f64,
+            1f64,
+            0f64,
+            0f64,
+            0f64,
+            0f64,
+            0.013333333333333334f64,
+        ],
+        "minecraft:gravel_layer",
+    );
+    pub const PATCH: DoublePerlinNoiseParameters = DoublePerlinNoiseParameters::new(
+        -5,
+        &[1f64, 0f64, 0f64, 0f64, 0f64, 0.013333333333333334f64],
+        "minecraft:patch",
+    );
+    pub const NETHERRACK: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-3, &[1f64, 0f64, 0f64, 0.35f64], "minecraft:netherrack");
+    pub const NETHER_WART: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-3, &[1f64, 0f64, 0f64, 0.9f64], "minecraft:nether_wart");
+    pub const NETHER_STATE_SELECTOR: DoublePerlinNoiseParameters =
+        DoublePerlinNoiseParameters::new(-4, &[1f64], "minecraft:nether_state_selector");
 }
 
-impl BuiltInNoiseParams<'_> {
-    pub fn new() -> Self {
-        Self {
-            temperature: DoublePerlinNoiseParameters::new(
-                -10,
-                &[1.5f64, 0f64, 1f64, 0f64, 0f64, 0f64],
-            ),
-            vegetation: DoublePerlinNoiseParameters::new(-8, &[1f64, 1f64, 0f64, 0f64, 0f64, 0f64]),
-            continentalness: DoublePerlinNoiseParameters::new(
-                -9,
-                &[1f64, 1f64, 2f64, 2f64, 2f64, 1f64, 1f64, 1f64, 1f64],
-            ),
-
-            erosion: DoublePerlinNoiseParameters::new(-9, &[1f64, 1f64, 0f64, 1f64, 1f64]),
-            temperature_large: DoublePerlinNoiseParameters::new(
-                -12,
-                &[1.5f64, 0f64, 1f64, 0f64, 0f64, 0f64],
-            ),
-            vegetation_large: DoublePerlinNoiseParameters::new(
-                -10,
-                &[1f64, 1f64, 0f64, 0f64, 0f64, 0f64],
-            ),
-            continentalness_large: DoublePerlinNoiseParameters::new(
-                -11,
-                &[1f64, 1f64, 2f64, 2f64, 2f64, 1f64, 1f64, 1f64, 1f64],
-            ),
-            erosion_large: DoublePerlinNoiseParameters::new(-11, &[1f64, 1f64, 0f64, 1f64, 1f64]),
-            ridge: DoublePerlinNoiseParameters::new(-7, &[1f64, 2f64, 1f64, 0f64, 0f64, 0f64]),
-            offset: DoublePerlinNoiseParameters::new(-3, &[1f64; 4]),
-            aquifer_barrier: DoublePerlinNoiseParameters::new(-3, &[1f64]),
-            aquifer_fluid_level_floodedness: DoublePerlinNoiseParameters::new(-7, &[1f64]),
-            aquifer_lava: DoublePerlinNoiseParameters::new(-1, &[1f64]),
-            aquifer_fluid_level_spread: DoublePerlinNoiseParameters::new(-5, &[1f64]),
-            pillar: DoublePerlinNoiseParameters::new(-7, &[1f64; 2]),
-            pillar_rareness: DoublePerlinNoiseParameters::new(-8, &[1f64]),
-            pillar_thickness: DoublePerlinNoiseParameters::new(-8, &[1f64]),
-            spaghetti_2d: DoublePerlinNoiseParameters::new(-7, &[1f64]),
-            spaghetti_2d_elevation: DoublePerlinNoiseParameters::new(-8, &[1f64]),
-            spaghetti_2d_modulator: DoublePerlinNoiseParameters::new(-11, &[1f64]),
-            spaghetti_2d_thickness: DoublePerlinNoiseParameters::new(-11, &[1f64]),
-            spaghetti_3d_1: DoublePerlinNoiseParameters::new(-7, &[1f64]),
-            spaghetti_3d_2: DoublePerlinNoiseParameters::new(-7, &[1f64]),
-            spaghetti_3d_rarity: DoublePerlinNoiseParameters::new(-11, &[1f64]),
-            spaghetti_3d_thickness: DoublePerlinNoiseParameters::new(-8, &[1f64]),
-            spaghetti_roughness: DoublePerlinNoiseParameters::new(-5, &[1f64]),
-            spaghetti_roughness_modulator: DoublePerlinNoiseParameters::new(-8, &[1f64]),
-            cave_entrance: DoublePerlinNoiseParameters::new(-7, &[0.4f64, 0.5f64, 1f64]),
-            cave_layer: DoublePerlinNoiseParameters::new(-8, &[1f64]),
-            cave_cheese: DoublePerlinNoiseParameters::new(
-                -8,
-                &[0.5f64, 1f64, 2f64, 1f64, 2f64, 1f64, 0f64, 2f64, 0f64],
-            ),
-            ore_veininess: DoublePerlinNoiseParameters::new(-8, &[1f64]),
-            ore_vein_a: DoublePerlinNoiseParameters::new(-7, &[1f64]),
-            ore_vein_b: DoublePerlinNoiseParameters::new(-7, &[1f64]),
-            ore_gap: DoublePerlinNoiseParameters::new(-5, &[1f64]),
-            noodle: DoublePerlinNoiseParameters::new(-8, &[1f64]),
-            noodle_thickness: DoublePerlinNoiseParameters::new(-8, &[1f64]),
-            noodle_ridge_a: DoublePerlinNoiseParameters::new(-7, &[1f64]),
-            noodle_ridge_b: DoublePerlinNoiseParameters::new(-7, &[1f64]),
-            jagged: DoublePerlinNoiseParameters::new(-16, &[1f64; 16]),
-            surface: DoublePerlinNoiseParameters::new(-6, &[1f64; 3]),
-            surface_secondary: DoublePerlinNoiseParameters::new(-6, &[1f64, 1f64, 0f64, 1f64]),
-            clay_bands_offset: DoublePerlinNoiseParameters::new(-8, &[1f64]),
-            badlands_pillar: DoublePerlinNoiseParameters::new(-2, &[1f64; 4]),
-            badlands_pillar_roof: DoublePerlinNoiseParameters::new(-8, &[1f64]),
-            badlands_surface: DoublePerlinNoiseParameters::new(-6, &[1f64; 3]),
-            iceberg_pillar: DoublePerlinNoiseParameters::new(-6, &[1f64; 4]),
-            iceberg_pillar_roof: DoublePerlinNoiseParameters::new(-3, &[1f64]),
-            iceberg_surface: DoublePerlinNoiseParameters::new(-6, &[1f64; 3]),
-            surface_swamp: DoublePerlinNoiseParameters::new(-2, &[1f64]),
-            calcite: DoublePerlinNoiseParameters::new(-9, &[1f64; 4]),
-            gravel: DoublePerlinNoiseParameters::new(-8, &[1f64; 4]),
-            powder_snow: DoublePerlinNoiseParameters::new(-6, &[1f64; 4]),
-            packed_ice: DoublePerlinNoiseParameters::new(-7, &[1f64; 4]),
-            ice: DoublePerlinNoiseParameters::new(-4, &[1f64; 4]),
-            soul_sand_layer: DoublePerlinNoiseParameters::new(
-                -8,
-                &[
-                    1f64,
-                    1f64,
-                    1f64,
-                    1f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.013333333333333334f64,
-                ],
-            ),
-            gravel_layer: DoublePerlinNoiseParameters::new(
-                -8,
-                &[
-                    1f64,
-                    1f64,
-                    1f64,
-                    1f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0f64,
-                    0.013333333333333334f64,
-                ],
-            ),
-            patch: DoublePerlinNoiseParameters::new(
-                -5,
-                &[1f64, 0f64, 0f64, 0f64, 0f64, 0.013333333333333334f64],
-            ),
-            netherrack: DoublePerlinNoiseParameters::new(-3, &[1f64, 0f64, 0f64, 0.35f64]),
-            nether_wart: DoublePerlinNoiseParameters::new(-3, &[1f64, 0f64, 0f64, 0.9f64]),
-            nether_state_selector: DoublePerlinNoiseParameters::new(-4, &[1f64]),
-        }
-    }
-}
-
+#[inline]
 pub fn lerp<T>(delta: T, start: T, end: T) -> T
 where
     T: Float,
@@ -192,7 +198,11 @@ where
     start + delta * (end - start)
 }
 
-pub fn lerp_progress(value: f64, start: f64, end: f64) -> f64 {
+#[inline]
+pub fn lerp_progress<T>(value: T, start: T, end: T) -> T
+where
+    T: Float,
+{
     (value - start) / (end - start)
 }
 
@@ -206,8 +216,17 @@ pub fn clamped_lerp(start: f64, end: f64, delta: f64) -> f64 {
     }
 }
 
+#[inline]
 pub fn clamped_map(value: f64, old_start: f64, old_end: f64, new_start: f64, new_end: f64) -> f64 {
     clamped_lerp(new_start, new_end, lerp_progress(value, old_start, old_end))
+}
+
+#[inline]
+pub fn map<T>(value: T, old_start: T, old_end: T, new_start: T, new_end: T) -> T
+where
+    T: Float,
+{
+    lerp(lerp_progress(value, old_start, old_end), new_start, new_end)
 }
 
 pub fn lerp2(delta_x: f64, delta_y: f64, x0y0: f64, x1y0: f64, x0y1: f64, x1y1: f64) -> f64 {
@@ -240,30 +259,97 @@ pub fn lerp3(
 }
 
 struct Gradient {
-    x: i32,
-    y: i32,
-    z: i32,
+    x: f64,
+    y: f64,
+    z: f64,
 }
 
 const GRADIENTS: [Gradient; 16] = [
-    Gradient { x: 1, y: 1, z: 0 },
-    Gradient { x: -1, y: 1, z: 0 },
-    Gradient { x: 1, y: -1, z: 0 },
-    Gradient { x: -1, y: -1, z: 0 },
-    Gradient { x: 1, y: 0, z: 1 },
-    Gradient { x: -1, y: 0, z: 1 },
-    Gradient { x: 1, y: 0, z: -1 },
-    Gradient { x: -1, y: 0, z: -1 },
-    Gradient { x: 0, y: 1, z: 1 },
-    Gradient { x: 0, y: -1, z: 1 },
-    Gradient { x: 0, y: 1, z: -1 },
-    Gradient { x: 0, y: -1, z: -1 },
-    Gradient { x: 1, y: 1, z: 0 },
-    Gradient { x: 0, y: -1, z: 1 },
-    Gradient { x: -1, y: 1, z: 0 },
-    Gradient { x: 0, y: -1, z: -1 },
+    Gradient {
+        x: 1f64,
+        y: 1f64,
+        z: 0f64,
+    },
+    Gradient {
+        x: -1f64,
+        y: 1f64,
+        z: 0f64,
+    },
+    Gradient {
+        x: 1f64,
+        y: -1f64,
+        z: 0f64,
+    },
+    Gradient {
+        x: -1f64,
+        y: -1f64,
+        z: 0f64,
+    },
+    Gradient {
+        x: 1f64,
+        y: 0f64,
+        z: 1f64,
+    },
+    Gradient {
+        x: -1f64,
+        y: 0f64,
+        z: 1f64,
+    },
+    Gradient {
+        x: 1f64,
+        y: 0f64,
+        z: -1f64,
+    },
+    Gradient {
+        x: -1f64,
+        y: 0f64,
+        z: -1f64,
+    },
+    Gradient {
+        x: 0f64,
+        y: 1f64,
+        z: 1f64,
+    },
+    Gradient {
+        x: 0f64,
+        y: -1f64,
+        z: 1f64,
+    },
+    Gradient {
+        x: 0f64,
+        y: 1f64,
+        z: -1f64,
+    },
+    Gradient {
+        x: 0f64,
+        y: -1f64,
+        z: -1f64,
+    },
+    Gradient {
+        x: 1f64,
+        y: 1f64,
+        z: 0f64,
+    },
+    Gradient {
+        x: 0f64,
+        y: -1f64,
+        z: 1f64,
+    },
+    Gradient {
+        x: -1f64,
+        y: 1f64,
+        z: 0f64,
+    },
+    Gradient {
+        x: 0f64,
+        y: -1f64,
+        z: -1f64,
+    },
 ];
 
-fn dot(gradient: &Gradient, x: f64, y: f64, z: f64) -> f64 {
-    (gradient.z as f64).mul_add(z, (gradient.x as f64).mul_add(x, gradient.y as f64 * y))
+impl Gradient {
+    #[inline]
+    fn dot(&self, x: f64, y: f64, z: f64) -> f64 {
+        self.x * x + self.y * y + self.z * z
+    }
 }

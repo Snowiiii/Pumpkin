@@ -15,12 +15,9 @@ pub mod style;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(transparent)]
-// TODO: Use this instead of TextComponent alone to allow for example text with different colors
-// TODO: Allow to mix TextComponent and String
 pub struct Text<'a>(pub Box<TextComponent<'a>>);
 
 // Represents a Text component
-// Reference: https://wiki.vg/Text_formatting#Text_components
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct TextComponent<'a> {
@@ -89,6 +86,9 @@ impl<'a> TextComponent<'a> {
                 //TODO: check if term supports hyperlinks before
                 text = format!("\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\", url, text).to_string()
             }
+        }
+        for child in self.extra {
+            text += &*child.to_pretty_console();
         }
         text
     }
@@ -185,22 +185,24 @@ impl<'a> TextComponent<'a> {
             style: &'a Style<'a>,
             #[serde(default, skip_serializing_if = "Vec::is_empty")]
             #[serde(rename = "extra")]
-            extra: Vec<&'a TempStruct<'a>>,
+            extra: Vec<TempStruct<'a>>,
         }
-        let temp_extra: Vec<TempStruct> = self
-            .extra
-            .iter()
-            .map(|x| TempStruct {
-                text: &x.content,
-                style: &x.style,
-                extra: vec![],
-            })
-            .collect();
-        let temp_extra_refs: Vec<&TempStruct> = temp_extra.iter().collect();
+        fn convert_extra<'a>(extra: &'a [TextComponent<'a>]) -> Vec<TempStruct<'a>> {
+            extra
+                .iter()
+                .map(|x| TempStruct {
+                    text: &x.content,
+                    style: &x.style,
+                    extra: convert_extra(&x.extra),
+                })
+                .collect()
+        }
+
+        let temp_extra = convert_extra(&self.extra);
         let astruct = TempStruct {
             text: &self.content,
             style: &self.style,
-            extra: temp_extra_refs,
+            extra: temp_extra,
         };
         // dbg!(&serde_json::to_string(&astruct));
         // dbg!(pumpkin_nbt::serializer::to_bytes_unnamed(&astruct).unwrap().to_vec());
