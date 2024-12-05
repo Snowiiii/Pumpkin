@@ -11,8 +11,6 @@ use crate::{
     },
 };
 
-use crate::block::block_state::get_block_state;
-
 #[expect(dead_code)]
 pub type SuperflatGenerator = GenericGenerator<SuperflatBiomeGenerator, SuperflatTerrainGenerator>;
 

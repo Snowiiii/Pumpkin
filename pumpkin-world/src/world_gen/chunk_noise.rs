@@ -1,11 +1,10 @@
 use std::{collections::HashMap, hash::Hash, mem, num::Wrapping, ops::AddAssign, sync::Arc};
 
-use lazy_static::lazy_static;
 use num_traits::Zero;
 use pumpkin_core::math::{floor_div, vector2::Vector2, vector3::Vector3};
 
 use crate::{
-    block::BlockState,
+    block::{block_state::get_block_state, BlockState},
     match_ref_implementations,
     world_gen::{
         noise::{density::basic::WrapperType, lerp3},
@@ -41,11 +40,9 @@ use super::{
     positions::chunk_pos,
 };
 
-lazy_static! {
-    pub static ref STONE_BLOCK: BlockState = BlockState::new("stone").unwrap();
-    pub static ref LAVA_BLOCK: BlockState = BlockState::new("lava").unwrap();
-    pub static ref WATER_BLOCK: BlockState = BlockState::new("water").unwrap();
-}
+pub const STONE_BLOCK: BlockState = get_block_state!("stone");
+pub const LAVA_BLOCK: BlockState = get_block_state!("lava");
+pub const WATER_BLOCK: BlockState = get_block_state!("water");
 
 pub struct ChunkCacheOnceFunction<R: ComponentReference<ChunkNoiseState>> {
     delegate: R,

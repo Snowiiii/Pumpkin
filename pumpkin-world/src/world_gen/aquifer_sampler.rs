@@ -430,7 +430,7 @@ impl WorldAquiferSampler {
                 .sample_mut(&NoisePos::Unblended(UnblendedNoisePos::new(x, y, z)), env);
 
             if sample.abs() > 0.3f64 {
-                return *LAVA_BLOCK;
+                return LAVA_BLOCK;
             }
         }
 
@@ -477,7 +477,7 @@ impl WorldAquiferSampler {
 
             let fluid_level = self.fluid_level.get_fluid_level(i, j, k);
             if fluid_level.get_block_state(j).of_block(LAVA_BLOCK.block_id) {
-                Some(*LAVA_BLOCK)
+                Some(LAVA_BLOCK)
             } else {
                 let scaled_x = floor_div(i - 5, 16);
                 let scaled_y = floor_div(j + 1, 12);

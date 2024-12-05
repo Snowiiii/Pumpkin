@@ -48,6 +48,7 @@ macro_rules! get_block_state {
     ($identifier:literal) => {
         crate::block::BlockState {
             state_id: pumpkin_macros::block_state_id!($identifier),
+            block_id: pumpkin_macros::block_id!($identifier),
         }
     };
 }
