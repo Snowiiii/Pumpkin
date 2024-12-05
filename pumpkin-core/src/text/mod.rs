@@ -1,6 +1,7 @@
 use core::str;
 use std::borrow::Cow;
 
+use crate::text::color::ARGBColor;
 use click::ClickEvent;
 use color::Color;
 use colored::Colorize;
@@ -171,6 +172,12 @@ impl<'a> TextComponent<'a> {
     /// Default fonts: `minecraft:default`, `minecraft:uniform`, `minecraft:alt`, `minecraft:illageralt`
     pub fn font(mut self, identifier: String) -> Self {
         self.style.font = Some(identifier);
+        self
+    }
+
+    /// Overrides the shadow properties of text.
+    pub fn shadow_color(mut self, color: ARGBColor) -> Self {
+        self.style.shadow_color = Some(color);
         self
     }
 
