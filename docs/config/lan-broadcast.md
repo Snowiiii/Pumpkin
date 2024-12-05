@@ -28,7 +28,7 @@ motd = "[your MOTD here]"
 :::
 
 #### `port`: Integer (0-65535) (optional)
-What port to bind to. If not specified, will bind to port 0 (any availible port on the system).
+What port to bind to. If not specified, will bind to port 0 (any available port on the system).
 
 > [!IMPORTANT]
 > The protocol defines what port to broadcast to. This option only exists to specify which port to bind to on the host. This option purely exists so that the port can be predictable.
