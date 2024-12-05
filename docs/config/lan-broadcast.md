@@ -4,7 +4,7 @@ Pumpkin can broadcast the server across the network in order to make it easier f
 ## Configuring LAN Broadcast
 
 #### `enabled`: Boolean
-Weather LAN Broadcast is enabled or not.
+Whether LAN Broadcast is enabled or not.
 
 :::code-group
 ```toml [features.toml] {2}
