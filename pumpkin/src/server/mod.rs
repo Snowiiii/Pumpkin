@@ -89,6 +89,7 @@ impl Server {
             ),
             DimensionType::Overworld,
         );
+
         Self {
             cached_registry: Registry::get_synced(),
             open_containers: RwLock::new(HashMap::new()),
