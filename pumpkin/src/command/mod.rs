@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::command::commands::cmd_seed;
 use crate::command::commands::{cmd_bossbar, cmd_transfer};
 use crate::command::dispatcher::CommandDispatcher;
-use crate::entity::player::{PermissionLvl, Player};
+use crate::entity::player::Player;
 use crate::server::Server;
 use crate::world::World;
 use args::ConsumedArgs;
@@ -17,6 +17,7 @@ use commands::{
 };
 use dispatcher::CommandError;
 use pumpkin_core::math::vector3::Vector3;
+use pumpkin_core::permission::PermissionLvl;
 use pumpkin_core::text::TextComponent;
 
 pub mod args;

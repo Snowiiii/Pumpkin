@@ -82,7 +82,7 @@ pub trait SaveJSONConfiguration: LoadJSONConfiguration {
 
 impl LoadJSONConfiguration for OperatorConfig {
     fn get_path() -> &'static Path {
-        Path::new("ops.json")
+        Path::new("data/ops.json")
     }
     fn validate(&self) {
         // TODO: Validate the operator configuration

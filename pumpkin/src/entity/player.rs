@@ -9,8 +9,8 @@ use std::{
 
 use crossbeam::atomic::AtomicCell;
 use itertools::Itertools;
-use num_derive::{FromPrimitive, ToPrimitive};
-use pumpkin_config::{op::OpLevel, ADVANCED_CONFIG};
+use num_derive::FromPrimitive;
+use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::{
     math::{
         boundingbox::{BoundingBox, BoundingBoxSize},
@@ -18,6 +18,7 @@ use pumpkin_core::{
         vector2::Vector2,
         vector3::Vector3,
     },
+    permission::PermissionLvl,
     text::TextComponent,
     GameMode,
 };
@@ -230,7 +231,7 @@ impl Player {
                 .iter()
                 .find(|op| op.uuid == gameprofile_clone.id)
                 .map_or(parking_lot::Mutex::new(PermissionLvl::Zero), |op| {
-                    parking_lot::Mutex::new(op.level.into())
+                    parking_lot::Mutex::new(op.level)
                 }),
         }
     }
@@ -872,27 +873,4 @@ pub enum ChatMode {
     CommandsOnly,
     /// All messages should be hidden
     Hidden,
-}
-
-/// the player's permission level
-#[derive(FromPrimitive, ToPrimitive, Clone, Copy)]
-#[repr(i8)]
-pub enum PermissionLvl {
-    Zero = 0,
-    One = 1,
-    Two = 2,
-    Three = 3,
-    Four = 4,
-}
-
-impl From<OpLevel> for PermissionLvl {
-    fn from(op: OpLevel) -> Self {
-        match op {
-            OpLevel::None => PermissionLvl::Zero,
-            OpLevel::Basic => PermissionLvl::One,
-            OpLevel::Moderator => PermissionLvl::Two,
-            OpLevel::Admin => PermissionLvl::Three,
-            OpLevel::Owner => PermissionLvl::Four,
-        }
-    }
 }
