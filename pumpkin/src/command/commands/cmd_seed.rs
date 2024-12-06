@@ -39,12 +39,16 @@ impl CommandExecutor for PumpkinExecutor {
 
         sender
             .send_message(
-                TextComponent::text(&format!("Seed: [{seed}]"))
-                    .hover_event(HoverEvent::ShowText(Cow::from(
-                        "Click to Copy to Clipboard",
-                    )))
-                    .click_event(ClickEvent::CopyToClipboard(Cow::from(seed)))
-                    .color_named(NamedColor::Green), // TODO: use white and green, when possible
+                TextComponent::text("Seed: [")
+                    .add_child(
+                        TextComponent::text(&seed.clone())
+                            .hover_event(HoverEvent::ShowText(Cow::from(
+                                "Click to Copy to Clipboard",
+                            )))
+                            .click_event(ClickEvent::CopyToClipboard(Cow::from(seed)))
+                            .color_named(NamedColor::Green),
+                    )
+                    .add_child(TextComponent::text("]")),
             )
             .await;
         Ok(())

@@ -25,8 +25,7 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
-use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
-use pumpkin_protocol::server::play::{SClickContainer, SKeepAlive};
+use pumpkin_protocol::server::play::{SCookieResponse as SPCookieResponse, SPlayPingRequest};
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
@@ -41,6 +40,10 @@ use pumpkin_protocol::{
         SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
     },
     RawPacket, ServerPacket, SoundCategory, VarInt,
+};
+use pumpkin_protocol::{
+    client::play::{CSetEntityMetadata, Metadata},
+    server::play::{SClickContainer, SKeepAlive},
 };
 use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
 use tokio::sync::{Mutex, Notify};
@@ -102,7 +105,7 @@ pub type PlayerPendingChunks =
 /// A `Player` is a special type of entity that represents a human player connected to the server.
 pub struct Player {
     /// The underlying living entity object that represents the player.
-    pub living_entity: LivingEntity,
+    pub living_entity: LivingEntity<PlayerInventory>,
     /// The player's game profile information, including their username and UUID.
     pub gameprofile: GameProfile,
     /// The client connection associated with the player.
@@ -115,8 +118,6 @@ pub struct Player {
     pub food: AtomicI32,
     /// The player's food saturation level.
     pub food_saturation: AtomicCell<f32>,
-    /// The player's inventory, containing items and equipment.
-    pub inventory: Mutex<PlayerInventory>,
     /// The ID of the currently open container (if any).
     pub open_container: AtomicCell<Option<u64>>,
     /// The item currently being held by the player.
@@ -192,14 +193,17 @@ impl Player {
         };
 
         Self {
-            living_entity: LivingEntity::new(Entity::new(
-                entity_id,
-                world,
-                EntityType::Player,
-                1.62,
-                AtomicCell::new(BoundingBox::new_default(&bounding_box_size)),
-                AtomicCell::new(bounding_box_size),
-            )),
+            living_entity: LivingEntity::new_with_container(
+                Entity::new(
+                    entity_id,
+                    world,
+                    EntityType::Player,
+                    1.62,
+                    AtomicCell::new(BoundingBox::new_default(&bounding_box_size)),
+                    AtomicCell::new(bounding_box_size),
+                ),
+                PlayerInventory::new(),
+            ),
             config: Mutex::new(config),
             gameprofile,
             client,
@@ -208,7 +212,6 @@ impl Player {
             food: AtomicI32::new(20),
             food_saturation: AtomicCell::new(20.0),
             current_block_destroy_stage: AtomicU8::new(0),
-            inventory: Mutex::new(PlayerInventory::new()),
             open_container: AtomicCell::new(None),
             carried_item: AtomicCell::new(None),
             teleport_id_count: AtomicI32::new(0),
@@ -234,6 +237,13 @@ impl Player {
                     parking_lot::Mutex::new(op.level)
                 }),
         }
+    }
+
+    pub fn inventory(&self) -> &Mutex<PlayerInventory> {
+        self.living_entity
+            .inventory
+            .as_ref()
+            .expect("Player always has inventory")
     }
 
     /// Removes the Player out of the current World
@@ -642,15 +652,37 @@ impl Player {
 
     pub async fn set_gamemode(&self, gamemode: GameMode) {
         // We could send the same gamemode without problems. But why waste bandwidth ?
-        let current_gamemode = self.gamemode.load();
-        assert!(
-            current_gamemode != gamemode,
+        assert_ne!(
+            self.gamemode.load(),
+            gamemode,
             "Setting the same gamemode as already is"
         );
         self.gamemode.store(gamemode);
-        self.abilities.lock().await.flying = false;
-        // So a little story time. I actually made an abilties_from_gamemode function. I looked at vanilla and they always send the abilties from the gamemode. But the funny thing actually is. That the client
-        // does actually use the same method and set the abilties when receiving the CGameEvent gamemode packet. Just Mojang nonsense
+        // The client is using the same method for setting abilities when receiving the CGameEvent ChangeGameMode packet.
+        // So we can just update the abilities without sending them.
+        {
+            // use another scope so we instantly unlock abilities
+            let mut abilities = self.abilities.lock().await;
+            match gamemode {
+                GameMode::Undefined | GameMode::Survival | GameMode::Adventure => {
+                    abilities.flying = false;
+                    abilities.allow_flying = false;
+                    abilities.creative = false;
+                    abilities.invulnerable = false;
+                }
+                GameMode::Creative => {
+                    abilities.allow_flying = true;
+                    abilities.creative = true;
+                    abilities.invulnerable = true;
+                }
+                GameMode::Spectator => {
+                    abilities.flying = true;
+                    abilities.allow_flying = true;
+                    abilities.creative = false;
+                    abilities.invulnerable = true;
+                }
+            }
+        }
         self.living_entity
             .entity
             .world
@@ -667,6 +699,24 @@ impl Player {
             .send_packet(&CGameEvent::new(
                 GameEvent::ChangeGameMode,
                 gamemode as i32 as f32,
+            ))
+            .await;
+    }
+
+    /// Send skin layers and used hand to all players
+    pub async fn update_client_information(&self) {
+        let config = self.config.lock().await;
+        let world = self.world();
+        world
+            .broadcast_packet_all(&CSetEntityMetadata::new(
+                self.entity_id().into(),
+                Metadata::new(17, 0.into(), config.skin_parts),
+            ))
+            .await;
+        world
+            .broadcast_packet_all(&CSetEntityMetadata::new(
+                self.entity_id().into(),
+                Metadata::new(18, 0.into(), config.main_hand as u8),
             ))
             .await;
     }
@@ -694,16 +744,12 @@ impl Player {
     pub async fn process_packets(self: &Arc<Self>, server: &Arc<Server>) {
         let mut packets = self.client.client_packets_queue.lock().await;
         while let Some(mut packet) = packets.pop_back() {
-            #[cfg(debug_assertions)]
-            let inst = std::time::Instant::now();
             tokio::select! {
                 () = self.await_cancel() => {
                     log::debug!("Canceling player packet processing");
                     return;
                 },
                 packet_result = self.handle_play_packet(server, &mut packet) => {
-                    #[cfg(debug_assertions)]
-                    log::trace!("Handled play packet in {:?}", inst.elapsed());
                     match packet_result {
                         Ok(()) => {}
                         Err(e) => {
@@ -788,6 +834,10 @@ impl Player {
                 self.handle_player_command(SPlayerCommand::read(bytebuf)?)
                     .await;
             }
+            SPlayPingRequest::PACKET_ID => {
+                self.handle_play_ping_request(SPlayPingRequest::read(bytebuf)?)
+                    .await;
+            }
             SClickContainer::PACKET_ID => {
                 self.handle_click_container(server, SClickContainer::read(bytebuf)?)
                     .await?;
@@ -856,16 +906,17 @@ impl Default for Abilities {
 }
 
 /// Represents the player's dominant hand.
-#[derive(FromPrimitive, Clone)]
+#[derive(Debug, FromPrimitive, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
 pub enum Hand {
-    /// The player's primary hand (usually the right hand).
-    Main,
-    /// The player's off-hand (usually the left hand).
-    Off,
+    /// Usually the player's off-hand.
+    Left,
+    /// Usually the player's primary hand.
+    Right,
 }
 
 /// Represents the player's chat mode settings.
-#[derive(FromPrimitive, Clone)]
+#[derive(Debug, FromPrimitive, Clone)]
 pub enum ChatMode {
     /// Chat is enabled for the player.
     Enabled,

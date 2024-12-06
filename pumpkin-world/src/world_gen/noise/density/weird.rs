@@ -1,11 +1,18 @@
-use std::sync::Arc;
+use std::{hash::Hash, marker::PhantomData, sync::Arc};
 
 use super::{
-    noise::InternalNoise, Applier, ApplierImpl, DensityFunction, DensityFunctionImpl, NoisePos,
-    NoisePosImpl, Visitor, VisitorImpl,
+    component_functions::{
+        ApplierImpl, ComponentFunctionImpl, ComponentReference, ComponentReferenceImplementation,
+        ConverterEnvironment, ConverterImpl, DensityFunctionEnvironment, EnvironmentApplierImpl,
+        ImmutableComponentFunctionImpl, MutableComponentFunctionImpl, MutableComponentReference,
+        NoEnvironment, OwnedConverterEnvironment, SharedComponentReference,
+        SharedConverterEnvironment,
+    },
+    noise::InternalNoise,
+    NoisePos, NoisePosImpl,
 };
 
-#[derive(Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum RarityMapper {
     Tunnels,
     Caves,
@@ -41,7 +48,7 @@ impl RarityMapper {
                     0.75f64
                 } else if value < 0.5f64 {
                     1f64
-                } else if value < 0.75 {
+                } else if value < 0.75f64 {
                     2f64
                 } else {
                     3f64
@@ -51,23 +58,28 @@ impl RarityMapper {
     }
 }
 
-#[derive(Clone)]
-pub struct WierdScaledFunction<'a> {
-    input: Arc<DensityFunction<'a>>,
-    noise: Arc<InternalNoise<'a>>,
-    rarity: RarityMapper,
+pub struct WierdScaledFunction<E: DensityFunctionEnvironment, R: ComponentReference<E>> {
+    pub(crate) input: R,
+    pub(crate) noise: Arc<InternalNoise>,
+    pub(crate) rarity: RarityMapper,
+    _dummy: PhantomData<E>,
 }
 
-impl<'a> WierdScaledFunction<'a> {
-    pub fn new(
-        input: Arc<DensityFunction<'a>>,
-        noise: Arc<InternalNoise<'a>>,
-        rarity: RarityMapper,
-    ) -> Self {
+impl<E: DensityFunctionEnvironment, R: ComponentReference<E>> From<WierdScaledFunction<E, R>>
+    for MutableComponentReference<E>
+{
+    fn from(value: WierdScaledFunction<E, R>) -> Self {
+        Self(Box::new(value))
+    }
+}
+
+impl<E: DensityFunctionEnvironment, R: ComponentReference<E>> WierdScaledFunction<E, R> {
+    pub fn new(input: R, noise: Arc<InternalNoise>, rarity: RarityMapper) -> Self {
         Self {
             input,
             noise,
             rarity,
+            _dummy: PhantomData::<E> {},
         }
     }
 
@@ -78,33 +90,96 @@ impl<'a> WierdScaledFunction<'a> {
             .sample(pos.x() as f64 / d, pos.y() as f64 / d, pos.z() as f64 / d)
             .abs()
     }
+
+    pub fn create_new_ref(
+        input: ComponentReferenceImplementation<E>,
+        noise: Arc<InternalNoise>,
+        rarity: RarityMapper,
+    ) -> ComponentReferenceImplementation<E> {
+        match input {
+            ComponentReferenceImplementation::Mutable(owned) => {
+                ComponentReferenceImplementation::Mutable(
+                    WierdScaledFunction::new(owned, noise, rarity).into(),
+                )
+            }
+            ComponentReferenceImplementation::Shared(shared) => {
+                ComponentReferenceImplementation::Shared(
+                    WierdScaledFunction::<NoEnvironment, SharedComponentReference>::new(
+                        shared, noise, rarity,
+                    )
+                    .into(),
+                )
+            }
+        }
+    }
 }
 
-impl<'a> DensityFunctionImpl<'a> for WierdScaledFunction<'a> {
-    fn max(&self) -> f64 {
-        self.rarity.max_multiplier() * self.noise.max_value()
+impl<E: DensityFunctionEnvironment, R: ComponentReference<E>> ComponentFunctionImpl
+    for WierdScaledFunction<E, R>
+{
+}
+
+impl<E: DensityFunctionEnvironment, R: ComponentReference<E>> MutableComponentFunctionImpl<E>
+    for WierdScaledFunction<E, R>
+{
+    fn sample_mut(&mut self, pos: &NoisePos, env: &E) -> f64 {
+        let density = self.input.sample_mut(pos, env);
+        self.apply_loc(pos, density)
     }
 
-    fn min(&self) -> f64 {
-        0f64
-    }
-
-    fn apply(&self, visitor: &Visitor<'a>) -> Arc<DensityFunction<'a>> {
-        visitor.apply(Arc::new(DensityFunction::Wierd(WierdScaledFunction {
-            input: self.input.apply(visitor),
-            noise: visitor.apply_internal_noise(self.noise.clone()),
-            rarity: self.rarity.clone(),
-        })))
-    }
-
-    fn sample(&self, pos: &NoisePos) -> f64 {
-        self.apply_loc(pos, self.input.sample(pos))
-    }
-
-    fn fill(&self, densities: &mut [f64], applier: &Applier<'a>) {
-        self.input.fill(densities, applier);
-        densities.iter_mut().enumerate().for_each(|(i, val)| {
+    fn fill_mut(&mut self, arr: &mut [f64], applier: &mut dyn EnvironmentApplierImpl<Env = E>) {
+        self.input.fill_mut(arr, applier);
+        arr.iter_mut().enumerate().for_each(|(i, val)| {
             *val = self.apply_loc(&applier.at(i), *val);
         });
+    }
+
+    fn environment(&self) -> ConverterEnvironment<E> {
+        ConverterEnvironment::Wierd(&self.input, &self.noise, self.rarity)
+    }
+
+    fn into_environment(self: Box<Self>) -> OwnedConverterEnvironment<E> {
+        OwnedConverterEnvironment::Wierd(self.input.wrapped_ref(), self.noise, self.rarity)
+    }
+
+    fn convert(
+        self: Box<Self>,
+        converter: &mut dyn ConverterImpl<E>,
+    ) -> ComponentReferenceImplementation<E> {
+        Self::create_new_ref(
+            self.input.convert(converter),
+            converter
+                .convert_noise(&self.noise)
+                .unwrap_or_else(|| self.noise.clone()),
+            self.rarity,
+        )
+    }
+
+    fn clone_to_new_ref(&self) -> ComponentReferenceImplementation<E> {
+        Self::create_new_ref(
+            self.input.clone_to_new_ref(),
+            self.noise.clone(),
+            self.rarity,
+        )
+    }
+}
+
+impl<E: DensityFunctionEnvironment> ImmutableComponentFunctionImpl
+    for WierdScaledFunction<E, SharedComponentReference>
+{
+    fn sample(&self, pos: &NoisePos) -> f64 {
+        let density = self.input.sample(pos);
+        self.apply_loc(pos, density)
+    }
+
+    fn fill(&self, arr: &mut [f64], applier: &mut dyn ApplierImpl) {
+        self.input.fill(arr, applier);
+        arr.iter_mut().enumerate().for_each(|(i, val)| {
+            *val = self.apply_loc(&applier.at(i), *val);
+        });
+    }
+
+    fn shared_environment(&self) -> SharedConverterEnvironment {
+        SharedConverterEnvironment::Wierd(&self.input, &self.noise, self.rarity)
     }
 }

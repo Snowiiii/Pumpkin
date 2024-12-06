@@ -137,7 +137,7 @@ async fn handle_packet(
                                 session_id: packet.session_id,
                                 hostname: CString::new(BASIC_CONFIG.motd.as_str())?,
                                 version: CString::new(CURRENT_MC_VERSION)?,
-                                plugins: CString::new("Pumpkin on 1.21.3")?, // TODO: Fill this with plugins when plugins are working
+                                plugins: CString::new("Pumpkin on 1.21.4")?, // TODO: Fill this with plugins when plugins are working
                                 map: CString::new("world")?, // TODO: Get actual world name
                                 num_players: server.get_player_count().await,
                                 max_players: BASIC_CONFIG.max_players as usize,

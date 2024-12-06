@@ -15,7 +15,6 @@ pub mod window_property;
 pub use error::InventoryError;
 pub use open_container::*;
 
-/// https://wiki.vg/Inventory
 #[derive(Debug, FromPrimitive, Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
 pub enum WindowType {
@@ -126,6 +125,34 @@ pub trait Container: Sync + Send {
     }
 
     fn recipe_used(&mut self) {}
+}
+
+pub struct EmptyContainer;
+
+impl Container for EmptyContainer {
+    fn window_type(&self) -> &'static WindowType {
+        unreachable!(
+            "you should never be able to get here because this type is always wrapped in an option"
+        );
+    }
+
+    fn window_name(&self) -> &'static str {
+        unreachable!(
+            "you should never be able to get here because this type is always wrapped in an option"
+        );
+    }
+
+    fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
+        unreachable!(
+            "you should never be able to get here because this type is always wrapped in an option"
+        );
+    }
+
+    fn all_slots_ref(&self) -> Vec<Option<&ItemStack>> {
+        unreachable!(
+            "you should never be able to get here because this type is always wrapped in an option"
+        );
+    }
 }
 
 pub fn handle_item_take(

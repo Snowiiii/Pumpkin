@@ -1,8 +1,8 @@
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::ops::{Add, Div, Mul, Sub};
 
 use num_traits::Float;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Hash, Eq, Default)]
 pub struct Vector3<T> {
     pub x: T,
     pub y: T,
@@ -80,6 +80,7 @@ impl<T: Math + Copy> Add for Vector3<T> {
     }
 }
 
+/*
 impl<T: Math + Copy> Neg for Vector3<T> {
     type Output = Self;
 
@@ -91,6 +92,7 @@ impl<T: Math + Copy> Neg for Vector3<T> {
         }
     }
 }
+*/
 
 impl<T> From<(T, T, T)> for Vector3<T> {
     #[inline(always)]
@@ -108,7 +110,7 @@ impl<T> From<Vector3<T>> for (T, T, T) {
 
 pub trait Math:
     Mul<Output = Self>
-    + Neg<Output = Self>
+    //+ Neg<Output = Self>
     + Add<Output = Self>
     + Div<Output = Self>
     + Sub<Output = Self>
@@ -119,3 +121,4 @@ impl Math for f64 {}
 impl Math for f32 {}
 impl Math for i32 {}
 impl Math for i64 {}
+impl Math for u8 {}

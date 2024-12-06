@@ -327,7 +327,13 @@ impl ser::Serializer for &mut Serializer {
     }
 
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
-        self.output.put_u8(COMPOUND_ID);
+        if let State::FirstListElement { .. } = self.state {
+            self.parse_state(COMPOUND_ID)?;
+        } else if let State::ListElement = self.state {
+            return Ok(self);
+        } else {
+            self.output.put_u8(COMPOUND_ID);
+        }
         Ok(self)
     }
 

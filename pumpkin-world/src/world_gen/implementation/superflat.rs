@@ -3,7 +3,7 @@ use pumpkin_core::math::vector2::Vector2;
 use crate::{
     biome::Biome,
     block::block_state::BlockState,
-    coordinates::{BlockCoordinates, XZBlockCoordinates},
+    coordinates::XZBlockCoordinates,
     world_gen::{
         generator::{BiomeGenerator, GeneratorInit, TerrainGenerator},
         generic_generator::GenericGenerator,
@@ -39,7 +39,19 @@ impl GeneratorInit for SuperflatTerrainGenerator {
 
 impl TerrainGenerator for SuperflatTerrainGenerator {
     fn prepare_chunk(&self, _at: &Vector2<i32>) {}
+    fn clean_chunk(&self, _at: &Vector2<i32>) {}
+
     // TODO allow specifying which blocks should be at which height in the config.
+    fn generate_block(
+        &self,
+        _chunk_pos: &Vector2<i32>,
+        _at: pumpkin_core::math::vector3::Vector3<i32>,
+        _biome: Biome,
+    ) -> BlockState {
+        todo!()
+    }
+
+    /*
     fn generate_block(&self, at: BlockCoordinates, _: Biome) -> BlockState {
         match *at.y {
             -64 => BlockState::new("bedrock").unwrap(),
@@ -48,4 +60,5 @@ impl TerrainGenerator for SuperflatTerrainGenerator {
             _ => BlockState::AIR,
         }
     }
+    */
 }

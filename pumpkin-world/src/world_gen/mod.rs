@@ -1,25 +1,52 @@
 #![allow(dead_code)]
 
+pub mod aquifer_sampler;
 mod blender;
+pub mod chunk_noise;
+pub mod generation_shapes;
 mod generator;
 mod generic_generator;
 pub mod height_limit;
 mod implementation;
-mod noise;
+pub mod noise;
+pub mod ore_sampler;
 mod positions;
-mod proto_chunk;
-mod sampler;
+pub mod proto_chunk;
 mod seed;
 
 pub use generator::WorldGenerator;
-use implementation::overworld::biome::plains::PlainsGenerator;
+use implementation::{
+    //overworld::biome::plains::PlainsGenerator,
+    test::{TestBiomeGenerator, TestGenerator, TestTerrainGenerator},
+};
 pub use seed::Seed;
 
 use generator::GeneratorInit;
 
 pub fn get_world_gen(seed: Seed) -> Box<dyn WorldGenerator> {
     // TODO decide which WorldGenerator to pick based on config.
-    Box::new(PlainsGenerator::new(seed))
+    //Box::new(PlainsGenerator::new(seed))
+    Box::new(TestGenerator::<TestBiomeGenerator, TestTerrainGenerator>::new(seed))
+}
+
+pub mod section_coords {
+    use num_traits::PrimInt;
+
+    #[inline]
+    pub fn block_to_section<T>(coord: T) -> T
+    where
+        T: PrimInt,
+    {
+        coord >> 4
+    }
+
+    #[inline]
+    pub fn section_to_block<T>(coord: T) -> T
+    where
+        T: PrimInt,
+    {
+        coord << 4
+    }
 }
 
 pub mod biome_coords {

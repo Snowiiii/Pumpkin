@@ -5,16 +5,17 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 ///
 /// Permission levels determine the player's access to commands and server operations.
 /// Each numeric level corresponds to a specific role:
-/// - `Zero`: None
-/// - `One`: Basic
-/// - `Two`: Moderator
-/// - `Three`: Admin
-/// - `Four`: Owner
+/// - `Zero`: `normal`: Player can use basic commands.
+/// - `One`: `moderator`: Player can bypass spawn protection.
+/// - `Two`: `gamemaster`: Player or executor can use more commands and player can use command blocks.
+/// - `Three`:  `admin`: Player or executor can use commands related to multiplayer management.
+/// - `Four`: `owner`: Player or executor can use all of the commands, including commands related to server management.
 #[derive(FromPrimitive, ToPrimitive, Clone, Copy, Default, PartialEq, Eq)]
 #[repr(i8)]
 pub enum PermissionLvl {
     #[default]
     Zero = 0,
+    One = 1,
     Two = 2,
     Three = 3,
     Four = 4,
