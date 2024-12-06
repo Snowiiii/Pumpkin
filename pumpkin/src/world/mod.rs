@@ -711,8 +711,7 @@ impl World {
         let current_players = self.current_players.clone();
         tokio::spawn(async move {
             let (send, mut recv) = mpsc::channel(1);
-            let player_event =
-                PlayerEvent::new(player.gameprofile.name.clone(), player.gameprofile.id, send);
+            let player_event = PlayerEvent::new(player.clone(), send);
             let players_copy = current_players.lock().await.clone();
             tokio::spawn(async move {
                 while let Some(action) = recv.recv().await {
@@ -812,7 +811,7 @@ impl World {
     ///
     /// - This function assumes `broadcast_packet_expect` and `remove_entity` are defined elsewhere.
     /// - The disconnect message sending is currently optional. Consider making it a configurable option.
-    pub async fn remove_player(&self, player: &Player) {
+    pub async fn remove_player(&self, player: Arc<Player>) {
         self.current_players
             .lock()
             .await
@@ -826,8 +825,7 @@ impl World {
         .await;
         self.remove_entity(&player.living_entity.entity).await;
         let (send, mut recv) = mpsc::channel(1);
-        let player_event =
-            PlayerEvent::new(player.gameprofile.name.clone(), player.gameprofile.id, send);
+        let player_event = PlayerEvent::new(player.clone(), send);
         let players_copy = self.current_players.lock().await.clone();
         tokio::spawn(async move {
             while let Some(action) = recv.recv().await {

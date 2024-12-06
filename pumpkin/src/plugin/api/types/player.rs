@@ -1,6 +1,10 @@
+use std::{ops::Deref, sync::Arc};
+
 use pumpkin_core::text::TextComponent;
 use tokio::sync::mpsc;
 use uuid::Uuid;
+
+use crate::entity::player::Player;
 
 pub enum PlayerEventAction<'a> {
     SendMessage {
@@ -32,19 +36,22 @@ pub enum PlayerEventAction<'a> {
 }
 
 pub struct PlayerEvent<'a> {
-    pub name: String,
-    pub uuid: Uuid,
+    pub player: Arc<Player>,
     channel: mpsc::Sender<PlayerEventAction<'a>>,
+}
+
+impl Deref for PlayerEvent<'_> {
+    type Target = Player;
+
+    fn deref(&self) -> &Self::Target {
+        &self.player
+    }
 }
 
 impl<'a> PlayerEvent<'a> {
     #[must_use]
-    pub fn new(name: String, uuid: Uuid, channel: mpsc::Sender<PlayerEventAction<'a>>) -> Self {
-        Self {
-            name,
-            uuid,
-            channel,
-        }
+    pub fn new(player: Arc<Player>, channel: mpsc::Sender<PlayerEventAction<'a>>) -> Self {
+        Self { player, channel }
     }
 
     pub async fn send_message(&self, message: TextComponent<'a>) {
@@ -52,7 +59,7 @@ impl<'a> PlayerEvent<'a> {
         self.channel
             .send(PlayerEventAction::SendMessage {
                 message,
-                player_id: self.uuid,
+                player_id: self.player.gameprofile.id,
                 response: tx,
             })
             .await
@@ -65,7 +72,7 @@ impl<'a> PlayerEvent<'a> {
         self.channel
             .send(PlayerEventAction::Kick {
                 reason,
-                player_id: self.uuid,
+                player_id: self.player.gameprofile.id,
                 response: tx,
             })
             .await

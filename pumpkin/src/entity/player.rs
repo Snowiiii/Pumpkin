@@ -232,14 +232,14 @@ impl Player {
 
     /// Removes the Player out of the current World
     #[allow(unused_variables)]
-    pub async fn remove(&self) {
+    pub async fn remove(self: Arc<Self>) {
         let world = self.world();
         // Abort pending chunks here too because we might clean up before chunk tasks are done
         self.abort_chunks("closed");
 
         self.cancel_tasks.notify_waiters();
 
-        world.remove_player(self).await;
+        world.remove_player(self.clone()).await;
 
         let cylindrical = self.watched_section.load();
 
