@@ -67,7 +67,7 @@ impl CommandExecutor for PumpkinExecutor {
                                 "https://github.com/Snowiiii/Pumpkin",
                             )))
                             .hover_event(HoverEvent::ShowText(Cow::from("Click to open link.")))
-                            .color_named(NamedColor::Aqua)
+                            .color_named(NamedColor::Blue)
                             .bold()
                             .underlined(),
                     )
@@ -79,7 +79,7 @@ impl CommandExecutor for PumpkinExecutor {
                                 "https://snowiiii.github.io/Pumpkin/",
                             )))
                             .hover_event(HoverEvent::ShowText(Cow::from("Click to open link.")))
-                            .color_named(NamedColor::Aqua)
+                            .color_named(NamedColor::Blue)
                             .bold()
                             .underlined(),
                     ),
