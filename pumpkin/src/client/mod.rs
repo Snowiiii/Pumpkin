@@ -32,8 +32,9 @@ use pumpkin_protocol::{
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Mutex;
 
+use pumpkin_protocol::server::config::SCookieResponse as SCCookieResponse;
+use pumpkin_protocol::server::login::SCookieResponse as SLCookieResponse;
 use thiserror::Error;
-
 pub mod authentication;
 mod client_packet;
 pub mod combat;
@@ -75,7 +76,7 @@ impl Default for PlayerConfig {
             chat_mode: ChatMode::Enabled,
             chat_colors: true,
             skin_parts: 0,
-            main_hand: Hand::Main,
+            main_hand: Hand::Right,
             text_filtering: false,
             server_listing: false,
         }
@@ -433,6 +434,9 @@ impl Client {
             SLoginAcknowledged::PACKET_ID => {
                 self.handle_login_acknowledged(server).await;
             }
+            SLCookieResponse::PACKET_ID => {
+                self.handle_login_cookie_response(SLCookieResponse::read(bytebuf)?);
+            }
             _ => {
                 log::error!(
                     "Failed to handle client packet id {} in Login State",
@@ -467,6 +471,9 @@ impl Client {
                 self.handle_known_packs(server, SKnownPacks::read(bytebuf)?)
                     .await;
             }
+            SCCookieResponse::PACKET_ID => {
+                self.handle_config_cookie_response(SCCookieResponse::read(bytebuf)?);
+            }
             _ => {
                 log::error!(
                     "Failed to handle client packet id {} in Config State",
@@ -496,7 +503,11 @@ impl Client {
                     return true;
                 }
                 Ok(None) => (), //log::debug!("Waiting for more data to complete packet..."),
-                Err(err) => log::warn!("Failed to decode packet for: {}", err.to_string()),
+                Err(err) => {
+                    log::warn!("Failed to decode packet for: {}", err.to_string());
+                    self.close();
+                    return false; // return to avoid reserving additional bytes
+                }
             }
 
             dec.reserve(4096);

@@ -42,6 +42,7 @@ pub mod client;
 pub mod command;
 pub mod entity;
 pub mod error;
+pub mod lan_broadcast;
 pub mod proxy;
 pub mod query;
 pub mod rcon;
@@ -95,38 +96,12 @@ const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> L
 }
 
 const CARGO_PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
-
-fn log_system_info() {
-    let os_type = sys_info::os_type().unwrap();
-    let os_release = sys_info::os_release().unwrap();
-    let arch = std::env::consts::ARCH;
-
-    if cfg!(target_os = "linux") {
-        if let Some(linux_release) = sys_info::linux_os_release().unwrap().pretty_name {
-            log::info!(
-                "Running on {} ({}) {} ({})",
-                os_type,
-                linux_release,
-                os_release,
-                arch
-            );
-            return;
-        }
-    }
-    log::info!("Running on {} {} ({})", os_type, os_release, arch);
-}
-
 const GIT_VERSION: &str = env!("GIT_VERSION");
 
 #[tokio::main]
+#[expect(clippy::too_many_lines)]
 async fn main() -> io::Result<()> {
     init_logger();
-    log_system_info();
-    log::info!("Starting Pumpkin {CARGO_PKG_VERSION} ({GIT_VERSION}) for Minecraft {CURRENT_MC_VERSION} (Protocol {CURRENT_MC_PROTOCOL})",);
-    log::warn!("Pumpkin is currently under heavy development!");
-    log::info!("Report Issues on https://github.com/Snowiiii/Pumpkin/issues");
-    log::info!("Join our Discord for community support https://discord.com/invite/wT8XjrjKkf");
-    //log::info!("CPU {} Cores {}MHz", sys_info::cpu_num().unwrap(), sys_info::cpu_speed().unwrap());
 
     // let rt = tokio::runtime::Builder::new_multi_thread()
     //     .enable_all()
@@ -147,6 +122,24 @@ async fn main() -> io::Result<()> {
         // TODO: Gracefully exit?
         std::process::exit(1);
     }));
+
+    log::info!("Starting Pumpkin {CARGO_PKG_VERSION} ({GIT_VERSION}) for Minecraft {CURRENT_MC_VERSION} (Protocol {CURRENT_MC_PROTOCOL})",);
+
+    log::debug!(
+        "Build info: FAMILY: \"{}\", OS: \"{}\", ARCH: \"{}\", BUILD: \"{}\"",
+        std::env::consts::FAMILY,
+        std::env::consts::OS,
+        std::env::consts::ARCH,
+        if cfg!(debug_assertions) {
+            "Debug"
+        } else {
+            "Release"
+        }
+    );
+
+    log::warn!("Pumpkin is currently under heavy development!");
+    log::info!("Report Issues on https://github.com/Snowiiii/Pumpkin/issues");
+    log::info!("Join our Discord for community support https://discord.com/invite/wT8XjrjKkf");
 
     let time = Instant::now();
 
@@ -181,6 +174,11 @@ async fn main() -> io::Result<()> {
     if ADVANCED_CONFIG.query.enabled {
         log::info!("Query protocol enabled. Starting...");
         tokio::spawn(query::start_query_handler(server.clone(), addr));
+    }
+
+    if ADVANCED_CONFIG.lan_broadcast.enabled {
+        log::info!("LAN broadcast enabled. Starting...");
+        tokio::spawn(lan_broadcast::start_lan_broadcast(addr));
     }
 
     {
@@ -228,7 +226,7 @@ async fn main() -> io::Result<()> {
             {
                 let (player, world) = server.add_player(client).await;
                 world
-                    .spawn_player(&BASIC_CONFIG, player.clone(), &server.command_dispatcher)
+                    .spawn_player(&BASIC_CONFIG, player.clone(), &server)
                     .await;
 
                 // poll Player

@@ -18,7 +18,7 @@ pub use var_long::*;
 
 /// To current Minecraft protocol
 /// Don't forget to change this when porting
-pub const CURRENT_MC_PROTOCOL: u32 = 768;
+pub const CURRENT_MC_PROTOCOL: u32 = 769;
 
 pub const MAX_PACKET_SIZE: i32 = 2097152;
 
@@ -68,6 +68,18 @@ pub enum SoundCategory {
     Voice,
 }
 
+#[derive(Serialize)]
+pub struct IDOrSoundEvent {
+    pub id: VarInt,
+    pub sound_event: Option<SoundEvent>,
+}
+
+#[derive(Serialize)]
+pub struct SoundEvent {
+    pub sound_name: String,
+    pub range: Option<f32>,
+}
+
 pub struct RawPacket {
     pub id: VarInt,
     pub bytebuf: ByteBuffer,
@@ -96,7 +108,7 @@ pub struct StatusResponse {
 }
 #[derive(Serialize)]
 pub struct Version {
-    /// The current name of the Version (e.g. 1.21.3)
+    /// The current name of the Version (e.g. 1.21.4)
     pub name: String,
     /// The current Protocol Version (e.g. 767)
     pub protocol: u32,

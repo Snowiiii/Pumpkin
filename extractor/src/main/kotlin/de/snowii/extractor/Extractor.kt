@@ -1,5 +1,6 @@
 package de.snowii.extractor
 
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import de.snowii.extractor.extractors.*
@@ -32,6 +33,7 @@ class Extractor : ModInitializer {
             Tags(),
             Items(),
             Blocks(),
+            Tests(),
         )
 
         val outputDirectory: Path
@@ -42,7 +44,7 @@ class Extractor : ModInitializer {
             return
         }
 
-        val gson = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().serializeNulls().create()
+        val gson = GsonBuilder().disableHtmlEscaping().create()
 
         ServerLifecycleEvents.SERVER_STARTED.register(ServerLifecycleEvents.ServerStarted { server: MinecraftServer ->
             for (ext in extractors) {

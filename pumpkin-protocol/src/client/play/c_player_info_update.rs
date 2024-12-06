@@ -21,7 +21,7 @@ impl<'a> CPlayerInfoUpdate<'a> {
     }
 }
 
-impl<'a> ClientPacket for CPlayerInfoUpdate<'a> {
+impl ClientPacket for CPlayerInfoUpdate<'_> {
     fn write(&self, bytebuf: &mut ByteBuffer) {
         bytebuf.put_i8(self.actions);
         bytebuf.put_list::<Player>(self.players, |p, v| {

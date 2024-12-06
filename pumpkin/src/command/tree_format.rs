@@ -7,7 +7,7 @@ trait IsVisible {
     fn is_visible(&self) -> bool;
 }
 
-impl<'a> IsVisible for Node<'a> {
+impl IsVisible for Node<'_> {
     fn is_visible(&self) -> bool {
         matches!(
             self.node_type,
@@ -16,7 +16,7 @@ impl<'a> IsVisible for Node<'a> {
     }
 }
 
-impl<'a> Display for Node<'a> {
+impl Display for Node<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.node_type {
             NodeType::Literal { string } => {
@@ -50,7 +50,7 @@ fn flatten_require_nodes(nodes: &[Node], children: &[usize]) -> Vec<usize> {
     new_children
 }
 
-impl<'a> Display for CommandTree<'a> {
+impl Display for CommandTree<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_char('/')?;
         f.write_str(self.names[0])?;
@@ -105,7 +105,7 @@ impl<'a> Display for CommandTree<'a> {
                     }
 
                     for node in iter {
-                        f.write_char('|')?;
+                        f.write_str(" | ")?;
                         node.fmt(f)?;
                     }
 

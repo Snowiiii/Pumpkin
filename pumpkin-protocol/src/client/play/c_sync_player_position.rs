@@ -41,7 +41,7 @@ impl<'a> CSyncPlayerPosition<'a> {
     }
 }
 
-impl<'a> ClientPacket for CSyncPlayerPosition<'a> {
+impl ClientPacket for CSyncPlayerPosition<'_> {
     fn write(&self, bytebuf: &mut crate::bytebuf::ByteBuffer) {
         bytebuf.put_var_int(&self.teleport_id);
         bytebuf.put_f64(self.x);

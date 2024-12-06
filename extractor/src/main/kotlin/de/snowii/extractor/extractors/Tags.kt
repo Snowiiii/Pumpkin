@@ -20,15 +20,15 @@ class Tags : Extractor.Extractor {
 
         for (tag in tags.entries) {
             val tagGroupTagsJson = JsonObject()
-            tagGroupTagsJson.addProperty("name", tag.key.value.toString())
+            tagGroupTagsJson.addProperty("name", tag.key.value.path)
             val tagValues =
                 tag.value.toRegistryTags(server.combinedDynamicRegistries.combinedRegistryManager.getOrThrow(tag.key))
             for (value in tagValues.tags) {
                 val tagGroupTagsJsonArray = JsonArray()
                 for (tagVal in value.value) {
-                    tagGroupTagsJsonArray.add(tagVal.key.orElseThrow().value.toString())
+                    tagGroupTagsJsonArray.add(tagVal.key.orElseThrow().value.path)
                 }
-                tagGroupTagsJson.add(value.key.id.toString(), tagGroupTagsJsonArray)
+                tagGroupTagsJson.add(value.key.id.path, tagGroupTagsJsonArray)
             }
             tagsJson.add(tagGroupTagsJson)
         }

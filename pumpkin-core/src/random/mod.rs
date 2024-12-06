@@ -8,7 +8,6 @@ pub mod xoroshiro128;
 pub enum RandomGenerator {
     Xoroshiro(Xoroshiro),
     Legacy(LegacyRand),
-    LegacyXoroshiro(Xoroshiro),
 }
 
 impl RandomGenerator {
@@ -16,7 +15,6 @@ impl RandomGenerator {
     pub fn split(&mut self) -> Self {
         match self {
             Self::Xoroshiro(rand) => Self::Xoroshiro(rand.split()),
-            Self::LegacyXoroshiro(rand) => Self::LegacyXoroshiro(rand.split()),
             Self::Legacy(rand) => Self::Legacy(rand.split()),
         }
     }
@@ -25,17 +23,7 @@ impl RandomGenerator {
     pub fn next_splitter(&mut self) -> RandomDeriver {
         match self {
             Self::Xoroshiro(rand) => RandomDeriver::Xoroshiro(rand.next_splitter()),
-            Self::LegacyXoroshiro(rand) => RandomDeriver::Xoroshiro(rand.next_splitter()),
             Self::Legacy(rand) => RandomDeriver::Legacy(rand.next_splitter()),
-        }
-    }
-
-    #[inline]
-    pub fn next(&mut self, bits: u64) -> u64 {
-        match self {
-            Self::Xoroshiro(rand) => rand.next(bits),
-            Self::LegacyXoroshiro(rand) => rand.next(bits),
-            Self::Legacy(rand) => rand.next(bits),
         }
     }
 
@@ -43,7 +31,6 @@ impl RandomGenerator {
     pub fn next_i32(&mut self) -> i32 {
         match self {
             Self::Xoroshiro(rand) => rand.next_i32(),
-            Self::LegacyXoroshiro(rand) => rand.next_i32(),
             Self::Legacy(rand) => rand.next_i32(),
         }
     }
@@ -52,7 +39,6 @@ impl RandomGenerator {
     pub fn next_bounded_i32(&mut self, bound: i32) -> i32 {
         match self {
             Self::Xoroshiro(rand) => rand.next_bounded_i32(bound),
-            Self::LegacyXoroshiro(rand) => rand.next_bounded_i32(bound),
             Self::Legacy(rand) => rand.next_bounded_i32(bound),
         }
     }
@@ -66,7 +52,6 @@ impl RandomGenerator {
     pub fn next_i64(&mut self) -> i64 {
         match self {
             Self::Xoroshiro(rand) => rand.next_i64(),
-            Self::LegacyXoroshiro(rand) => rand.next_i64(),
             Self::Legacy(rand) => rand.next_i64(),
         }
     }
@@ -75,7 +60,6 @@ impl RandomGenerator {
     pub fn next_bool(&mut self) -> bool {
         match self {
             Self::Xoroshiro(rand) => rand.next_bool(),
-            Self::LegacyXoroshiro(rand) => rand.next_bool(),
             Self::Legacy(rand) => rand.next_bool(),
         }
     }
@@ -84,7 +68,6 @@ impl RandomGenerator {
     pub fn next_f32(&mut self) -> f32 {
         match self {
             Self::Xoroshiro(rand) => rand.next_f32(),
-            Self::LegacyXoroshiro(rand) => rand.next_f32(),
             Self::Legacy(rand) => rand.next_f32(),
         }
     }
@@ -93,7 +76,6 @@ impl RandomGenerator {
     pub fn next_f64(&mut self) -> f64 {
         match self {
             Self::Xoroshiro(rand) => rand.next_f64(),
-            Self::LegacyXoroshiro(rand) => rand.next_f64(),
             Self::Legacy(rand) => rand.next_f64(),
         }
     }
@@ -102,7 +84,6 @@ impl RandomGenerator {
     pub fn next_gaussian(&mut self) -> f64 {
         match self {
             Self::Xoroshiro(rand) => rand.next_gaussian(),
-            Self::LegacyXoroshiro(rand) => rand.next_gaussian(),
             Self::Legacy(rand) => rand.next_gaussian(),
         }
     }
@@ -125,6 +106,7 @@ impl RandomGenerator {
     }
 }
 
+#[derive(Clone)]
 pub enum RandomDeriver {
     Xoroshiro(XoroshiroSplitter),
     Legacy(LegacySplitter),
@@ -162,8 +144,6 @@ pub trait RandomImpl {
     fn split(&mut self) -> Self;
 
     fn next_splitter(&mut self) -> impl RandomDeriverImpl;
-
-    fn next(&mut self, bits: u64) -> u64;
 
     fn next_i32(&mut self) -> i32;
 
@@ -215,17 +195,17 @@ fn hash_block_pos(x: i32, y: i32, z: i32) -> i64 {
     l >> 16
 }
 
-fn java_string_hash(string: &str) -> u32 {
+fn java_string_hash(string: &str) -> i32 {
     // All byte values of latin1 align with
     // the values of U+0000 - U+00FF making this code
     // equivalent to both java hash implementations
 
-    let mut result = 0u32;
+    let mut result = 0i32;
 
     for char_encoding in string.encode_utf16() {
-        result = 31u32
+        result = 31i32
             .wrapping_mul(result)
-            .wrapping_add(char_encoding as u32);
+            .wrapping_add(char_encoding as i32);
     }
     result
 }
@@ -271,12 +251,13 @@ mod tests {
                 ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄ\
                 ÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞ\
                 ßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþ",
-                (-1992287231i32) as u32,
+                -1992287231i32,
             ),
             ("求同存异", 847053876),
             // This might look wierd because hebrew is text is right to left
             ("אבְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ:", 1372570871),
             ("संस्कृत-", 1748614838),
+            ("minecraft:offset", -920384768i32),
         ];
 
         for (string, value) in values {

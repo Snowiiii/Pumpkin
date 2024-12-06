@@ -15,45 +15,44 @@ pub mod window_property;
 pub use error::InventoryError;
 pub use open_container::*;
 
-/// https://wiki.vg/Inventory
 #[derive(Debug, FromPrimitive, Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
 pub enum WindowType {
     // not used
-    Generic9x1 = screen!("minecraft:generic_9x1"),
+    Generic9x1 = screen!("generic_9x1"),
     // not used
-    Generic9x2 = screen!("minecraft:generic_9x2"),
+    Generic9x2 = screen!("generic_9x2"),
     // General-purpose 3-row inventory. Used by Chest, minecart with chest, ender chest, and barrel
-    Generic9x3 = screen!("minecraft:generic_9x3"),
+    Generic9x3 = screen!("generic_9x3"),
     // not used
-    Generic9x4 = screen!("minecraft:generic_9x4"),
+    Generic9x4 = screen!("generic_9x4"),
     // not used
-    Generic9x5 = screen!("minecraft:generic_9x5"),
+    Generic9x5 = screen!("generic_9x5"),
     // Used by large chests
-    Generic9x6 = screen!("minecraft:generic_9x6"),
+    Generic9x6 = screen!("generic_9x6"),
     // General-purpose 3-by-3 square inventory, used by Dispenser and Dropper
-    Generic3x3 = screen!("minecraft:generic_3x3"),
+    Generic3x3 = screen!("generic_3x3"),
     // General-purpose 3-by-3 square inventory, used by the Crafter
-    Craft3x3 = screen!("minecraft:crafter_3x3"),
-    Anvil = screen!("minecraft:anvil"),
-    Beacon = screen!("minecraft:beacon"),
-    BlastFurnace = screen!("minecraft:blast_furnace"),
-    BrewingStand = screen!("minecraft:brewing_stand"),
-    CraftingTable = screen!("minecraft:crafting"),
-    EnchantmentTable = screen!("minecraft:enchantment"),
-    Furnace = screen!("minecraft:furnace"),
-    Grindstone = screen!("minecraft:grindstone"),
+    Craft3x3 = screen!("crafter_3x3"),
+    Anvil = screen!("anvil"),
+    Beacon = screen!("beacon"),
+    BlastFurnace = screen!("blast_furnace"),
+    BrewingStand = screen!("brewing_stand"),
+    CraftingTable = screen!("crafting"),
+    EnchantmentTable = screen!("enchantment"),
+    Furnace = screen!("furnace"),
+    Grindstone = screen!("grindstone"),
     // Hopper or minecart with hopper
-    Hopper = screen!("minecraft:hopper"),
-    Lectern = screen!("minecraft:lectern"),
-    Loom = screen!("minecraft:loom"),
+    Hopper = screen!("hopper"),
+    Lectern = screen!("lectern"),
+    Loom = screen!("loom"),
     // Villager, Wandering Trader
-    Merchant = screen!("minecraft:merchant"),
-    ShulkerBox = screen!("minecraft:shulker_box"),
-    SmithingTable = screen!("minecraft:smithing"),
-    Smoker = screen!("minecraft:smoker"),
-    CartographyTable = screen!("minecraft:cartography_table"),
-    Stonecutter = screen!("minecraft:stonecutter"),
+    Merchant = screen!("merchant"),
+    ShulkerBox = screen!("shulker_box"),
+    SmithingTable = screen!("smithing"),
+    Smoker = screen!("smoker"),
+    CartographyTable = screen!("cartography_table"),
+    Stonecutter = screen!("stonecutter"),
 }
 pub struct ContainerStruct<const SLOTS: usize>([Option<ItemStack>; SLOTS]);
 
@@ -126,6 +125,34 @@ pub trait Container: Sync + Send {
     }
 
     fn recipe_used(&mut self) {}
+}
+
+pub struct EmptyContainer;
+
+impl Container for EmptyContainer {
+    fn window_type(&self) -> &'static WindowType {
+        unreachable!(
+            "you should never be able to get here because this type is always wrapped in an option"
+        );
+    }
+
+    fn window_name(&self) -> &'static str {
+        unreachable!(
+            "you should never be able to get here because this type is always wrapped in an option"
+        );
+    }
+
+    fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
+        unreachable!(
+            "you should never be able to get here because this type is always wrapped in an option"
+        );
+    }
+
+    fn all_slots_ref(&self) -> Vec<Option<&ItemStack>> {
+        unreachable!(
+            "you should never be able to get here because this type is always wrapped in an option"
+        );
+    }
 }
 
 pub fn handle_item_take(

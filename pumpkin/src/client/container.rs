@@ -22,7 +22,7 @@ use std::sync::Arc;
 
 impl Player {
     pub async fn open_container(&self, server: &Server, window_type: WindowType) {
-        let mut inventory = self.inventory.lock().await;
+        let mut inventory = self.inventory().lock().await;
         inventory.state_id = 0;
         inventory.total_opened_containers += 1;
         let mut container = self.get_open_container(server).await;
@@ -48,7 +48,7 @@ impl Player {
     }
 
     pub async fn set_container_content(&self, container: Option<&mut Box<dyn Container>>) {
-        let mut inventory = self.inventory.lock().await;
+        let mut inventory = self.inventory().lock().await;
 
         let total_opened_containers = inventory.total_opened_containers;
         let id = if container.is_some() {
@@ -83,7 +83,7 @@ impl Player {
 
     /// The official Minecraft client is weird, and will always just close *any* window that is opened when this gets sent
     pub async fn close_container(&self) {
-        let mut inventory = self.inventory.lock().await;
+        let mut inventory = self.inventory().lock().await;
         inventory.total_opened_containers += 1;
         self.client
             .send_packet(&CCloseContainer::new(
@@ -99,7 +99,7 @@ impl Player {
         let (id, value) = window_property.into_tuple();
         self.client
             .send_packet(&CSetContainerProperty::new(
-                self.inventory.lock().await.total_opened_containers.into(),
+                self.inventory().lock().await.total_opened_containers.into(),
                 id,
                 value,
             ))
@@ -118,7 +118,7 @@ impl Player {
         };
         let drag_handler = &server.drag_handler;
 
-        let state_id = self.inventory.lock().await.state_id;
+        let state_id = self.inventory().lock().await.state_id;
         // This is just checking for regular desync, client hasn't done anything malicious
         if state_id != packet.state_id.0 as u32 {
             self.set_container_content(opened_container.as_deref_mut())
@@ -127,7 +127,7 @@ impl Player {
         }
 
         if opened_container.is_some() {
-            let total_containers = self.inventory.lock().await.total_opened_containers;
+            let total_containers = self.inventory().lock().await.total_opened_containers;
             if packet.window_id.0 != total_containers {
                 return Err(InventoryError::ClosedContainerInteract(self.entity_id()));
             }
@@ -145,7 +145,7 @@ impl Player {
             packet.slot,
         )?;
         let (crafted_item, crafted_item_slot) = {
-            let mut inventory = self.inventory.lock().await;
+            let mut inventory = self.inventory().lock().await;
             let combined =
                 OptionallyCombinedContainer::new(&mut inventory, opened_container.as_deref_mut());
             (
@@ -173,7 +173,7 @@ impl Player {
         .await?;
         // Checks for if crafted item has been taken
         {
-            let mut inventory = self.inventory.lock().await;
+            let mut inventory = self.inventory().lock().await;
             let mut combined =
                 OptionallyCombinedContainer::new(&mut inventory, opened_container.as_deref_mut());
             if combined.crafted_item_slot().is_none() && crafted_item.is_some() {
@@ -191,7 +191,7 @@ impl Player {
                 drop(opened_container);
                 self.send_whole_container_change(server).await?;
             } else if let container_click::Slot::Normal(slot_index) = click_slot {
-                let mut inventory = self.inventory.lock().await;
+                let mut inventory = self.inventory().lock().await;
                 let combined_container =
                     OptionallyCombinedContainer::new(&mut inventory, Some(&mut opened_container));
                 if let Some(slot) = combined_container.get_slot_excluding_inventory(slot_index) {
@@ -275,7 +275,7 @@ impl Player {
         slot: container_click::Slot,
         taking_crafted: bool,
     ) -> Result<(), InventoryError> {
-        let mut inventory = self.inventory.lock().await;
+        let mut inventory = self.inventory().lock().await;
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
         match slot {
             container_click::Slot::Normal(slot) => {
@@ -299,7 +299,7 @@ impl Player {
         slot: container_click::Slot,
         taking_crafted: bool,
     ) -> Result<(), InventoryError> {
-        let mut inventory = self.inventory.lock().await;
+        let mut inventory = self.inventory().lock().await;
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
 
         match slot {
@@ -357,7 +357,7 @@ impl Player {
             KeyClick::Slot(slot) => slot,
             KeyClick::Offhand => 45,
         };
-        let mut inventory = self.inventory.lock().await;
+        let mut inventory = self.inventory().lock().await;
         let mut changing_item_slot = inventory.get_slot(changing_slot as usize)?.to_owned();
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
 
@@ -379,7 +379,7 @@ impl Player {
         if self.gamemode.load() != GameMode::Creative {
             return Err(InventoryError::PermissionError);
         }
-        let mut inventory = self.inventory.lock().await;
+        let mut inventory = self.inventory().lock().await;
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
         if let Some(Some(item)) = container.all_slots().get_mut(slot) {
             self.carried_item.store(Some(item.to_owned()));
@@ -392,7 +392,7 @@ impl Player {
         opened_container: Option<&mut Box<dyn Container>>,
         slot: usize,
     ) -> Result<(), InventoryError> {
-        let mut inventory = self.inventory.lock().await;
+        let mut inventory = self.inventory().lock().await;
         let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
         let mut slots = container.all_slots();
 
@@ -451,7 +451,7 @@ impl Player {
                 drag_handler.add_slot(container_id, player_id, slot).await
             }
             MouseDragState::End => {
-                let mut inventory = self.inventory.lock().await;
+                let mut inventory = self.inventory().lock().await;
                 let mut container =
                     OptionallyCombinedContainer::new(&mut inventory, opened_container);
                 let mut carried_item = self.carried_item.load();
@@ -511,7 +511,7 @@ impl Player {
         slot: Slot,
     ) -> Result<(), InventoryError> {
         for player in self.get_current_players_in_container(server).await {
-            let mut inventory = player.inventory.lock().await;
+            let mut inventory = player.inventory().lock().await;
             let total_opened_containers = inventory.total_opened_containers;
 
             // Returns previous value
@@ -552,8 +552,8 @@ impl Player {
     }
 
     async fn pickup_items(&self, item: &Item, mut amount: u32) {
-        let max_stack = item.max_stack as u8;
-        let mut inventory = self.inventory.lock().await;
+        let max_stack = item.components.max_stack_size;
+        let mut inventory = self.inventory().lock().await;
         let slots = inventory.slots_with_hotbar_first();
 
         let matching_slots = slots.filter_map(|slot| {
@@ -578,7 +578,7 @@ impl Player {
                 amount = amount_left;
                 *slot = Some(ItemStack {
                     item_id: item.id,
-                    item_count: item.max_stack as u8,
+                    item_count: item.components.max_stack_size,
                 });
             } else {
                 *slot = Some(ItemStack {
@@ -610,7 +610,9 @@ impl Player {
                 return;
             }
         }
-        log::warn!("{amount} items ({}) were discarded because dropping them to the ground is not implemented", item.name);
+        log::warn!(
+            "{amount} items were discarded because dropping them to the ground is not implemented"
+        );
     }
 
     /// Add items to inventory if there's space, else drop them to the ground.

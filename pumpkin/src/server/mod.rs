@@ -7,7 +7,7 @@ use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::{Container, OpenContainer};
 use pumpkin_protocol::client::login::CEncryptionRequest;
 use pumpkin_protocol::{client::config::CPluginMessage, ClientPacket};
-use pumpkin_registry::Registry;
+use pumpkin_registry::{DimensionType, Registry};
 use pumpkin_world::dimension::Dimension;
 use rand::prelude::SliceRandom;
 use std::collections::HashMap;
@@ -21,6 +21,7 @@ use std::{
 use tokio::sync::{Mutex, RwLock};
 
 use crate::client::EncryptionError;
+use crate::world::custom_bossbar::CustomBossbars;
 use crate::{
     client::Client,
     command::{default_dispatcher, dispatcher::CommandDispatcher},
@@ -32,7 +33,7 @@ mod connection_cache;
 mod key_store;
 pub mod ticker;
 
-pub const CURRENT_MC_VERSION: &str = "1.21.3";
+pub const CURRENT_MC_VERSION: &str = "1.21.4";
 
 /// Represents a Minecraft server instance.
 pub struct Server {
@@ -46,6 +47,8 @@ pub struct Server {
     pub command_dispatcher: Arc<CommandDispatcher<'static>>,
     /// Manages multiple worlds within the server.
     pub worlds: Vec<Arc<World>>,
+    // All the dimensions that exists on the server,
+    pub dimensions: Vec<DimensionType>,
     /// Caches game registries for efficient access.
     pub cached_registry: Vec<Registry>,
     /// Tracks open containers used for item interactions.
@@ -55,6 +58,8 @@ pub struct Server {
     entity_id: AtomicI32,
     /// Manages authentication with a authentication server, if enabled.
     pub auth_client: Option<reqwest::Client>,
+    /// The server's custom bossbars
+    pub bossbars: Mutex<CustomBossbars>,
 }
 
 impl Server {
@@ -77,10 +82,13 @@ impl Server {
         // First register default command, after that plugins can put in their own
         let command_dispatcher = default_dispatcher();
 
-        let world = World::load(Dimension::OverWorld.into_level(
-            // TODO: load form config
-            "./world".parse().unwrap(),
-        ));
+        let world = World::load(
+            Dimension::OverWorld.into_level(
+                // TODO: load form config
+                "./world".parse().unwrap(),
+            ),
+            DimensionType::Overworld,
+        );
         Self {
             cached_registry: Registry::get_synced(),
             open_containers: RwLock::new(HashMap::new()),
@@ -88,16 +96,23 @@ impl Server {
             // 0 is invalid
             entity_id: 2.into(),
             worlds: vec![Arc::new(world)],
+            dimensions: vec![
+                DimensionType::Overworld,
+                DimensionType::OverworldCaves,
+                DimensionType::TheNether,
+                DimensionType::TheEnd,
+            ],
             command_dispatcher,
             auth_client,
             key_store: KeyStore::new(),
             server_listing: Mutex::new(CachedStatus::new()),
             server_branding: CachedBranding::new(),
+            bossbars: Mutex::new(CustomBossbars::new()),
         }
     }
 
     /// Adds a new player to the server.
-
+    ///
     /// This function takes an `Arc<Client>` representing the connected client and performs the following actions:
     ///
     /// 1. Generates a new entity ID for the player.
@@ -110,7 +125,7 @@ impl Server {
     /// # Arguments
     ///
     /// * `client`: An `Arc<Client>` representing the connected client.
-
+    ///
     /// # Returns
     ///
     /// A tuple containing:
@@ -286,7 +301,7 @@ impl Server {
         &'a self,
         verification_token: &'a [u8; 4],
         should_authenticate: bool,
-    ) -> CEncryptionRequest<'_> {
+    ) -> CEncryptionRequest<'a> {
         self.key_store
             .encryption_request("", verification_token, should_authenticate)
     }

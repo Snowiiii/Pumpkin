@@ -1,10 +1,10 @@
 use core::str;
 use std::borrow::Cow;
 
+use crate::text::color::ARGBColor;
 use click::ClickEvent;
 use color::Color;
 use colored::Colorize;
-use fastnbt::SerOpts;
 use hover::HoverEvent;
 use serde::{Deserialize, Serialize};
 use style::Style;
@@ -16,12 +16,9 @@ pub mod style;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(transparent)]
-// TODO: Use this instead of TextComponent alone to allow for example text with different colors
-// TODO: Allow to mix TextComponent and String
 pub struct Text<'a>(pub Box<TextComponent<'a>>);
 
 // Represents a Text component
-// Reference: https://wiki.vg/Text_formatting#Text_components
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct TextComponent<'a> {
@@ -32,6 +29,8 @@ pub struct TextComponent<'a> {
     /// Also has `ClickEvent
     #[serde(flatten)]
     pub style: Style<'a>,
+    /// Extra text components
+    pub extra: Vec<TextComponent<'a>>,
 }
 
 impl<'a> TextComponent<'a> {
@@ -39,6 +38,7 @@ impl<'a> TextComponent<'a> {
         Self {
             content: TextContent::Text { text: text.into() },
             style: Style::default(),
+            extra: vec![],
         }
     }
 
@@ -46,7 +46,13 @@ impl<'a> TextComponent<'a> {
         Self {
             content: TextContent::Text { text: text.into() },
             style: Style::default(),
+            extra: vec![],
         }
+    }
+
+    pub fn add_child(mut self, child: TextComponent<'a>) -> Self {
+        self.extra.push(child);
+        self
     }
 
     pub fn to_pretty_console(self) -> String {
@@ -82,11 +88,14 @@ impl<'a> TextComponent<'a> {
                 text = format!("\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\", url, text).to_string()
             }
         }
+        for child in self.extra {
+            text += &*child.to_pretty_console();
+        }
         text
     }
 }
 
-impl<'a> serde::Serialize for TextComponent<'a> {
+impl serde::Serialize for TextComponent<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -113,31 +122,31 @@ impl<'a> TextComponent<'a> {
 
     /// Makes the text bold
     pub fn bold(mut self) -> Self {
-        self.style.bold = Some(1);
+        self.style.bold = Some(true);
         self
     }
 
     /// Makes the text italic
     pub fn italic(mut self) -> Self {
-        self.style.italic = Some(1);
+        self.style.italic = Some(true);
         self
     }
 
     /// Makes the text underlined
     pub fn underlined(mut self) -> Self {
-        self.style.underlined = Some(1);
+        self.style.underlined = Some(true);
         self
     }
 
     /// Makes the text strikethrough
     pub fn strikethrough(mut self) -> Self {
-        self.style.strikethrough = Some(1);
+        self.style.strikethrough = Some(true);
         self
     }
 
     /// Makes the text obfuscated
     pub fn obfuscated(mut self) -> Self {
-        self.style.obfuscated = Some(1);
+        self.style.obfuscated = Some(true);
         self
     }
 
@@ -159,6 +168,19 @@ impl<'a> TextComponent<'a> {
         self
     }
 
+    /// Allows you to change the font of the text.
+    /// Default fonts: `minecraft:default`, `minecraft:uniform`, `minecraft:alt`, `minecraft:illageralt`
+    pub fn font(mut self, identifier: String) -> Self {
+        self.style.font = Some(identifier);
+        self
+    }
+
+    /// Overrides the shadow properties of text.
+    pub fn shadow_color(mut self, color: ARGBColor) -> Self {
+        self.style.shadow_color = Some(color);
+        self
+    }
+
     pub fn encode(&self) -> Vec<u8> {
         // TODO: Somehow fix this ugly mess
         #[derive(serde::Serialize)]
@@ -168,14 +190,34 @@ impl<'a> TextComponent<'a> {
             text: &'a TextContent<'a>,
             #[serde(flatten)]
             style: &'a Style<'a>,
+            #[serde(default, skip_serializing_if = "Vec::is_empty")]
+            #[serde(rename = "extra")]
+            extra: Vec<TempStruct<'a>>,
         }
+        fn convert_extra<'a>(extra: &'a [TextComponent<'a>]) -> Vec<TempStruct<'a>> {
+            extra
+                .iter()
+                .map(|x| TempStruct {
+                    text: &x.content,
+                    style: &x.style,
+                    extra: convert_extra(&x.extra),
+                })
+                .collect()
+        }
+
+        let temp_extra = convert_extra(&self.extra);
         let astruct = TempStruct {
             text: &self.content,
             style: &self.style,
+            extra: temp_extra,
         };
         // dbg!(&serde_json::to_string(&astruct));
+        // dbg!(pumpkin_nbt::serializer::to_bytes_unnamed(&astruct).unwrap().to_vec());
 
-        fastnbt::to_bytes_with_opts(&astruct, SerOpts::network_nbt()).unwrap()
+        // TODO
+        pumpkin_nbt::serializer::to_bytes_unnamed(&astruct)
+            .unwrap()
+            .to_vec()
     }
 }
 

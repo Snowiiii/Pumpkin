@@ -41,7 +41,7 @@ impl KeyStore {
         server_id: &'a str,
         verification_token: &'a [u8; 4],
         should_authenticate: bool,
-    ) -> CEncryptionRequest<'_> {
+    ) -> CEncryptionRequest<'a> {
         CEncryptionRequest::new(
             server_id,
             &self.public_key_der,

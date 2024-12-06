@@ -5,7 +5,7 @@
 ![CI](https://github.com/Snowiiii/Pumpkin/actions/workflows/rust.yml/badge.svg)
 [![Discord](https://img.shields.io/discord/1268592337445978193.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/wT8XjrjKkf)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![Current version)](https://img.shields.io/badge/current_version-1.21.3-blue)
+![Current version)](https://img.shields.io/badge/current_version-1.21.4-blue)
 
 </div>
 
@@ -40,18 +40,19 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 - Player Configuration
   - [x] Registries (biome types, paintings, dimensions)
   - [x] Server Brand
-  - [ ] Server Links
+  - [x] Server Links
   - [x] Set Resource Pack
-  - [ ] Cookies
+  - [x] Cookies
 - World
   - [x] World Joining
   - [x] Player Tab-list
   - [x] World Loading
   - [x] Lighting
   - [x] Entity Spawning
+  - [x] Bossbar
   - [x] Chunk Loading
   - [x] Chunk Generation
-  - [ ] World Time
+  - [x] World Time
   - [x] Scoreboard
   - [x] World Borders
   - [ ] World Saving

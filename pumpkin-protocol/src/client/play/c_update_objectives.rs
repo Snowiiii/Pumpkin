@@ -30,7 +30,7 @@ impl<'a> CUpdateObjectives<'a> {
     }
 }
 
-impl<'a> ClientPacket for CUpdateObjectives<'a> {
+impl ClientPacket for CUpdateObjectives<'_> {
     fn write(&self, bytebuf: &mut crate::bytebuf::ByteBuffer) {
         bytebuf.put_string(self.objective_name);
         bytebuf.put_u8(self.mode);
@@ -45,7 +45,7 @@ impl<'a> ClientPacket for CUpdateObjectives<'a> {
                     NumberFormat::Styled(style) => {
                         p.put_var_int(&VarInt(1));
                         // TODO
-                        p.put_slice(&fastnbt::to_bytes(style).unwrap());
+                        p.put_slice(&pumpkin_nbt::serializer::to_bytes_unnamed(style).unwrap());
                     }
                     NumberFormat::Fixed(text_component) => {
                         p.put_var_int(&VarInt(2));

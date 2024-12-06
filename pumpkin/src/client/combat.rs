@@ -29,7 +29,7 @@ impl AttackType {
         let sprinting = entity.sprinting.load(std::sync::atomic::Ordering::Relaxed);
         let on_ground = entity.on_ground.load(std::sync::atomic::Ordering::Relaxed);
         let sword = player
-            .inventory
+            .inventory()
             .lock()
             .await
             .held_item()
@@ -113,7 +113,7 @@ pub async fn spawn_sweep_particle(attacker_entity: &Entity, world: &World, pos: 
             0.0,
             0.0,
             0,
-            VarInt(i32::from(particle!("minecraft:sweep_attack"))), // sweep
+            VarInt(i32::from(particle!("sweep_attack"))), // sweep
             &[],
         ))
         .await;
@@ -124,7 +124,7 @@ pub async fn player_attack_sound(pos: &Vector3<f64>, world: &World, attack_type:
         AttackType::Knockback => {
             world
                 .play_sound(
-                    sound!("minecraft:entity.player.attack.knockback"),
+                    sound!("entity.player.attack.knockback"),
                     SoundCategory::Players,
                     pos,
                 )
@@ -133,7 +133,7 @@ pub async fn player_attack_sound(pos: &Vector3<f64>, world: &World, attack_type:
         AttackType::Critical => {
             world
                 .play_sound(
-                    sound!("minecraft:entity.player.attack.crit"),
+                    sound!("entity.player.attack.crit"),
                     SoundCategory::Players,
                     pos,
                 )
@@ -142,7 +142,7 @@ pub async fn player_attack_sound(pos: &Vector3<f64>, world: &World, attack_type:
         AttackType::Sweeping => {
             world
                 .play_sound(
-                    sound!("minecraft:entity.player.attack.sweep"),
+                    sound!("entity.player.attack.sweep"),
                     SoundCategory::Players,
                     pos,
                 )
@@ -151,7 +151,7 @@ pub async fn player_attack_sound(pos: &Vector3<f64>, world: &World, attack_type:
         AttackType::Strong => {
             world
                 .play_sound(
-                    sound!("minecraft:entity.player.attack.strong"),
+                    sound!("entity.player.attack.strong"),
                     SoundCategory::Players,
                     pos,
                 )
@@ -160,7 +160,7 @@ pub async fn player_attack_sound(pos: &Vector3<f64>, world: &World, attack_type:
         AttackType::Weak => {
             world
                 .play_sound(
-                    sound!("minecraft:entity.player.attack.weak"),
+                    sound!("entity.player.attack.weak"),
                     SoundCategory::Players,
                     pos,
                 )
