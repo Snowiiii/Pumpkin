@@ -630,15 +630,37 @@ impl Player {
 
     pub async fn set_gamemode(&self, gamemode: GameMode) {
         // We could send the same gamemode without problems. But why waste bandwidth ?
-        let current_gamemode = self.gamemode.load();
-        assert!(
-            current_gamemode != gamemode,
+        assert_ne!(
+            self.gamemode.load(),
+            gamemode,
             "Setting the same gamemode as already is"
         );
         self.gamemode.store(gamemode);
-        self.abilities.lock().await.flying = false;
-        // So a little story time. I actually made an abilties_from_gamemode function. I looked at vanilla and they always send the abilties from the gamemode. But the funny thing actually is. That the client
-        // does actually use the same method and set the abilties when receiving the CGameEvent gamemode packet. Just Mojang nonsense
+        // The client is using the same method for setting abilities when receiving the CGameEvent ChangeGameMode packet.
+        // So we can just update the abilities without sending them.
+        {
+            // use another scope so we instantly unlock abilities
+            let mut abilities = self.abilities.lock().await;
+            match gamemode {
+                GameMode::Undefined | GameMode::Survival | GameMode::Adventure => {
+                    abilities.flying = false;
+                    abilities.allow_flying = false;
+                    abilities.creative = false;
+                    abilities.invulnerable = false;
+                }
+                GameMode::Creative => {
+                    abilities.allow_flying = true;
+                    abilities.creative = true;
+                    abilities.invulnerable = true;
+                }
+                GameMode::Spectator => {
+                    abilities.flying = true;
+                    abilities.allow_flying = true;
+                    abilities.creative = false;
+                    abilities.invulnerable = true;
+                }
+            }
+        }
         self.living_entity
             .entity
             .world
@@ -886,9 +908,14 @@ pub enum ChatMode {
 #[derive(Debug, FromPrimitive, ToPrimitive, Clone, Copy)]
 #[repr(i8)]
 pub enum PermissionLvl {
+    /// `normal`: Player can use basic commands.
     Zero = 0,
+    /// `moderator`: Player can bypass spawn protection.
     One = 1,
+    /// `gamemaster`: Player or executor can use more commands and player can use command blocks.
     Two = 2,
+    /// `admin`: Player or executor can use commands related to multiplayer management.
     Three = 3,
+    /// `owner`: Player or executor can use all of the commands, including commands related to server management.
     Four = 4,
 }
