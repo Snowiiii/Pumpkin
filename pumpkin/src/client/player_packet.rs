@@ -114,18 +114,17 @@ impl Player {
         pos.clamp(-2.0E7, 2.0E7)
     }
 
-    pub async fn handle_position(self: &Arc<Self>, position_packet: SPlayerPosition) {
-        if position_packet.x.is_nan()
-            || position_packet.feet_y.is_nan()
-            || position_packet.z.is_nan()
-        {
+    pub async fn handle_position(self: &Arc<Self>, packet: SPlayerPosition) {
+        // y = feet Y
+        let position = packet.position;
+        if position.x.is_nan() || position.y.is_nan() || position.z.is_nan() {
             self.kick(TextComponent::text("Invalid movement")).await;
             return;
         }
         let position = Vector3::new(
-            Self::clamp_horizontal(position_packet.x),
-            Self::clamp_vertical(position_packet.feet_y),
-            Self::clamp_horizontal(position_packet.z),
+            Self::clamp_horizontal(position.x),
+            Self::clamp_vertical(position.y),
+            Self::clamp_horizontal(position.z),
         );
         let entity = &self.living_entity.entity;
         self.living_entity.set_pos(position);
@@ -135,11 +134,10 @@ impl Player {
 
         entity
             .on_ground
-            .store(position_packet.ground, std::sync::atomic::Ordering::Relaxed);
+            .store(packet.ground, std::sync::atomic::Ordering::Relaxed);
 
         let entity_id = entity.entity_id;
         let Vector3 { x, y, z } = pos;
-        let (last_x, last_y, last_z) = (last_pos.x, last_pos.y, last_pos.z);
         let world = &entity.world;
 
         // let delta = Vector3::new(x - lastx, y - lasty, z - lastz);
@@ -160,36 +158,34 @@ impl Player {
                 &[self.gameprofile.id],
                 &CUpdateEntityPos::new(
                     entity_id.into(),
-                    x.mul_add(4096.0, -(last_x * 4096.0)) as i16,
-                    y.mul_add(4096.0, -(last_y * 4096.0)) as i16,
-                    z.mul_add(4096.0, -(last_z * 4096.0)) as i16,
-                    position_packet.ground,
+                    Vector3::new(
+                        x.mul_add(4096.0, -(last_pos.x * 4096.0)) as i16,
+                        y.mul_add(4096.0, -(last_pos.y * 4096.0)) as i16,
+                        z.mul_add(4096.0, -(last_pos.z * 4096.0)) as i16,
+                    ),
+                    packet.ground,
                 ),
             )
             .await;
         player_chunker::update_position(self).await;
     }
 
-    pub async fn handle_position_rotation(
-        self: &Arc<Self>,
-        position_rotation: SPlayerPositionRotation,
-    ) {
-        if position_rotation.x.is_nan()
-            || position_rotation.feet_y.is_nan()
-            || position_rotation.z.is_nan()
-        {
+    pub async fn handle_position_rotation(self: &Arc<Self>, packet: SPlayerPositionRotation) {
+        // y = feet Y
+        let position = packet.position;
+        if position.x.is_nan() || position.y.is_nan() || position.z.is_nan() {
             self.kick(TextComponent::text("Invalid movement")).await;
             return;
         }
 
-        if position_rotation.yaw.is_infinite() || position_rotation.pitch.is_infinite() {
+        if packet.yaw.is_infinite() || packet.pitch.is_infinite() {
             self.kick(TextComponent::text("Invalid rotation")).await;
             return;
         }
         let position = Vector3::new(
-            Self::clamp_horizontal(position_rotation.x),
-            Self::clamp_vertical(position_rotation.feet_y),
-            Self::clamp_horizontal(position_rotation.z),
+            Self::clamp_horizontal(position.x),
+            Self::clamp_vertical(position.y),
+            Self::clamp_horizontal(position.z),
         );
         let entity = &self.living_entity.entity;
         self.living_entity.set_pos(position);
@@ -197,19 +193,17 @@ impl Player {
         let pos = entity.pos.load();
         let last_pos = self.living_entity.last_pos.load();
 
-        entity.on_ground.store(
-            position_rotation.ground,
-            std::sync::atomic::Ordering::Relaxed,
-        );
+        entity
+            .on_ground
+            .store(packet.ground, std::sync::atomic::Ordering::Relaxed);
 
         entity.set_rotation(
-            wrap_degrees(position_rotation.yaw) % 360.0,
-            wrap_degrees(position_rotation.pitch).clamp(-90.0, 90.0) % 360.0,
+            wrap_degrees(packet.yaw) % 360.0,
+            wrap_degrees(packet.pitch).clamp(-90.0, 90.0) % 360.0,
         );
 
         let entity_id = entity.entity_id;
         let Vector3 { x, y, z } = pos;
-        let (last_x, last_y, last_z) = (last_pos.x, last_pos.y, last_pos.z);
 
         let yaw = modulus(entity.yaw.load() * 256.0 / 360.0, 256.0);
         let pitch = modulus(entity.pitch.load() * 256.0 / 360.0, 256.0);
@@ -235,12 +229,14 @@ impl Player {
                 &[self.gameprofile.id],
                 &CUpdateEntityPosRot::new(
                     entity_id.into(),
-                    x.mul_add(4096.0, -(last_x * 4096.0)) as i16,
-                    y.mul_add(4096.0, -(last_y * 4096.0)) as i16,
-                    z.mul_add(4096.0, -(last_z * 4096.0)) as i16,
+                    Vector3::new(
+                        x.mul_add(4096.0, -(last_pos.x * 4096.0)) as i16,
+                        y.mul_add(4096.0, -(last_pos.y * 4096.0)) as i16,
+                        z.mul_add(4096.0, -(last_pos.z * 4096.0)) as i16,
+                    ),
                     yaw as u8,
                     pitch as u8,
-                    position_rotation.ground,
+                    packet.ground,
                 ),
             )
             .await;
