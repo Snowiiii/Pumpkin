@@ -35,7 +35,7 @@ impl ArgumentConsumer for SimpleArgConsumer {
         _server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
-        Some(Arg::Simple(args.pop()?.to_string()))
+        Some(Arg::Simple(args.pop()?))
     }
 
     async fn suggest<'a>(

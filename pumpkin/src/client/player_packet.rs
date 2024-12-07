@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use super::PlayerConfig;
+use crate::block::block_manager::BlockActionResult;
 use crate::{
     command::CommandSender,
     entity::player::{ChatMode, Hand, Player},
@@ -35,9 +37,8 @@ use pumpkin_protocol::{
     },
 };
 use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
+use pumpkin_world::item::item_registry::get_item_by_id;
 use thiserror::Error;
-
-use super::PlayerConfig;
 
 fn modulus(a: f32, b: f32) -> f32 {
     ((a % b) + b) % b
@@ -48,6 +49,7 @@ pub enum BlockPlacingError {
     BlockOutOfReach,
     InvalidBlockFace,
     BlockOutOfWorld,
+    InventoryInvalid,
 }
 
 impl std::fmt::Display for BlockPlacingError {
@@ -60,7 +62,7 @@ impl PumpkinError for BlockPlacingError {
     fn is_kick(&self) -> bool {
         match self {
             Self::BlockOutOfReach | Self::BlockOutOfWorld => false,
-            Self::InvalidBlockFace => true,
+            Self::InvalidBlockFace | Self::InventoryInvalid => true,
         }
     }
 
@@ -69,6 +71,7 @@ impl PumpkinError for BlockPlacingError {
             Self::BlockOutOfReach | Self::BlockOutOfWorld | Self::InvalidBlockFace => {
                 log::Level::Warn
             }
+            Self::InventoryInvalid => log::Level::Error,
         }
     }
 
@@ -76,6 +79,7 @@ impl PumpkinError for BlockPlacingError {
         match self {
             Self::BlockOutOfReach | Self::BlockOutOfWorld => None,
             Self::InvalidBlockFace => Some("Invalid block face".into()),
+            Self::InventoryInvalid => Some("Held item invalid".into()),
         }
     }
 }
@@ -88,8 +92,7 @@ impl Player {
         if let Some((id, position)) = awaiting_teleport.as_ref() {
             if id == &confirm_teleport.teleport_id {
                 // we should set the pos now to that we requested in the teleport packet, Is may fixed issues when the client sended position packets while being teleported
-                self.living_entity
-                    .set_pos(position.x, position.y, position.z);
+                self.living_entity.set_pos(*position);
 
                 *awaiting_teleport = None;
             } else {
@@ -111,29 +114,30 @@ impl Player {
         pos.clamp(-2.0E7, 2.0E7)
     }
 
-    pub async fn handle_position(self: &Arc<Self>, position: SPlayerPosition) {
-        if position.x.is_nan() || position.feet_y.is_nan() || position.z.is_nan() {
+    pub async fn handle_position(self: &Arc<Self>, packet: SPlayerPosition) {
+        // y = feet Y
+        let position = packet.position;
+        if position.x.is_nan() || position.y.is_nan() || position.z.is_nan() {
             self.kick(TextComponent::text("Invalid movement")).await;
             return;
         }
-
-        let entity = &self.living_entity.entity;
-        self.living_entity.set_pos(
+        let position = Vector3::new(
             Self::clamp_horizontal(position.x),
-            Self::clamp_vertical(position.feet_y),
+            Self::clamp_vertical(position.y),
             Self::clamp_horizontal(position.z),
         );
+        let entity = &self.living_entity.entity;
+        self.living_entity.set_pos(position);
 
         let pos = entity.pos.load();
         let last_pos = self.living_entity.last_pos.load();
 
         entity
             .on_ground
-            .store(position.ground, std::sync::atomic::Ordering::Relaxed);
+            .store(packet.ground, std::sync::atomic::Ordering::Relaxed);
 
         let entity_id = entity.entity_id;
         let Vector3 { x, y, z } = pos;
-        let (last_x, last_y, last_z) = (last_pos.x, last_pos.y, last_pos.z);
         let world = &entity.world;
 
         // let delta = Vector3::new(x - lastx, y - lasty, z - lastz);
@@ -154,56 +158,52 @@ impl Player {
                 &[self.gameprofile.id],
                 &CUpdateEntityPos::new(
                     entity_id.into(),
-                    x.mul_add(4096.0, -(last_x * 4096.0)) as i16,
-                    y.mul_add(4096.0, -(last_y * 4096.0)) as i16,
-                    z.mul_add(4096.0, -(last_z * 4096.0)) as i16,
-                    position.ground,
+                    Vector3::new(
+                        x.mul_add(4096.0, -(last_pos.x * 4096.0)) as i16,
+                        y.mul_add(4096.0, -(last_pos.y * 4096.0)) as i16,
+                        z.mul_add(4096.0, -(last_pos.z * 4096.0)) as i16,
+                    ),
+                    packet.ground,
                 ),
             )
             .await;
         player_chunker::update_position(self).await;
     }
 
-    pub async fn handle_position_rotation(
-        self: &Arc<Self>,
-        position_rotation: SPlayerPositionRotation,
-    ) {
-        if position_rotation.x.is_nan()
-            || position_rotation.feet_y.is_nan()
-            || position_rotation.z.is_nan()
-        {
+    pub async fn handle_position_rotation(self: &Arc<Self>, packet: SPlayerPositionRotation) {
+        // y = feet Y
+        let position = packet.position;
+        if position.x.is_nan() || position.y.is_nan() || position.z.is_nan() {
             self.kick(TextComponent::text("Invalid movement")).await;
             return;
         }
 
-        if position_rotation.yaw.is_infinite() || position_rotation.pitch.is_infinite() {
+        if packet.yaw.is_infinite() || packet.pitch.is_infinite() {
             self.kick(TextComponent::text("Invalid rotation")).await;
             return;
         }
-
-        let entity = &self.living_entity.entity;
-        self.living_entity.set_pos(
-            Self::clamp_horizontal(position_rotation.x),
-            Self::clamp_vertical(position_rotation.feet_y),
-            Self::clamp_horizontal(position_rotation.z),
+        let position = Vector3::new(
+            Self::clamp_horizontal(position.x),
+            Self::clamp_vertical(position.y),
+            Self::clamp_horizontal(position.z),
         );
+        let entity = &self.living_entity.entity;
+        self.living_entity.set_pos(position);
 
         let pos = entity.pos.load();
         let last_pos = self.living_entity.last_pos.load();
 
-        entity.on_ground.store(
-            position_rotation.ground,
-            std::sync::atomic::Ordering::Relaxed,
-        );
+        entity
+            .on_ground
+            .store(packet.ground, std::sync::atomic::Ordering::Relaxed);
 
         entity.set_rotation(
-            wrap_degrees(position_rotation.yaw) % 360.0,
-            wrap_degrees(position_rotation.pitch).clamp(-90.0, 90.0) % 360.0,
+            wrap_degrees(packet.yaw) % 360.0,
+            wrap_degrees(packet.pitch).clamp(-90.0, 90.0) % 360.0,
         );
 
         let entity_id = entity.entity_id;
         let Vector3 { x, y, z } = pos;
-        let (last_x, last_y, last_z) = (last_pos.x, last_pos.y, last_pos.z);
 
         let yaw = modulus(entity.yaw.load() * 256.0 / 360.0, 256.0);
         let pitch = modulus(entity.pitch.load() * 256.0 / 360.0, 256.0);
@@ -229,12 +229,14 @@ impl Player {
                 &[self.gameprofile.id],
                 &CUpdateEntityPosRot::new(
                     entity_id.into(),
-                    x.mul_add(4096.0, -(last_x * 4096.0)) as i16,
-                    y.mul_add(4096.0, -(last_y * 4096.0)) as i16,
-                    z.mul_add(4096.0, -(last_z * 4096.0)) as i16,
+                    Vector3::new(
+                        x.mul_add(4096.0, -(last_pos.x * 4096.0)) as i16,
+                        y.mul_add(4096.0, -(last_pos.y * 4096.0)) as i16,
+                        z.mul_add(4096.0, -(last_pos.z * 4096.0)) as i16,
+                    ),
                     yaw as u8,
                     pitch as u8,
-                    position_rotation.ground,
+                    packet.ground,
                 ),
             )
             .await;
@@ -523,7 +525,7 @@ impl Player {
         }
     }
 
-    pub async fn handle_player_action(&self, player_action: SPlayerAction) {
+    pub async fn handle_player_action(&self, player_action: SPlayerAction, server: &Server) {
         match Status::from_i32(player_action.status.0) {
             Some(status) => match status {
                 Status::StartedDigging => {
@@ -542,7 +544,16 @@ impl Player {
                         // Block break & block break sound
                         let entity = &self.living_entity.entity;
                         let world = &entity.world;
+                        let block = world.get_block(location).await;
+
                         world.break_block(location, Some(self)).await;
+
+                        if let Ok(block) = block {
+                            server
+                                .block_manager
+                                .on_broken(block, self, location, server)
+                                .await;
+                        }
                     }
                 }
                 Status::CancelledDigging => {
@@ -571,7 +582,16 @@ impl Player {
                     // Block break & block break sound
                     let entity = &self.living_entity.entity;
                     let world = &entity.world;
+                    let block = world.get_block(location).await;
+
                     world.break_block(location, Some(self)).await;
+
+                    if let Ok(block) = block {
+                        server
+                            .block_manager
+                            .on_broken(block, self, location, server)
+                            .await;
+                    }
                     // TODO: Send this every tick
                     self.client
                         .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence))
@@ -624,6 +644,7 @@ impl Player {
     pub async fn handle_use_item_on(
         &self,
         use_item_on: SUseItemOn,
+        server: &Server,
     ) -> Result<(), Box<dyn PumpkinError>> {
         let location = use_item_on.location;
 
@@ -633,22 +654,46 @@ impl Player {
         }
 
         if let Some(face) = BlockFace::from_i32(use_item_on.face.0) {
-            let mut inventory = self.inventory().lock().await;
-            let item_slot = inventory.held_item_mut();
-            if let Some(item) = item_slot {
-                let block = get_block_by_item(item.item_id);
-                // check if item is a block, Because Not every item can be placed :D
-                if let Some(block) = block {
-                    let entity = &self.living_entity.entity;
-                    let world = &entity.world;
+            let inventory = self.inventory().lock().await;
+            let entity = &self.living_entity.entity;
+            let world = &entity.world;
+            let item_slot = inventory.held_item();
 
+            if let Some(item_stack) = item_slot {
+                let item_stack = *item_stack;
+                drop(inventory);
+
+                if let Some(item) = get_item_by_id(item_stack.item_id) {
+                    if let Ok(block) = world.get_block(location).await {
+                        let result = server
+                            .block_manager
+                            .on_use_with_item(block, self, location, item, server)
+                            .await;
+                        match result {
+                            BlockActionResult::Continue => {}
+                            BlockActionResult::Consume => {
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+
+                // check if item is a block, Because Not every item can be placed :D
+                if let Some(block) = get_block_by_item(item_stack.item_id) {
                     // TODO: Config
                     // Decrease Block count
                     if self.gamemode.load() != GameMode::Creative {
-                        item.item_count -= 1;
-                        if item.item_count == 0 {
+                        let mut inventory = self.inventory().lock().await;
+                        let item_slot = inventory.held_item_mut();
+                        // This should never be possible
+                        let Some(item_stack) = item_slot else {
+                            return Err(BlockPlacingError::InventoryInvalid.into());
+                        };
+                        item_stack.item_count -= 1;
+                        if item_stack.item_count == 0 {
                             *item_slot = None;
                         }
+                        drop(inventory);
                     }
 
                     let clicked_world_pos = WorldPosition(location.0);
@@ -682,11 +727,25 @@ impl Player {
                         world
                             .set_block_state(world_pos, block.default_state_id)
                             .await;
+                        server
+                            .block_manager
+                            .on_placed(block, self, world_pos, server)
+                            .await;
                     }
+
+                    self.client
+                        .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
+                        .await;
                 }
-                self.client
-                    .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))
-                    .await;
+            } else {
+                drop(inventory);
+                let block = world.get_block(location).await;
+                if let Ok(block) = block {
+                    server
+                        .block_manager
+                        .on_use(block, self, location, server)
+                        .await;
+                }
             }
 
             Ok(())

@@ -179,6 +179,9 @@ impl Player {
             if combined.crafted_item_slot().is_none() && crafted_item.is_some() {
                 combined.recipe_used();
             }
+
+            // TODO: `combined.craft` uses rayon! It should be called from `rayon::spawn` and its
+            // result passed to the tokio runtime via a channel!
             if combined.craft() {
                 drop(inventory);
                 self.set_container_content(opened_container.as_deref_mut())

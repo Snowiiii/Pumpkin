@@ -1,6 +1,6 @@
 use log::warn;
 use logging::LoggingConfig;
-use pumpkin_core::{permission::PermissionLvl, Difficulty, GameMode};
+use pumpkin_core::{Difficulty, GameMode, PermissionLvl};
 use query::QueryConfig;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 

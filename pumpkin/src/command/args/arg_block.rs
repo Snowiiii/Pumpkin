@@ -37,14 +37,7 @@ impl ArgumentConsumer for BlockArgumentConsumer {
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
         let s = args.pop()?;
-
-        let name = if s.contains(':') {
-            s.to_string()
-        } else {
-            format!("minecraft:{s}")
-        };
-
-        Some(Arg::Block(name))
+        Some(Arg::Block(s))
     }
 
     async fn suggest<'a>(

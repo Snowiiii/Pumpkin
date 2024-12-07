@@ -5,6 +5,7 @@ pub mod random;
 pub mod text;
 
 pub use gamemode::GameMode;
+pub use permission::PermissionLvl;
 
 use serde::{Deserialize, Serialize};
 

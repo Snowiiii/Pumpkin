@@ -1,5 +1,4 @@
 use std::{
-    collections::{HashMap, VecDeque},
     sync::{
         atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU32, AtomicU8},
         Arc,
@@ -8,7 +7,6 @@ use std::{
 };
 
 use crossbeam::atomic::AtomicCell;
-use itertools::Itertools;
 use num_derive::FromPrimitive;
 use pumpkin_config::ADVANCED_CONFIG;
 use pumpkin_core::{
@@ -30,7 +28,7 @@ use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
         CCombatDeath, CEntityStatus, CGameEvent, CHurtAnimation, CKeepAlive, CPlayDisconnect,
-        CPlayerAbilities, CPlayerInfoUpdate, CSetHealth, CSyncPlayerPosition, CSystemChatMessage,
+        CPlayerAbilities, CPlayerInfoUpdate, CPlayerPosition, CSetHealth, CSystemChatMessage,
         GameEvent, PlayerAction,
     },
     server::play::{
@@ -47,7 +45,6 @@ use pumpkin_protocol::{
 };
 use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
 use tokio::sync::{Mutex, Notify};
-use tokio::task::JoinHandle;
 
 use super::Entity;
 use crate::{
@@ -63,42 +60,6 @@ use crate::{
 use crate::{error::PumpkinError, server::json_config::OPERATOR_CONFIG};
 
 use super::living::LivingEntity;
-
-pub struct ChunkHandleWrapper {
-    handle: Option<JoinHandle<()>>,
-    aborted: bool,
-}
-
-impl ChunkHandleWrapper {
-    #[must_use]
-    pub fn new(handle: JoinHandle<()>) -> Self {
-        Self {
-            handle: Some(handle),
-            aborted: false,
-        }
-    }
-
-    pub fn abort(&mut self) {
-        self.aborted = true;
-        if let Some(handle) = &self.handle {
-            handle.abort();
-        } else {
-            log::error!("Trying to abort without a handle!");
-        }
-    }
-
-    pub fn take_handle(&mut self) -> JoinHandle<()> {
-        self.handle.take().unwrap()
-    }
-
-    #[must_use]
-    pub fn aborted(&self) -> bool {
-        self.aborted
-    }
-}
-
-pub type PlayerPendingChunks =
-    Arc<parking_lot::Mutex<HashMap<Vector2<i32>, VecDeque<ChunkHandleWrapper>>>>;
 
 /// Represents a Minecraft player entity.
 ///
@@ -147,15 +108,6 @@ pub struct Player {
     pub last_keep_alive_time: AtomicCell<Instant>,
     /// Amount of ticks since last attack
     pub last_attacked_ticks: AtomicU32,
-
-    //TODO: Is there a way to consolidate these two?
-    //Need to lookup by chunk, but also would be need to contain all the stuff
-    //In a PendingBatch struct. Is there a cheap way to map multiple keys to a single element?
-    //
-    /// Individual chunk tasks that this client is waiting for
-    pub pending_chunks: PlayerPendingChunks,
-    /// Chunk batches that this client is waiting for
-    pub pending_chunk_batch: parking_lot::Mutex<HashMap<uuid::Uuid, JoinHandle<()>>>,
 
     /// Tell tasks to stop if we are closing
     cancel_tasks: Notify,
@@ -222,8 +174,6 @@ impl Player {
             keep_alive_id: AtomicI64::new(0),
             last_keep_alive_time: AtomicCell::new(std::time::Instant::now()),
             last_attacked_ticks: AtomicU32::new(0),
-            pending_chunks: Arc::new(parking_lot::Mutex::new(HashMap::new())),
-            pending_chunk_batch: parking_lot::Mutex::new(HashMap::new()),
             cancel_tasks: Notify::new(),
             // Minecraft has no why to change the default permission level of new players.
             // Minecrafts default permission level is 0
@@ -250,17 +200,11 @@ impl Player {
     #[allow(unused_variables)]
     pub async fn remove(&self) {
         let world = self.world();
-        // Abort pending chunks here too because we might clean up before chunk tasks are done
-        self.abort_chunks("closed");
-
         self.cancel_tasks.notify_waiters();
 
         world.remove_player(self).await;
 
         let cylindrical = self.watched_section.load();
-
-        // NOTE: This all must be synchronous to make sense! The chunks are handled asynhrously.
-        // Non-async code is atomic to async code
 
         // Radial chunks are all of the chunks the player is theoretically viewing
         // Giving enough time, all of these chunks will be in memory
@@ -273,91 +217,11 @@ impl Player {
             radial_chunks.len()
         );
 
-        let (watched_chunks, to_await) = {
-            let mut pending_chunks = self.pending_chunks.lock();
-
-            // Don't try to clean chunks that dont exist yet
-            // If they are still pending, we never sent the client the chunk,
-            // And the watcher value is not set
-            //
-            // The chunk may or may not be in the cache at this point
-            let watched_chunks = radial_chunks
-                .iter()
-                .filter(|chunk| !pending_chunks.contains_key(chunk))
-                .copied()
-                .collect::<Vec<_>>();
-
-            // Mark all pending chunks to be cancelled
-            // Cant use abort chunk because we use the lock for more
-            pending_chunks.iter_mut().for_each(|(chunk, handles)| {
-                handles.iter_mut().enumerate().for_each(|(count, handle)| {
-                    if !handle.aborted() {
-                        log::debug!("Aborting chunk {:?} ({}) (disconnect)", chunk, count);
-                        handle.abort();
-                    }
-                });
-            });
-
-            let to_await = pending_chunks
-                .iter_mut()
-                .map(|(chunk, pending)| {
-                    (
-                        *chunk,
-                        pending
-                            .iter_mut()
-                            .map(ChunkHandleWrapper::take_handle)
-                            .collect_vec(),
-                    )
-                })
-                .collect_vec();
-
-            // Return chunks to stop watching and what to wait for
-            (watched_chunks, to_await)
-        };
-
-        // Wait for individual chunks to finish after we cancel them
-        for (chunk, awaitables) in to_await {
-            for (count, handle) in awaitables.into_iter().enumerate() {
-                #[cfg(debug_assertions)]
-                log::debug!("Waiting for chunk {:?} ({})", chunk, count);
-                let _ = handle.await;
-            }
-        }
-
-        // Allow the batch jobs to properly cull stragglers before we do our clean up
-        log::debug!("Collecting chunk batches...");
-        let batches = {
-            let mut chunk_batches = self.pending_chunk_batch.lock();
-            let keys = chunk_batches.keys().copied().collect_vec();
-            let handles = keys
-                .iter()
-                .filter_map(|batch_id| {
-                    #[cfg(debug_assertions)]
-                    log::debug!("Batch id: {}", batch_id);
-                    chunk_batches.remove(batch_id)
-                })
-                .collect_vec();
-            assert!(chunk_batches.is_empty());
-            handles
-        };
-
-        log::debug!("Awaiting chunk batches ({})...", batches.len());
-
-        for (count, batch) in batches.into_iter().enumerate() {
-            #[cfg(debug_assertions)]
-            log::debug!("Awaiting batch {}", count);
-            let _ = batch.await;
-            #[cfg(debug_assertions)]
-            log::debug!("Done awaiting batch {}", count);
-        }
-        log::debug!("Done waiting for chunk batches");
-
         // Decrement value of watched chunks
-        let chunks_to_clean = world.mark_chunks_as_not_watched(&watched_chunks);
+        let chunks_to_clean = world.mark_chunks_as_not_watched(&radial_chunks);
 
         // Remove chunks with no watchers from the cache
         world.clean_chunks(&chunks_to_clean);
-
         // Remove left over entries from all possiblily loaded chunks
         world.clean_memory(&radial_chunks);
 
@@ -554,30 +418,29 @@ impl Player {
         *self.permission_lvl.lock()
     }
 
-    /// yaw and pitch in degrees
-    pub async fn teleport(&self, position: Vector3<f64>, yaw: f32, pitch: f32) {
+    /// Yaw and Pitch in degrees
+    /// Rarly used, For example when waking up player from bed or first time spawn. Otherwise entity teleport is used
+    /// Player should respond with the `SConfirmTeleport` packet
+    pub async fn request_teleport(&self, position: Vector3<f64>, yaw: f32, pitch: f32) {
         // this is the ultra special magic code used to create the teleport id
         // This returns the old value
+        // This operation wraps around on overflow.
         let i = self
             .teleport_id_count
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        if i + 2 == i32::MAX {
-            self.teleport_id_count
-                .store(0, std::sync::atomic::Ordering::Relaxed);
-        }
         let teleport_id = i + 1;
-        self.living_entity
-            .set_pos(position.x, position.y, position.z);
+        self.living_entity.set_pos(position);
         let entity = &self.living_entity.entity;
         entity.set_rotation(yaw, pitch);
         *self.awaiting_teleport.lock().await = Some((teleport_id.into(), position));
         self.client
-            .send_packet(&CSyncPlayerPosition::new(
+            .send_packet(&CPlayerPosition::new(
                 teleport_id.into(),
                 position,
                 Vector3::new(0.0, 0.0, 0.0),
                 yaw,
                 pitch,
+                // TODO
                 &[],
             ))
             .await;
@@ -726,18 +589,6 @@ impl Player {
             .send_packet(&CSystemChatMessage::new(text, false))
             .await;
     }
-
-    pub fn abort_chunks(&self, reason: &str) {
-        let mut pending_chunks = self.pending_chunks.lock();
-        pending_chunks.iter_mut().for_each(|(chunk, handles)| {
-            handles.iter_mut().enumerate().for_each(|(count, handle)| {
-                if !handle.aborted() {
-                    log::debug!("Aborting chunk {:?} ({}) ({})", chunk, count, reason);
-                    handle.abort();
-                }
-            });
-        });
-    }
 }
 
 impl Player {
@@ -827,7 +678,7 @@ impl Player {
                     .await;
             }
             SPlayerAction::PACKET_ID => {
-                self.handle_player_action(SPlayerAction::read(bytebuf)?)
+                self.handle_player_action(SPlayerAction::read(bytebuf)?, server)
                     .await;
             }
             SPlayerCommand::PACKET_ID => {
@@ -854,7 +705,8 @@ impl Player {
                 self.handle_swing_arm(SSwingArm::read(bytebuf)?).await;
             }
             SUseItemOn::PACKET_ID => {
-                self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await?;
+                self.handle_use_item_on(SUseItemOn::read(bytebuf)?, server)
+                    .await?;
             }
             SUseItem::PACKET_ID => self.handle_use_item(&SUseItem::read(bytebuf)?),
             SCommandSuggestion::PACKET_ID => {

@@ -37,7 +37,7 @@ parking_lot.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 
-bytes = "1.8"
+bytes.workspace = true
 
 rand = "0.8.5"
 

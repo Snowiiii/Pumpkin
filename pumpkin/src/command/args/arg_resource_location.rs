@@ -32,15 +32,7 @@ impl ArgumentConsumer for ResourceLocationArgumentConsumer {
         _server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
-        let s = args.pop()?;
-
-        let name = if s.contains(':') {
-            s.to_string()
-        } else {
-            format!("minecraft:{s}")
-        };
-
-        Some(Arg::ResourceLocation(name))
+        Some(Arg::ResourceLocation(args.pop()?))
     }
 
     async fn suggest<'a>(
