@@ -66,8 +66,8 @@ impl ProtoChunk {
 
         // TODO: Customize these
         let sampler = FluidLevelSampler::Chunk(StandardChunkFluidLevelSampler::new(
-            FluidLevel::new(63, *WATER_BLOCK),
-            FluidLevel::new(-54, *LAVA_BLOCK),
+            FluidLevel::new(63, WATER_BLOCK),
+            FluidLevel::new(-54, LAVA_BLOCK),
         ));
 
         let height = generation_shape.height() as usize;
@@ -163,7 +163,7 @@ impl ProtoChunk {
 
                                     // TODO: Change default block
                                     let block_state =
-                                        self.sampler.sample_block_state().unwrap_or(*STONE_BLOCK);
+                                        self.sampler.sample_block_state().unwrap_or(STONE_BLOCK);
                                     //log::debug!("Sampled block state in {:?}", inst.elapsed());
 
                                     let local_pos = Vector3 {

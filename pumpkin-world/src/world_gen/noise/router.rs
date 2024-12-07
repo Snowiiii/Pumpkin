@@ -294,8 +294,8 @@ impl BaseRouter {
         ))
         .min(CAVES_NOODLE_OVERWORLD.clone());
 
-        let i = *vein_type::MIN_Y;
-        let j = *vein_type::MAX_Y;
+        let i = vein_type::MIN_Y;
+        let j = vein_type::MAX_Y;
         let ore_veininess = vertical_range_choice(
             Y.clone(),
             NoiseFunction::new(
