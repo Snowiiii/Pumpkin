@@ -11,7 +11,7 @@ use pumpkin_core::math::{
 };
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
 use pumpkin_protocol::{
-    client::play::{CSetEntityMetadata, Metadata},
+    client::play::{CSetEntityMetadata, CTeleportEntitiy, Metadata},
     VarInt,
 };
 
@@ -95,12 +95,10 @@ impl Entity {
     /// Updates the entity's position, block position, and chunk position.
     ///
     /// This function calculates the new position, block position, and chunk position based on the provided coordinates. If any of these values change, the corresponding fields are updated.
-    #[expect(clippy::float_cmp)]
-    pub fn set_pos(&self, x: f64, y: f64, z: f64) {
+    pub fn set_pos(&self, new_position: Vector3<f64>) {
         let pos = self.pos.load();
-        if pos.x != x || pos.y != y || pos.z != z {
-            self.pos.store(Vector3::new(x, y, z));
-
+        if pos != new_position {
+            self.pos.store(new_position);
             self.bounding_box.store(BoundingBox::new_from_pos(
                 pos.x,
                 pos.y,
@@ -108,9 +106,9 @@ impl Entity {
                 &self.bounding_box_size.load(),
             ));
 
-            let floor_x = x.floor() as i32;
-            let floor_y = y.floor() as i32;
-            let floor_z = z.floor() as i32;
+            let floor_x = new_position.x.floor() as i32;
+            let floor_y = new_position.y.floor() as i32;
+            let floor_z = new_position.z.floor() as i32;
 
             let block_pos = self.block_pos.load();
             let block_pos_vec = block_pos.0;
@@ -132,6 +130,23 @@ impl Entity {
                 }
             }
         }
+    }
+
+    pub async fn teleport(&self, position: Vector3<f64>, yaw: f32, pitch: f32) {
+        self.world
+            .broadcast_packet_all(&CTeleportEntitiy::new(
+                self.entity_id.into(),
+                position,
+                Vector3::new(0.0, 0.0, 0.0),
+                yaw,
+                pitch,
+                // TODO
+                &[],
+                self.on_ground.load(std::sync::atomic::Ordering::SeqCst),
+            ))
+            .await;
+        self.set_pos(position);
+        self.set_rotation(yaw, pitch);
     }
 
     /// Sets the Entity yaw & pitch Rotation

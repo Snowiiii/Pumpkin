@@ -92,8 +92,7 @@ impl Player {
         if let Some((id, position)) = awaiting_teleport.as_ref() {
             if id == &confirm_teleport.teleport_id {
                 // we should set the pos now to that we requested in the teleport packet, Is may fixed issues when the client sended position packets while being teleported
-                self.living_entity
-                    .set_pos(position.x, position.y, position.z);
+                self.living_entity.set_pos(*position);
 
                 *awaiting_teleport = None;
             } else {
@@ -115,25 +114,28 @@ impl Player {
         pos.clamp(-2.0E7, 2.0E7)
     }
 
-    pub async fn handle_position(self: &Arc<Self>, position: SPlayerPosition) {
-        if position.x.is_nan() || position.feet_y.is_nan() || position.z.is_nan() {
+    pub async fn handle_position(self: &Arc<Self>, position_packet: SPlayerPosition) {
+        if position_packet.x.is_nan()
+            || position_packet.feet_y.is_nan()
+            || position_packet.z.is_nan()
+        {
             self.kick(TextComponent::text("Invalid movement")).await;
             return;
         }
-
-        let entity = &self.living_entity.entity;
-        self.living_entity.set_pos(
-            Self::clamp_horizontal(position.x),
-            Self::clamp_vertical(position.feet_y),
-            Self::clamp_horizontal(position.z),
+        let position = Vector3::new(
+            Self::clamp_horizontal(position_packet.x),
+            Self::clamp_vertical(position_packet.feet_y),
+            Self::clamp_horizontal(position_packet.z),
         );
+        let entity = &self.living_entity.entity;
+        self.living_entity.set_pos(position);
 
         let pos = entity.pos.load();
         let last_pos = self.living_entity.last_pos.load();
 
         entity
             .on_ground
-            .store(position.ground, std::sync::atomic::Ordering::Relaxed);
+            .store(position_packet.ground, std::sync::atomic::Ordering::Relaxed);
 
         let entity_id = entity.entity_id;
         let Vector3 { x, y, z } = pos;
@@ -161,7 +163,7 @@ impl Player {
                     x.mul_add(4096.0, -(last_x * 4096.0)) as i16,
                     y.mul_add(4096.0, -(last_y * 4096.0)) as i16,
                     z.mul_add(4096.0, -(last_z * 4096.0)) as i16,
-                    position.ground,
+                    position_packet.ground,
                 ),
             )
             .await;
@@ -184,13 +186,13 @@ impl Player {
             self.kick(TextComponent::text("Invalid rotation")).await;
             return;
         }
-
-        let entity = &self.living_entity.entity;
-        self.living_entity.set_pos(
+        let position = Vector3::new(
             Self::clamp_horizontal(position_rotation.x),
             Self::clamp_vertical(position_rotation.feet_y),
             Self::clamp_horizontal(position_rotation.z),
         );
+        let entity = &self.living_entity.entity;
+        self.living_entity.set_pos(position);
 
         let pos = entity.pos.load();
         let last_pos = self.living_entity.last_pos.load();

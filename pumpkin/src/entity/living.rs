@@ -68,9 +68,9 @@ impl<C: Container> LivingEntity<C> {
         }
     }
 
-    pub fn set_pos(&self, x: f64, y: f64, z: f64) {
+    pub fn set_pos(&self, position: Vector3<f64>) {
         self.last_pos.store(self.entity.pos.load());
-        self.entity.set_pos(x, y, z);
+        self.entity.set_pos(position);
     }
 
     pub async fn set_health(&self, health: f32) {

@@ -50,7 +50,7 @@ thiserror = "2"
 num-traits = "0.2"
 num-derive = "0.4"
 
-bytes = "1.8"
+bytes = "1.9"
 
 # Concurrency/Parallelism and Synchronization
 rayon = "1.10.0"

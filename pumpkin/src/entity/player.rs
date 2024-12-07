@@ -27,7 +27,7 @@ use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
         CCombatDeath, CEntityStatus, CGameEvent, CHurtAnimation, CKeepAlive, CPlayDisconnect,
-        CPlayerAbilities, CPlayerInfoUpdate, CSetHealth, CSyncPlayerPosition, CSystemChatMessage,
+        CPlayerAbilities, CPlayerInfoUpdate, CPlayerPosition, CSetHealth, CSystemChatMessage,
         GameEvent, PlayerAction,
     },
     server::play::{
@@ -396,30 +396,29 @@ impl Player {
         self.permission_lvl
     }
 
-    /// yaw and pitch in degrees
-    pub async fn teleport(&self, position: Vector3<f64>, yaw: f32, pitch: f32) {
+    /// Yaw and Pitch in degrees
+    /// Rarly used, For example when waking up player from bed or first time spawn. Otherwise entity teleport is used
+    /// Player should respond with the `SConfirmTeleport` packet
+    pub async fn request_teleport(&self, position: Vector3<f64>, yaw: f32, pitch: f32) {
         // this is the ultra special magic code used to create the teleport id
         // This returns the old value
+        // This operation wraps around on overflow.
         let i = self
             .teleport_id_count
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        if i + 2 == i32::MAX {
-            self.teleport_id_count
-                .store(0, std::sync::atomic::Ordering::Relaxed);
-        }
         let teleport_id = i + 1;
-        self.living_entity
-            .set_pos(position.x, position.y, position.z);
+        self.living_entity.set_pos(position);
         let entity = &self.living_entity.entity;
         entity.set_rotation(yaw, pitch);
         *self.awaiting_teleport.lock().await = Some((teleport_id.into(), position));
         self.client
-            .send_packet(&CSyncPlayerPosition::new(
+            .send_packet(&CPlayerPosition::new(
                 teleport_id.into(),
                 position,
                 Vector3::new(0.0, 0.0, 0.0),
                 yaw,
                 pitch,
+                // TODO
                 &[],
             ))
             .await;

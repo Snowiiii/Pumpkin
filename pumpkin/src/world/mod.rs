@@ -270,7 +270,7 @@ impl World {
         position.y = f64::from(top + 1);
 
         log::debug!("Sending player teleport to {}", player.gameprofile.name);
-        player.teleport(position, yaw, pitch).await;
+        player.request_teleport(position, yaw, pitch).await;
 
         player.living_entity.last_pos.store(position);
 
@@ -457,7 +457,7 @@ impl World {
         position.y = f64::from(top + 1);
 
         log::debug!("Sending player teleport to {}", player.gameprofile.name);
-        player.teleport(position, yaw, pitch).await;
+        player.request_teleport(position, yaw, pitch).await;
 
         player.living_entity.last_pos.store(position);
 
