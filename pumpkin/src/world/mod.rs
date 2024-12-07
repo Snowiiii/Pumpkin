@@ -1,17 +1,11 @@
-use std::{
-    collections::{hash_map::Entry, HashMap, VecDeque},
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
 pub mod level_time;
 pub mod player_chunker;
 
 use crate::{
     command::client_cmd_suggestions,
-    entity::{
-        player::{ChunkHandleWrapper, Player},
-        Entity,
-    },
+    entity::{player::Player, Entity},
     error::PumpkinError,
     server::Server,
 };
@@ -47,8 +41,8 @@ use scoreboard::Scoreboard;
 use thiserror::Error;
 use tokio::sync::{mpsc::Receiver, Mutex};
 use tokio::{
+    runtime::Handle,
     sync::{mpsc, RwLock},
-    task::JoinHandle,
 };
 use worldborder::Worldborder;
 
@@ -56,11 +50,6 @@ pub mod bossbar;
 pub mod custom_bossbar;
 pub mod scoreboard;
 pub mod worldborder;
-
-type ChunkReceiver = (
-    Vec<(Vector2<i32>, JoinHandle<()>)>,
-    Receiver<Arc<RwLock<ChunkData>>>,
-);
 
 #[derive(Debug, Error)]
 pub enum GetBlockError {
@@ -515,6 +504,10 @@ impl World {
         self.level.mark_chunks_as_not_watched(chunks)
     }
 
+    pub fn mark_chunks_as_watched(&self, chunks: &[Vector2<i32>]) {
+        self.level.mark_chunks_as_newly_watched(chunks);
+    }
+
     pub fn clean_chunks(&self, chunks: &[Vector2<i32>]) {
         self.level.clean_chunks(chunks);
     }
@@ -527,9 +520,8 @@ impl World {
         self.level.loaded_chunk_count()
     }
 
-    #[expect(clippy::too_many_lines)]
     /// IMPORTANT: Chunks have to be non-empty
-    fn spawn_world_chunks(&self, player: Arc<Player>, chunks: &[Vector2<i32>]) {
+    fn spawn_world_chunks(&self, player: Arc<Player>, chunks: Vec<Vector2<i32>>) {
         if player
             .client
             .closed
@@ -540,44 +532,12 @@ impl World {
         }
         #[cfg(debug_assertions)]
         let inst = std::time::Instant::now();
-        // Unique id of this chunk batch for later removal
-        let id = uuid::Uuid::new_v4();
 
-        let (pending, mut receiver) = self.receive_chunks(chunks);
-        {
-            let mut pending_chunks = player.pending_chunks.lock();
-
-            for chunk in chunks {
-                if pending_chunks.contains_key(chunk) {
-                    log::debug!(
-                        "Client id {} is requesting chunk {:?} but its already pending!",
-                        player.client.id,
-                        chunk
-                    );
-                }
-            }
-
-            for (chunk, handle) in pending {
-                let entry = pending_chunks.entry(chunk);
-                let wrapper = ChunkHandleWrapper::new(handle);
-                match entry {
-                    Entry::Occupied(mut entry) => {
-                        entry.get_mut().push_back(wrapper);
-                    }
-                    Entry::Vacant(entry) => {
-                        let mut queue = VecDeque::new();
-                        queue.push_back(wrapper);
-                        entry.insert(queue);
-                    }
-                };
-            }
-        }
-        let pending_chunks = player.pending_chunks.clone();
+        player.world().mark_chunks_as_watched(&chunks);
+        let mut receiver = self.receive_chunks(chunks);
         let level = self.level.clone();
-        let retained_player = player.clone();
-        let batch_id = id;
 
-        let handle = tokio::spawn(async move {
+        tokio::spawn(async move {
             while let Some(chunk_data) = receiver.recv().await {
                 let chunk_data = chunk_data.read().await;
                 let packet = CChunkData(&chunk_data);
@@ -595,40 +555,13 @@ impl World {
                     );
                 }
 
-                {
-                    let mut pending_chunks = pending_chunks.lock();
-                    let handlers = pending_chunks
-                        .get_mut(&chunk_data.position)
-                        .expect("All chunks should be pending");
-                    let handler = handlers
-                        .pop_front()
-                        .expect("All chunks should have a handler");
-
-                    if handlers.is_empty() {
-                        pending_chunks.remove(&chunk_data.position);
-                    }
-
-                    // Chunk loading task was canceled after it was completed
-                    if handler.aborted() {
-                        // We never increment the watch value
-                        if level.should_pop_chunk(&chunk_data.position) {
-                            level.clean_chunks(&[chunk_data.position]);
-                        }
-                        // If ignored, dont send the packet
-                        let loaded_chunks = level.loaded_chunk_count();
-                        log::debug!(
-                            "Aborted chunk {:?} (post-process) {} cached",
-                            chunk_data.position,
-                            loaded_chunks
-                        );
-
-                        // We dont want to mark this chunk as watched or send it to the client
-                        continue;
-                    }
-
-                    // This must be locked with pending
-                    level.mark_chunk_as_newly_watched(chunk_data.position);
-                };
+                if !level.is_chunk_watched(&chunk_data.position) {
+                    log::debug!(
+                        "Received chunk {:?}, but it is no longer watched... cleaning",
+                        &chunk_data.position
+                    );
+                    level.clean_chunk(&chunk_data.position);
+                }
 
                 if !player
                     .client
@@ -639,22 +572,9 @@ impl World {
                 }
             }
 
-            {
-                let mut batch = player.pending_chunk_batch.lock();
-                batch.remove(&batch_id);
-            }
             #[cfg(debug_assertions)]
-            log::debug!(
-                "chunks sent after {}ms (batch {})",
-                inst.elapsed().as_millis(),
-                batch_id
-            );
+            log::debug!("chunks sent after {}ms ", inst.elapsed().as_millis(),);
         });
-
-        {
-            let mut batch_handles = retained_player.pending_chunk_batch.lock();
-            batch_handles.insert(id, handle);
-        }
     }
 
     /// Gets a Player by entity id
@@ -789,18 +709,35 @@ impl World {
     }
 
     // Stream the chunks (don't collect them and then do stuff with them)
-    pub fn receive_chunks(&self, chunks: &[Vector2<i32>]) -> ChunkReceiver {
+    /// Important: must be called from an async function (or changed to accept a tokio runtime
+    /// handle)
+    pub fn receive_chunks(&self, chunks: Vec<Vector2<i32>>) -> Receiver<Arc<RwLock<ChunkData>>> {
         let (sender, receive) = mpsc::channel(chunks.len());
-        let pending_chunks = self.level.fetch_chunks(chunks, sender);
-        (pending_chunks, receive)
+        // Put this in another thread so we aren't blocking on it
+        let level = self.level.clone();
+        let rt = Handle::current();
+        rayon::spawn(move || {
+            level.fetch_chunks(&chunks, sender, &rt);
+        });
+        receive
     }
 
-    pub async fn receive_chunk(&self, chunk: Vector2<i32>) -> Arc<RwLock<ChunkData>> {
-        let (_, mut receiver) = self.receive_chunks(&[chunk]);
-        receiver
+    pub async fn receive_chunk(&self, chunk_pos: Vector2<i32>) -> Arc<RwLock<ChunkData>> {
+        let mut receiver = self.receive_chunks(vec![chunk_pos]);
+        let chunk = receiver
             .recv()
             .await
-            .expect("Channel closed for unknown reason")
+            .expect("Channel closed for unknown reason");
+
+        if !self.level.is_chunk_watched(&chunk_pos) {
+            log::debug!(
+                "Received chunk {:?}, but it is not watched... cleaning",
+                chunk_pos
+            );
+            self.level.clean_chunk(&chunk_pos);
+        }
+
+        chunk
     }
 
     pub async fn break_block(&self, position: WorldPosition, cause: Option<&Player>) {

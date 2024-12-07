@@ -53,7 +53,7 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
     let loading_chunks = new_cylindrical.all_chunks_within();
 
     if !loading_chunks.is_empty() {
-        world.spawn_world_chunks(player, &loading_chunks);
+        world.spawn_world_chunks(player, loading_chunks);
     }
 }
 
@@ -112,56 +112,22 @@ pub async fn update_position(player: &Arc<Player>) {
 
             entity
                 .world
-                .spawn_world_chunks(player.clone(), &loading_chunks);
+                .spawn_world_chunks(player.clone(), loading_chunks);
             //log::debug!("Loading chunks took {:?}", inst.elapsed());
         }
 
         if !unloading_chunks.is_empty() {
-            // We want to check if this chunk is still pending
-            // if it is -> ignore
-
             //let inst = std::time::Instant::now();
 
-            let watched_chunks: Vec<_> = {
-                let mut pending_chunks = player.pending_chunks.lock();
-                unloading_chunks
-                    .into_iter()
-                    .filter(|chunk| {
-                        if let Some(handles) = pending_chunks.get_mut(chunk) {
-                            if let Some((count, handle)) = handles
-                                .iter_mut()
-                                .rev()
-                                .enumerate()
-                                .find(|(_, handle)| !handle.aborted())
-                            {
-                                log::debug!("Aborting chunk {:?} ({}) (unload)", chunk, count);
-                                // We want to abort the last queued chunk, that we if a client still
-                                // has a pending request for this chunk, we dont need to do the work
-                                // twice
-                                handle.abort();
-                            } else {
-                                log::warn!(
-                                    "Aborting chunk {:?} but all were already aborted!",
-                                    chunk
-                                );
-                            }
-                            false
-                        } else {
-                            true
-                        }
-                    })
-                    .collect()
-            };
-
             //log::debug!("Unloading chunks took {:?} (1)", inst.elapsed());
-            let chunks_to_clean = entity.world.mark_chunks_as_not_watched(&watched_chunks);
+            let chunks_to_clean = entity.world.mark_chunks_as_not_watched(&unloading_chunks);
             entity.world.clean_chunks(&chunks_to_clean);
 
             //log::debug!("Unloading chunks took {:?} (2)", inst.elapsed());
             // This can take a little if we are sending a bunch of packets, queue it up :p
             let client = player.client.clone();
             tokio::spawn(async move {
-                for chunk in watched_chunks {
+                for chunk in unloading_chunks {
                     if client.closed.load(std::sync::atomic::Ordering::Relaxed) {
                         // We will never un-close a connection
                         break;
