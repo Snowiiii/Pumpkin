@@ -8,7 +8,7 @@ edition = "2021"
 cargo-fuzz = true
 
 [dependencies]
-pumpkin = { path = "../"}
+pumpkin = { path = ".." }
 
 libfuzzer-sys = "0.4"
 

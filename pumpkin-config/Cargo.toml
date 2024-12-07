@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 pumpkin-core = { path = "../pumpkin-core" }
+
 serde.workspace = true
 log.workspace = true
 
