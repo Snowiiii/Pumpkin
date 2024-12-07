@@ -58,7 +58,7 @@ pub struct SyncedRegistry {
     damage_type: IndexMap<String, DamageType>,
     banner_pattern: IndexMap<String, BannerPattern>,
     enchantment: IndexMap<String, Enchantment>,
-    jukebox_song: IndexMap<String, JukeboxSong>,
+    pub jukebox_song: IndexMap<String, JukeboxSong>,
     instrument: IndexMap<String, Instrument>,
 }
 
@@ -225,18 +225,18 @@ impl Registry {
         //     registry_entries,
         // };
 
-        // let registry_entries = SYNCED_REGISTRIES
-        //     .jukebox_song
-        //     .iter()
-        //     .map(|s| RegistryEntry {
-        //         entry_id: s.0,
-        //         data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
-        //     })
-        //     .collect();
-        // let jukebox_song = Registry {
-        //     registry_id: "minecraft:jukebox_song".to_string(),
-        //     registry_entries,
-        // };
+        let registry_entries = SYNCED_REGISTRIES
+            .jukebox_song
+            .iter()
+            .map(|s| RegistryEntry {
+                entry_id: s.0,
+                data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
+            })
+            .collect();
+        let jukebox_song = Registry {
+            registry_id: "minecraft:jukebox_song".to_string(),
+            registry_entries,
+        };
 
         // let registry_entries = SYNCED_REGISTRIES
         //     .instrument
@@ -262,7 +262,7 @@ impl Registry {
             damage_type,
             banner_pattern,
             // enchantment,
-            // jukebox_song,
+            jukebox_song,
             // instrument,
         ]
     }

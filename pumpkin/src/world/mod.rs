@@ -16,6 +16,7 @@ use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
+use pumpkin_protocol::client::play::CLevelEvent;
 use pumpkin_protocol::{
     client::play::{CBlockUpdate, CRespawn, CSoundEffect, CWorldEvent},
     SoundCategory,
@@ -164,6 +165,16 @@ impl World {
             seed,
         ))
         .await;
+    }
+
+    pub async fn play_record(&self, record_id: i32, position: WorldPosition) {
+        self.broadcast_packet_all(&CLevelEvent::new(1010, position, record_id, false))
+            .await;
+    }
+
+    pub async fn stop_record(&self, position: WorldPosition) {
+        self.broadcast_packet_all(&CLevelEvent::new(1011, position, 0, false))
+            .await;
     }
 
     pub async fn tick(&self) {

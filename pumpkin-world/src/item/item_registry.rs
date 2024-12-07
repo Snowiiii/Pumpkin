@@ -1,4 +1,5 @@
-use std::{collections::HashMap, sync::LazyLock};
+use std::collections::HashMap;
+use std::sync::LazyLock;
 
 use serde::Deserialize;
 
@@ -12,6 +13,14 @@ pub fn get_item(name: &str) -> Option<&Item> {
     ITEMS.get(&name.replace("minecraft:", ""))
 }
 
+pub fn get_item_by_id<'a>(id: u16) -> Option<&'a Item> {
+    let item = ITEMS.iter().find(|item| item.1.id == id);
+    if let Some(item) = item {
+        return Some(item.1);
+    }
+    None
+}
+
 #[derive(Deserialize, Clone, Debug)]
 pub struct Item {
     pub id: u16,
@@ -22,4 +31,11 @@ pub struct Item {
 pub struct ItemComponents {
     #[serde(rename = "minecraft:max_stack_size")]
     pub max_stack_size: u8,
+    #[serde(rename = "minecraft:jukebox_playable")]
+    pub jukebox_playable: Option<JukeboxPlayable>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct JukeboxPlayable {
+    pub song: String,
 }

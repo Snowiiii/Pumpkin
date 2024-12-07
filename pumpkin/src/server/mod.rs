@@ -21,6 +21,8 @@ use std::{
 };
 use tokio::sync::{Mutex, RwLock};
 
+use crate::block::block_manager::BlockManager;
+use crate::block::default_block_manager;
 use crate::client::EncryptionError;
 use crate::world::custom_bossbar::CustomBossbars;
 use crate::{
@@ -46,6 +48,8 @@ pub struct Server {
     server_branding: CachedBranding,
     /// Saves and Dispatches commands to appropriate handlers.
     pub command_dispatcher: Arc<CommandDispatcher<'static>>,
+    /// Saves and calls blocks blocks
+    pub block_manager: Arc<BlockManager>,
     /// Manages multiple worlds within the server.
     pub worlds: Vec<Arc<World>>,
     // All the dimensions that exists on the server,
@@ -112,6 +116,7 @@ impl Server {
                 DimensionType::TheEnd,
             ],
             command_dispatcher,
+            block_manager: default_block_manager(),
             auth_client,
             key_store: KeyStore::new(),
             server_listing: Mutex::new(CachedStatus::new()),
