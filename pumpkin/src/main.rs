@@ -99,15 +99,6 @@ const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> L
 const CARGO_PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 const GIT_VERSION: &str = env!("GIT_VERSION");
 
-// NOTE: The tokio runtime must be seperate from rayon, otherwise the cpu intensive tasks will
-// choke the async tasks. THIS MEANS THERE SHOULD BE NO BLOCKING CALLS TO RAYON FROM THE TOKIO
-// RUNTIME TO INCLUDE `par_iter`!!!
-// Also, there is no need for the tokio to span multiple threads,
-// one thread should be sufficient as cpu intensive work should be passed to rayon with the
-// runtime only waiting on the results. If you need to call async code from a thread, pass a
-// tokio handle from `Handle::current()` from the tokio thread to the code being
-// parallelized
-//
 // WARNING: All rayon calls from the tokio runtime must be non-blocking! This includes things
 // like `par_iter`. These should be spawned in the the rayon pool and then passed to the tokio
 // runtime with a channel! See `Level::fetch_chunks` as an example!
