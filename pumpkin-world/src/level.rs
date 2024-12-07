@@ -100,7 +100,7 @@ impl Level {
     /// it is removed from memory. Should only be called on chunks the player was not watching
     /// before
     pub fn mark_chunks_as_newly_watched(&self, chunks: &[Vector2<i32>]) {
-        chunks.par_iter().for_each(|chunk| {
+        chunks.iter().for_each(|chunk| {
             self.mark_chunk_as_newly_watched(*chunk);
         });
     }
@@ -126,9 +126,9 @@ impl Level {
     /// it is removed from memory. Should only be called on chunks the player was watching before
     pub fn mark_chunks_as_not_watched(&self, chunks: &[Vector2<i32>]) -> Vec<Vector2<i32>> {
         chunks
-            .par_iter()
+            .iter()
             .filter(|chunk| self.mark_chunk_as_not_watched(**chunk))
-            .map(|chunk| *chunk)
+            .copied()
             .collect()
     }
 
@@ -157,7 +157,7 @@ impl Level {
     }
 
     pub fn clean_chunks(&self, chunks: &[Vector2<i32>]) {
-        chunks.par_iter().for_each(|chunk_pos| {
+        chunks.iter().for_each(|chunk_pos| {
             //log::debug!("Unloading {:?}", chunk_pos);
             self.clean_chunk(chunk_pos);
         });
@@ -174,7 +174,7 @@ impl Level {
     }
 
     pub fn clean_memory(&self, chunks_to_check: &[Vector2<i32>]) {
-        chunks_to_check.par_iter().for_each(|chunk| {
+        chunks_to_check.iter().for_each(|chunk| {
             if let Some(entry) = self.chunk_watchers.get(chunk) {
                 if entry.value().is_zero() {
                     self.chunk_watchers.remove(chunk);
@@ -212,8 +212,6 @@ impl Level {
     }
 
     /// Reads/Generates many chunks in a world
-    /// MUST be called from a tokio runtime thread
-    ///
     /// Note: The order of the output chunks will almost never be in the same order as the order of input chunks
     pub fn fetch_chunks(
         &self,

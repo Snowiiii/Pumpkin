@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use pumpkin_core::math::vector2::Vector2;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -80,10 +81,20 @@ impl Cylindrical {
                 all_chunks.push(Vector2::new(x, z));
             }
         }
-        all_chunks
+
+        let mut result = all_chunks
             .into_iter()
             .filter(|chunk| self.is_within_distance(chunk.x, chunk.z))
-            .collect()
+            .collect_vec();
+
+        // Sort such that the first chunks are closest to the center
+        result.sort_unstable_by_key(|pos| {
+            let rel_x = pos.x - self.center.x;
+            let rel_z = pos.z - self.center.z;
+            rel_x * rel_x + rel_z * rel_z
+        });
+
+        result
     }
 }
 
