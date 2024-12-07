@@ -5,7 +5,10 @@ use num_traits::Zero;
 use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::math::vector2::Vector2;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use tokio::sync::{mpsc, RwLock};
+use tokio::{
+    runtime::Handle,
+    sync::{mpsc, RwLock},
+};
 
 use crate::{
     chunk::{
@@ -216,6 +219,7 @@ impl Level {
         &self,
         chunks: &[Vector2<i32>],
         channel: mpsc::Sender<Arc<RwLock<ChunkData>>>,
+        rt: &Handle,
     ) {
         chunks.par_iter().for_each(|at| {
             let channel = channel.clone();
@@ -258,9 +262,12 @@ impl Level {
                     }
                 });
 
-            let _ = channel
-                .blocking_send(chunk)
-                .inspect_err(|err| log::error!("unable to send chunk to channel: {}", err));
+            rt.spawn(async move {
+                let _ = channel
+                    .send(chunk)
+                    .await
+                    .inspect_err(|err| log::error!("unable to send chunk to channel: {}", err));
+            });
         });
     }
 }

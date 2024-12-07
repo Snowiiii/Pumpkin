@@ -39,8 +39,11 @@ use pumpkin_world::{
 use rand::{thread_rng, Rng};
 use scoreboard::Scoreboard;
 use thiserror::Error;
-use tokio::sync::{mpsc, RwLock};
 use tokio::sync::{mpsc::Receiver, Mutex};
+use tokio::{
+    runtime::Handle,
+    sync::{mpsc, RwLock},
+};
 use worldborder::Worldborder;
 
 pub mod bossbar;
@@ -706,12 +709,15 @@ impl World {
     }
 
     // Stream the chunks (don't collect them and then do stuff with them)
+    /// Important: must be called from an async function (or changed to accept a tokio runtime
+    /// handle)
     pub fn receive_chunks(&self, chunks: Vec<Vector2<i32>>) -> Receiver<Arc<RwLock<ChunkData>>> {
         let (sender, receive) = mpsc::channel(chunks.len());
         // Put this in another thread so we aren't blocking on it
         let level = self.level.clone();
+        let rt = Handle::current();
         rayon::spawn(move || {
-            level.fetch_chunks(&chunks, sender);
+            level.fetch_chunks(&chunks, sender, &rt);
         });
         receive
     }
