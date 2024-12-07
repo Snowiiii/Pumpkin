@@ -47,15 +47,10 @@ Temporary Items
 **/build/
 !src/**/build/
 .kotlin
+kls_database.db
 
 # Ignore Gradle GUI config
 gradle-app.setting
-
-# Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
-!gradle-wrapper.jar
-
-# Avoid ignore Gradle wrappper properties
-!gradle-wrapper.properties
 
 # Cache of project
 .gradletasknamecache
@@ -74,6 +69,11 @@ gradle-app.setting
 *.zip
 *.tar.gz
 *.rar
+
+# Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
+!gradle-wrapper.jar
+# Avoid ignore Gradle wrappper properties
+!gradle-wrapper.properties
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
@@ -130,3 +130,6 @@ run/
 *perf.data*
 *flamegraph.svg
 
+# Extracted assets
+assets/*.json
+pumpkin-world/assets

@@ -30,6 +30,13 @@ jobs:
           - stable
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: 21
+          cache: "gradle"
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./extract_assets.sh
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --all-targets --all-features --no-default-features
@@ -43,6 +50,16 @@ jobs:
           - stable
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: 21
+          cache: "gradle"
+      - uses: gradle/actions/setup-gradle@v4
+      - if: matrix.os != 'windows-latest'
+        run: ./extract_assets.sh
+      - if: matrix.os == 'windows-latest'
+        run: .\extract_assets.bat
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --verbose
@@ -56,7 +73,16 @@ jobs:
           - stable
     steps:
       - uses: actions/checkout@v4
-
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: 21
+          cache: "gradle"
+      - uses: gradle/actions/setup-gradle@v4
+      - if: matrix.os != 'windows-latest'
+        run: ./extract_assets.sh
+      - if: matrix.os == 'windows-latest'
+        run: .\extract_assets.bat
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --verbose --release
@@ -66,6 +92,25 @@ jobs:
           name: pumpkin-${{ matrix.os }}
           compression-level: 9
           path: target/${{ matrix.target }}/release/pumpkin*
+  extract_asset_artifacts:
+    name: Extract asset files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: 21
+          cache: "gradle"
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./extractor/run_gradle.sh
+      - name: Export assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: pumpkin-assets
+          compression-level: 9
+          path: |
+            extractor/run/pumpkin_extractor_output
   clippy_release:
     name: Run lints in release mode
     runs-on: ubuntu-latest
@@ -75,6 +120,13 @@ jobs:
           - stable
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: 21
+          cache: "gradle"
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./extract_assets.sh
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --release --all-targets --all-features --no-default-features
