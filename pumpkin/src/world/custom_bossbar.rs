@@ -235,10 +235,10 @@ impl CustomBossbars {
     pub async fn update_name(
         &mut self,
         server: &Server,
-        resource_location: String,
-        new_title: String,
+        resource_location: &str,
+        new_title: &str,
     ) -> Result<(), BossbarUpdateError> {
-        let bossbar = self.custom_bossbars.get_mut(&resource_location);
+        let bossbar = self.custom_bossbars.get_mut(resource_location);
         if let Some(bossbar) = bossbar {
             if bossbar.bossbar_data.title == new_title {
                 return Err(BossbarUpdateError::NoChanges(String::from(
@@ -246,7 +246,7 @@ impl CustomBossbars {
                 )));
             }
 
-            bossbar.bossbar_data.title = new_title;
+            bossbar.bossbar_data.title = new_title.to_string();
 
             if !bossbar.visible {
                 return Ok(());
@@ -269,7 +269,7 @@ impl CustomBossbars {
             return Ok(());
         }
         Err(BossbarUpdateError::InvalidResourceLocation(
-            resource_location,
+            resource_location.to_string(),
         ))
     }
 
