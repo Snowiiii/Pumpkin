@@ -81,6 +81,19 @@ impl BlockManager {
         }
     }
 
+    pub async fn on_close(
+        &self,
+        block: &Block,
+        player: &Player,
+        location: WorldPosition,
+        server: &Server,
+    ) {
+        let pumpkin_block = self.get_pumpkin_block(block);
+        if let Some(pumpkin_block) = pumpkin_block {
+            pumpkin_block.on_close(player, location, server).await;
+        }
+    }
+
     #[must_use]
     pub fn get_pumpkin_block(&self, block: &Block) -> Option<&Arc<dyn PumpkinBlock>> {
         self.blocks
