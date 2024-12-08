@@ -532,7 +532,12 @@ impl World {
     }
 
     /// IMPORTANT: Chunks have to be non-empty
-    fn spawn_world_chunks(&self, player: Arc<Player>, chunks: Vec<Vector2<i32>>) {
+    fn spawn_world_chunks(
+        &self,
+        player: Arc<Player>,
+        chunks: Vec<Vector2<i32>>,
+        center_chunk: Vector2<i32>,
+    ) {
         if player
             .client
             .closed
@@ -543,6 +548,14 @@ impl World {
         }
         #[cfg(debug_assertions)]
         let inst = std::time::Instant::now();
+
+        // Sort such that the first chunks are closest to the center
+        let mut chunks = chunks;
+        chunks.sort_unstable_by_key(|pos| {
+            let rel_x = pos.x - center_chunk.x;
+            let rel_z = pos.z - center_chunk.z;
+            rel_x * rel_x + rel_z * rel_z
+        });
 
         player.world().mark_chunks_as_watched(&chunks);
         let mut receiver = self.receive_chunks(chunks);
@@ -567,11 +580,12 @@ impl World {
                 }
 
                 if !level.is_chunk_watched(&chunk_data.position) {
-                    log::debug!(
+                    log::trace!(
                         "Received chunk {:?}, but it is no longer watched... cleaning",
                         &chunk_data.position
                     );
                     level.clean_chunk(&chunk_data.position);
+                    continue;
                 }
 
                 if !player
@@ -741,7 +755,7 @@ impl World {
             .expect("Channel closed for unknown reason");
 
         if !self.level.is_chunk_watched(&chunk_pos) {
-            log::debug!(
+            log::trace!(
                 "Received chunk {:?}, but it is not watched... cleaning",
                 chunk_pos
             );
