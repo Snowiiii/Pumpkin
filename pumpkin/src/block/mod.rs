@@ -1,3 +1,6 @@
+use blocks::chest::ChestBlock;
+use blocks::furnace::FurnaceBlock;
+
 use crate::block::block_manager::BlockManager;
 use crate::block::blocks::crafting_table::CraftingTableBlock;
 use crate::block::blocks::jukebox::JukeboxBlock;
@@ -13,6 +16,8 @@ pub fn default_block_manager() -> Arc<BlockManager> {
 
     manager.register(JukeboxBlock);
     manager.register(CraftingTableBlock);
+    manager.register(FurnaceBlock);
+    manager.register(ChestBlock);
 
     Arc::new(manager)
 }

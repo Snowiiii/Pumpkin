@@ -22,7 +22,9 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
-use pumpkin_protocol::server::play::{SCookieResponse as SPCookieResponse, SPlayPingRequest};
+use pumpkin_protocol::server::play::{
+    SCloseContainer, SCookieResponse as SPCookieResponse, SPlayPingRequest,
+};
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
@@ -693,6 +695,10 @@ impl Player {
             }
             SPCookieResponse::PACKET_ID => {
                 self.handle_cookie_response(SPCookieResponse::read(bytebuf)?);
+            }
+            SCloseContainer::PACKET_ID => {
+                self.handle_close_container(server, SCloseContainer::read(bytebuf)?)
+                    .await;
             }
             _ => {
                 log::warn!("Failed to handle player packet id {}", packet.id.0);
