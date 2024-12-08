@@ -1,4 +1,5 @@
-use std::sync::Arc;
+use std::collections::HashSet;
+use std::sync::{Arc, LazyLock};
 
 use super::PlayerConfig;
 use crate::block::block_manager::BlockActionResult;
@@ -37,7 +38,7 @@ use pumpkin_protocol::{
     },
 };
 use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
-use pumpkin_world::item::item_registry::get_item_by_id;
+use pumpkin_world::item::item_registry::{get_item, get_item_by_id};
 use thiserror::Error;
 
 fn modulus(a: f32, b: f32) -> f32 {
@@ -83,6 +84,22 @@ impl PumpkinError for BlockPlacingError {
         }
     }
 }
+
+static CREATIVE_DONT_BREAK_WITH: LazyLock<HashSet<u16>> = LazyLock::new(|| {
+    [
+        get_item("wooden_sword").unwrap().id,
+        get_item("stone_sword").unwrap().id,
+        get_item("iron_sword").unwrap().id,
+        get_item("golden_sword").unwrap().id,
+        get_item("diamond_sword").unwrap().id,
+        get_item("netherite_sword").unwrap().id,
+        get_item("trident").unwrap().id,
+        get_item("mace").unwrap().id,
+    ]
+    .iter()
+    .copied()
+    .collect()
+});
 
 /// Handles all Play Packets send by a real Player
 /// NEVER TRUST THE CLIENT. HANDLE EVERY ERROR, UNWRAP/EXPECT ARE FORBIDDEN
@@ -540,6 +557,15 @@ impl Player {
                     // TODO: do validation
                     // TODO: Config
                     if self.gamemode.load() == GameMode::Creative {
+                        // Don't break block if player is holding an item like a sword
+                        if let Some(inv) = &self.living_entity.inventory {
+                            if let Some(item) = inv.lock().await.held_item() {
+                                if CREATIVE_DONT_BREAK_WITH.contains(&item.item_id) {
+                                    return;
+                                }
+                            }
+                        }
+
                         let location = player_action.location;
                         // Block break & block break sound
                         let entity = &self.living_entity.entity;
