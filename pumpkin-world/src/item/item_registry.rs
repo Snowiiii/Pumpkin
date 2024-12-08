@@ -56,7 +56,7 @@ pub struct Modifier {
     #[serde(rename = "type")]
     pub type_val: String,
     pub id: String,
-    pub amount: f32,
+    pub amount: f64,
     pub operation: String,
     pub slot: String,
 }

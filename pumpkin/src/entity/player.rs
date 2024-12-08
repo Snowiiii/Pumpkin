@@ -271,7 +271,7 @@ impl Player {
         // only reduce attack damage if in cooldown
         // TODO: Enchantments are reduced same way just without the square
         if attack_cooldown_progress < 1.0 {
-            damage_multiplier = 0.2_f32 + attack_cooldown_progress.pow(2) * 0.8_f32;
+            damage_multiplier = 0.2 + attack_cooldown_progress.pow(2) * 0.8;
         }
         // modify added damage based on multiplier
         let mut damage = base_damage + add_damage * damage_multiplier;
@@ -279,7 +279,7 @@ impl Player {
         let pos = victim_entity.pos.load();
 
         if (config.protect_creative && victim.gamemode.load() == GameMode::Creative)
-            || !victim.living_entity.check_damage(damage)
+            || !victim.living_entity.check_damage(damage as f32)
         {
             world
                 .play_sound(
@@ -295,7 +295,7 @@ impl Player {
             .play_sound(sound!("entity.player.hurt"), SoundCategory::Players, &pos)
             .await;
 
-        let attack_type = AttackType::new(self, attack_cooldown_progress).await;
+        let attack_type = AttackType::new(self, attack_cooldown_progress as f32).await;
 
         player_attack_sound(&pos, world, attack_type).await;
 
@@ -305,7 +305,7 @@ impl Player {
 
         victim
             .living_entity
-            .damage(damage, 34) // PlayerAttack
+            .damage(damage as f32, 34) // PlayerAttack
             .await;
 
         let mut knockback_strength = 1.0;
@@ -369,14 +369,14 @@ impl Player {
         }
     }
 
-    pub fn get_attack_cooldown_progress(&self, base_time: f32, attack_speed: f32) -> f32 {
+    pub fn get_attack_cooldown_progress(&self, base_time: f64, attack_speed: f64) -> f64 {
         #[allow(clippy::cast_precision_loss)]
-        let x = self
-            .last_attacked_ticks
-            .load(std::sync::atomic::Ordering::Acquire) as f32
-            + base_time;
+        let x = f64::from(
+            self.last_attacked_ticks
+                .load(std::sync::atomic::Ordering::Acquire),
+        ) + base_time;
 
-        let progress_per_tick = BASIC_CONFIG.tps / attack_speed;
+        let progress_per_tick = f64::from(BASIC_CONFIG.tps) / attack_speed;
         let progress = x / progress_per_tick;
         progress.clamp(0.0, 1.0)
     }
