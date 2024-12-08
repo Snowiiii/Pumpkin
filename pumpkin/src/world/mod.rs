@@ -401,11 +401,11 @@ impl World {
             .init_client(&player.client)
             .await;
 
-        // Spawn in initial chunks
-        player_chunker::player_join(self, player.clone()).await;
-
         // Sends initial time
         player.send_time(self).await;
+
+        // Spawn in initial chunks
+        player_chunker::player_join(self, player.clone()).await;
 
         // if let Some(bossbars) = self..lock().await.get_player_bars(&player.gameprofile.id) {
         //     for bossbar in bossbars {
