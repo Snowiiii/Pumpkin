@@ -44,17 +44,18 @@ impl ArgumentConsumer for ResourceLocationArgumentConsumer {
         if !self.autocomplete {
             return Ok(None);
         }
+        // TODO
 
-        let suggestions = _server
-            .bossbars
-            .lock()
-            .await
-            .custom_bossbars
-            .keys()
-            .map(|suggestion| CommandSuggestion::new(suggestion.clone(), None))
-            .collect();
+        // let suggestions = server
+        //     .bossbars
+        //     .lock()
+        //     .await
+        //     .custom_bossbars
+        //     .keys()
+        //     .map(|suggestion| CommandSuggestion::new(suggestion, None))
+        //     .collect();
 
-        Ok(Some(suggestions))
+        Ok(None)
     }
 }
 

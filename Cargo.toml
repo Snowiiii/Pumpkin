@@ -35,7 +35,7 @@ debug = true
 
 [workspace.dependencies]
 log = "0.4"
-tokio = { version = "1.41", features = [
+tokio = { version = "1.42", features = [
     "fs",
     "io-util",
     "macros",

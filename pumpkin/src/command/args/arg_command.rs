@@ -59,7 +59,7 @@ impl ArgumentConsumer for CommandTreeArgumentConsumer {
             .commands
             .keys()
             .filter(|suggestion| suggestion.starts_with(input))
-            .map(|suggestion| CommandSuggestion::new((*suggestion).to_string(), None))
+            .map(|suggestion| CommandSuggestion::new(suggestion, None))
             .collect();
         Ok(Some(suggestions))
     }

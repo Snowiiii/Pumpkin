@@ -1,6 +1,4 @@
-use std::sync::Arc;
-
-use lazy_static::lazy_static;
+use std::sync::{Arc, LazyLock};
 
 use crate::world_gen::{
     noise::density::{
@@ -37,14 +35,12 @@ use super::{
     },
 };
 
-lazy_static! {
-    pub static ref OVERWORLD_NOISE_ROUTER: BaseRouter =
-        BaseRouter::create_surface_noise_router(false, false);
-    pub static ref OVERWORLD_NOISE_ROUTER_LARGE: BaseRouter =
-        BaseRouter::create_surface_noise_router(true, false);
-    pub static ref OVERWORLD_NOISE_ROUTER_AMPLIFIED: BaseRouter =
-        BaseRouter::create_surface_noise_router(false, true);
-}
+pub static OVERWORLD_NOISE_ROUTER: LazyLock<BaseRouter> =
+    LazyLock::new(|| BaseRouter::create_surface_noise_router(false, false));
+pub static OVERWORLD_NOISE_ROUTER_LARGE: LazyLock<BaseRouter> =
+    LazyLock::new(|| BaseRouter::create_surface_noise_router(true, false));
+pub static OVERWORLD_NOISE_ROUTER_AMPLIFIED: LazyLock<BaseRouter> =
+    LazyLock::new(|| BaseRouter::create_surface_noise_router(false, true));
 
 pub struct BaseRouter {
     pub(crate) barrier: SharedComponentReference,

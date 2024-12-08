@@ -404,7 +404,6 @@ impl Client {
                     "Failed to handle client packet id {} in Status State",
                     packet.id.0
                 );
-                return Err(DeserializerError::UnknownPacket);
             }
         };
 
@@ -479,7 +478,6 @@ impl Client {
                     "Failed to handle client packet id {} in Config State",
                     packet.id.0
                 );
-                return Err(DeserializerError::UnknownPacket);
             }
         };
         Ok(())
