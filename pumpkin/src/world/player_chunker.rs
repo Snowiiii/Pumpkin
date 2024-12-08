@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::{
-    math::{get_section_cord, position::WorldPosition, vector2::Vector2, vector3::Vector3},
+    math::{get_section_cord, position::WorldPosition, vector3::Vector3},
     GameMode,
 };
 use pumpkin_protocol::client::play::{CCenterChunk, CUnloadChunk};
@@ -49,11 +49,11 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
         view_distance
     );
 
-    let new_cylindrical = Cylindrical::new(Vector2::new(chunk_pos.x, chunk_pos.z), view_distance);
+    let new_cylindrical = Cylindrical::new(chunk_pos, view_distance);
     let loading_chunks = new_cylindrical.all_chunks_within();
 
     if !loading_chunks.is_empty() {
-        world.spawn_world_chunks(player, loading_chunks);
+        world.spawn_world_chunks(player, loading_chunks, chunk_pos);
     }
 }
 
@@ -68,24 +68,19 @@ pub async fn update_position(player: &Arc<Player>) {
     let entity = &player.living_entity.entity;
 
     let view_distance = get_view_distance(player).await;
-    let chunk_center = chunk_section_from_pos(&entity.block_pos.load()).into();
+    let new_chunk_center = entity.chunk_pos.load();
 
     let old_cylindrical = player.watched_section.load();
-    let new_cylindrical = Cylindrical::new(chunk_center, view_distance);
+    let new_cylindrical = Cylindrical::new(new_chunk_center, view_distance);
 
     if old_cylindrical != new_cylindrical {
         player.watched_section.store(new_cylindrical);
 
-        //log::debug!("changing chunks");
-        let chunk_pos = entity.chunk_pos.load();
-        assert_eq!(new_cylindrical.center.x, chunk_pos.x);
-        assert_eq!(new_cylindrical.center.z, chunk_pos.z);
-
         player
             .client
             .send_packet(&CCenterChunk {
-                chunk_x: chunk_pos.x.into(),
-                chunk_z: chunk_pos.z.into(),
+                chunk_x: new_chunk_center.x.into(),
+                chunk_z: new_chunk_center.z.into(),
             })
             .await;
 
@@ -101,20 +96,6 @@ pub async fn update_position(player: &Arc<Player>) {
                 unloading_chunks.push(chunk_pos);
             },
         );
-        if !loading_chunks.is_empty() {
-            //let inst = std::time::Instant::now();
-
-            // loading_chunks.sort_by(|a, b| {
-            //     let distance_a_squared = a.sub(a).length_squared();
-            //     let distance_b_squared = b.sub(a).length_squared();
-            //     distance_a_squared.cmp(&distance_b_squared)
-            // });
-
-            entity
-                .world
-                .spawn_world_chunks(player.clone(), loading_chunks);
-            //log::debug!("Loading chunks took {:?}", inst.elapsed());
-        }
 
         if !unloading_chunks.is_empty() {
             //let inst = std::time::Instant::now();
@@ -138,6 +119,21 @@ pub async fn update_position(player: &Arc<Player>) {
                 }
             });
             //log::debug!("Unloading chunks took {:?} (3)", inst.elapsed());
+        }
+
+        if !loading_chunks.is_empty() {
+            //let inst = std::time::Instant::now();
+
+            // loading_chunks.sort_by(|a, b| {
+            //     let distance_a_squared = a.sub(a).length_squared();
+            //     let distance_b_squared = b.sub(a).length_squared();
+            //     distance_a_squared.cmp(&distance_b_squared)
+            // });
+
+            entity
+                .world
+                .spawn_world_chunks(player.clone(), loading_chunks, new_chunk_center);
+            //log::debug!("Loading chunks took {:?}", inst.elapsed());
         }
     }
 }

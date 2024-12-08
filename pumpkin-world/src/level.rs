@@ -151,7 +151,7 @@ impl Level {
                 // - Player disconnecting before all packets have been sent
                 // - Player moving so fast that the chunk leaves the render distance before it
                 // is loaded into memory
-                false
+                true
             }
         }
     }
