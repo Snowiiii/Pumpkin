@@ -6,7 +6,6 @@ use pumpkin_world::item::ItemStack;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 pub struct OpenContainer {
-    // TODO: unique id should be here
     players: Vec<i32>,
     container: Arc<Mutex<Box<dyn Container>>>,
     location: Option<WorldPosition>,
@@ -52,6 +51,21 @@ impl OpenContainer {
             location,
             block,
         }
+    }
+
+    pub fn is_location(&self, try_position: WorldPosition) -> bool {
+        if let Some(location) = self.location {
+            location == try_position
+        } else {
+            false
+        }
+    }
+
+    pub async fn on_destroy(&self) {
+        let mut container = self.container.lock().await;
+
+        container.clear_all_slots();
+        // TODO drop all items by default
     }
 
     pub fn all_player_ids(&self) -> Vec<i32> {

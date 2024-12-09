@@ -2,6 +2,7 @@ use crate::block::pumpkin_block::{BlockMetadata, PumpkinBlock};
 use crate::entity::player::Player;
 use crate::server::Server;
 use pumpkin_core::math::position::WorldPosition;
+use pumpkin_inventory::OpenContainer;
 use pumpkin_world::block::block_registry::Block;
 use pumpkin_world::item::item_registry::Item;
 use std::collections::HashMap;
@@ -34,7 +35,7 @@ impl BlockManager {
     ) {
         let pumpkin_block = self.get_pumpkin_block(block);
         if let Some(pumpkin_block) = pumpkin_block {
-            pumpkin_block.on_use(player, location, server).await;
+            pumpkin_block.on_use(block, player, location, server).await;
         }
     }
 
@@ -49,7 +50,7 @@ impl BlockManager {
         let pumpkin_block = self.get_pumpkin_block(block);
         if let Some(pumpkin_block) = pumpkin_block {
             return pumpkin_block
-                .on_use_with_item(player, location, item, server)
+                .on_use_with_item(block, player, location, item, server)
                 .await;
         }
         BlockActionResult::Continue
@@ -64,7 +65,9 @@ impl BlockManager {
     ) {
         let pumpkin_block = self.get_pumpkin_block(block);
         if let Some(pumpkin_block) = pumpkin_block {
-            pumpkin_block.on_placed(player, location, server).await;
+            pumpkin_block
+                .on_placed(block, player, location, server)
+                .await;
         }
     }
 
@@ -77,7 +80,9 @@ impl BlockManager {
     ) {
         let pumpkin_block = self.get_pumpkin_block(block);
         if let Some(pumpkin_block) = pumpkin_block {
-            pumpkin_block.on_broken(player, location, server).await;
+            pumpkin_block
+                .on_broken(block, player, location, server)
+                .await;
         }
     }
 
@@ -87,10 +92,13 @@ impl BlockManager {
         player: &Player,
         location: WorldPosition,
         server: &Server,
+        container: &mut OpenContainer,
     ) {
         let pumpkin_block = self.get_pumpkin_block(block);
         if let Some(pumpkin_block) = pumpkin_block {
-            pumpkin_block.on_close(player, location, server).await;
+            pumpkin_block
+                .on_close(block, player, location, server, container)
+                .await;
         }
     }
 
