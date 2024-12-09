@@ -1,7 +1,11 @@
 package de.snowii.extractor
 
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.google.gson.JsonArray
 import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.google.gson.reflect.TypeToken
 import de.snowii.extractor.extractors.*
 import java.io.FileWriter
 import java.io.IOException
@@ -9,6 +13,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.TreeMap
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
 import net.minecraft.server.MinecraftServer
@@ -57,7 +62,8 @@ class Extractor : ModInitializer {
                         try {
                             val out = outputDirectory.resolve(ext.fileName())
                             val fileWriter = FileWriter(out.toFile(), StandardCharsets.UTF_8)
-                            gson.toJson(ext.extract(server), fileWriter)
+                            val extracted = ext.extract(server)
+                            gson.toJson(deterministic_json(gson, extracted) ?: extracted, fileWriter)
                             fileWriter.close()
                             logger.info("Wrote " + out.toAbsolutePath())
                         } catch (e: java.lang.Exception) {
@@ -65,9 +71,33 @@ class Extractor : ModInitializer {
                         }
                     }
 
-                    throw java.lang.Exception("THIS EXCEPTION WAS INSERTED TO STOP USELESS WORK, DONT WORRY ABOUT IT")
+                    throw java.lang.Exception(
+                            "THIS EXCEPTION WAS INSERTED TO STOP USELESS WORK, DONT WORRY ABOUT IT"
+                    )
                 }
         )
+    }
+
+    fun deterministic_json(gson: Gson, element: JsonElement): Any? {
+        if (element is JsonObject) {
+            val json = gson.toJson(element)
+            val map_type = object : TypeToken<TreeMap<String, JsonElement>>() {}.type
+            val map = gson.fromJson<TreeMap<String, JsonElement>>(json, map_type)
+            val keys = map.keys.asSequence()
+            val loose_map = TreeMap<String, Any>()
+            for (key in keys) {
+                val value = map[key]!!
+                loose_map[key] = this.deterministic_json(gson, value) ?: value
+            }
+            return loose_map
+        } else if (element is JsonArray) {
+            val checked_array = ArrayList<Any>()
+            for (el in element) {
+                checked_array.add(deterministic_json(gson, el) ?: el)
+            }
+            return checked_array
+        }
+        return null
     }
 
     interface Extractor {

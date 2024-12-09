@@ -36,7 +36,7 @@ jobs:
           java-version: 21
           cache: "gradle"
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./extract_assets.sh
+      - run: ./contrib/extract_assets.sh
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --all-targets --all-features --no-default-features
@@ -57,9 +57,9 @@ jobs:
           cache: "gradle"
       - uses: gradle/actions/setup-gradle@v4
       - if: matrix.os != 'windows-latest'
-        run: ./extract_assets.sh
+        run: ./contrib/extract_assets.sh
       - if: matrix.os == 'windows-latest'
-        run: .\extract_assets.bat
+        run: .\contrib\extract_assets.bat
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --verbose
@@ -80,9 +80,9 @@ jobs:
           cache: "gradle"
       - uses: gradle/actions/setup-gradle@v4
       - if: matrix.os != 'windows-latest'
-        run: ./extract_assets.sh
+        run: ./contrib/extract_assets.sh
       - if: matrix.os == 'windows-latest'
-        run: .\extract_assets.bat
+        run: .\contrib\extract_assets.bat
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --verbose --release
@@ -126,7 +126,7 @@ jobs:
           java-version: 21
           cache: "gradle"
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./extract_assets.sh
+      - run: ./contrib/extract_assets.sh
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --release --all-targets --all-features --no-default-features

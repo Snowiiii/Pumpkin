@@ -2,10 +2,10 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(dirname "$0")"
-EXTRACTOR_DIR="./extractor"
+SCRIPT_DIR="$(realpath "$(dirname "$0")")"
+ROOT_DIR="$SCRIPT_DIR/.."
+EXTRACTOR_DIR="$ROOT_DIR/extractor"
 
-cd "$SCRIPT_DIR"
 if [ ! -d "$EXTRACTOR_DIR" ]; then
     echo "make sure to run this script as-is in the Pumpkin source root!"
     exit 1

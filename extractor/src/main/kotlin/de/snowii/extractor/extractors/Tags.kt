@@ -14,7 +14,7 @@ class Tags : Extractor.Extractor {
     }
 
     override fun extract(server: MinecraftServer): JsonElement {
-        val tagsJson = JsonArray()
+        val tagsArray = ArrayList<JsonElement>()
 
         val tags = TagPacketSerializer.serializeTags(server.combinedDynamicRegistries)
 
@@ -24,13 +24,23 @@ class Tags : Extractor.Extractor {
             val tagValues =
                 tag.value.toRegistryTags(server.combinedDynamicRegistries.combinedRegistryManager.getOrThrow(tag.key))
             for (value in tagValues.tags) {
-                val tagGroupTagsJsonArray = JsonArray()
+                val tagGroupTagsArray = ArrayList<String>()
                 for (tagVal in value.value) {
-                    tagGroupTagsJsonArray.add(tagVal.key.orElseThrow().value.path)
+                    tagGroupTagsArray.add(tagVal.key.orElseThrow().value.path)
+                }
+                val tagGroupTagsJsonArray = JsonArray()
+                for (path in tagGroupTagsArray.sorted()) {
+                    tagGroupTagsArray.add(path)
                 }
                 tagGroupTagsJson.add(value.key.id.path, tagGroupTagsJsonArray)
             }
-            tagsJson.add(tagGroupTagsJson)
+            tagsArray.add(tagGroupTagsJson)
+        }
+
+        val tagsJson = JsonArray()
+
+        for (el in tagsArray.sortedBy { it.asJsonObject.get("name").asString }) {
+            tagsJson.add(el)
         }
 
         return tagsJson
