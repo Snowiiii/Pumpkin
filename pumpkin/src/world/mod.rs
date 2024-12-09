@@ -167,6 +167,16 @@ impl World {
         .await;
     }
 
+    pub async fn play_block_sound(&self, sound_id: u16, position: WorldPosition) {
+        let new_vec = Vector3::new(
+            f64::from(position.0.x) + 0.5,
+            f64::from(position.0.y) + 0.5,
+            f64::from(position.0.z) + 0.5,
+        );
+        self.play_sound(sound_id, SoundCategory::Blocks, &new_vec)
+            .await;
+    }
+
     pub async fn play_record(&self, record_id: i32, position: WorldPosition) {
         self.broadcast_packet_all(&CLevelEvent::new(1010, position, record_id, false))
             .await;
