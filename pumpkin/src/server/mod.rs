@@ -1,6 +1,7 @@
 use connection_cache::{CachedBranding, CachedStatus};
 use key_store::KeyStore;
 use pumpkin_config::BASIC_CONFIG;
+use pumpkin_core::math::position::WorldPosition;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
@@ -9,9 +10,11 @@ use pumpkin_inventory::{Container, OpenContainer};
 use pumpkin_protocol::client::login::CEncryptionRequest;
 use pumpkin_protocol::{client::config::CPluginMessage, ClientPacket};
 use pumpkin_registry::{DimensionType, Registry};
+use pumpkin_world::block::block_registry::Block;
 use pumpkin_world::dimension::Dimension;
 use rand::prelude::SliceRandom;
 use std::collections::HashMap;
+use std::sync::atomic::AtomicU32;
 use std::{
     sync::{
         atomic::{AtomicI32, Ordering},
@@ -61,6 +64,8 @@ pub struct Server {
     pub drag_handler: DragHandler,
     /// Assigns unique IDs to entities.
     entity_id: AtomicI32,
+    /// Assigns unique IDs to containers.
+    container_id: AtomicU32,
     /// Manages authentication with a authentication server, if enabled.
     pub auth_client: Option<reqwest::Client>,
     /// The server's custom bossbars
@@ -102,6 +107,7 @@ impl Server {
             drag_handler: DragHandler::new(),
             // 0 is invalid
             entity_id: 2.into(),
+            container_id: 0.into(),
             worlds: vec![Arc::new(world)],
             dimensions: vec![
                 DimensionType::Overworld,
@@ -190,6 +196,26 @@ impl Server {
             .get(&container_id)?
             .try_open(player_id)
             .cloned()
+    }
+
+    pub async fn get_container_id(&self, location: WorldPosition, block: Block) -> Option<u32> {
+        let open_containers = self.open_containers.read().await;
+        // TODO: do better than brute force
+        for (id, container) in open_containers.iter() {
+            if container.is_location(location) {
+                if let Some(container_block) = container.get_block() {
+                    if container_block.id == block.id {
+                        log::debug!("Found container id: {}", id);
+                        return Some(*id as u32);
+                    }
+                }
+            }
+        }
+        log::debug!("No container found... this should not happen.");
+
+        drop(open_containers);
+
+        None
     }
 
     /// Broadcasts a packet to all players in all worlds.
@@ -301,6 +327,11 @@ impl Server {
     /// This should be global
     pub fn new_entity_id(&self) -> EntityId {
         self.entity_id.fetch_add(1, Ordering::SeqCst)
+    }
+
+    /// Generates a new container id
+    pub fn new_container_id(&self) -> u32 {
+        self.container_id.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn get_branding(&self) -> CPluginMessage<'_> {
