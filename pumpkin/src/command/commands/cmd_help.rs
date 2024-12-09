@@ -50,10 +50,10 @@ impl CommandExecutor for CommandHelpExecutor {
                 TextComponent::text_string("-".repeat((52 - header_text.len()) / 2) + " ")
                     .color_named(NamedColor::Yellow),
             )
-            .add_child(TextComponent::text_string(header_text.clone()))
+            .add_child(TextComponent::text(&header_text))
             .add_child(
                 TextComponent::text_string(
-                    " ".to_owned().to_string() + &"-".repeat((52 - header_text.len()) / 2) + "\n",
+                    " ".to_owned() + &"-".repeat((52 - header_text.len()) / 2) + "\n",
                 )
                 .color_named(NamedColor::Yellow),
             )
@@ -168,13 +168,11 @@ impl CommandExecutor for BaseHelpExecutor {
                     .color_named(NamedColor::Yellow),
             )
             .add_child(arrow_left.clone())
-            .add_child(TextComponent::text_string(header_text.clone()))
+            .add_child(TextComponent::text(&header_text))
             .add_child(arrow_right.clone())
             .add_child(
                 TextComponent::text_string(
-                    " ".to_owned().to_string()
-                        + &"-".repeat((52 - header_text.len() - 3) / 2)
-                        + "\n",
+                    " ".to_owned() + &"-".repeat((52 - header_text.len() - 3) / 2) + "\n",
                 )
                 .color_named(NamedColor::Yellow),
             );
@@ -201,18 +199,17 @@ impl CommandExecutor for BaseHelpExecutor {
         }
 
         let footer_text = format!(" Page {page}/{total_pages} ");
-
         message = message
             .add_child(
                 TextComponent::text_string("-".repeat((52 - footer_text.len() - 3) / 2) + " ")
                     .color_named(NamedColor::Yellow),
             )
             .add_child(arrow_left)
-            .add_child(TextComponent::text_string(footer_text.clone()))
+            .add_child(TextComponent::text(&footer_text))
             .add_child(arrow_right)
             .add_child(
                 TextComponent::text_string(
-                    " ".to_owned().to_string() + &"-".repeat((52 - footer_text.len() - 3) / 2),
+                    " ".to_owned() + &"-".repeat((52 - footer_text.len() - 3) / 2),
                 )
                 .color_named(NamedColor::Yellow),
             );
