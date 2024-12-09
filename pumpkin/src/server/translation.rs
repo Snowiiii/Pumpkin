@@ -12,7 +12,7 @@ use pumpkin_core::text::{style::Style, TextComponent, TextContent};
 use serde_json::Value;
 use thiserror::Error;
 
-static PATH: LazyLock<&str> = LazyLock::new(|| "assets/lang/en_us/en_us.json");
+static EN_US: LazyLock<&str> = LazyLock::new(|| "assets/lang/en_us/en_us.json");
 
 #[derive(Error, Debug)]
 pub enum TranslationError {
@@ -29,7 +29,7 @@ pub enum TranslationError {
 pub fn translate(message: &'_ str) -> Result<TextComponent<'_>, TranslationError> {
     let config = &ADVANCED_CONFIG.translation;
     if !config.enabled {
-        let translations = get_translations(*PATH, message)?;
+        let translations = get_translations(*EN_US, message)?;
 
         return Ok(translations);
     }
