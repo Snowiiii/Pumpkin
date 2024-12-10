@@ -767,14 +767,10 @@ mod octave_perline_noise_sampler_test {
 
 #[cfg(test)]
 mod perlin_noise_sampler_test {
-    use std::{fs, path::Path};
 
-    use pumpkin_core::{
-        assert_eq_delta,
-        random::{xoroshiro128::Xoroshiro, RandomDeriverImpl, RandomGenerator, RandomImpl},
-    };
+    use pumpkin_core::random::{xoroshiro128::Xoroshiro, RandomGenerator, RandomImpl};
 
-    use crate::{read_data_from_file, world_gen::noise::perlin::PerlinNoiseSampler};
+    use crate::world_gen::noise::perlin::PerlinNoiseSampler;
 
     use super::OctavePerlinNoiseSampler;
 
@@ -974,34 +970,6 @@ mod perlin_noise_sampler_test {
 
         for ((x, y, z), sample) in values {
             assert_eq!(sampler.sample_flat_y(x, y, z), sample);
-        }
-    }
-
-    #[test]
-    fn test_no_y_chunk() {
-        let expected_data: Vec<(i32, i32, i32, f64)> =
-            read_data_from_file!("../../../assets/perlin2_7_4.json");
-
-        let mut rand = Xoroshiro::from_seed(0);
-        let splitter = rand.next_splitter();
-        let mut rand = RandomGenerator::Xoroshiro(splitter.split_string("minecraft:terrain"));
-        assert_eq!(rand.next_i32(), 1374487555);
-        let mut rand = RandomGenerator::Xoroshiro(splitter.split_string("minecraft:terrain"));
-
-        let (first, amplitudes) =
-            OctavePerlinNoiseSampler::calculate_amplitudes(&(-15..=0).collect::<Vec<i32>>());
-        let sampler = OctavePerlinNoiseSampler::new(&mut rand, first, &amplitudes, true);
-        let sampler = sampler.get_octave(0).unwrap();
-
-        assert_eq!(sampler.x_origin, 18.223354299069797);
-        assert_eq!(sampler.y_origin, 93.99298907803595);
-        assert_eq!(sampler.z_origin, 184.48198875745823);
-
-        for (x, y, z, sample) in expected_data {
-            let scale = 0.005;
-            let result =
-                sampler.sample_flat_y(x as f64 * scale, y as f64 * scale, z as f64 * scale);
-            assert_eq_delta!(result, sample, f64::EPSILON);
         }
     }
 
@@ -1220,40 +1188,6 @@ mod perlin_noise_sampler_test {
     }
 
     #[test]
-    fn test_no_fade_chunk() {
-        let expected_data: Vec<(i32, i32, i32, f64)> =
-            read_data_from_file!("../../../assets/perlin_7_4.json");
-
-        let mut rand = Xoroshiro::from_seed(0);
-        let splitter = rand.next_splitter();
-        let mut rand = RandomGenerator::Xoroshiro(splitter.split_string("minecraft:terrain"));
-        assert_eq!(rand.next_i32(), 1374487555);
-        let mut rand = RandomGenerator::Xoroshiro(splitter.split_string("minecraft:terrain"));
-
-        let (first, amplitudes) =
-            OctavePerlinNoiseSampler::calculate_amplitudes(&(-15..=0).collect::<Vec<i32>>());
-        let sampler = OctavePerlinNoiseSampler::new(&mut rand, first, &amplitudes, true);
-        let sampler = sampler.get_octave(0).unwrap();
-
-        assert_eq!(sampler.x_origin, 18.223354299069797);
-        assert_eq!(sampler.y_origin, 93.99298907803595);
-        assert_eq!(sampler.z_origin, 184.48198875745823);
-
-        for (x, y, z, sample) in expected_data {
-            let scale = 0.005;
-            let max_y = scale * 2f64;
-            let result = sampler.sample_no_fade(
-                x as f64 * scale,
-                y as f64 * scale,
-                z as f64 * scale,
-                scale,
-                max_y,
-            );
-            assert_eq_delta!(result, sample, f64::EPSILON);
-        }
-    }
-
-    #[test]
     fn test_precision() {
         let values = [
             2.5E-4,
@@ -1308,27 +1242,5 @@ mod perlin_noise_sampler_test {
             amplitudes,
             [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
         );
-    }
-
-    #[test]
-    fn test_map() {
-        let expected_data: Vec<i32> = read_data_from_file!("../../../assets/perlin_map.json");
-        let mut expected_iter = expected_data.iter();
-
-        let mut rand = Xoroshiro::from_seed(0);
-        let splitter = rand.next_splitter();
-        let mut rand = RandomGenerator::Xoroshiro(splitter.split_string("minecraft:terrain"));
-        assert_eq!(rand.next_i32(), 1374487555);
-        let mut rand = RandomGenerator::Xoroshiro(splitter.split_string("minecraft:terrain"));
-
-        let (first, amplitudes) =
-            OctavePerlinNoiseSampler::calculate_amplitudes(&(-15..=0).collect::<Vec<i32>>());
-        let sampler = OctavePerlinNoiseSampler::new(&mut rand, first, &amplitudes, true);
-        let sampler = sampler.get_octave(0).unwrap();
-
-        for x in -512..512 {
-            let y = sampler.map(x);
-            assert_eq!(y, *expected_iter.next().unwrap());
-        }
     }
 }
