@@ -7,7 +7,7 @@ use std::{
 };
 
 use crossbeam::atomic::AtomicCell;
-use num_derive::{FromPrimitive, ToPrimitive};
+use num_derive::FromPrimitive;
 use num_traits::Pow;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::{
@@ -17,6 +17,7 @@ use pumpkin_core::{
         vector2::Vector2,
         vector3::Vector3,
     },
+    permission::PermissionLvl,
     text::TextComponent,
     GameMode,
 };
@@ -50,16 +51,17 @@ use pumpkin_world::{
 use tokio::sync::{Mutex, Notify};
 
 use super::Entity;
-use crate::error::PumpkinError;
 use crate::{
     client::{
         authentication::GameProfile,
         combat::{self, player_attack_sound, AttackType},
         Client, PlayerConfig,
     },
+    command::{client_cmd_suggestions, dispatcher::CommandDispatcher},
     server::Server,
     world::World,
 };
+use crate::{error::PumpkinError, server::json_config::OPERATOR_CONFIG};
 
 use super::living::LivingEntity;
 
@@ -115,7 +117,7 @@ pub struct Player {
     cancel_tasks: Notify,
 
     /// the players op permission level
-    permission_lvl: PermissionLvl,
+    permission_lvl: parking_lot::Mutex<PermissionLvl>,
 }
 
 impl Player {
@@ -137,6 +139,8 @@ impl Player {
             },
             |profile| profile,
         );
+
+        let gameprofile_clone = gameprofile.clone();
         let config = client.config.lock().await.clone().unwrap_or_default();
         let view_distance = config.view_distance;
         let bounding_box_size = BoundingBoxSize {
@@ -175,8 +179,17 @@ impl Player {
             last_keep_alive_time: AtomicCell::new(std::time::Instant::now()),
             last_attacked_ticks: AtomicU32::new(0),
             cancel_tasks: Notify::new(),
-            // TODO: change this
-            permission_lvl: PermissionLvl::Four,
+            // Minecraft has no why to change the default permission level of new players.
+            // Minecrafts default permission level is 0
+            permission_lvl: OPERATOR_CONFIG
+                .read()
+                .await
+                .ops
+                .iter()
+                .find(|op| op.uuid == gameprofile_clone.id)
+                .map_or(parking_lot::Mutex::new(PermissionLvl::Zero), |op| {
+                    parking_lot::Mutex::new(op.level)
+                }),
         }
     }
 
@@ -420,20 +433,29 @@ impl Player {
         self.client
             .send_packet(&CEntityStatus::new(
                 self.entity_id(),
-                24 + self.permission_lvl as i8,
+                24 + self.permission_lvl() as i8,
             ))
             .await;
     }
 
     /// sets the players permission level and syncs it with the client
-    pub async fn set_permission_lvl(&mut self, lvl: PermissionLvl) {
-        self.permission_lvl = lvl;
+    pub async fn set_permission_lvl(
+        self: &Arc<Self>,
+        lvl: PermissionLvl,
+        command_dispatcher: &Arc<CommandDispatcher<'static>>,
+    ) {
+        {
+            let mut level = self.permission_lvl.lock();
+            *level = lvl;
+        }
+
         self.send_permission_lvl_update().await;
+        client_cmd_suggestions::send_c_commands_packet(self, command_dispatcher).await;
     }
 
     /// get the players permission level
     pub fn permission_lvl(&self) -> PermissionLvl {
-        self.permission_lvl
+        *self.permission_lvl.lock()
     }
 
     /// Yaw and Pitch in degrees
@@ -794,20 +816,4 @@ pub enum ChatMode {
     CommandsOnly,
     /// All messages should be hidden
     Hidden,
-}
-
-/// the player's permission level
-#[derive(Debug, FromPrimitive, ToPrimitive, Clone, Copy)]
-#[repr(i8)]
-pub enum PermissionLvl {
-    /// `normal`: Player can use basic commands.
-    Zero = 0,
-    /// `moderator`: Player can bypass spawn protection.
-    One = 1,
-    /// `gamemaster`: Player or executor can use more commands and player can use command blocks.
-    Two = 2,
-    /// `admin`: Player or executor can use commands related to multiplayer management.
-    Three = 3,
-    /// `owner`: Player or executor can use all of the commands, including commands related to server management.
-    Four = 4,
 }
