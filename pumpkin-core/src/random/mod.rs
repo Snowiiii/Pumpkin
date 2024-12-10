@@ -1,9 +1,22 @@
+use std::sync::atomic::{AtomicU64, Ordering};
+
 use legacy_rand::{LegacyRand, LegacySplitter};
 use xoroshiro128::{Xoroshiro, XoroshiroSplitter};
 
 mod gaussian;
 pub mod legacy_rand;
 pub mod xoroshiro128;
+
+static SEED_UNIQUIFIER: AtomicU64 = AtomicU64::new(8682522807148012u64);
+
+pub fn get_seed() -> u64 {
+    SEED_UNIQUIFIER
+        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |val| {
+            Some(val.wrapping_mul(1181783497276652981u64))
+        })
+        // We always return Some, so there will always be an Ok result
+        .unwrap()
+}
 
 pub enum RandomGenerator {
     Xoroshiro(Xoroshiro),
@@ -195,7 +208,7 @@ fn hash_block_pos(x: i32, y: i32, z: i32) -> i64 {
     l >> 16
 }
 
-fn java_string_hash(string: &str) -> i32 {
+pub fn java_string_hash(string: &str) -> i32 {
     // All byte values of latin1 align with
     // the values of U+0000 - U+00FF making this code
     // equivalent to both java hash implementations
