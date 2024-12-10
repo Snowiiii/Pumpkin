@@ -60,8 +60,8 @@ impl CachedBranding {
     }
     fn build_brand() -> Vec<u8> {
         let brand = "Pumpkin";
-        let mut buf = vec![];
-        let _ = VarInt(brand.len() as i32).encode(&mut buf);
+        let mut buf = Vec::new();
+        VarInt(brand.len() as i32).encode(&mut buf);
         buf.extend_from_slice(brand.as_bytes());
         buf
     }

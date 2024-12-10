@@ -1,6 +1,4 @@
-use std::io::{self, Write};
-
-use bytes::Buf;
+use bytes::{Buf, BufMut};
 use thiserror::Error;
 
 use crate::VarIntType;
@@ -22,7 +20,7 @@ impl VarInt {
         }
     }
 
-    pub fn decode_partial(r: &mut &[u8]) -> Result<i32, VarIntDecodeError> {
+    pub fn decode_partial(r: &mut impl Buf) -> Result<i32, VarIntDecodeError> {
         let mut val = 0;
         for i in 0..Self::MAX_SIZE {
             if !r.has_remaining() {
@@ -34,25 +32,25 @@ impl VarInt {
                 return Ok(val);
             }
         }
-
         Err(VarIntDecodeError::TooLarge)
     }
 
-    pub fn encode(&self, mut w: impl Write) -> Result<(), io::Error> {
-        let mut x = self.0 as u64;
-        loop {
-            let byte = (x & 0x7F) as u8;
-            x >>= 7;
-            if x == 0 {
-                w.write_all(&[byte])?;
+    pub fn encode(&self, w: &mut impl BufMut) {
+        let mut val = self.0;
+        for _ in 0..Self::MAX_SIZE {
+            let mut b: u8 = val as u8 & 0b01111111;
+            val >>= 7;
+            if val != 0 {
+                b |= 0b10000000;
+            }
+            w.put_u8(b);
+            if val == 0 {
                 break;
             }
-            w.write_all(&[byte | 0x80])?;
         }
-        Ok(())
     }
 
-    pub fn decode(r: &mut &[u8]) -> Result<Self, VarIntDecodeError> {
+    pub fn decode(r: &mut impl Buf) -> Result<Self, VarIntDecodeError> {
         let mut val = 0;
         for i in 0..Self::MAX_SIZE {
             if !r.has_remaining() {

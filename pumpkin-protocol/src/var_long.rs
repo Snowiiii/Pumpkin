@@ -1,6 +1,4 @@
-use std::io::{self, Write};
-
-use bytes::Buf;
+use bytes::{Buf, BufMut};
 use thiserror::Error;
 
 use crate::VarLongType;
@@ -22,21 +20,20 @@ impl VarLong {
         }
     }
 
-    pub fn encode(&self, mut w: impl Write) -> Result<(), io::Error> {
-        let mut x = self.0 as u64;
-        loop {
+    pub fn encode(&self, w: &mut impl BufMut) {
+        let mut x = self.0;
+        for _ in 0..Self::MAX_SIZE {
             let byte = (x & 0x7F) as u8;
             x >>= 7;
             if x == 0 {
-                w.write_all(&[byte])?;
+                w.put_slice(&[byte]);
                 break;
             }
-            w.write_all(&[byte | 0x80])?;
+            w.put_slice(&[byte | 0x80]);
         }
-        Ok(())
     }
 
-    pub fn decode(r: &mut &[u8]) -> Result<Self, VarLongDecodeError> {
+    pub fn decode(r: &mut impl Buf) -> Result<Self, VarLongDecodeError> {
         let mut val = 0;
         for i in 0..Self::MAX_SIZE {
             if !r.has_remaining() {

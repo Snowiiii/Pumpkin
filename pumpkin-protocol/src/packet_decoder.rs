@@ -209,7 +209,6 @@ mod tests {
     use cfb8::cipher::AsyncStreamCipher;
     use cfb8::Encryptor as Cfb8Encryptor;
     use libdeflater::{CompressionLvl, Compressor};
-    use std::io::Cursor;
 
     /// Helper function to compress data using libdeflater's Zlib compressor
     fn compress_zlib(data: &[u8]) -> Vec<u8> {
@@ -265,10 +264,7 @@ mod tests {
         let packet_len_varint = VarInt(packet_len);
         let mut packet_length_encoded = Vec::new();
         {
-            let mut cursor = Cursor::new(&mut packet_length_encoded);
-            packet_len_varint
-                .encode(&mut cursor)
-                .expect("VarInt encoding failed");
+            packet_len_varint.encode(&mut packet_length_encoded);
         }
 
         // Create a new buffer for the entire packet

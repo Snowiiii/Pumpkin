@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use aes::cipher::{generic_array::GenericArray, BlockEncryptMut, BlockSizeUser, KeyIvInit};
 use bytes::{BufMut, BytesMut};
 use pumpkin_config::compression::CompressionInfo;
@@ -39,17 +37,12 @@ impl Default for PacketEncoder {
 impl PacketEncoder {
     pub fn append_packet<P: ClientPacket>(&mut self, packet: &P) -> Result<(), PacketEncodeError> {
         let start_len = self.buf.len();
-        let mut writer = (&mut self.buf).writer();
 
         let mut packet_buf = ByteBuffer::empty();
-        VarInt(P::PACKET_ID)
-            .encode(&mut writer)
-            .map_err(|_| PacketEncodeError::EncodeID)?;
+        VarInt(P::PACKET_ID).encode(&mut self.buf);
         packet.write(&mut packet_buf);
 
-        writer
-            .write(packet_buf.buf())
-            .map_err(|_| PacketEncodeError::EncodeFailedWrite)?;
+        self.buf.put(packet_buf.buf());
 
         let data_len = self.buf.len() - start_len;
 
@@ -87,14 +80,8 @@ impl PacketEncoder {
 
                 self.buf.truncate(start_len);
 
-                let mut writer = (&mut self.buf).writer();
-
-                VarInt(packet_len as i32)
-                    .encode(&mut writer)
-                    .map_err(|_| PacketEncodeError::EncodeLength)?;
-                VarInt(data_len as i32)
-                    .encode(&mut writer)
-                    .map_err(|_| PacketEncodeError::EncodeData)?;
+                VarInt(packet_len as i32).encode(&mut self.buf);
+                VarInt(data_len as i32).encode(&mut self.buf);
                 self.buf.extend_from_slice(&self.compress_buf);
             } else {
                 let data_len_size = 1;
@@ -114,13 +101,9 @@ impl PacketEncoder {
 
                 let mut front = &mut self.buf[start_len..];
 
-                VarInt(packet_len as i32)
-                    .encode(&mut front)
-                    .map_err(|_| PacketEncodeError::EncodeLength)?;
+                VarInt(packet_len as i32).encode(&mut front);
                 // Zero for no compression on this packet.
-                VarInt(0)
-                    .encode(front)
-                    .map_err(|_| PacketEncodeError::EncodeData)?;
+                VarInt(0).encode(&mut front);
             }
 
             return Ok(());
@@ -138,10 +121,8 @@ impl PacketEncoder {
         self.buf
             .copy_within(start_len..start_len + data_len, start_len + packet_len_size);
 
-        let front = &mut self.buf[start_len..];
-        VarInt(packet_len as i32)
-            .encode(front)
-            .map_err(|_| PacketEncodeError::EncodeID)?;
+        let mut front = &mut self.buf[start_len..];
+        VarInt(packet_len as i32).encode(&mut front);
         Ok(())
     }
 
@@ -188,18 +169,12 @@ impl PacketEncoder {
 
 #[derive(Error, Debug)]
 pub enum PacketEncodeError {
-    #[error("failed to encode packet ID")]
-    EncodeID,
-    #[error("failed to encode packet Length")]
-    EncodeLength,
     #[error("failed to encode packet data")]
     EncodeData,
     #[error("failed to write encoded packet")]
     EncodeFailedWrite,
     #[error("packet exceeds maximum length")]
     TooLong,
-    #[error("invalid compression level")]
-    InvalidCompressionLevel,
     #[error("compression failed")]
     CompressionFailed,
 }
