@@ -17,7 +17,7 @@ use pumpkin_core::{
     text::TextComponent,
     GameMode,
 };
-use pumpkin_inventory::{InventoryError, WindowType};
+use pumpkin_inventory::InventoryError;
 use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
 use pumpkin_protocol::{
     client::play::CCommandSuggestions,
@@ -790,11 +790,13 @@ impl Player {
     // TODO:
     // This function will in the future be used to keep track of if the client is in a valid state.
     // But this is not possible yet
-    pub async fn handle_close_container(&self, server: &Server, packet: SCloseContainer) {
-        let Some(_window_type) = WindowType::from_i32(packet.window_id.0) else {
-            self.kick(TextComponent::text("Invalid window ID")).await;
-            return;
-        };
+    pub async fn handle_close_container(&self, server: &Server, _packet: SCloseContainer) {
+        // TODO: This should check if player sent this packet before
+        // let Some(_window_type) = WindowType::from_i32(packet.window_id.0) else {
+        //     log::info!("Closed ID: {}", packet.window_id.0);
+        //     self.kick(TextComponent::text("Invalid window ID")).await;
+        //     return;
+        // };
         // window_id 0 represents both 9x1 Generic AND inventory here
         let mut inventory = self.inventory().lock().await;
 
@@ -803,6 +805,16 @@ impl Player {
         if let Some(id) = open_container {
             let mut open_containers = server.open_containers.write().await;
             if let Some(container) = open_containers.get_mut(&id) {
+                // If container contains both a location and a type, run the on_close block_manager handler
+                if let Some(pos) = container.get_location() {
+                    if let Some(block) = container.get_block() {
+                        server
+                            .block_manager
+                            .on_close(&block, self, pos, server, container) //block, self, location, server)
+                            .await;
+                    }
+                }
+                // Remove the player from the container
                 container.remove_player(self.entity_id());
             }
             self.open_container.store(None);
