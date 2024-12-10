@@ -36,11 +36,12 @@ impl PacketDecoder {
     pub fn decode(&mut self) -> Result<Option<RawPacket>, PacketDecodeError> {
         let mut r = &self.buf[..];
 
-        let packet_len = match VarInt::decode_partial(&mut r) {
+        let packet_len = match VarInt::decode(&mut r) {
             Ok(len) => len,
             Err(VarIntDecodeError::Incomplete) => return Ok(None),
             Err(VarIntDecodeError::TooLarge) => Err(PacketDecodeError::MalformedLength)?,
         };
+        let packet_len = packet_len.0;
 
         if !(0..=MAX_PACKET_SIZE).contains(&packet_len) {
             Err(PacketDecodeError::OutOfBounds)?
@@ -222,11 +223,9 @@ mod tests {
     }
 
     /// Helper function to encrypt data using AES-128 CFB-8 mode
-    fn encrypt_aes128(data: &[u8], key: &[u8; 16], iv: &[u8; 16]) -> Vec<u8> {
+    fn encrypt_aes128(mut data: &mut [u8], key: &[u8; 16], iv: &[u8; 16]) {
         let encryptor = Cfb8Encryptor::<Aes128>::new_from_slices(key, iv).expect("Invalid key/iv");
-        let mut encrypted = data.to_vec();
-        encryptor.encrypt(&mut encrypted);
-        encrypted
+        encryptor.encrypt(&mut data);
     }
 
     /// Helper function to build a packet with optional compression and encryption
@@ -274,7 +273,8 @@ mod tests {
 
         // Encrypt if key and iv are provided
         if let (Some(k), Some(v)) = (key, iv) {
-            encrypt_aes128(&packet, k, v)
+            encrypt_aes128(&mut packet, k, v);
+            packet
         } else {
             packet
         }
@@ -416,7 +416,7 @@ mod tests {
         packet_buffer.put_var_int(&packet_len_varint);
         packet_buffer.put_slice(buffer.buf());
 
-        let packet_bytes = packet_buffer.buf().to_vec();
+        let packet_bytes = packet_buffer.buf();
 
         // Initialize the decoder with compression enabled
         let mut decoder = PacketDecoder::default();

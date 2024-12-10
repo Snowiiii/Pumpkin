@@ -7,11 +7,10 @@ use crate::VarLongType;
 pub struct VarLong(pub VarLongType);
 
 impl VarLong {
-    /// The maximum number of bytes a `VarInt` could occupy when read from and
-    /// written to the Minecraft protocol.
+    /// The maximum number of bytes a `VarLong`
     pub const MAX_SIZE: usize = 10;
 
-    /// Returns the exact number of bytes this varint will write when
+    /// Returns the exact number of bytes this varlong will write when
     /// [`Encode::encode`] is called, assuming no error occurs.
     pub const fn written_size(self) -> usize {
         match self.0 {

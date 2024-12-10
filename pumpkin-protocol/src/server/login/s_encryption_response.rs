@@ -8,9 +8,9 @@ use crate::{
 #[server_packet("login:key")]
 pub struct SEncryptionResponse {
     pub shared_secret_length: VarInt,
-    pub shared_secret: Vec<u8>,
+    pub shared_secret: bytes::Bytes,
     pub verify_token_length: VarInt,
-    pub verify_token: Vec<u8>,
+    pub verify_token: bytes::Bytes,
 }
 
 impl ServerPacket for SEncryptionResponse {
@@ -21,9 +21,9 @@ impl ServerPacket for SEncryptionResponse {
         let verify_token = bytebuf.copy_to_bytes(shared_secret_length.0 as usize)?;
         Ok(Self {
             shared_secret_length,
-            shared_secret: shared_secret.to_vec(),
+            shared_secret,
             verify_token_length,
-            verify_token: verify_token.to_vec(),
+            verify_token,
         })
     }
 }

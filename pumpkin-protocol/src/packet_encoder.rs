@@ -37,11 +37,11 @@ impl Default for PacketEncoder {
 impl PacketEncoder {
     pub fn append_packet<P: ClientPacket>(&mut self, packet: &P) -> Result<(), PacketEncodeError> {
         let start_len = self.buf.len();
-
-        let mut packet_buf = ByteBuffer::empty();
+        // Write the Packet ID first
         VarInt(P::PACKET_ID).encode(&mut self.buf);
+        let mut packet_buf = ByteBuffer::empty();
+        // Now write the packet into an empty buffer
         packet.write(&mut packet_buf);
-
         self.buf.put(packet_buf.buf());
 
         let data_len = self.buf.len() - start_len;
@@ -229,11 +229,9 @@ mod tests {
     }
 
     /// Helper function to decrypt data using AES-128 CFB-8 mode
-    fn decrypt_aes128(encrypted_data: &[u8], key: &[u8; 16], iv: &[u8; 16]) -> Vec<u8> {
+    fn decrypt_aes128(mut encrypted_data: &mut [u8], key: &[u8; 16], iv: &[u8; 16]) {
         let decryptor = Cfb8Decryptor::<Aes128>::new_from_slices(key, iv).expect("Invalid key/iv");
-        let mut decrypted = encrypted_data.to_vec();
-        decryptor.decrypt(&mut decrypted);
-        decrypted
+        decryptor.decrypt(&mut encrypted_data);
     }
 
     /// Helper function to build a packet with optional compression and encryption
@@ -356,13 +354,13 @@ mod tests {
         let key = [0x00u8; 16]; // Example key
 
         // Build the packet with encryption enabled (no compression)
-        let packet_bytes = build_packet_with_encoder(&packet, None, Some(&key));
+        let mut packet_bytes = build_packet_with_encoder(&packet, None, Some(&key));
 
         // Decrypt the packet
-        let decrypted_packet = decrypt_aes128(&packet_bytes, &key, &key);
+        decrypt_aes128(&mut packet_bytes, &key, &key);
 
         // Decode the packet manually to verify correctness
-        let mut buffer = &decrypted_packet[..];
+        let mut buffer = &packet_bytes[..];
 
         // Read packet length VarInt
         let packet_length = decode_varint(&mut buffer).expect("Failed to decode packet length");
@@ -399,13 +397,14 @@ mod tests {
         let key = [0x01u8; 16]; // Example key
 
         // Build the packet with both compression and encryption enabled
-        let packet_bytes = build_packet_with_encoder(&packet, Some(compression_info), Some(&key));
+        let mut packet_bytes =
+            build_packet_with_encoder(&packet, Some(compression_info), Some(&key));
 
         // Decrypt the packet
-        let decrypted_packet = decrypt_aes128(&packet_bytes, &key, &key);
+        decrypt_aes128(&mut packet_bytes, &key, &key);
 
         // Decode the packet manually to verify correctness
-        let mut buffer = &decrypted_packet[..];
+        let mut buffer = &packet_bytes[..];
 
         // Read packet length VarInt
         let packet_length = decode_varint(&mut buffer).expect("Failed to decode packet length");
