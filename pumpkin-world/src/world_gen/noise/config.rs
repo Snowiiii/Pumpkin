@@ -594,7 +594,7 @@ mod test {
     #[test]
     fn test_final_density_samples() {
         let expected_data: Vec<(i32, i32, i32, f64)> =
-            read_data_from_file!("../../../assets/final_density_dump_7_4.json");
+            read_data_from_file!("../../../assets/final_density_7_4.json");
 
         let config = NoiseConfig::new(0, &OVERWORLD_NOISE_ROUTER);
         let function = config.router().final_density.clone();
