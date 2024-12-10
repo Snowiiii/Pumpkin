@@ -5,9 +5,35 @@
 Pre-release: Currently under development and not yet ready for official release.
 
 To get Pumpkin running, you first have to clone it:
+
 ```shell
 git clone https://github.com/Snowiiii/Pumpkin.git
 cd Pumpkin
+```
+
+Then extract asset files from the Minecraft server with:
+
+```shell
+./contrib/extract_assets.sh
+```
+
+or, if on windows:
+
+```shell
+.\contrib\extract_assets.bat
+```
+
+If you cannot or choose not to have Java on your machine, you can
+download pre-extracted archival files with:
+
+```shell
+./contrib/download_assets.sh
+```
+
+or, if on windows:
+
+```shell
+.\contrib\download_assets.bat
 ```
 
 You may also have to [install rust](https://www.rust-lang.org/tools/install) if you don't already have it.
@@ -25,7 +51,7 @@ Then run:
 > Rust flag.
 
 ```shell
-cargo run --release
+RUSTFLAGS='-C target-cpu=native' cargo run --release
 ```
 
 ## Docker
@@ -40,13 +66,14 @@ docker compose up --build
 After running this command a `data/` folder should appear in which you'll be able to find all the server files.
 Within this `data/` folder you can put your `world/` folder (make sure you restart the server)
 
-
 ## Test Server
+
 Pumpkin has a Test server maintained by @kralverde. Its runs on the latest commit of Pumpkin
 
 - **IP:** pumpkin.kralverde.dev
 
 **Specs:**
+
 - OS: Debian GNU/Linux bookworm 12.7 x86_64
 - Kernel: Linux 6.1.0-21-cloud-amd64
 - CPU: Intel Core (Haswell, no TSX) (2) @ 2.40 GHz
