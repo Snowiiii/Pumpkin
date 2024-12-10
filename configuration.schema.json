@@ -1,0 +1,75 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Pumpkin Basic Config",
+    "description": "A basic config file for easy configuration of Pumpkin",
+    "type": "object",
+    "properties": {
+        "server_address": {
+            "type": "string",
+            "format": "ipv4",
+            "default": "127.0.0.1:25565"
+        },
+        "seed": {
+            "type": "string",
+            "default": ""
+        },
+        "max_players": {
+            "type": "integer",
+            "default": 10000
+        },
+        "view_distance": {
+            "type": "integer",
+            "default": 10
+        },
+        "simulation_distance": {
+            "type": "integer",
+            "default": 10
+        },
+        "default_difficulty": {
+            "type": "string",
+            "enum": ["Peaceful", "Easy", "Normal", "Hard"],
+            "default": "Normal"
+        },
+        "allow_nether": {
+            "type": "boolean",
+            "default": true
+        },
+        "hardcore": {
+            "type": "boolean",
+            "default": false
+        },
+        "online_mode": {
+            "type": "boolean",
+            "default": true
+        },
+        "encryption": {
+            "type": "boolean",
+            "default": true
+        },
+        "motd": {
+            "type": "string",
+            "default": "A Blazing fast Pumpkin Server!"
+        },
+        "tps": {
+            "type": "number",
+            "default": 20.0
+        },
+        "default_gamemode": {
+            "type": "string",
+            "enum": ["Survival", "Creative", "Adventure", "Spectator"],
+            "default": "Survival"
+        },
+        "scrub_ips": {
+            "type": "boolean",
+            "default": true
+        },
+        "use_favicon": {
+            "type": "boolean",
+            "default": true
+        },
+        "favicon_path": {
+            "type": "string",
+            "default": "icon.png"
+        }
+    }
+}
