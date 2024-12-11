@@ -229,9 +229,9 @@ mod tests {
     }
 
     /// Helper function to decrypt data using AES-128 CFB-8 mode
-    fn decrypt_aes128(mut encrypted_data: &mut [u8], key: &[u8; 16], iv: &[u8; 16]) {
+    fn decrypt_aes128(encrypted_data: &mut [u8], key: &[u8; 16], iv: &[u8; 16]) {
         let decryptor = Cfb8Decryptor::<Aes128>::new_from_slices(key, iv).expect("Invalid key/iv");
-        decryptor.decrypt(&mut encrypted_data);
+        decryptor.decrypt(encrypted_data);
     }
 
     /// Helper function to build a packet with optional compression and encryption
