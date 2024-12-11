@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use pumpkin_core::math::vector2::Vector2;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -20,26 +21,17 @@ impl Cylindrical {
         mut newly_included: impl FnMut(Vector2<i32>),
         mut just_removed: impl FnMut(Vector2<i32>),
     ) {
-        let min_x = old_cylindrical.left().min(new_cylindrical.left());
-        let max_x = old_cylindrical.right().max(new_cylindrical.right());
-        let min_z = old_cylindrical.bottom().min(new_cylindrical.bottom());
-        let max_z = old_cylindrical.top().max(new_cylindrical.top());
+        for new_cylindrical_chunk in new_cylindrical.all_chunks_within() {
+            if !old_cylindrical.is_within_distance(new_cylindrical_chunk.x, new_cylindrical_chunk.z)
+            {
+                newly_included(new_cylindrical_chunk);
+            }
+        }
 
-        //log::debug!("{:?} {:?}", old_cylindrical, new_cylindrical);
-        for x in min_x..=max_x {
-            for z in min_z..=max_z {
-                let old_is_within = old_cylindrical.is_within_distance(x, z);
-                let new_is_within = new_cylindrical.is_within_distance(x, z);
-
-                //log::debug!("{}, {}: {} {}", x, z, old_is_within, new_is_within);
-
-                if old_is_within != new_is_within {
-                    if new_is_within {
-                        newly_included(Vector2::new(x, z));
-                    } else {
-                        just_removed(Vector2::new(x, z));
-                    }
-                }
+        for old_cylindrical_chunk in old_cylindrical.all_chunks_within() {
+            if !new_cylindrical.is_within_distance(old_cylindrical_chunk.x, old_cylindrical_chunk.z)
+            {
+                just_removed(old_cylindrical_chunk);
             }
         }
     }
@@ -80,10 +72,11 @@ impl Cylindrical {
                 all_chunks.push(Vector2::new(x, z));
             }
         }
+
         all_chunks
             .into_iter()
             .filter(|chunk| self.is_within_distance(chunk.x, chunk.z))
-            .collect()
+            .collect_vec()
     }
 }
 

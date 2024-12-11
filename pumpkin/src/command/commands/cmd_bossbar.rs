@@ -53,6 +53,7 @@ enum CommandValueSet {
 struct BossbarAddExecuter;
 
 #[async_trait]
+#[expect(clippy::inefficient_to_string)]
 impl CommandExecutor for BossbarAddExecuter {
     async fn execute<'a>(
         &self,
@@ -74,7 +75,7 @@ impl CommandExecutor for BossbarAddExecuter {
             return Ok(());
         }
 
-        let bossbar = Bossbar::new(name.clone());
+        let bossbar = Bossbar::new(name.to_string());
         server
             .bossbars
             .lock()
@@ -320,7 +321,7 @@ impl CommandExecutor for BossbarSetExecuter {
                     .bossbars
                     .lock()
                     .await
-                    .update_name(server, namespace.to_string(), name.clone())
+                    .update_name(server, namespace, name)
                     .await
                 {
                     Ok(()) => {}

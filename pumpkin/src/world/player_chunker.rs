@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::{
-    math::{get_section_cord, position::WorldPosition, vector2::Vector2, vector3::Vector3},
+    math::{get_section_cord, position::WorldPosition, vector3::Vector3},
     GameMode,
 };
 use pumpkin_protocol::client::play::{CCenterChunk, CUnloadChunk};
@@ -49,11 +49,11 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
         view_distance
     );
 
-    let new_cylindrical = Cylindrical::new(Vector2::new(chunk_pos.x, chunk_pos.z), view_distance);
+    let new_cylindrical = Cylindrical::new(chunk_pos, view_distance);
     let loading_chunks = new_cylindrical.all_chunks_within();
 
     if !loading_chunks.is_empty() {
-        world.spawn_world_chunks(player, &loading_chunks);
+        world.spawn_world_chunks(player, loading_chunks, chunk_pos);
     }
 }
 
@@ -68,24 +68,19 @@ pub async fn update_position(player: &Arc<Player>) {
     let entity = &player.living_entity.entity;
 
     let view_distance = get_view_distance(player).await;
-    let chunk_center = chunk_section_from_pos(&entity.block_pos.load()).into();
+    let new_chunk_center = entity.chunk_pos.load();
 
     let old_cylindrical = player.watched_section.load();
-    let new_cylindrical = Cylindrical::new(chunk_center, view_distance);
+    let new_cylindrical = Cylindrical::new(new_chunk_center, view_distance);
 
     if old_cylindrical != new_cylindrical {
         player.watched_section.store(new_cylindrical);
 
-        //log::debug!("changing chunks");
-        let chunk_pos = entity.chunk_pos.load();
-        assert_eq!(new_cylindrical.center.x, chunk_pos.x);
-        assert_eq!(new_cylindrical.center.z, chunk_pos.z);
-
         player
             .client
             .send_packet(&CCenterChunk {
-                chunk_x: chunk_pos.x.into(),
-                chunk_z: chunk_pos.z.into(),
+                chunk_x: new_chunk_center.x.into(),
+                chunk_z: new_chunk_center.z.into(),
             })
             .await;
 
@@ -101,6 +96,31 @@ pub async fn update_position(player: &Arc<Player>) {
                 unloading_chunks.push(chunk_pos);
             },
         );
+
+        if !unloading_chunks.is_empty() {
+            //let inst = std::time::Instant::now();
+
+            //log::debug!("Unloading chunks took {:?} (1)", inst.elapsed());
+            let chunks_to_clean = entity.world.mark_chunks_as_not_watched(&unloading_chunks);
+            entity.world.clean_chunks(&chunks_to_clean);
+
+            //log::debug!("Unloading chunks took {:?} (2)", inst.elapsed());
+            // This can take a little if we are sending a bunch of packets, queue it up :p
+            let client = player.client.clone();
+            tokio::spawn(async move {
+                for chunk in unloading_chunks {
+                    if client.closed.load(std::sync::atomic::Ordering::Relaxed) {
+                        // We will never un-close a connection
+                        break;
+                    }
+                    client
+                        .send_packet(&CUnloadChunk::new(chunk.x, chunk.z))
+                        .await;
+                }
+            });
+            //log::debug!("Unloading chunks took {:?} (3)", inst.elapsed());
+        }
+
         if !loading_chunks.is_empty() {
             //let inst = std::time::Instant::now();
 
@@ -112,66 +132,8 @@ pub async fn update_position(player: &Arc<Player>) {
 
             entity
                 .world
-                .spawn_world_chunks(player.clone(), &loading_chunks);
+                .spawn_world_chunks(player.clone(), loading_chunks, new_chunk_center);
             //log::debug!("Loading chunks took {:?}", inst.elapsed());
-        }
-
-        if !unloading_chunks.is_empty() {
-            // We want to check if this chunk is still pending
-            // if it is -> ignore
-
-            //let inst = std::time::Instant::now();
-
-            let watched_chunks: Vec<_> = {
-                let mut pending_chunks = player.pending_chunks.lock();
-                unloading_chunks
-                    .into_iter()
-                    .filter(|chunk| {
-                        if let Some(handles) = pending_chunks.get_mut(chunk) {
-                            if let Some((count, handle)) = handles
-                                .iter_mut()
-                                .rev()
-                                .enumerate()
-                                .find(|(_, handle)| !handle.aborted())
-                            {
-                                log::debug!("Aborting chunk {:?} ({}) (unload)", chunk, count);
-                                // We want to abort the last queued chunk, that we if a client still
-                                // has a pending request for this chunk, we dont need to do the work
-                                // twice
-                                handle.abort();
-                            } else {
-                                log::warn!(
-                                    "Aborting chunk {:?} but all were already aborted!",
-                                    chunk
-                                );
-                            }
-                            false
-                        } else {
-                            true
-                        }
-                    })
-                    .collect()
-            };
-
-            //log::debug!("Unloading chunks took {:?} (1)", inst.elapsed());
-            let chunks_to_clean = entity.world.mark_chunks_as_not_watched(&watched_chunks);
-            entity.world.clean_chunks(&chunks_to_clean);
-
-            //log::debug!("Unloading chunks took {:?} (2)", inst.elapsed());
-            // This can take a little if we are sending a bunch of packets, queue it up :p
-            let client = player.client.clone();
-            tokio::spawn(async move {
-                for chunk in watched_chunks {
-                    if client.closed.load(std::sync::atomic::Ordering::Relaxed) {
-                        // We will never un-close a connection
-                        break;
-                    }
-                    client
-                        .send_packet(&CUnloadChunk::new(chunk.x, chunk.z))
-                        .await;
-                }
-            });
-            //log::debug!("Unloading chunks took {:?} (3)", inst.elapsed());
         }
     }
 }

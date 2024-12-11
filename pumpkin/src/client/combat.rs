@@ -80,9 +80,9 @@ pub async fn handle_knockback(
 
     let packet = &CEntityVelocity::new(
         &entity_id,
-        victim_velocity.x as f32,
-        victim_velocity.y as f32,
-        victim_velocity.z as f32,
+        victim_velocity.x,
+        victim_velocity.y,
+        victim_velocity.z,
     );
     let velocity = attacker_entity.velocity.load();
     attacker_entity
@@ -105,12 +105,8 @@ pub async fn spawn_sweep_particle(attacker_entity: &Entity, world: &World, pos: 
     world
         .broadcast_packet_all(&CParticle::new(
             false,
-            pos.x + d,
-            body_y,
-            pos.z + e,
-            0.0,
-            0.0,
-            0.0,
+            Vector3::new(pos.x + d, body_y, pos.z + e),
+            Vector3::new(0.0, 0.0, 0.0),
             0.0,
             0,
             VarInt(i32::from(particle!("sweep_attack"))), // sweep

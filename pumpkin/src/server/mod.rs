@@ -1,6 +1,7 @@
 use connection_cache::{CachedBranding, CachedStatus};
 use key_store::KeyStore;
 use pumpkin_config::BASIC_CONFIG;
+use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::GameMode;
 use pumpkin_entity::EntityId;
 use pumpkin_inventory::drag_handler::DragHandler;
@@ -20,6 +21,8 @@ use std::{
 };
 use tokio::sync::{Mutex, RwLock};
 
+use crate::block::block_manager::BlockManager;
+use crate::block::default_block_manager;
 use crate::client::EncryptionError;
 use crate::world::custom_bossbar::CustomBossbars;
 use crate::{
@@ -45,6 +48,8 @@ pub struct Server {
     server_branding: CachedBranding,
     /// Saves and Dispatches commands to appropriate handlers.
     pub command_dispatcher: Arc<CommandDispatcher<'static>>,
+    /// Saves and calls blocks blocks
+    pub block_manager: Arc<BlockManager>,
     /// Manages multiple worlds within the server.
     pub worlds: Vec<Arc<World>>,
     // All the dimensions that exists on the server,
@@ -89,6 +94,14 @@ impl Server {
             ),
             DimensionType::Overworld,
         );
+
+        // Spawn chunks are never unloaded
+        for x in -1..=1 {
+            for z in -1..=1 {
+                world.level.mark_chunk_as_newly_watched(Vector2::new(x, z));
+            }
+        }
+
         Self {
             cached_registry: Registry::get_synced(),
             open_containers: RwLock::new(HashMap::new()),
@@ -103,6 +116,7 @@ impl Server {
                 DimensionType::TheEnd,
             ],
             command_dispatcher,
+            block_manager: default_block_manager(),
             auth_client,
             key_store: KeyStore::new(),
             server_listing: Mutex::new(CachedStatus::new()),

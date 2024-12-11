@@ -1,3 +1,4 @@
+use pumpkin_core::math::vector3::Vector3;
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
@@ -10,7 +11,7 @@ pub struct CDamageEvent {
     source_type_id: VarInt,
     source_cause_id: VarInt,
     source_direct_id: VarInt,
-    source_position: Option<(f64, f64, f64)>,
+    source_position: Option<Vector3<f64>>,
 }
 
 impl CDamageEvent {
@@ -19,7 +20,7 @@ impl CDamageEvent {
         source_type_id: VarInt,
         source_cause_id: Option<VarInt>,
         source_direct_id: Option<VarInt>,
-        source_position: Option<(f64, f64, f64)>,
+        source_position: Option<Vector3<f64>>,
     ) -> Self {
         Self {
             entity_id,

@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use aes::cipher::{generic_array::GenericArray, BlockEncryptMut, BlockSizeUser, KeyIvInit};
 use bytes::{BufMut, BytesMut};
 use pumpkin_config::compression::CompressionInfo;
@@ -39,17 +37,12 @@ impl Default for PacketEncoder {
 impl PacketEncoder {
     pub fn append_packet<P: ClientPacket>(&mut self, packet: &P) -> Result<(), PacketEncodeError> {
         let start_len = self.buf.len();
-        let mut writer = (&mut self.buf).writer();
-
+        // Write the Packet ID first
+        VarInt(P::PACKET_ID).encode(&mut self.buf);
         let mut packet_buf = ByteBuffer::empty();
-        VarInt(P::PACKET_ID)
-            .encode(&mut writer)
-            .map_err(|_| PacketEncodeError::EncodeID)?;
+        // Now write the packet into an empty buffer
         packet.write(&mut packet_buf);
-
-        writer
-            .write(packet_buf.buf())
-            .map_err(|_| PacketEncodeError::EncodeFailedWrite)?;
+        self.buf.put(packet_buf.buf());
 
         let data_len = self.buf.len() - start_len;
 
@@ -87,14 +80,8 @@ impl PacketEncoder {
 
                 self.buf.truncate(start_len);
 
-                let mut writer = (&mut self.buf).writer();
-
-                VarInt(packet_len as i32)
-                    .encode(&mut writer)
-                    .map_err(|_| PacketEncodeError::EncodeLength)?;
-                VarInt(data_len as i32)
-                    .encode(&mut writer)
-                    .map_err(|_| PacketEncodeError::EncodeData)?;
+                VarInt(packet_len as i32).encode(&mut self.buf);
+                VarInt(data_len as i32).encode(&mut self.buf);
                 self.buf.extend_from_slice(&self.compress_buf);
             } else {
                 let data_len_size = 1;
@@ -114,13 +101,9 @@ impl PacketEncoder {
 
                 let mut front = &mut self.buf[start_len..];
 
-                VarInt(packet_len as i32)
-                    .encode(&mut front)
-                    .map_err(|_| PacketEncodeError::EncodeLength)?;
+                VarInt(packet_len as i32).encode(&mut front);
                 // Zero for no compression on this packet.
-                VarInt(0)
-                    .encode(front)
-                    .map_err(|_| PacketEncodeError::EncodeData)?;
+                VarInt(0).encode(&mut front);
             }
 
             return Ok(());
@@ -138,10 +121,8 @@ impl PacketEncoder {
         self.buf
             .copy_within(start_len..start_len + data_len, start_len + packet_len_size);
 
-        let front = &mut self.buf[start_len..];
-        VarInt(packet_len as i32)
-            .encode(front)
-            .map_err(|_| PacketEncodeError::EncodeID)?;
+        let mut front = &mut self.buf[start_len..];
+        VarInt(packet_len as i32).encode(&mut front);
         Ok(())
     }
 
@@ -188,18 +169,12 @@ impl PacketEncoder {
 
 #[derive(Error, Debug)]
 pub enum PacketEncodeError {
-    #[error("failed to encode packet ID")]
-    EncodeID,
-    #[error("failed to encode packet Length")]
-    EncodeLength,
     #[error("failed to encode packet data")]
     EncodeData,
     #[error("failed to write encoded packet")]
     EncodeFailedWrite,
     #[error("packet exceeds maximum length")]
     TooLong,
-    #[error("invalid compression level")]
-    InvalidCompressionLevel,
     #[error("compression failed")]
     CompressionFailed,
 }
@@ -254,11 +229,9 @@ mod tests {
     }
 
     /// Helper function to decrypt data using AES-128 CFB-8 mode
-    fn decrypt_aes128(encrypted_data: &[u8], key: &[u8; 16], iv: &[u8; 16]) -> Vec<u8> {
+    fn decrypt_aes128(mut encrypted_data: &mut [u8], key: &[u8; 16], iv: &[u8; 16]) {
         let decryptor = Cfb8Decryptor::<Aes128>::new_from_slices(key, iv).expect("Invalid key/iv");
-        let mut decrypted = encrypted_data.to_vec();
-        decryptor.decrypt(&mut decrypted);
-        decrypted
+        decryptor.decrypt(&mut encrypted_data);
     }
 
     /// Helper function to build a packet with optional compression and encryption
@@ -381,13 +354,13 @@ mod tests {
         let key = [0x00u8; 16]; // Example key
 
         // Build the packet with encryption enabled (no compression)
-        let packet_bytes = build_packet_with_encoder(&packet, None, Some(&key));
+        let mut packet_bytes = build_packet_with_encoder(&packet, None, Some(&key));
 
         // Decrypt the packet
-        let decrypted_packet = decrypt_aes128(&packet_bytes, &key, &key);
+        decrypt_aes128(&mut packet_bytes, &key, &key);
 
         // Decode the packet manually to verify correctness
-        let mut buffer = &decrypted_packet[..];
+        let mut buffer = &packet_bytes[..];
 
         // Read packet length VarInt
         let packet_length = decode_varint(&mut buffer).expect("Failed to decode packet length");
@@ -424,13 +397,14 @@ mod tests {
         let key = [0x01u8; 16]; // Example key
 
         // Build the packet with both compression and encryption enabled
-        let packet_bytes = build_packet_with_encoder(&packet, Some(compression_info), Some(&key));
+        let mut packet_bytes =
+            build_packet_with_encoder(&packet, Some(compression_info), Some(&key));
 
         // Decrypt the packet
-        let decrypted_packet = decrypt_aes128(&packet_bytes, &key, &key);
+        decrypt_aes128(&mut packet_bytes, &key, &key);
 
         // Decode the packet manually to verify correctness
-        let mut buffer = &decrypted_packet[..];
+        let mut buffer = &packet_bytes[..];
 
         // Read packet length VarInt
         let packet_length = decode_varint(&mut buffer).expect("Failed to decode packet length");

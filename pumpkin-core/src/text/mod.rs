@@ -100,7 +100,7 @@ impl serde::Serialize for TextComponent<'_> {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_bytes(self.encode().as_slice())
+        serializer.serialize_bytes(&self.encode())
     }
 }
 
@@ -181,7 +181,7 @@ impl<'a> TextComponent<'a> {
         self
     }
 
-    pub fn encode(&self) -> Vec<u8> {
+    pub fn encode(&self) -> bytes::BytesMut {
         // TODO: Somehow fix this ugly mess
         #[derive(serde::Serialize)]
         #[serde(rename_all = "camelCase")]
@@ -215,9 +215,7 @@ impl<'a> TextComponent<'a> {
         // dbg!(pumpkin_nbt::serializer::to_bytes_unnamed(&astruct).unwrap().to_vec());
 
         // TODO
-        pumpkin_nbt::serializer::to_bytes_unnamed(&astruct)
-            .unwrap()
-            .to_vec()
+        pumpkin_nbt::serializer::to_bytes_unnamed(&astruct).unwrap()
     }
 }
 

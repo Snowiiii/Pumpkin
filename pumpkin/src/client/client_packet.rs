@@ -8,6 +8,7 @@ use crate::{
     },
     server::{Server, CURRENT_MC_VERSION},
 };
+use core::str;
 use num_traits::FromPrimitive;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::TextComponent;
@@ -412,8 +413,8 @@ impl Client {
             || plugin_message.channel.starts_with("MC|Brand")
         {
             log::debug!("got a client brand");
-            match String::from_utf8(plugin_message.data) {
-                Ok(brand) => *self.brand.lock().await = Some(brand),
+            match str::from_utf8(&plugin_message.data) {
+                Ok(brand) => *self.brand.lock().await = Some(brand.to_string()),
                 Err(e) => self.kick(&e.to_string()).await,
             }
         }

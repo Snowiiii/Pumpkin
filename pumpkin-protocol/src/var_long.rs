@@ -1,6 +1,4 @@
-use std::io::{self, Write};
-
-use bytes::Buf;
+use bytes::{Buf, BufMut};
 use thiserror::Error;
 
 use crate::VarLongType;
@@ -9,11 +7,10 @@ use crate::VarLongType;
 pub struct VarLong(pub VarLongType);
 
 impl VarLong {
-    /// The maximum number of bytes a `VarInt` could occupy when read from and
-    /// written to the Minecraft protocol.
+    /// The maximum number of bytes a `VarLong`
     pub const MAX_SIZE: usize = 10;
 
-    /// Returns the exact number of bytes this varint will write when
+    /// Returns the exact number of bytes this varlong will write when
     /// [`Encode::encode`] is called, assuming no error occurs.
     pub const fn written_size(self) -> usize {
         match self.0 {
@@ -22,21 +19,20 @@ impl VarLong {
         }
     }
 
-    pub fn encode(&self, mut w: impl Write) -> Result<(), io::Error> {
-        let mut x = self.0 as u64;
-        loop {
+    pub fn encode(&self, w: &mut impl BufMut) {
+        let mut x = self.0;
+        for _ in 0..Self::MAX_SIZE {
             let byte = (x & 0x7F) as u8;
             x >>= 7;
             if x == 0 {
-                w.write_all(&[byte])?;
+                w.put_slice(&[byte]);
                 break;
             }
-            w.write_all(&[byte | 0x80])?;
+            w.put_slice(&[byte | 0x80]);
         }
-        Ok(())
     }
 
-    pub fn decode(r: &mut &[u8]) -> Result<Self, VarLongDecodeError> {
+    pub fn decode(r: &mut impl Buf) -> Result<Self, VarLongDecodeError> {
         let mut val = 0;
         for i in 0..Self::MAX_SIZE {
             if !r.has_remaining() {

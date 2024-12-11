@@ -84,16 +84,16 @@ pub(crate) enum Arg<'a> {
     Rotation(f32, f32),
     GameMode(GameMode),
     CommandTree(&'a CommandTree<'a>),
-    Item(String),
-    ResourceLocation(String),
-    Block(String),
+    Item(&'a str),
+    ResourceLocation(&'a str),
+    Block(&'a str),
     BossbarColor(BossbarColor),
     BossbarStyle(BossbarDivisions),
     Msg(String),
     Num(Result<Number, NotInBounds>),
     Bool(bool),
     #[allow(unused)]
-    Simple(String),
+    Simple(&'a str),
 }
 
 /// see [`crate::commands::tree_builder::argument`] and [`CommandTree::execute`]/[`crate::commands::tree_builder::NonLeafNodeBuilder::execute`]

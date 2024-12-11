@@ -34,16 +34,8 @@ impl ArgumentConsumer for ItemArgumentConsumer {
         _server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
-        let s = args.pop()?;
-
-        let name = if s.contains(':') {
-            s.to_string()
-        } else {
-            format!("minecraft:{s}")
-        };
-
         // todo: get an actual item
-        Some(Arg::Item(name))
+        Some(Arg::Item(args.pop()?))
     }
 
     async fn suggest<'a>(
