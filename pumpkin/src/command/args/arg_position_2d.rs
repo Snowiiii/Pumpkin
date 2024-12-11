@@ -39,7 +39,7 @@ impl ArgumentConsumer for Position2DArgumentConsumer {
     ) -> Option<Arg<'a>> {
         let pos = MaybeRelativePosition2D::try_new(args.pop()?, args.pop()?)?;
 
-        let vec2 = pos.try_to_abolute(src.position())?;
+        let vec2 = pos.try_to_absolute(src.position())?;
 
         Some(Arg::Pos2D(vec2))
     }
@@ -64,7 +64,7 @@ impl MaybeRelativePosition2D {
         Some(Self(x.try_into().ok()?, z.try_into().ok()?))
     }
 
-    fn try_to_abolute(self, origin: Option<Vector3<f64>>) -> Option<Vector2<f64>> {
+    fn try_to_absolute(self, origin: Option<Vector3<f64>>) -> Option<Vector2<f64>> {
         Some(Vector2::new(
             self.0.into_absolute(origin.map(|o| o.x))?,
             self.1.into_absolute(origin.map(|o| o.z))?,

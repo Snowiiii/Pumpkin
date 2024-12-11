@@ -27,16 +27,16 @@ pub async fn start_query_handler(server: Arc<Server>, bound_addr: SocketAddr) {
             .expect("Unable to bind to address"),
     );
 
-    // Challange tokens are bound to the IP address and port
-    let valid_challange_tokens = Arc::new(RwLock::new(HashMap::new()));
-    let valid_challange_tokens_clone = valid_challange_tokens.clone();
-    // All challange tokens ever created are expired every 30 seconds
+    // Challenge tokens are bound to the IP address and port
+    let valid_challenge_tokens = Arc::new(RwLock::new(HashMap::new()));
+    let valid_challenge_tokens_clone = valid_challenge_tokens.clone();
+    // All challenge tokens ever created are expired every 30 seconds
     tokio::spawn(async move {
         let mut interval = time::interval(Duration::from_secs(30));
 
         loop {
             interval.tick().await;
-            valid_challange_tokens_clone.write().await.clear();
+            valid_challenge_tokens_clone.write().await.clear();
         }
     });
 
@@ -49,7 +49,7 @@ pub async fn start_query_handler(server: Arc<Server>, bound_addr: SocketAddr) {
 
     loop {
         let socket = socket.clone();
-        let valid_challange_tokens = valid_challange_tokens.clone();
+        let valid_challenge_tokens = valid_challenge_tokens.clone();
         let server = server.clone();
         let mut buf = vec![0; 1024];
         let (_, addr) = socket.recv_from(&mut buf).await.unwrap();
@@ -57,7 +57,7 @@ pub async fn start_query_handler(server: Arc<Server>, bound_addr: SocketAddr) {
         tokio::spawn(async move {
             if let Err(err) = handle_packet(
                 buf,
-                valid_challange_tokens,
+                valid_challenge_tokens,
                 server,
                 socket,
                 addr,
@@ -87,10 +87,10 @@ async fn handle_packet(
         match raw_packet.packet_type {
             PacketType::Handshake => {
                 if let Ok(packet) = SHandshake::decode(&mut raw_packet).await {
-                    let challange_token = rand::thread_rng().gen_range(1..=i32::MAX);
+                    let challenge_token = rand::thread_rng().gen_range(1..=i32::MAX);
                     let response = CHandshake {
                         session_id: packet.session_id,
-                        challange_token,
+                        challenge_token,
                     };
 
                     // Ignore all errors since we don't want the query handler to crash
@@ -99,7 +99,7 @@ async fn handle_packet(
                         .send_to(response.encode().await.as_slice(), addr)
                         .await;
 
-                    clients.write().await.insert(challange_token, addr);
+                    clients.write().await.insert(challenge_token, addr);
                 }
             }
             PacketType::Status => {
@@ -107,7 +107,7 @@ async fn handle_packet(
                     if clients
                         .read()
                         .await
-                        .get(&packet.challange_token)
+                        .get(&packet.challenge_token)
                         .is_some_and(|token_bound_ip: &SocketAddr| token_bound_ip == &addr)
                     {
                         if packet.is_full_request {
@@ -150,7 +150,7 @@ async fn handle_packet(
                                 .send_to(response.encode().await.as_slice(), addr)
                                 .await;
                         } else {
-                            let resposne = CBasicStatus {
+                            let response = CBasicStatus {
                                 session_id: packet.session_id,
                                 motd: CString::new(BASIC_CONFIG.motd.as_str())?,
                                 map: CString::new("world")?,
@@ -161,7 +161,7 @@ async fn handle_packet(
                             };
 
                             let _ = socket
-                                .send_to(resposne.encode().await.as_slice(), addr)
+                                .send_to(response.encode().await.as_slice(), addr)
                                 .await;
                         }
                     }

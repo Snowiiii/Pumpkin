@@ -14,11 +14,7 @@ pub mod color;
 pub mod hover;
 pub mod style;
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
-#[serde(transparent)]
-pub struct Text<'a>(pub Box<TextComponent<'a>>);
-
-// Represents a Text component
+/// Represents a Text component
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct TextComponent<'a> {
@@ -29,6 +25,7 @@ pub struct TextComponent<'a> {
     /// Also has `ClickEvent
     #[serde(flatten)]
     pub style: Style<'a>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     /// Extra text components
     pub extra: Vec<TextComponent<'a>>,
 }
@@ -228,7 +225,7 @@ pub enum TextContent<'a> {
     Translate {
         translate: Cow<'a, str>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        with: Vec<Text<'a>>,
+        with: Vec<TextComponent<'a>>,
     },
     /// Displays the name of one or more entities found by a selector.
     EntityNames {

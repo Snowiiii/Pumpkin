@@ -222,9 +222,7 @@ impl Client {
 
         let mut enc = self.enc.lock().await;
         if let Err(error) = enc.append_packet(packet) {
-            if error.kickable() {
-                self.kick(&error.to_string()).await;
-            }
+            self.kick(&error.to_string()).await;
             return;
         }
 
@@ -445,7 +443,6 @@ impl Client {
                     "Failed to handle client packet id {} in Login State",
                     packet.id.0
                 );
-                return Ok(());
             }
         };
         Ok(())

@@ -271,7 +271,7 @@ impl BaseRouter {
             .clone()
             .min(ConstantFunction::new(5f64).mul(CAVES_ENTRANCES_OVERWORLD.clone()));
 
-        let mapped_cave_entraces_overworld = RangeFunction::<
+        let mapped_cave_entrances_overworld = RangeFunction::<
             NoEnvironment,
             SharedComponentReference,
             SharedComponentReference,
@@ -286,7 +286,7 @@ impl BaseRouter {
 
         let blended_cave_entrances_overworld = apply_blend_density(apply_surface_slides(
             amplified,
-            mapped_cave_entraces_overworld.into(),
+            mapped_cave_entrances_overworld.into(),
         ))
         .min(CAVES_NOODLE_OVERWORLD.clone());
 

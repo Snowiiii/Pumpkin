@@ -11,7 +11,7 @@ type Cipher = cfb8::Encryptor<aes::Aes128>;
 
 // Encoder: Server -> Client
 // Supports ZLib endecoding/compression
-// Supports Aes128 Encyption
+// Supports Aes128 Encryption
 pub struct PacketEncoder {
     buf: BytesMut,
     compress_buf: Vec<u8>,
@@ -65,7 +65,7 @@ impl PacketEncoder {
                 let compressed_size = self
                     .compressor
                     .zlib_compress(data_to_compress, &mut self.compress_buf)
-                    .map_err(|_| PacketEncodeError::CompressionFailed)?;
+                    .map_err(|e| PacketEncodeError::CompressionFailed(e.to_string()))?;
 
                 // Resize compress_buf to actual compressed size
                 self.compress_buf.resize(compressed_size, 0);
@@ -169,21 +169,10 @@ impl PacketEncoder {
 
 #[derive(Error, Debug)]
 pub enum PacketEncodeError {
-    #[error("failed to encode packet data")]
-    EncodeData,
-    #[error("failed to write encoded packet")]
-    EncodeFailedWrite,
     #[error("packet exceeds maximum length")]
     TooLong,
-    #[error("compression failed")]
-    CompressionFailed,
-}
-
-impl PacketEncodeError {
-    pub fn kickable(&self) -> bool {
-        // We no longer have a connection, so dont try to kick the player, just close
-        !matches!(self, Self::EncodeData | Self::EncodeFailedWrite)
-    }
+    #[error("compression failed {0}")]
+    CompressionFailed(String),
 }
 
 #[cfg(test)]

@@ -70,7 +70,7 @@ impl<'a> CommandDispatcher<'a> {
                 }
                 Err(pumpkin_error) => {
                     pumpkin_error.log();
-                    sender.send_message(TextComponent::text("Unknown internal error occured while running command. Please see server log").color(Color::Named(NamedColor::Red))).await;
+                    sender.send_message(TextComponent::text("Unknown internal error occurred while running command. Please see server log").color(Color::Named(NamedColor::Red))).await;
                 }
             }
         }

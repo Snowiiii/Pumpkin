@@ -9,7 +9,7 @@ type Cipher = cfb8::Decryptor<aes::Aes128>;
 
 // Decoder: Client -> Server
 // Supports ZLib decoding/decompression
-// Supports Aes128 Encyption
+// Supports Aes128 Encryption
 pub struct PacketDecoder {
     buf: BytesMut,
     decompress_buf: BytesMut,
@@ -135,7 +135,7 @@ impl PacketDecoder {
         }
     }
 
-    /// Sets ZLib Deompression
+    /// Sets ZLib Decompression
     pub fn set_compression(&mut self, compression: bool) {
         self.compression = compression;
     }
@@ -183,10 +183,6 @@ impl PacketDecoder {
 pub enum PacketDecodeError {
     #[error("failed to decode packet ID")]
     DecodeID,
-    #[error("failed to write into decoder: {0}")]
-    FailedWrite(String),
-    #[error("failed to flush decoder")]
-    FailedFinish,
     #[error("packet exceeds maximum length")]
     TooLong,
     #[error("packet length is out of bounds")]

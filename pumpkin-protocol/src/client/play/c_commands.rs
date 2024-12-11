@@ -69,10 +69,10 @@ impl ProtoNode<'_> {
                 name: _,
                 is_executable,
                 parser: _,
-                override_suggestion_type: override_suggestion_tpye,
+                override_suggestion_type,
             } => {
                 let mut n = 2;
-                if override_suggestion_tpye.is_some() {
+                if override_suggestion_type.is_some() {
                     n |= Self::FLAG_HAS_SUGGESTION_TYPE
                 }
                 if is_executable {

@@ -150,16 +150,16 @@ impl World {
         &self,
         sound_id: u16,
         category: SoundCategory,
-        posistion: &Vector3<f64>,
+        position: &Vector3<f64>,
     ) {
         let seed = thread_rng().gen::<f64>();
         self.broadcast_packet_all(&CSoundEffect::new(
             VarInt(i32::from(sound_id)),
             None,
             category,
-            posistion.x,
-            posistion.y,
-            posistion.z,
+            position.x,
+            position.y,
+            position.z,
             1.0,
             1.0,
             seed,
@@ -442,7 +442,7 @@ impl World {
             .await;
 
         log::debug!("Sending player abilities to {}", player.gameprofile.name);
-        player.send_abilties_update().await;
+        player.send_abilities_update().await;
 
         player.send_permission_lvl_update().await;
 

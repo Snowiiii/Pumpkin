@@ -34,7 +34,7 @@ pub enum VelocityError {
     #[error("Failed to read address")]
     FailedReadAddress,
     #[error("Failed to parse address")]
-    FailedParseAddres,
+    FailedParseAddress,
     #[error("Failed to read game profile name")]
     FailedReadProfileName,
     #[error("Failed to read game profile UUID")]
@@ -129,7 +129,7 @@ pub fn receive_velocity_plugin_response(
 
         let socket_addr: SocketAddr = SocketAddr::new(
             addr.parse::<IpAddr>()
-                .map_err(|_| VelocityError::FailedParseAddres)?,
+                .map_err(|_| VelocityError::FailedParseAddress)?,
             port,
         );
         let profile = read_game_profile(&mut buf)?;

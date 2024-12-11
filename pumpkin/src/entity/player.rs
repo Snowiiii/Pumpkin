@@ -86,7 +86,7 @@ pub struct Player {
     /// The item currently being held by the player.
     pub carried_item: AtomicCell<Option<ItemStack>>,
 
-    /// send `send_abilties_update` when changed
+    /// send `send_abilities_update` when changed
     /// The player's abilities and special powers.
     ///
     /// This field represents the various abilities that the player possesses, such as flight, invulnerability, and other special effects.
@@ -390,7 +390,7 @@ impl Player {
     }
 
     /// Updates the current abilities the Player has
-    pub async fn send_abilties_update(&self) {
+    pub async fn send_abilities_update(&self) {
         let mut b = 0i8;
         let abilities = &self.abilities.lock().await;
 
