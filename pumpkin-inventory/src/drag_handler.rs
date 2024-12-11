@@ -123,10 +123,10 @@ impl DragHandler {
                 let amount_of_slots = changing_slots.clone().count();
                 let (amount_per_slot, remainder) = if amount_of_slots == 0 {
                     // TODO: please work lol
-                    1, 0
+                    (1, 0)
                 } else {
-                    (carried_item.item_count as usize).div_rem_euclid(&amount_of_slots);
-                }
+                    (carried_item.item_count as usize).div_rem_euclid(&amount_of_slots)
+                };
                 let mut item_in_each_slot = *carried_item;
                 item_in_each_slot.item_count = amount_per_slot as u8;
                 changing_slots.for_each(|slot| *slots[slot] = Some(item_in_each_slot));
