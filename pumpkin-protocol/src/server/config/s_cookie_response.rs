@@ -11,7 +11,7 @@ pub struct SCookieResponse {
     pub key: Identifier,
     pub has_payload: bool,
     pub payload_length: Option<VarInt>,
-    pub payload: Option<Vec<u8>>, // 5120,
+    pub payload: Option<bytes::Bytes>, // 5120,
 }
 
 const MAX_PAYLOAD_SIZE: i32 = 5120;
@@ -39,7 +39,7 @@ impl ServerPacket for SCookieResponse {
             ));
         }
 
-        let payload = bytebuf.copy_to_bytes(length as usize)?.to_vec();
+        let payload = bytebuf.copy_to_bytes(length as usize)?;
 
         Ok(Self {
             key,

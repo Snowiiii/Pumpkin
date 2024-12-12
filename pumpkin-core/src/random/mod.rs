@@ -254,7 +254,7 @@ mod tests {
                 -1992287231i32,
             ),
             ("求同存异", 847053876),
-            // This might look wierd because hebrew is text is right to left
+            // This might look weird because hebrew is text is right to left
             ("אבְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ:", 1372570871),
             ("संस्कृत-", 1748614838),
             ("minecraft:offset", -920384768i32),

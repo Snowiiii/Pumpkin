@@ -64,11 +64,11 @@ sha2 = "0.10.8"
 
 # icon loading
 base64 = "0.22.1"
-png = "0.17.14"
+png = "0.17.15"
 
 # logging
 simple_logger = { version = "5.0.0", features = ["threads"] }
-time = "0.3.36"
+time = "0.3.37"
 
 # commands
 async-trait = "0.1.83"

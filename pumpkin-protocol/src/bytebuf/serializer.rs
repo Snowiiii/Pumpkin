@@ -55,7 +55,7 @@ impl ser::Error for SerializerError {
 // Enums are written as a varint of the index
 // Structs are ignored
 // Iterables' values are written in order, but NO information (e.g. size) about the
-// iterable itself is written (list sizes should be a seperate field)
+// iterable itself is written (list sizes should be a separate field)
 impl ser::Serializer for &mut Serializer {
     type Ok = ();
     type Error = SerializerError;
@@ -137,7 +137,7 @@ impl ser::Serializer for &mut Serializer {
         Ok(())
     }
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
-        // here is where all arrays/list getting written, usally we prefix the length of every length with an var int. The problem is
+        // here is where all arrays/list getting written, usually we prefix the length of every length with an var int. The problem is
         // that byte arrays also getting thrown in here, and we don't want to prefix them
         Ok(self)
     }

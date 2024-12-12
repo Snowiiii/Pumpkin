@@ -28,7 +28,7 @@ impl ClientPacket for CBossEvent<'_> {
                 flags,
             } => {
                 bytebuf.put_var_int(&VarInt::from(0u8));
-                bytebuf.put_slice(title.encode().as_slice());
+                bytebuf.put_slice(&title.encode());
                 bytebuf.put_f32(*health);
                 bytebuf.put_var_int(color);
                 bytebuf.put_var_int(division);
@@ -43,7 +43,7 @@ impl ClientPacket for CBossEvent<'_> {
             }
             BosseventAction::UpdateTile(title) => {
                 bytebuf.put_var_int(&VarInt::from(3u8));
-                bytebuf.put_slice(title.encode().as_slice());
+                bytebuf.put_slice(&title.encode());
             }
             BosseventAction::UpdateStyle { color, dividers } => {
                 bytebuf.put_var_int(&VarInt::from(4u8));

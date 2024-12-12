@@ -29,6 +29,8 @@ There are several ways you can contribute to Pumpkin:
 
 The Documentation of Pumpkin can be found at <https://snowiiii.github.io/Pumpkin/>
 
+**Tip: [typos](https://github.com/crate-ci/typos) is a great Project to detect and automatically fix typos
+
 ### Coding Guidelines
 
 - **Working with Tokio and Rayon:**

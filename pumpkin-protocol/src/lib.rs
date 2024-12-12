@@ -22,7 +22,7 @@ pub const CURRENT_MC_PROTOCOL: u32 = 769;
 
 pub const MAX_PACKET_SIZE: i32 = 2097152;
 
-/// usally uses a namespace like "minecraft:thing"
+/// usually uses a namespace like "minecraft:thing"
 pub type Identifier = String;
 pub type VarIntType = i32;
 pub type VarLongType = i64;

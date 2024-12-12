@@ -22,7 +22,6 @@ num-traits.workspace = true
 num-derive.workspace = true
 futures = "0.3"
 dashmap = "6.1.0"
-lazy_static = "1.5.0"
 
 # Compression
 flate2 = "1.0"

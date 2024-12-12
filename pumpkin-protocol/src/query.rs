@@ -24,7 +24,7 @@ impl RawQueryPacket {
 
         match reader.read_u16().await.map_err(|_| ())? {
             // Magic should always equal 65277
-            // Since it denotes the protocl being used
+            // Since it denotes the protocol being used
             // Should not attempt to decode packets with other magic values
             65277 => Ok(Self {
                 packet_type: PacketType::from_u8(reader.read_u8().await.map_err(|_| ())?)
@@ -52,7 +52,7 @@ impl SHandshake {
 #[derive(PartialEq, Debug)]
 pub struct SStatusRequest {
     pub session_id: i32,
-    pub challange_token: i32,
+    pub challenge_token: i32,
     // Full status request and basic status request are pretty much similar
     // So might as just use the same struct
     pub is_full_request: bool,
@@ -62,7 +62,7 @@ impl SStatusRequest {
     pub async fn decode(packet: &mut RawQueryPacket) -> Result<Self, ()> {
         Ok(Self {
             session_id: packet.reader.read_i32().await.map_err(|_| ())?,
-            challange_token: packet.reader.read_i32().await.map_err(|_| ())?,
+            challenge_token: packet.reader.read_i32().await.map_err(|_| ())?,
             is_full_request: {
                 let mut buf = [0; 4];
 
@@ -74,7 +74,7 @@ impl SStatusRequest {
                     Ok(0) => false,
                     Ok(4) => true,
                     _ => {
-                        // Just ingnore malformed packets or errors
+                        // Just ignore malformed packets or errors
                         return Err(());
                     }
                 }
@@ -88,7 +88,7 @@ pub struct CHandshake {
     // For simplicity use a number type
     // Should be encoded as string here
     // Will be converted in encoding
-    pub challange_token: i32,
+    pub challenge_token: i32,
 }
 
 impl CHandshake {
@@ -99,10 +99,10 @@ impl CHandshake {
         buf.write_u8(9).await.unwrap();
         // Session ID
         buf.write_i32(self.session_id).await.unwrap();
-        // Challange token
+        // Challenge token
         // Use CString to add null terminator and ensure no null bytes in the middle of data
         // Unwrap here since there should be no errors with nulls in the middle of data
-        let token = CString::new(self.challange_token.to_string()).unwrap();
+        let token = CString::new(self.challenge_token.to_string()).unwrap();
         buf.extend_from_slice(token.as_bytes_with_nul());
 
         buf
@@ -249,7 +249,7 @@ async fn test_handshake_response() {
 
     let packet = CHandshake {
         session_id: 1,
-        challange_token: 9513307,
+        challenge_token: 9513307,
     };
 
     assert_eq!(bytes, packet.encode().await)
@@ -265,7 +265,7 @@ async fn test_basic_stat_request() {
 
     let actual_packet = SStatusRequest {
         session_id: 1,
-        challange_token: 9513307,
+        challenge_token: 9513307,
         is_full_request: false,
     };
 
@@ -304,7 +304,7 @@ async fn test_full_stat_request() {
 
     let actual_packet = SStatusRequest {
         session_id: 1,
-        challange_token: 9513307,
+        challenge_token: 9513307,
         is_full_request: true,
     };
 

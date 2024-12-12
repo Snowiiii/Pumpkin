@@ -8,14 +8,14 @@ use crate::{
 #[server_packet("config:custom_payload")]
 pub struct SPluginMessage {
     pub channel: Identifier,
-    pub data: Vec<u8>,
+    pub data: bytes::BytesMut,
 }
 
 impl ServerPacket for SPluginMessage {
     fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError> {
         Ok(Self {
             channel: bytebuf.get_string()?,
-            data: bytebuf.get_slice().to_vec(),
+            data: bytebuf.get_slice(),
         })
     }
 }

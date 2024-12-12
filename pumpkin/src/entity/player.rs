@@ -8,7 +8,8 @@ use std::{
 
 use crossbeam::atomic::AtomicCell;
 use num_derive::{FromPrimitive, ToPrimitive};
-use pumpkin_config::ADVANCED_CONFIG;
+use num_traits::Pow;
+use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::{
     math::{
         boundingbox::{BoundingBox, BoundingBoxSize},
@@ -22,6 +23,10 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
+use pumpkin_protocol::client::play::CUpdateTime;
+use pumpkin_protocol::server::play::{
+    SCloseContainer, SCookieResponse as SPCookieResponse, SPlayPingRequest,
+};
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
@@ -38,14 +43,13 @@ use pumpkin_protocol::{
     RawPacket, ServerPacket, SoundCategory, VarInt,
 };
 use pumpkin_protocol::{
-    client::play::CUpdateTime,
-    server::play::{SCookieResponse as SPCookieResponse, SPlayPingRequest},
-};
-use pumpkin_protocol::{
     client::play::{CSetEntityMetadata, Metadata},
     server::play::{SClickContainer, SKeepAlive},
 };
-use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
+use pumpkin_world::{
+    cylindrical_chunk_iterator::Cylindrical,
+    item::{item_registry::get_item_by_id, ItemStack},
+};
 use tokio::sync::{Mutex, Notify};
 
 use super::Entity;
@@ -85,7 +89,7 @@ pub struct Player {
     /// The item currently being held by the player.
     pub carried_item: AtomicCell<Option<ItemStack>>,
 
-    /// send `send_abilties_update` when changed
+    /// send `send_abilities_update` when changed
     /// The player's abilities and special powers.
     ///
     /// This field represents the various abilities that the player possesses, such as flight, invulnerability, and other special effects.
@@ -231,16 +235,54 @@ impl Player {
         let attacker_entity = &self.living_entity.entity;
         let config = &ADVANCED_CONFIG.pvp;
 
-        let pos = victim_entity.pos.load();
+        let inventory = self.inventory().lock().await;
+        let item_slot = inventory.held_item();
 
-        let attack_cooldown_progress = self.get_attack_cooldown_progress(0.5);
+        let base_damage = 1.0;
+        let base_attack_speed = 4.0;
+
+        let mut damage_multiplier = 1.0;
+        let mut add_damage = 0.0;
+        let mut add_speed = 0.0;
+
+        // get attack damage
+        if let Some(item_stack) = item_slot {
+            if let Some(item) = get_item_by_id(item_stack.item_id) {
+                // TODO: this should be cached in memory
+                if let Some(modifiers) = &item.components.attribute_modifiers {
+                    for item_mod in &modifiers.modifiers {
+                        if item_mod.operation == "add_value" {
+                            if item_mod.id == "minecraft:base_attack_damage" {
+                                add_damage = item_mod.amount;
+                            }
+                            if item_mod.id == "minecraft:base_attack_speed" {
+                                add_speed = item_mod.amount;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        drop(inventory);
+
+        let attack_speed = base_attack_speed + add_speed;
+
+        let attack_cooldown_progress = self.get_attack_cooldown_progress(0.5, attack_speed);
         self.last_attacked_ticks
             .store(0, std::sync::atomic::Ordering::Relaxed);
 
-        // TODO: attack damage attribute and deal damage
-        let mut damage = 1.0;
+        // only reduce attack damage if in cooldown
+        // TODO: Enchantments are reduced same way just without the square
+        if attack_cooldown_progress < 1.0 {
+            damage_multiplier = 0.2 + attack_cooldown_progress.pow(2) * 0.8;
+        }
+        // modify added damage based on multiplier
+        let mut damage = base_damage + add_damage * damage_multiplier;
+
+        let pos = victim_entity.pos.load();
+
         if (config.protect_creative && victim.gamemode.load() == GameMode::Creative)
-            || !victim.living_entity.check_damage(damage)
+            || !victim.living_entity.check_damage(damage as f32)
         {
             world
                 .play_sound(
@@ -256,7 +298,7 @@ impl Player {
             .play_sound(sound!("entity.player.hurt"), SoundCategory::Players, &pos)
             .await;
 
-        let attack_type = AttackType::new(self, attack_cooldown_progress).await;
+        let attack_type = AttackType::new(self, attack_cooldown_progress as f32).await;
 
         player_attack_sound(&pos, world, attack_type).await;
 
@@ -266,7 +308,7 @@ impl Player {
 
         victim
             .living_entity
-            .damage(damage, 34) // PlayerAttack
+            .damage(damage as f32, 34) // PlayerAttack
             .await;
 
         let mut knockback_strength = 1.0;
@@ -330,16 +372,14 @@ impl Player {
         }
     }
 
-    pub fn get_attack_cooldown_progress(&self, base_time: f32) -> f32 {
+    pub fn get_attack_cooldown_progress(&self, base_time: f64, attack_speed: f64) -> f64 {
         #[allow(clippy::cast_precision_loss)]
-        let x = self
-            .last_attacked_ticks
-            .load(std::sync::atomic::Ordering::Acquire) as f32
-            + base_time;
-        // TODO attack speed attribute
-        let attack_speed = 4.0;
-        let progress_per_tick = 1.0 / attack_speed * 20.0;
+        let x = f64::from(
+            self.last_attacked_ticks
+                .load(std::sync::atomic::Ordering::Acquire),
+        ) + base_time;
 
+        let progress_per_tick = f64::from(BASIC_CONFIG.tps) / attack_speed;
         let progress = x / progress_per_tick;
         progress.clamp(0.0, 1.0)
     }
@@ -353,7 +393,7 @@ impl Player {
     }
 
     /// Updates the current abilities the Player has
-    pub async fn send_abilties_update(&self) {
+    pub async fn send_abilities_update(&self) {
         let mut b = 0i8;
         let abilities = &self.abilities.lock().await;
 
@@ -708,6 +748,10 @@ impl Player {
             }
             SPCookieResponse::PACKET_ID => {
                 self.handle_cookie_response(SPCookieResponse::read(bytebuf)?);
+            }
+            SCloseContainer::PACKET_ID => {
+                self.handle_close_container(server, SCloseContainer::read(bytebuf)?)
+                    .await;
             }
             _ => {
                 log::warn!("Failed to handle player packet id {}", packet.id.0);

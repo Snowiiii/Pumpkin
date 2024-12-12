@@ -9,7 +9,7 @@ type Cipher = cfb8::Decryptor<aes::Aes128>;
 
 // Decoder: Client -> Server
 // Supports ZLib decoding/decompression
-// Supports Aes128 Encyption
+// Supports Aes128 Encryption
 pub struct PacketDecoder {
     buf: BytesMut,
     decompress_buf: BytesMut,
@@ -36,11 +36,12 @@ impl PacketDecoder {
     pub fn decode(&mut self) -> Result<Option<RawPacket>, PacketDecodeError> {
         let mut r = &self.buf[..];
 
-        let packet_len = match VarInt::decode_partial(&mut r) {
+        let packet_len = match VarInt::decode(&mut r) {
             Ok(len) => len,
             Err(VarIntDecodeError::Incomplete) => return Ok(None),
             Err(VarIntDecodeError::TooLarge) => Err(PacketDecodeError::MalformedLength)?,
         };
+        let packet_len = packet_len.0;
 
         if !(0..=MAX_PACKET_SIZE).contains(&packet_len) {
             Err(PacketDecodeError::OutOfBounds)?
@@ -134,7 +135,7 @@ impl PacketDecoder {
         }
     }
 
-    /// Sets ZLib Deompression
+    /// Sets ZLib Decompression
     pub fn set_compression(&mut self, compression: bool) {
         self.compression = compression;
     }
@@ -182,10 +183,6 @@ impl PacketDecoder {
 pub enum PacketDecodeError {
     #[error("failed to decode packet ID")]
     DecodeID,
-    #[error("failed to write into decoder: {0}")]
-    FailedWrite(String),
-    #[error("failed to flush decoder")]
-    FailedFinish,
     #[error("packet exceeds maximum length")]
     TooLong,
     #[error("packet length is out of bounds")]
@@ -209,7 +206,6 @@ mod tests {
     use cfb8::cipher::AsyncStreamCipher;
     use cfb8::Encryptor as Cfb8Encryptor;
     use libdeflater::{CompressionLvl, Compressor};
-    use std::io::Cursor;
 
     /// Helper function to compress data using libdeflater's Zlib compressor
     fn compress_zlib(data: &[u8]) -> Vec<u8> {
@@ -223,11 +219,9 @@ mod tests {
     }
 
     /// Helper function to encrypt data using AES-128 CFB-8 mode
-    fn encrypt_aes128(data: &[u8], key: &[u8; 16], iv: &[u8; 16]) -> Vec<u8> {
+    fn encrypt_aes128(data: &mut [u8], key: &[u8; 16], iv: &[u8; 16]) {
         let encryptor = Cfb8Encryptor::<Aes128>::new_from_slices(key, iv).expect("Invalid key/iv");
-        let mut encrypted = data.to_vec();
-        encryptor.encrypt(&mut encrypted);
-        encrypted
+        encryptor.encrypt(data);
     }
 
     /// Helper function to build a packet with optional compression and encryption
@@ -265,10 +259,7 @@ mod tests {
         let packet_len_varint = VarInt(packet_len);
         let mut packet_length_encoded = Vec::new();
         {
-            let mut cursor = Cursor::new(&mut packet_length_encoded);
-            packet_len_varint
-                .encode(&mut cursor)
-                .expect("VarInt encoding failed");
+            packet_len_varint.encode(&mut packet_length_encoded);
         }
 
         // Create a new buffer for the entire packet
@@ -278,7 +269,8 @@ mod tests {
 
         // Encrypt if key and iv are provided
         if let (Some(k), Some(v)) = (key, iv) {
-            encrypt_aes128(&packet, k, v)
+            encrypt_aes128(&mut packet, k, v);
+            packet
         } else {
             packet
         }
@@ -420,14 +412,14 @@ mod tests {
         packet_buffer.put_var_int(&packet_len_varint);
         packet_buffer.put_slice(buffer.buf());
 
-        let packet_bytes = packet_buffer.buf().to_vec();
+        let packet_bytes = packet_buffer.buf();
 
         // Initialize the decoder with compression enabled
         let mut decoder = PacketDecoder::default();
         decoder.set_compression(true);
 
         // Feed the invalid compressed packet to the decoder
-        decoder.queue_slice(&packet_bytes);
+        decoder.queue_slice(packet_bytes);
 
         // Attempt to decode and expect a decompression error
         let result = decoder.decode();
