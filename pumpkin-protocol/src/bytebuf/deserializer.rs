@@ -127,16 +127,14 @@ impl<'de> de::Deserializer<'de> for Deserializer<'_> {
     where
         V: de::Visitor<'de>,
     {
-        let string = self.inner.get_string()?;
-        visitor.visit_str(&string)
+        visitor.visit_str(&self.inner.get_string()?)
     }
 
     fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        let string = self.inner.get_string()?;
-        visitor.visit_str(&string)
+        visitor.visit_str(&self.inner.get_string()?)
     }
 
     fn deserialize_bytes<V>(self, _visitor: V) -> Result<V::Value, Self::Error>

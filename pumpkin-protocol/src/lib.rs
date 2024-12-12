@@ -1,6 +1,6 @@
 use bytebuf::{packet_id::Packet, ByteBuffer, DeserializerError};
 use pumpkin_core::text::{style::Style, TextComponent};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 
 pub mod bytebuf;
 pub mod client;
@@ -24,11 +24,19 @@ pub const MAX_PACKET_SIZE: i32 = 2097152;
 
 /// usually uses a namespace like "minecraft:thing"
 pub type Identifier = String;
-pub type VarIntType = i32;
-pub type VarLongType = i64;
 pub type FixedBitSet = bytes::Bytes;
 
 pub struct BitSet<'a>(pub VarInt, pub &'a [i64]);
+
+impl Serialize for BitSet<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // TODO: make this right
+        (&self.0, self.1).serialize(serializer)
+    }
+}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ConnectionState {
