@@ -216,7 +216,6 @@ impl ProtoChunk {
 mod test {
     use std::{fs, path::Path};
 
-    use itertools::Itertools;
     use pumpkin_core::math::vector2::Vector2;
 
     use crate::read_data_from_file;
@@ -235,7 +234,7 @@ mod test {
                 .flat_block_map
                 .into_iter()
                 .map(|state| state.state_id)
-                .collect_vec()
+                .collect::<Vec<u16>>()
         );
     }
 
@@ -252,7 +251,7 @@ mod test {
                 .flat_block_map
                 .into_iter()
                 .map(|state| state.state_id)
-                .collect_vec()
+                .collect::<Vec<u16>>()
         );
     }
 }

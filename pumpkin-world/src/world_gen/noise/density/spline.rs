@@ -1,7 +1,6 @@
 use std::{marker::PhantomData, sync::Arc};
 
 use enum_dispatch::enum_dispatch;
-use itertools::Itertools;
 
 use crate::world_gen::noise::lerp;
 
@@ -302,13 +301,13 @@ impl<E: DensityFunctionEnvironment, R: ComponentReference<E>> MutableSpline<E, R
                     .iter()
                     .all(|point| matches!(point, SplinePoint::Immutable(_)))
                 {
-                    let immutable_points = converted_points
+                    let immutable_points: Vec<ImmutablePoint> = converted_points
                         .into_iter()
                         .map(|point| match point {
                             SplinePoint::Immutable(point) => point,
                             _ => unreachable!(),
                         })
-                        .collect_vec();
+                        .collect();
                     SplineRef::Immutable(
                         ImmutableSpline {
                             function: shared,
@@ -387,7 +386,7 @@ impl<E: DensityFunctionEnvironment, R: ComponentReference<E>> MutableSplineImpl<
         let converted_points = points
             .into_iter()
             .map(|point| point.convert(converter))
-            .collect_vec();
+            .collect();
 
         Self::create_new_spline(converted_base, converted_points)
     }
@@ -398,7 +397,7 @@ impl<E: DensityFunctionEnvironment, R: ComponentReference<E>> MutableSplineImpl<
             .points
             .iter()
             .map(|point| point.clone_to_new_point())
-            .collect_vec();
+            .collect();
 
         Self::create_new_spline(cloned_function, cloned_points)
     }
@@ -462,18 +461,18 @@ impl ImmutableSplineRef {
         converter: &mut dyn ConverterImpl<E>,
     ) -> Option<SplineRef<E>> {
         let converted_base = self.0.function.maybe_convert(converter);
-        let maybe_converted_points = self
+        let maybe_converted_points: Vec<Option<SplinePoint<E>>> = self
             .0
             .points
             .iter()
             .map(|point| point.maybe_convert(converter))
-            .collect_vec();
+            .collect();
 
         if converted_base.is_none() && maybe_converted_points.iter().all(|point| point.is_none()) {
             None
         } else {
             let converted_base = converted_base.unwrap_or_else(|| self.0.function.clone().into());
-            let converted_points = maybe_converted_points
+            let converted_points: Vec<SplinePoint<E>> = maybe_converted_points
                 .into_iter()
                 .enumerate()
                 .map(|(index, point)| {
@@ -483,7 +482,7 @@ impl ImmutableSplineRef {
                         self.0.points[index].clone().into()
                     }
                 })
-                .collect_vec();
+                .collect();
 
             Some(match converted_base {
                 ComponentReferenceImplementation::Shared(shared) => {
@@ -491,13 +490,13 @@ impl ImmutableSplineRef {
                         .iter()
                         .all(|point| matches!(point, SplinePoint::Immutable(_)))
                     {
-                        let immutable_points = converted_points
+                        let immutable_points: Vec<ImmutablePoint> = converted_points
                             .into_iter()
                             .map(|point| match point {
                                 SplinePoint::Immutable(point) => point,
                                 _ => unreachable!(),
                             })
-                            .collect_vec();
+                            .collect();
                         SplineRef::Immutable(
                             ImmutableSpline {
                                 function: shared,

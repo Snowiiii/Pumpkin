@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use itertools::{izip, Itertools};
 use num_traits::Pow;
 use pumpkin_core::random::RandomGenerator;
 
@@ -226,19 +225,6 @@ impl OctavePerlinNoiseSampler {
                     random.skip(262);
                 }
             }
-
-            #[cfg(debug_assertions)]
-            {
-                use itertools::Itertools;
-                use num_traits::Zero;
-
-                if let Ok(length1) = samplers.iter().filter(|x| x.is_some()).try_len() {
-                    if let Ok(length2) = amplitudes.iter().filter(|x| !x.is_zero()).try_len() {
-                        assert_eq!(length1, length2);
-                    }
-                }
-                assert!(j >= i as i32 - 1);
-            }
         } else {
             let splitter = random.next_splitter();
             for k in 0..i {
@@ -256,20 +242,20 @@ impl OctavePerlinNoiseSampler {
         let mut lacunarity = 2f64.pow((-j) as f64);
         let max_value = Self::get_total_amplitude(2f64, persistence, amplitudes);
 
-        let persistences = (0..amplitudes.len())
+        let persistences: Vec<f64> = (0..amplitudes.len())
             .map(|_| {
                 let result = persistence;
                 persistence /= 2f64;
                 result
             })
-            .collect_vec();
-        let lacunarities = (0..amplitudes.len())
+            .collect();
+        let lacunarities: Vec<f64> = (0..amplitudes.len())
             .map(|_| {
                 let result = lacunarity;
                 lacunarity *= 2f64;
                 result
             })
-            .collect_vec();
+            .collect();
 
         Self {
             octave_samplers: samplers.into(),
@@ -284,13 +270,13 @@ impl OctavePerlinNoiseSampler {
     pub fn sample(&self, x: f64, y: f64, z: f64) -> f64 {
         let mut d = 0f64;
 
-        for (sampler, amplitude, persistence, lacunarity) in izip!(
-            &self.octave_samplers,
-            &self.amplitudes,
-            &self.persistences,
-            &self.lacunarities
-        ) {
-            if let Some(sampler) = sampler {
+        let num_octaves = self.octave_samplers.len();
+        for i in 0..num_octaves {
+            if let Some(sampler) = &self.octave_samplers[i] {
+                let lacunarity = self.lacunarities[i];
+                let amplitude = self.amplitudes[i];
+                let persistence = self.persistences[i];
+
                 let g = sampler.sample_no_fade(
                     Self::maintain_precision(x * lacunarity),
                     Self::maintain_precision(y * lacunarity),

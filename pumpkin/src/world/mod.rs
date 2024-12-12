@@ -9,7 +9,6 @@ use crate::{
     error::PumpkinError,
     server::Server,
 };
-use itertools::Itertools;
 use level_time::LevelTime;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
@@ -224,11 +223,7 @@ impl World {
         server: &Server,
     ) {
         let command_dispatcher = &server.command_dispatcher;
-        let dimensions = &server
-            .dimensions
-            .iter()
-            .map(DimensionType::name)
-            .collect_vec();
+        let dimensions: Vec<&str> = server.dimensions.iter().map(DimensionType::name).collect();
 
         // This code follows the vanilla packet order
         let entity_id = player.entity_id();
@@ -245,7 +240,7 @@ impl World {
             .send_packet(&CLogin::new(
                 entity_id,
                 base_config.hardcore,
-                dimensions,
+                &dimensions,
                 base_config.max_players.into(),
                 base_config.view_distance.into(), //  TODO: view distance
                 base_config.simulation_distance.into(), // TODO: sim view dinstance

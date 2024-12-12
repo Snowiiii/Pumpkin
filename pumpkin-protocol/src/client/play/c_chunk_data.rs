@@ -1,5 +1,4 @@
 use crate::{bytebuf::ByteBuffer, BitSet, ClientPacket, VarInt};
-use itertools::Itertools;
 
 use pumpkin_macros::client_packet;
 use pumpkin_world::{chunk::ChunkData, DIRECT_PALETTE_BITS};
@@ -26,7 +25,7 @@ impl ClientPacket for CChunkData<'_> {
             data_buf.put_i16(block_count);
             //// Block states
 
-            let palette = chunk.iter().dedup().collect_vec();
+            let palette = chunk;
             // TODO: make dynamic block_size work
             // TODO: make direct block_size work
             enum PaletteType {
@@ -55,7 +54,7 @@ impl ClientPacket for CChunkData<'_> {
 
                     palette.iter().for_each(|id| {
                         // Palette
-                        data_buf.put_var_int(&VarInt(**id as i32));
+                        data_buf.put_var_int(&VarInt(*id as i32));
                     });
                     // Data array length
                     let data_array_len = chunk.len().div_ceil(64 / block_size as usize);
@@ -67,7 +66,7 @@ impl ClientPacket for CChunkData<'_> {
                         for block in block_clump.iter().rev() {
                             let index = palette
                                 .iter()
-                                .position(|b| *b == block)
+                                .position(|b| b == block)
                                 .expect("Its just got added, ofc it should be there");
                             out_long = out_long << block_size | (index as i64);
                         }

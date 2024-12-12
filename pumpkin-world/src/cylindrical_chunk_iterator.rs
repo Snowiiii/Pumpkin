@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use pumpkin_core::math::vector2::Vector2;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -76,7 +75,7 @@ impl Cylindrical {
         all_chunks
             .into_iter()
             .filter(|chunk| self.is_within_distance(chunk.x, chunk.z))
-            .collect_vec()
+            .collect()
     }
 }
 

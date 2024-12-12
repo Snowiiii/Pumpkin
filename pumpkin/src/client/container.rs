@@ -1,6 +1,5 @@
 use crate::entity::player::Player;
 use crate::server::Server;
-use itertools::Itertools;
 use pumpkin_core::text::TextComponent;
 use pumpkin_core::GameMode;
 use pumpkin_inventory::container_click::{
@@ -59,11 +58,11 @@ impl Player {
 
         let container = OptionallyCombinedContainer::new(&mut inventory, container);
 
-        let slots = container
+        let slots: Vec<Slot> = container
             .all_slots_ref()
             .into_iter()
             .map(Slot::from)
-            .collect_vec();
+            .collect();
 
         let carried_item = self
             .carried_item
@@ -462,7 +461,7 @@ impl Player {
     }
 
     async fn get_current_players_in_container(&self, server: &Server) -> Vec<Arc<Self>> {
-        let player_ids = {
+        let player_ids: Vec<i32> = {
             let open_containers = server.open_containers.read().await;
             open_containers
                 .get(&self.open_container.load().unwrap())
@@ -470,7 +469,7 @@ impl Player {
                 .all_player_ids()
                 .into_iter()
                 .filter(|player_id| *player_id != self.entity_id())
-                .collect_vec()
+                .collect()
         };
         let player_token = self.gameprofile.id;
 
@@ -493,7 +492,7 @@ impl Player {
                     player_ids.contains(&entity_id).then(|| player.clone())
                 }
             })
-            .collect_vec();
+            .collect();
         players
     }
 
