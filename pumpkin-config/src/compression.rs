@@ -21,7 +21,7 @@ impl Default for CompressionConfig {
 
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(default)]
-/// We have this in a Seperate struct so we can use it outside of the Config
+/// We have this in a Separate struct so we can use it outside of the Config
 pub struct CompressionInfo {
     /// The compression threshold used when compression is enabled
     pub threshold: u32,

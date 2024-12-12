@@ -463,7 +463,7 @@ impl CommandExecutor for BossbarSetExecuter {
                     .bossbars
                     .lock()
                     .await
-                    .update_visibilty(server, namespace.to_string(), visibility)
+                    .update_visibility(server, namespace.to_string(), visibility)
                     .await
                 {
                     Ok(()) => {}

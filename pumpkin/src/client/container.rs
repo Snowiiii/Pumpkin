@@ -314,15 +314,9 @@ impl Player {
                     let find_condition = |(slot_number, slot): (usize, &mut Option<ItemStack>)| {
                         // TODO: Check for max item count here
                         match slot {
-                            Some(item) => {
-                                if item.item_id == item_in_pressed_slot.item_id
-                                    && item.item_count != 64
-                                {
-                                    Some(slot_number)
-                                } else {
-                                    None
-                                }
-                            }
+                            Some(item) => (item.item_id == item_in_pressed_slot.item_id
+                                && item.item_count != 64)
+                                .then_some(slot_number),
                             None => Some(slot_number),
                         }
                     };
@@ -496,11 +490,7 @@ impl Player {
                     None
                 } else {
                     let entity_id = player.entity_id();
-                    if player_ids.contains(&entity_id) {
-                        Some(player.clone())
-                    } else {
-                        None
-                    }
+                    player_ids.contains(&entity_id).then(|| player.clone())
                 }
             })
             .collect_vec();
@@ -560,13 +550,11 @@ impl Player {
         let slots = inventory.slots_with_hotbar_first();
 
         let matching_slots = slots.filter_map(|slot| {
-            if let Some(item_slot) = slot.as_ref() {
-                if item_slot.item_id == item.id && item_slot.item_count < max_stack {
+            if let Some(item_slot) = slot.as_mut() {
+                (item_slot.item_id == item.id && item_slot.item_count < max_stack).then(|| {
                     let item_count = item_slot.item_count;
-                    Some((slot, item_count))
-                } else {
-                    None
-                }
+                    (item_slot, item_count)
+                })
             } else {
                 None
             }
@@ -579,15 +567,15 @@ impl Player {
             let amount_to_add = max_stack - item_count;
             if let Some(amount_left) = amount.checked_sub(u32::from(amount_to_add)) {
                 amount = amount_left;
-                *slot = Some(ItemStack {
+                *slot = ItemStack {
                     item_id: item.id,
                     item_count: item.components.max_stack_size,
-                });
+                };
             } else {
-                *slot = Some(ItemStack {
+                *slot = ItemStack {
                     item_id: item.id,
                     item_count: max_stack - (amount_to_add - amount as u8),
-                });
+                };
                 return;
             }
         }

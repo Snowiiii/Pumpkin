@@ -216,17 +216,19 @@ impl Client {
     pub async fn send_packet<P: ClientPacket>(&self, packet: &P) {
         //log::debug!("Sending packet with id {} to {}", P::PACKET_ID, self.id);
         // assert!(!self.closed);
+        if self.closed.load(std::sync::atomic::Ordering::Relaxed) {
+            return;
+        }
+
         let mut enc = self.enc.lock().await;
         if let Err(error) = enc.append_packet(packet) {
-            if error.kickable() {
-                self.kick(&error.to_string()).await;
-            }
+            self.kick(&error.to_string()).await;
             return;
         }
 
         let mut writer = self.connection_writer.lock().await;
         if let Err(error) = writer.write_all(&enc.take()).await {
-            log::debug!("{}", error.to_string());
+            log::debug!("Unable to write to connection: {}", error.to_string());
         }
 
         /*
@@ -404,7 +406,6 @@ impl Client {
                     "Failed to handle client packet id {} in Status State",
                     packet.id.0
                 );
-                return Err(DeserializerError::UnknownPacket);
             }
         };
 
@@ -442,7 +443,6 @@ impl Client {
                     "Failed to handle client packet id {} in Login State",
                     packet.id.0
                 );
-                return Ok(());
             }
         };
         Ok(())
@@ -479,7 +479,6 @@ impl Client {
                     "Failed to handle client packet id {} in Config State",
                     packet.id.0
                 );
-                return Err(DeserializerError::UnknownPacket);
             }
         };
         Ok(())

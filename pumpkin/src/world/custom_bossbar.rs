@@ -189,7 +189,7 @@ impl CustomBossbars {
         ))
     }
 
-    pub async fn update_visibilty(
+    pub async fn update_visibility(
         &mut self,
         server: &Server,
         resource_location: String,
@@ -365,7 +365,7 @@ impl CustomBossbars {
     ) -> Result<(), BossbarUpdateError> {
         let bossbar = self.custom_bossbars.get_mut(&resource_location);
         if let Some(bossbar) = bossbar {
-            // Get differnce between old and new player list and remove bossbars from old players
+            // Get difference between old and new player list and remove bossbars from old players
             let removed_players: Vec<Uuid> = bossbar
                 .player
                 .iter()

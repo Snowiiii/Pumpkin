@@ -11,7 +11,7 @@ use pumpkin_core::math::{
 };
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
 use pumpkin_protocol::{
-    client::play::{CSetEntityMetadata, CTeleportEntitiy, Metadata},
+    client::play::{CSetEntityMetadata, CTeleportEntity, Metadata},
     VarInt,
 };
 
@@ -134,7 +134,7 @@ impl Entity {
 
     pub async fn teleport(&self, position: Vector3<f64>, yaw: f32, pitch: f32) {
         self.world
-            .broadcast_packet_all(&CTeleportEntitiy::new(
+            .broadcast_packet_all(&CTeleportEntity::new(
                 self.entity_id.into(),
                 position,
                 Vector3::new(0.0, 0.0, 0.0),

@@ -120,7 +120,7 @@ impl ProtoChunk {
         let horizontal_cell_block_count = self.sampler.horizontal_cell_block_count();
         let vertical_cell_block_count = self.sampler.vertical_cell_block_count();
 
-        let horizonal_cells = CHUNK_DIM / horizontal_cell_block_count;
+        let horizontal_cells = CHUNK_DIM / horizontal_cell_block_count;
 
         let min_y = self.sampler.min_y();
         let minimum_cell_y = min_y / vertical_cell_block_count as i8;
@@ -133,10 +133,10 @@ impl ProtoChunk {
         //     - All unsafe functions are encapsulated and no mutable references are leaked
         unsafe {
             self.sampler.sample_start_density();
-            for cell_x in 0..horizonal_cells {
+            for cell_x in 0..horizontal_cells {
                 self.sampler.sample_end_density(cell_x);
 
-                for cell_z in 0..horizonal_cells {
+                for cell_z in 0..horizontal_cells {
                     for cell_y in (0..cell_height).rev() {
                         self.sampler.on_sampled_cell_corners(cell_y, cell_z);
                         for local_y in (0..vertical_cell_block_count).rev() {

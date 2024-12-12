@@ -1,14 +1,12 @@
-use crate::{BitSet, FixedBitSet, VarInt, VarLongType};
-use bytes::{Buf, BufMut, BytesMut};
 use core::str;
+
+use crate::{BitSet, FixedBitSet, VarInt, VarLong};
+use bytes::{Buf, BufMut, BytesMut};
 
 mod deserializer;
 pub use deserializer::DeserializerError;
 pub mod packet_id;
 mod serializer;
-
-const SEGMENT_BITS: u8 = 0x7F;
-const CONTINUE_BIT: u8 = 0x80;
 
 #[derive(Debug)]
 pub struct ByteBuffer {
@@ -26,49 +24,31 @@ impl ByteBuffer {
     }
 
     pub fn get_var_int(&mut self) -> Result<VarInt, DeserializerError> {
-        let mut value: i32 = 0;
-        let mut position: i32 = 0;
-
-        loop {
-            let read = self.get_u8()?;
-
-            value |= ((read & SEGMENT_BITS) as i32) << position;
-
-            if read & CONTINUE_BIT == 0 {
-                break;
-            }
-
-            position += 7;
-
-            if position >= 32 {
-                return Err(DeserializerError::Message("VarInt is too big".to_string()));
-            }
+        match VarInt::decode(&mut self.buffer) {
+            Ok(var_int) => Ok(var_int),
+            Err(error) => match error {
+                crate::VarIntDecodeError::Incomplete => Err(DeserializerError::Message(
+                    "VarInt is Incomplete".to_string(),
+                )),
+                crate::VarIntDecodeError::TooLarge => {
+                    Err(DeserializerError::Message("VarInt is too big".to_string()))
+                }
+            },
         }
-
-        Ok(VarInt(value))
     }
 
-    pub fn get_var_long(&mut self) -> Result<VarLongType, DeserializerError> {
-        let mut value: i64 = 0;
-        let mut position: i64 = 0;
-
-        loop {
-            let read = self.get_u8()?;
-
-            value |= ((read & SEGMENT_BITS) as i64) << position;
-
-            if read & CONTINUE_BIT == 0 {
-                break;
-            }
-
-            position += 7;
-
-            if position >= 64 {
-                return Err(DeserializerError::Message("VarLong is too big".to_string()));
-            }
+    pub fn get_var_long(&mut self) -> Result<VarLong, DeserializerError> {
+        match VarLong::decode(&mut self.buffer) {
+            Ok(var_long) => Ok(var_long),
+            Err(error) => match error {
+                crate::VarLongDecodeError::Incomplete => Err(DeserializerError::Message(
+                    "VarLong is Incomplete".to_string(),
+                )),
+                crate::VarLongDecodeError::TooLarge => {
+                    Err(DeserializerError::Message("VarLong is too big".to_string()))
+                }
+            },
         }
-
-        Ok(value)
     }
 
     pub fn get_string(&mut self) -> Result<String, DeserializerError> {
@@ -144,18 +124,7 @@ impl ByteBuffer {
     }
 
     pub fn put_var_int(&mut self, value: &VarInt) {
-        let mut val = value.0;
-        for _ in 0..5 {
-            let mut b: u8 = val as u8 & 0b01111111;
-            val >>= 7;
-            if val != 0 {
-                b |= 0b10000000;
-            }
-            self.buffer.put_u8(b);
-            if val == 0 {
-                break;
-            }
-        }
+        value.encode(&mut self.buffer);
     }
 
     pub fn put_bit_set(&mut self, set: &BitSet) {
@@ -209,17 +178,6 @@ impl ByteBuffer {
         self.put_list(v, |p, &v| p.put_var_int(&v.into()))
     }
 
-    /*  pub fn get_nbt(&mut self) -> Option<fastnbt::value::Value> {
-            match crab_nbt::NbtTag::deserialize(self.buf()) {
-                Ok(v) => Some(v),
-                Err(err) => None,
-            }
-        }
-
-        pub fn put_nbt(&mut self, nbt: N) {
-            self.buffer.put_slice(&nbt.serialize());
-        }
-    */
     pub fn buf(&mut self) -> &mut BytesMut {
         &mut self.buffer
     }
