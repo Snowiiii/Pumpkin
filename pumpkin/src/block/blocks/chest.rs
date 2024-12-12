@@ -50,19 +50,7 @@ impl PumpkinBlock for ChestBlock {
         location: WorldPosition,
         server: &Server,
     ) {
-        // TODO: drop all items and close screen if different player breaks block
-        let entity_id = player.entity_id();
-        if let Some(container_id) = server.get_container_id(location, block.clone()).await {
-            let mut open_containers = server.open_containers.write().await;
-            if let Some(container) = open_containers.get_mut(&u64::from(container_id)) {
-                log::info!("Good ct ID: {}", container_id);
-
-                container.on_destroy().await;
-
-                container.remove_player(entity_id);
-                player.open_container.store(None);
-            }
-        }
+        super::standard_on_destroy_with_container(block, player, location, server).await;
     }
 
     async fn on_close<'a>(
@@ -77,6 +65,7 @@ impl PumpkinBlock for ChestBlock {
             .world()
             .play_block_sound(sound!("block.chest.close"), _location)
             .await;
+        // TODO: send entity updates close
     }
 }
 
@@ -88,30 +77,15 @@ impl ChestBlock {
         location: WorldPosition,
         server: &Server,
     ) {
-        let entity_id = player.entity_id();
-        if let Some(container_id) = server.get_container_id(location, block.clone()).await {
-            let mut open_containers = server.open_containers.write().await;
-            if let Some(container) = open_containers.get_mut(&u64::from(container_id)) {
-                log::info!("Good chest ID: {}", container_id);
-                container.add_player(entity_id);
-                player.open_container.store(Some(container_id.into()));
-            }
-            // drop(open_containers);
-        } else {
-            let mut open_containers = server.open_containers.write().await;
-
-            let new_id = server.new_container_id();
-            log::info!("New chest ID: {}", new_id);
-
-            let open_container = OpenContainer::new_empty_container::<Chest>(
-                entity_id,
-                Some(location),
-                Some(block.clone()),
-            );
-            open_containers.insert(new_id.into(), open_container);
-            player.open_container.store(Some(new_id.into()));
-            // drop(open_containers);
-        }
-        player.open_container(server, WindowType::Generic9x3).await;
+        // TODO: shouldn't Chest and window type be constrained together to avoid errors?
+        super::standard_open_container::<Chest>(
+            block,
+            player,
+            location,
+            server,
+            WindowType::Generic9x3,
+        )
+        .await;
+        // TODO: send entity updates open
     }
 }

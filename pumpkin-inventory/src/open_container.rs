@@ -5,8 +5,10 @@ use pumpkin_world::block::block_registry::Block;
 use pumpkin_world::item::ItemStack;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+
 pub struct OpenContainer {
     // TODO: unique id should be here
+    // TODO: should this be uuid?
     players: Vec<i32>,
     container: Arc<Mutex<Box<dyn Container>>>,
     location: Option<WorldPosition>,
@@ -62,11 +64,8 @@ impl OpenContainer {
         }
     }
 
-    pub async fn on_destroy(&self) {
-        let mut container = self.container.lock().await;
-
-        container.clear_all_slots();
-        // TODO drop all items by default
+    pub async fn clear_all_slots(&self) {
+        self.container.lock().await.clear_all_slots();
     }
 
     pub fn all_player_ids(&self) -> Vec<i32> {

@@ -44,19 +44,7 @@ impl PumpkinBlock for CraftingTableBlock {
         location: WorldPosition,
         server: &Server,
     ) {
-        // TODO: drop all items and close screen if different player breaks block
-        let entity_id = player.entity_id();
-        if let Some(container_id) = server.get_container_id(location, block.clone()).await {
-            let mut open_containers = server.open_containers.write().await;
-            if let Some(ender_chest) = open_containers.get_mut(&u64::from(container_id)) {
-                log::info!("Good ct ID: {}", container_id);
-
-                ender_chest.on_destroy().await;
-
-                ender_chest.remove_player(entity_id);
-                player.open_container.store(None);
-            }
-        }
+        super::standard_on_destroy_with_container(block, player, location, server).await;
     }
 
     async fn on_close<'a>(
@@ -67,12 +55,11 @@ impl PumpkinBlock for CraftingTableBlock {
         _server: &Server,
         container: &OpenContainer,
     ) {
-        log::info!("On Close CT");
         let entity_id = player.entity_id();
 
         for player_id in container.all_player_ids() {
             if entity_id == player_id {
-                container.on_destroy().await;
+                container.clear_all_slots().await;
             }
         }
 
@@ -115,7 +102,6 @@ impl CraftingTableBlock {
             open_containers.insert(new_id.into(), open_container);
 
             player.open_container.store(Some(new_id.into()));
-            // drop(open_containers);
         } else {
             log::info!("Using previous ct ID: {}", id_to_use);
             if let Some(ender_chest) = open_containers.get_mut(&(id_to_use as u64)) {
