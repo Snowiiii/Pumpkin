@@ -3,7 +3,7 @@ use crate::entity::player::Player;
 use async_trait::async_trait;
 use pumpkin_core::math::position::WorldPosition;
 use pumpkin_inventory::Furnace;
-use pumpkin_inventory::{OpenContainer, WindowType};
+use pumpkin_inventory::WindowType;
 use pumpkin_macros::pumpkin_block;
 use pumpkin_world::block::block_registry::Block;
 use pumpkin_world::item::item_registry::Item;
@@ -46,19 +46,7 @@ impl PumpkinBlock for FurnaceBlock {
         location: WorldPosition,
         server: &Server,
     ) {
-        // TODO: drop all items and close screen if different player breaks block
-        let entity_id = player.entity_id();
-        if let Some(container_id) = server.get_container_id(location, block.clone()).await {
-            let mut open_containers = server.open_containers.write().await;
-            if let Some(container) = open_containers.get_mut(&u64::from(container_id)) {
-                log::info!("Good ct ID: {}", container_id);
-
-                container.on_destroy().await;
-
-                container.remove_player(entity_id);
-                player.open_container.store(None);
-            }
-        }
+        super::standard_on_destroy_with_container(block, player, location, server).await;
     }
 }
 
@@ -70,30 +58,13 @@ impl FurnaceBlock {
         location: WorldPosition,
         server: &Server,
     ) {
-        let entity_id = player.entity_id();
-        if let Some(container_id) = server.get_container_id(location, block.clone()).await {
-            let mut open_containers = server.open_containers.write().await;
-            if let Some(container) = open_containers.get_mut(&u64::from(container_id)) {
-                log::info!("Good furnance ID: {}", container_id);
-                container.add_player(entity_id);
-                player.open_container.store(Some(container_id.into()));
-            }
-            // drop(open_containers);
-        } else {
-            let mut open_containers = server.open_containers.write().await;
-
-            let new_id = server.new_container_id();
-            log::info!("New furnace ID: {}", new_id);
-
-            let open_container = OpenContainer::new_empty_container::<Furnace>(
-                entity_id,
-                Some(location),
-                Some(block.clone()),
-            );
-            open_containers.insert(new_id.into(), open_container);
-            player.open_container.store(Some(new_id.into()));
-            // drop(open_containers);
-        }
-        player.open_container(server, WindowType::Furnace).await;
+        super::standard_open_container::<Furnace>(
+            block,
+            player,
+            location,
+            server,
+            WindowType::Furnace,
+        )
+        .await;
     }
 }
