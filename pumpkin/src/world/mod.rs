@@ -411,6 +411,9 @@ impl World {
             .init_client(&player.client)
             .await;
 
+        // Sends initial time
+        player.send_time(self).await;
+
         // Spawn in initial chunks
         player_chunker::player_join(self, player.clone()).await;
 

@@ -23,6 +23,7 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
+use pumpkin_protocol::client::play::CUpdateTime;
 use pumpkin_protocol::server::play::{
     SCloseContainer, SCookieResponse as SPCookieResponse, SPlayPingRequest,
 };
@@ -436,6 +437,18 @@ impl Player {
     /// get the players permission level
     pub fn permission_lvl(&self) -> PermissionLvl {
         self.permission_lvl
+    }
+
+    /// Sends the world time to just the player.
+    pub async fn send_time(&self, world: &World) {
+        let l_world = world.level_time.lock().await;
+        self.client
+            .send_packet(&CUpdateTime::new(
+                l_world.world_age,
+                l_world.time_of_day,
+                true,
+            ))
+            .await;
     }
 
     /// Yaw and Pitch in degrees
