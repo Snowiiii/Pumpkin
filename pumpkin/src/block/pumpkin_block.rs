@@ -29,4 +29,6 @@ pub trait PumpkinBlock: Send + Sync {
     async fn on_placed<'a>(&self, _player: &Player, _location: WorldPosition, _server: &Server) {}
 
     async fn on_broken<'a>(&self, _player: &Player, _location: WorldPosition, _server: &Server) {}
+
+    async fn on_close<'a>(&self, _player: &Player, _location: WorldPosition, _server: &Server) {}
 }
