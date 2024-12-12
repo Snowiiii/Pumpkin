@@ -399,7 +399,7 @@ impl Player {
         self.permission_lvl
     }
 
-    // sends the world time to just the player
+    /// Sends the world time to just the player.
     pub async fn send_time(&self, world: &World) {
         let l_world = world.level_time.lock().await;
         self.client
