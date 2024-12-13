@@ -73,16 +73,12 @@ impl Server {
     pub fn new() -> Self {
         // TODO: only create when needed
 
-        let auth_client = if BASIC_CONFIG.online_mode {
-            Some(
-                reqwest::Client::builder()
-                    .timeout(Duration::from_millis(5000))
-                    .build()
-                    .expect("Failed to to make reqwest client"),
-            )
-        } else {
-            None
-        };
+        let auth_client = BASIC_CONFIG.online_mode.then(|| {
+            reqwest::Client::builder()
+                .timeout(Duration::from_millis(5000))
+                .build()
+                .expect("Failed to to make reqwest client")
+        });
 
         // First register default command, after that plugins can put in their own
         let command_dispatcher = default_dispatcher();

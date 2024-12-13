@@ -1,34 +1,27 @@
 use std::fmt::Display;
 
+use super::{ByteBuf, ReadingError};
+use bytes::Bytes;
 use serde::de::{self, DeserializeSeed, SeqAccess};
-use thiserror::Error;
-
-use super::ByteBuffer;
 
 pub struct Deserializer<'a> {
-    inner: &'a mut ByteBuffer,
+    inner: &'a mut Bytes,
 }
 
-#[derive(Debug, Error)]
-pub enum DeserializerError {
-    #[error("serializer error {0}")]
-    Message(String),
-}
-
-impl de::Error for DeserializerError {
+impl de::Error for ReadingError {
     fn custom<T: Display>(msg: T) -> Self {
         Self::Message(msg.to_string())
     }
 }
 
 impl<'a> Deserializer<'a> {
-    pub fn new(buf: &'a mut ByteBuffer) -> Self {
+    pub fn new(buf: &'a mut Bytes) -> Self {
         Self { inner: buf }
     }
 }
 
 impl<'de> de::Deserializer<'de> for Deserializer<'_> {
-    type Error = DeserializerError;
+    type Error = ReadingError;
 
     fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -43,77 +36,77 @@ impl<'de> de::Deserializer<'de> for Deserializer<'_> {
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_bool(self.inner.get_bool()?)
+        visitor.visit_bool(self.inner.try_get_bool()?)
     }
 
     fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_i8(self.inner.get_i8()?)
+        visitor.visit_i8(self.inner.try_get_i8()?)
     }
 
     fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_i16(self.inner.get_i16()?)
+        visitor.visit_i16(self.inner.try_get_i16()?)
     }
 
     fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_i32(self.inner.get_i32()?)
+        visitor.visit_i32(self.inner.try_get_i32()?)
     }
 
     fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_i64(self.inner.get_i64()?)
+        visitor.visit_i64(self.inner.try_get_i64()?)
     }
 
     fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_u8(self.inner.get_u8()?)
+        visitor.visit_u8(self.inner.try_get_u8()?)
     }
 
     fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_u16(self.inner.get_u16()?)
+        visitor.visit_u16(self.inner.try_get_u16()?)
     }
 
     fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_u32(self.inner.get_u32()?)
+        visitor.visit_u32(self.inner.try_get_u32()?)
     }
 
     fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_u64(self.inner.get_u64()?)
+        visitor.visit_u64(self.inner.try_get_u64()?)
     }
 
     fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_f32(self.inner.get_f32()?)
+        visitor.visit_f32(self.inner.try_get_f32()?)
     }
 
     fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        visitor.visit_f64(self.inner.get_f64()?)
+        visitor.visit_f64(self.inner.try_get_f64()?)
     }
 
     fn deserialize_char<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
@@ -127,16 +120,14 @@ impl<'de> de::Deserializer<'de> for Deserializer<'_> {
     where
         V: de::Visitor<'de>,
     {
-        let string = self.inner.get_string()?;
-        visitor.visit_str(&string)
+        visitor.visit_str(&self.inner.try_get_string()?)
     }
 
     fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        let string = self.inner.get_string()?;
-        visitor.visit_str(&string)
+        visitor.visit_str(&self.inner.try_get_string()?)
     }
 
     fn deserialize_bytes<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
@@ -198,7 +189,7 @@ impl<'de> de::Deserializer<'de> for Deserializer<'_> {
         }
 
         impl<'de, 'a, 'b: 'a> SeqAccess<'de> for Access<'a, 'b> {
-            type Error = DeserializerError;
+            type Error = ReadingError;
 
             fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
             where
@@ -231,7 +222,7 @@ impl<'de> de::Deserializer<'de> for Deserializer<'_> {
         }
 
         impl<'de, 'a, 'b: 'a> SeqAccess<'de> for Access<'a, 'b> {
-            type Error = DeserializerError;
+            type Error = ReadingError;
 
             fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
             where

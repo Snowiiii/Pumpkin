@@ -11,24 +11,20 @@ pumpkin-macros = { path = "../pumpkin-macros" }
 tokio.workspace = true
 rayon.workspace = true
 derive_more.workspace = true
-itertools.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 log.workspace = true
-parking_lot.workspace = true
 
 num-traits.workspace = true
 num-derive.workspace = true
-futures = "0.3"
 dashmap = "6.1.0"
 
-# Compression
+# Compression   
 flate2 = "1.0"
 lz4 = "1.28.0"
 
 enum_dispatch = "0.3.13"
-derive-getters = "0.5.0"
 
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
 
@@ -38,7 +34,6 @@ rand = "0.8.5"
 
 [dev-dependencies]
 criterion = { version = "0.5.1", features = ["html_reports"] }
-
 
 [[bench]]
 name = "chunk_noise"

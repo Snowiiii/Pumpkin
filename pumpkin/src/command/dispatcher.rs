@@ -70,7 +70,7 @@ impl<'a> CommandDispatcher<'a> {
                 }
                 Err(pumpkin_error) => {
                     pumpkin_error.log();
-                    sender.send_message(TextComponent::text("Unknown internal error occured while running command. Please see server log").color(Color::Named(NamedColor::Red))).await;
+                    sender.send_message(TextComponent::text("Unknown internal error occurred while running command. Please see server log").color(Color::Named(NamedColor::Red))).await;
                 }
             }
         }
@@ -145,13 +145,13 @@ impl<'a> CommandDispatcher<'a> {
         let key = parts
             .next()
             .ok_or(GeneralCommandIssue("Empty Command".to_string()))?;
-        let mut raw_args: Vec<&str> = parts.rev().collect();
+        let raw_args: Vec<&str> = parts.rev().collect();
 
         let tree = self.get_tree(key)?;
 
         // try paths until fitting path is found
         for path in tree.iter_paths() {
-            if Self::try_is_fitting_path(src, server, &path, tree, &mut raw_args).await? {
+            if Self::try_is_fitting_path(src, server, &path, tree, &mut raw_args.clone()).await? {
                 return Ok(());
             }
         }

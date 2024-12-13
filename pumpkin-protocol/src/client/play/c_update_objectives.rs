@@ -1,7 +1,8 @@
+use bytes::{BufMut, BytesMut};
 use pumpkin_core::text::TextComponent;
 use pumpkin_macros::client_packet;
 
-use crate::{ClientPacket, NumberFormat, VarInt};
+use crate::{bytebuf::ByteBufMut, ClientPacket, NumberFormat, VarInt};
 
 #[client_packet("play:set_objective")]
 pub struct CUpdateObjectives<'a> {
@@ -31,7 +32,7 @@ impl<'a> CUpdateObjectives<'a> {
 }
 
 impl ClientPacket for CUpdateObjectives<'_> {
-    fn write(&self, bytebuf: &mut crate::bytebuf::ByteBuffer) {
+    fn write(&self, bytebuf: &mut BytesMut) {
         bytebuf.put_string(self.objective_name);
         bytebuf.put_u8(self.mode);
         if self.mode == 0 || self.mode == 2 {

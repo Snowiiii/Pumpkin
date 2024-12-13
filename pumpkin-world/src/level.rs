@@ -56,7 +56,7 @@ impl Level {
                 "World region folder does not exist, despite there being a root folder."
             );
             // TODO: read seed from level.dat
-            let seed = Seed(0);
+            let seed = get_or_create_seed();
             let world_gen = get_world_gen(seed).into(); // TODO Read Seed from config.
 
             Self {

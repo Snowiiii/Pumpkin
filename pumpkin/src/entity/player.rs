@@ -23,7 +23,10 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
-use pumpkin_protocol::server::play::{SCookieResponse as SPCookieResponse, SPlayPingRequest};
+use pumpkin_protocol::client::play::CUpdateTime;
+use pumpkin_protocol::server::play::{
+    SCloseContainer, SCookieResponse as SPCookieResponse, SPlayPingRequest,
+};
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
@@ -86,7 +89,7 @@ pub struct Player {
     /// The item currently being held by the player.
     pub carried_item: AtomicCell<Option<ItemStack>>,
 
-    /// send `send_abilties_update` when changed
+    /// send `send_abilities_update` when changed
     /// The player's abilities and special powers.
     ///
     /// This field represents the various abilities that the player possesses, such as flight, invulnerability, and other special effects.
@@ -390,7 +393,7 @@ impl Player {
     }
 
     /// Updates the current abilities the Player has
-    pub async fn send_abilties_update(&self) {
+    pub async fn send_abilities_update(&self) {
         let mut b = 0i8;
         let abilities = &self.abilities.lock().await;
 
@@ -434,6 +437,18 @@ impl Player {
     /// get the players permission level
     pub fn permission_lvl(&self) -> PermissionLvl {
         self.permission_lvl
+    }
+
+    /// Sends the world time to just the player.
+    pub async fn send_time(&self, world: &World) {
+        let l_world = world.level_time.lock().await;
+        self.client
+            .send_packet(&CUpdateTime::new(
+                l_world.world_age,
+                l_world.time_of_day,
+                true,
+            ))
+            .await;
     }
 
     /// Yaw and Pitch in degrees
@@ -733,6 +748,10 @@ impl Player {
             }
             SPCookieResponse::PACKET_ID => {
                 self.handle_cookie_response(SPCookieResponse::read(bytebuf)?);
+            }
+            SCloseContainer::PACKET_ID => {
+                self.handle_close_container(server, SCloseContainer::read(bytebuf)?)
+                    .await;
             }
             _ => {
                 log::warn!("Failed to handle player packet id {}", packet.id.0);

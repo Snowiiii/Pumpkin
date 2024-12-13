@@ -1,7 +1,8 @@
+use bytes::{BufMut, BytesMut};
 use pumpkin_core::text::TextComponent;
 use pumpkin_macros::client_packet;
 
-use crate::{ClientPacket, VarInt};
+use crate::{bytebuf::ByteBufMut, ClientPacket, VarInt};
 
 #[client_packet("play:command_suggestions")]
 pub struct CCommandSuggestions<'a> {
@@ -28,7 +29,7 @@ impl<'a> CCommandSuggestions<'a> {
 }
 
 impl ClientPacket for CCommandSuggestions<'_> {
-    fn write(&self, bytebuf: &mut crate::bytebuf::ByteBuffer) {
+    fn write(&self, bytebuf: &mut BytesMut) {
         bytebuf.put_var_int(&self.id);
         bytebuf.put_var_int(&self.start);
         bytebuf.put_var_int(&self.length);

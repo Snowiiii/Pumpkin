@@ -1,9 +1,34 @@
+use std::{
+    sync::atomic::{AtomicU64, Ordering},
+    time,
+};
+
 use legacy_rand::{LegacyRand, LegacySplitter};
 use xoroshiro128::{Xoroshiro, XoroshiroSplitter};
 
 mod gaussian;
 pub mod legacy_rand;
 pub mod xoroshiro128;
+
+static SEED_UNIQUIFIER: AtomicU64 = AtomicU64::new(8682522807148012u64);
+
+pub fn get_seed() -> u64 {
+    let seed = SEED_UNIQUIFIER
+        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |val| {
+            Some(val.wrapping_mul(1181783497276652981u64))
+        })
+        // We always return Some, so there will always be an Ok result
+        .unwrap();
+
+    let nanos = time::SystemTime::now()
+        .duration_since(time::SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+
+    let nano_upper = (nanos >> 8) as u64;
+    let nano_lower = nanos as u64;
+    seed ^ nano_upper ^ nano_lower
+}
 
 pub enum RandomGenerator {
     Xoroshiro(Xoroshiro),
@@ -186,7 +211,7 @@ pub trait RandomDeriverImpl {
     fn split_pos(&self, x: i32, y: i32, z: i32) -> impl RandomImpl;
 }
 
-fn hash_block_pos(x: i32, y: i32, z: i32) -> i64 {
+pub fn hash_block_pos(x: i32, y: i32, z: i32) -> i64 {
     let l = (x.wrapping_mul(3129871) as i64) ^ ((z as i64).wrapping_mul(116129781i64)) ^ (y as i64);
     let l = l
         .wrapping_mul(l)
@@ -195,7 +220,7 @@ fn hash_block_pos(x: i32, y: i32, z: i32) -> i64 {
     l >> 16
 }
 
-fn java_string_hash(string: &str) -> i32 {
+pub fn java_string_hash(string: &str) -> i32 {
     // All byte values of latin1 align with
     // the values of U+0000 - U+00FF making this code
     // equivalent to both java hash implementations
@@ -254,7 +279,7 @@ mod tests {
                 -1992287231i32,
             ),
             ("求同存异", 847053876),
-            // This might look wierd because hebrew is text is right to left
+            // This might look weird because hebrew is text is right to left
             ("אבְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ:", 1372570871),
             ("संस्कृत-", 1748614838),
             ("minecraft:offset", -920384768i32),

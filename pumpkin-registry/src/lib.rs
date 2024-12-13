@@ -146,11 +146,10 @@ impl Registry {
             .wolf_variant
             .iter()
             .map(|s| {
-                // I present to you, A ugly hack which is done because Mojang developers decited to put is_<biome> instead of just <biome> on 3 wolf varients while all others have just the biome, this causes the client to not find the biome and disconnect
-                let varient = s.1.clone();
+                let variant = s.1.clone();
                 RegistryEntry {
                     entry_id: s.0,
-                    data: pumpkin_nbt::serializer::to_bytes_unnamed(&varient).unwrap(),
+                    data: pumpkin_nbt::serializer::to_bytes_unnamed(&variant).unwrap(),
                 }
             })
             .collect();

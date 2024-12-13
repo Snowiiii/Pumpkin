@@ -722,7 +722,7 @@ impl Player {
 
                     let block_bounding_box = BoundingBox::from_block(&world_pos);
                     let bounding_box = entity.bounding_box.load();
-                    //TODO: Make this check for every entity in that posistion
+                    //TODO: Make this check for every entity in that position
                     if !bounding_box.intersects(&block_bounding_box) {
                         world
                             .set_block_state(world_pos, block.default_state_id)
@@ -803,6 +803,16 @@ impl Player {
         if let Some(id) = open_container {
             let mut open_containers = server.open_containers.write().await;
             if let Some(container) = open_containers.get_mut(&id) {
+                // If container contains both a location and a type, run the on_close block_manager handler
+                if let Some(pos) = container.get_location() {
+                    if let Some(block) = container.get_block() {
+                        server
+                            .block_manager
+                            .on_close(&block, self, pos, server) //block, self, location, server)
+                            .await;
+                    }
+                }
+                // Remove the player from the container
                 container.remove_player(self.entity_id());
             }
             self.open_container.store(None);

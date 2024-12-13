@@ -9,7 +9,6 @@ use crate::{
     error::PumpkinError,
     server::Server,
 };
-use itertools::Itertools;
 use level_time::LevelTime;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
@@ -150,21 +149,31 @@ impl World {
         &self,
         sound_id: u16,
         category: SoundCategory,
-        posistion: &Vector3<f64>,
+        position: &Vector3<f64>,
     ) {
         let seed = thread_rng().gen::<f64>();
         self.broadcast_packet_all(&CSoundEffect::new(
             VarInt(i32::from(sound_id)),
             None,
             category,
-            posistion.x,
-            posistion.y,
-            posistion.z,
+            position.x,
+            position.y,
+            position.z,
             1.0,
             1.0,
             seed,
         ))
         .await;
+    }
+
+    pub async fn play_block_sound(&self, sound_id: u16, position: WorldPosition) {
+        let new_vec = Vector3::new(
+            f64::from(position.0.x) + 0.5,
+            f64::from(position.0.y) + 0.5,
+            f64::from(position.0.z) + 0.5,
+        );
+        self.play_sound(sound_id, SoundCategory::Blocks, &new_vec)
+            .await;
     }
 
     pub async fn play_record(&self, record_id: i32, position: WorldPosition) {
@@ -214,11 +223,7 @@ impl World {
         server: &Server,
     ) {
         let command_dispatcher = &server.command_dispatcher;
-        let dimensions = &server
-            .dimensions
-            .iter()
-            .map(DimensionType::name)
-            .collect_vec();
+        let dimensions: Vec<&str> = server.dimensions.iter().map(DimensionType::name).collect();
 
         // This code follows the vanilla packet order
         let entity_id = player.entity_id();
@@ -235,7 +240,7 @@ impl World {
             .send_packet(&CLogin::new(
                 entity_id,
                 base_config.hardcore,
-                dimensions,
+                &dimensions,
                 base_config.max_players.into(),
                 base_config.view_distance.into(), //  TODO: view distance
                 base_config.simulation_distance.into(), // TODO: sim view dinstance
@@ -401,6 +406,9 @@ impl World {
             .init_client(&player.client)
             .await;
 
+        // Sends initial time
+        player.send_time(self).await;
+
         // Spawn in initial chunks
         player_chunker::player_join(self, player.clone()).await;
 
@@ -442,7 +450,7 @@ impl World {
             .await;
 
         log::debug!("Sending player abilities to {}", player.gameprofile.name);
-        player.send_abilties_update().await;
+        player.send_abilities_update().await;
 
         player.send_permission_lvl_update().await;
 
@@ -567,10 +575,9 @@ impl World {
                 let packet = CChunkData(&chunk_data);
                 #[cfg(debug_assertions)]
                 if chunk_data.position == (0, 0).into() {
-                    use pumpkin_protocol::bytebuf::ByteBuffer;
-                    let mut test = ByteBuffer::empty();
+                    let mut test = bytes::BytesMut::new();
                     packet.write(&mut test);
-                    let len = test.buf().len();
+                    let len = test.len();
                     log::debug!(
                         "Chunk packet size: {}B {}KB {}MB",
                         len,

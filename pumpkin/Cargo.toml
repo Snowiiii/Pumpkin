@@ -21,7 +21,6 @@ pumpkin-protocol = { path = "../pumpkin-protocol" }
 pumpkin-registry = { path = "../pumpkin-registry" }
 pumpkin-macros = { path = "../pumpkin-macros" }
 
-itertools.workspace = true
 log.workspace = true
 crossbeam.workspace = true
 uuid.workspace = true
@@ -31,7 +30,6 @@ thiserror.workspace = true
 
 num-traits.workspace = true
 num-derive.workspace = true
-parking_lot.workspace = true
 
 # config
 serde.workspace = true
@@ -56,14 +54,14 @@ reqwest = { version = "0.12.9", default-features = false, features = [
 ] }
 
 sha1 = "0.10.6"
-digest = "=0.11.0-pre.9"
 
 # velocity en
 hmac = "0.12.1"
 sha2 = "0.10.8"
 
-# icon loading
 base64 = "0.22.1"
+
+# icon loading
 png = "0.17.15"
 
 # logging

@@ -13,7 +13,6 @@ pumpkin-core = { path = "../pumpkin-core" }
 uuid.workspace = true
 serde.workspace = true
 thiserror.workspace = true
-itertools.workspace = true
 log.workspace = true
 tokio.workspace = true
 num-traits.workspace = true
