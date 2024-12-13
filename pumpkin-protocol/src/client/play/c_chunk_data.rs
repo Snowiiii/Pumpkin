@@ -1,5 +1,6 @@
-use crate::{bytebuf::ByteBuffer, BitSet, ClientPacket, VarInt};
+use crate::{bytebuf::ByteBufMut, BitSet, ClientPacket, VarInt};
 
+use bytes::{BufMut, BytesMut};
 use pumpkin_macros::client_packet;
 use pumpkin_world::{chunk::ChunkData, DIRECT_PALETTE_BITS};
 
@@ -7,7 +8,7 @@ use pumpkin_world::{chunk::ChunkData, DIRECT_PALETTE_BITS};
 pub struct CChunkData<'a>(pub &'a ChunkData);
 
 impl ClientPacket for CChunkData<'_> {
-    fn write(&self, buf: &mut crate::bytebuf::ByteBuffer) {
+    fn write(&self, buf: &mut BytesMut) {
         // Chunk X
         buf.put_i32(self.0.position.x);
         // Chunk Z
@@ -18,7 +19,7 @@ impl ClientPacket for CChunkData<'_> {
         // Heightmaps
         buf.put_slice(&heightmap_nbt);
 
-        let mut data_buf = ByteBuffer::empty();
+        let mut data_buf = BytesMut::new();
         self.0.blocks.iter_subchunks().for_each(|chunk| {
             let block_count = chunk.len() as i16;
             // Block count
@@ -102,9 +103,9 @@ impl ClientPacket for CChunkData<'_> {
         });
 
         // Size
-        buf.put_var_int(&VarInt(data_buf.buf().len() as i32));
+        buf.put_var_int(&VarInt(data_buf.len() as i32));
         // Data
-        buf.put_slice(data_buf.buf());
+        buf.put_slice(&data_buf);
 
         // TODO: block entities
         buf.put_var_int(&VarInt(0));

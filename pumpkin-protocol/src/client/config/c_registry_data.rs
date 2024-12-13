@@ -1,7 +1,7 @@
-use bytes::BytesMut;
+use bytes::{BufMut, BytesMut};
 use pumpkin_macros::client_packet;
 
-use crate::{bytebuf::ByteBuffer, ClientPacket};
+use crate::{bytebuf::ByteBufMut, ClientPacket};
 
 #[client_packet("config:registry_data")]
 pub struct CRegistryData<'a> {
@@ -24,7 +24,7 @@ pub struct RegistryEntry<'a> {
 }
 
 impl ClientPacket for CRegistryData<'_> {
-    fn write(&self, bytebuf: &mut ByteBuffer) {
+    fn write(&self, bytebuf: &mut BytesMut) {
         bytebuf.put_string(self.registry_id);
         bytebuf.put_list::<RegistryEntry>(self.entries, |p, v| {
             p.put_string(v.entry_id);

@@ -17,7 +17,7 @@ use crossbeam::atomic::AtomicCell;
 use pumpkin_config::compression::CompressionInfo;
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
-    bytebuf::{packet_id::Packet, DeserializerError},
+    bytebuf::{packet_id::Packet, ReadingError},
     client::{config::CConfigDisconnect, login::CLoginDisconnect, play::CPlayDisconnect},
     packet_decoder::PacketDecoder,
     packet_encoder::{PacketEncodeError, PacketEncoder},
@@ -343,7 +343,7 @@ impl Client {
         &self,
         server: &Arc<Server>,
         packet: &mut RawPacket,
-    ) -> Result<(), DeserializerError> {
+    ) -> Result<(), ReadingError> {
         match self.connection_state.load() {
             pumpkin_protocol::ConnectionState::HandShake => {
                 self.handle_handshake_packet(packet).await
@@ -366,10 +366,7 @@ impl Client {
         }
     }
 
-    async fn handle_handshake_packet(
-        &self,
-        packet: &mut RawPacket,
-    ) -> Result<(), DeserializerError> {
+    async fn handle_handshake_packet(&self, packet: &mut RawPacket) -> Result<(), ReadingError> {
         log::debug!("Handling handshake group");
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
@@ -390,7 +387,7 @@ impl Client {
         &self,
         server: &Arc<Server>,
         packet: &mut RawPacket,
-    ) -> Result<(), DeserializerError> {
+    ) -> Result<(), ReadingError> {
         log::debug!("Handling status group");
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
@@ -416,7 +413,7 @@ impl Client {
         &self,
         server: &Arc<Server>,
         packet: &mut RawPacket,
-    ) -> Result<(), DeserializerError> {
+    ) -> Result<(), ReadingError> {
         log::debug!("Handling login group for id");
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
@@ -452,7 +449,7 @@ impl Client {
         &self,
         server: &Arc<Server>,
         packet: &mut RawPacket,
-    ) -> Result<(), DeserializerError> {
+    ) -> Result<(), ReadingError> {
         log::debug!("Handling config group");
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {

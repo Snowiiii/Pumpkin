@@ -1,4 +1,5 @@
-use bytebuf::{packet_id::Packet, ByteBuffer, DeserializerError};
+use bytebuf::{packet_id::Packet, ReadingError};
+use bytes::{Bytes, BytesMut};
 use pumpkin_core::text::{style::Style, TextComponent};
 use serde::{Deserialize, Serialize, Serializer};
 
@@ -22,8 +23,10 @@ pub const CURRENT_MC_PROTOCOL: u32 = 769;
 
 pub const MAX_PACKET_SIZE: i32 = 2097152;
 
-/// usually uses a namespace like "minecraft:thing"
+/// usally uses a namespace like "minecraft:thing"
 pub type Identifier = String;
+pub type VarIntType = i32;
+pub type VarLongType = i64;
 pub type FixedBitSet = bytes::Bytes;
 
 pub struct BitSet<'a>(pub VarInt, pub &'a [i64]);
@@ -90,15 +93,15 @@ pub struct SoundEvent {
 
 pub struct RawPacket {
     pub id: VarInt,
-    pub bytebuf: ByteBuffer,
+    pub bytebuf: Bytes,
 }
 
 pub trait ClientPacket: Packet {
-    fn write(&self, bytebuf: &mut ByteBuffer);
+    fn write(&self, bytebuf: &mut BytesMut);
 }
 
 pub trait ServerPacket: Packet + Sized {
-    fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError>;
+    fn read(bytebuf: &mut Bytes) -> Result<Self, ReadingError>;
 }
 
 #[derive(Serialize)]

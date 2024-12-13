@@ -1,37 +1,38 @@
 use std::fmt::Display;
 
+use bytes::{BufMut, BytesMut};
 use serde::{
     ser::{self},
     Serialize,
 };
 use thiserror::Error;
 
-use super::ByteBuffer;
+use super::ByteBufMut;
 
 pub struct Serializer {
-    pub output: ByteBuffer,
+    pub output: BytesMut,
 }
 
 impl Serializer {
-    pub fn new(buf: ByteBuffer) -> Self {
+    pub fn new(buf: BytesMut) -> Self {
         Self { output: buf }
     }
 }
 
-impl From<Serializer> for ByteBuffer {
+impl From<Serializer> for BytesMut {
     fn from(val: Serializer) -> Self {
         val.output
     }
 }
 
-impl AsRef<ByteBuffer> for Serializer {
-    fn as_ref(&self) -> &ByteBuffer {
+impl AsRef<BytesMut> for Serializer {
+    fn as_ref(&self) -> &BytesMut {
         &self.output
     }
 }
 
-impl AsMut<ByteBuffer> for Serializer {
-    fn as_mut(&mut self) -> &mut ByteBuffer {
+impl AsMut<BytesMut> for Serializer {
+    fn as_mut(&mut self) -> &mut BytesMut {
         &mut self.output
     }
 }

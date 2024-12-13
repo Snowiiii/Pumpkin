@@ -575,10 +575,9 @@ impl World {
                 let packet = CChunkData(&chunk_data);
                 #[cfg(debug_assertions)]
                 if chunk_data.position == (0, 0).into() {
-                    use pumpkin_protocol::bytebuf::ByteBuffer;
-                    let mut test = ByteBuffer::empty();
+                    let mut test = bytes::BytesMut::new();
                     packet.write(&mut test);
-                    let len = test.buf().len();
+                    let len = test.len();
                     log::debug!(
                         "Chunk packet size: {}B {}KB {}MB",
                         len,

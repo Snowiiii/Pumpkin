@@ -1,6 +1,7 @@
+use bytes::{BufMut, BytesMut};
 use pumpkin_macros::client_packet;
 
-use crate::{ClientPacket, IDOrSoundEvent, SoundCategory, SoundEvent, VarInt};
+use crate::{bytebuf::ByteBufMut, ClientPacket, IDOrSoundEvent, SoundCategory, SoundEvent, VarInt};
 
 #[client_packet("play:sound_entity")]
 pub struct CEntitySoundEffect {
@@ -38,7 +39,7 @@ impl CEntitySoundEffect {
 }
 
 impl ClientPacket for CEntitySoundEffect {
-    fn write(&self, bytebuf: &mut crate::bytebuf::ByteBuffer) {
+    fn write(&self, bytebuf: &mut BytesMut) {
         bytebuf.put_var_int(&self.sound_event.id);
         if self.sound_event.id.0 == 0 {
             if let Some(test) = &self.sound_event.sound_event {

@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use libdeflater::{CompressionLvl, Compressor};
 
-use crate::{bytebuf::ByteBuffer, ClientPacket, VarInt, MAX_PACKET_SIZE};
+use crate::{ClientPacket, VarInt, MAX_PACKET_SIZE};
 
 type Cipher = cfb8::Encryptor<aes::Aes128>;
 
@@ -39,10 +39,8 @@ impl PacketEncoder {
         let start_len = self.buf.len();
         // Write the Packet ID first
         VarInt(P::PACKET_ID).encode(&mut self.buf);
-        let mut packet_buf = ByteBuffer::empty();
         // Now write the packet into an empty buffer
-        packet.write(&mut packet_buf);
-        self.buf.put(packet_buf.buf());
+        packet.write(&mut self.buf);
 
         let data_len = self.buf.len() - start_len;
 
@@ -274,10 +272,10 @@ mod tests {
 
         // Remaining buffer is the payload
         // We need to obtain the expected payload
-        let mut expected_payload = ByteBuffer::empty();
+        let mut expected_payload = BytesMut::new();
         packet.write(&mut expected_payload);
 
-        assert_eq!(buffer, expected_payload.buf());
+        assert_eq!(buffer, expected_payload);
     }
 
     /// Test encoding with compression
@@ -308,10 +306,10 @@ mod tests {
 
         // Read data length VarInt (uncompressed data length)
         let data_length = decode_varint(&mut buffer).expect("Failed to decode data length");
-        let mut expected_payload = ByteBuffer::empty();
+        let mut expected_payload = BytesMut::new();
         packet.write(&mut expected_payload);
         let uncompressed_data_length =
-            VarInt(CStatusResponse::PACKET_ID).written_size() + expected_payload.buf().len();
+            VarInt(CStatusResponse::PACKET_ID).written_size() + expected_payload.len();
         assert_eq!(data_length as usize, uncompressed_data_length);
 
         // Remaining buffer is the compressed data
@@ -330,7 +328,7 @@ mod tests {
         assert_eq!(decoded_packet_id, CStatusResponse::PACKET_ID);
 
         // Remaining buffer is the payload
-        assert_eq!(decompressed_buffer, expected_payload.buf());
+        assert_eq!(decompressed_buffer, expected_payload);
     }
 
     /// Test encoding with encryption
@@ -364,10 +362,10 @@ mod tests {
         assert_eq!(decoded_packet_id, CStatusResponse::PACKET_ID);
 
         // Remaining buffer is the payload
-        let mut expected_payload = ByteBuffer::empty();
+        let mut expected_payload = BytesMut::new();
         packet.write(&mut expected_payload);
 
-        assert_eq!(buffer, expected_payload.buf());
+        assert_eq!(buffer, expected_payload);
     }
 
     /// Test encoding with both compression and encryption
@@ -405,10 +403,10 @@ mod tests {
 
         // Read data length VarInt (uncompressed data length)
         let data_length = decode_varint(&mut buffer).expect("Failed to decode data length");
-        let mut expected_payload = ByteBuffer::empty();
+        let mut expected_payload = BytesMut::new();
         packet.write(&mut expected_payload);
         let uncompressed_data_length =
-            VarInt(CStatusResponse::PACKET_ID).written_size() + expected_payload.buf().len();
+            VarInt(CStatusResponse::PACKET_ID).written_size() + expected_payload.len();
         assert_eq!(data_length as usize, uncompressed_data_length);
 
         // Remaining buffer is the compressed data
@@ -427,7 +425,7 @@ mod tests {
         assert_eq!(decoded_packet_id, CStatusResponse::PACKET_ID);
 
         // Remaining buffer is the payload
-        assert_eq!(decompressed_buffer, expected_payload.buf());
+        assert_eq!(decompressed_buffer, expected_payload);
     }
 
     /// Test encoding with zero-length payload
@@ -455,15 +453,15 @@ mod tests {
         assert_eq!(decoded_packet_id, CStatusResponse::PACKET_ID);
 
         // Remaining buffer is the payload (empty)
-        let mut expected_payload = ByteBuffer::empty();
+        let mut expected_payload = BytesMut::new();
         packet.write(&mut expected_payload);
 
         assert_eq!(
             buffer.len(),
-            expected_payload.buf().len(),
+            expected_payload.len(),
             "Payload length mismatch"
         );
-        assert_eq!(buffer, expected_payload.buf());
+        assert_eq!(buffer, expected_payload);
     }
 
     /// Test encoding with maximum length payload
@@ -500,10 +498,10 @@ mod tests {
         assert_eq!(decoded_packet_id, CStatusResponse::PACKET_ID);
 
         // Remaining buffer is the payload
-        let mut expected_payload = ByteBuffer::empty();
+        let mut expected_payload = BytesMut::new();
         packet.write(&mut expected_payload);
 
-        assert_eq!(buffer, expected_payload.buf());
+        assert_eq!(buffer, expected_payload);
     }
 
     /// Test encoding a packet that exceeds MAX_PACKET_SIZE
@@ -557,9 +555,9 @@ mod tests {
         assert_eq!(decoded_packet_id, CStatusResponse::PACKET_ID);
 
         // Remaining buffer is the payload
-        let mut expected_payload = ByteBuffer::empty();
+        let mut expected_payload = BytesMut::new();
         packet.write(&mut expected_payload);
 
-        assert_eq!(buffer, expected_payload.buf());
+        assert_eq!(buffer, expected_payload);
     }
 }
