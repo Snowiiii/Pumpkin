@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::net::{Ipv4Addr, SocketAddr};
+#[cfg(feature = "schemars")]
+use schemars::JsonSchema;
 
 #[derive(Deserialize, Serialize, Clone)]
+#[cfg_attr(feature = "schemars", derive(JsonSchema))]
 #[serde(default)]
 pub struct RCONConfig {
     /// Is RCON Enabled?
@@ -30,6 +33,7 @@ impl Default for RCONConfig {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
+#[cfg_attr(feature = "schemars", derive(JsonSchema))]
 #[serde(default)]
 pub struct RCONLogging {
     /// Whether successful RCON logins should be logged.

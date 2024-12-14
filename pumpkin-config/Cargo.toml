@@ -3,9 +3,15 @@ name = "pumpkin-config"
 version.workspace = true
 edition.workspace = true
 
+[features]
+schemars = ["dep:schemars", "pumpkin-core/schemars"]
+
 [dependencies]
 pumpkin-core = { path = "../pumpkin-core" }
 serde.workspace = true
 log.workspace = true
 
 toml = "0.8"
+# used by the generate schemas script
+schemars = { version = "=1.0.0-alpha.17", optional = true }
+

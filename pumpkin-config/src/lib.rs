@@ -2,6 +2,8 @@ use log::warn;
 use logging::LoggingConfig;
 use pumpkin_core::{Difficulty, GameMode};
 use query::QueryConfig;
+#[cfg(feature = "schemars")]
+use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use std::{
@@ -46,6 +48,7 @@ pub static BASIC_CONFIG: LazyLock<BasicConfiguration> = LazyLock::new(BasicConfi
 /// This also allows you get some Performance or Resource boosts.
 /// Important: The Configuration should match Vanilla by default
 #[derive(Deserialize, Serialize, Default)]
+#[cfg_attr(feature = "schemars", derive(JsonSchema))]
 #[serde(default)]
 pub struct AdvancedConfiguration {
     pub proxy: ProxyConfig,
@@ -61,7 +64,7 @@ pub struct AdvancedConfiguration {
     pub lan_broadcast: LANBroadcastConfig,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
 pub struct BasicConfiguration {
     /// The address to bind the server to.
