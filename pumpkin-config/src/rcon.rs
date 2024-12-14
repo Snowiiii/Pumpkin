@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use std::net::{Ipv4Addr, SocketAddr};
 #[cfg(feature = "schemars")]
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::net::{Ipv4Addr, SocketAddr};
 
 #[derive(Deserialize, Serialize, Clone)]
 #[cfg_attr(feature = "schemars", derive(JsonSchema))]

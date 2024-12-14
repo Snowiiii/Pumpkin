@@ -1,9 +1,9 @@
 use std::str::FromStr;
 
 use num_derive::FromPrimitive;
-use serde::{Deserialize, Serialize};
 #[cfg(feature = "schemars")]
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseGameModeError;
