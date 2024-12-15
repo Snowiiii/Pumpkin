@@ -50,7 +50,7 @@ impl CommandExecutor for PumpkinExecutor {
                     )
                     .add_child(
                         TextComponent::text(&format!(
-                            " (Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL}) "
+                            " (Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL})"
                         ))
                         .click_event(ClickEvent::CopyToClipboard(Cow::from(format!(
                             "(Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL})"
@@ -60,6 +60,7 @@ impl CommandExecutor for PumpkinExecutor {
                         )))
                         .color_named(NamedColor::Gold),
                     )
+                    .add_child(TextComponent::text(" "))
                     // https://snowiiii.github.io/Pumpkin/
                     .add_child(
                         TextComponent::text("Github Repository")
