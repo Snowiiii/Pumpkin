@@ -67,7 +67,9 @@ impl CommandExecutor for PumpkinExecutor {
                             .click_event(ClickEvent::OpenUrl(Cow::from(
                                 "https://github.com/Snowiiii/Pumpkin",
                             )))
-                            .hover_event(HoverEvent::ShowText(Cow::from("Click to open repository.")))
+                            .hover_event(HoverEvent::ShowText(Cow::from(
+                                "Click to open repository.",
+                            )))
                             .color_named(NamedColor::Blue)
                             .bold()
                             .underlined(),
