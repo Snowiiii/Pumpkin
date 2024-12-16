@@ -1,7 +1,9 @@
 pub mod api;
 
 pub use api::*;
-use std::{any::Any, fs, path::Path};
+use std::{any::Any, fs, path::Path, sync::Arc};
+
+use crate::command::dispatcher::CommandDispatcher;
 
 type PluginData = (
     PluginMetadata<'static>,
@@ -12,6 +14,7 @@ type PluginData = (
 
 pub struct PluginManager {
     plugins: Vec<PluginData>,
+    command_dispatcher: Option<Arc<CommandDispatcher<'static>>>
 }
 
 impl Default for PluginManager {
@@ -20,47 +23,14 @@ impl Default for PluginManager {
     }
 }
 
-struct PluginLogger {
-    plugin_name: String,
-}
-
-impl Logger for PluginLogger {
-    fn info(&self, message: &str) {
-        log::info!("[{}] {}", self.plugin_name, message);
-    }
-
-    fn warn(&self, message: &str) {
-        log::warn!("[{}] {}", self.plugin_name, message);
-    }
-
-    fn error(&self, message: &str) {
-        log::error!("[{}] {}", self.plugin_name, message);
-    }
-}
-
-struct Context<'a> {
-    metadata: &'a PluginMetadata<'a>,
-}
-impl PluginContext for Context<'_> {
-    fn get_logger(&self) -> Box<dyn Logger> {
-        Box::new(PluginLogger {
-            plugin_name: self.metadata.name.to_string(),
-        })
-    }
-
-    fn get_data_folder(&self) -> String {
-        let path = format!("./plugins/{}", self.metadata.name);
-        if !Path::new(&path).exists() {
-            fs::create_dir_all(&path).unwrap();
-        }
-        path
-    }
-}
-
 impl PluginManager {
     #[must_use]
     pub fn new() -> Self {
-        PluginManager { plugins: vec![] }
+        PluginManager { plugins: vec![], command_dispatcher: None }
+    }
+
+    pub fn set_command_dispatcher(&mut self, dispatcher: Arc<CommandDispatcher<'static>>) {
+        self.command_dispatcher = Some(dispatcher);
     }
 
     pub fn load_plugins(&mut self) -> Result<(), String> {
@@ -85,7 +55,8 @@ impl PluginManager {
         let metadata: &PluginMetadata =
             unsafe { &**library.get::<*const PluginMetadata>(b"METADATA").unwrap() };
 
-        let context = Context { metadata };
+        // let dispatcher = self.command_dispatcher.clone().expect("Command dispatcher not set").clone();
+        let context = handle_context(metadata.clone()/* , dispatcher */);
         let mut plugin_box = plugin_fn();
         let res = plugin_box.on_load(&context);
         let mut loaded = true;
@@ -110,23 +81,30 @@ impl PluginManager {
         let mut blocking_hooks = Vec::new();
         let mut non_blocking_hooks = Vec::new();
 
+        /* let dispatcher = self.command_dispatcher
+            .clone()
+            .expect("Command dispatcher not set"); // This should not happen */
+
         for (metadata, hooks, _, loaded) in &mut self.plugins {
             if !*loaded {
                 continue;
             }
-            if hooks
-                .registered_events()
-                .unwrap()
+
+            let registered_events = match hooks.registered_events() {
+                Ok(events) => events,
+                Err(e) => {
+                    log::error!("Failed to get registered events: {}", e);
+                    continue;
+                }
+            };
+
+            if let Some(matching_event) = registered_events
                 .iter()
-                .any(|e| e.name == event_name)
+                .find(|e| e.name == event_name)
             {
-                let context = Context { metadata };
-                if hooks
-                    .registered_events()
-                    .unwrap()
-                    .iter()
-                    .any(|e| e.name == event_name && e.blocking)
-                {
+                let context = handle_context(metadata.clone()/* , dispatcher.clone() */);
+                
+                if matching_event.blocking {
                     blocking_hooks.push((context, hooks));
                 } else {
                     non_blocking_hooks.push((context, hooks));

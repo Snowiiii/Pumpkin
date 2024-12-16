@@ -17,7 +17,7 @@ struct Bans {
 }
 
 #[plugin_method]
-fn on_load(&mut self, server: &dyn PluginContext) -> Result<(), String> {
+fn on_load(&mut self, server: &Context) -> Result<(), String> {
     let data_folder = server.get_data_folder();
     if !fs::exists(format!("{}/data.toml", data_folder)).unwrap() {
         let cfg = toml::to_string(&self.config).unwrap();
@@ -38,7 +38,7 @@ fn on_load(&mut self, server: &dyn PluginContext) -> Result<(), String> {
 }
 
 #[plugin_method]
-fn on_unload(&mut self, server: &dyn PluginContext) -> Result<(), String> {
+fn on_unload(&mut self, server: &Context) -> Result<(), String> {
     let data_folder = server.get_data_folder();
     let cfg = toml::to_string(&self.config).unwrap();
     fs::write(format!("{}/data.toml", data_folder), cfg).unwrap();
@@ -50,7 +50,7 @@ fn on_unload(&mut self, server: &dyn PluginContext) -> Result<(), String> {
 #[plugin_event(blocking = true, priority = Highest)]
 async fn on_player_join(
     &mut self,
-    server: &dyn PluginContext,
+    server: &Context,
     player: &PlayerEvent,
 ) -> Result<bool, String> {
     server.get_logger().info(
@@ -83,7 +83,7 @@ async fn on_player_join(
 #[plugin_event]
 async fn on_player_leave(
     &mut self,
-    server: &dyn PluginContext,
+    server: &Context,
     player: &PlayerEvent,
 ) -> Result<bool, String> {
     server

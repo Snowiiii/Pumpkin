@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 
-use super::{types::player::PlayerEvent, PluginContext};
+use super::types::player::PlayerEvent;
+use super::context::Context;
 
 #[derive(Eq, PartialEq, Ord, PartialOrd)]
 pub enum EventPriority {
@@ -27,7 +28,7 @@ pub trait Hooks: Send + Sync + 'static {
     /// Called when a player joins the server.
     async fn on_player_join(
         &mut self,
-        _server: &dyn PluginContext,
+        _server: &Context,
         _player: &PlayerEvent,
     ) -> Result<bool, String> {
         Ok(false)
@@ -36,7 +37,7 @@ pub trait Hooks: Send + Sync + 'static {
     /// Called when a player leaves the server.
     async fn on_player_leave(
         &mut self,
-        _server: &dyn PluginContext,
+        _server: &Context,
         _player: &PlayerEvent,
     ) -> Result<bool, String> {
         Ok(false)

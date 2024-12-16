@@ -19,12 +19,12 @@ pub struct PluginMetadata<'s> {
 
 pub trait PluginMethods: Send + Sync + 'static {
     /// Called when the plugin is loaded.
-    fn on_load(&mut self, _server: &dyn PluginContext) -> Result<(), String> {
+    fn on_load(&mut self, _server: &Context) -> Result<(), String> {
         Ok(())
     }
 
     /// Called when the plugin is unloaded.
-    fn on_unload(&mut self, _server: &dyn PluginContext) -> Result<(), String> {
+    fn on_unload(&mut self, _server: &Context) -> Result<(), String> {
         Ok(())
     }
 }
