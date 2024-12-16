@@ -435,28 +435,68 @@ impl Player {
         ) */
     }
 
-    pub async fn handle_client_information(&self, client_information: SClientInformationPlay) {
+    pub async fn handle_client_information(
+        self: &Arc<Player>,
+        client_information: SClientInformationPlay,
+    ) {
         if let (Some(main_hand), Some(chat_mode)) = (
             Hand::from_i32(client_information.main_hand.into()),
             ChatMode::from_i32(client_information.chat_mode.into()),
         ) {
-            let mut config = self.config.lock().await;
-            let update =
-                config.main_hand != main_hand || config.skin_parts != client_information.skin_parts;
+            if client_information.view_distance <= 0 {
+                self.kick(TextComponent::text(
+                    "Cannot have zero or negative view distance!",
+                ))
+                .await;
+                return;
+            }
 
-            *config = PlayerConfig {
-                locale: client_information.locale,
-                // A Negative view distance would be impossible and make no sense right ?, Mojang: Lets make is signed :D
-                view_distance: client_information.view_distance as u8,
-                chat_mode,
-                chat_colors: client_information.chat_colors,
-                skin_parts: client_information.skin_parts,
-                main_hand,
-                text_filtering: client_information.text_filtering,
-                server_listing: client_information.server_listing,
+            let (update_skin, update_watched) = {
+                let mut config = self.config.lock().await;
+                let update_skin = config.main_hand != main_hand
+                    || config.skin_parts != client_information.skin_parts;
+
+                let old_view_distance = config.view_distance;
+
+                let update_watched = if old_view_distance == client_information.view_distance as u8
+                {
+                    false
+                } else {
+                    log::debug!(
+                        "Player {} ({}) updated render distance: {} -> {}.",
+                        self.gameprofile.name,
+                        self.client.id,
+                        old_view_distance,
+                        client_information.view_distance
+                    );
+
+                    true
+                };
+
+                *config = PlayerConfig {
+                    locale: client_information.locale,
+                    // A Negative view distance would be impossible and make no sense right ?, Mojang: Lets make is signed :D
+                    view_distance: client_information.view_distance as u8,
+                    chat_mode,
+                    chat_colors: client_information.chat_colors,
+                    skin_parts: client_information.skin_parts,
+                    main_hand,
+                    text_filtering: client_information.text_filtering,
+                    server_listing: client_information.server_listing,
+                };
+                (update_skin, update_watched)
             };
-            drop(config);
-            if update {
+
+            if update_watched {
+                player_chunker::update_position(self).await;
+            }
+
+            if update_skin {
+                log::debug!(
+                    "Player {} ({}) updated their skin.",
+                    self.gameprofile.name,
+                    self.client.id,
+                );
                 self.update_client_information().await;
             }
         } else {

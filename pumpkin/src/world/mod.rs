@@ -410,7 +410,7 @@ impl World {
         player.send_time(self).await;
 
         // Spawn in initial chunks
-        player_chunker::player_join(self, player.clone()).await;
+        player_chunker::player_join(&player).await;
 
         // if let Some(bossbars) = self..lock().await.get_player_bars(&player.gameprofile.id) {
         //     for bossbar in bossbars {
@@ -512,7 +512,7 @@ impl World {
         )
         .await;
 
-        player_chunker::player_join(self, player.clone()).await;
+        player_chunker::player_join(player).await;
         self.broadcast_packet_all(&entity_metadata_packet).await;
         // update commands
 
@@ -565,7 +565,6 @@ impl World {
             rel_x * rel_x + rel_z * rel_z
         });
 
-        player.world().mark_chunks_as_watched(&chunks);
         let mut receiver = self.receive_chunks(chunks);
         let level = self.level.clone();
 

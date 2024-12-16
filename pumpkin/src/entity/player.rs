@@ -130,7 +130,7 @@ impl Player {
     ) -> Self {
         let gameprofile = client.gameprofile.lock().await.clone().map_or_else(
             || {
-                log::error!("No gameprofile?. Impossible");
+                log::error!("Client {} has no game profile!", client.id);
                 GameProfile {
                     id: uuid::Uuid::new_v4(),
                     name: String::new(),
@@ -141,7 +141,6 @@ impl Player {
             |profile| profile,
         );
         let config = client.config.lock().await.clone().unwrap_or_default();
-        let view_distance = config.view_distance;
         let bounding_box_size = BoundingBoxSize {
             width: 0.6,
             height: 1.8,
@@ -172,7 +171,13 @@ impl Player {
             teleport_id_count: AtomicI32::new(0),
             abilities: Mutex::new(Abilities::default()),
             gamemode: AtomicCell::new(gamemode),
-            watched_section: AtomicCell::new(Cylindrical::new(Vector2::new(0, 0), view_distance)),
+            // We want this to be an impossible watched section so that `player_chunker::update_position`
+            // will mark chunks as watched for a new join rather than a respawn
+            // (We left shift by one so we can search around that chunk)
+            watched_section: AtomicCell::new(Cylindrical::new(
+                Vector2::new(i32::MAX >> 1, i32::MAX >> 1),
+                0,
+            )),
             wait_for_keep_alive: AtomicBool::new(false),
             keep_alive_id: AtomicI64::new(0),
             last_keep_alive_time: AtomicCell::new(std::time::Instant::now()),
