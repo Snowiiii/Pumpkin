@@ -42,33 +42,29 @@ impl PacketEncoder {
     /// The packet format is as follows:
     ///
     /// **Uncompressed:**
-    /// ```
-    /// +-----------------------+
+    /// |-----------------------|
     /// | Packet Length (VarInt)|
-    /// +-----------------------+
+    /// |-----------------------|
     /// | Packet ID (VarInt)    |
-    /// +-----------------------+
+    /// |-----------------------|
     /// | Data (Byte Array)     |
-    /// +-----------------------+
-    /// ```
+    /// |-----------------------|
     ///
     /// **Compressed:**
-    /// ```
-    /// +-----------------------+
+    /// |------------------------|
     /// | Packet Length (VarInt) |
-    /// +-----------------------+
+    /// |------------------------|
     /// | Data Length (VarInt)   |
-    /// +-----------------------+
+    /// |------------------------|
     /// | Packet ID (VarInt)     |
-    /// +-----------------------+
+    /// |------------------------|
     /// | Data (Byte Array)      |
-    /// +-----------------------+
+    /// |------------------------|
     ///
-    /// *   `Packet Length`: The total length of the packet *excluding* the `Packet Length` field itself.
-    /// *   `Data Length`: (Only present in compressed packets) The length of the uncompressed `Packet ID` and `Data`.
-    /// *   `Packet ID`: The ID of the packet.
-    /// *   `Data`: The packet's data.
-    /// ```
+    /// -   `Packet Length`: The total length of the packet *excluding* the `Packet Length` field itself.
+    /// -   `Data Length`: (Only present in compressed packets) The length of the uncompressed `Packet ID` and `Data`.
+    /// -   `Packet ID`: The ID of the packet.
+    /// -   `Data`: The packet's data.
     pub fn append_packet<P: ClientPacket>(&mut self, packet: &P) -> Result<(), PacketEncodeError> {
         let start_len = self.buf.len();
         // Write the Packet ID first
