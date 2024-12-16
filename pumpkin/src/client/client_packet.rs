@@ -388,6 +388,12 @@ impl Client {
         client_information: SClientInformationConfig,
     ) {
         log::debug!("Handling client settings");
+        if client_information.view_distance <= 0 {
+            self.kick("Cannot have zero or negative view distance!")
+                .await;
+            return;
+        }
+
         if let (Some(main_hand), Some(chat_mode)) = (
             Hand::from_i32(client_information.main_hand.into()),
             ChatMode::from_i32(client_information.chat_mode.into()),

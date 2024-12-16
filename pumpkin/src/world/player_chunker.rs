@@ -10,8 +10,6 @@ use pumpkin_world::cylindrical_chunk_iterator::Cylindrical;
 
 use crate::entity::player::Player;
 
-use super::World;
-
 pub async fn get_view_distance(player: &Player) -> u8 {
     player
         .config
@@ -21,17 +19,8 @@ pub async fn get_view_distance(player: &Player) -> u8 {
         .clamp(2, BASIC_CONFIG.view_distance)
 }
 
-pub async fn player_join(world: &World, player: Arc<Player>) {
-    let new_watched = chunk_section_from_pos(&player.living_entity.entity.block_pos.load());
-
-    let mut cylindrical = player.watched_section.load();
-    cylindrical.center = new_watched.into();
-    player.watched_section.store(cylindrical);
-
+pub async fn player_join(player: &Arc<Player>) {
     let chunk_pos = player.living_entity.entity.chunk_pos.load();
-
-    assert_eq!(new_watched.x, chunk_pos.x);
-    assert_eq!(new_watched.z, chunk_pos.z);
 
     log::debug!("Sending center chunk to {}", player.gameprofile.name);
     player
@@ -41,20 +30,15 @@ pub async fn player_join(world: &World, player: Arc<Player>) {
             chunk_z: chunk_pos.z.into(),
         })
         .await;
-    let view_distance = get_view_distance(&player).await;
+    let view_distance = get_view_distance(player).await;
     log::debug!(
         "Player {} ({}) joined with view distance: {}",
         player.gameprofile.name,
-        player.gameprofile.name,
+        player.client.id,
         view_distance
     );
 
-    let new_cylindrical = Cylindrical::new(chunk_pos, view_distance);
-    let loading_chunks = new_cylindrical.all_chunks_within();
-
-    if !loading_chunks.is_empty() {
-        world.spawn_world_chunks(player, loading_chunks, chunk_pos);
-    }
+    update_position(player).await;
 }
 
 pub async fn update_position(player: &Arc<Player>) {
@@ -74,8 +58,6 @@ pub async fn update_position(player: &Arc<Player>) {
     let new_cylindrical = Cylindrical::new(new_chunk_center, view_distance);
 
     if old_cylindrical != new_cylindrical {
-        player.watched_section.store(new_cylindrical);
-
         player
             .client
             .send_packet(&CCenterChunk {
@@ -97,14 +79,15 @@ pub async fn update_position(player: &Arc<Player>) {
             },
         );
 
-        if !unloading_chunks.is_empty() {
-            //let inst = std::time::Instant::now();
+        // Make sure the watched section and the chunk watcher updates are async atomic. We want to
+        // ensure what we unload when the player disconnects is correct
+        entity.world.mark_chunks_as_watched(&loading_chunks);
+        let chunks_to_clean = entity.world.mark_chunks_as_not_watched(&unloading_chunks);
+        player.watched_section.store(new_cylindrical);
 
-            //log::debug!("Unloading chunks took {:?} (1)", inst.elapsed());
-            let chunks_to_clean = entity.world.mark_chunks_as_not_watched(&unloading_chunks);
+        if !chunks_to_clean.is_empty() {
             entity.world.clean_chunks(&chunks_to_clean);
 
-            //log::debug!("Unloading chunks took {:?} (2)", inst.elapsed());
             // This can take a little if we are sending a bunch of packets, queue it up :p
             let client = player.client.clone();
             tokio::spawn(async move {
@@ -118,22 +101,12 @@ pub async fn update_position(player: &Arc<Player>) {
                         .await;
                 }
             });
-            //log::debug!("Unloading chunks took {:?} (3)", inst.elapsed());
         }
 
         if !loading_chunks.is_empty() {
-            //let inst = std::time::Instant::now();
-
-            // loading_chunks.sort_by(|a, b| {
-            //     let distance_a_squared = a.sub(a).length_squared();
-            //     let distance_b_squared = b.sub(a).length_squared();
-            //     distance_a_squared.cmp(&distance_b_squared)
-            // });
-
             entity
                 .world
                 .spawn_world_chunks(player.clone(), loading_chunks, new_chunk_center);
-            //log::debug!("Loading chunks took {:?}", inst.elapsed());
         }
     }
 }
