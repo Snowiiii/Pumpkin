@@ -120,17 +120,12 @@ impl PacketDecoder {
     pub fn set_encryption(&mut self, key: Option<&[u8; 16]>) {
         if let Some(key) = key {
             assert!(self.cipher.is_none(), "encryption is already enabled");
-
             let mut cipher = Cipher::new_from_slices(key, key).expect("invalid key");
-
             // Don't forget to decrypt the data we already have.
-
             Self::decrypt_bytes(&mut cipher, &mut self.buf);
-
             self.cipher = Some(cipher);
         } else {
             assert!(self.cipher.is_some(), "encryption is already disabled");
-
             self.cipher = None;
         }
     }

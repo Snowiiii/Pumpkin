@@ -1,4 +1,5 @@
 use crate::InventoryError;
+use pumpkin_protocol::server::play::SlotActionType;
 use pumpkin_world::item::ItemStack;
 
 pub struct Click {
@@ -7,23 +8,22 @@ pub struct Click {
 }
 
 impl Click {
-    pub fn new(mode: u8, button: i8, slot: i16) -> Result<Self, InventoryError> {
+    pub fn new(mode: SlotActionType, button: i8, slot: i16) -> Result<Self, InventoryError> {
         match mode {
-            0 => Self::new_normal_click(button, slot),
+            SlotActionType::Pickup => Self::new_normal_click(button, slot),
             // Both buttons do the same here, so we omit it
-            1 => Self::new_shift_click(slot),
-            2 => Self::new_key_click(button, slot),
-            3 => Ok(Self {
+            SlotActionType::QuickMove => Self::new_shift_click(slot),
+            SlotActionType::Swap => Self::new_key_click(button, slot),
+            SlotActionType::Clone => Ok(Self {
                 click_type: ClickType::CreativePickItem,
                 slot: Slot::Normal(slot.try_into().or(Err(InventoryError::InvalidSlot))?),
             }),
-            4 => Self::new_drop_item(button),
-            5 => Self::new_drag_item(button, slot),
-            6 => Ok(Self {
+            SlotActionType::Throw => Self::new_drop_item(button),
+            SlotActionType::QuickCraft => Self::new_drag_item(button, slot),
+            SlotActionType::PickupAll => Ok(Self {
                 click_type: ClickType::DoubleClick,
                 slot: Slot::Normal(slot.try_into().or(Err(InventoryError::InvalidSlot))?),
             }),
-            _ => Err(InventoryError::InvalidPacket),
         }
     }
 
@@ -31,7 +31,7 @@ impl Click {
         let slot = match slot {
             -999 => Slot::OutsideInventory,
             _ => {
-                let slot = slot.try_into().or(Err(InventoryError::InvalidSlot))?;
+                let slot = slot.try_into().unwrap_or(0);
                 Slot::Normal(slot)
             }
         };

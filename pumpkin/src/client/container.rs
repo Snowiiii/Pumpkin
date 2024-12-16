@@ -134,15 +134,7 @@ impl Player {
             return Err(InventoryError::ClosedContainerInteract(self.entity_id()));
         }
 
-        let click = Click::new(
-            packet
-                .mode
-                .0
-                .try_into()
-                .expect("Mode can only be between 0-6"),
-            packet.button,
-            packet.slot,
-        )?;
+        let click = Click::new(packet.mode, packet.button, packet.slot)?;
         let (crafted_item, crafted_item_slot) = {
             let mut inventory = self.inventory().lock().await;
             let combined =

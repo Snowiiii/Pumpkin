@@ -14,7 +14,7 @@ pub type VarIntType = i32;
 pub struct VarInt(pub VarIntType);
 
 impl VarInt {
-    /// The maximum number of bytes a `VarInt`
+    /// The maximum number of bytes a `VarInt` can occupy.
     pub const MAX_SIZE: usize = 5;
 
     /// Returns the exact number of bytes this varint will write when
@@ -86,7 +86,7 @@ impl From<VarInt> for i32 {
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Error)]
 pub enum VarIntDecodeError {
-    #[error("incomplete VarInt decode")]
+    #[error("Incomplete VarInt decode")]
     Incomplete,
     #[error("VarInt is too large")]
     TooLarge,
