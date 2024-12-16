@@ -4,10 +4,13 @@ pub mod random;
 pub mod text;
 
 pub use gamemode::GameMode;
+#[cfg(feature = "schemars")]
+pub use schemars::JsonSchema;
 
 use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(JsonSchema))]
 pub enum Difficulty {
     Peaceful,
     Easy,
@@ -16,6 +19,7 @@ pub enum Difficulty {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(JsonSchema))]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ProfileAction {
     ForcedNameChange,

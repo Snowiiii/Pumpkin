@@ -1,0 +1,633 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AdvancedConfiguration",
+  "description": "The idea is that Pumpkin should very customizable.\n You can Enable or Disable Features depending on your needs.\n\n This also allows you get some Performance or Resource boosts.\n Important: The Configuration should match Vanilla by default",
+  "type": "object",
+  "properties": {
+    "authentication": {
+      "$ref": "#/$defs/AuthenticationConfig",
+      "default": {
+        "auth_url": null,
+        "enabled": true,
+        "player_profile": {
+          "allow_banned_players": false,
+          "allowed_actions": [
+            "FORCED_NAME_CHANGE",
+            "USING_BANNED_SKIN"
+          ]
+        },
+        "prevent_proxy_connection_auth_url": null,
+        "prevent_proxy_connections": false,
+        "textures": {
+          "allowed_url_domains": [
+            ".minecraft.net",
+            ".mojang.com"
+          ],
+          "allowed_url_schemes": [
+            "http",
+            "https"
+          ],
+          "enabled": true,
+          "types": {
+            "cape": true,
+            "elytra": true,
+            "skin": true
+          }
+        }
+      }
+    },
+    "commands": {
+      "$ref": "#/$defs/CommandsConfig",
+      "default": {
+        "log_console": true,
+        "use_console": true
+      }
+    },
+    "lan_broadcast": {
+      "$ref": "#/$defs/LANBroadcastConfig",
+      "default": {
+        "enabled": false,
+        "motd": null,
+        "port": null
+      }
+    },
+    "logging": {
+      "$ref": "#/$defs/LoggingConfig",
+      "default": {
+        "color": true,
+        "enabled": true,
+        "env": false,
+        "level": "Info",
+        "threads": true,
+        "timestamp": true
+      }
+    },
+    "packet_compression": {
+      "$ref": "#/$defs/CompressionConfig",
+      "default": {
+        "enabled": true,
+        "level": 4,
+        "threshold": 256
+      }
+    },
+    "proxy": {
+      "$ref": "#/$defs/ProxyConfig",
+      "default": {
+        "bungeecord": {
+          "enabled": false
+        },
+        "enabled": false,
+        "velocity": {
+          "enabled": false,
+          "secret": ""
+        }
+      }
+    },
+    "pvp": {
+      "$ref": "#/$defs/PVPConfig",
+      "default": {
+        "enabled": true,
+        "hurt_animation": true,
+        "knockback": true,
+        "protect_creative": true,
+        "swing": true
+      }
+    },
+    "query": {
+      "$ref": "#/$defs/QueryConfig",
+      "default": {
+        "enabled": false,
+        "port": null
+      }
+    },
+    "rcon": {
+      "$ref": "#/$defs/RCONConfig",
+      "default": {
+        "address": "0.0.0.0:25575",
+        "enabled": false,
+        "logging": {
+          "log_commands": true,
+          "log_logged_successfully": true,
+          "log_quit": true,
+          "log_wrong_password": true
+        },
+        "max_connections": 0,
+        "password": ""
+      }
+    },
+    "resource_pack": {
+      "$ref": "#/$defs/ResourcePackConfig",
+      "default": {
+        "enabled": false,
+        "force": false,
+        "prompt_message": "",
+        "resource_pack_sha1": "",
+        "resource_pack_url": ""
+      }
+    },
+    "server_links": {
+      "$ref": "#/$defs/ServerLinksConfig",
+      "default": {
+        "announcements": "",
+        "bug_report": "https://github.com/Snowiiii/Pumpkin/issues",
+        "community": "",
+        "custom": {},
+        "enabled": true,
+        "feedback": "",
+        "forums": "",
+        "news": "",
+        "status": "",
+        "support": "",
+        "website": ""
+      }
+    }
+  },
+  "$defs": {
+    "AuthenticationConfig": {
+      "type": "object",
+      "properties": {
+        "auth_url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "enabled": {
+          "description": "Whether to use Mojang authentication.",
+          "type": "boolean",
+          "default": true
+        },
+        "player_profile": {
+          "description": "Player profile handling.",
+          "$ref": "#/$defs/PlayerProfileConfig",
+          "default": {
+            "allow_banned_players": false,
+            "allowed_actions": [
+              "FORCED_NAME_CHANGE",
+              "USING_BANNED_SKIN"
+            ]
+          }
+        },
+        "prevent_proxy_connection_auth_url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "prevent_proxy_connections": {
+          "type": "boolean",
+          "default": false
+        },
+        "textures": {
+          "description": "Texture handling.",
+          "$ref": "#/$defs/TextureConfig",
+          "default": {
+            "allowed_url_domains": [
+              ".minecraft.net",
+              ".mojang.com"
+            ],
+            "allowed_url_schemes": [
+              "http",
+              "https"
+            ],
+            "enabled": true,
+            "types": {
+              "cape": true,
+              "elytra": true,
+              "skin": true
+            }
+          }
+        }
+      }
+    },
+    "BungeeCordConfig": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "CommandsConfig": {
+      "type": "object",
+      "properties": {
+        "log_console": {
+          "description": "Should be commands from players be logged in console?",
+          "type": "boolean",
+          "default": true
+        },
+        "use_console": {
+          "description": "Are commands from the Console accepted ?",
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "CompressionConfig": {
+      "description": "Packet compression",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "description": "Wether compression is enabled",
+          "type": "boolean",
+          "default": true
+        },
+        "level": {
+          "description": "A value between 0..9\n 1 = Optimize for the best speed of encoding.\n 9 = Optimize for the size of data being encoded.",
+          "type": "integer",
+          "format": "uint32",
+          "default": 4,
+          "minimum": 0
+        },
+        "threshold": {
+          "description": "The compression threshold used when compression is enabled",
+          "type": "integer",
+          "format": "uint32",
+          "default": 256,
+          "minimum": 0
+        }
+      }
+    },
+    "LANBroadcastConfig": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "motd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "port": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "default": null,
+          "minimum": 0
+        }
+      }
+    },
+    "LevelFilter": {
+      "type": "string",
+      "enum": [
+        "Off",
+        "Error",
+        "Warn",
+        "Info",
+        "Debug",
+        "Trace"
+      ]
+    },
+    "LoggingConfig": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "boolean",
+          "default": true
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "env": {
+          "type": "boolean",
+          "default": false
+        },
+        "level": {
+          "$ref": "#/$defs/LevelFilter",
+          "default": "Info"
+        },
+        "threads": {
+          "type": "boolean",
+          "default": true
+        },
+        "timestamp": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "PVPConfig": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "description": "Is PVP enabled ?",
+          "type": "boolean",
+          "default": true
+        },
+        "hurt_animation": {
+          "description": "Do we want to have the Red hurt animation & fov bobbing",
+          "type": "boolean",
+          "default": true
+        },
+        "knockback": {
+          "description": "Has PVP Knockback?",
+          "type": "boolean",
+          "default": true
+        },
+        "protect_creative": {
+          "description": "Should players in creative be protected against PVP",
+          "type": "boolean",
+          "default": true
+        },
+        "swing": {
+          "description": "Should player swing when attacking?",
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "PlayerProfileConfig": {
+      "type": "object",
+      "properties": {
+        "allow_banned_players": {
+          "description": "Allow players flagged by Mojang (banned, forced name change).",
+          "type": "boolean",
+          "default": false
+        },
+        "allowed_actions": {
+          "description": "Depends on the value above",
+          "type": "array",
+          "default": [
+            "FORCED_NAME_CHANGE",
+            "USING_BANNED_SKIN"
+          ],
+          "items": {
+            "$ref": "#/$defs/ProfileAction"
+          }
+        }
+      }
+    },
+    "ProfileAction": {
+      "type": "string",
+      "enum": [
+        "FORCED_NAME_CHANGE",
+        "USING_BANNED_SKIN"
+      ]
+    },
+    "ProxyConfig": {
+      "type": "object",
+      "properties": {
+        "bungeecord": {
+          "$ref": "#/$defs/BungeeCordConfig",
+          "default": {
+            "enabled": false
+          }
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "velocity": {
+          "$ref": "#/$defs/VelocityConfig",
+          "default": {
+            "enabled": false,
+            "secret": ""
+          }
+        }
+      }
+    },
+    "QueryConfig": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "port": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "default": null,
+          "minimum": 0
+        }
+      }
+    },
+    "RCONConfig": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "description": "The network address and port where the RCON server will listen for connections.",
+          "type": "string",
+          "default": "0.0.0.0:25575"
+        },
+        "enabled": {
+          "description": "Is RCON Enabled?",
+          "type": "boolean",
+          "default": false
+        },
+        "logging": {
+          "description": "RCON Logging",
+          "$ref": "#/$defs/RCONLogging",
+          "default": {
+            "log_commands": true,
+            "log_logged_successfully": true,
+            "log_quit": true,
+            "log_wrong_password": true
+          }
+        },
+        "max_connections": {
+          "description": "The maximum number of concurrent RCON connections allowed.\n If 0 there is no limit",
+          "type": "integer",
+          "format": "uint32",
+          "default": 0,
+          "minimum": 0
+        },
+        "password": {
+          "description": "The password required for RCON authentication.",
+          "type": "string",
+          "default": ""
+        }
+      }
+    },
+    "RCONLogging": {
+      "type": "object",
+      "properties": {
+        "log_commands": {
+          "description": "Whether all RCON commands, regardless of success or failure, should be logged.",
+          "type": "boolean",
+          "default": true
+        },
+        "log_logged_successfully": {
+          "description": "Whether successful RCON logins should be logged.",
+          "type": "boolean",
+          "default": true
+        },
+        "log_quit": {
+          "description": "Whether RCON quit commands should be logged.",
+          "type": "boolean",
+          "default": true
+        },
+        "log_wrong_password": {
+          "description": "Whether failed RCON login attempts with incorrect passwords should be logged.",
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "ResourcePackConfig": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "force": {
+          "description": "Will force the Player to accept the resource pack",
+          "type": "boolean",
+          "default": false
+        },
+        "prompt_message": {
+          "description": "Custom prompt Text component, Leave blank for none",
+          "type": "string",
+          "default": ""
+        },
+        "resource_pack_sha1": {
+          "description": "The SHA1 hash (40) of the resource pack.",
+          "type": "string",
+          "default": ""
+        },
+        "resource_pack_url": {
+          "description": "The path to the resource pack.",
+          "type": "string",
+          "default": ""
+        }
+      }
+    },
+    "ServerLinksConfig": {
+      "type": "object",
+      "properties": {
+        "announcements": {
+          "type": "string",
+          "default": ""
+        },
+        "bug_report": {
+          "type": "string",
+          "default": "https://github.com/Snowiiii/Pumpkin/issues"
+        },
+        "community": {
+          "type": "string",
+          "default": ""
+        },
+        "custom": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {}
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "feedback": {
+          "type": "string",
+          "default": ""
+        },
+        "forums": {
+          "type": "string",
+          "default": ""
+        },
+        "news": {
+          "type": "string",
+          "default": ""
+        },
+        "status": {
+          "type": "string",
+          "default": ""
+        },
+        "support": {
+          "type": "string",
+          "default": ""
+        },
+        "website": {
+          "type": "string",
+          "default": ""
+        }
+      }
+    },
+    "TextureConfig": {
+      "type": "object",
+      "properties": {
+        "allowed_url_domains": {
+          "type": "array",
+          "default": [
+            ".minecraft.net",
+            ".mojang.com"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "allowed_url_schemes": {
+          "type": "array",
+          "default": [
+            "http",
+            "https"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "enabled": {
+          "description": "Whether to use player textures.",
+          "type": "boolean",
+          "default": true
+        },
+        "types": {
+          "description": "Specific texture types.",
+          "$ref": "#/$defs/TextureTypes",
+          "default": {
+            "cape": true,
+            "elytra": true,
+            "skin": true
+          }
+        }
+      }
+    },
+    "TextureTypes": {
+      "type": "object",
+      "properties": {
+        "cape": {
+          "description": "Use player capes.",
+          "type": "boolean",
+          "default": true
+        },
+        "elytra": {
+          "description": "Use player elytras.\n (i didn't know myself that there are custom elytras)",
+          "type": "boolean",
+          "default": true
+        },
+        "skin": {
+          "description": "Use player skins.",
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "VelocityConfig": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "secret": {
+          "type": "string",
+          "default": ""
+        }
+      }
+    }
+  }
+}

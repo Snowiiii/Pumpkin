@@ -3,6 +3,9 @@ name = "pumpkin-core"
 version.workspace = true
 edition.workspace = true
 
+[features]
+schemars = ["dep:schemars"]
+
 [dependencies]
 pumpkin-nbt = { path = "../pumpkin-nbt" }
 serde.workspace = true
@@ -13,3 +16,4 @@ num-derive.workspace = true
 
 colored = "2"
 md5 = "0.7.0"
+schemars = { version = "=1.0.0-alpha.17", optional = true }

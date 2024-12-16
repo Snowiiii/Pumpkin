@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BasicConfiguration",
+  "type": "object",
+  "properties": {
+    "allow_nether": {
+      "description": "Whether the Nether dimension is enabled.",
+      "type": "boolean",
+      "default": true
+    },
+    "default_difficulty": {
+      "description": "The default game difficulty.",
+      "$ref": "#/$defs/Difficulty",
+      "default": "Normal"
+    },
+    "default_gamemode": {
+      "description": "The default game mode for players.",
+      "$ref": "#/$defs/GameMode",
+      "default": "Survival"
+    },
+    "encryption": {
+      "description": "Whether packet encryption is enabled. Required when online mode is enabled.",
+      "type": "boolean",
+      "default": true
+    },
+    "favicon_path": {
+      "description": "Path to server favicon",
+      "type": "string",
+      "default": "icon.png"
+    },
+    "hardcore": {
+      "description": "Whether the server is in hardcore mode.",
+      "type": "boolean",
+      "default": false
+    },
+    "max_players": {
+      "description": "The maximum number of players allowed on the server. Specifying `0` disables the limit.",
+      "type": "integer",
+      "format": "uint32",
+      "default": 100000,
+      "minimum": 0
+    },
+    "motd": {
+      "description": "The server's description displayed on the status screen.",
+      "type": "string",
+      "default": "A Blazing fast Pumpkin Server!"
+    },
+    "online_mode": {
+      "description": "Whether online mode is enabled. Requires valid Minecraft accounts.",
+      "type": "boolean",
+      "default": true
+    },
+    "scrub_ips": {
+      "description": "Whether to remove IPs from logs or not",
+      "type": "boolean",
+      "default": true
+    },
+    "seed": {
+      "description": "The seed for world generation.",
+      "type": "string",
+      "default": ""
+    },
+    "server_address": {
+      "description": "The address to bind the server to.",
+      "type": "string",
+      "default": "0.0.0.0:25565"
+    },
+    "simulation_distance": {
+      "description": "The maximum simulated view distance.",
+      "type": "integer",
+      "format": "uint8",
+      "default": 10,
+      "minimum": 0
+    },
+    "tps": {
+      "type": "number",
+      "format": "float",
+      "default": 20.0
+    },
+    "use_favicon": {
+      "description": "Whether to use a server favicon",
+      "type": "boolean",
+      "default": true
+    },
+    "view_distance": {
+      "description": "The maximum view distance for players.",
+      "type": "integer",
+      "format": "uint8",
+      "default": 10,
+      "minimum": 0
+    }
+  },
+  "$defs": {
+    "Difficulty": {
+      "type": "string",
+      "enum": [
+        "Peaceful",
+        "Easy",
+        "Normal",
+        "Hard"
+      ]
+    },
+    "GameMode": {
+      "type": "string",
+      "enum": [
+        "Undefined",
+        "Survival",
+        "Creative",
+        "Adventure",
+        "Spectator"
+      ]
+    }
+  }
+}

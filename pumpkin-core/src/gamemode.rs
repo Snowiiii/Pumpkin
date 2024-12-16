@@ -1,12 +1,15 @@
 use std::str::FromStr;
 
 use num_derive::FromPrimitive;
+#[cfg(feature = "schemars")]
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseGameModeError;
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, FromPrimitive)]
+#[cfg_attr(feature = "schemars", derive(JsonSchema))]
 #[repr(i8)]
 pub enum GameMode {
     Undefined = -1,
