@@ -5,17 +5,16 @@ export default defineConfig({
   title: "Pumpkin",
   description:
     "Empowering everyone to host fast and efficient Minecraft servers",
-  lang: "en-US",
-  base: "",
+  lang: "en",
+  base: "/Pumpkin/",
   locales: {
-    en: {
+    root: {
       label: 'English',
       lang: 'en',
-      link: '/Pumpkin/',
     },
     es: {
       label: 'Español',
-      lang: 'es', // optional, will be added  as `lang` attribute on `html` tag
+      lang: 'es',
       link: '/Pumpkin/es',
     }
   },
@@ -35,43 +34,43 @@ export default defineConfig({
       {
         text: "About",
         items: [
-          { text: "Introduction", link: "/about/introduction" },
-          { text: "Quick Start", link: "/about/quick-start" },
-          { text: "Benchmarks", link: "/about/benchmarks" },
+          { text: "Introduction", link: "/en/about/introduction" },
+          { text: "Quick Start", link: "/en/about/quick-start" },
+          { text: "Benchmarks", link: "/en/about/benchmarks" },
         ],
       },
       {
         text: "Configuration",
         items: [
-          { text: "Introduction", link: "/config/introduction" },
-          { text: "Basic", link: "/config/basic" },
-          { text: "Proxy", link: "/config/proxy"},
-          { text: "Authentication", link: "/config/authentication"},
-          { text: "Compression", link: "/config/compression"},
-          { text: "Resource Pack", link: "/config/resource-pack"},
-          { text: "Commands", link: "/config/commands"},
-          { text: "RCON", link: "/config/rcon"},
-          { text: "PVP", link: "/config/pvp"},
-          { text: "Logging", link: "/config/logging"},
-          { text: "Query", link: "/config/query"},
-          { text: "LAN Broadcast", link: "/config/lan-broadcast"},
+          { text: "Introduction", link: "/en/config/introduction" },
+          { text: "Basic", link: "/en/config/basic" },
+          { text: "Proxy", link: "/en/config/proxy"},
+          { text: "Authentication", link: "/en/config/authentication"},
+          { text: "Compression", link: "/en/config/compression"},
+          { text: "Resource Pack", link: "/en/config/resource-pack"},
+          { text: "Commands", link: "/en/config/commands"},
+          { text: "RCON", link: "/en/config/rcon"},
+          { text: "PVP", link: "/en/config/pvp"},
+          { text: "Logging", link: "/en/config/logging"},
+          { text: "Query", link: "/en/config/query"},
+          { text: "LAN Broadcast", link: "/en/config/lan-broadcast"},
         ],
       },
       {
         text: "Developers",
         items: [
-          { text: "Contributing", link: "/developer/contributing", },
-          { text: "Introduction", link: "/developer/introduction" },
-          { text: "Networking", link: "/developer/networking" },
-          { text: "Authentication", link: "/developer/authentication" },
-          { text: "RCON", link: "/developer/rcon" },
-          { text: "World", link: "developer/world"},
+          { text: "Contributing", link: "/en/developer/contributing", },
+          { text: "Introduction", link: "/en/developer/introduction" },
+          { text: "Networking", link: "/en/developer/networking" },
+          { text: "Authentication", link: "/en/developer/authentication" },
+          { text: "RCON", link: "/en/developer/rcon" },
+          { text: "World", link: "/en/developer/world"},
         ],
       },      
       {
         text: "Troubleshooting",
         items: [
-          { text: "Common Issues", link: "/troubleshooting/common_issues.md" },
+          { text: "Common Issues", link: "/en/troubleshooting/common_issues.md" },
         ],
       },
     ],
