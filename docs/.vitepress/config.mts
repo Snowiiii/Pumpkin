@@ -11,7 +11,7 @@ export default defineConfig({
     en: {
       label: 'English',
       lang: 'en',
-      link: '/Pumpkin/',
+      link: '/Pumpkin/en',
     },
     es: {
       label: 'Español',
