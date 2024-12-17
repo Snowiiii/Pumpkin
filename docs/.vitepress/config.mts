@@ -5,8 +5,8 @@ export default defineConfig({
   title: "Pumpkin",
   description:
     "Empowering everyone to host fast and efficient Minecraft servers",
-  lang: "en-US",
-  base: "",
+  lang: "en",
+  base: "/Pumpkin/",
   locales: {
     en: {
       label: 'English',
@@ -15,7 +15,7 @@ export default defineConfig({
     },
     es: {
       label: 'Español',
-      lang: 'es', // optional, will be added  as `lang` attribute on `html` tag
+      lang: 'es',
       link: '/Pumpkin/es',
     }
   },
