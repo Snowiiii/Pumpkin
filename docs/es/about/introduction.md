@@ -1,7 +1,7 @@
 # Pumpkin
 
-Pumpkin es un servidor de Minecraft creado completamente en **Rust**, ofreciendo velocidad, rapido,
-y experienca customisable. Se enfoca en rapidez y que sea jugable mientras y con las mecanicas vanillia.
+Pumpkin is a Minecraft server built entirely in **Rust**, offering a fast, efficient,
+and customizable experience. It prioritizes performance and player enjoyment while adhering to the core mechanics of the game.
 
 <picture>
   <source srcset="/assets/introduction-preview-2560x1440.png" media="(min-width: 2560px)">
