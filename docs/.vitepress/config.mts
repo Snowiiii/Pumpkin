@@ -6,7 +6,20 @@ export default defineConfig({
   description:
     "Empowering everyone to host fast and efficient Minecraft servers",
   lang: "en-US",
-  base: "/Pumpkin/",
+  base: "",
+  locales: {
+    en: {
+      label: 'English',
+      lang: 'en',
+      link: '/Pumpkin/',
+    },
+    es: {
+      label: 'Español',
+      lang: 'es', // optional, will be added  as `lang` attribute on `html` tag
+      link: '/Pumpkin/es',
+    }
+  },
+   // default /fr/ -- shows on navbar translations menu, can be external
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     search: {
