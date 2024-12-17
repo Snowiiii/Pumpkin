@@ -1,8 +1,7 @@
 ### Introduction
+¡Bienvenido a la documentacion de Pumpkin!
 
-Welcome to the Pumpkin Documentation!
-
-Whether you're an internal Pumpkin developer or working on a Pumpkin plugin, this documentation is your resource for everything Pumpkin.
+No importa que seas un contributor a Pumpkin o programando un plugin de Pumpkin, esta documentacion es tu recurso de todo Pumpkin.
 
 > [!IMPORTANT]
-> While Pumpkin currently doesn't have plugin support yet, this documentation provides valuable insights into the platform's architecture and functionality, which can be helpful for understanding how to create potential future plugins.
+> Por ahora Pumpkin no tiene soporte de plugins aun, esta documentacion tiene contenido adrento de la arcritetura de la plataforma y funcionalidad, que puede ser ayudante para entender como se crearan proximos plugins.
