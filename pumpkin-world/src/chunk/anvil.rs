@@ -9,7 +9,6 @@ use flate2::bufread::{GzDecoder, GzEncoder, ZlibDecoder, ZlibEncoder};
 
 use crate::{
     block::block_registry::BLOCK_ID_TO_REGISTRY_ID, chunk::ChunkWritingError, level::LevelFolder,
-    WORLD_LOWEST_Y,
 };
 
 use super::{
@@ -400,7 +399,7 @@ impl AnvilChunkFormat {
                         *v,
                         (
                             BLOCK_ID_TO_REGISTRY_ID
-                                .get(&v)
+                                .get(v)
                                 .expect("Tried saving a block which does not exist."),
                             i,
                         ),

@@ -64,8 +64,8 @@ impl Level {
                 region_folder,
             },
             seed,
-            chunk_reader: Arc::new(AnvilChunkFormat::default()),
-            chunk_writer: Arc::new(AnvilChunkFormat::default()),
+            chunk_reader: Arc::new(AnvilChunkFormat),
+            chunk_writer: Arc::new(AnvilChunkFormat),
             loaded_chunks: Arc::new(DashMap::new()),
             chunk_watchers: Arc::new(DashMap::new()),
         }
