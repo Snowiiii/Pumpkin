@@ -519,26 +519,6 @@ impl World {
         player.set_health(20.0, 20, 20.0).await;
     }
 
-    pub fn mark_chunks_as_not_watched(&self, chunks: &[Vector2<i32>]) -> Vec<Vector2<i32>> {
-        self.level.mark_chunks_as_not_watched(chunks)
-    }
-
-    pub fn mark_chunks_as_watched(&self, chunks: &[Vector2<i32>]) {
-        self.level.mark_chunks_as_newly_watched(chunks);
-    }
-
-    pub fn clean_chunks(&self, chunks: &[Vector2<i32>]) {
-        self.level.clean_chunks(chunks);
-    }
-
-    pub fn clean_memory(&self, chunks_to_check: &[Vector2<i32>]) {
-        self.level.clean_memory(chunks_to_check);
-    }
-
-    pub fn get_cached_chunk_len(&self) -> usize {
-        self.level.loaded_chunk_count()
-    }
-
     /// IMPORTANT: Chunks have to be non-empty
     fn spawn_world_chunks(
         &self,
@@ -590,7 +570,7 @@ impl World {
                         "Received chunk {:?}, but it is no longer watched... cleaning",
                         &chunk_data.position
                     );
-                    level.clean_chunk(&chunk_data.position);
+                    level.clean_chunk(&chunk_data.position).await;
                     continue;
                 }
 
@@ -765,7 +745,7 @@ impl World {
                 "Received chunk {:?}, but it is not watched... cleaning",
                 chunk_pos
             );
-            self.level.clean_chunk(&chunk_pos);
+            self.level.clean_chunk(&chunk_pos).await;
         }
 
         chunk

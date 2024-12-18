@@ -12,7 +12,8 @@ use tokio::{
 
 use crate::{
     chunk::{
-        anvil::AnvilChunkReader, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
+        anvil::AnvilChunkFormat, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
+        ChunkWriter,
     },
     world_gen::{get_world_gen, Seed, WorldGenerator},
 };
@@ -28,15 +29,16 @@ use crate::{
 /// For more details on world generation, refer to the `WorldGenerator` module.
 pub struct Level {
     pub seed: Seed,
-    save_file: Option<SaveFile>,
+    level_folder: LevelFolder,
     loaded_chunks: Arc<DashMap<Vector2<i32>, Arc<RwLock<ChunkData>>>>,
     chunk_watchers: Arc<DashMap<Vector2<i32>, usize>>,
     chunk_reader: Arc<dyn ChunkReader>,
+    chunk_writer: Arc<dyn ChunkWriter>,
     world_gen: Arc<dyn WorldGenerator>,
 }
 
 #[derive(Clone)]
-pub struct SaveFile {
+pub struct LevelFolder {
     pub root_folder: PathBuf,
     pub region_folder: PathBuf,
 }
@@ -48,39 +50,24 @@ fn get_or_create_seed() -> Seed {
 
 impl Level {
     pub fn from_root_folder(root_folder: PathBuf) -> Self {
-        // If we are using an already existing world we want to read the seed from the level.dat, If not we want to check if there is a seed in the config, if not lets create a random one
-        if root_folder.exists() {
-            let region_folder = root_folder.join("region");
-            assert!(
-                region_folder.exists(),
-                "World region folder does not exist, despite there being a root folder."
-            );
-            // TODO: read seed from level.dat
-            let seed = get_or_create_seed();
-            let world_gen = get_world_gen(seed).into(); // TODO Read Seed from config.
-
-            Self {
-                seed,
-                world_gen,
-                save_file: Some(SaveFile {
-                    root_folder,
-                    region_folder,
-                }),
-                chunk_reader: Arc::new(AnvilChunkReader::new()),
-                loaded_chunks: Arc::new(DashMap::new()),
-                chunk_watchers: Arc::new(DashMap::new()),
-            }
-        } else {
-            let seed = get_or_create_seed();
-            let world_gen = get_world_gen(seed).into(); // TODO Read Seed from config.
-            Self {
-                seed,
-                world_gen,
-                save_file: None,
-                chunk_reader: Arc::new(AnvilChunkReader::new()),
-                loaded_chunks: Arc::new(DashMap::new()),
-                chunk_watchers: Arc::new(DashMap::new()),
-            }
+        let seed = get_or_create_seed();
+        let world_gen = get_world_gen(seed).into();
+        // Check if region folder exists, if not lets make one
+        let region_folder = root_folder.join("region");
+        if !region_folder.exists() {
+            std::fs::create_dir_all(&region_folder).expect("Failed to create Region folder");
+        }
+        Self {
+            world_gen,
+            level_folder: LevelFolder {
+                root_folder,
+                region_folder,
+            },
+            seed,
+            chunk_reader: Arc::new(AnvilChunkFormat::default()),
+            chunk_writer: Arc::new(AnvilChunkFormat::default()),
+            loaded_chunks: Arc::new(DashMap::new()),
+            chunk_watchers: Arc::new(DashMap::new()),
         }
     }
 
@@ -156,16 +143,16 @@ impl Level {
         }
     }
 
-    pub fn clean_chunks(&self, chunks: &[Vector2<i32>]) {
-        chunks.iter().for_each(|chunk_pos| {
+    pub async fn clean_chunks(&self, chunks: &[Vector2<i32>]) {
+        for chunk_pos in chunks {
             //log::debug!("Unloading {:?}", chunk_pos);
-            self.clean_chunk(chunk_pos);
-        });
+            self.clean_chunk(chunk_pos).await;
+        }
     }
 
-    pub fn clean_chunk(&self, chunk: &Vector2<i32>) {
+    pub async fn clean_chunk(&self, chunk: &Vector2<i32>) {
         if let Some(data) = self.loaded_chunks.remove(chunk) {
-            self.write_chunk(data);
+            self.write_chunk(data).await;
         }
     }
 
@@ -189,16 +176,22 @@ impl Level {
         self.chunk_watchers.shrink_to_fit();
     }
 
-    pub fn write_chunk(&self, _chunk_to_write: (Vector2<i32>, Arc<RwLock<ChunkData>>)) {
-        //TODO
+    pub async fn write_chunk(&self, chunk_to_write: (Vector2<i32>, Arc<RwLock<ChunkData>>)) {
+        let data = chunk_to_write.1.read().await;
+        if let Err(error) =
+            self.chunk_writer
+                .write_chunk(&data, &self.level_folder, &chunk_to_write.0)
+        {
+            log::error!("Failed writing Chunk to disk {}", error.to_string());
+        }
     }
 
     fn load_chunk_from_save(
         chunk_reader: Arc<dyn ChunkReader>,
-        save_file: SaveFile,
+        save_file: &LevelFolder,
         chunk_pos: Vector2<i32>,
     ) -> Result<Option<Arc<RwLock<ChunkData>>>, ChunkReadingError> {
-        match chunk_reader.read_chunk(&save_file, &chunk_pos) {
+        match chunk_reader.read_chunk(save_file, &chunk_pos) {
             Ok(data) => Ok(Some(Arc::new(RwLock::new(data)))),
             Err(
                 ChunkReadingError::ChunkNotExist
@@ -223,7 +216,8 @@ impl Level {
             let channel = channel.clone();
             let loaded_chunks = self.loaded_chunks.clone();
             let chunk_reader = self.chunk_reader.clone();
-            let save_file = self.save_file.clone();
+            let chunk_writer = self.chunk_writer.clone();
+            let level_folder = self.level_folder.clone();
             let world_gen = self.world_gen.clone();
             let chunk_pos = *at;
 
@@ -231,20 +225,33 @@ impl Level {
                 .get(&chunk_pos)
                 .map(|entry| entry.value().clone())
                 .unwrap_or_else(|| {
-                    let loaded_chunk = save_file
-                        .and_then(|save_file| {
-                            match Self::load_chunk_from_save(chunk_reader, save_file, chunk_pos) {
-                                Ok(chunk) => chunk,
-                                Err(err) => {
-                                    log::error!(
-                                        "Failed to read chunk (regenerating) {:?}: {:?}",
-                                        chunk_pos,
-                                        err
-                                    );
-                                    None
+                    let loaded_chunk =
+                        match Self::load_chunk_from_save(chunk_reader, &level_folder, chunk_pos) {
+                            Ok(chunk) => {
+                                // Save new Chunk
+                                if let Some(chunk) = &chunk {
+                                    if let Err(error) = chunk_writer.write_chunk(
+                                        &chunk.blocking_read(),
+                                        &level_folder,
+                                        &chunk_pos,
+                                    ) {
+                                        log::error!(
+                                            "Failed writing Chunk to disk {}",
+                                            error.to_string()
+                                        );
+                                    };
                                 }
+                                chunk
                             }
-                        })
+                            Err(err) => {
+                                log::error!(
+                                    "Failed to read chunk (regenerating) {:?}: {:?}",
+                                    chunk_pos,
+                                    err
+                                );
+                                None
+                            }
+                        }
                         .unwrap_or_else(|| {
                             Arc::new(RwLock::new(world_gen.generate_chunk(chunk_pos)))
                         });
