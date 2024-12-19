@@ -4,6 +4,7 @@ use std::{
     io::{Read, Seek, SeekFrom, Write},
 };
 
+use bytes::*;
 use fastnbt::LongArray;
 use flate2::bufread::{GzDecoder, GzEncoder, ZlibDecoder, ZlibEncoder};
 
@@ -22,20 +23,17 @@ const WORLD_DATA_VERSION: i32 = 4189;
 #[derive(Clone, Default)]
 pub struct AnvilChunkFormat;
 
-fn modulus(a: i32, b: i32) -> i32 {
-    ((a % b) + b) % b
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
 pub enum Compression {
     /// GZip Compression
-    GZip,
+    GZip = 1,
     /// ZLib Compression
-    ZLib,
+    ZLib = 2,
     /// LZ4 Compression (since 24w04a)
-    LZ4,
+    LZ4 = 4,
     /// Custom compression algorithm (since 24w05a)
-    Custom,
+    Custom = 127,
 }
 
 impl Compression {
@@ -162,14 +160,14 @@ impl ChunkReader for AnvilChunkFormat {
             .read_exact(&mut timestamp_table)
             .map_err(|err| ChunkReadingError::IoError(err.kind()))?;
 
-        let modulus = |a: i32, b: i32| ((a % b) + b) % b;
-        let chunk_x = modulus(at.x, 32) as u32;
-        let chunk_z = modulus(at.z, 32) as u32;
+        let chunk_x = at.x & 0x1F;
+        let chunk_z = at.z & 0x1F;
         let table_entry = (chunk_x + chunk_z * 32) * 4;
 
-        let mut offset = vec![0u8];
+        let mut offset = BytesMut::new();
+        offset.put_u8(0);
         offset.extend_from_slice(&location_table[table_entry as usize..table_entry as usize + 3]);
-        let offset = u32::from_be_bytes(offset.try_into().unwrap()) as u64 * 4096;
+        let offset = offset.get_u32() as u64 * 4096;
         let size = location_table[table_entry as usize + 3] as usize * 4096;
 
         if offset == 0 && size == 0 {
@@ -188,12 +186,12 @@ impl ChunkReader for AnvilChunkFormat {
             out
         };
 
-        let header: Vec<u8> = file_buf.drain(0..5).collect();
-        if header.len() != 5 {
+        let mut header: Bytes = file_buf.drain(0..5).collect();
+        if header.remaining() != 5 {
             return Err(ChunkReadingError::InvalidHeader);
         }
-        let size = u32::from_be_bytes(header[..4].try_into().unwrap());
-        let compression = header[4];
+        let size = header.get_u32();
+        let compression = header.get_u8();
 
         let compression = Compression::from_byte(compression)
             .map_err(|_| ChunkReadingError::Compression(CompressionError::UnknownCompression))?;
@@ -263,14 +261,15 @@ impl ChunkWriter for AnvilChunkFormat {
                 .map_err(|err| ChunkWritingError::IoError(err.kind()))?;
         }
 
-        let chunk_x = modulus(at.x, 32) as u32;
-        let chunk_z = modulus(at.z, 32) as u32;
+        let chunk_x = at.x & 0x1F;
+        let chunk_z = at.z & 0x1F;
 
         let table_entry = (chunk_x + chunk_z * 32) * 4;
 
-        let mut offset = vec![0u8];
+        let mut offset = BytesMut::new();
+        offset.put_u8(0);
         offset.extend_from_slice(&location_table[table_entry as usize..table_entry as usize + 3]);
-        let at_offset = u32::from_be_bytes(offset.try_into().unwrap()) as u64 * 4096;
+        let at_offset = offset.get_u32() as u64 * 4096;
         let at_size = location_table[table_entry as usize + 3] as usize * 4096;
 
         let mut end_index = 4096 * 2;
@@ -280,12 +279,13 @@ impl ChunkWriter for AnvilChunkFormat {
                 .chunks(4)
                 .enumerate()
                 .filter_map(|(index, v)| {
-                    if table_entry / 4 == index as u32 {
+                    if table_entry / 4 == index as i32 {
                         return None;
                     }
-                    let mut offset = vec![0u8];
+                    let mut offset = BytesMut::new();
+                    offset.put_u8(0);
                     offset.extend_from_slice(&v[0..3]);
-                    let offset = u32::from_be_bytes(offset.try_into().unwrap()) as u64 * 4096;
+                    let offset = offset.get_u32() as u64 * 4096;
                     let size = v[3] as usize * 4096;
                     if offset == 0 && size == 0 {
                         return None;
@@ -344,9 +344,10 @@ impl ChunkWriter for AnvilChunkFormat {
             }
         } else {
             for (offset, size) in location_table.chunks(4).filter_map(|v| {
-                let mut offset = vec![0u8];
+                let mut offset = BytesMut::new();
+                offset.put_u8(0);
                 offset.extend_from_slice(&v[0..3]);
-                let offset = u32::from_be_bytes(offset.try_into().unwrap()) as u64 * 4096;
+                let offset = offset.get_u32() as u64 * 4096;
                 let size = v[3] as usize * 4096;
                 if offset == 0 && size == 0 {
                     return None;
@@ -359,8 +360,6 @@ impl ChunkWriter for AnvilChunkFormat {
 
         let location_bytes = &(end_index as u32 / 4096).to_be_bytes()[1..4];
         let size_bytes = [(bytes.len().div_ceil(4096)) as u8];
-        dbg!(end_index, bytes.len());
-        dbg!(&location_bytes, &size_bytes);
         location_table[table_entry as usize..table_entry as usize + 4]
             .as_mut()
             .copy_from_slice(&[location_bytes, &size_bytes].concat());
@@ -374,6 +373,16 @@ impl ChunkWriter for AnvilChunkFormat {
         // dbg!(&location_table.iter().map(|v| v.to_string()).join(","));
 
         region_file.seek(SeekFrom::Start(end_index)).unwrap(); // TODO
+
+        let mut header: BytesMut = BytesMut::with_capacity(5);
+        // total chunk size includes the byte representing the compression
+        // scheme, so +1.
+        header.put_u32(bytes.len() as u32 + 1);
+        // compression scheme
+        header.put_u8(compression as u8);
+        region_file
+            .write_all(&header)
+            .expect("Failed to write header");
         region_file.write_all(&bytes).unwrap_or_else(|_| {
             panic!(
                 "Region file r.-{},{}.mca got corrupted, sorry",
@@ -381,7 +390,9 @@ impl ChunkWriter for AnvilChunkFormat {
             )
         });
 
-        // region_file.write_all(&vec![0u8; 4096]);
+        region_file
+            .write_all(&vec![0u8; 4096])
+            .expect("Failed to add padding");
 
         Ok(())
     }
@@ -442,6 +453,7 @@ impl AnvilChunkFormat {
 
         let nbt = ChunkNbt {
             data_version: WORLD_DATA_VERSION,
+            status: super::ChunkStatus::Full,
             heightmaps: chunk_data.blocks.heightmap.clone(),
             sections,
         };

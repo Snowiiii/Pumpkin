@@ -123,6 +123,7 @@ struct ChunkSection {
 #[serde(rename_all = "PascalCase")]
 struct ChunkNbt {
     data_version: i32,
+    status: ChunkStatus,
     // #[serde(rename = "xPos")]
     // x_pos: i32,
     // #[serde(rename = "yPos")]
@@ -134,8 +135,7 @@ struct ChunkNbt {
     heightmaps: ChunkHeightmaps,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
-#[serde(tag = "Status")]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 enum ChunkStatus {
     #[serde(rename = "minecraft:empty")]
     Empty,
@@ -254,10 +254,18 @@ impl Index<ChunkRelativeBlockCoordinates> for ChunkBlocks {
     }
 }
 
+// I can't use an tag because it will break ChunkNBT, but status need to have a big S, so "Status"
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct ChunkStatusWrapper {
+    status: ChunkStatus,
+}
+
 impl ChunkData {
     pub fn from_bytes(chunk_data: &[u8], at: Vector2<i32>) -> Result<Self, ChunkParsingError> {
-        if fastnbt::from_bytes::<ChunkStatus>(chunk_data)
+        if fastnbt::from_bytes::<ChunkStatusWrapper>(chunk_data)
             .map_err(|_| ChunkParsingError::FailedReadStatus)?
+            .status
             != ChunkStatus::Full
         {
             return Err(ChunkParsingError::ChunkNotGenerated);
