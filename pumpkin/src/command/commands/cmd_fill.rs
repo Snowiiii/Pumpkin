@@ -4,10 +4,11 @@ use crate::command::args::{ConsumedArgs, FindArg};
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, literal, require};
 use crate::command::{CommandError, CommandExecutor, CommandSender};
-use crate::entity::player::PermissionLvl;
+
 use async_trait::async_trait;
 use pumpkin_core::math::position::WorldPosition;
 use pumpkin_core::math::vector3::Vector3;
+use pumpkin_core::permission::PermissionLvl;
 use pumpkin_core::text::TextComponent;
 
 const NAMES: [&str; 1] = ["fill"];

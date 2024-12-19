@@ -3,8 +3,8 @@ use async_trait::async_trait;
 use crate::command::args::arg_gamemode::GamemodeArgumentConsumer;
 use crate::command::args::GetCloned;
 
-use crate::entity::player::PermissionLvl;
 use crate::TextComponent;
+use pumpkin_core::permission::PermissionLvl;
 
 use crate::command::args::arg_players::PlayersArgumentConsumer;
 
