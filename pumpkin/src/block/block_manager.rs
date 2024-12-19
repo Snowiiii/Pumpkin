@@ -21,8 +21,7 @@ pub struct BlockManager {
 
 impl BlockManager {
     pub fn register<T: PumpkinBlock + BlockMetadata + 'static>(&mut self, block: T) {
-        self.blocks
-            .insert(block.name().to_string(), Arc::new(block));
+        self.blocks.insert(block.name(), Arc::new(block));
     }
 
     pub async fn on_use(

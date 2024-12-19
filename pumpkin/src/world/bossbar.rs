@@ -43,7 +43,7 @@ pub struct Bossbar {
 
 impl Bossbar {
     #[must_use]
-    pub fn new(title: String) -> Bossbar {
+    pub fn new(title: String) -> Self {
         let uuid = Uuid::new_v4();
 
         Self {

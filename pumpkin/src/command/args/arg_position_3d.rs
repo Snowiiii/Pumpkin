@@ -81,7 +81,7 @@ impl DefaultNameArgConsumer for Position3DArgumentConsumer {
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &Position3DArgumentConsumer
+        &Self
     }
 }
 

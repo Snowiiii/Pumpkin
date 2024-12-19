@@ -1,4 +1,5 @@
 use std::{
+    num::NonZeroU8,
     sync::{
         atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU32, AtomicU8},
         Arc,
@@ -176,7 +177,7 @@ impl Player {
             // (We left shift by one so we can search around that chunk)
             watched_section: AtomicCell::new(Cylindrical::new(
                 Vector2::new(i32::MAX >> 1, i32::MAX >> 1),
-                0,
+                unsafe { NonZeroU8::new_unchecked(1) },
             )),
             wait_for_keep_alive: AtomicBool::new(false),
             keep_alive_id: AtomicI64::new(0),

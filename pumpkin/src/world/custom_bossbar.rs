@@ -53,7 +53,7 @@ impl Default for CustomBossbars {
 
 impl CustomBossbars {
     #[must_use]
-    pub fn new() -> CustomBossbars {
+    pub fn new() -> Self {
         Self {
             custom_bossbars: HashMap::new(),
         }

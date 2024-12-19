@@ -242,8 +242,8 @@ impl World {
                 base_config.hardcore,
                 &dimensions,
                 base_config.max_players.into(),
-                base_config.view_distance.into(), //  TODO: view distance
-                base_config.simulation_distance.into(), // TODO: sim view dinstance
+                base_config.view_distance.get().into(), //  TODO: view distance
+                base_config.simulation_distance.get().into(), // TODO: sim view dinstance
                 false,
                 true,
                 false,
@@ -324,7 +324,7 @@ impl World {
                 .client
                 .send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries))
                 .await;
-        }
+        };
 
         let gameprofile = &player.gameprofile;
 

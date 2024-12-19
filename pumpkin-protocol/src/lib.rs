@@ -1,3 +1,5 @@
+use std::num::NonZeroU16;
+
 use bytebuf::{packet_id::Packet, ReadingError};
 use bytes::{Bytes, BytesMut};
 use pumpkin_core::text::{style::Style, TextComponent};
@@ -19,7 +21,7 @@ pub use var_long::*;
 
 /// To current Minecraft protocol
 /// Don't forget to change this when porting
-pub const CURRENT_MC_PROTOCOL: u32 = 769;
+pub const CURRENT_MC_PROTOCOL: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(769) };
 
 pub const MAX_PACKET_SIZE: i32 = 2097152;
 

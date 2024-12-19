@@ -1,3 +1,5 @@
+use std::num::NonZeroUsize;
+
 use bytes::{Buf, BufMut};
 use serde::{
     de::{self, SeqAccess, Visitor},
@@ -15,7 +17,7 @@ pub struct VarLong(pub VarLongType);
 
 impl VarLong {
     /// The maximum number of bytes a `VarLong`
-    pub const MAX_SIZE: usize = 10;
+    pub const MAX_SIZE: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(10) };
 
     /// Returns the exact number of bytes this varlong will write when
     /// [`Encode::encode`] is called, assuming no error occurs.
@@ -28,7 +30,7 @@ impl VarLong {
 
     pub fn encode(&self, w: &mut impl BufMut) {
         let mut x = self.0;
-        for _ in 0..Self::MAX_SIZE {
+        for _ in 0..Self::MAX_SIZE.get() {
             let byte = (x & 0x7F) as u8;
             x >>= 7;
             if x == 0 {
@@ -41,7 +43,7 @@ impl VarLong {
 
     pub fn decode(r: &mut impl Buf) -> Result<Self, VarLongDecodeError> {
         let mut val = 0;
-        for i in 0..Self::MAX_SIZE {
+        for i in 0..Self::MAX_SIZE.get() {
             if !r.has_remaining() {
                 return Err(VarLongDecodeError::Incomplete);
             }
@@ -131,7 +133,7 @@ impl<'de> Deserialize<'de> for VarLong {
                 A: SeqAccess<'de>,
             {
                 let mut val = 0;
-                for i in 0..VarLong::MAX_SIZE {
+                for i in 0..VarLong::MAX_SIZE.get() {
                     if let Some(byte) = seq.next_element::<u8>()? {
                         val |= (i64::from(byte) & 0b01111111) << (i * 7);
                         if byte & 0b10000000 == 0 {

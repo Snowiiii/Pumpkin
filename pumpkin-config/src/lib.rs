@@ -7,6 +7,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
     fs,
     net::{Ipv4Addr, SocketAddr},
+    num::NonZeroU8,
     path::Path,
     sync::LazyLock,
 };
@@ -71,9 +72,9 @@ pub struct BasicConfiguration {
     /// The maximum number of players allowed on the server. Specifying `0` disables the limit.
     pub max_players: u32,
     /// The maximum view distance for players.
-    pub view_distance: u8,
+    pub view_distance: NonZeroU8,
     /// The maximum simulated view distance.
-    pub simulation_distance: u8,
+    pub simulation_distance: NonZeroU8,
     /// The default game difficulty.
     pub default_difficulty: Difficulty,
     /// Whether the Nether dimension is enabled.
@@ -103,8 +104,8 @@ impl Default for BasicConfiguration {
             server_address: SocketAddr::new(Ipv4Addr::new(0, 0, 0, 0).into(), 25565),
             seed: "".to_string(),
             max_players: 100000,
-            view_distance: 10,
-            simulation_distance: 10,
+            view_distance: NonZeroU8::new(10).unwrap(),
+            simulation_distance: NonZeroU8::new(10).unwrap(),
             default_difficulty: Difficulty::Normal,
             allow_nether: true,
             hardcore: false,
@@ -176,9 +177,14 @@ impl LoadConfiguration for BasicConfiguration {
     }
 
     fn validate(&self) {
-        assert!(self.view_distance >= 2, "View distance must be at least 2");
         assert!(
-            self.view_distance <= 32,
+            self.view_distance
+                .ge(unsafe { &NonZeroU8::new_unchecked(2) }),
+            "View distance must be at least 2"
+        );
+        assert!(
+            self.view_distance
+                .le(unsafe { &NonZeroU8::new_unchecked(32) }),
             "View distance must be less than 32"
         );
         if self.online_mode {

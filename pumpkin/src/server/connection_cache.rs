@@ -2,6 +2,7 @@ use core::error;
 use std::{
     fs::File,
     io::{Cursor, Read},
+    num::NonZeroU32,
     path::Path,
 };
 
@@ -105,7 +106,7 @@ impl CachedStatus {
     }
 
     pub fn build_response(config: &BasicConfiguration) -> StatusResponse {
-        let icon = if config.use_favicon {
+        let favicon = if config.use_favicon {
             let icon_path = &config.favicon_path;
             log::debug!("Loading server favicon from '{}'", icon_path);
             match load_icon_from_file(icon_path).or_else(|err| {
@@ -142,7 +143,7 @@ impl CachedStatus {
         StatusResponse {
             version: Some(Version {
                 name: CURRENT_MC_VERSION.into(),
-                protocol: CURRENT_MC_PROTOCOL,
+                protocol: NonZeroU32::from(CURRENT_MC_PROTOCOL).get(),
             }),
             players: Some(Players {
                 max: config.max_players,
@@ -150,7 +151,7 @@ impl CachedStatus {
                 sample: vec![],
             }),
             description: config.motd.clone(),
-            favicon: icon,
+            favicon,
             enforce_secure_chat: false,
         }
     }

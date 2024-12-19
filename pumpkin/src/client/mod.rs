@@ -1,6 +1,7 @@
 use std::{
     collections::VecDeque,
     net::SocketAddr,
+    num::NonZeroU8,
     sync::{
         atomic::{AtomicBool, AtomicI32},
         Arc,
@@ -53,7 +54,7 @@ pub struct PlayerConfig {
     /// The player's preferred language.
     pub locale: String, // 16
     /// The maximum distance at which chunks are rendered.
-    pub view_distance: u8,
+    pub view_distance: NonZeroU8,
     /// The player's chat mode settings
     pub chat_mode: ChatMode,
     /// Whether chat colors are enabled.
@@ -72,7 +73,7 @@ impl Default for PlayerConfig {
     fn default() -> Self {
         Self {
             locale: "en_us".to_string(),
-            view_distance: 2,
+            view_distance: unsafe { NonZeroU8::new_unchecked(10) },
             chat_mode: ChatMode::Enabled,
             chat_colors: true,
             skin_parts: 0,

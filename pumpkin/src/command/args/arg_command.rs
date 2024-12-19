@@ -38,10 +38,9 @@ impl ArgumentConsumer for CommandTreeArgumentConsumer {
         let s = args.pop()?;
 
         let dispatcher = &server.command_dispatcher;
-        return match dispatcher.get_tree(s) {
-            Ok(tree) => Some(Arg::CommandTree(tree)),
-            Err(_) => None,
-        };
+        return dispatcher
+            .get_tree(s)
+            .map_or_else(|_| None, |tree| Some(Arg::CommandTree(tree)));
     }
 
     async fn suggest<'a>(
@@ -71,7 +70,7 @@ impl DefaultNameArgConsumer for CommandTreeArgumentConsumer {
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &CommandTreeArgumentConsumer
+        &Self
     }
 }
 

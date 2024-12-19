@@ -60,7 +60,7 @@ impl DefaultNameArgConsumer for MsgArgConsumer {
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &MsgArgConsumer
+        &Self
     }
 }
 

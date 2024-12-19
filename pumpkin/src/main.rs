@@ -2,7 +2,22 @@
 #![deny(clippy::pedantic)]
 // #![warn(clippy::restriction)]
 #![deny(clippy::cargo)]
+// to keep consistency
 #![deny(clippy::if_then_some_else_none)]
+#![deny(clippy::empty_enum_variants_with_brackets)]
+#![deny(clippy::empty_structs_with_brackets)]
+#![deny(clippy::separated_literal_suffix)]
+#![deny(clippy::semicolon_outside_block)]
+#![deny(clippy::non_zero_suggestions)]
+#![deny(clippy::string_lit_chars_any)]
+#![deny(clippy::use_self)]
+#![deny(clippy::useless_let_if_seq)]
+#![deny(clippy::branches_sharing_code)]
+#![deny(clippy::equatable_if_let)]
+#![deny(clippy::option_if_let_else)]
+// use log crate
+#![deny(clippy::print_stdout)]
+#![deny(clippy::print_stderr)]
 // REMOVE SOME WHEN RELEASE
 #![expect(clippy::cargo_common_metadata)]
 #![expect(clippy::multiple_crate_versions)]
@@ -182,8 +197,8 @@ async fn main() {
         let server = server.clone();
         tokio::spawn(async move {
             ticker.run(&server).await;
-        });
-    }
+        })
+    };
 
     let mut master_client_id: u16 = 0;
     loop {

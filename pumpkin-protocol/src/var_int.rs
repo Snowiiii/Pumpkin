@@ -1,3 +1,5 @@
+use std::num::NonZeroUsize;
+
 use bytes::{Buf, BufMut};
 use serde::{
     de::{SeqAccess, Visitor},
@@ -15,7 +17,7 @@ pub struct VarInt(pub VarIntType);
 
 impl VarInt {
     /// The maximum number of bytes a `VarInt` can occupy.
-    pub const MAX_SIZE: usize = 5;
+    pub const MAX_SIZE: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(5) };
 
     /// Returns the exact number of bytes this varint will write when
     /// [`Encode::encode`] is called, assuming no error occurs.
@@ -28,7 +30,7 @@ impl VarInt {
 
     pub fn encode(&self, w: &mut impl BufMut) {
         let mut val = self.0;
-        for _ in 0..Self::MAX_SIZE {
+        for _ in 0..Self::MAX_SIZE.get() {
             let b: u8 = val as u8 & 0b01111111;
             val >>= 7;
             w.put_u8(if val == 0 { b } else { b | 0b10000000 });
@@ -40,7 +42,7 @@ impl VarInt {
 
     pub fn decode(r: &mut impl Buf) -> Result<Self, VarIntDecodeError> {
         let mut val = 0;
-        for i in 0..Self::MAX_SIZE {
+        for i in 0..Self::MAX_SIZE.get() {
             if !r.has_remaining() {
                 return Err(VarIntDecodeError::Incomplete);
             }
@@ -130,7 +132,7 @@ impl<'de> Deserialize<'de> for VarInt {
                 A: SeqAccess<'de>,
             {
                 let mut val = 0;
-                for i in 0..VarInt::MAX_SIZE {
+                for i in 0..VarInt::MAX_SIZE.get() {
                     if let Some(byte) = seq.next_element::<u8>()? {
                         val |= (i32::from(byte) & 0b01111111) << (i * 7);
                         if byte & 0b10000000 == 0 {

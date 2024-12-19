@@ -1,3 +1,4 @@
+use std::num::NonZeroU8;
 use std::sync::Arc;
 
 use super::PlayerConfig;
@@ -436,7 +437,7 @@ impl Player {
     }
 
     pub async fn handle_client_information(
-        self: &Arc<Player>,
+        self: &Arc<Self>,
         client_information: SClientInformationPlay,
     ) {
         if let (Some(main_hand), Some(chat_mode)) = (
@@ -458,25 +459,27 @@ impl Player {
 
                 let old_view_distance = config.view_distance;
 
-                let update_watched = if old_view_distance == client_information.view_distance as u8
-                {
-                    false
-                } else {
-                    log::debug!(
-                        "Player {} ({}) updated render distance: {} -> {}.",
-                        self.gameprofile.name,
-                        self.client.id,
-                        old_view_distance,
-                        client_information.view_distance
-                    );
+                let update_watched =
+                    if old_view_distance.get() == client_information.view_distance as u8 {
+                        false
+                    } else {
+                        log::debug!(
+                            "Player {} ({}) updated render distance: {} -> {}.",
+                            self.gameprofile.name,
+                            self.client.id,
+                            old_view_distance,
+                            client_information.view_distance
+                        );
 
-                    true
-                };
+                        true
+                    };
 
                 *config = PlayerConfig {
                     locale: client_information.locale,
                     // A Negative view distance would be impossible and make no sense right ?, Mojang: Lets make is signed :D
-                    view_distance: client_information.view_distance as u8,
+                    view_distance: unsafe {
+                        NonZeroU8::new_unchecked(client_information.view_distance as u8)
+                    },
                     chat_mode,
                     chat_colors: client_information.chat_colors,
                     skin_parts: client_information.skin_parts,
