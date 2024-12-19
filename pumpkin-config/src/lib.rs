@@ -17,6 +17,7 @@ pub mod logging;
 pub mod proxy;
 pub mod query;
 pub mod resource_pack;
+pub mod translation;
 
 pub use auth::AuthenticationConfig;
 pub use commands::CommandsConfig;
@@ -25,6 +26,7 @@ pub use lan_broadcast::LANBroadcastConfig;
 pub use pvp::PVPConfig;
 pub use rcon::RCONConfig;
 pub use server_links::ServerLinksConfig;
+pub use translation::TranslationConfig;
 
 mod commands;
 pub mod compression;
@@ -57,6 +59,7 @@ pub struct AdvancedConfiguration {
     pub rcon: RCONConfig,
     pub pvp: PVPConfig,
     pub logging: LoggingConfig,
+    pub translation: TranslationConfig,
     pub query: QueryConfig,
     pub server_links: ServerLinksConfig,
     pub lan_broadcast: LANBroadcastConfig,
