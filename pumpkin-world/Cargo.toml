@@ -8,6 +8,9 @@ pumpkin-core = { path = "../pumpkin-core" }
 pumpkin-config = { path = "../pumpkin-config" }
 pumpkin-macros = { path = "../pumpkin-macros" }
 
+bytes.workspace = true
+
+
 tokio.workspace = true
 rayon.workspace = true
 derive_more.workspace = true
