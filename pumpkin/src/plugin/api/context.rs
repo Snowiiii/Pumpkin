@@ -10,7 +10,10 @@ pub struct Context {
 }
 impl Context {
     pub fn new(metadata: PluginMetadata<'static>, channel: Sender<ContextAction>) -> Context {
-        Context { metadata, _channel: channel }
+        Context {
+            metadata,
+            _channel: channel,
+        }
     }
 
     pub fn get_logger(&self) -> Logger {
@@ -26,7 +29,7 @@ impl Context {
         }
         path
     }
-/*  TODO: Implement when dispatcher is mutable
+    /*  TODO: Implement when dispatcher is mutable
     pub async fn register_command(&self, tree: crate::command::tree::CommandTree<'static>) {
         self.channel.send(ContextAction::RegisterCommand(tree)).await;
     } */
@@ -36,7 +39,9 @@ pub enum ContextAction {
     // TODO: Implement when dispatcher is mutable
 }
 
-pub fn handle_context(metadata: PluginMetadata<'static>/* , dispatcher: Arc<CommandDispatcher<'static>> */) -> Context {
+pub fn handle_context(
+    metadata: PluginMetadata<'static>, /* , dispatcher: Arc<CommandDispatcher<'static>> */
+) -> Context {
     let (send, mut recv) = mpsc::channel(1);
     tokio::spawn(async move {
         while let Some(action) = recv.recv().await {

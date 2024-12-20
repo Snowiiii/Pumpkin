@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 
-use super::types::player::PlayerEvent;
 use super::context::Context;
+use super::types::player::PlayerEvent;
 
 #[derive(Eq, PartialEq, Ord, PartialOrd)]
 pub enum EventPriority {

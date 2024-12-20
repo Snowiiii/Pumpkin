@@ -14,7 +14,7 @@ type PluginData = (
 
 pub struct PluginManager {
     plugins: Vec<PluginData>,
-    command_dispatcher: Option<Arc<CommandDispatcher<'static>>>
+    command_dispatcher: Option<Arc<CommandDispatcher<'static>>>,
 }
 
 impl Default for PluginManager {
@@ -26,7 +26,10 @@ impl Default for PluginManager {
 impl PluginManager {
     #[must_use]
     pub fn new() -> Self {
-        PluginManager { plugins: vec![], command_dispatcher: None }
+        PluginManager {
+            plugins: vec![],
+            command_dispatcher: None,
+        }
     }
 
     pub fn set_command_dispatcher(&mut self, dispatcher: Arc<CommandDispatcher<'static>>) {
@@ -56,7 +59,7 @@ impl PluginManager {
             unsafe { &**library.get::<*const PluginMetadata>(b"METADATA").unwrap() };
 
         // let dispatcher = self.command_dispatcher.clone().expect("Command dispatcher not set").clone();
-        let context = handle_context(metadata.clone()/* , dispatcher */);
+        let context = handle_context(metadata.clone() /* , dispatcher */);
         let mut plugin_box = plugin_fn();
         let res = plugin_box.on_load(&context);
         let mut loaded = true;
@@ -82,8 +85,8 @@ impl PluginManager {
         let mut non_blocking_hooks = Vec::new();
 
         /* let dispatcher = self.command_dispatcher
-            .clone()
-            .expect("Command dispatcher not set"); // This should not happen */
+        .clone()
+        .expect("Command dispatcher not set"); // This should not happen */
 
         for (metadata, hooks, _, loaded) in &mut self.plugins {
             if !*loaded {
@@ -98,12 +101,9 @@ impl PluginManager {
                 }
             };
 
-            if let Some(matching_event) = registered_events
-                .iter()
-                .find(|e| e.name == event_name)
-            {
-                let context = handle_context(metadata.clone()/* , dispatcher.clone() */);
-                
+            if let Some(matching_event) = registered_events.iter().find(|e| e.name == event_name) {
+                let context = handle_context(metadata.clone() /* , dispatcher.clone() */);
+
                 if matching_event.blocking {
                     blocking_hooks.push((context, hooks));
                 } else {

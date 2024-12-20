@@ -5,6 +5,7 @@ use plugin::PluginManager;
 use pumpkin_core::text::TextComponent;
 use tokio::sync::Mutex;
 
+pub mod block;
 pub mod client;
 pub mod command;
 pub mod entity;
