@@ -22,7 +22,7 @@ pub(crate) struct BoundedNumArgumentConsumer<T: ToFromNumber> {
 #[async_trait]
 impl<T: ToFromNumber> ArgumentConsumer for BoundedNumArgumentConsumer<T>
 where
-    BoundedNumArgumentConsumer<T>: GetClientSideArgParser,
+    Self: GetClientSideArgParser,
 {
     async fn consume<'a>(
         &self,
@@ -236,7 +236,7 @@ impl GetClientSideArgParser for BoundedNumArgumentConsumer<i64> {
 
 impl<T: ToFromNumber> DefaultNameArgConsumer for BoundedNumArgumentConsumer<T>
 where
-    BoundedNumArgumentConsumer<T>: ArgumentConsumer,
+    Self: ArgumentConsumer,
 {
     fn default_name(&self) -> &'static str {
         // setting a single default name for all BoundedNumArgumentConsumer variants is probably a bad idea since it would lead to confusion

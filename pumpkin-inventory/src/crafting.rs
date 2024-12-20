@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use pumpkin_registry::{
     flatten_3x3, get_tag_values, IngredientSlot, IngredientType, RecipeResult, TagCategory, RECIPES,
 };
@@ -76,13 +75,13 @@ fn shapeless_crafting_match(
     input: [[Option<ItemStack>; 3]; 3],
     pattern: &[[[Option<IngredientSlot>; 3]; 3]],
 ) -> bool {
-    let mut pattern = pattern
+    let mut pattern: Vec<IngredientSlot> = pattern
         .iter()
         .flatten()
         .flatten()
         .flatten()
         .cloned()
-        .collect_vec();
+        .collect();
     for item in input.into_iter().flatten().flatten() {
         if let Some(index) = pattern.iter().enumerate().find_map(|(i, recipe_item)| {
             if ingredient_slot_check(recipe_item, item) {

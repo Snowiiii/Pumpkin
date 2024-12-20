@@ -1,418 +1,359 @@
-use crate::{BitSet, FixedBitSet, VarInt, VarLongType};
-use bytes::{Buf, BufMut, BytesMut};
 use core::str;
 
+use crate::{BitSet, FixedBitSet, VarInt, VarLong};
+use bytes::{Buf, BufMut};
+
 mod deserializer;
-pub use deserializer::DeserializerError;
+use thiserror::Error;
 pub mod packet_id;
 mod serializer;
 
-const SEGMENT_BITS: u8 = 0x7F;
-const CONTINUE_BIT: u8 = 0x80;
+use std::mem::size_of;
 
-#[derive(Debug)]
-pub struct ByteBuffer {
-    buffer: BytesMut,
+#[derive(Debug, Error)]
+pub enum ReadingError {
+    /// End-of-File
+    #[error("EOF, Tried to read {0} but No bytes left to consume")]
+    EOF(String),
+    #[error("{0} is Incomplete")]
+    Incomplete(String),
+    #[error("{0} is too Large")]
+    TooLarge(String),
+    #[error("{0}")]
+    Message(String),
 }
 
-impl ByteBuffer {
-    pub fn empty() -> Self {
-        Self {
-            buffer: BytesMut::new(),
-        }
-    }
-    pub fn new(buffer: BytesMut) -> Self {
-        Self { buffer }
-    }
+pub trait ByteBuf: Buf {
+    fn try_get_bool(&mut self) -> Result<bool, ReadingError>;
 
-    pub fn get_var_int(&mut self) -> Result<VarInt, DeserializerError> {
-        let mut value: i32 = 0;
-        let mut position: i32 = 0;
+    fn try_get_u8(&mut self) -> Result<u8, ReadingError>;
 
-        loop {
-            let read = self.get_u8()?;
+    fn try_get_i8(&mut self) -> Result<i8, ReadingError>;
 
-            value |= ((read & SEGMENT_BITS) as i32) << position;
+    fn try_get_u16(&mut self) -> Result<u16, ReadingError>;
 
-            if read & CONTINUE_BIT == 0 {
-                break;
-            }
+    fn try_get_i16(&mut self) -> Result<i16, ReadingError>;
 
-            position += 7;
+    fn try_get_u32(&mut self) -> Result<u32, ReadingError>;
 
-            if position >= 32 {
-                return Err(DeserializerError::Message("VarInt is too big".to_string()));
-            }
-        }
+    fn try_get_i32(&mut self) -> Result<i32, ReadingError>;
 
-        Ok(VarInt(value))
-    }
+    fn try_get_u64(&mut self) -> Result<u64, ReadingError>;
 
-    pub fn get_var_long(&mut self) -> Result<VarLongType, DeserializerError> {
-        let mut value: i64 = 0;
-        let mut position: i64 = 0;
+    fn try_get_i64(&mut self) -> Result<i64, ReadingError>;
 
-        loop {
-            let read = self.get_u8()?;
+    fn try_get_f32(&mut self) -> Result<f32, ReadingError>;
 
-            value |= ((read & SEGMENT_BITS) as i64) << position;
+    fn try_get_f64(&mut self) -> Result<f64, ReadingError>;
 
-            if read & CONTINUE_BIT == 0 {
-                break;
-            }
+    fn try_copy_to_bytes(&mut self, len: usize) -> Result<bytes::Bytes, ReadingError>;
 
-            position += 7;
+    fn try_copy_to_slice(&mut self, dst: &mut [u8]) -> Result<(), ReadingError>;
 
-            if position >= 64 {
-                return Err(DeserializerError::Message("VarLong is too big".to_string()));
-            }
-        }
+    fn try_get_var_int(&mut self) -> Result<VarInt, ReadingError>;
 
-        Ok(value)
-    }
+    fn try_get_var_long(&mut self) -> Result<VarLong, ReadingError>;
 
-    pub fn get_string(&mut self) -> Result<String, DeserializerError> {
-        self.get_string_len(i16::MAX as i32)
-    }
+    fn try_get_string(&mut self) -> Result<String, ReadingError>;
 
-    pub fn get_string_len(&mut self, max_size: i32) -> Result<String, DeserializerError> {
-        let size = self.get_var_int()?.0;
-        if size > max_size {
-            return Err(DeserializerError::Message(
-                "String length is bigger than max size".to_string(),
-            ));
-        }
-
-        let data = self.copy_to_bytes(size as usize)?;
-        if data.len() as i32 > max_size {
-            return Err(DeserializerError::Message(
-                "String is bigger than max size".to_string(),
-            ));
-        }
-        match str::from_utf8(&data) {
-            Ok(string_result) => Ok(string_result.to_string()),
-            Err(e) => Err(DeserializerError::Message(e.to_string())),
-        }
-    }
-
-    pub fn get_bool(&mut self) -> Result<bool, DeserializerError> {
-        Ok(self.get_u8()? != 0)
-    }
-
-    pub fn get_uuid(&mut self) -> Result<uuid::Uuid, DeserializerError> {
-        let mut bytes = [0u8; 16];
-        self.copy_to_slice(&mut bytes)?;
-        Ok(uuid::Uuid::from_slice(&bytes).expect("Failed to parse UUID"))
-    }
-
-    pub fn get_fixed_bitset(&mut self, bits: usize) -> Result<FixedBitSet, DeserializerError> {
-        self.copy_to_bytes(bits.div_ceil(8))
-    }
-
-    pub fn put_bool(&mut self, v: bool) {
-        if v {
-            self.buffer.put_u8(1);
-        } else {
-            self.buffer.put_u8(0);
-        }
-    }
-
-    pub fn put_uuid(&mut self, v: &uuid::Uuid) {
-        // thats the vanilla way
-        let pair = v.as_u64_pair();
-        self.put_u64(pair.0);
-        self.put_u64(pair.1);
-    }
-
-    pub fn put_string(&mut self, val: &str) {
-        self.put_string_len(val, i16::MAX as i32);
-    }
-
-    pub fn put_string_len(&mut self, val: &str, max_size: i32) {
-        if val.len() as i32 > max_size {
-            // Should be panic?, I mean its our fault
-            panic!("String is too big");
-        }
-        self.put_var_int(&val.len().into());
-        self.buffer.put(val.as_bytes());
-    }
-
-    pub fn put_string_array(&mut self, array: &[String]) {
-        for string in array {
-            self.put_string(string)
-        }
-    }
-
-    pub fn put_var_int(&mut self, value: &VarInt) {
-        let mut val = value.0;
-        for _ in 0..5 {
-            let mut b: u8 = val as u8 & 0b01111111;
-            val >>= 7;
-            if val != 0 {
-                b |= 0b10000000;
-            }
-            self.buffer.put_u8(b);
-            if val == 0 {
-                break;
-            }
-        }
-    }
-
-    pub fn put_bit_set(&mut self, set: &BitSet) {
-        self.put_var_int(&set.0);
-        for b in set.1 {
-            self.put_i64(*b);
-        }
-    }
+    fn try_get_string_len(&mut self, max_size: u32) -> Result<String, ReadingError>;
 
     /// Reads a boolean. If true, the closure is called, and the returned value is
     /// wrapped in Some. Otherwise, this returns None.
-    pub fn get_option<T>(
+    fn try_get_option<G>(
         &mut self,
-        val: impl FnOnce(&mut Self) -> Result<T, DeserializerError>,
-    ) -> Result<Option<T>, DeserializerError> {
-        if self.get_bool()? {
+        val: impl FnOnce(&mut Self) -> Result<G, ReadingError>,
+    ) -> Result<Option<G>, ReadingError>;
+
+    fn get_list<G>(
+        &mut self,
+        val: impl Fn(&mut Self) -> Result<G, ReadingError>,
+    ) -> Result<Vec<G>, ReadingError>;
+
+    fn try_get_uuid(&mut self) -> Result<uuid::Uuid, ReadingError>;
+
+    fn try_get_fixed_bitset(&mut self, bits: usize) -> Result<FixedBitSet, ReadingError>;
+}
+
+impl<T: Buf> ByteBuf for T {
+    fn try_get_bool(&mut self) -> Result<bool, ReadingError> {
+        Ok(self.try_get_u8()? != 0)
+    }
+
+    fn try_get_u8(&mut self) -> Result<u8, ReadingError> {
+        if size_of::<u8>() <= self.remaining() {
+            Ok(self.get_u8())
+        } else {
+            Err(ReadingError::EOF("u8".to_string()))
+        }
+    }
+
+    fn try_get_i8(&mut self) -> Result<i8, ReadingError> {
+        if size_of::<i8>() <= self.remaining() {
+            Ok(self.get_i8())
+        } else {
+            Err(ReadingError::EOF("i8".to_string()))
+        }
+    }
+
+    fn try_get_u16(&mut self) -> Result<u16, ReadingError> {
+        if size_of::<u16>() <= self.remaining() {
+            Ok(self.get_u16())
+        } else {
+            Err(ReadingError::EOF("u16".to_string()))
+        }
+    }
+
+    fn try_get_i16(&mut self) -> Result<i16, ReadingError> {
+        if size_of::<i16>() <= self.remaining() {
+            Ok(self.get_i16())
+        } else {
+            Err(ReadingError::EOF("i16".to_string()))
+        }
+    }
+
+    fn try_get_u32(&mut self) -> Result<u32, ReadingError> {
+        if size_of::<u32>() <= self.remaining() {
+            Ok(self.get_u32())
+        } else {
+            Err(ReadingError::EOF("u32".to_string()))
+        }
+    }
+
+    fn try_get_i32(&mut self) -> Result<i32, ReadingError> {
+        if size_of::<i32>() <= self.remaining() {
+            Ok(self.get_i32())
+        } else {
+            Err(ReadingError::EOF("i32".to_string()))
+        }
+    }
+
+    fn try_get_u64(&mut self) -> Result<u64, ReadingError> {
+        if size_of::<u64>() <= self.remaining() {
+            Ok(self.get_u64())
+        } else {
+            Err(ReadingError::EOF("u64".to_string()))
+        }
+    }
+
+    fn try_get_i64(&mut self) -> Result<i64, ReadingError> {
+        if size_of::<i64>() <= self.remaining() {
+            Ok(self.get_i64())
+        } else {
+            Err(ReadingError::EOF("i64".to_string()))
+        }
+    }
+
+    fn try_get_f32(&mut self) -> Result<f32, ReadingError> {
+        if size_of::<f32>() <= self.remaining() {
+            Ok(self.get_f32())
+        } else {
+            Err(ReadingError::EOF("f32".to_string()))
+        }
+    }
+
+    fn try_get_f64(&mut self) -> Result<f64, ReadingError> {
+        if size_of::<f64>() <= self.remaining() {
+            Ok(self.get_f64())
+        } else {
+            Err(ReadingError::EOF("f64".to_string()))
+        }
+    }
+
+    fn try_copy_to_bytes(&mut self, len: usize) -> Result<bytes::Bytes, ReadingError> {
+        if self.remaining() >= len {
+            Ok(self.copy_to_bytes(len))
+        } else {
+            Err(ReadingError::Message("Unable to copy bytes".to_string()))
+        }
+    }
+
+    fn try_copy_to_slice(&mut self, dst: &mut [u8]) -> Result<(), ReadingError> {
+        if self.remaining() >= dst.len() {
+            self.copy_to_slice(dst);
+            Ok(())
+        } else {
+            Err(ReadingError::Message("Unable to copy slice".to_string()))
+        }
+    }
+
+    fn try_get_var_int(&mut self) -> Result<VarInt, ReadingError> {
+        match VarInt::decode(self) {
+            Ok(var_int) => Ok(var_int),
+            Err(error) => match error {
+                crate::VarIntDecodeError::Incomplete => {
+                    Err(ReadingError::Incomplete("varint".to_string()))
+                }
+                crate::VarIntDecodeError::TooLarge => {
+                    Err(ReadingError::TooLarge("varint".to_string()))
+                }
+            },
+        }
+    }
+    fn try_get_var_long(&mut self) -> Result<VarLong, ReadingError> {
+        match VarLong::decode(self) {
+            Ok(var_long) => Ok(var_long),
+            Err(error) => match error {
+                crate::VarLongDecodeError::Incomplete => {
+                    Err(ReadingError::Incomplete("varint".to_string()))
+                }
+                crate::VarLongDecodeError::TooLarge => {
+                    Err(ReadingError::TooLarge("varlong".to_string()))
+                }
+            },
+        }
+    }
+
+    fn try_get_string(&mut self) -> Result<String, ReadingError> {
+        self.try_get_string_len(i16::MAX as u32)
+    }
+
+    fn try_get_string_len(&mut self, max_size: u32) -> Result<String, ReadingError> {
+        let size = self.try_get_var_int()?.0;
+        if size as u32 > max_size {
+            return Err(ReadingError::TooLarge("string".to_string()));
+        }
+
+        let data = self.try_copy_to_bytes(size as usize)?;
+        if data.len() as u32 > max_size {
+            return Err(ReadingError::TooLarge("string".to_string()));
+        }
+        match str::from_utf8(&data) {
+            Ok(string_result) => Ok(string_result.to_string()),
+            Err(e) => Err(ReadingError::Message(e.to_string())),
+        }
+    }
+
+    fn try_get_option<G>(
+        &mut self,
+        val: impl FnOnce(&mut Self) -> Result<G, ReadingError>,
+    ) -> Result<Option<G>, ReadingError> {
+        if self.try_get_bool()? {
             Ok(Some(val(self)?))
         } else {
             Ok(None)
         }
     }
-    /// Writes `true` if the option is Some, or `false` if None. If the option is
-    /// some, then it also calls the `write` closure.
-    pub fn put_option<T>(&mut self, val: &Option<T>, write: impl FnOnce(&mut Self, &T)) {
-        self.put_bool(val.is_some());
-        if let Some(v) = val {
-            write(self, v)
-        }
-    }
 
-    pub fn get_list<T>(
+    fn get_list<G>(
         &mut self,
-        val: impl Fn(&mut Self) -> Result<T, DeserializerError>,
-    ) -> Result<Vec<T>, DeserializerError> {
-        let len = self.get_var_int()?.0 as usize;
+        val: impl Fn(&mut Self) -> Result<G, ReadingError>,
+    ) -> Result<Vec<G>, ReadingError> {
+        let len = self.try_get_var_int()?.0 as usize;
         let mut list = Vec::with_capacity(len);
         for _ in 0..len {
             list.push(val(self)?);
         }
         Ok(list)
     }
-    /// Writes a list to the buffer.
-    pub fn put_list<T>(&mut self, list: &[T], write: impl Fn(&mut Self, &T)) {
+
+    fn try_get_uuid(&mut self) -> Result<uuid::Uuid, ReadingError> {
+        let mut bytes = [0u8; 16];
+        self.try_copy_to_slice(&mut bytes)?;
+        Ok(uuid::Uuid::from_slice(&bytes).expect("Failed to parse UUID"))
+    }
+
+    fn try_get_fixed_bitset(&mut self, bits: usize) -> Result<FixedBitSet, ReadingError> {
+        self.try_copy_to_bytes(bits.div_ceil(8))
+    }
+}
+
+pub trait ByteBufMut {
+    fn put_bool(&mut self, v: bool);
+
+    fn put_uuid(&mut self, v: &uuid::Uuid);
+
+    fn put_string(&mut self, val: &str);
+
+    fn put_string_len(&mut self, val: &str, max_size: u32);
+
+    fn put_string_array(&mut self, array: &[String]);
+
+    fn put_bit_set(&mut self, set: &BitSet);
+
+    /// Writes `true` if the option is Some, or `false` if None. If the option is
+    /// some, then it also calls the `write` closure.
+    fn put_option<G>(&mut self, val: &Option<G>, write: impl FnOnce(&mut Self, &G));
+
+    fn put_list<G>(&mut self, list: &[G], write: impl Fn(&mut Self, &G));
+
+    fn put_var_int(&mut self, value: &VarInt);
+
+    fn put_varint_arr(&mut self, v: &[i32]);
+}
+
+impl<T: BufMut> ByteBufMut for T {
+    fn put_bool(&mut self, v: bool) {
+        if v {
+            self.put_u8(1);
+        } else {
+            self.put_u8(0);
+        }
+    }
+
+    fn put_uuid(&mut self, v: &uuid::Uuid) {
+        // thats the vanilla way
+        let pair = v.as_u64_pair();
+        self.put_u64(pair.0);
+        self.put_u64(pair.1);
+    }
+
+    fn put_string(&mut self, val: &str) {
+        self.put_string_len(val, i16::MAX as u32);
+    }
+
+    fn put_string_len(&mut self, val: &str, max_size: u32) {
+        if val.len() as u32 > max_size {
+            // Should be panic?, I mean its our fault
+            panic!("String is too big");
+        }
+        self.put_var_int(&val.len().into());
+        self.put(val.as_bytes());
+    }
+
+    fn put_string_array(&mut self, array: &[String]) {
+        for string in array {
+            self.put_string(string)
+        }
+    }
+
+    fn put_var_int(&mut self, value: &VarInt) {
+        value.encode(self);
+    }
+
+    fn put_bit_set(&mut self, set: &BitSet) {
+        self.put_var_int(&set.0);
+        for b in set.1 {
+            self.put_i64(*b);
+        }
+    }
+
+    fn put_option<G>(&mut self, val: &Option<G>, write: impl FnOnce(&mut Self, &G)) {
+        self.put_bool(val.is_some());
+        if let Some(v) = val {
+            write(self, v)
+        }
+    }
+
+    fn put_list<G>(&mut self, list: &[G], write: impl Fn(&mut Self, &G)) {
         self.put_var_int(&list.len().into());
         for v in list {
             write(self, v);
         }
     }
 
-    pub fn put_varint_arr(&mut self, v: &[i32]) {
+    fn put_varint_arr(&mut self, v: &[i32]) {
         self.put_list(v, |p, &v| p.put_var_int(&v.into()))
-    }
-
-    /*  pub fn get_nbt(&mut self) -> Option<fastnbt::value::Value> {
-            match crab_nbt::NbtTag::deserialize(self.buf()) {
-                Ok(v) => Some(v),
-                Err(err) => None,
-            }
-        }
-
-        pub fn put_nbt(&mut self, nbt: N) {
-            self.buffer.put_slice(&nbt.serialize());
-        }
-    */
-    pub fn buf(&mut self) -> &mut BytesMut {
-        &mut self.buffer
-    }
-
-    // Trait equivalents
-    pub fn get_u8(&mut self) -> Result<u8, DeserializerError> {
-        if self.buffer.has_remaining() {
-            Ok(self.buffer.get_u8())
-        } else {
-            Err(DeserializerError::Message(
-                "No bytes left to consume".to_string(),
-            ))
-        }
-    }
-
-    pub fn get_i8(&mut self) -> Result<i8, DeserializerError> {
-        if self.buffer.has_remaining() {
-            Ok(self.buffer.get_i8())
-        } else {
-            Err(DeserializerError::Message(
-                "No bytes left to consume".to_string(),
-            ))
-        }
-    }
-
-    pub fn get_u16(&mut self) -> Result<u16, DeserializerError> {
-        if self.buffer.remaining() >= 2 {
-            Ok(self.buffer.get_u16())
-        } else {
-            Err(DeserializerError::Message(
-                "Less than 2 bytes left to consume".to_string(),
-            ))
-        }
-    }
-
-    pub fn get_i16(&mut self) -> Result<i16, DeserializerError> {
-        if self.buffer.remaining() >= 2 {
-            Ok(self.buffer.get_i16())
-        } else {
-            Err(DeserializerError::Message(
-                "Less than 2 bytes left to consume".to_string(),
-            ))
-        }
-    }
-
-    pub fn get_u32(&mut self) -> Result<u32, DeserializerError> {
-        if self.buffer.remaining() >= 4 {
-            Ok(self.buffer.get_u32())
-        } else {
-            Err(DeserializerError::Message(
-                "Less than 4 bytes left to consume".to_string(),
-            ))
-        }
-    }
-
-    pub fn get_i32(&mut self) -> Result<i32, DeserializerError> {
-        if self.buffer.remaining() >= 4 {
-            Ok(self.buffer.get_i32())
-        } else {
-            Err(DeserializerError::Message(
-                "Less than 4 bytes left to consume".to_string(),
-            ))
-        }
-    }
-
-    pub fn get_u64(&mut self) -> Result<u64, DeserializerError> {
-        if self.buffer.remaining() >= 8 {
-            Ok(self.buffer.get_u64())
-        } else {
-            Err(DeserializerError::Message(
-                "Less than 8 bytes left to consume".to_string(),
-            ))
-        }
-    }
-
-    pub fn get_i64(&mut self) -> Result<i64, DeserializerError> {
-        if self.buffer.remaining() >= 8 {
-            Ok(self.buffer.get_i64())
-        } else {
-            Err(DeserializerError::Message(
-                "Less than 8 bytes left to consume".to_string(),
-            ))
-        }
-    }
-
-    pub fn get_f32(&mut self) -> Result<f32, DeserializerError> {
-        if self.buffer.remaining() >= 4 {
-            Ok(self.buffer.get_f32())
-        } else {
-            Err(DeserializerError::Message(
-                "Less than 4 bytes left to consume".to_string(),
-            ))
-        }
-    }
-
-    pub fn get_f64(&mut self) -> Result<f64, DeserializerError> {
-        if self.buffer.remaining() >= 8 {
-            Ok(self.buffer.get_f64())
-        } else {
-            Err(DeserializerError::Message(
-                "Less than 8 bytes left to consume".to_string(),
-            ))
-        }
-    }
-
-    // TODO: SerializerError?
-    pub fn put_u8(&mut self, n: u8) {
-        self.buffer.put_u8(n)
-    }
-
-    pub fn put_i8(&mut self, n: i8) {
-        self.buffer.put_i8(n)
-    }
-
-    pub fn put_u16(&mut self, n: u16) {
-        self.buffer.put_u16(n)
-    }
-
-    pub fn put_i16(&mut self, n: i16) {
-        self.buffer.put_i16(n)
-    }
-
-    pub fn put_u32(&mut self, n: u32) {
-        self.buffer.put_u32(n)
-    }
-
-    pub fn put_i32(&mut self, n: i32) {
-        self.buffer.put_i32(n)
-    }
-
-    pub fn put_u64(&mut self, n: u64) {
-        self.buffer.put_u64(n)
-    }
-
-    pub fn put_i64(&mut self, n: i64) {
-        self.buffer.put_i64(n)
-    }
-
-    pub fn put_f32(&mut self, n: f32) {
-        self.buffer.put_f32(n)
-    }
-
-    pub fn put_f64(&mut self, n: f64) {
-        self.buffer.put_f64(n)
-    }
-
-    pub fn copy_to_bytes(&mut self, len: usize) -> Result<bytes::Bytes, DeserializerError> {
-        if self.buffer.len() >= len {
-            Ok(self.buffer.copy_to_bytes(len))
-        } else {
-            Err(DeserializerError::Message(
-                "Unable to copy bytes".to_string(),
-            ))
-        }
-    }
-
-    pub fn copy_to_slice(&mut self, dst: &mut [u8]) -> Result<(), DeserializerError> {
-        if self.buffer.remaining() >= dst.len() {
-            self.buffer.copy_to_slice(dst);
-            Ok(())
-        } else {
-            Err(DeserializerError::Message(
-                "Unable to copy slice".to_string(),
-            ))
-        }
-    }
-
-    pub fn put_slice(&mut self, src: &[u8]) {
-        self.buffer.put_slice(src)
-    }
-
-    pub fn put<T: Buf>(&mut self, src: T)
-    where
-        Self: Sized,
-    {
-        self.buffer.put(src)
-    }
-
-    pub fn reserve(&mut self, additional: usize) {
-        self.buffer.reserve(additional)
-    }
-
-    pub fn get_slice(&mut self) -> BytesMut {
-        self.buffer.split()
     }
 }
 
 #[cfg(test)]
 mod test {
+    use bytes::{Bytes, BytesMut};
     use serde::{Deserialize, Serialize};
 
     use crate::{
-        bytebuf::{deserializer, serializer, ByteBuffer},
+        bytebuf::{deserializer, serializer},
         VarInt,
     };
 
@@ -423,12 +364,14 @@ mod test {
             bar: i32,
         }
         let foo = Foo { bar: 69 };
-        let mut serializer = serializer::Serializer::new(ByteBuffer::empty());
+        let mut serializer = serializer::Serializer::new(BytesMut::new());
         foo.serialize(&mut serializer).unwrap();
 
-        let mut serialized: ByteBuffer = serializer.into();
-        let deserialized: Foo =
-            Foo::deserialize(deserializer::Deserializer::new(&mut serialized)).unwrap();
+        let serialized: BytesMut = serializer.into();
+        let deserialized: Foo = Foo::deserialize(deserializer::Deserializer::new(
+            &mut Bytes::from(serialized),
+        ))
+        .unwrap();
 
         assert_eq!(foo, deserialized);
     }
@@ -440,12 +383,14 @@ mod test {
             bar: VarInt,
         }
         let foo = Foo { bar: 69.into() };
-        let mut serializer = serializer::Serializer::new(ByteBuffer::empty());
+        let mut serializer = serializer::Serializer::new(BytesMut::new());
         foo.serialize(&mut serializer).unwrap();
 
-        let mut serialized: ByteBuffer = serializer.into();
-        let deserialized: Foo =
-            Foo::deserialize(deserializer::Deserializer::new(&mut serialized)).unwrap();
+        let serialized: BytesMut = serializer.into();
+        let deserialized: Foo = Foo::deserialize(deserializer::Deserializer::new(
+            &mut Bytes::from(serialized),
+        ))
+        .unwrap();
 
         assert_eq!(foo, deserialized);
     }

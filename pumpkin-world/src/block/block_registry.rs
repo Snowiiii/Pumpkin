@@ -53,7 +53,7 @@ pub static BLOCK_ID_BY_ITEM_ID: LazyLock<HashMap<u16, u16>> = LazyLock::new(|| {
 });
 
 pub fn get_block(registry_id: &str) -> Option<&Block> {
-    let id = BLOCK_ID_BY_REGISTRY_ID.get(registry_id)?;
+    let id = BLOCK_ID_BY_REGISTRY_ID.get(&registry_id.replace("minecraft:", ""))?;
     BLOCKS_BY_ID.get(id)
 }
 

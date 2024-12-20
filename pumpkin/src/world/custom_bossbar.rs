@@ -53,7 +53,7 @@ impl Default for CustomBossbars {
 
 impl CustomBossbars {
     #[must_use]
-    pub fn new() -> CustomBossbars {
+    pub fn new() -> Self {
         Self {
             custom_bossbars: HashMap::new(),
         }
@@ -189,7 +189,7 @@ impl CustomBossbars {
         ))
     }
 
-    pub async fn update_visibilty(
+    pub async fn update_visibility(
         &mut self,
         server: &Server,
         resource_location: String,
@@ -235,10 +235,10 @@ impl CustomBossbars {
     pub async fn update_name(
         &mut self,
         server: &Server,
-        resource_location: String,
-        new_title: String,
+        resource_location: &str,
+        new_title: &str,
     ) -> Result<(), BossbarUpdateError> {
-        let bossbar = self.custom_bossbars.get_mut(&resource_location);
+        let bossbar = self.custom_bossbars.get_mut(resource_location);
         if let Some(bossbar) = bossbar {
             if bossbar.bossbar_data.title == new_title {
                 return Err(BossbarUpdateError::NoChanges(String::from(
@@ -246,7 +246,7 @@ impl CustomBossbars {
                 )));
             }
 
-            bossbar.bossbar_data.title = new_title;
+            bossbar.bossbar_data.title = new_title.to_string();
 
             if !bossbar.visible {
                 return Ok(());
@@ -269,7 +269,7 @@ impl CustomBossbars {
             return Ok(());
         }
         Err(BossbarUpdateError::InvalidResourceLocation(
-            resource_location,
+            resource_location.to_string(),
         ))
     }
 
@@ -365,7 +365,7 @@ impl CustomBossbars {
     ) -> Result<(), BossbarUpdateError> {
         let bossbar = self.custom_bossbars.get_mut(&resource_location);
         if let Some(bossbar) = bossbar {
-            // Get differnce between old and new player list and remove bossbars from old players
+            // Get difference between old and new player list and remove bossbars from old players
             let removed_players: Vec<Uuid> = bossbar
                 .player
                 .iter()

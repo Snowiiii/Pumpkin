@@ -1,6 +1,7 @@
-use crate::bytebuf::ByteBuffer;
+use crate::bytebuf::ByteBufMut;
 use crate::client::play::bossevent_action::BosseventAction;
 use crate::{ClientPacket, VarInt};
+use bytes::{BufMut, BytesMut};
 use pumpkin_macros::client_packet;
 
 #[client_packet("play:boss_event")]
@@ -16,7 +17,7 @@ impl<'a> CBossEvent<'a> {
 }
 
 impl ClientPacket for CBossEvent<'_> {
-    fn write(&self, bytebuf: &mut ByteBuffer) {
+    fn write(&self, bytebuf: &mut BytesMut) {
         bytebuf.put_uuid(&self.uuid);
         let action = &self.action;
         match action {
@@ -28,7 +29,7 @@ impl ClientPacket for CBossEvent<'_> {
                 flags,
             } => {
                 bytebuf.put_var_int(&VarInt::from(0u8));
-                bytebuf.put_slice(title.encode().as_slice());
+                bytebuf.put_slice(&title.encode());
                 bytebuf.put_f32(*health);
                 bytebuf.put_var_int(color);
                 bytebuf.put_var_int(division);
@@ -43,7 +44,7 @@ impl ClientPacket for CBossEvent<'_> {
             }
             BosseventAction::UpdateTile(title) => {
                 bytebuf.put_var_int(&VarInt::from(3u8));
-                bytebuf.put_slice(title.encode().as_slice());
+                bytebuf.put_slice(&title.encode());
             }
             BosseventAction::UpdateStyle { color, dividers } => {
                 bytebuf.put_var_int(&VarInt::from(4u8));

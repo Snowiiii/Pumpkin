@@ -1,6 +1,4 @@
-use std::sync::Arc;
-
-use lazy_static::lazy_static;
+use std::sync::{Arc, LazyLock};
 
 use crate::world_gen::{
     noise::density::{
@@ -37,14 +35,12 @@ use super::{
     },
 };
 
-lazy_static! {
-    pub static ref OVERWORLD_NOISE_ROUTER: BaseRouter =
-        BaseRouter::create_surface_noise_router(false, false);
-    pub static ref OVERWORLD_NOISE_ROUTER_LARGE: BaseRouter =
-        BaseRouter::create_surface_noise_router(true, false);
-    pub static ref OVERWORLD_NOISE_ROUTER_AMPLIFIED: BaseRouter =
-        BaseRouter::create_surface_noise_router(false, true);
-}
+pub static OVERWORLD_NOISE_ROUTER: LazyLock<BaseRouter> =
+    LazyLock::new(|| BaseRouter::create_surface_noise_router(false, false));
+pub static OVERWORLD_NOISE_ROUTER_LARGE: LazyLock<BaseRouter> =
+    LazyLock::new(|| BaseRouter::create_surface_noise_router(true, false));
+pub static OVERWORLD_NOISE_ROUTER_AMPLIFIED: LazyLock<BaseRouter> =
+    LazyLock::new(|| BaseRouter::create_surface_noise_router(false, true));
 
 pub struct BaseRouter {
     pub(crate) barrier: SharedComponentReference,
@@ -275,7 +271,7 @@ impl BaseRouter {
             .clone()
             .min(ConstantFunction::new(5f64).mul(CAVES_ENTRANCES_OVERWORLD.clone()));
 
-        let mapped_cave_entraces_overworld = RangeFunction::<
+        let mapped_cave_entrances_overworld = RangeFunction::<
             NoEnvironment,
             SharedComponentReference,
             SharedComponentReference,
@@ -290,12 +286,12 @@ impl BaseRouter {
 
         let blended_cave_entrances_overworld = apply_blend_density(apply_surface_slides(
             amplified,
-            mapped_cave_entraces_overworld.into(),
+            mapped_cave_entrances_overworld.into(),
         ))
         .min(CAVES_NOODLE_OVERWORLD.clone());
 
-        let i = *vein_type::MIN_Y;
-        let j = *vein_type::MAX_Y;
+        let i = vein_type::MIN_Y;
+        let j = vein_type::MAX_Y;
         let ore_veininess = vertical_range_choice(
             Y.clone(),
             NoiseFunction::new(

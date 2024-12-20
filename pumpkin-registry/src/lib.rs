@@ -58,7 +58,7 @@ pub struct SyncedRegistry {
     damage_type: IndexMap<String, DamageType>,
     banner_pattern: IndexMap<String, BannerPattern>,
     enchantment: IndexMap<String, Enchantment>,
-    jukebox_song: IndexMap<String, JukeboxSong>,
+    pub jukebox_song: IndexMap<String, JukeboxSong>,
     instrument: IndexMap<String, Instrument>,
 }
 
@@ -69,6 +69,12 @@ pub enum DimensionType {
     OverworldCaves,
     TheEnd,
     TheNether,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct DataPool<T> {
+    data: T,
+    weight: i32,
 }
 
 impl DimensionType {
@@ -140,11 +146,10 @@ impl Registry {
             .wolf_variant
             .iter()
             .map(|s| {
-                // I present to you, A ugly hack which is done because Mojang developers decited to put is_<biome> instead of just <biome> on 3 wolf varients while all others have just the biome, this causes the client to not find the biome and disconnect
-                let varient = s.1.clone();
+                let variant = s.1.clone();
                 RegistryEntry {
                     entry_id: s.0,
-                    data: pumpkin_nbt::serializer::to_bytes_unnamed(&varient).unwrap(),
+                    data: pumpkin_nbt::serializer::to_bytes_unnamed(&variant).unwrap(),
                 }
             })
             .collect();
@@ -219,18 +224,18 @@ impl Registry {
         //     registry_entries,
         // };
 
-        // let registry_entries = SYNCED_REGISTRIES
-        //     .jukebox_song
-        //     .iter()
-        //     .map(|s| RegistryEntry {
-        //         entry_id: s.0,
-        //         data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
-        //     })
-        //     .collect();
-        // let jukebox_song = Registry {
-        //     registry_id: "minecraft:jukebox_song".to_string(),
-        //     registry_entries,
-        // };
+        let registry_entries = SYNCED_REGISTRIES
+            .jukebox_song
+            .iter()
+            .map(|s| RegistryEntry {
+                entry_id: s.0,
+                data: pumpkin_nbt::serializer::to_bytes_unnamed(&s.1).unwrap(),
+            })
+            .collect();
+        let jukebox_song = Registry {
+            registry_id: "minecraft:jukebox_song".to_string(),
+            registry_entries,
+        };
 
         // let registry_entries = SYNCED_REGISTRIES
         //     .instrument
@@ -256,7 +261,7 @@ impl Registry {
             damage_type,
             banner_pattern,
             // enchantment,
-            // jukebox_song,
+            jukebox_song,
             // instrument,
         ]
     }

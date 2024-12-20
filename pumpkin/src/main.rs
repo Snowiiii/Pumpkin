@@ -2,6 +2,22 @@
 #![deny(clippy::pedantic)]
 // #![warn(clippy::restriction)]
 #![deny(clippy::cargo)]
+// to keep consistency
+#![deny(clippy::if_then_some_else_none)]
+#![deny(clippy::empty_enum_variants_with_brackets)]
+#![deny(clippy::empty_structs_with_brackets)]
+#![deny(clippy::separated_literal_suffix)]
+#![deny(clippy::semicolon_outside_block)]
+#![deny(clippy::non_zero_suggestions)]
+#![deny(clippy::string_lit_chars_any)]
+#![deny(clippy::use_self)]
+#![deny(clippy::useless_let_if_seq)]
+#![deny(clippy::branches_sharing_code)]
+#![deny(clippy::equatable_if_let)]
+#![deny(clippy::option_if_let_else)]
+// use log crate
+#![deny(clippy::print_stdout)]
+#![deny(clippy::print_stderr)]
 // REMOVE SOME WHEN RELEASE
 #![expect(clippy::cargo_common_metadata)]
 #![expect(clippy::multiple_crate_versions)]
@@ -43,6 +59,7 @@ use rcon::RCONServer;
 use std::time::Instant;
 // Setup some tokens to allow us to identify which event is for which socket.
 
+pub mod block;
 pub mod client;
 pub mod command;
 pub mod entity;
@@ -107,24 +124,15 @@ const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> L
 const CARGO_PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 const GIT_VERSION: &str = env!("GIT_VERSION");
 
+// WARNING: All rayon calls from the tokio runtime must be non-blocking! This includes things
+// like `par_iter`. These should be spawned in the the rayon pool and then passed to the tokio
+// runtime with a channel! See `Level::fetch_chunks` as an example!
 #[tokio::main]
 #[expect(clippy::too_many_lines)]
-async fn main() -> io::Result<()> {
+async fn main() {
+    let time = Instant::now();
     init_logger();
 
-    // let rt = tokio::runtime::Builder::new_multi_thread()
-    //     .enable_all()
-    //     .build()
-    //     .unwrap();
-
-    tokio::spawn(async {
-        setup_sighandler()
-            .await
-            .expect("Unable to setup signal handlers");
-    });
-
-    // ensure rayon is built outside of tokio scope
-    rayon::ThreadPoolBuilder::new().build_global().unwrap();
     let default_panic = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         default_panic(info);
@@ -150,7 +158,11 @@ async fn main() -> io::Result<()> {
     log::info!("Report Issues on https://github.com/Snowiiii/Pumpkin/issues");
     log::info!("Join our Discord for community support https://discord.com/invite/wT8XjrjKkf");
 
-    let time = Instant::now();
+    tokio::spawn(async {
+        setup_sighandler()
+            .await
+            .expect("Unable to setup signal handlers");
+    });
 
     // Setup the TCP server socket.
     let listener = tokio::net::TcpListener::bind(BASIC_CONFIG.server_address)
@@ -196,13 +208,13 @@ async fn main() -> io::Result<()> {
         let server = server.clone();
         tokio::spawn(async move {
             ticker.run(&server).await;
-        });
-    }
+        })
+    };
 
     let mut master_client_id: u16 = 0;
     loop {
         // Asynchronously wait for an inbound socket.
-        let (connection, address) = listener.accept().await?;
+        let (connection, address) = listener.accept().await.unwrap();
 
         if let Err(e) = connection.set_nodelay(true) {
             log::warn!("failed to set TCP_NODELAY {e}");

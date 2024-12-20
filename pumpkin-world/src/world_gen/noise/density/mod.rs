@@ -74,9 +74,7 @@ pub trait NoisePosImpl {
 }
 
 pub mod built_in_density_function {
-    use std::sync::Arc;
-
-    use lazy_static::lazy_static;
+    use std::sync::{Arc, LazyLock};
 
     use crate::world_gen::noise::built_in_noise_params::{self};
     use crate::world_gen::positions::{MAX_COLUMN_HEIGHT, MIN_HEIGHT};
@@ -106,136 +104,153 @@ pub mod built_in_density_function {
 
     use super::weird::{RarityMapper, WierdScaledFunction};
 
-    lazy_static! {
-        pub static ref ZERO: SharedComponentReference = ConstantFunction::new(0f64).into();
-        pub static ref TEN: SharedComponentReference = ConstantFunction::new(10f64).into();
-        pub static ref BLEND_ALPHA: SharedComponentReference = BlendAlphaFunction::INSTANCE.into();
-        pub static ref BLEND_OFFSET: SharedComponentReference =
-            BlendOffsetFunction::INSTANCE.into();
-        pub static ref Y: SharedComponentReference = YClampedFunction::new(
+    pub static ZERO: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| ConstantFunction::new(0f64).into());
+    pub static TEN: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| ConstantFunction::new(10f64).into());
+    pub static BLEND_ALPHA: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| BlendAlphaFunction::INSTANCE.into());
+    pub static BLEND_OFFSET: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| BlendOffsetFunction::INSTANCE.into());
+    pub static Y: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        YClampedFunction::new(
             MIN_HEIGHT * 2,
             MAX_COLUMN_HEIGHT as i32 * 2,
             (MIN_HEIGHT * 2) as f64,
-            ((MAX_COLUMN_HEIGHT as i32) * 2) as f64
+            ((MAX_COLUMN_HEIGHT as i32) * 2) as f64,
         )
-        .into();
-        pub static ref SHIFT_X: SharedComponentReference =
+        .into()
+    });
+    pub static SHIFT_X: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
             WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
-                WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
-                    ShiftAFunction::new(Arc::new(InternalNoise::new(
-                        &built_in_noise_params::OFFSET,
-                        None
-                    )))
-                    .into(),
-                    WrapperType::Cache2D
-                )
+                ShiftAFunction::new(Arc::new(InternalNoise::new(
+                    &built_in_noise_params::OFFSET,
+                    None,
+                )))
                 .into(),
-                WrapperType::FlatCache
+                WrapperType::Cache2D,
             )
-            .into();
-        pub static ref SHIFT_Z: SharedComponentReference =
+            .into(),
+            WrapperType::FlatCache,
+        )
+        .into()
+    });
+    pub static SHIFT_Z: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
             WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
-                WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
-                    ShiftBFunction::new(Arc::new(InternalNoise::new(
-                        &built_in_noise_params::OFFSET,
-                        None
-                    )))
-                    .into(),
-                    WrapperType::Cache2D
-                )
+                ShiftBFunction::new(Arc::new(InternalNoise::new(
+                    &built_in_noise_params::OFFSET,
+                    None,
+                )))
                 .into(),
-                WrapperType::FlatCache
+                WrapperType::Cache2D,
             )
-            .into();
-        pub static ref BASE_3D_NOISE_OVERWORLD: SharedComponentReference =
-            InterpolatedNoiseFunction::create_base_3d_noise_function(
-                0.25f64, 0.125f64, 80f64, 160f64, 8f64
+            .into(),
+            WrapperType::FlatCache,
+        )
+        .into()
+    });
+    pub static BASE_3D_NOISE_OVERWORLD: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        InterpolatedNoiseFunction::create_base_3d_noise_function(
+            0.25f64, 0.125f64, 80f64, 160f64, 8f64,
+        )
+        .into()
+    });
+    pub static BASE_3D_NOISE_NETHER: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        InterpolatedNoiseFunction::create_base_3d_noise_function(
+            0.25f64, 0.375f64, 80f64, 60f64, 8f64,
+        )
+        .into()
+    });
+    pub static BASE_3D_NOISE_END: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        InterpolatedNoiseFunction::create_base_3d_noise_function(
+            0.25f64, 0.25f64, 80f64, 160f64, 4f64,
+        )
+        .into()
+    });
+    pub static CONTINENTS_OVERWORLD: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
+            ShiftedNoiseFunction::<
+                NoEnvironment,
+                SharedComponentReference,
+                SharedComponentReference,
+                SharedComponentReference,
+            >::new(
+                SHIFT_X.clone(),
+                ZERO.clone(),
+                SHIFT_Z.clone(),
+                0.25f64,
+                0f64,
+                Arc::new(InternalNoise::new(
+                    &built_in_noise_params::CONTINENTALNESS,
+                    None,
+                )),
             )
-            .into();
-        pub static ref BASE_3D_NOISE_NETHER: SharedComponentReference =
-            InterpolatedNoiseFunction::create_base_3d_noise_function(
-                0.25f64, 0.375f64, 80f64, 60f64, 8f64
+            .into(),
+            WrapperType::FlatCache,
+        )
+        .into()
+    });
+    pub static EROSION_OVERWORLD: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
+            ShiftedNoiseFunction::<
+                NoEnvironment,
+                SharedComponentReference,
+                SharedComponentReference,
+                SharedComponentReference,
+            >::new(
+                SHIFT_X.clone(),
+                ZERO.clone(),
+                SHIFT_Z.clone(),
+                0.25f64,
+                0f64,
+                Arc::new(InternalNoise::new(&built_in_noise_params::EROSION, None)),
             )
-            .into();
-        pub static ref BASE_3D_NOISE_END: SharedComponentReference =
-            InterpolatedNoiseFunction::create_base_3d_noise_function(
-                0.25f64, 0.25f64, 80f64, 160f64, 4f64
+            .into(),
+            WrapperType::FlatCache,
+        )
+        .into()
+    });
+    pub static RIDGES_OVERWORLD: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
+            ShiftedNoiseFunction::<
+                NoEnvironment,
+                SharedComponentReference,
+                SharedComponentReference,
+                SharedComponentReference,
+            >::new(
+                SHIFT_X.clone(),
+                ZERO.clone(),
+                SHIFT_Z.clone(),
+                0.25f64,
+                0f64,
+                Arc::new(InternalNoise::new(&built_in_noise_params::RIDGE, None)),
             )
-            .into();
-        pub static ref CONTINENTS_OVERWORLD: SharedComponentReference =
-            WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
-                ShiftedNoiseFunction::<
-                    NoEnvironment,
-                    SharedComponentReference,
-                    SharedComponentReference,
-                    SharedComponentReference,
-                >::new(
-                    SHIFT_X.clone(),
-                    ZERO.clone(),
-                    SHIFT_Z.clone(),
-                    0.25f64,
-                    0f64,
-                    Arc::new(InternalNoise::new(
-                        &built_in_noise_params::CONTINENTALNESS,
-                        None
-                    ))
-                )
-                .into(),
-                WrapperType::FlatCache
-            )
-            .into();
-        pub static ref EROSION_OVERWORLD: SharedComponentReference =
-            WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
-                ShiftedNoiseFunction::<
-                    NoEnvironment,
-                    SharedComponentReference,
-                    SharedComponentReference,
-                    SharedComponentReference,
-                >::new(
-                    SHIFT_X.clone(),
-                    ZERO.clone(),
-                    SHIFT_Z.clone(),
-                    0.25f64,
-                    0f64,
-                    Arc::new(InternalNoise::new(&built_in_noise_params::EROSION, None))
-                )
-                .into(),
-                WrapperType::FlatCache
-            )
-            .into();
-        pub static ref RIDGES_OVERWORLD: SharedComponentReference =
-            WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
-                ShiftedNoiseFunction::<
-                    NoEnvironment,
-                    SharedComponentReference,
-                    SharedComponentReference,
-                    SharedComponentReference,
-                >::new(
-                    SHIFT_X.clone(),
-                    ZERO.clone(),
-                    SHIFT_Z.clone(),
-                    0.25f64,
-                    0f64,
-                    Arc::new(InternalNoise::new(&built_in_noise_params::RIDGE, None))
-                )
-                .into(),
-                WrapperType::FlatCache
-            )
-            .into();
-        pub static ref RIDGES_FOLDED_OVERWORLD: SharedComponentReference = RIDGES_OVERWORLD
+            .into(),
+            WrapperType::FlatCache,
+        )
+        .into()
+    });
+    pub static RIDGES_FOLDED_OVERWORLD: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        RIDGES_OVERWORLD
             .clone()
             .abs()
             .add_const(-0.6666666666666666f64)
             .abs()
             .add_const(-0.3333333333333333f64)
-            .mul_const(-3f64);
-        static ref JAGGED_NOISE: SharedComponentReference = NoiseFunction::new(
+            .mul_const(-3f64)
+    });
+    static JAGGED_NOISE: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        NoiseFunction::new(
             Arc::new(InternalNoise::new(&built_in_noise_params::JAGGED, None)),
             1500f64,
-            0f64
+            0f64,
         )
-        .into();
-        pub static ref OFFSET_OVERWORLD: SharedComponentReference = apply_blending(
+        .into()
+    });
+    pub static OFFSET_OVERWORLD: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        apply_blending(
             ConstantFunction::new(-0.50375f32 as f64).add(
                 SplineFunction::<NoEnvironment, ImmutableSplineRef>::new(
                     create_offset_spline(
@@ -244,13 +259,15 @@ pub mod built_in_density_function {
                         RIDGES_FOLDED_OVERWORLD.clone(),
                         false,
                     )
-                    .into()
+                    .into(),
                 )
-                .into()
+                .into(),
             ),
             BLEND_OFFSET.clone(),
-        );
-        pub static ref FACTOR_OVERWORLD: SharedComponentReference = apply_blending(
+        )
+    });
+    pub static FACTOR_OVERWORLD: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        apply_blending(
             SplineFunction::<NoEnvironment, ImmutableSplineRef>::new(
                 create_factor_spline(
                     CONTINENTS_OVERWORLD.clone(),
@@ -259,12 +276,14 @@ pub mod built_in_density_function {
                     RIDGES_FOLDED_OVERWORLD.clone(),
                     false,
                 )
-                .into()
+                .into(),
             )
             .into(),
             TEN.clone(),
-        );
-        pub static ref JAGGEDNESS_OVERWORLD: SharedComponentReference = apply_blending(
+        )
+    });
+    pub static JAGGEDNESS_OVERWORLD: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        apply_blending(
             SplineFunction::<NoEnvironment, ImmutableSplineRef>::new(
                 create_jaggedness_spline(
                     CONTINENTS_OVERWORLD.clone(),
@@ -273,28 +292,31 @@ pub mod built_in_density_function {
                     RIDGES_FOLDED_OVERWORLD.clone(),
                     false,
                 )
-                .into()
+                .into(),
             )
             .into(),
             ZERO.clone(),
-        );
-        pub static ref DEPTH_OVERWORLD: SharedComponentReference =
-            YClampedFunction::new(-64, 320, 1.5f64, -1.5f64).add(OFFSET_OVERWORLD.clone());
-        pub static ref SLOPED_CHEESE_OVERWORLD: SharedComponentReference = {
-            let density1 = JAGGEDNESS_OVERWORLD
+        )
+    });
+    pub static DEPTH_OVERWORLD: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        YClampedFunction::new(-64, 320, 1.5f64, -1.5f64).add(OFFSET_OVERWORLD.clone())
+    });
+    pub static SLOPED_CHEESE_OVERWORLD: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        let density1 = JAGGEDNESS_OVERWORLD
+            .clone()
+            .mul(JAGGED_NOISE.clone().half_negative());
+        let density2 = ConstantFunction::new(4f64).mul(
+            DEPTH_OVERWORLD
                 .clone()
-                .mul(JAGGED_NOISE.clone().half_negative());
-            let density2 = ConstantFunction::new(4f64).mul(
-                DEPTH_OVERWORLD
-                    .clone()
-                    .add(density1)
-                    .mul(FACTOR_OVERWORLD.clone())
-                    .quarter_negative(),
-            );
+                .add(density1)
+                .mul(FACTOR_OVERWORLD.clone())
+                .quarter_negative(),
+        );
 
-            density2.add(BASE_3D_NOISE_OVERWORLD.clone())
-        };
-        pub static ref CONTINENTS_OVERWORLD_LARGE_BIOME: SharedComponentReference =
+        density2.add(BASE_3D_NOISE_OVERWORLD.clone())
+    });
+    pub static CONTINENTS_OVERWORLD_LARGE_BIOME: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| {
             WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
                 ShiftedNoiseFunction::<
                     NoEnvironment,
@@ -309,14 +331,16 @@ pub mod built_in_density_function {
                     0f64,
                     Arc::new(InternalNoise::new(
                         &built_in_noise_params::CONTINENTALNESS_LARGE,
-                        None
-                    ))
+                        None,
+                    )),
                 )
                 .into(),
-                WrapperType::FlatCache
+                WrapperType::FlatCache,
             )
-            .into();
-        pub static ref EROSION_OVERWORLD_LARGE_BIOME: SharedComponentReference =
+            .into()
+        });
+    pub static EROSION_OVERWORLD_LARGE_BIOME: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| {
             WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
                 ShiftedNoiseFunction::<
                     NoEnvironment,
@@ -331,60 +355,73 @@ pub mod built_in_density_function {
                     0f64,
                     Arc::new(InternalNoise::new(
                         &built_in_noise_params::EROSION_LARGE,
-                        None
-                    ))
+                        None,
+                    )),
                 )
                 .into(),
-                WrapperType::FlatCache
+                WrapperType::FlatCache,
             )
-            .into();
-        pub static ref OFFSET_OVERWORLD_LARGE_BIOME: SharedComponentReference = apply_blending(
-            ConstantFunction::new(-0.50375f32 as f64).add(
+            .into()
+        });
+    pub static OFFSET_OVERWORLD_LARGE_BIOME: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| {
+            apply_blending(
+                ConstantFunction::new(-0.50375f32 as f64).add(
+                    SplineFunction::<NoEnvironment, ImmutableSplineRef>::new(
+                        create_offset_spline(
+                            CONTINENTS_OVERWORLD_LARGE_BIOME.clone(),
+                            EROSION_OVERWORLD_LARGE_BIOME.clone(),
+                            RIDGES_FOLDED_OVERWORLD.clone(),
+                            false,
+                        )
+                        .into(),
+                    )
+                    .into(),
+                ),
+                BLEND_OFFSET.clone(),
+            )
+        });
+    pub static FACTOR_OVERWORLD_LARGE_BIOME: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| {
+            apply_blending(
                 SplineFunction::<NoEnvironment, ImmutableSplineRef>::new(
-                    create_offset_spline(
+                    create_factor_spline(
                         CONTINENTS_OVERWORLD_LARGE_BIOME.clone(),
                         EROSION_OVERWORLD_LARGE_BIOME.clone(),
+                        RIDGES_OVERWORLD.clone(),
                         RIDGES_FOLDED_OVERWORLD.clone(),
                         false,
                     )
-                    .into()
+                    .into(),
                 )
-                .into()
-            ),
-            BLEND_OFFSET.clone()
-        );
-        pub static ref FACTOR_OVERWORLD_LARGE_BIOME: SharedComponentReference = apply_blending(
-            SplineFunction::<NoEnvironment, ImmutableSplineRef>::new(
-                create_factor_spline(
-                    CONTINENTS_OVERWORLD_LARGE_BIOME.clone(),
-                    EROSION_OVERWORLD_LARGE_BIOME.clone(),
-                    RIDGES_OVERWORLD.clone(),
-                    RIDGES_FOLDED_OVERWORLD.clone(),
-                    false,
-                )
-                .into()
+                .into(),
+                TEN.clone(),
             )
-            .into(),
-            TEN.clone()
-        );
-        pub static ref JAGGEDNESS_OVERWORLD_LARGE_BIOME: SharedComponentReference = apply_blending(
-            SplineFunction::<NoEnvironment, ImmutableSplineRef>::new(
-                create_jaggedness_spline(
-                    CONTINENTS_OVERWORLD_LARGE_BIOME.clone(),
-                    EROSION_OVERWORLD_LARGE_BIOME.clone(),
-                    RIDGES_OVERWORLD.clone(),
-                    RIDGES_FOLDED_OVERWORLD.clone(),
-                    false,
+        });
+    pub static JAGGEDNESS_OVERWORLD_LARGE_BIOME: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| {
+            apply_blending(
+                SplineFunction::<NoEnvironment, ImmutableSplineRef>::new(
+                    create_jaggedness_spline(
+                        CONTINENTS_OVERWORLD_LARGE_BIOME.clone(),
+                        EROSION_OVERWORLD_LARGE_BIOME.clone(),
+                        RIDGES_OVERWORLD.clone(),
+                        RIDGES_FOLDED_OVERWORLD.clone(),
+                        false,
+                    )
+                    .into(),
                 )
-                .into()
+                .into(),
+                ZERO.clone(),
             )
-            .into(),
-            ZERO.clone()
-        );
-        pub static ref DEPTH_OVERWORLD_LARGE_BIOME: SharedComponentReference =
+        });
+    pub static DEPTH_OVERWORLD_LARGE_BIOME: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| {
             YClampedFunction::new(-64, 320, 1.5f64, -1.5f64)
-                .add(OFFSET_OVERWORLD_LARGE_BIOME.clone());
-        pub static ref SLOPED_CHEESE_OVERWORLD_LARGE_BIOME: SharedComponentReference = {
+                .add(OFFSET_OVERWORLD_LARGE_BIOME.clone())
+        });
+    pub static SLOPED_CHEESE_OVERWORLD_LARGE_BIOME: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| {
             let density1 = JAGGEDNESS_OVERWORLD_LARGE_BIOME
                 .clone()
                 .mul(JAGGED_NOISE.clone().half_negative());
@@ -397,54 +434,65 @@ pub mod built_in_density_function {
             );
 
             density2.add(BASE_3D_NOISE_OVERWORLD.clone())
-        };
-        pub static ref OFFSET_OVERWORLD_AMPLIFIED: SharedComponentReference = apply_blending(
-            ConstantFunction::new(-0.50375f32 as f64).add(
+        });
+    pub static OFFSET_OVERWORLD_AMPLIFIED: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| {
+            apply_blending(
+                ConstantFunction::new(-0.50375f32 as f64).add(
+                    SplineFunction::<NoEnvironment, ImmutableSplineRef>::new(
+                        create_offset_spline(
+                            CONTINENTS_OVERWORLD.clone(),
+                            EROSION_OVERWORLD.clone(),
+                            RIDGES_FOLDED_OVERWORLD.clone(),
+                            true,
+                        )
+                        .into(),
+                    )
+                    .into(),
+                ),
+                BLEND_OFFSET.clone(),
+            )
+        });
+    pub static FACTOR_OVERWORLD_AMPLIFIED: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| {
+            apply_blending(
                 SplineFunction::<NoEnvironment, ImmutableSplineRef>::new(
-                    create_offset_spline(
+                    create_factor_spline(
                         CONTINENTS_OVERWORLD.clone(),
                         EROSION_OVERWORLD.clone(),
+                        RIDGES_OVERWORLD.clone(),
                         RIDGES_FOLDED_OVERWORLD.clone(),
-                        true
+                        true,
                     )
-                    .into()
+                    .into(),
                 )
-                .into()
-            ),
-            BLEND_OFFSET.clone()
-        );
-        pub static ref FACTOR_OVERWORLD_AMPLIFIED: SharedComponentReference = apply_blending(
-            SplineFunction::<NoEnvironment, ImmutableSplineRef>::new(
-                create_factor_spline(
-                    CONTINENTS_OVERWORLD.clone(),
-                    EROSION_OVERWORLD.clone(),
-                    RIDGES_OVERWORLD.clone(),
-                    RIDGES_FOLDED_OVERWORLD.clone(),
-                    true
-                )
-                .into()
+                .into(),
+                TEN.clone(),
             )
-            .into(),
-            TEN.clone()
-        );
-        pub static ref JAGGEDNESS_OVERWORLD_AMPLIFIED: SharedComponentReference = apply_blending(
-            SplineFunction::<NoEnvironment, ImmutableSplineRef>::new(
-                create_jaggedness_spline(
-                    CONTINENTS_OVERWORLD.clone(),
-                    EROSION_OVERWORLD.clone(),
-                    RIDGES_OVERWORLD.clone(),
-                    RIDGES_FOLDED_OVERWORLD.clone(),
-                    true
+        });
+    pub static JAGGEDNESS_OVERWORLD_AMPLIFIED: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| {
+            apply_blending(
+                SplineFunction::<NoEnvironment, ImmutableSplineRef>::new(
+                    create_jaggedness_spline(
+                        CONTINENTS_OVERWORLD.clone(),
+                        EROSION_OVERWORLD.clone(),
+                        RIDGES_OVERWORLD.clone(),
+                        RIDGES_FOLDED_OVERWORLD.clone(),
+                        true,
+                    )
+                    .into(),
                 )
-                .into()
+                .into(),
+                ZERO.clone(),
             )
-            .into(),
-            ZERO.clone()
-        );
-        pub static ref DEPTH_OVERWORLD_AMPLIFIED: SharedComponentReference =
-            YClampedFunction::new(-64, 320, 1.5f64, -1.5f64)
-                .add(OFFSET_OVERWORLD_AMPLIFIED.clone());
-        pub static ref SLOPED_CHEESE_OVERWORLD_AMPLIFIED: SharedComponentReference = {
+        });
+    pub static DEPTH_OVERWORLD_AMPLIFIED: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| {
+            YClampedFunction::new(-64, 320, 1.5f64, -1.5f64).add(OFFSET_OVERWORLD_AMPLIFIED.clone())
+        });
+    pub static SLOPED_CHEESE_OVERWORLD_AMPLIFIED: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| {
             let density1 = JAGGEDNESS_OVERWORLD_AMPLIFIED
                 .clone()
                 .mul(JAGGED_NOISE.clone().half_negative());
@@ -457,10 +505,11 @@ pub mod built_in_density_function {
             );
 
             density2.add(BASE_3D_NOISE_OVERWORLD.clone())
-        };
-        pub static ref SLOPED_CHEESE_END: SharedComponentReference =
-            EndIslandFunction::new(0).add(BASE_3D_NOISE_END.clone());
-        pub static ref CAVES_SPAGHETTI_ROUGHNESS_FUNCTION_OVERWORLD: SharedComponentReference = {
+        });
+    pub static SLOPED_CHEESE_END: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| EndIslandFunction::new(0).add(BASE_3D_NOISE_END.clone()));
+    pub static CAVES_SPAGHETTI_ROUGHNESS_FUNCTION_OVERWORLD: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| {
             let function = NoiseFunction::new(
                 Arc::new(InternalNoise::new(
                     &built_in_noise_params::SPAGHETTI_ROUGHNESS,
@@ -483,20 +532,23 @@ pub mod built_in_density_function {
                 WrapperType::OnceCache,
             )
             .into()
-        };
-        pub static ref CAVES_SPAGHETTI_2D_THICKNESS_MODULAR_OVERWORLD: SharedComponentReference =
+        });
+    pub static CAVES_SPAGHETTI_2D_THICKNESS_MODULAR_OVERWORLD: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| {
             WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
                 noise_in_range(
                     &built_in_noise_params::SPAGHETTI_2D_THICKNESS,
                     2f64,
                     1f64,
                     -0.6f64,
-                    -1.3f64
+                    -1.3f64,
                 ),
                 WrapperType::OnceCache,
             )
-            .into();
-        pub static ref CAVES_SPAGHETTI_2D_OVERWORLD: SharedComponentReference = {
+            .into()
+        });
+    pub static CAVES_SPAGHETTI_2D_OVERWORLD: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| {
             let function1 = NoiseFunction::new(
                 Arc::new(InternalNoise::new(
                     &built_in_noise_params::SPAGHETTI_2D_MODULATOR,
@@ -534,8 +586,9 @@ pub mod built_in_density_function {
             let function7 = function2.add(function4.mul_const(0.083f64));
 
             function7.max(function6).clamp(-1f64, 1f64)
-        };
-        pub static ref CAVES_ENTRANCES_OVERWORLD: SharedComponentReference = {
+        });
+    pub static CAVES_ENTRANCES_OVERWORLD: LazyLock<SharedComponentReference> =
+        LazyLock::new(|| {
             let function_ref: SharedComponentReference =
                 WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
                     NoiseFunction::new(
@@ -601,115 +654,114 @@ pub mod built_in_density_function {
                 WrapperType::OnceCache,
             )
             .into()
-        };
-        pub static ref CAVES_NOODLE_OVERWORLD: SharedComponentReference = {
-            let function2 = vertical_range_choice(
-                Y.clone(),
-                NoiseFunction::new(
-                    Arc::new(InternalNoise::new(&built_in_noise_params::NOODLE, None)),
-                    1f64,
-                    1f64,
-                )
-                .into(),
-                -60,
-                320,
-                -1,
-            );
-
-            let function3 = vertical_range_choice(
-                Y.clone(),
-                noise_in_range(
-                    &built_in_noise_params::NOODLE_THICKNESS,
-                    1f64,
-                    1f64,
-                    -0.05f64,
-                    -0.1f64,
-                ),
-                -60,
-                320,
-                0,
-            );
-
-            let function4 = vertical_range_choice(
-                Y.clone(),
-                NoiseFunction::new(
-                    Arc::new(InternalNoise::new(
-                        &built_in_noise_params::NOODLE_RIDGE_A,
-                        None,
-                    )),
-                    2.6666666666666665f64,
-                    2.6666666666666665f64,
-                )
-                .into(),
-                -60,
-                320,
-                0,
-            );
-
-            let function5 = vertical_range_choice(
-                Y.clone(),
-                NoiseFunction::new(
-                    Arc::new(InternalNoise::new(
-                        &built_in_noise_params::NOODLE_RIDGE_B,
-                        None,
-                    )),
-                    2.6666666666666665f64,
-                    2.6666666666666665f64,
-                )
-                .into(),
-                -60,
-                320,
-                0,
-            );
-
-            let function6 = function4.abs().max(function5.abs()).mul_const(1.5f64);
-
-            RangeFunction::<
-                NoEnvironment,
-                SharedComponentReference,
-                SharedComponentReference,
-                SharedComponentReference,
-            >::new(
-                function2,
-                -1000000f64,
-                0f64,
-                ConstantFunction::new(64f64).into(),
-                function3.add(function6),
+        });
+    pub static CAVES_NOODLE_OVERWORLD: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        let function2 = vertical_range_choice(
+            Y.clone(),
+            NoiseFunction::new(
+                Arc::new(InternalNoise::new(&built_in_noise_params::NOODLE, None)),
+                1f64,
+                1f64,
             )
-            .into()
-        };
-        pub static ref CAVES_PILLARS_OVERWORLD: SharedComponentReference = {
-            let function = NoiseFunction::new(
-                Arc::new(InternalNoise::new(&built_in_noise_params::PILLAR, None)),
-                25f64,
-                0.3f64,
-            );
+            .into(),
+            -60,
+            320,
+            -1,
+        );
 
-            let function2 = noise_in_range(
-                &built_in_noise_params::PILLAR_RARENESS,
+        let function3 = vertical_range_choice(
+            Y.clone(),
+            noise_in_range(
+                &built_in_noise_params::NOODLE_THICKNESS,
                 1f64,
                 1f64,
-                0f64,
-                -2f64,
-            );
+                -0.05f64,
+                -0.1f64,
+            ),
+            -60,
+            320,
+            0,
+        );
 
-            let function3 = noise_in_range(
-                &built_in_noise_params::PILLAR_THICKNESS,
-                1f64,
-                1f64,
-                0f64,
-                1.1f64,
-            );
-
-            let function4 = function.mul_const(2f64).add(function2);
-
-            WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
-                function4.mul(function3.cube()),
-                WrapperType::OnceCache,
+        let function4 = vertical_range_choice(
+            Y.clone(),
+            NoiseFunction::new(
+                Arc::new(InternalNoise::new(
+                    &built_in_noise_params::NOODLE_RIDGE_A,
+                    None,
+                )),
+                2.6666666666666665f64,
+                2.6666666666666665f64,
             )
-            .into()
-        };
-    }
+            .into(),
+            -60,
+            320,
+            0,
+        );
+
+        let function5 = vertical_range_choice(
+            Y.clone(),
+            NoiseFunction::new(
+                Arc::new(InternalNoise::new(
+                    &built_in_noise_params::NOODLE_RIDGE_B,
+                    None,
+                )),
+                2.6666666666666665f64,
+                2.6666666666666665f64,
+            )
+            .into(),
+            -60,
+            320,
+            0,
+        );
+
+        let function6 = function4.abs().max(function5.abs()).mul_const(1.5f64);
+
+        RangeFunction::<
+            NoEnvironment,
+            SharedComponentReference,
+            SharedComponentReference,
+            SharedComponentReference,
+        >::new(
+            function2,
+            -1000000f64,
+            0f64,
+            ConstantFunction::new(64f64).into(),
+            function3.add(function6),
+        )
+        .into()
+    });
+    pub static CAVES_PILLARS_OVERWORLD: LazyLock<SharedComponentReference> = LazyLock::new(|| {
+        let function = NoiseFunction::new(
+            Arc::new(InternalNoise::new(&built_in_noise_params::PILLAR, None)),
+            25f64,
+            0.3f64,
+        );
+
+        let function2 = noise_in_range(
+            &built_in_noise_params::PILLAR_RARENESS,
+            1f64,
+            1f64,
+            0f64,
+            -2f64,
+        );
+
+        let function3 = noise_in_range(
+            &built_in_noise_params::PILLAR_THICKNESS,
+            1f64,
+            1f64,
+            0f64,
+            1.1f64,
+        );
+
+        let function4 = function.mul_const(2f64).add(function2);
+
+        WrapperFunction::<NoEnvironment, SharedComponentReference>::new(
+            function4.mul(function3.cube()),
+            WrapperType::OnceCache,
+        )
+        .into()
+    });
 }
 
 pub fn peaks_valleys_noise(variance: f32) -> f32 {

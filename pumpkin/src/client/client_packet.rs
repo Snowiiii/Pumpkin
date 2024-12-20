@@ -8,6 +8,7 @@ use crate::{
     },
     server::{Server, CURRENT_MC_VERSION},
 };
+use core::str;
 use num_traits::FromPrimitive;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::TextComponent;
@@ -28,7 +29,10 @@ use pumpkin_protocol::{
     },
     ConnectionState, KnownPack, VarInt, CURRENT_MC_PROTOCOL,
 };
-use std::sync::LazyLock;
+use std::{
+    num::{NonZeroI32, NonZeroU8},
+    sync::LazyLock,
+};
 use uuid::Uuid;
 
 static LINKS: LazyLock<Vec<Link>> = LazyLock::new(|| {
@@ -105,7 +109,7 @@ impl Client {
         self.connection_state.store(handshake.next_state);
         if self.connection_state.load() != ConnectionState::Status {
             let protocol = version;
-            match protocol.cmp(&(CURRENT_MC_PROTOCOL as i32)) {
+            match protocol.cmp(&NonZeroI32::from(CURRENT_MC_PROTOCOL).get()) {
                 std::cmp::Ordering::Less => {
                     self.kick(&format!("Client outdated ({protocol}), Server uses Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL}")).await;
                 }
@@ -131,10 +135,7 @@ impl Client {
     }
 
     fn is_valid_player_name(name: &str) -> bool {
-        name.len() <= 16
-            && name
-                .chars()
-                .all(|c| c > 32_u8 as char && c < 127_u8 as char)
+        name.len() <= 16 && name.chars().all(|c| c > 32u8 as char && c < 127u8 as char)
     }
 
     pub async fn handle_login_start(&self, server: &Server, login_start: SLoginStart) {
@@ -387,13 +388,21 @@ impl Client {
         client_information: SClientInformationConfig,
     ) {
         log::debug!("Handling client settings");
+        if client_information.view_distance <= 0 {
+            self.kick("Cannot have zero or negative view distance!")
+                .await;
+            return;
+        }
+
         if let (Some(main_hand), Some(chat_mode)) = (
             Hand::from_i32(client_information.main_hand.into()),
             ChatMode::from_i32(client_information.chat_mode.into()),
         ) {
             *self.config.lock().await = Some(PlayerConfig {
                 locale: client_information.locale,
-                view_distance: client_information.view_distance as u8,
+                view_distance: unsafe {
+                    NonZeroU8::new_unchecked(client_information.view_distance as u8)
+                },
                 chat_mode,
                 chat_colors: client_information.chat_colors,
                 skin_parts: client_information.skin_parts,
@@ -412,8 +421,8 @@ impl Client {
             || plugin_message.channel.starts_with("MC|Brand")
         {
             log::debug!("got a client brand");
-            match String::from_utf8(plugin_message.data) {
-                Ok(brand) => *self.brand.lock().await = Some(brand),
+            match str::from_utf8(&plugin_message.data) {
+                Ok(brand) => *self.brand.lock().await = Some(brand.to_string()),
                 Err(e) => self.kick(&e.to_string()).await,
             }
         }

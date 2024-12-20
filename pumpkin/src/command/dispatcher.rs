@@ -14,7 +14,6 @@ use pumpkin_core::text::color::{Color, NamedColor};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
-#[allow(dead_code)]
 pub(crate) enum CommandError {
     /// This error means that there was an error while parsing a previously consumed argument.
     /// That only happens when consumption is wrongly implemented, as it should ensure parsing may
@@ -33,11 +32,11 @@ impl CommandError {
     pub fn into_string_or_pumpkin_error(self, cmd: &str) -> Result<String, Box<dyn PumpkinError>> {
         match self {
             InvalidConsumption(s) => {
-                println!("Error while parsing command \"{cmd}\": {s:?} was consumed, but couldn't be parsed");
+                log::error!("Error while parsing command \"{cmd}\": {s:?} was consumed, but couldn't be parsed");
                 Ok("Internal Error (See logs for details)".into())
             }
             InvalidRequirement => {
-                println!("Error while parsing command \"{cmd}\": a requirement that was expected was not met.");
+                log::error!("Error while parsing command \"{cmd}\": a requirement that was expected was not met.");
                 Ok("Internal Error (See logs for details)".into())
             }
             GeneralCommandIssue(s) => Ok(s),
@@ -71,7 +70,7 @@ impl<'a> CommandDispatcher<'a> {
                 }
                 Err(pumpkin_error) => {
                     pumpkin_error.log();
-                    sender.send_message(TextComponent::text("Unknown internal error occured while running command. Please see server log").color(Color::Named(NamedColor::Red))).await;
+                    sender.send_message(TextComponent::text("Unknown internal error occurred while running command. Please see server log").color(Color::Named(NamedColor::Red))).await;
                 }
             }
         }
@@ -92,7 +91,7 @@ impl<'a> CommandDispatcher<'a> {
         let Some(key) = parts.next() else {
             return Vec::new();
         };
-        let raw_args: Vec<&str> = parts.rev().collect();
+        let mut raw_args: Vec<&str> = parts.rev().collect();
 
         let Ok(tree) = self.get_tree(key) else {
             return Vec::new();
@@ -103,15 +102,8 @@ impl<'a> CommandDispatcher<'a> {
         // try paths and collect the nodes that fail
         // todo: make this more fine-grained
         for path in tree.iter_paths() {
-            match Self::try_find_suggestions_on_path(
-                src,
-                server,
-                &path,
-                tree,
-                raw_args.clone(),
-                cmd,
-            )
-            .await
+            match Self::try_find_suggestions_on_path(src, server, &path, tree, &mut raw_args, cmd)
+                .await
             {
                 Err(InvalidConsumption(s)) => {
                     log::error!("Error while parsing command \"{cmd}\": {s:?} was consumed, but couldn't be parsed");
@@ -137,7 +129,7 @@ impl<'a> CommandDispatcher<'a> {
         }
 
         let mut suggestions = Vec::from_iter(suggestions);
-        suggestions.sort_by(|a, b| a.suggestion.cmp(&b.suggestion));
+        suggestions.sort_by(|a, b| a.suggestion.cmp(b.suggestion));
         suggestions
     }
 
@@ -159,7 +151,7 @@ impl<'a> CommandDispatcher<'a> {
 
         // try paths until fitting path is found
         for path in tree.iter_paths() {
-            if Self::try_is_fitting_path(src, server, &path, tree, raw_args.clone()).await? {
+            if Self::try_is_fitting_path(src, server, &path, tree, &mut raw_args.clone()).await? {
                 return Ok(());
             }
         }
@@ -193,7 +185,7 @@ impl<'a> CommandDispatcher<'a> {
         server: &'a Server,
         path: &[usize],
         tree: &CommandTree<'a>,
-        mut raw_args: RawArgs<'a>,
+        raw_args: &mut RawArgs<'a>,
     ) -> Result<bool, CommandError> {
         let mut parsed_args: ConsumedArgs = HashMap::new();
 
@@ -213,7 +205,7 @@ impl<'a> CommandDispatcher<'a> {
                     }
                 }
                 NodeType::Argument { consumer, name, .. } => {
-                    match consumer.consume(src, server, &mut raw_args).await {
+                    match consumer.consume(src, server, raw_args).await {
                         Some(consumed) => {
                             parsed_args.insert(name, consumed);
                         }
@@ -236,7 +228,7 @@ impl<'a> CommandDispatcher<'a> {
         server: &'a Server,
         path: &[usize],
         tree: &CommandTree<'a>,
-        mut raw_args: RawArgs<'a>,
+        raw_args: &mut RawArgs<'a>,
         input: &'a str,
     ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
         let mut parsed_args: ConsumedArgs = HashMap::new();
@@ -252,7 +244,7 @@ impl<'a> CommandDispatcher<'a> {
                     }
                 }
                 NodeType::Argument { consumer, name } => {
-                    match consumer.consume(src, server, &mut raw_args).await {
+                    match consumer.consume(src, server, raw_args).await {
                         Some(consumed) => {
                             parsed_args.insert(name, consumed);
                         }

@@ -1,7 +1,11 @@
+use bytes::Bytes;
 use num_derive::FromPrimitive;
 use pumpkin_macros::server_packet;
 
-use crate::{bytebuf::DeserializerError, ServerPacket, VarInt};
+use crate::{
+    bytebuf::{ByteBuf, ReadingError},
+    ServerPacket, VarInt,
+};
 
 #[server_packet("play:player_command")]
 pub struct SPlayerCommand {
@@ -23,11 +27,11 @@ pub enum Action {
 }
 
 impl ServerPacket for SPlayerCommand {
-    fn read(bytebuf: &mut crate::bytebuf::ByteBuffer) -> Result<Self, DeserializerError> {
+    fn read(bytebuf: &mut Bytes) -> Result<Self, ReadingError> {
         Ok(Self {
-            entity_id: bytebuf.get_var_int()?,
-            action: bytebuf.get_var_int()?,
-            jump_boost: bytebuf.get_var_int()?,
+            entity_id: bytebuf.try_get_var_int()?,
+            action: bytebuf.try_get_var_int()?,
+            jump_boost: bytebuf.try_get_var_int()?,
         })
     }
 }

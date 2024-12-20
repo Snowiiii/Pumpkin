@@ -43,9 +43,6 @@ impl PlayerInventory {
     }
     /// Set the contents of an item in a slot
     ///
-    /// ## Slot
-    /// The slot according to https://wiki.vg/Inventory#Player_Inventory
-    ///
     /// ## Item
     /// The optional item to place in the slot
     ///

@@ -1,6 +1,5 @@
 use crate::entity::player::Player;
 use crate::server::Server;
-use itertools::Itertools;
 use pumpkin_core::text::TextComponent;
 use pumpkin_core::GameMode;
 use pumpkin_inventory::container_click::{
@@ -59,11 +58,11 @@ impl Player {
 
         let container = OptionallyCombinedContainer::new(&mut inventory, container);
 
-        let slots = container
+        let slots: Vec<Slot> = container
             .all_slots_ref()
             .into_iter()
             .map(Slot::from)
-            .collect_vec();
+            .collect();
 
         let carried_item = self
             .carried_item
@@ -135,15 +134,7 @@ impl Player {
             return Err(InventoryError::ClosedContainerInteract(self.entity_id()));
         }
 
-        let click = Click::new(
-            packet
-                .mode
-                .0
-                .try_into()
-                .expect("Mode can only be between 0-6"),
-            packet.button,
-            packet.slot,
-        )?;
+        let click = Click::new(packet.mode, packet.button, packet.slot)?;
         let (crafted_item, crafted_item_slot) = {
             let mut inventory = self.inventory().lock().await;
             let combined =
@@ -179,6 +170,9 @@ impl Player {
             if combined.crafted_item_slot().is_none() && crafted_item.is_some() {
                 combined.recipe_used();
             }
+
+            // TODO: `combined.craft` uses rayon! It should be called from `rayon::spawn` and its
+            // result passed to the tokio runtime via a channel!
             if combined.craft() {
                 drop(inventory);
                 self.set_container_content(opened_container.as_deref_mut())
@@ -311,15 +305,9 @@ impl Player {
                     let find_condition = |(slot_number, slot): (usize, &mut Option<ItemStack>)| {
                         // TODO: Check for max item count here
                         match slot {
-                            Some(item) => {
-                                if item.item_id == item_in_pressed_slot.item_id
-                                    && item.item_count != 64
-                                {
-                                    Some(slot_number)
-                                } else {
-                                    None
-                                }
-                            }
+                            Some(item) => (item.item_id == item_in_pressed_slot.item_id
+                                && item.item_count != 64)
+                                .then_some(slot_number),
                             None => Some(slot_number),
                         }
                     };
@@ -465,7 +453,7 @@ impl Player {
     }
 
     async fn get_current_players_in_container(&self, server: &Server) -> Vec<Arc<Self>> {
-        let player_ids = {
+        let player_ids: Vec<i32> = {
             let open_containers = server.open_containers.read().await;
             open_containers
                 .get(&self.open_container.load().unwrap())
@@ -473,7 +461,7 @@ impl Player {
                 .all_player_ids()
                 .into_iter()
                 .filter(|player_id| *player_id != self.entity_id())
-                .collect_vec()
+                .collect()
         };
         let player_token = self.gameprofile.id;
 
@@ -493,14 +481,10 @@ impl Player {
                     None
                 } else {
                     let entity_id = player.entity_id();
-                    if player_ids.contains(&entity_id) {
-                        Some(player.clone())
-                    } else {
-                        None
-                    }
+                    player_ids.contains(&entity_id).then(|| player.clone())
                 }
             })
-            .collect_vec();
+            .collect();
         players
     }
 
@@ -557,13 +541,11 @@ impl Player {
         let slots = inventory.slots_with_hotbar_first();
 
         let matching_slots = slots.filter_map(|slot| {
-            if let Some(item_slot) = slot.as_ref() {
-                if item_slot.item_id == item.id && item_slot.item_count < max_stack {
+            if let Some(item_slot) = slot.as_mut() {
+                (item_slot.item_id == item.id && item_slot.item_count < max_stack).then(|| {
                     let item_count = item_slot.item_count;
-                    Some((slot, item_count))
-                } else {
-                    None
-                }
+                    (item_slot, item_count)
+                })
             } else {
                 None
             }
@@ -576,15 +558,15 @@ impl Player {
             let amount_to_add = max_stack - item_count;
             if let Some(amount_left) = amount.checked_sub(u32::from(amount_to_add)) {
                 amount = amount_left;
-                *slot = Some(ItemStack {
+                *slot = ItemStack {
                     item_id: item.id,
                     item_count: item.components.max_stack_size,
-                });
+                };
             } else {
-                *slot = Some(ItemStack {
+                *slot = ItemStack {
                     item_id: item.id,
                     item_count: max_stack - (amount_to_add - amount as u8),
-                });
+                };
                 return;
             }
         }

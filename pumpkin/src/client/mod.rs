@@ -1,6 +1,7 @@
 use std::{
     collections::VecDeque,
     net::SocketAddr,
+    num::NonZeroU8,
     sync::{
         atomic::{AtomicBool, AtomicI32},
         Arc,
@@ -17,7 +18,7 @@ use crossbeam::atomic::AtomicCell;
 use pumpkin_config::compression::CompressionInfo;
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
-    bytebuf::{packet_id::Packet, DeserializerError},
+    bytebuf::{packet_id::Packet, ReadingError},
     client::{config::CConfigDisconnect, login::CLoginDisconnect, play::CPlayDisconnect},
     packet_decoder::PacketDecoder,
     packet_encoder::{PacketEncodeError, PacketEncoder},
@@ -53,7 +54,7 @@ pub struct PlayerConfig {
     /// The player's preferred language.
     pub locale: String, // 16
     /// The maximum distance at which chunks are rendered.
-    pub view_distance: u8,
+    pub view_distance: NonZeroU8,
     /// The player's chat mode settings
     pub chat_mode: ChatMode,
     /// Whether chat colors are enabled.
@@ -72,11 +73,11 @@ impl Default for PlayerConfig {
     fn default() -> Self {
         Self {
             locale: "en_us".to_string(),
-            view_distance: 2,
+            view_distance: unsafe { NonZeroU8::new_unchecked(10) },
             chat_mode: ChatMode::Enabled,
             chat_colors: true,
             skin_parts: 0,
-            main_hand: Hand::Main,
+            main_hand: Hand::Right,
             text_filtering: false,
             server_listing: false,
         }
@@ -216,17 +217,19 @@ impl Client {
     pub async fn send_packet<P: ClientPacket>(&self, packet: &P) {
         //log::debug!("Sending packet with id {} to {}", P::PACKET_ID, self.id);
         // assert!(!self.closed);
+        if self.closed.load(std::sync::atomic::Ordering::Relaxed) {
+            return;
+        }
+
         let mut enc = self.enc.lock().await;
         if let Err(error) = enc.append_packet(packet) {
-            if error.kickable() {
-                self.kick(&error.to_string()).await;
-            }
+            self.kick(&error.to_string()).await;
             return;
         }
 
         let mut writer = self.connection_writer.lock().await;
         if let Err(error) = writer.write_all(&enc.take()).await {
-            log::debug!("{}", error.to_string());
+            log::debug!("Unable to write to connection: {}", error.to_string());
         }
 
         /*
@@ -341,7 +344,7 @@ impl Client {
         &self,
         server: &Arc<Server>,
         packet: &mut RawPacket,
-    ) -> Result<(), DeserializerError> {
+    ) -> Result<(), ReadingError> {
         match self.connection_state.load() {
             pumpkin_protocol::ConnectionState::HandShake => {
                 self.handle_handshake_packet(packet).await
@@ -364,10 +367,7 @@ impl Client {
         }
     }
 
-    async fn handle_handshake_packet(
-        &self,
-        packet: &mut RawPacket,
-    ) -> Result<(), DeserializerError> {
+    async fn handle_handshake_packet(&self, packet: &mut RawPacket) -> Result<(), ReadingError> {
         log::debug!("Handling handshake group");
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
@@ -388,7 +388,7 @@ impl Client {
         &self,
         server: &Arc<Server>,
         packet: &mut RawPacket,
-    ) -> Result<(), DeserializerError> {
+    ) -> Result<(), ReadingError> {
         log::debug!("Handling status group");
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
@@ -404,7 +404,6 @@ impl Client {
                     "Failed to handle client packet id {} in Status State",
                     packet.id.0
                 );
-                return Err(DeserializerError::UnknownPacket);
             }
         };
 
@@ -415,7 +414,7 @@ impl Client {
         &self,
         server: &Arc<Server>,
         packet: &mut RawPacket,
-    ) -> Result<(), DeserializerError> {
+    ) -> Result<(), ReadingError> {
         log::debug!("Handling login group for id");
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
@@ -442,7 +441,6 @@ impl Client {
                     "Failed to handle client packet id {} in Login State",
                     packet.id.0
                 );
-                return Ok(());
             }
         };
         Ok(())
@@ -452,7 +450,7 @@ impl Client {
         &self,
         server: &Arc<Server>,
         packet: &mut RawPacket,
-    ) -> Result<(), DeserializerError> {
+    ) -> Result<(), ReadingError> {
         log::debug!("Handling config group");
         let bytebuf = &mut packet.bytebuf;
         match packet.id.0 {
@@ -479,7 +477,6 @@ impl Client {
                     "Failed to handle client packet id {} in Config State",
                     packet.id.0
                 );
-                return Err(DeserializerError::UnknownPacket);
             }
         };
         Ok(())

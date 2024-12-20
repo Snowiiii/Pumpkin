@@ -1,13 +1,15 @@
+use std::num::NonZeroU8;
+
 use pumpkin_core::math::vector2::Vector2;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Cylindrical {
     pub center: Vector2<i32>,
-    pub view_distance: u8,
+    pub view_distance: NonZeroU8,
 }
 
 impl Cylindrical {
-    pub fn new(center: Vector2<i32>, view_distance: u8) -> Self {
+    pub fn new(center: Vector2<i32>, view_distance: NonZeroU8) -> Self {
         Self {
             center,
             view_distance,
@@ -20,44 +22,35 @@ impl Cylindrical {
         mut newly_included: impl FnMut(Vector2<i32>),
         mut just_removed: impl FnMut(Vector2<i32>),
     ) {
-        let min_x = old_cylindrical.left().min(new_cylindrical.left());
-        let max_x = old_cylindrical.right().max(new_cylindrical.right());
-        let min_z = old_cylindrical.bottom().min(new_cylindrical.bottom());
-        let max_z = old_cylindrical.top().max(new_cylindrical.top());
+        for new_cylindrical_chunk in new_cylindrical.all_chunks_within() {
+            if !old_cylindrical.is_within_distance(new_cylindrical_chunk.x, new_cylindrical_chunk.z)
+            {
+                newly_included(new_cylindrical_chunk);
+            }
+        }
 
-        //log::debug!("{:?} {:?}", old_cylindrical, new_cylindrical);
-        for x in min_x..=max_x {
-            for z in min_z..=max_z {
-                let old_is_within = old_cylindrical.is_within_distance(x, z);
-                let new_is_within = new_cylindrical.is_within_distance(x, z);
-
-                //log::debug!("{}, {}: {} {}", x, z, old_is_within, new_is_within);
-
-                if old_is_within != new_is_within {
-                    if new_is_within {
-                        newly_included(Vector2::new(x, z));
-                    } else {
-                        just_removed(Vector2::new(x, z));
-                    }
-                }
+        for old_cylindrical_chunk in old_cylindrical.all_chunks_within() {
+            if !new_cylindrical.is_within_distance(old_cylindrical_chunk.x, old_cylindrical_chunk.z)
+            {
+                just_removed(old_cylindrical_chunk);
             }
         }
     }
 
     fn left(&self) -> i32 {
-        self.center.x - self.view_distance as i32 - 1
+        self.center.x - self.view_distance.get() as i32 - 1
     }
 
     fn bottom(&self) -> i32 {
-        self.center.z - self.view_distance as i32 - 1
+        self.center.z - self.view_distance.get() as i32 - 1
     }
 
     fn right(&self) -> i32 {
-        self.center.x + self.view_distance as i32 + 1
+        self.center.x + self.view_distance.get() as i32 + 1
     }
 
     fn top(&self) -> i32 {
-        self.center.z + self.view_distance as i32 + 1
+        self.center.z + self.view_distance.get() as i32 + 1
     }
 
     fn is_within_distance(&self, x: i32, z: i32) -> bool {
@@ -68,7 +61,7 @@ impl Cylindrical {
         let min_leg = rel_x.min(rel_z) as i64;
 
         let hyp_sqr = max_leg * max_leg + min_leg * min_leg;
-        hyp_sqr < (self.view_distance as i64 * self.view_distance as i64)
+        hyp_sqr < (self.view_distance.get() as i64 * self.view_distance.get() as i64)
     }
 
     /// Returns an iterator of all chunks within this cylinder
@@ -80,6 +73,7 @@ impl Cylindrical {
                 all_chunks.push(Vector2::new(x, z));
             }
         }
+
         all_chunks
             .into_iter()
             .filter(|chunk| self.is_within_distance(chunk.x, chunk.z))
@@ -90,12 +84,14 @@ impl Cylindrical {
 #[cfg(test)]
 mod test {
 
+    use std::num::NonZeroU8;
+
     use super::Cylindrical;
     use pumpkin_core::math::vector2::Vector2;
 
     #[test]
     fn test_bounds() {
-        let cylinder = Cylindrical::new(Vector2::new(0, 0), 10);
+        let cylinder = Cylindrical::new(Vector2::new(0, 0), unsafe { NonZeroU8::new_unchecked(1) });
         for chunk in cylinder.all_chunks_within() {
             assert!(chunk.x >= cylinder.left() && chunk.x <= cylinder.right());
             assert!(chunk.z >= cylinder.bottom() && chunk.z <= cylinder.top());

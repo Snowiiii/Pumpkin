@@ -1,6 +1,9 @@
-use bytebuf::{packet_id::Packet, ByteBuffer, DeserializerError};
+use std::num::NonZeroU16;
+
+use bytebuf::{packet_id::Packet, ReadingError};
+use bytes::{Bytes, BytesMut};
 use pumpkin_core::text::{style::Style, TextComponent};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 
 pub mod bytebuf;
 pub mod client;
@@ -18,7 +21,7 @@ pub use var_long::*;
 
 /// To current Minecraft protocol
 /// Don't forget to change this when porting
-pub const CURRENT_MC_PROTOCOL: u32 = 768;
+pub const CURRENT_MC_PROTOCOL: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(769) };
 
 pub const MAX_PACKET_SIZE: i32 = 2097152;
 
@@ -29,6 +32,16 @@ pub type VarLongType = i64;
 pub type FixedBitSet = bytes::Bytes;
 
 pub struct BitSet<'a>(pub VarInt, pub &'a [i64]);
+
+impl Serialize for BitSet<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // TODO: make this right
+        (&self.0, self.1).serialize(serializer)
+    }
+}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ConnectionState {
@@ -82,15 +95,15 @@ pub struct SoundEvent {
 
 pub struct RawPacket {
     pub id: VarInt,
-    pub bytebuf: ByteBuffer,
+    pub bytebuf: Bytes,
 }
 
 pub trait ClientPacket: Packet {
-    fn write(&self, bytebuf: &mut ByteBuffer);
+    fn write(&self, bytebuf: &mut BytesMut);
 }
 
 pub trait ServerPacket: Packet + Sized {
-    fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError>;
+    fn read(bytebuf: &mut Bytes) -> Result<Self, ReadingError>;
 }
 
 #[derive(Serialize)]
@@ -108,7 +121,7 @@ pub struct StatusResponse {
 }
 #[derive(Serialize)]
 pub struct Version {
-    /// The current name of the Version (e.g. 1.21.3)
+    /// The current name of the Version (e.g. 1.21.4)
     pub name: String,
     /// The current Protocol Version (e.g. 767)
     pub protocol: u32,

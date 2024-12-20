@@ -115,7 +115,7 @@ impl TerrainGenerator for TestTerrainGenerator {
         let entry = self.chunks.entry(*at);
         match entry {
             Entry::Vacant(entry) => {
-                let mut proto_chunk = ProtoChunk::new(*at, self.seed.0 as u64);
+                let mut proto_chunk = ProtoChunk::new(*at, self.seed.0);
                 //let inst = std::time::Instant::now();
                 //println!("Populating chunk: {:?}", at);
                 proto_chunk.populate_noise();

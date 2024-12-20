@@ -1,6 +1,6 @@
 use log::log;
 use pumpkin_inventory::InventoryError;
-use pumpkin_protocol::bytebuf::DeserializerError;
+use pumpkin_protocol::bytebuf::ReadingError;
 use std::fmt::Display;
 
 pub trait PumpkinError: Send + std::error::Error + Display {
@@ -52,7 +52,7 @@ impl PumpkinError for InventoryError {
     }
 }
 
-impl PumpkinError for DeserializerError {
+impl PumpkinError for ReadingError {
     fn is_kick(&self) -> bool {
         true
     }

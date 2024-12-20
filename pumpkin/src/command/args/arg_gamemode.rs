@@ -65,7 +65,7 @@ impl DefaultNameArgConsumer for GamemodeArgumentConsumer {
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &GamemodeArgumentConsumer
+        &Self
     }
 }
 

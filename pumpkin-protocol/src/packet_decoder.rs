@@ -1,15 +1,15 @@
 use aes::cipher::{generic_array::GenericArray, BlockDecryptMut, BlockSizeUser, KeyIvInit};
-use bytes::{Buf, BytesMut};
+use bytes::{Buf, Bytes, BytesMut};
 use libdeflater::{DecompressionError, Decompressor};
 use thiserror::Error;
 
-use crate::{bytebuf::ByteBuffer, RawPacket, VarInt, VarIntDecodeError, MAX_PACKET_SIZE};
+use crate::{RawPacket, VarInt, VarIntDecodeError, MAX_PACKET_SIZE};
 
 type Cipher = cfb8::Decryptor<aes::Aes128>;
 
 // Decoder: Client -> Server
 // Supports ZLib decoding/decompression
-// Supports Aes128 Encyption
+// Supports Aes128 Encryption
 pub struct PacketDecoder {
     buf: BytesMut,
     decompress_buf: BytesMut,
@@ -36,11 +36,12 @@ impl PacketDecoder {
     pub fn decode(&mut self) -> Result<Option<RawPacket>, PacketDecodeError> {
         let mut r = &self.buf[..];
 
-        let packet_len = match VarInt::decode_partial(&mut r) {
+        let packet_len = match VarInt::decode(&mut r) {
             Ok(len) => len,
             Err(VarIntDecodeError::Incomplete) => return Ok(None),
             Err(VarIntDecodeError::TooLarge) => Err(PacketDecodeError::MalformedLength)?,
         };
+        let packet_len = packet_len.0;
 
         if !(0..=MAX_PACKET_SIZE).contains(&packet_len) {
             Err(PacketDecodeError::OutOfBounds)?
@@ -112,29 +113,24 @@ impl PacketDecoder {
         data.advance(data.len() - r.len());
         Ok(Some(RawPacket {
             id: packet_id,
-            bytebuf: ByteBuffer::new(data),
+            bytebuf: Bytes::from(data),
         }))
     }
 
     pub fn set_encryption(&mut self, key: Option<&[u8; 16]>) {
         if let Some(key) = key {
             assert!(self.cipher.is_none(), "encryption is already enabled");
-
             let mut cipher = Cipher::new_from_slices(key, key).expect("invalid key");
-
             // Don't forget to decrypt the data we already have.
-
             Self::decrypt_bytes(&mut cipher, &mut self.buf);
-
             self.cipher = Some(cipher);
         } else {
             assert!(self.cipher.is_some(), "encryption is already disabled");
-
             self.cipher = None;
         }
     }
 
-    /// Sets ZLib Deompression
+    /// Sets ZLib Decompression
     pub fn set_compression(&mut self, compression: bool) {
         self.compression = compression;
     }
@@ -182,10 +178,6 @@ impl PacketDecoder {
 pub enum PacketDecodeError {
     #[error("failed to decode packet ID")]
     DecodeID,
-    #[error("failed to write into decoder: {0}")]
-    FailedWrite(String),
-    #[error("failed to flush decoder")]
-    FailedFinish,
     #[error("packet exceeds maximum length")]
     TooLong,
     #[error("packet length is out of bounds")]
@@ -204,12 +196,14 @@ impl From<DecompressionError> for PacketDecodeError {
 
 #[cfg(test)]
 mod tests {
+    use crate::bytebuf::ByteBufMut;
+
     use super::*;
     use aes::Aes128;
+    use bytes::BufMut;
     use cfb8::cipher::AsyncStreamCipher;
     use cfb8::Encryptor as Cfb8Encryptor;
     use libdeflater::{CompressionLvl, Compressor};
-    use std::io::Cursor;
 
     /// Helper function to compress data using libdeflater's Zlib compressor
     fn compress_zlib(data: &[u8]) -> Vec<u8> {
@@ -223,11 +217,9 @@ mod tests {
     }
 
     /// Helper function to encrypt data using AES-128 CFB-8 mode
-    fn encrypt_aes128(data: &[u8], key: &[u8; 16], iv: &[u8; 16]) -> Vec<u8> {
+    fn encrypt_aes128(data: &mut [u8], key: &[u8; 16], iv: &[u8; 16]) {
         let encryptor = Cfb8Encryptor::<Aes128>::new_from_slices(key, iv).expect("Invalid key/iv");
-        let mut encrypted = data.to_vec();
-        encryptor.encrypt(&mut encrypted);
-        encrypted
+        encryptor.encrypt(data);
     }
 
     /// Helper function to build a packet with optional compression and encryption
@@ -238,18 +230,18 @@ mod tests {
         key: Option<&[u8; 16]>,
         iv: Option<&[u8; 16]>,
     ) -> Vec<u8> {
-        let mut buffer = ByteBuffer::empty();
+        let mut buffer = BytesMut::new();
 
         if compress {
             // Create a buffer that includes packet_id_varint and payload
-            let mut data_to_compress = ByteBuffer::empty();
+            let mut data_to_compress = BytesMut::new();
             let packet_id_varint = VarInt(packet_id);
             data_to_compress.put_var_int(&packet_id_varint);
             data_to_compress.put_slice(payload);
 
             // Compress the combined data
-            let compressed_payload = compress_zlib(data_to_compress.buf());
-            let data_len = data_to_compress.buf().len() as i32; // 1 + payload.len()
+            let compressed_payload = compress_zlib(&data_to_compress);
+            let data_len = data_to_compress.len() as i32; // 1 + payload.len()
             let data_len_varint = VarInt(data_len);
             buffer.put_var_int(&data_len_varint);
             buffer.put_slice(&compressed_payload);
@@ -261,24 +253,22 @@ mod tests {
         }
 
         // Calculate packet length: length of buffer
-        let packet_len = buffer.buf().len() as i32;
+        let packet_len = buffer.len() as i32;
         let packet_len_varint = VarInt(packet_len);
         let mut packet_length_encoded = Vec::new();
         {
-            let mut cursor = Cursor::new(&mut packet_length_encoded);
-            packet_len_varint
-                .encode(&mut cursor)
-                .expect("VarInt encoding failed");
+            packet_len_varint.encode(&mut packet_length_encoded);
         }
 
         // Create a new buffer for the entire packet
         let mut packet = Vec::new();
         packet.extend_from_slice(&packet_length_encoded);
-        packet.extend_from_slice(buffer.buf());
+        packet.extend_from_slice(&buffer);
 
         // Encrypt if key and iv are provided
         if let (Some(k), Some(v)) = (key, iv) {
-            encrypt_aes128(&packet, k, v)
+            encrypt_aes128(&mut packet, k, v);
+            packet
         } else {
             packet
         }
@@ -305,9 +295,9 @@ mod tests {
         let result = decoder.decode().expect("Decoding failed");
         assert!(result.is_some());
 
-        let mut raw_packet = result.unwrap();
+        let raw_packet = result.unwrap();
         assert_eq!(raw_packet.id.0, packet_id);
-        assert_eq!(raw_packet.bytebuf.buf().as_ref(), payload);
+        assert_eq!(raw_packet.bytebuf.as_ref(), payload);
     }
 
     /// Test decoding with compression
@@ -331,9 +321,9 @@ mod tests {
         let result = decoder.decode().expect("Decoding failed");
         assert!(result.is_some());
 
-        let mut raw_packet = result.unwrap();
+        let raw_packet = result.unwrap();
         assert_eq!(raw_packet.id.0, packet_id);
-        assert_eq!(raw_packet.bytebuf.buf().as_ref(), payload);
+        assert_eq!(raw_packet.bytebuf.as_ref(), payload);
     }
 
     /// Test decoding with encryption
@@ -362,9 +352,9 @@ mod tests {
         let result = decoder.decode().expect("Decoding failed");
         assert!(result.is_some());
 
-        let mut raw_packet = result.unwrap();
+        let raw_packet = result.unwrap();
         assert_eq!(raw_packet.id.0, packet_id);
-        assert_eq!(raw_packet.bytebuf.buf().as_ref(), payload);
+        assert_eq!(raw_packet.bytebuf.as_ref(), payload);
     }
 
     /// Test decoding with both compression and encryption
@@ -393,9 +383,9 @@ mod tests {
         let result = decoder.decode().expect("Decoding failed");
         assert!(result.is_some());
 
-        let mut raw_packet = result.unwrap();
+        let raw_packet = result.unwrap();
         assert_eq!(raw_packet.id.0, packet_id);
-        assert_eq!(raw_packet.bytebuf.buf().as_ref(), payload);
+        assert_eq!(raw_packet.bytebuf.as_ref(), payload);
     }
 
     /// Test decoding with invalid compressed data
@@ -406,21 +396,21 @@ mod tests {
         let invalid_compressed_data = vec![0xFF, 0xFF, 0xFF]; // Invalid Zlib data
 
         // Build the packet with compression enabled but invalid compressed data
-        let mut buffer = ByteBuffer::empty();
+        let mut buffer = BytesMut::new();
         let data_len_varint = VarInt(data_len);
         buffer.put_var_int(&data_len_varint);
         buffer.put_slice(&invalid_compressed_data);
 
         // Calculate packet length: VarInt(data_len) + invalid compressed data
-        let packet_len = buffer.buf().len() as i32;
+        let packet_len = buffer.len() as i32;
         let packet_len_varint = VarInt(packet_len);
 
         // Create a new buffer for the entire packet
-        let mut packet_buffer = ByteBuffer::empty();
+        let mut packet_buffer = BytesMut::new();
         packet_buffer.put_var_int(&packet_len_varint);
-        packet_buffer.put_slice(buffer.buf());
+        packet_buffer.put_slice(&buffer);
 
-        let packet_bytes = packet_buffer.buf().to_vec();
+        let packet_bytes = packet_buffer;
 
         // Initialize the decoder with compression enabled
         let mut decoder = PacketDecoder::default();
@@ -458,9 +448,9 @@ mod tests {
         let result = decoder.decode().expect("Decoding failed");
         assert!(result.is_some());
 
-        let mut raw_packet = result.unwrap();
+        let raw_packet = result.unwrap();
         assert_eq!(raw_packet.id.0, packet_id);
-        assert_eq!(raw_packet.bytebuf.buf().as_ref(), payload);
+        assert_eq!(raw_packet.bytebuf.as_ref(), payload);
     }
 
     /// Test decoding with maximum length packet
@@ -492,13 +482,13 @@ mod tests {
             "Decoder returned None when it should have decoded a packet"
         );
 
-        let mut raw_packet = result.unwrap();
+        let raw_packet = result.unwrap();
         assert_eq!(
             raw_packet.id.0, packet_id,
             "Decoded packet_id does not match"
         );
         assert_eq!(
-            raw_packet.bytebuf.buf().as_ref(),
+            raw_packet.bytebuf.as_ref(),
             &payload[..],
             "Decoded payload does not match"
         );

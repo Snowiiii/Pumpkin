@@ -1,29 +1,23 @@
-use std::{
-    collections::{hash_map::Entry, HashMap, VecDeque},
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
 pub mod level_time;
 pub mod player_chunker;
 
 use crate::{
     command::client_cmd_suggestions,
-    entity::{
-        player::{ChunkHandleWrapper, Player},
-        Entity,
-    },
+    entity::{player::Player, Entity},
     error::PumpkinError,
     plugin::types::player::{PlayerEvent, PlayerEventAction},
     server::Server,
     PLUGIN_MANAGER,
 };
-use itertools::Itertools;
 use level_time::LevelTime;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
+use pumpkin_protocol::client::play::CLevelEvent;
 use pumpkin_protocol::{
     client::play::{CBlockUpdate, CRespawn, CSoundEffect, CWorldEvent},
     SoundCategory,
@@ -49,8 +43,8 @@ use scoreboard::Scoreboard;
 use thiserror::Error;
 use tokio::sync::{mpsc::Receiver, Mutex};
 use tokio::{
+    runtime::Handle,
     sync::{mpsc, RwLock},
-    task::JoinHandle,
 };
 use worldborder::Worldborder;
 
@@ -58,11 +52,6 @@ pub mod bossbar;
 pub mod custom_bossbar;
 pub mod scoreboard;
 pub mod worldborder;
-
-type ChunkReceiver = (
-    Vec<(Vector2<i32>, JoinHandle<()>)>,
-    Receiver<Arc<RwLock<ChunkData>>>,
-);
 
 #[derive(Debug, Error)]
 pub enum GetBlockError {
@@ -162,21 +151,41 @@ impl World {
         &self,
         sound_id: u16,
         category: SoundCategory,
-        posistion: &Vector3<f64>,
+        position: &Vector3<f64>,
     ) {
         let seed = thread_rng().gen::<f64>();
         self.broadcast_packet_all(&CSoundEffect::new(
             VarInt(i32::from(sound_id)),
             None,
             category,
-            posistion.x,
-            posistion.y,
-            posistion.z,
+            position.x,
+            position.y,
+            position.z,
             1.0,
             1.0,
             seed,
         ))
         .await;
+    }
+
+    pub async fn play_block_sound(&self, sound_id: u16, position: WorldPosition) {
+        let new_vec = Vector3::new(
+            f64::from(position.0.x) + 0.5,
+            f64::from(position.0.y) + 0.5,
+            f64::from(position.0.z) + 0.5,
+        );
+        self.play_sound(sound_id, SoundCategory::Blocks, &new_vec)
+            .await;
+    }
+
+    pub async fn play_record(&self, record_id: i32, position: WorldPosition) {
+        self.broadcast_packet_all(&CLevelEvent::new(1010, position, record_id, false))
+            .await;
+    }
+
+    pub async fn stop_record(&self, position: WorldPosition) {
+        self.broadcast_packet_all(&CLevelEvent::new(1011, position, 0, false))
+            .await;
     }
 
     pub async fn tick(&self) {
@@ -216,11 +225,7 @@ impl World {
         server: &Server,
     ) {
         let command_dispatcher = &server.command_dispatcher;
-        let dimensions = &server
-            .dimensions
-            .iter()
-            .map(DimensionType::name)
-            .collect_vec();
+        let dimensions: Vec<&str> = server.dimensions.iter().map(DimensionType::name).collect();
 
         // This code follows the vanilla packet order
         let entity_id = player.entity_id();
@@ -237,10 +242,10 @@ impl World {
             .send_packet(&CLogin::new(
                 entity_id,
                 base_config.hardcore,
-                dimensions,
+                &dimensions,
                 base_config.max_players.into(),
-                base_config.view_distance.into(), //  TODO: view distance
-                base_config.simulation_distance.into(), // TODO: sim view dinstance
+                base_config.view_distance.get().into(), //  TODO: view distance
+                base_config.simulation_distance.get().into(), // TODO: sim view dinstance
                 false,
                 true,
                 false,
@@ -272,7 +277,7 @@ impl World {
         position.y = f64::from(top + 1);
 
         log::debug!("Sending player teleport to {}", player.gameprofile.name);
-        player.teleport(position, yaw, pitch).await;
+        player.request_teleport(position, yaw, pitch).await;
 
         player.living_entity.last_pos.store(position);
 
@@ -294,6 +299,7 @@ impl World {
             }],
         ))
         .await;
+        player.update_client_information().await;
 
         // here we send all the infos of already joined players
         let mut entries = Vec::new();
@@ -320,7 +326,7 @@ impl World {
                 .client
                 .send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries))
                 .await;
-        }
+        };
 
         let gameprofile = &player.gameprofile;
 
@@ -402,8 +408,11 @@ impl World {
             .init_client(&player.client)
             .await;
 
+        // Sends initial time
+        player.send_time(self).await;
+
         // Spawn in initial chunks
-        player_chunker::player_join(self, player.clone()).await;
+        player_chunker::player_join(&player).await;
 
         // if let Some(bossbars) = self..lock().await.get_player_bars(&player.gameprofile.id) {
         //     for bossbar in bossbars {
@@ -443,7 +452,7 @@ impl World {
             .await;
 
         log::debug!("Sending player abilities to {}", player.gameprofile.name);
-        player.send_abilties_update().await;
+        player.send_abilities_update().await;
 
         player.send_permission_lvl_update().await;
 
@@ -458,7 +467,7 @@ impl World {
         position.y = f64::from(top + 1);
 
         log::debug!("Sending player teleport to {}", player.gameprofile.name);
-        player.teleport(position, yaw, pitch).await;
+        player.request_teleport(position, yaw, pitch).await;
 
         player.living_entity.last_pos.store(position);
 
@@ -505,7 +514,7 @@ impl World {
         )
         .await;
 
-        player_chunker::player_join(self, player.clone()).await;
+        player_chunker::player_join(player).await;
         self.broadcast_packet_all(&entity_metadata_packet).await;
         // update commands
 
@@ -514,6 +523,10 @@ impl World {
 
     pub fn mark_chunks_as_not_watched(&self, chunks: &[Vector2<i32>]) -> Vec<Vector2<i32>> {
         self.level.mark_chunks_as_not_watched(chunks)
+    }
+
+    pub fn mark_chunks_as_watched(&self, chunks: &[Vector2<i32>]) {
+        self.level.mark_chunks_as_newly_watched(chunks);
     }
 
     pub fn clean_chunks(&self, chunks: &[Vector2<i32>]) {
@@ -528,9 +541,13 @@ impl World {
         self.level.loaded_chunk_count()
     }
 
-    #[expect(clippy::too_many_lines)]
     /// IMPORTANT: Chunks have to be non-empty
-    fn spawn_world_chunks(&self, player: Arc<Player>, chunks: &[Vector2<i32>]) {
+    fn spawn_world_chunks(
+        &self,
+        player: Arc<Player>,
+        chunks: Vec<Vector2<i32>>,
+        center_chunk: Vector2<i32>,
+    ) {
         if player
             .client
             .closed
@@ -541,53 +558,27 @@ impl World {
         }
         #[cfg(debug_assertions)]
         let inst = std::time::Instant::now();
-        // Unique id of this chunk batch for later removal
-        let id = uuid::Uuid::new_v4();
 
-        let (pending, mut receiver) = self.receive_chunks(chunks);
-        {
-            let mut pending_chunks = player.pending_chunks.lock();
+        // Sort such that the first chunks are closest to the center
+        let mut chunks = chunks;
+        chunks.sort_unstable_by_key(|pos| {
+            let rel_x = pos.x - center_chunk.x;
+            let rel_z = pos.z - center_chunk.z;
+            rel_x * rel_x + rel_z * rel_z
+        });
 
-            for chunk in chunks {
-                if pending_chunks.contains_key(chunk) {
-                    log::debug!(
-                        "Client id {} is requesting chunk {:?} but its already pending!",
-                        player.client.id,
-                        chunk
-                    );
-                }
-            }
-
-            for (chunk, handle) in pending {
-                let entry = pending_chunks.entry(chunk);
-                let wrapper = ChunkHandleWrapper::new(handle);
-                match entry {
-                    Entry::Occupied(mut entry) => {
-                        entry.get_mut().push_back(wrapper);
-                    }
-                    Entry::Vacant(entry) => {
-                        let mut queue = VecDeque::new();
-                        queue.push_back(wrapper);
-                        entry.insert(queue);
-                    }
-                };
-            }
-        }
-        let pending_chunks = player.pending_chunks.clone();
+        let mut receiver = self.receive_chunks(chunks);
         let level = self.level.clone();
-        let retained_player = player.clone();
-        let batch_id = id;
 
-        let handle = tokio::spawn(async move {
+        tokio::spawn(async move {
             while let Some(chunk_data) = receiver.recv().await {
                 let chunk_data = chunk_data.read().await;
                 let packet = CChunkData(&chunk_data);
                 #[cfg(debug_assertions)]
                 if chunk_data.position == (0, 0).into() {
-                    use pumpkin_protocol::bytebuf::ByteBuffer;
-                    let mut test = ByteBuffer::empty();
+                    let mut test = bytes::BytesMut::new();
                     packet.write(&mut test);
-                    let len = test.buf().len();
+                    let len = test.len();
                     log::debug!(
                         "Chunk packet size: {}B {}KB {}MB",
                         len,
@@ -596,40 +587,14 @@ impl World {
                     );
                 }
 
-                {
-                    let mut pending_chunks = pending_chunks.lock();
-                    let handlers = pending_chunks
-                        .get_mut(&chunk_data.position)
-                        .expect("All chunks should be pending");
-                    let handler = handlers
-                        .pop_front()
-                        .expect("All chunks should have a handler");
-
-                    if handlers.is_empty() {
-                        pending_chunks.remove(&chunk_data.position);
-                    }
-
-                    // Chunk loading task was canceled after it was completed
-                    if handler.aborted() {
-                        // We never increment the watch value
-                        if level.should_pop_chunk(&chunk_data.position) {
-                            level.clean_chunks(&[chunk_data.position]);
-                        }
-                        // If ignored, dont send the packet
-                        let loaded_chunks = level.loaded_chunk_count();
-                        log::debug!(
-                            "Aborted chunk {:?} (post-process) {} cached",
-                            chunk_data.position,
-                            loaded_chunks
-                        );
-
-                        // We dont want to mark this chunk as watched or send it to the client
-                        continue;
-                    }
-
-                    // This must be locked with pending
-                    level.mark_chunk_as_newly_watched(chunk_data.position);
-                };
+                if !level.is_chunk_watched(&chunk_data.position) {
+                    log::trace!(
+                        "Received chunk {:?}, but it is no longer watched... cleaning",
+                        &chunk_data.position
+                    );
+                    level.clean_chunk(&chunk_data.position);
+                    continue;
+                }
 
                 if !player
                     .client
@@ -640,22 +605,9 @@ impl World {
                 }
             }
 
-            {
-                let mut batch = player.pending_chunk_batch.lock();
-                batch.remove(&batch_id);
-            }
             #[cfg(debug_assertions)]
-            log::debug!(
-                "chunks sent after {}ms (batch {})",
-                inst.elapsed().as_millis(),
-                batch_id
-            );
+            log::debug!("chunks sent after {}ms ", inst.elapsed().as_millis(),);
         });
-
-        {
-            let mut batch_handles = retained_player.pending_chunk_batch.lock();
-            batch_handles.insert(id, handle);
-        }
     }
 
     /// Gets a Player by entity id
@@ -931,18 +883,35 @@ impl World {
     }
 
     // Stream the chunks (don't collect them and then do stuff with them)
-    pub fn receive_chunks(&self, chunks: &[Vector2<i32>]) -> ChunkReceiver {
+    /// Important: must be called from an async function (or changed to accept a tokio runtime
+    /// handle)
+    pub fn receive_chunks(&self, chunks: Vec<Vector2<i32>>) -> Receiver<Arc<RwLock<ChunkData>>> {
         let (sender, receive) = mpsc::channel(chunks.len());
-        let pending_chunks = self.level.fetch_chunks(chunks, sender);
-        (pending_chunks, receive)
+        // Put this in another thread so we aren't blocking on it
+        let level = self.level.clone();
+        let rt = Handle::current();
+        rayon::spawn(move || {
+            level.fetch_chunks(&chunks, sender, &rt);
+        });
+        receive
     }
 
-    pub async fn receive_chunk(&self, chunk: Vector2<i32>) -> Arc<RwLock<ChunkData>> {
-        let (_, mut receiver) = self.receive_chunks(&[chunk]);
-        receiver
+    pub async fn receive_chunk(&self, chunk_pos: Vector2<i32>) -> Arc<RwLock<ChunkData>> {
+        let mut receiver = self.receive_chunks(vec![chunk_pos]);
+        let chunk = receiver
             .recv()
             .await
-            .expect("Channel closed for unknown reason")
+            .expect("Channel closed for unknown reason");
+
+        if !self.level.is_chunk_watched(&chunk_pos) {
+            log::trace!(
+                "Received chunk {:?}, but it is not watched... cleaning",
+                chunk_pos
+            );
+            self.level.clean_chunk(&chunk_pos);
+        }
+
+        chunk
     }
 
     pub async fn break_block(&self, position: WorldPosition, cause: Option<&Player>) {

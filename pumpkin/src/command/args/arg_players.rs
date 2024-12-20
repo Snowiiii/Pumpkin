@@ -53,11 +53,7 @@ impl ArgumentConsumer for PlayersArgumentConsumer {
                 _ => None,
             },
             "@r" => {
-                if let Some(p) = server.get_random_player().await {
-                    Some(vec![p.clone()])
-                } else {
-                    Some(vec![])
-                }
+                (server.get_random_player().await).map_or_else(|| Some(vec![]), |p| Some(vec![p]))
             }
             "@a" | "@e" => Some(server.get_all_players().await),
             name => server.get_player_by_name(name).await.map(|p| vec![p]),
@@ -82,7 +78,7 @@ impl DefaultNameArgConsumer for PlayersArgumentConsumer {
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &PlayersArgumentConsumer
+        &Self
     }
 }
 
