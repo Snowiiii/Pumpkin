@@ -116,6 +116,25 @@ impl PlayerInventory {
         &mut self.items[self.selected + 36 - 9]
     }
 
+    pub fn set_held_item(&mut self, item: Option<ItemStack>) {
+        debug_assert!((0..9).contains(&self.selected));
+        self.items[self.selected + 36 - 9] = item;
+    }
+
+    pub fn get_hotbar_slot(&mut self) -> Option<usize> {
+        // // first searches the player's hotbar for an empty slot, starting from the current slot and looping around to the slot before it.
+        // for i in 0..9 {
+        //     let slot = (self.selected + i) % 9;
+        //     if self.items[slot + 36].is_none() {
+        //         return Some(slot + 36);
+        //     }
+        // }
+    
+        // If there still are no slots that meet that criteria, then the server uses the currently selected slot
+        Some(self.selected)
+    }
+    
+
     pub fn slots(&self) -> Vec<Option<&ItemStack>> {
         let mut slots = vec![self.crafting_output.as_ref()];
         slots.extend(self.crafting.iter().map(|c| c.as_ref()));
