@@ -12,9 +12,9 @@ use pumpkin_inventory::{Container, WindowType};
 use pumpkin_protocol::client::play::{
     CCloseContainer, COpenScreen, CSetContainerContent, CSetContainerProperty, CSetContainerSlot,
 };
+use pumpkin_protocol::codec::var_int::VarInt;
 use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_protocol::slot::Slot;
-use pumpkin_protocol::VarInt;
 use pumpkin_world::item::item_registry::Item;
 use pumpkin_world::item::ItemStack;
 use std::sync::Arc;

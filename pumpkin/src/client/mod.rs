@@ -296,8 +296,8 @@ impl Client {
     ///
     /// # Arguments
     ///
-    /// * `server`: A reference to the `Arc<Server>` instance.
-    pub async fn process_packets(&self, server: &Arc<Server>) {
+    /// * `server`: A reference to the `Server` instance.
+    pub async fn process_packets(&self, server: &Server) {
         let mut packet_queue = self.client_packets_queue.lock().await;
         while let Some(mut packet) = packet_queue.pop_front() {
             if self.closed.load(std::sync::atomic::Ordering::Relaxed) {
@@ -330,7 +330,7 @@ impl Client {
     ///
     /// # Arguments
     ///
-    /// * `server`: A reference to the `Arc<Server>` instance.
+    /// * `server`: A reference to the `Server` instance.
     /// * `packet`: A mutable reference to the `RawPacket` to be processed.
     ///
     /// # Returns
@@ -342,7 +342,7 @@ impl Client {
     /// Returns a `DeserializerError` if an error occurs during packet deserialization.
     pub async fn handle_packet(
         &self,
-        server: &Arc<Server>,
+        server: &Server,
         packet: &mut RawPacket,
     ) -> Result<(), ReadingError> {
         match self.connection_state.load() {
@@ -386,7 +386,7 @@ impl Client {
 
     async fn handle_status_packet(
         &self,
-        server: &Arc<Server>,
+        server: &Server,
         packet: &mut RawPacket,
     ) -> Result<(), ReadingError> {
         log::debug!("Handling status group");
@@ -412,7 +412,7 @@ impl Client {
 
     async fn handle_login_packet(
         &self,
-        server: &Arc<Server>,
+        server: &Server,
         packet: &mut RawPacket,
     ) -> Result<(), ReadingError> {
         log::debug!("Handling login group for id");
@@ -448,7 +448,7 @@ impl Client {
 
     async fn handle_config_packet(
         &self,
-        server: &Arc<Server>,
+        server: &Server,
         packet: &mut RawPacket,
     ) -> Result<(), ReadingError> {
         log::debug!("Handling config group");

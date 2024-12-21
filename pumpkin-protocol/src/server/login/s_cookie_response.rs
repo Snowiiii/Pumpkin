@@ -1,8 +1,9 @@
 use crate::{
     bytebuf::{ByteBuf, ReadingError},
-    Identifier, ServerPacket, VarInt,
+    codec::identifier::Identifier,
+    ServerPacket, VarInt,
 };
-use bytes::Bytes;
+use bytes::Buf;
 use pumpkin_macros::server_packet;
 use serde::de;
 
@@ -19,8 +20,8 @@ pub struct SCookieResponse {
 const MAX_PAYLOAD_SIZE: i32 = 5120;
 
 impl ServerPacket for SCookieResponse {
-    fn read(bytebuf: &mut Bytes) -> Result<Self, ReadingError> {
-        let key = bytebuf.try_get_string()?;
+    fn read(bytebuf: &mut impl Buf) -> Result<Self, ReadingError> {
+        let key = bytebuf.try_get_identifer()?;
         let has_payload = bytebuf.try_get_bool()?;
 
         if !has_payload {

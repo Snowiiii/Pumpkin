@@ -1,4 +1,4 @@
-use bytes::{BufMut, BytesMut};
+use bytes::BufMut;
 use pumpkin_core::math::vector3::Vector3;
 use pumpkin_macros::client_packet;
 
@@ -38,7 +38,7 @@ impl<'a> CTeleportEntity<'a> {
 }
 
 impl ClientPacket for CTeleportEntity<'_> {
-    fn write(&self, bytebuf: &mut BytesMut) {
+    fn write(&self, bytebuf: &mut impl BufMut) {
         bytebuf.put_var_int(&self.entity_id);
         bytebuf.put_f64(self.position.x);
         bytebuf.put_f64(self.position.y);

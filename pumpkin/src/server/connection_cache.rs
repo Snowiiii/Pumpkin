@@ -10,7 +10,8 @@ use base64::{engine::general_purpose, Engine as _};
 use pumpkin_config::{BasicConfiguration, BASIC_CONFIG};
 use pumpkin_protocol::{
     client::{config::CPluginMessage, status::CStatusResponse},
-    Players, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
+    codec::{var_int::VarInt, Codec},
+    Players, StatusResponse, Version, CURRENT_MC_PROTOCOL,
 };
 
 use super::CURRENT_MC_VERSION;

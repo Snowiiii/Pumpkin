@@ -24,7 +24,6 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
-use pumpkin_protocol::client::play::CUpdateTime;
 use pumpkin_protocol::server::play::{
     SCloseContainer, SCookieResponse as SPCookieResponse, SPlayPingRequest,
 };
@@ -41,15 +40,19 @@ use pumpkin_protocol::{
         SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
         SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
     },
-    RawPacket, ServerPacket, SoundCategory, VarInt,
+    RawPacket, ServerPacket, SoundCategory,
 };
+use pumpkin_protocol::{client::play::CUpdateTime, codec::var_int::VarInt};
 use pumpkin_protocol::{
     client::play::{CSetEntityMetadata, Metadata},
     server::play::{SClickContainer, SKeepAlive},
 };
 use pumpkin_world::{
     cylindrical_chunk_iterator::Cylindrical,
-    item::{item_registry::get_item_by_id, ItemStack},
+    item::{
+        item_registry::{get_item_by_id, Operation},
+        ItemStack,
+    },
 };
 use tokio::sync::{Mutex, Notify};
 
@@ -257,7 +260,7 @@ impl Player {
                 // TODO: this should be cached in memory
                 if let Some(modifiers) = &item.components.attribute_modifiers {
                     for item_mod in &modifiers.modifiers {
-                        if item_mod.operation == "add_value" {
+                        if item_mod.operation == Operation::AddValue {
                             if item_mod.id == "minecraft:base_attack_damage" {
                                 add_damage = item_mod.amount;
                             }

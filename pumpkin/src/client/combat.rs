@@ -4,7 +4,8 @@ use pumpkin_core::math::vector3::Vector3;
 use pumpkin_macros::{particle, sound};
 use pumpkin_protocol::{
     client::play::{CEntityVelocity, CParticle},
-    SoundCategory, VarInt,
+    codec::var_int::VarInt,
+    SoundCategory,
 };
 use pumpkin_world::item::ItemStack;
 

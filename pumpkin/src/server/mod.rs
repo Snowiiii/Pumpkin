@@ -71,8 +71,6 @@ impl Server {
     #[allow(clippy::new_without_default)]
     #[must_use]
     pub fn new() -> Self {
-        // TODO: only create when needed
-
         let auth_client = BASIC_CONFIG.online_mode.then(|| {
             reqwest::Client::builder()
                 .timeout(Duration::from_millis(5000))

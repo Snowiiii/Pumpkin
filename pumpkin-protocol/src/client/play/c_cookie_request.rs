@@ -1,6 +1,7 @@
-use crate::Identifier;
 use pumpkin_macros::client_packet;
 use serde::Serialize;
+
+use crate::codec::identifier::Identifier;
 
 #[derive(Serialize)]
 #[client_packet("play:cookie_request")]

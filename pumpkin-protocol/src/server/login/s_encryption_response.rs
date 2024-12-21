@@ -1,4 +1,4 @@
-use bytes::Bytes;
+use bytes::Buf;
 use pumpkin_macros::server_packet;
 
 use crate::{
@@ -15,7 +15,7 @@ pub struct SEncryptionResponse {
 }
 
 impl ServerPacket for SEncryptionResponse {
-    fn read(bytebuf: &mut Bytes) -> Result<Self, ReadingError> {
+    fn read(bytebuf: &mut impl Buf) -> Result<Self, ReadingError> {
         let shared_secret_length = bytebuf.try_get_var_int()?;
         let shared_secret = bytebuf.try_copy_to_bytes(shared_secret_length.0 as usize)?;
         let verify_token_length = bytebuf.try_get_var_int()?;

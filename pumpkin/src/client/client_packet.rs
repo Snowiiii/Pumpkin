@@ -12,9 +12,12 @@ use core::str;
 use num_traits::FromPrimitive;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::TextComponent;
-use pumpkin_protocol::client::config::{CServerLinks, Label, Link, LinkType};
 use pumpkin_protocol::server::config::SCookieResponse as SCCookieResponse;
 use pumpkin_protocol::server::login::SCookieResponse as SLCookieResponse;
+use pumpkin_protocol::{
+    client::config::{CServerLinks, Label, Link, LinkType},
+    codec::var_int::VarInt,
+};
 use pumpkin_protocol::{
     client::{
         config::{CConfigAddResourcePack, CFinishConfig, CKnownPacks, CRegistryData},
@@ -27,7 +30,7 @@ use pumpkin_protocol::{
         login::{SEncryptionResponse, SLoginPluginResponse, SLoginStart},
         status::SStatusPingRequest,
     },
-    ConnectionState, KnownPack, VarInt, CURRENT_MC_PROTOCOL,
+    ConnectionState, KnownPack, CURRENT_MC_PROTOCOL,
 };
 use std::{
     num::{NonZeroI32, NonZeroU8},
@@ -318,7 +321,7 @@ impl Client {
         // TODO: allow plugins to access this
         log::debug!(
             "Received cookie_response[login]: key: \"{}\", has_payload: \"{}\", payload_length: \"{}\"",
-            packet.key,
+            packet.key.to_string(),
             packet.has_payload,
             packet.payload_length.unwrap_or(VarInt::from(0)).0
         );
@@ -417,8 +420,10 @@ impl Client {
 
     pub async fn handle_plugin_message(&self, plugin_message: SPluginMessage) {
         log::debug!("Handling plugin message");
-        if plugin_message.channel.starts_with("minecraft:brand")
-            || plugin_message.channel.starts_with("MC|Brand")
+        if plugin_message
+            .channel
+            .to_string()
+            .starts_with("minecraft:brand")
         {
             log::debug!("got a client brand");
             match str::from_utf8(&plugin_message.data) {
@@ -432,7 +437,7 @@ impl Client {
         // TODO: allow plugins to access this
         log::debug!(
             "Received cookie_response[config]: key: \"{}\", has_payload: \"{}\", payload_length: \"{}\"",
-            packet.key,
+            packet.key.to_string(),
             packet.has_payload,
             packet.payload_length.unwrap_or(VarInt::from(0)).0
         );

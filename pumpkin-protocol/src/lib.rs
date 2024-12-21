@@ -1,23 +1,19 @@
 use std::num::NonZeroU16;
 
 use bytebuf::{packet_id::Packet, ReadingError};
-use bytes::{Bytes, BytesMut};
+use bytes::{Buf, BufMut, Bytes};
+use codec::{identifier::Identifier, var_int::VarInt};
 use pumpkin_core::text::{style::Style, TextComponent};
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
 pub mod bytebuf;
 pub mod client;
+pub mod codec;
 pub mod packet_decoder;
 pub mod packet_encoder;
 pub mod query;
 pub mod server;
 pub mod slot;
-
-mod var_int;
-pub use var_int::*;
-
-mod var_long;
-pub use var_long::*;
 
 /// To current Minecraft protocol
 /// Don't forget to change this when porting
@@ -25,23 +21,7 @@ pub const CURRENT_MC_PROTOCOL: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(7
 
 pub const MAX_PACKET_SIZE: i32 = 2097152;
 
-/// usally uses a namespace like "minecraft:thing"
-pub type Identifier = String;
-pub type VarIntType = i32;
-pub type VarLongType = i64;
 pub type FixedBitSet = bytes::Bytes;
-
-pub struct BitSet<'a>(pub VarInt, pub &'a [i64]);
-
-impl Serialize for BitSet<'_> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        // TODO: make this right
-        (&self.0, self.1).serialize(serializer)
-    }
-}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ConnectionState {
@@ -89,7 +69,7 @@ pub struct IDOrSoundEvent {
 
 #[derive(Serialize)]
 pub struct SoundEvent {
-    pub sound_name: String,
+    pub sound_name: Identifier,
     pub range: Option<f32>,
 }
 
@@ -99,11 +79,11 @@ pub struct RawPacket {
 }
 
 pub trait ClientPacket: Packet {
-    fn write(&self, bytebuf: &mut BytesMut);
+    fn write(&self, bytebuf: &mut impl BufMut);
 }
 
 pub trait ServerPacket: Packet + Sized {
-    fn read(bytebuf: &mut Bytes) -> Result<Self, ReadingError>;
+    fn read(bytebuf: &mut impl Buf) -> Result<Self, ReadingError>;
 }
 
 #[derive(Serialize)]

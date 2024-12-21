@@ -19,11 +19,11 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_inventory::{InventoryError, WindowType};
+use pumpkin_protocol::codec::var_int::VarInt;
 use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
 use pumpkin_protocol::{
     client::play::CCommandSuggestions,
     server::play::{SCloseContainer, SCommandSuggestion, SKeepAlive, SSetPlayerGround, SUseItem},
-    VarInt,
 };
 use pumpkin_protocol::{
     client::play::{
@@ -896,7 +896,7 @@ impl Player {
         // TODO: allow plugins to access this
         log::debug!(
             "Received cookie_response[play]: key: \"{}\", has_payload: \"{}\", payload_length: \"{}\"",
-            packet.key,
+            packet.key.to_string(),
             packet.has_payload,
             packet.payload_length.unwrap_or(VarInt::from(0)).0
         );
