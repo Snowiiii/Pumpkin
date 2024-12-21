@@ -83,7 +83,7 @@ pub(crate) enum Arg<'a> {
     Pos2D(Vector2<f64>),
     Rotation(f32, f32),
     GameMode(GameMode),
-    CommandTree(&'a CommandTree<'a>),
+    CommandTree(CommandTree<'a>),
     Item(&'a str),
     ResourceLocation(&'a str),
     Block(&'a str),

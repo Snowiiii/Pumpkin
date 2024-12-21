@@ -107,7 +107,7 @@ impl<'a> CommandSender<'a> {
 }
 
 #[must_use]
-pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
+pub fn default_dispatcher<'a>() -> CommandDispatcher<'a> {
     let mut dispatcher = CommandDispatcher::default();
 
     dispatcher.register(cmd_pumpkin::init_command_tree());
@@ -129,7 +129,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_transfer::init_command_tree());
     dispatcher.register(cmd_fill::init_command_tree());
 
-    Arc::new(dispatcher)
+    dispatcher
 }
 
 #[async_trait]
