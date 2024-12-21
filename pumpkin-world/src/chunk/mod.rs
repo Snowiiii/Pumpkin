@@ -25,6 +25,7 @@ pub trait ChunkReader: Sync + Send {
         save_file: &SaveFile,
         at: &Vector2<i32>,
     ) -> Result<ChunkData, ChunkReadingError>;
+    fn read_world_info(&self, save_file: &SaveFile) -> Result<WorldInfo, ChunkReadingError>;
 }
 
 #[derive(Error, Debug)]
@@ -325,4 +326,9 @@ pub enum ChunkParsingError {
     ChunkNotGenerated,
     #[error("Error deserializing chunk: {0}")]
     ErrorDeserializingChunk(String),
+}
+
+pub struct WorldInfo {
+    pub seed: i64,
+    // TODO: Implement all fields
 }
