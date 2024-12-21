@@ -328,6 +328,7 @@ pub enum ChunkParsingError {
     ErrorDeserializingChunk(String),
 }
 
+#[derive(Debug, PartialEq)]
 pub struct WorldInfo {
     pub seed: i64,
     // TODO: Implement all fields

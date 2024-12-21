@@ -218,7 +218,7 @@ mod tests {
     use pumpkin_core::math::vector2::Vector2;
 
     use crate::{
-        chunk::{anvil::AnvilChunkReader, ChunkReader, ChunkReadingError},
+        chunk::{anvil::AnvilChunkReader, ChunkReader, ChunkReadingError, WorldInfo},
         level::SaveFile,
     };
 
@@ -233,5 +233,21 @@ mod tests {
             &Vector2::new(0, 0),
         );
         assert!(matches!(result, Err(ChunkReadingError::ChunkNotExist)));
+    }
+
+    #[test]
+    fn test_level_dat_reading() {
+        let world_loader = AnvilChunkReader::new();
+        let root_folder = PathBuf::from("test-files").join("sample-1");
+        let save_file = SaveFile {
+            root_folder: root_folder.clone(),
+            region_folder: root_folder,
+        };
+        let expected = WorldInfo {
+            seed: -79717552349559436,
+        };
+        let info = world_loader.read_world_info(&save_file).unwrap();
+
+        assert_eq!(info, expected);
     }
 }
