@@ -72,7 +72,7 @@ impl Level {
             }
         } else {
             let seed = get_or_create_seed();
-            let world_gen = get_world_gen(seed).into(); // TODO Read Seed from config.
+            let world_gen = get_world_gen(seed).into();
             Self {
                 seed,
                 world_gen,
