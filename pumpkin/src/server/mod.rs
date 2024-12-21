@@ -47,7 +47,7 @@ pub struct Server {
     /// Saves server branding information.
     server_branding: CachedBranding,
     /// Saves and Dispatches commands to appropriate handlers.
-    pub command_dispatcher: Arc<CommandDispatcher<'static>>,
+    pub command_dispatcher: RwLock<CommandDispatcher<'static>>,
     /// Saves and calls blocks blocks
     pub block_manager: Arc<BlockManager>,
     /// Manages multiple worlds within the server.
@@ -79,7 +79,7 @@ impl Server {
         });
 
         // First register default command, after that plugins can put in their own
-        let command_dispatcher = default_dispatcher();
+        let command_dispatcher = RwLock::new(default_dispatcher());
 
         let world = World::load(
             Dimension::OverWorld.into_level(

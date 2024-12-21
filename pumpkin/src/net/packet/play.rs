@@ -286,7 +286,7 @@ impl Player {
         server: &Arc<Server>,
         command: SChatCommand,
     ) {
-        let dispatcher = server.command_dispatcher.clone();
+        let dispatcher = server.command_dispatcher.read().await;
         dispatcher
             .handle_command(
                 &mut CommandSender::Player(self.clone()),
@@ -877,10 +877,8 @@ impl Player {
             return;
         };
 
-        let suggestions = server
-            .command_dispatcher
-            .find_suggestions(&mut src, server, cmd)
-            .await;
+        let dispatcher = server.command_dispatcher.read().await;
+        let suggestions = dispatcher.find_suggestions(&mut src, server, cmd).await;
 
         let response = CCommandSuggestions::new(
             packet.id,

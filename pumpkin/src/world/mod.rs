@@ -229,7 +229,6 @@ impl World {
         player: Arc<Player>,
         server: &Server,
     ) {
-        let command_dispatcher = &server.command_dispatcher;
         let dimensions: Vec<Identifier> =
             server.dimensions.iter().map(DimensionType::name).collect();
 
@@ -270,8 +269,7 @@ impl World {
             .await;
         // permissions, i. e. the commands a player may use
         player.send_permission_lvl_update().await;
-        client_cmd_suggestions::send_c_commands_packet(&player, command_dispatcher).await;
-
+        client_cmd_suggestions::send_c_commands_packet(&player, &server.command_dispatcher).await;
         // teleport
         let mut position = Vector3::new(10.0, 120.0, 10.0);
         let yaw = 10.0;
