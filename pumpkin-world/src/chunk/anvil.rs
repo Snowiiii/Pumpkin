@@ -4,11 +4,10 @@ use std::{
 };
 
 use flate2::bufread::{GzDecoder, ZlibDecoder};
-use serde::Deserialize;
 
-use crate::{chunk::ChunkParsingError, level::SaveFile};
+use crate::level::SaveFile;
 
-use super::{ChunkData, ChunkReader, ChunkReadingError, CompressionError, WorldInfo};
+use super::{ChunkData, ChunkReader, ChunkReadingError, CompressionError};
 
 #[derive(Clone)]
 pub struct AnvilChunkReader {}
@@ -159,56 +158,6 @@ impl ChunkReader for AnvilChunkReader {
 
         ChunkData::from_bytes(&decompressed_chunk, *at).map_err(ChunkReadingError::ParsingError)
     }
-
-    fn read_world_info(&self, save_file: &SaveFile) -> Result<WorldInfo, ChunkReadingError> {
-        let path = save_file.root_folder.join("level.dat");
-
-        let mut world_info_file = OpenOptions::new()
-            .read(true)
-            .open(path)
-            .map_err(|e| ChunkReadingError::IoError(e.kind()))?;
-
-        let mut buffer = Vec::new();
-        world_info_file
-            .read_to_end(&mut buffer)
-            .map_err(|e| ChunkReadingError::IoError(e.kind()))?;
-
-        let decompressed_data = Compression::GZip
-            .decompress_data(buffer)
-            .map_err(ChunkReadingError::Compression)?;
-        let info = fastnbt::from_bytes::<LevelDat>(&decompressed_data).map_err(|e| {
-            ChunkReadingError::ParsingError(ChunkParsingError::ErrorDeserializingChunk(
-                e.to_string(),
-            ))
-        })?;
-
-        Ok(WorldInfo {
-            seed: info.data.world_gen_settings.seed,
-        })
-    }
-}
-
-#[derive(Deserialize)]
-pub struct LevelDat {
-    // No idea why its formatted like this
-    #[serde(rename = "Data")]
-    pub data: WorldData,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct WorldData {
-    pub world_gen_settings: WorldGenSettings,
-    // TODO: Implement the rest of the fields
-    // Fields below this comment are being deserialized, but are not being used
-    pub spawn_x: i32,
-    pub spawn_y: i32,
-    pub spawn_z: i32,
-}
-
-#[derive(Deserialize)]
-pub struct WorldGenSettings {
-    pub seed: i64,
 }
 
 #[cfg(test)]
@@ -218,7 +167,7 @@ mod tests {
     use pumpkin_core::math::vector2::Vector2;
 
     use crate::{
-        chunk::{anvil::AnvilChunkReader, ChunkReader, ChunkReadingError, WorldInfo},
+        chunk::{anvil::AnvilChunkReader, ChunkReader, ChunkReadingError},
         level::SaveFile,
     };
 
@@ -233,21 +182,5 @@ mod tests {
             &Vector2::new(0, 0),
         );
         assert!(matches!(result, Err(ChunkReadingError::ChunkNotExist)));
-    }
-
-    #[test]
-    fn test_level_dat_reading() {
-        let world_loader = AnvilChunkReader::new();
-        let root_folder = PathBuf::from("test-files").join("sample-1");
-        let save_file = SaveFile {
-            root_folder: root_folder.clone(),
-            region_folder: root_folder,
-        };
-        let expected = WorldInfo {
-            seed: -79717552349559436,
-        };
-        let info = world_loader.read_world_info(&save_file).unwrap();
-
-        assert_eq!(info, expected);
     }
 }

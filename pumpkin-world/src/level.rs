@@ -13,9 +13,9 @@ use tokio::{
 use crate::{
     chunk::{
         anvil::AnvilChunkReader, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
-        WorldInfo,
     },
     world_gen::{get_world_gen, Seed, WorldGenerator},
+    world_info::{anvil::AnvilInfoReader, WorldInfo, WorldInfoReader},
 };
 
 /// The `Level` module provides functionality for working with chunks within or outside a Minecraft world.
@@ -62,10 +62,11 @@ impl Level {
                 region_folder,
             };
 
-            let reader = AnvilChunkReader::new();
-            let info = reader
+            // TODO: Load info correctly based on world format type
+            let world_info_reader = AnvilInfoReader::new();
+            let info = world_info_reader
                 .read_world_info(&save_file)
-                .expect("Unable to get world info!");
+                .expect("Unable to get world info!"); // TODO: Improve error handling
             let seed = Seed(info.seed as u64);
             let world_gen = get_world_gen(seed).into(); // TODO Read Seed from config.
 
