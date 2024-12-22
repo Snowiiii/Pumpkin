@@ -37,7 +37,6 @@ impl WorldInfoReader for AnvilInfoReader {
     }
 }
 
-
 impl Default for AnvilInfoReader {
     fn default() -> Self {
         Self::new()
