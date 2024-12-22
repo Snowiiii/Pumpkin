@@ -4,7 +4,7 @@ use pumpkin_core::text::TextComponent;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::entity::player::Player;
+use crate::{entity::player::Player, server::Server};
 
 pub enum PlayerEventAction<'a> {
     SendMessage {
@@ -79,4 +79,81 @@ impl<'a> PlayerEvent<'a> {
             .unwrap();
         rx.await.unwrap();
     }
+}
+
+pub async fn player_event_handler(
+    server: Arc<Server>,
+    player: Arc<Player>,
+) -> PlayerEvent<'static> {
+    let (send, mut recv) = mpsc::channel(1);
+    let player_event = PlayerEvent::new(player.clone(), send);
+    let players_copy = server.get_all_players().await;
+    tokio::spawn(async move {
+        while let Some(action) = recv.recv().await {
+            match action {
+                PlayerEventAction::SendMessage {
+                    message,
+                    player_id,
+                    response,
+                } => {
+                    if let Some(player) =
+                        players_copy.iter().find(|p| p.gameprofile.id == player_id)
+                    {
+                        player.send_system_message(&message).await;
+                    }
+                    response.send(()).unwrap();
+                }
+                PlayerEventAction::Kick {
+                    reason,
+                    player_id,
+                    response,
+                } => {
+                    if let Some(player) =
+                        players_copy.iter().find(|p| p.gameprofile.id == player_id)
+                    {
+                        player.kick(reason).await;
+                    }
+                    response.send(()).unwrap();
+                }
+                PlayerEventAction::SetHealth {
+                    health,
+                    food,
+                    saturation,
+                    player_id,
+                    response,
+                } => {
+                    if let Some(player) =
+                        players_copy.iter().find(|p| p.gameprofile.id == player_id)
+                    {
+                        player.set_health(health, food, saturation).await;
+                    }
+                    response.send(()).unwrap();
+                }
+                PlayerEventAction::Kill {
+                    player_id,
+                    response,
+                } => {
+                    if let Some(player) =
+                        players_copy.iter().find(|p| p.gameprofile.id == player_id)
+                    {
+                        player.kill().await;
+                    }
+                    response.send(()).unwrap();
+                }
+                PlayerEventAction::SetGameMode {
+                    game_mode,
+                    player_id,
+                    response,
+                } => {
+                    if let Some(player) =
+                        players_copy.iter().find(|p| p.gameprofile.id == player_id)
+                    {
+                        player.set_gamemode(game_mode).await;
+                    }
+                    response.send(()).unwrap();
+                }
+            }
+        }
+    });
+    player_event
 }

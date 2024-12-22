@@ -179,7 +179,9 @@ async fn main() {
     let server = Arc::new(Server::new());
     let mut ticker = Ticker::new(BASIC_CONFIG.tps);
 
-    PLUGIN_MANAGER.lock().await.load_plugins().unwrap();
+    let mut loader_lock = PLUGIN_MANAGER.lock().await;
+    loader_lock.set_server(server.clone());
+    loader_lock.load_plugins().unwrap();
 
     log::info!("Started Server took {}ms", time.elapsed().as_millis());
     log::info!("You now can connect to the server, Listening on {}", addr);

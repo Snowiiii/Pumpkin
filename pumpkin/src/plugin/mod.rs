@@ -1,9 +1,9 @@
 pub mod api;
 
 pub use api::*;
-use std::{any::Any, fs, path::Path, sync::Arc};
+use std::{any::Any, fs, future::Future, path::Path, pin::Pin, sync::Arc};
 
-use crate::command::dispatcher::CommandDispatcher;
+use crate::server::Server;
 
 type PluginData = (
     PluginMetadata<'static>,
@@ -14,7 +14,7 @@ type PluginData = (
 
 pub struct PluginManager {
     plugins: Vec<PluginData>,
-    command_dispatcher: Option<Arc<CommandDispatcher<'static>>>,
+    server: Option<Arc<Server>>,
 }
 
 impl Default for PluginManager {
@@ -23,17 +23,59 @@ impl Default for PluginManager {
     }
 }
 
+const EVENT_PLAYER_JOIN: &str = "player_join";
+const EVENT_PLAYER_LEAVE: &str = "player_leave";
+
+type EventResult = Result<bool, String>;
+type EventFuture<'a> = Pin<Box<dyn Future<Output = EventResult> + Send + 'a>>;
+
+fn create_default_handler() -> EventFuture<'static> {
+    Box::pin(async { Ok(false) })
+}
+
+fn handle_player_event<'a>(
+    hooks: &'a mut Box<dyn Plugin>,
+    context: &'a Context,
+    event: &'a (dyn Any + Send + Sync),
+    handler: impl Fn(
+        &'a mut Box<dyn Plugin>,
+        &'a Context,
+        &'a types::player::PlayerEvent,
+    ) -> EventFuture<'a>,
+) -> EventFuture<'a> {
+    event
+        .downcast_ref::<types::player::PlayerEvent>()
+        .map_or_else(|| create_default_handler(), |e| handler(hooks, context, e))
+}
+
+fn match_event<'a>(
+    event_name: &str,
+    hooks: &'a mut Box<dyn Plugin>,
+    context: &'a Context,
+    event: &'a (dyn Any + Send + Sync),
+) -> EventFuture<'a> {
+    match event_name {
+        EVENT_PLAYER_JOIN => {
+            handle_player_event(hooks, context, event, |h, c, e| h.on_player_join(c, e))
+        }
+        EVENT_PLAYER_LEAVE => {
+            handle_player_event(hooks, context, event, |h, c, e| h.on_player_leave(c, e))
+        }
+        _ => create_default_handler(),
+    }
+}
+
 impl PluginManager {
     #[must_use]
     pub fn new() -> Self {
-        PluginManager {
+        Self {
             plugins: vec![],
-            command_dispatcher: None,
+            server: None,
         }
     }
 
-    pub fn set_command_dispatcher(&mut self, dispatcher: Arc<CommandDispatcher<'static>>) {
-        self.command_dispatcher = Some(dispatcher);
+    pub fn set_server(&mut self, server: Arc<Server>) {
+        self.server = Some(server);
     }
 
     pub fn load_plugins(&mut self) -> Result<(), String> {
@@ -58,8 +100,11 @@ impl PluginManager {
         let metadata: &PluginMetadata =
             unsafe { &**library.get::<*const PluginMetadata>(b"METADATA").unwrap() };
 
-        // let dispatcher = self.command_dispatcher.clone().expect("Command dispatcher not set").clone();
-        let context = handle_context(metadata.clone() /* , dispatcher */);
+        // The chance that this will panic is non-existent, but just in case
+        let context = handle_context(
+            metadata.clone(), /* , dispatcher */
+            self.server.clone().expect("Server not set"),
+        );
         let mut plugin_box = plugin_fn();
         let res = plugin_box.on_load(&context);
         let mut loaded = true;
@@ -102,7 +147,10 @@ impl PluginManager {
             };
 
             if let Some(matching_event) = registered_events.iter().find(|e| e.name == event_name) {
-                let context = handle_context(metadata.clone() /* , dispatcher.clone() */);
+                let context = handle_context(
+                    metadata.clone(), /* , dispatcher.clone() */
+                    self.server.clone().expect("Server not set"),
+                );
 
                 if matching_event.blocking {
                     blocking_hooks.push((context, hooks));
@@ -135,55 +183,17 @@ impl PluginManager {
         let event = event as &(dyn Any + Sync + Send);
 
         for (context, hooks) in blocking_hooks {
-            let r = match event_name {
-                "player_join" => {
-                    if let Some(event) = event.downcast_ref::<types::player::PlayerEvent>() {
-                        hooks.on_player_join(&context, event)
-                    } else {
-                        Box::pin(async { Ok(false) })
-                    }
-                }
-                "player_leave" => {
-                    if let Some(event) = event.downcast_ref::<types::player::PlayerEvent>() {
-                        hooks.on_player_leave(&context, event)
-                    } else {
-                        Box::pin(async { Ok(false) })
-                    }
-                }
-                _ => Box::pin(async { Ok(false) }),
-            };
-            match r.await {
+            match match_event(event_name, hooks, &context, event).await {
                 Ok(true) => return true,
-                Err(e) => {
-                    log::error!("Error in plugin: {}", e);
-                }
+                Err(e) => log::error!("Error in plugin: {}", e),
                 _ => {}
             }
         }
 
         for (context, hooks) in non_blocking_hooks {
-            let r = match event_name {
-                "player_join" => {
-                    if let Some(event) = event.downcast_ref::<types::player::PlayerEvent>() {
-                        hooks.on_player_join(&context, event)
-                    } else {
-                        Box::pin(async { Ok(false) })
-                    }
-                }
-                "player_leave" => {
-                    if let Some(event) = event.downcast_ref::<types::player::PlayerEvent>() {
-                        hooks.on_player_leave(&context, event)
-                    } else {
-                        Box::pin(async { Ok(false) })
-                    }
-                }
-                _ => Box::pin(async { Ok(false) }),
-            };
-            match r.await {
+            match match_event(event_name, hooks, &context, event).await {
                 Ok(true) => continue,
-                Err(e) => {
-                    log::error!("Error in plugin: {}", e);
-                }
+                Err(e) => log::error!("Error in plugin: {}", e),
                 _ => {}
             }
         }
