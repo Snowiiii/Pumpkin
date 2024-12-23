@@ -10,7 +10,7 @@ use serde::de;
 #[server_packet("login:cookie_response")]
 /// Response to a Cookie Request (login) from the server.
 /// The Notchian server only accepts responses of up to 5 kiB in size.
-pub struct SCookieResponse {
+pub struct SLoginCookieResponse {
     pub key: Identifier,
     pub has_payload: bool,
     pub payload_length: Option<VarInt>,
@@ -19,7 +19,7 @@ pub struct SCookieResponse {
 
 const MAX_PAYLOAD_SIZE: i32 = 5120;
 
-impl ServerPacket for SCookieResponse {
+impl ServerPacket for SLoginCookieResponse {
     fn read(bytebuf: &mut impl Buf) -> Result<Self, ReadingError> {
         let key = bytebuf.try_get_identifer()?;
         let has_payload = bytebuf.try_get_bool()?;

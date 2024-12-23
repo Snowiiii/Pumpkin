@@ -7,13 +7,15 @@ use pumpkin_core::text::{style::Style, TextComponent};
 use serde::{Deserialize, Serialize};
 
 pub mod bytebuf;
+#[cfg(feature = "clientbound")]
 pub mod client;
 pub mod codec;
 pub mod packet_decoder;
 pub mod packet_encoder;
+#[cfg(feature = "query")]
 pub mod query;
+#[cfg(feature = "serverbound")]
 pub mod server;
-pub mod slot;
 
 /// To current Minecraft protocol
 /// Don't forget to change this when porting

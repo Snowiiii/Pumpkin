@@ -57,10 +57,9 @@ use pumpkin_world::{
 use tokio::sync::{Mutex, Notify};
 
 use super::Entity;
-use crate::error::PumpkinError;
+use crate::{error::PumpkinError, net::GameProfile};
 use crate::{
-    client::{
-        authentication::GameProfile,
+    net::{
         combat::{self, player_attack_sound, AttackType},
         Client, PlayerConfig,
     },

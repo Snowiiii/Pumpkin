@@ -26,6 +26,7 @@ fn load_icon_from_file<P: AsRef<Path>>(path: P) -> Result<String, Box<dyn error:
 }
 
 fn load_icon_from_bytes(png_data: &[u8]) -> Result<String, Box<dyn error::Error>> {
+    assert!(!png_data.is_empty(), "PNG data is empty");
     let icon = png::Decoder::new(Cursor::new(&png_data));
     let reader = icon.read_info()?;
     let info = reader.info();
@@ -70,6 +71,7 @@ impl CachedBranding {
 }
 
 impl CachedStatus {
+    #[must_use]
     pub fn new() -> Self {
         let status_response = Self::build_response(&BASIC_CONFIG);
         let status_response_json = serde_json::to_string(&status_response)

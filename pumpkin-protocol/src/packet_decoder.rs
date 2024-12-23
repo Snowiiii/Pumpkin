@@ -16,8 +16,8 @@ type Cipher = cfb8::Decryptor<aes::Aes128>;
 pub struct PacketDecoder {
     buf: BytesMut,
     decompress_buf: BytesMut,
-    compression: bool,
     cipher: Option<Cipher>,
+    compression: bool,
     decompressor: Decompressor,
 }
 
@@ -28,8 +28,8 @@ impl Default for PacketDecoder {
         Self {
             buf: BytesMut::new(),
             decompress_buf: BytesMut::new(),
-            compression: false,
             cipher: None,
+            compression: false,
             decompressor: Decompressor::new(),
         }
     }

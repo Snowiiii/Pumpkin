@@ -23,12 +23,12 @@ use tokio::sync::{Mutex, RwLock};
 
 use crate::block::block_manager::BlockManager;
 use crate::block::default_block_manager;
-use crate::client::EncryptionError;
+use crate::net::EncryptionError;
 use crate::world::custom_bossbar::CustomBossbars;
 use crate::{
-    client::Client,
     command::{default_dispatcher, dispatcher::CommandDispatcher},
     entity::player::Player,
+    net::Client,
     world::World,
 };
 

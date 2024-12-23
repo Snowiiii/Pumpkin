@@ -15,8 +15,8 @@ type Cipher = cfb8::Encryptor<aes::Aes128>;
 pub struct PacketEncoder {
     buf: BytesMut,
     compress_buf: Vec<u8>,
-    compression_threshold: Option<u32>,
     cipher: Option<Cipher>,
+    compression_threshold: Option<u32>,
     compressor: Compressor, // Reuse the compressor for all packets
 }
 
@@ -27,8 +27,8 @@ impl Default for PacketEncoder {
         Self {
             buf: BytesMut::with_capacity(1024),
             compress_buf: Vec::with_capacity(1024),
-            compression_threshold: None,
             cipher: None,
+            compression_threshold: None,
             compressor: Compressor::new(CompressionLvl::fastest()), // init compressor with fastest compression level
         }
     }
