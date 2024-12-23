@@ -183,7 +183,7 @@ async fn main() {
         let mut loader_lock = PLUGIN_MANAGER.lock().await;
         loader_lock.set_server(server.clone());
         loader_lock.load_plugins().await.unwrap();
-    }
+    };
 
     log::info!("Started Server took {}ms", time.elapsed().as_millis());
     log::info!("You now can connect to the server, Listening on {}", addr);

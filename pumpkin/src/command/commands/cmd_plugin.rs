@@ -88,7 +88,7 @@ impl CommandExecutor for LoadExecutor {
         if plugin_manager.is_plugin_loaded(plugin_name) {
             sender
                 .send_message(
-                    TextComponent::text_string(format!("Plugin {} is already loaded", plugin_name))
+                    TextComponent::text_string(format!("Plugin {plugin_name} is already loaded"))
                         .color_named(NamedColor::Red),
                 )
                 .await;
@@ -98,12 +98,11 @@ impl CommandExecutor for LoadExecutor {
         let result = plugin_manager.load_plugin(plugin_name).await;
 
         match result {
-            Ok(_) => {
+            Ok(()) => {
                 sender
                     .send_message(
                         TextComponent::text_string(format!(
-                            "Plugin {} loaded successfully",
-                            plugin_name
+                            "Plugin {plugin_name} loaded successfully"
                         ))
                         .color_named(NamedColor::Green),
                     )
@@ -113,8 +112,7 @@ impl CommandExecutor for LoadExecutor {
                 sender
                     .send_message(
                         TextComponent::text_string(format!(
-                            "Failed to load plugin {}: {}",
-                            plugin_name, e
+                            "Failed to load plugin {plugin_name}: {e}"
                         ))
                         .color_named(NamedColor::Red),
                     )
@@ -144,7 +142,7 @@ impl CommandExecutor for UnloadExecutor {
         if !plugin_manager.is_plugin_loaded(plugin_name) {
             sender
                 .send_message(
-                    TextComponent::text_string(format!("Plugin {} is not loaded", plugin_name))
+                    TextComponent::text_string(format!("Plugin {plugin_name} is not loaded"))
                         .color_named(NamedColor::Red),
                 )
                 .await;
@@ -154,12 +152,11 @@ impl CommandExecutor for UnloadExecutor {
         let result = plugin_manager.unload_plugin(plugin_name).await;
 
         match result {
-            Ok(_) => {
+            Ok(()) => {
                 sender
                     .send_message(
                         TextComponent::text_string(format!(
-                            "Plugin {} unloaded successfully",
-                            plugin_name
+                            "Plugin {plugin_name} unloaded successfully",
                         ))
                         .color_named(NamedColor::Green),
                     )
@@ -169,8 +166,7 @@ impl CommandExecutor for UnloadExecutor {
                 sender
                     .send_message(
                         TextComponent::text_string(format!(
-                            "Failed to unload plugin {}: {}",
-                            plugin_name, e
+                            "Failed to unload plugin {plugin_name}: {e}"
                         ))
                         .color_named(NamedColor::Red),
                     )

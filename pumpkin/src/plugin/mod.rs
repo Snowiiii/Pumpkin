@@ -117,6 +117,7 @@ impl PluginManager {
             .push((metadata.clone(), plugin_box, library, loaded));
     }
 
+    #[must_use]
     pub fn is_plugin_loaded(&self, name: &str) -> bool {
         self.plugins
             .iter()
@@ -131,7 +132,7 @@ impl PluginManager {
 
         if let Some((metadata, plugin, _, loaded)) = plugin {
             if *loaded {
-                return Err(format!("Plugin {} is already loaded", name));
+                return Err(format!("Plugin {name} is already loaded"));
             }
 
             let context = handle_context(
@@ -139,13 +140,11 @@ impl PluginManager {
                 self.server.clone().expect("Server not set"),
             );
             let res = plugin.on_load(&context).await;
-            if let Err(e) = res {
-                return Err(e);
-            }
+            res?;
             *loaded = true;
             Ok(())
         } else {
-            Err(format!("Plugin {} not found", name))
+            Err(format!("Plugin {name} not found"))
         }
     }
 
@@ -161,13 +160,11 @@ impl PluginManager {
                 self.server.clone().expect("Server not set"),
             );
             let res = plugin.on_unload(&context).await;
-            if let Err(e) = res {
-                return Err(e);
-            }
+            res?;
             *loaded = false;
             Ok(())
         } else {
-            Err(format!("Plugin {} not found", name))
+            Err(format!("Plugin {name} not found"))
         }
     }
 
