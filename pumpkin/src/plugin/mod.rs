@@ -78,7 +78,7 @@ impl PluginManager {
         self.server = Some(server);
     }
 
-    pub fn load_plugins(&mut self) -> Result<(), String> {
+    pub async fn load_plugins(&mut self) -> Result<(), String> {
         const PLUGIN_DIR: &str = "./plugins";
 
         let dir_entires = fs::read_dir(PLUGIN_DIR);
@@ -87,13 +87,13 @@ impl PluginManager {
             if !entry.as_ref().unwrap().path().is_file() {
                 continue;
             }
-            self.try_load_plugin(entry.unwrap().path().as_path());
+            self.try_load_plugin(entry.unwrap().path().as_path()).await;
         }
 
         Ok(())
     }
 
-    fn try_load_plugin(&mut self, path: &Path) {
+    async fn try_load_plugin(&mut self, path: &Path) {
         let library = unsafe { libloading::Library::new(path).unwrap() };
 
         let plugin_fn = unsafe { library.get::<fn() -> Box<dyn Plugin>>(b"plugin").unwrap() };
@@ -106,7 +106,7 @@ impl PluginManager {
             self.server.clone().expect("Server not set"),
         );
         let mut plugin_box = plugin_fn();
-        let res = plugin_box.on_load(&context);
+        let res = plugin_box.on_load(&context).await;
         let mut loaded = true;
         if let Err(e) = res {
             log::error!("Error loading plugin: {}", e);
@@ -115,6 +115,60 @@ impl PluginManager {
 
         self.plugins
             .push((metadata.clone(), plugin_box, library, loaded));
+    }
+
+    pub fn is_plugin_loaded(&self, name: &str) -> bool {
+        self.plugins
+            .iter()
+            .any(|(metadata, _, _, loaded)| metadata.name == name && *loaded)
+    }
+
+    pub async fn load_plugin(&mut self, name: &str) -> Result<(), String> {
+        let plugin = self
+            .plugins
+            .iter_mut()
+            .find(|(metadata, _, _, _)| metadata.name == name);
+
+        if let Some((metadata, plugin, _, loaded)) = plugin {
+            if *loaded {
+                return Err(format!("Plugin {} is already loaded", name));
+            }
+
+            let context = handle_context(
+                metadata.clone(), /* , dispatcher */
+                self.server.clone().expect("Server not set"),
+            );
+            let res = plugin.on_load(&context).await;
+            if let Err(e) = res {
+                return Err(e);
+            }
+            *loaded = true;
+            Ok(())
+        } else {
+            Err(format!("Plugin {} not found", name))
+        }
+    }
+
+    pub async fn unload_plugin(&mut self, name: &str) -> Result<(), String> {
+        let plugin = self
+            .plugins
+            .iter_mut()
+            .find(|(metadata, _, _, _)| metadata.name == name);
+
+        if let Some((metadata, plugin, _, loaded)) = plugin {
+            let context = handle_context(
+                metadata.clone(), /* , dispatcher */
+                self.server.clone().expect("Server not set"),
+            );
+            let res = plugin.on_unload(&context).await;
+            if let Err(e) = res {
+                return Err(e);
+            }
+            *loaded = false;
+            Ok(())
+        } else {
+            Err(format!("Plugin {} not found", name))
+        }
     }
 
     #[must_use]
