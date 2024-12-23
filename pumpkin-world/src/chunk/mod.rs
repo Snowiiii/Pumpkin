@@ -1,7 +1,6 @@
 use fastnbt::LongArray;
-use pumpkin_core::math::vector2::Vector2;
+use pumpkin_core::math::{ceil_log2, vector2::Vector2};
 use serde::{Deserialize, Serialize};
-use std::cmp::max;
 use std::collections::HashMap;
 use std::ops::Index;
 use thiserror::Error;
@@ -92,15 +91,9 @@ pub struct ChunkBlocks {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct PaletteEntry {
+    // bloc name
     name: String,
-    _properties: Option<HashMap<String, String>>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct ChunkSectionBlockStates {
-    //  #[serde(with = "LongArray")]
-    data: Option<LongArray>,
-    palette: Vec<PaletteEntry>,
+    properties: Option<HashMap<String, String>>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -119,17 +112,24 @@ struct ChunkSection {
     block_states: Option<ChunkSectionBlockStates>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct ChunkSectionBlockStates {
+    //  #[serde(with = "LongArray")]
+    data: Option<LongArray>,
+    palette: Vec<PaletteEntry>,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 struct ChunkNbt {
     data_version: i32,
-    status: ChunkStatus,
-    // #[serde(rename = "xPos")]
-    // x_pos: i32,
+    #[serde(rename = "xPos")]
+    x_pos: i32,
     // #[serde(rename = "yPos")]
-    // y_pos: i32,
-    // #[serde(rename = "zPos")]
-    // z_pos: i32,
+    //y_pos: i32,
+    #[serde(rename = "zPos")]
+    z_pos: i32,
+    status: ChunkStatus,
     #[serde(rename = "sections")]
     sections: Vec<ChunkSection>,
     heightmaps: ChunkHeightmaps,
@@ -262,7 +262,10 @@ pub struct ChunkStatusWrapper {
 }
 
 impl ChunkData {
-    pub fn from_bytes(chunk_data: &[u8], at: Vector2<i32>) -> Result<Self, ChunkParsingError> {
+    pub fn from_bytes(
+        chunk_data: &[u8],
+        position: Vector2<i32>,
+    ) -> Result<Self, ChunkParsingError> {
         if fastnbt::from_bytes::<ChunkStatusWrapper>(chunk_data)
             .map_err(|_| ChunkParsingError::FailedReadStatus)?
             .status
@@ -273,6 +276,17 @@ impl ChunkData {
 
         let chunk_data = fastnbt::from_bytes::<ChunkNbt>(chunk_data)
             .map_err(|e| ChunkParsingError::ErrorDeserializingChunk(e.to_string()))?;
+
+        if chunk_data.x_pos != position.x || chunk_data.z_pos != position.z {
+            log::error!(
+                "Expected chunk at {}:{}, but got {}:{}",
+                position.x,
+                position.z,
+                chunk_data.x_pos,
+                chunk_data.z_pos
+            );
+            // lets still continue
+        }
 
         // this needs to be boxed, otherwise it will cause a stack-overflow
         let mut blocks = ChunkBlocks::empty_with_heightmap(chunk_data.heightmaps);
@@ -305,9 +319,10 @@ impl ChunkData {
             };
 
             // How many bits each block has in one of the palette u64s
-            let block_bit_size = {
-                let size = 64 - (palette.len() as i64 - 1).leading_zeros();
-                max(4, size)
+            let block_bit_size = if palette.len() < 16 {
+                4
+            } else {
+                ceil_log2(palette.len() as u32).max(4)
             };
             // How many blocks there are in one of the palettes u64s
             let blocks_in_palette = 64 / block_bit_size;
@@ -341,10 +356,7 @@ impl ChunkData {
             }
         }
 
-        Ok(ChunkData {
-            blocks,
-            position: at,
-        })
+        Ok(ChunkData { blocks, position })
     }
 }
 

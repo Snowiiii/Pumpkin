@@ -7,6 +7,7 @@ use std::{
 use bytes::*;
 use fastnbt::LongArray;
 use flate2::bufread::{GzDecoder, GzEncoder, ZlibDecoder, ZlibEncoder};
+use pumpkin_core::math::ceil_log2;
 
 use crate::{
     block::block_registry::BLOCK_ID_TO_REGISTRY_ID, chunk::ChunkWritingError, level::LevelFolder,
@@ -219,19 +220,7 @@ impl ChunkWriter for AnvilChunkFormat {
         at: &pumpkin_core::math::vector2::Vector2<i32>,
     ) -> Result<(), super::ChunkWritingError> {
         // TODO: update timestamp
-
-        let bytes = self
-            .to_bytes(chunk_data)
-            .map_err(|err| ChunkWritingError::ChunkSerializingError(err.to_string()))?;
-        // TODO: config
-        let compression = Compression::ZLib;
-        let bytes = compression
-            // TODO: config
-            .compress_data(&bytes, 6)
-            .map_err(ChunkWritingError::Compression)?;
-
         let region = (at.x >> 5, at.z >> 5);
-
         let mut region_file = OpenOptions::new()
             .read(true)
             .write(true)
@@ -244,6 +233,16 @@ impl ChunkWriter for AnvilChunkFormat {
             )
             .map_err(|err| ChunkWritingError::IoError(err.kind()))?;
 
+        let bytes = self
+            .to_bytes(chunk_data)
+            .map_err(|err| ChunkWritingError::ChunkSerializingError(err.to_string()))?;
+        // TODO: config
+        let compression = Compression::ZLib;
+        let bytes = compression
+            // TODO: config
+            .compress_data(&bytes, 6)
+            .map_err(ChunkWritingError::Compression)?;
+
         let mut location_table: [u8; 4096] = [0; 4096];
         let mut timestamp_table: [u8; 4096] = [0; 4096];
 
@@ -251,8 +250,9 @@ impl ChunkWriter for AnvilChunkFormat {
             .metadata()
             .map_err(|err| ChunkWritingError::IoError(err.kind()))?;
 
+        // The header consists of 8 KiB of data
         // fill the location and timestamp tables if they exist
-        if file_meta.len() >= 4096 * 2 {
+        if file_meta.len() >= 8192 {
             region_file
                 .read_exact(&mut location_table)
                 .map_err(|err| ChunkWritingError::IoError(err.kind()))?;
@@ -390,8 +390,11 @@ impl ChunkWriter for AnvilChunkFormat {
             )
         });
 
+        let sector_count = (bytes.len() + 4).div_ceil(4096) * 4096;
+
+        // padding
         region_file
-            .write_all(&vec![0u8; 4096])
+            .write_all(&vec![0u8; sector_count])
             .expect("Failed to add padding");
 
         Ok(())
@@ -418,22 +421,31 @@ impl AnvilChunkFormat {
                 }),
             );
 
-            let block_bit_size = {
-                let size = 64 - (palette.len() as i64 - 1).leading_zeros();
-                std::cmp::max(4, size)
-            } as usize;
-            let blocks_in_pack = 64 / block_bit_size;
+            let block_bit_size = if palette.len() < 16 {
+                4
+            } else {
+                ceil_log2(palette.len() as u32).max(4)
+            };
+            let _blocks_in_pack = 64 / block_bit_size;
+
             let mut section_longs = Vec::new();
+            let mut current_pack_long: i64 = 0;
+            let mut bits_used_in_pack: u32 = 0;
 
-            let mut current_pack_long = 0i64;
+            for block in blocks {
+                let index = palette.get(block).expect("Just added all unique").1;
+                current_pack_long |= (index as i64) << bits_used_in_pack;
+                bits_used_in_pack += block_bit_size as u32;
 
-            for block_pack in blocks.chunks(blocks_in_pack) {
-                for block in block_pack {
-                    let index = palette.get(block).expect("Just added all unique").1;
-                    current_pack_long = current_pack_long << block_bit_size | index as i64;
+                if bits_used_in_pack >= 64 {
+                    section_longs.push(current_pack_long);
+                    current_pack_long = 0;
+                    bits_used_in_pack = 0;
                 }
+            }
+
+            if bits_used_in_pack > 0 {
                 section_longs.push(current_pack_long);
-                current_pack_long = 0;
             }
 
             sections.push(ChunkSection {
@@ -444,7 +456,7 @@ impl AnvilChunkFormat {
                         .into_iter()
                         .map(|entry| PaletteEntry {
                             name: entry.1 .0.clone(),
-                            _properties: None,
+                            properties: None,
                         })
                         .collect(),
                 }),
@@ -453,6 +465,8 @@ impl AnvilChunkFormat {
 
         let nbt = ChunkNbt {
             data_version: WORLD_DATA_VERSION,
+            x_pos: chunk_data.position.x,
+            z_pos: chunk_data.position.z,
             status: super::ChunkStatus::Full,
             heightmaps: chunk_data.blocks.heightmap.clone(),
             sections,
