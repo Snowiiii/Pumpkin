@@ -102,7 +102,9 @@ Cargo.lock
 #.idea/
 
 # === PROJECT SPECIFIC ===
-plugins/*
+plugins/**/*.so
+plugins/**/*.dylib
+plugins/**/*.dll
 world/*
 
 # docker-compose

@@ -11,7 +11,8 @@ use args::ConsumedArgs;
 use async_trait::async_trait;
 use commands::{
     cmd_clear, cmd_fill, cmd_gamemode, cmd_give, cmd_help, cmd_kick, cmd_kill, cmd_list,
-    cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_time, cmd_worldborder,
+    cmd_plugin, cmd_plugins, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_time,
+    cmd_worldborder,
 };
 use dispatcher::CommandError;
 use pumpkin_core::math::vector3::Vector3;
@@ -118,6 +119,8 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_help::init_command_tree());
     dispatcher.register(cmd_kill::init_command_tree());
     dispatcher.register(cmd_kick::init_command_tree());
+    dispatcher.register(cmd_plugin::init_command_tree());
+    dispatcher.register(cmd_plugins::init_command_tree());
     dispatcher.register(cmd_worldborder::init_command_tree());
     dispatcher.register(cmd_teleport::init_command_tree());
     dispatcher.register(cmd_time::init_command_tree());
