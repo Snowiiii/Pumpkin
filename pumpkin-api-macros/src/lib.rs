@@ -28,7 +28,7 @@ pub fn plugin_method(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let method = quote! {
         #[allow(unused_mut)]
-        fn #fn_name(#fn_inputs) #fn_output {
+        async fn #fn_name(#fn_inputs) #fn_output {
             #fn_body
         }
     }
@@ -188,6 +188,7 @@ pub fn plugin_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         impl pumpkin::plugin::Plugin for #struct_ident {}
 
+        #[async_trait::async_trait]
         impl pumpkin::plugin::PluginMethods for #struct_ident {
             #(#methods)*
         }

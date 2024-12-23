@@ -17,7 +17,7 @@ struct Bans {
 }
 
 #[plugin_method]
-fn on_load(&mut self, server: &Context) -> Result<(), String> {
+async fn on_load(&mut self, server: &Context) -> Result<(), String> {
     let data_folder = server.get_data_folder();
     if !fs::exists(format!("{}/data.toml", data_folder)).unwrap() {
         let cfg = toml::to_string(&self.config).unwrap();
@@ -38,7 +38,7 @@ fn on_load(&mut self, server: &Context) -> Result<(), String> {
 }
 
 #[plugin_method]
-fn on_unload(&mut self, server: &Context) -> Result<(), String> {
+async fn on_unload(&mut self, server: &Context) -> Result<(), String> {
     let data_folder = server.get_data_folder();
     let cfg = toml::to_string(&self.config).unwrap();
     fs::write(format!("{}/data.toml", data_folder), cfg).unwrap();
