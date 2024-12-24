@@ -46,7 +46,7 @@ impl PumpkinBlock for FurnaceBlock {
         location: WorldPosition,
         server: &Server,
     ) {
-        super::standard_on_destroy_with_container(block, player, location, server).await;
+        super::standard_on_broken_with_container(block, player, location, server).await;
     }
 }
 
