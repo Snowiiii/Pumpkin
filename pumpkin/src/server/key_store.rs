@@ -5,7 +5,7 @@ use rsa::{traits::PublicKeyParts as _, Pkcs1v15Encrypt, RsaPrivateKey};
 use sha1::Sha1;
 use sha2::Digest;
 
-use crate::client::EncryptionError;
+use crate::net::EncryptionError;
 
 pub struct KeyStore {
     pub private_key: RsaPrivateKey,
@@ -13,6 +13,7 @@ pub struct KeyStore {
 }
 
 impl KeyStore {
+    #[must_use]
     pub fn new() -> Self {
         log::debug!("Creating encryption keys...");
         let private_key = Self::generate_private_key();
@@ -41,7 +42,7 @@ impl KeyStore {
         server_id: &'a str,
         verification_token: &'a [u8; 4],
         should_authenticate: bool,
-    ) -> CEncryptionRequest<'_> {
+    ) -> CEncryptionRequest<'a> {
         CEncryptionRequest::new(
             server_id,
             &self.public_key_der,

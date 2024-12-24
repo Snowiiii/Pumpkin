@@ -95,7 +95,7 @@ pub mod ingredients {
     }
 
     struct IngredientTypeVisitor;
-    impl<'de> Visitor<'de> for IngredientTypeVisitor {
+    impl Visitor<'_> for IngredientTypeVisitor {
         type Value = IngredientType;
         fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
             write!(formatter, "valid item type")

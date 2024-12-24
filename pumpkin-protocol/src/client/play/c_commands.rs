@@ -1,6 +1,7 @@
+use bytes::BufMut;
 use pumpkin_macros::client_packet;
 
-use crate::{bytebuf::ByteBuffer, ClientPacket, VarInt};
+use crate::{bytebuf::ByteBufMut, ClientPacket, VarInt};
 
 #[client_packet("play:commands")]
 pub struct CCommands<'a> {
@@ -17,8 +18,8 @@ impl<'a> CCommands<'a> {
     }
 }
 
-impl<'a> ClientPacket for CCommands<'a> {
-    fn write(&self, bytebuf: &mut ByteBuffer) {
+impl ClientPacket for CCommands<'_> {
+    fn write(&self, bytebuf: &mut impl BufMut) {
         bytebuf.put_list(&self.nodes, |bytebuf, node: &ProtoNode| {
             node.write_to(bytebuf)
         });
@@ -46,12 +47,12 @@ pub enum ProtoNodeType<'a> {
     },
 }
 
-impl<'a> ProtoNode<'a> {
+impl ProtoNode<'_> {
     const FLAG_IS_EXECUTABLE: u8 = 4;
     const FLAG_HAS_REDIRECT: u8 = 8;
     const FLAG_HAS_SUGGESTION_TYPE: u8 = 16;
 
-    pub fn write_to(&self, bytebuf: &mut ByteBuffer) {
+    pub fn write_to(&self, bytebuf: &mut impl BufMut) {
         // flags
         let flags = match self.node_type {
             ProtoNodeType::Root => 0,
@@ -69,10 +70,10 @@ impl<'a> ProtoNode<'a> {
                 name: _,
                 is_executable,
                 parser: _,
-                override_suggestion_type: override_suggestion_tpye,
+                override_suggestion_type,
             } => {
                 let mut n = 2;
-                if override_suggestion_tpye.is_some() {
+                if override_suggestion_type.is_some() {
                     n |= Self::FLAG_HAS_SUGGESTION_TYPE
                 }
                 if is_executable {
@@ -181,13 +182,13 @@ pub enum ProtoCmdArgParser<'a> {
     Uuid,
 }
 
-impl<'a> ProtoCmdArgParser<'a> {
+impl ProtoCmdArgParser<'_> {
     pub const ENTITY_FLAG_ONLY_SINGLE: u8 = 1;
     pub const ENTITY_FLAG_PLAYERS_ONLY: u8 = 2;
 
     pub const SCORE_HOLDER_FLAG_ALLOW_MULTIPLE: u8 = 1;
 
-    pub fn write_to_buffer(&self, bytebuf: &mut ByteBuffer) {
+    pub fn write_to_buffer(&self, bytebuf: &mut impl BufMut) {
         match self {
             Self::Bool => bytebuf.put_var_int(&0.into()),
             Self::Float { min, max } => Self::write_number_arg(&1.into(), *min, *max, bytebuf),
@@ -269,7 +270,7 @@ impl<'a> ProtoCmdArgParser<'a> {
         id: &VarInt,
         min: Option<T>,
         max: Option<T>,
-        bytebuf: &mut ByteBuffer,
+        bytebuf: &mut impl BufMut,
     ) {
         let mut flags: u8 = 0;
         if min.is_some() {
@@ -290,13 +291,13 @@ impl<'a> ProtoCmdArgParser<'a> {
         }
     }
 
-    fn write_with_flags(id: &VarInt, flags: u8, bytebuf: &mut ByteBuffer) {
+    fn write_with_flags(id: &VarInt, flags: u8, bytebuf: &mut impl BufMut) {
         bytebuf.put_var_int(id);
 
         bytebuf.put_u8(flags);
     }
 
-    fn write_with_identifier(id: &VarInt, extra_identifier: &str, bytebuf: &mut ByteBuffer) {
+    fn write_with_identifier(id: &VarInt, extra_identifier: &str, bytebuf: &mut impl BufMut) {
         bytebuf.put_var_int(id);
 
         bytebuf.put_string(extra_identifier);
@@ -312,29 +313,29 @@ pub enum StringProtoArgBehavior {
 }
 
 trait NumberCmdArg {
-    fn write(self, bytebuf: &mut ByteBuffer);
+    fn write(self, bytebuf: &mut impl BufMut);
 }
 
 impl NumberCmdArg for f32 {
-    fn write(self, bytebuf: &mut ByteBuffer) {
+    fn write(self, bytebuf: &mut impl BufMut) {
         bytebuf.put_f32(self);
     }
 }
 
 impl NumberCmdArg for f64 {
-    fn write(self, bytebuf: &mut ByteBuffer) {
+    fn write(self, bytebuf: &mut impl BufMut) {
         bytebuf.put_f64(self);
     }
 }
 
 impl NumberCmdArg for i32 {
-    fn write(self, bytebuf: &mut ByteBuffer) {
+    fn write(self, bytebuf: &mut impl BufMut) {
         bytebuf.put_i32(self);
     }
 }
 
 impl NumberCmdArg for i64 {
-    fn write(self, bytebuf: &mut ByteBuffer) {
+    fn write(self, bytebuf: &mut impl BufMut) {
         bytebuf.put_i64(self);
     }
 }

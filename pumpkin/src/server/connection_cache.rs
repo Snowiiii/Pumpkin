@@ -2,6 +2,7 @@ use core::error;
 use std::{
     fs::File,
     io::{Cursor, Read},
+    num::NonZeroU32,
     path::Path,
 };
 
@@ -9,7 +10,8 @@ use base64::{engine::general_purpose, Engine as _};
 use pumpkin_config::{BasicConfiguration, BASIC_CONFIG};
 use pumpkin_protocol::{
     client::{config::CPluginMessage, status::CStatusResponse},
-    Players, StatusResponse, VarInt, Version, CURRENT_MC_PROTOCOL,
+    codec::{var_int::VarInt, Codec},
+    Players, StatusResponse, Version, CURRENT_MC_PROTOCOL,
 };
 
 use super::CURRENT_MC_VERSION;
@@ -24,6 +26,7 @@ fn load_icon_from_file<P: AsRef<Path>>(path: P) -> Result<String, Box<dyn error:
 }
 
 fn load_icon_from_bytes(png_data: &[u8]) -> Result<String, Box<dyn error::Error>> {
+    assert!(!png_data.is_empty(), "PNG data is empty");
     let icon = png::Decoder::new(Cursor::new(&png_data));
     let reader = icon.read_info()?;
     let info = reader.info();
@@ -60,14 +63,15 @@ impl CachedBranding {
     }
     fn build_brand() -> Vec<u8> {
         let brand = "Pumpkin";
-        let mut buf = vec![];
-        let _ = VarInt(brand.len() as i32).encode(&mut buf);
+        let mut buf = Vec::new();
+        VarInt(brand.len() as i32).encode(&mut buf);
         buf.extend_from_slice(brand.as_bytes());
         buf
     }
 }
 
 impl CachedStatus {
+    #[must_use]
     pub fn new() -> Self {
         let status_response = Self::build_response(&BASIC_CONFIG);
         let status_response_json = serde_json::to_string(&status_response)
@@ -105,7 +109,7 @@ impl CachedStatus {
     }
 
     pub fn build_response(config: &BasicConfiguration) -> StatusResponse {
-        let icon = if config.use_favicon {
+        let favicon = if config.use_favicon {
             let icon_path = &config.favicon_path;
             log::debug!("Loading server favicon from '{}'", icon_path);
             match load_icon_from_file(icon_path).or_else(|err| {
@@ -142,7 +146,7 @@ impl CachedStatus {
         StatusResponse {
             version: Some(Version {
                 name: CURRENT_MC_VERSION.into(),
-                protocol: CURRENT_MC_PROTOCOL,
+                protocol: NonZeroU32::from(CURRENT_MC_PROTOCOL).get(),
             }),
             players: Some(Players {
                 max: config.max_players,
@@ -150,7 +154,7 @@ impl CachedStatus {
                 sample: vec![],
             }),
             description: config.motd.clone(),
-            favicon: icon,
+            favicon,
             enforce_secure_chat: false,
         }
     }

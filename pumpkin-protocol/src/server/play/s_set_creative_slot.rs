@@ -1,6 +1,6 @@
 use pumpkin_macros::server_packet;
 
-use crate::slot::Slot;
+use crate::codec::slot::Slot;
 
 #[derive(serde::Deserialize, Debug)]
 #[server_packet("play:set_creative_mode_slot")]

@@ -2,8 +2,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "2.0.21"
-    id("fabric-loom") version "1.8.9"
+    kotlin("jvm") version "2.1.0"
+    id("fabric-loom") version "1.9-SNAPSHOT"
     id("maven-publish")
 }
 
@@ -49,6 +49,9 @@ dependencies {
     modImplementation("net.fabricmc:fabric-language-kotlin:${project.property("kotlin_loader_version")}")
 
     modImplementation("net.fabricmc.fabric-api:fabric-api:${project.property("fabric_version")}")
+
+    // To allow for reflection
+    implementation(kotlin("reflect"))
 }
 
 tasks.processResources {

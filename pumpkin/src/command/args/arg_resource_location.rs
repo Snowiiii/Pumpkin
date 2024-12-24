@@ -32,15 +32,7 @@ impl ArgumentConsumer for ResourceLocationArgumentConsumer {
         _server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
-        let s = args.pop()?;
-
-        let name = if s.contains(':') {
-            s.to_string()
-        } else {
-            format!("minecraft:{s}")
-        };
-
-        Some(Arg::ResourceLocation(name))
+        Some(Arg::ResourceLocation(args.pop()?))
     }
 
     async fn suggest<'a>(
@@ -52,17 +44,18 @@ impl ArgumentConsumer for ResourceLocationArgumentConsumer {
         if !self.autocomplete {
             return Ok(None);
         }
+        // TODO
 
-        let suggestions = _server
-            .bossbars
-            .lock()
-            .await
-            .custom_bossbars
-            .keys()
-            .map(|suggestion| CommandSuggestion::new(suggestion.clone(), None))
-            .collect();
+        // let suggestions = server
+        //     .bossbars
+        //     .lock()
+        //     .await
+        //     .custom_bossbars
+        //     .keys()
+        //     .map(|suggestion| CommandSuggestion::new(suggestion, None))
+        //     .collect();
 
-        Ok(Some(suggestions))
+        Ok(None)
     }
 }
 

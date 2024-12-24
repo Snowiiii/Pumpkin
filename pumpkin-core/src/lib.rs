@@ -7,7 +7,7 @@ pub use gamemode::GameMode;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Serialize, Deserialize)]
+#[derive(PartialEq, Serialize, Deserialize, Clone)]
 pub enum Difficulty {
     Peaceful,
     Easy,
@@ -20,4 +20,13 @@ pub enum Difficulty {
 pub enum ProfileAction {
     ForcedNameChange,
     UsingBannedSkin,
+}
+
+#[macro_export]
+macro_rules! assert_eq_delta {
+    ($x:expr, $y:expr, $d:expr) => {
+        if !(2f64 * ($x - $y).abs() <= $d * ($x.abs() + $y.abs())) {
+            panic!("{} vs {} ({} vs {})", $x, $y, ($x - $y).abs(), $d);
+        }
+    };
 }

@@ -26,7 +26,19 @@ There are several ways you can contribute to Pumpkin:
   Write clear and concise commit messages that describe your changes.
 
 ### Docs
-The Documentation of Pumpkin can be found at https://snowiiii.github.io/Pumpkin/
+
+The Documentation of Pumpkin can be found at <https://snowiiii.github.io/Pumpkin/>
+
+**Tip: [typos](https://github.com/crate-ci/typos) is a great Project to detect and automatically fix typos
+
+### Coding Guidelines
+
+- **Working with Tokio and Rayon:**
+  When invoking CPU intensive work, this work should be done in the Rayon thread pool via `rayon::spawn`, Rayon's
+  parallel iterators, or otherwise instead of from the Tokio runtime. However, it is important that the
+  Tokio runtime not block on these Rayon calls. Instead, the data should be passed to the Tokio runtime
+  via async means, for example: `tokio::sync::mpsc`. An example of how to properly do this can be found
+  in `pumpkin_world::level::Level::fetch_chunks`.
 
 ### Additional Information
 

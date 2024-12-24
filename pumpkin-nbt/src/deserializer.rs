@@ -1,5 +1,5 @@
 use crate::*;
-use bytes::{Buf, BytesMut};
+use bytes::Buf;
 use serde::de::{self, DeserializeSeed, MapAccess, SeqAccess, Visitor};
 use serde::{forward_to_deserialize_any, Deserialize};
 use std::io::Cursor;
@@ -24,7 +24,7 @@ impl<'de, T: Buf> Deserializer<'de, T> {
 }
 
 /// Deserializes struct using Serde Deserializer from unnamed (network) NBT
-pub fn from_bytes<'a, T>(s: &'a mut BytesMut) -> Result<T>
+pub fn from_bytes<'a, T>(s: &'a mut impl Buf) -> Result<T>
 where
     T: Deserialize<'a>,
 {
@@ -41,7 +41,7 @@ where
 }
 
 /// Deserializes struct using Serde Deserializer from normal NBT
-pub fn from_bytes_unnamed<'a, T>(s: &'a mut BytesMut) -> Result<T>
+pub fn from_bytes_unnamed<'a, T>(s: &'a mut impl Buf) -> Result<T>
 where
     T: Deserialize<'a>,
 {
@@ -57,7 +57,7 @@ where
     T::deserialize(&mut deserializer)
 }
 
-impl<'de, 'a, T: Buf> de::Deserializer<'de> for &'a mut Deserializer<'de, T> {
+impl<'de, T: Buf> de::Deserializer<'de> for &mut Deserializer<'de, T> {
     type Error = Error;
 
     forward_to_deserialize_any!(i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 seq char str string bytes byte_buf tuple tuple_struct enum ignored_any unit unit_struct option newtype_struct);
@@ -163,7 +163,7 @@ struct CompoundAccess<'a, 'de: 'a, T: Buf> {
     de: &'a mut Deserializer<'de, T>,
 }
 
-impl<'de, 'a, T: Buf> MapAccess<'de> for CompoundAccess<'a, 'de, T> {
+impl<'de, T: Buf> MapAccess<'de> for CompoundAccess<'_, 'de, T> {
     type Error = Error;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>>
@@ -194,7 +194,7 @@ struct ListAccess<'a, 'de: 'a, T: Buf> {
     list_type: u8,
 }
 
-impl<'a, 'de, T: Buf> SeqAccess<'de> for ListAccess<'a, 'de, T> {
+impl<'de, T: Buf> SeqAccess<'de> for ListAccess<'_, 'de, T> {
     type Error = Error;
 
     fn next_element_seed<E>(&mut self, seed: E) -> Result<Option<E::Value>>

@@ -16,9 +16,16 @@ members = [
 version = "0.1.0"
 edition = "2021"
 
+
+[profile.dev]
+opt-level = 1
+
 [profile.release]
 lto = true
 codegen-units = 1
+
+[profile.bench]
+debug = true
 
 [profile.profiling]
 inherits = "release"
@@ -26,7 +33,7 @@ debug = true
 
 [workspace.dependencies]
 log = "0.4"
-tokio = { version = "1.41", features = [
+tokio = { version = "1.42", features = [
     "fs",
     "io-util",
     "macros",
@@ -41,7 +48,7 @@ thiserror = "2"
 num-traits = "0.2"
 num-derive = "0.4"
 
-bytes = "1.8"
+bytes = "1.9"
 
 # Concurrency/Parallelism and Synchronization
 rayon = "1.10.0"
@@ -52,5 +59,3 @@ uuid = { version = "1.11.0", features = ["serde", "v3", "v4"] }
 derive_more = { version = "1.0.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-
-itertools = "0.13.0"

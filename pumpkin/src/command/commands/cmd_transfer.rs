@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use pumpkin_core::text::color::{Color, NamedColor};
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::client::play::CTransfer;
-use pumpkin_protocol::VarInt;
+use pumpkin_protocol::codec::var_int::VarInt;
 
 use crate::command::args::arg_bounded_num::BoundedNumArgumentConsumer;
 use crate::command::args::arg_players::PlayersArgumentConsumer;
@@ -116,6 +116,7 @@ impl CommandExecutor for TransferTargetPlayer {
     }
 }
 
+#[allow(clippy::redundant_closure_for_method_calls)]
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
         require(&|sender| sender.has_permission_lvl(PermissionLvl::Three)).with_child(

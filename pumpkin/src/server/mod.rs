@@ -3,6 +3,7 @@ use crossbeam::atomic::AtomicCell;
 use key_store::KeyStore;
 use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::math::boundingbox::{BoundingBox, BoundingBoxSize};
+use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::GameMode;
 use pumpkin_entity::entity_type::EntityType;
 use pumpkin_entity::EntityId;
@@ -24,14 +25,16 @@ use std::{
 use tokio::sync::{Mutex, RwLock};
 use uuid::Uuid;
 
-use crate::client::EncryptionError;
+use crate::block::block_manager::BlockManager;
+use crate::block::default_block_manager;
 use crate::entity::living::LivingEntity;
 use crate::entity::Entity;
+use crate::net::EncryptionError;
 use crate::world::custom_bossbar::CustomBossbars;
 use crate::{
-    client::Client,
     command::{default_dispatcher, dispatcher::CommandDispatcher},
     entity::player::Player,
+    net::Client,
     world::World,
 };
 
@@ -39,7 +42,7 @@ mod connection_cache;
 mod key_store;
 pub mod ticker;
 
-pub const CURRENT_MC_VERSION: &str = "1.21.3";
+pub const CURRENT_MC_VERSION: &str = "1.21.4";
 
 /// Represents a Minecraft server instance.
 pub struct Server {
@@ -51,6 +54,8 @@ pub struct Server {
     server_branding: CachedBranding,
     /// Saves and Dispatches commands to appropriate handlers.
     pub command_dispatcher: Arc<CommandDispatcher<'static>>,
+    /// Saves and calls blocks blocks
+    pub block_manager: Arc<BlockManager>,
     /// Manages multiple worlds within the server.
     pub worlds: Vec<Arc<World>>,
     // All the dimensions that exists on the server,
@@ -72,18 +77,12 @@ impl Server {
     #[allow(clippy::new_without_default)]
     #[must_use]
     pub fn new() -> Self {
-        // TODO: only create when needed
-
-        let auth_client = if BASIC_CONFIG.online_mode {
-            Some(
-                reqwest::Client::builder()
-                    .timeout(Duration::from_millis(5000))
-                    .build()
-                    .expect("Failed to to make reqwest client"),
-            )
-        } else {
-            None
-        };
+        let auth_client = BASIC_CONFIG.online_mode.then(|| {
+            reqwest::Client::builder()
+                .timeout(Duration::from_millis(5000))
+                .build()
+                .expect("Failed to to make reqwest client")
+        });
 
         // First register default command, after that plugins can put in their own
         let command_dispatcher = default_dispatcher();
@@ -95,6 +94,14 @@ impl Server {
             ),
             DimensionType::Overworld,
         );
+
+        // Spawn chunks are never unloaded
+        for x in -1..=1 {
+            for z in -1..=1 {
+                world.level.mark_chunk_as_newly_watched(Vector2::new(x, z));
+            }
+        }
+
         Self {
             cached_registry: Registry::get_synced(),
             open_containers: RwLock::new(HashMap::new()),
@@ -109,6 +116,7 @@ impl Server {
                 DimensionType::TheEnd,
             ],
             command_dispatcher,
+            block_manager: default_block_manager(),
             auth_client,
             key_store: KeyStore::new(),
             server_listing: Mutex::new(CachedStatus::new()),
@@ -118,7 +126,7 @@ impl Server {
     }
 
     /// Adds a new player to the server.
-
+    ///
     /// This function takes an `Arc<Client>` representing the connected client and performs the following actions:
     ///
     /// 1. Generates a new entity ID for the player.
@@ -131,7 +139,7 @@ impl Server {
     /// # Arguments
     ///
     /// * `client`: An `Arc<Client>` representing the connected client.
-
+    ///
     /// # Returns
     ///
     /// A tuple containing:
@@ -170,6 +178,12 @@ impl Server {
     pub async fn remove_player(&self) {
         // TODO: Config if we want decrease online
         self.server_listing.lock().await.remove_player();
+    }
+
+    pub async fn save(&self) {
+        for world in &self.worlds {
+            world.save().await;
+        }
     }
 
     // TODO: move to world
@@ -332,7 +346,7 @@ impl Server {
         &'a self,
         verification_token: &'a [u8; 4],
         should_authenticate: bool,
-    ) -> CEncryptionRequest<'_> {
+    ) -> CEncryptionRequest<'a> {
         self.key_store
             .encryption_request("", verification_token, should_authenticate)
     }

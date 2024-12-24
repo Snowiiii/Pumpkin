@@ -31,6 +31,10 @@ impl Xoroshiro {
         Self::new(lo, hi)
     }
 
+    fn next(&mut self, bits: u64) -> u64 {
+        self.next_random() >> (64 - bits)
+    }
+
     fn next_random(&mut self) -> u64 {
         let l = self.lo;
         let m = self.hi;
@@ -68,10 +72,6 @@ impl RandomImpl for Xoroshiro {
 
     fn split(&mut self) -> Self {
         Self::new(self.next_random(), self.next_random())
-    }
-
-    fn next(&mut self, bits: u64) -> u64 {
-        self.next_random() >> (64 - bits)
     }
 
     #[allow(refining_impl_trait)]
@@ -123,6 +123,7 @@ impl RandomImpl for Xoroshiro {
     }
 }
 
+#[derive(Clone)]
 pub struct XoroshiroSplitter {
     lo: u64,
     hi: u64,

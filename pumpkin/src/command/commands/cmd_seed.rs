@@ -24,11 +24,9 @@ impl CommandExecutor for PumpkinExecutor {
         _args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
         let seed = match sender {
-            CommandSender::Player(player) => {
-                player.living_entity.entity.world.level.seed.0.to_string()
-            }
+            CommandSender::Player(player) => player.living_entity.entity.world.level.seed.0,
             _ => match server.worlds.first() {
-                Some(world) => world.level.seed.0.to_string(),
+                Some(world) => world.level.seed.0,
                 None => {
                     return Err(CommandError::GeneralCommandIssue(
                         "Unable to get Seed".to_string(),
@@ -36,15 +34,20 @@ impl CommandExecutor for PumpkinExecutor {
                 }
             },
         };
+        let seed = (seed as i64).to_string();
 
         sender
             .send_message(
-                TextComponent::text(&format!("Seed: [{seed}]"))
-                    .hover_event(HoverEvent::ShowText(Cow::from(
-                        "Click to Copy to Clipboard",
-                    )))
-                    .click_event(ClickEvent::CopyToClipboard(Cow::from(seed)))
-                    .color_named(NamedColor::Green), // TODO: use white and green, when possible
+                TextComponent::text("Seed: [")
+                    .add_child(
+                        TextComponent::text(&seed.clone())
+                            .hover_event(HoverEvent::ShowText(Cow::from(
+                                "Click to Copy to Clipboard",
+                            )))
+                            .click_event(ClickEvent::CopyToClipboard(Cow::from(seed)))
+                            .color_named(NamedColor::Green),
+                    )
+                    .add_child(TextComponent::text("]")),
             )
             .await;
         Ok(())

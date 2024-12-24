@@ -3,7 +3,7 @@ use pumpkin_core::text::TextComponent;
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-use crate::{BitSet, VarInt};
+use crate::{codec::bit_set::BitSet, VarInt};
 
 #[derive(Serialize)]
 #[client_packet("play:player_chat")]
@@ -18,7 +18,7 @@ pub struct CPlayerChatMessage<'a> {
     previous_messages_count: VarInt,
     previous_messages: &'a [PreviousMessage<'a>], // max 20
     unsigned_content: Option<TextComponent<'a>>,
-    filter_type: FilterType<'a>,
+    filter_type: FilterType,
     chat_type: VarInt,
     sender_name: TextComponent<'a>,
     target_name: Option<TextComponent<'a>>,
@@ -35,7 +35,7 @@ impl<'a> CPlayerChatMessage<'a> {
         salt: i64,
         previous_messages: &'a [PreviousMessage<'a>],
         unsigned_content: Option<TextComponent<'a>>,
-        filter_type: FilterType<'a>,
+        filter_type: FilterType,
         chat_type: VarInt,
         sender_name: TextComponent<'a>,
         target_name: Option<TextComponent<'a>>,
@@ -66,11 +66,11 @@ pub struct PreviousMessage<'a> {
 
 #[derive(Serialize)]
 #[repr(i32)]
-pub enum FilterType<'a> {
+pub enum FilterType {
     /// Message is not filtered at all
     PassThrough = 0,
     /// Message is fully filtered
     FullyFiltered = 1,
     /// Only some characters in the message are filtered
-    PartiallyFiltered(BitSet<'a>) = 2,
+    PartiallyFiltered(BitSet) = 2,
 }

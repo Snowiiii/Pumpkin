@@ -1,4 +1,4 @@
-use pumpkin_protocol::VarInt;
+use pumpkin_protocol::codec::var_int::VarInt;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,8 +30,9 @@ struct BiomeEffects {
     mood_sound: Option<MoodSound>,
     #[serde(skip_serializing_if = "Option::is_none")]
     additions_sound: Option<AdditionsSound>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    music: Option<Music>,
+    //   #[serde(skip_serializing_if = "Option::is_none")]
+    //   music: Option<Vec<DataPool<Music>>>,
+    music_volume: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,13 +48,12 @@ struct ParticleOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     value: Option<VarInt>,
 }
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct MoodSound {
-    block_search_extent: i32,
-    offset: f64,
     sound: String,
     tick_delay: i32,
+    block_search_extent: i32,
+    offset: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

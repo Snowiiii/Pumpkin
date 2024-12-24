@@ -1,4 +1,5 @@
-use std::{collections::HashMap, sync::LazyLock};
+use std::collections::HashMap;
+use std::sync::LazyLock;
 
 use serde::Deserialize;
 
@@ -45,4 +46,41 @@ pub struct Item {
 pub struct ItemComponents {
     #[serde(rename = "minecraft:max_stack_size")]
     pub max_stack_size: u8,
+    #[serde(rename = "minecraft:jukebox_playable")]
+    pub jukebox_playable: Option<JukeboxPlayable>,
+    #[serde(rename = "minecraft:damage")]
+    pub damage: Option<u16>,
+    #[serde(rename = "minecraft:max_damage")]
+    pub max_damage: Option<u16>,
+    #[serde(rename = "minecraft:attribute_modifiers")]
+    pub attribute_modifiers: Option<AttributeModifiers>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct JukeboxPlayable {
+    pub song: String,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct AttributeModifiers {
+    pub modifiers: Vec<Modifier>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct Modifier {
+    #[serde(rename = "type")]
+    pub type_val: String,
+    pub id: String,
+    pub amount: f64,
+    pub operation: Operation,
+    // TODO: Make this an enum
+    pub slot: String,
+}
+
+#[derive(Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum Operation {
+    AddValue,
+    AddMultipliedBase,
+    AddMultipliedTotal,
 }
