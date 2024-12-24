@@ -9,14 +9,16 @@ use crate::{
     error::PumpkinError,
     server::Server,
 };
-use itertools::Itertools;
 use level_time::LevelTime;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
-use pumpkin_protocol::client::play::CLevelEvent;
+use pumpkin_protocol::{
+    client::play::CLevelEvent,
+    codec::{identifier::Identifier, var_int::VarInt},
+};
 use pumpkin_protocol::{
     client::play::{CBlockUpdate, CRespawn, CSoundEffect, CWorldEvent},
     SoundCategory,
@@ -26,7 +28,7 @@ use pumpkin_protocol::{
         CChunkData, CGameEvent, CLogin, CPlayerInfoUpdate, CRemoveEntities, CRemovePlayerInfo,
         CSetEntityMetadata, CSpawnEntity, GameEvent, Metadata, PlayerAction,
     },
-    ClientPacket, VarInt,
+    ClientPacket,
 };
 use pumpkin_registry::DimensionType;
 use pumpkin_world::chunk::ChunkData;
@@ -114,6 +116,10 @@ impl World {
             level_time: Mutex::new(LevelTime::new()),
             dimension_type,
         }
+    }
+
+    pub async fn save(&self) {
+        self.level.save().await;
     }
 
     /// Broadcasts a packet to all connected players within the world.
@@ -224,11 +230,8 @@ impl World {
         server: &Server,
     ) {
         let command_dispatcher = &server.command_dispatcher;
-        let dimensions = &server
-            .dimensions
-            .iter()
-            .map(DimensionType::name)
-            .collect_vec();
+        let dimensions: Vec<Identifier> =
+            server.dimensions.iter().map(DimensionType::name).collect();
 
         // This code follows the vanilla packet order
         let entity_id = player.entity_id();
@@ -245,10 +248,10 @@ impl World {
             .send_packet(&CLogin::new(
                 entity_id,
                 base_config.hardcore,
-                dimensions,
+                &dimensions,
                 base_config.max_players.into(),
-                base_config.view_distance.into(), //  TODO: view distance
-                base_config.simulation_distance.into(), // TODO: sim view dinstance
+                base_config.view_distance.get().into(), //  TODO: view distance
+                base_config.simulation_distance.get().into(), // TODO: sim view dinstance
                 false,
                 true,
                 false,
@@ -329,7 +332,7 @@ impl World {
                 .client
                 .send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries))
                 .await;
-        }
+        };
 
         let gameprofile = &player.gameprofile;
 
@@ -411,8 +414,11 @@ impl World {
             .init_client(&player.client)
             .await;
 
+        // Sends initial time
+        player.send_time(self).await;
+
         // Spawn in initial chunks
-        player_chunker::player_join(self, player.clone()).await;
+        player_chunker::player_join(&player).await;
 
         // if let Some(bossbars) = self..lock().await.get_player_bars(&player.gameprofile.id) {
         //     for bossbar in bossbars {
@@ -514,31 +520,11 @@ impl World {
         )
         .await;
 
-        player_chunker::player_join(self, player.clone()).await;
+        player_chunker::player_join(player).await;
         self.broadcast_packet_all(&entity_metadata_packet).await;
         // update commands
 
         player.set_health(20.0, 20, 20.0).await;
-    }
-
-    pub fn mark_chunks_as_not_watched(&self, chunks: &[Vector2<i32>]) -> Vec<Vector2<i32>> {
-        self.level.mark_chunks_as_not_watched(chunks)
-    }
-
-    pub fn mark_chunks_as_watched(&self, chunks: &[Vector2<i32>]) {
-        self.level.mark_chunks_as_newly_watched(chunks);
-    }
-
-    pub fn clean_chunks(&self, chunks: &[Vector2<i32>]) {
-        self.level.clean_chunks(chunks);
-    }
-
-    pub fn clean_memory(&self, chunks_to_check: &[Vector2<i32>]) {
-        self.level.clean_memory(chunks_to_check);
-    }
-
-    pub fn get_cached_chunk_len(&self) -> usize {
-        self.level.loaded_chunk_count()
     }
 
     /// IMPORTANT: Chunks have to be non-empty
@@ -567,7 +553,6 @@ impl World {
             rel_x * rel_x + rel_z * rel_z
         });
 
-        player.world().mark_chunks_as_watched(&chunks);
         let mut receiver = self.receive_chunks(chunks);
         let level = self.level.clone();
 
@@ -577,10 +562,9 @@ impl World {
                 let packet = CChunkData(&chunk_data);
                 #[cfg(debug_assertions)]
                 if chunk_data.position == (0, 0).into() {
-                    use pumpkin_protocol::bytebuf::ByteBuffer;
-                    let mut test = ByteBuffer::empty();
+                    let mut test = bytes::BytesMut::new();
                     packet.write(&mut test);
-                    let len = test.buf().len();
+                    let len = test.len();
                     log::debug!(
                         "Chunk packet size: {}B {}KB {}MB",
                         len,

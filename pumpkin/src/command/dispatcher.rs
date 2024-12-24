@@ -32,11 +32,11 @@ impl CommandError {
     pub fn into_string_or_pumpkin_error(self, cmd: &str) -> Result<String, Box<dyn PumpkinError>> {
         match self {
             InvalidConsumption(s) => {
-                println!("Error while parsing command \"{cmd}\": {s:?} was consumed, but couldn't be parsed");
+                log::error!("Error while parsing command \"{cmd}\": {s:?} was consumed, but couldn't be parsed");
                 Ok("Internal Error (See logs for details)".into())
             }
             InvalidRequirement => {
-                println!("Error while parsing command \"{cmd}\": a requirement that was expected was not met.");
+                log::error!("Error while parsing command \"{cmd}\": a requirement that was expected was not met.");
                 Ok("Internal Error (See logs for details)".into())
             }
             GeneralCommandIssue(s) => Ok(s),

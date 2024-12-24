@@ -65,12 +65,14 @@ impl<'a> FindArg<'a> for BlockArgumentConsumer {
 
     fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
-            Some(Arg::Block(name)) => match block_registry::get_block(name) {
-                Some(block) => Ok(block),
-                None => Err(CommandError::GeneralCommandIssue(format!(
-                    "Block {name} does not exist."
-                ))),
-            },
+            Some(Arg::Block(name)) => block_registry::get_block(name).map_or_else(
+                || {
+                    Err(CommandError::GeneralCommandIssue(format!(
+                        "Block {name} does not exist."
+                    )))
+                },
+                Result::Ok,
+            ),
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),
         }
     }

@@ -63,12 +63,14 @@ impl<'a> FindArg<'a> for ItemArgumentConsumer {
 
     fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
-            Some(Arg::Item(name)) => match item_registry::get_item(name) {
-                Some(item) => Ok((name, item)),
-                None => Err(CommandError::GeneralCommandIssue(format!(
-                    "Item {name} does not exist."
-                ))),
-            },
+            Some(Arg::Item(name)) => item_registry::get_item(name).map_or_else(
+                || {
+                    Err(CommandError::GeneralCommandIssue(format!(
+                        "Item {name} does not exist."
+                    )))
+                },
+                |item| Ok((*name, item)),
+            ),
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),
         }
     }

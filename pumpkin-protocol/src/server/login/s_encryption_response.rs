@@ -1,7 +1,8 @@
+use bytes::Buf;
 use pumpkin_macros::server_packet;
 
 use crate::{
-    bytebuf::{ByteBuffer, DeserializerError},
+    bytebuf::{ByteBuf, ReadingError},
     ServerPacket, VarInt,
 };
 
@@ -14,11 +15,11 @@ pub struct SEncryptionResponse {
 }
 
 impl ServerPacket for SEncryptionResponse {
-    fn read(bytebuf: &mut ByteBuffer) -> Result<Self, DeserializerError> {
-        let shared_secret_length = bytebuf.get_var_int()?;
-        let shared_secret = bytebuf.copy_to_bytes(shared_secret_length.0 as usize)?;
-        let verify_token_length = bytebuf.get_var_int()?;
-        let verify_token = bytebuf.copy_to_bytes(shared_secret_length.0 as usize)?;
+    fn read(bytebuf: &mut impl Buf) -> Result<Self, ReadingError> {
+        let shared_secret_length = bytebuf.try_get_var_int()?;
+        let shared_secret = bytebuf.try_copy_to_bytes(shared_secret_length.0 as usize)?;
+        let verify_token_length = bytebuf.try_get_var_int()?;
+        let verify_token = bytebuf.try_copy_to_bytes(shared_secret_length.0 as usize)?;
         Ok(Self {
             shared_secret_length,
             shared_secret,

@@ -1,6 +1,7 @@
-use crate::bytebuf::ByteBuffer;
+use crate::bytebuf::ByteBufMut;
 use crate::client::play::bossevent_action::BosseventAction;
 use crate::{ClientPacket, VarInt};
+use bytes::BufMut;
 use pumpkin_macros::client_packet;
 
 #[client_packet("play:boss_event")]
@@ -16,7 +17,7 @@ impl<'a> CBossEvent<'a> {
 }
 
 impl ClientPacket for CBossEvent<'_> {
-    fn write(&self, bytebuf: &mut ByteBuffer) {
+    fn write(&self, bytebuf: &mut impl BufMut) {
         bytebuf.put_uuid(&self.uuid);
         let action = &self.action;
         match action {

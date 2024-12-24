@@ -13,5 +13,3 @@ num-derive.workspace = true
 
 colored = "2"
 md5 = "0.7.0"
-
-enum_dispatch = "0.3.13"

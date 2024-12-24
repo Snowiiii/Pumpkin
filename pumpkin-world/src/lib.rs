@@ -1,11 +1,11 @@
-use pumpkin_core::math::vector2::Vector2;
-use world_gen::{
+use generation::{
     aquifer_sampler::{FluidLevel, FluidLevelSampler},
     chunk_noise::{ChunkNoiseGenerator, LAVA_BLOCK, WATER_BLOCK},
     generation_shapes::GenerationShape,
     noise::{config::NoiseConfig, router::OVERWORLD_NOISE_ROUTER},
     proto_chunk::{ProtoChunk, StandardChunkFluidLevelSampler},
 };
+use pumpkin_core::math::vector2::Vector2;
 
 pub mod biome;
 pub mod block;
@@ -13,10 +13,10 @@ pub mod chunk;
 pub mod coordinates;
 pub mod cylindrical_chunk_iterator;
 pub mod dimension;
+mod generation;
 pub mod item;
 pub mod level;
-mod world_gen;
-
+pub mod world_info;
 pub const WORLD_HEIGHT: usize = 384;
 pub const WORLD_LOWEST_Y: i16 = -64;
 pub const WORLD_MAX_Y: i16 = WORLD_HEIGHT as i16 - WORLD_LOWEST_Y.abs();

@@ -1,7 +1,8 @@
+use bytes::BufMut;
 use pumpkin_core::math::vector3::Vector3;
 use pumpkin_macros::client_packet;
 
-use crate::{ClientPacket, PositionFlag, VarInt};
+use crate::{bytebuf::ByteBufMut, ClientPacket, PositionFlag, VarInt};
 
 #[client_packet("play:teleport_entity")]
 pub struct CTeleportEntity<'a> {
@@ -37,7 +38,7 @@ impl<'a> CTeleportEntity<'a> {
 }
 
 impl ClientPacket for CTeleportEntity<'_> {
-    fn write(&self, bytebuf: &mut crate::bytebuf::ByteBuffer) {
+    fn write(&self, bytebuf: &mut impl BufMut) {
         bytebuf.put_var_int(&self.entity_id);
         bytebuf.put_f64(self.position.x);
         bytebuf.put_f64(self.position.y);
