@@ -15,6 +15,7 @@ use crate::{
         anvil::AnvilChunkReader, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
     },
     generation::{get_world_gen, Seed, WorldGenerator},
+    world_info::{anvil::AnvilInfoReader, WorldInfo, WorldInfoReader},
 };
 
 /// The `Level` module provides functionality for working with chunks within or outside a Minecraft world.
@@ -28,6 +29,7 @@ use crate::{
 /// For more details on world generation, refer to the `WorldGenerator` module.
 pub struct Level {
     pub seed: Seed,
+    pub world_info: Option<WorldInfo>,
     save_file: Option<SaveFile>,
     loaded_chunks: Arc<DashMap<Vector2<i32>, Arc<RwLock<ChunkData>>>>,
     chunk_watchers: Arc<DashMap<Vector2<i32>, usize>>,
@@ -55,20 +57,27 @@ impl Level {
                 region_folder.exists(),
                 "World region folder does not exist, despite there being a root folder."
             );
-            // TODO: read seed from level.dat
-            let seed = get_or_create_seed();
+            let save_file = SaveFile {
+                root_folder,
+                region_folder,
+            };
+
+            // TODO: Load info correctly based on world format type
+            let world_info_reader = AnvilInfoReader::new();
+            let info = world_info_reader
+                .read_world_info(&save_file)
+                .expect("Unable to get world info!"); // TODO: Improve error handling
+            let seed = Seed(info.seed as u64);
             let world_gen = get_world_gen(seed).into(); // TODO Read Seed from config.
 
             Self {
                 seed,
                 world_gen,
-                save_file: Some(SaveFile {
-                    root_folder,
-                    region_folder,
-                }),
+                save_file: Some(save_file),
                 chunk_reader: Arc::new(AnvilChunkReader::new()),
                 loaded_chunks: Arc::new(DashMap::new()),
                 chunk_watchers: Arc::new(DashMap::new()),
+                world_info: Some(info),
             }
         } else {
             let seed = get_or_create_seed();
@@ -80,6 +89,7 @@ impl Level {
                 chunk_reader: Arc::new(AnvilChunkReader::new()),
                 loaded_chunks: Arc::new(DashMap::new()),
                 chunk_watchers: Arc::new(DashMap::new()),
+                world_info: None,
             }
         }
     }
