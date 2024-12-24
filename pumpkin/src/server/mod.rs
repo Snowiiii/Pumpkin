@@ -60,6 +60,7 @@ pub struct Server {
     /// Caches game registries for efficient access.
     pub cached_registry: Vec<Registry>,
     /// Tracks open containers used for item interactions.
+    // TODO: should have per player open_containers
     pub open_containers: RwLock<HashMap<u64, OpenContainer>>,
     pub drag_handler: DragHandler,
     /// Assigns unique IDs to entities.
@@ -198,6 +199,8 @@ impl Server {
             .cloned()
     }
 
+    /// Returns the first id with a matching location and block type. If this is used with unique
+    /// blocks, the output will return a random result.
     pub async fn get_container_id(&self, location: WorldPosition, block: Block) -> Option<u32> {
         let open_containers = self.open_containers.read().await;
         // TODO: do better than brute force
@@ -211,11 +214,35 @@ impl Server {
                 }
             }
         }
-        log::debug!("No container found... this should not happen.");
+        log::error!("No container found... this should not happen.");
 
         drop(open_containers);
 
         None
+    }
+
+    pub async fn get_all_container_ids(
+        &self,
+        location: WorldPosition,
+        block: Block,
+    ) -> Option<Vec<u32>> {
+        let open_containers = self.open_containers.read().await;
+        let mut matching_container_ids: Vec<u32> = vec![];
+        // TODO: do better than brute force
+        for (id, container) in open_containers.iter() {
+            if container.is_location(location) {
+                if let Some(container_block) = container.get_block() {
+                    if container_block.id == block.id {
+                        log::debug!("Found matching container id: {}", id);
+                        matching_container_ids.push(*id as u32);
+                    }
+                }
+            }
+        }
+
+        drop(open_containers);
+
+        Some(matching_container_ids)
     }
 
     /// Broadcasts a packet to all players in all worlds.

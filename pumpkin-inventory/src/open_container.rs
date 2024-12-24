@@ -68,12 +68,20 @@ impl OpenContainer {
         self.container.lock().await.clear_all_slots();
     }
 
+    pub fn clear_all_players(&mut self) {
+        self.players = vec![];
+    }
+
     pub fn all_player_ids(&self) -> Vec<i32> {
         self.players.clone()
     }
 
     pub fn get_location(&self) -> Option<WorldPosition> {
         self.location
+    }
+
+    pub async fn set_location(&mut self, location: Option<WorldPosition>) {
+        self.location = location;
     }
 
     pub fn get_block(&self) -> Option<Block> {
