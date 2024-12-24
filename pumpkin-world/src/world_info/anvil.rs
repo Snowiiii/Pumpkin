@@ -1,29 +1,30 @@
-use std::{fs::OpenOptions, io::Read};
+use std::{
+    fs::OpenOptions,
+    io::{Read, Write},
+    time::{SystemTime, UNIX_EPOCH},
+};
 
-use flate2::read::GzDecoder;
-use serde::Deserialize;
+use flate2::{read::GzDecoder, write::GzEncoder, Compression};
+use serde::{Deserialize, Serialize};
 
-use crate::level::SaveFile;
+use crate::level::LevelFolder;
 
-use super::{WorldInfo, WorldInfoError, WorldInfoReader};
+use super::{LevelData, WorldInfoError, WorldInfoReader, WorldInfoWriter};
 
-pub struct AnvilInfoReader {}
+const LEVEL_DAT_FILE_NAME: &str = "level.dat";
 
-impl AnvilInfoReader {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
+pub struct AnvilLevelInfo;
 
-impl WorldInfoReader for AnvilInfoReader {
-    fn read_world_info(&self, save_file: &SaveFile) -> Result<WorldInfo, WorldInfoError> {
-        let path = save_file.root_folder.join("level.dat");
+impl WorldInfoReader for AnvilLevelInfo {
+    fn read_world_info(&self, level_folder: &LevelFolder) -> Result<LevelData, WorldInfoError> {
+        let path = level_folder.root_folder.join(LEVEL_DAT_FILE_NAME);
 
         let mut world_info_file = OpenOptions::new().read(true).open(path)?;
 
         let mut buffer = Vec::new();
         world_info_file.read_to_end(&mut buffer)?;
 
+        // try to decompress using GZip
         let mut decoder = GzDecoder::new(&buffer[..]);
         let mut decompressed_data = Vec::new();
         decoder.read_to_end(&mut decompressed_data)?;
@@ -31,63 +32,57 @@ impl WorldInfoReader for AnvilInfoReader {
         let info = fastnbt::from_bytes::<LevelDat>(&decompressed_data)
             .map_err(|e| WorldInfoError::DeserializationError(e.to_string()))?;
 
-        Ok(WorldInfo {
-            seed: info.data.world_gen_settings.seed,
-        })
+        // todo check version
+
+        Ok(info.data)
     }
 }
 
-impl Default for AnvilInfoReader {
-    fn default() -> Self {
-        Self::new()
+impl WorldInfoWriter for AnvilLevelInfo {
+    fn write_world_info(
+        &self,
+        info: LevelData,
+        level_folder: &LevelFolder,
+    ) -> Result<(), WorldInfoError> {
+        let start = SystemTime::now();
+        let since_the_epoch = start
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards");
+        let level = LevelDat {
+            data: LevelData {
+                allow_commands: info.allow_commands,
+                data_version: info.data_version,
+                difficulty: info.difficulty,
+                world_gen_settings: info.world_gen_settings,
+                last_played: since_the_epoch.as_millis() as i64,
+                level_name: info.level_name,
+                spawn_x: info.spawn_x,
+                spawn_y: info.spawn_y,
+                spawn_z: info.spawn_z,
+                nbt_version: info.nbt_version,
+                version: info.version,
+            },
+        };
+        // convert it into nbt
+        let nbt = pumpkin_nbt::serializer::to_bytes_unnamed(&level).unwrap();
+        // now compress using GZip, TODO: im not sure about the to_vec, but writer is not implemented for BytesMut, see https://github.com/tokio-rs/bytes/pull/478
+        let mut encoder = GzEncoder::new(nbt.to_vec(), Compression::best());
+        let compressed_data = Vec::new();
+        encoder.write_all(&compressed_data)?;
+
+        // open file
+        let path = level_folder.root_folder.join(LEVEL_DAT_FILE_NAME);
+        let mut world_info_file = OpenOptions::new().write(true).open(path)?;
+        // write compressed data into file
+        world_info_file.write_all(&compressed_data).unwrap();
+
+        Ok(())
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct LevelDat {
-    // No idea why its formatted like this
+    // This tag contains all the level data.
     #[serde(rename = "Data")]
-    pub data: WorldData,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct WorldData {
-    pub world_gen_settings: WorldGenSettings,
-    // TODO: Implement the rest of the fields
-    // Fields below this comment are being deserialized, but are not being used
-    pub spawn_x: i32,
-    pub spawn_y: i32,
-    pub spawn_z: i32,
-}
-
-#[derive(Deserialize)]
-pub struct WorldGenSettings {
-    pub seed: i64,
-}
-
-#[cfg(test)]
-mod tests {
-    use std::path::PathBuf;
-
-    use crate::{
-        level::SaveFile,
-        world_info::{anvil::AnvilInfoReader, WorldInfo, WorldInfoReader},
-    };
-
-    #[test]
-    fn test_level_dat_reading() {
-        let world_info = AnvilInfoReader::new();
-        let root_folder = PathBuf::from("test-files").join("sample-1");
-        let save_file = SaveFile {
-            root_folder: root_folder.clone(),
-            region_folder: root_folder,
-        };
-        let expected = WorldInfo {
-            seed: -79717552349559436,
-        };
-        let info = world_info.read_world_info(&save_file).unwrap();
-
-        assert_eq!(info, expected);
-    }
+    pub data: LevelData,
 }

@@ -174,6 +174,12 @@ impl Server {
         self.server_listing.lock().await.remove_player();
     }
 
+    pub async fn save(&self) {
+        for world in &self.worlds {
+            world.save().await;
+        }
+    }
+
     pub async fn try_get_container(
         &self,
         player_id: EntityId,

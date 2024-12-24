@@ -118,6 +118,10 @@ impl World {
         }
     }
 
+    pub async fn save(&self) {
+        self.level.save().await;
+    }
+
     /// Broadcasts a packet to all connected players within the world.
     ///
     /// Sends the specified packet to every player currently logged in to the world.
@@ -521,26 +525,6 @@ impl World {
         // update commands
 
         player.set_health(20.0, 20, 20.0).await;
-    }
-
-    pub fn mark_chunks_as_not_watched(&self, chunks: &[Vector2<i32>]) -> Vec<Vector2<i32>> {
-        self.level.mark_chunks_as_not_watched(chunks)
-    }
-
-    pub fn mark_chunks_as_watched(&self, chunks: &[Vector2<i32>]) {
-        self.level.mark_chunks_as_newly_watched(chunks);
-    }
-
-    pub fn clean_chunks(&self, chunks: &[Vector2<i32>]) {
-        self.level.clean_chunks(chunks);
-    }
-
-    pub fn clean_memory(&self, chunks_to_check: &[Vector2<i32>]) {
-        self.level.clean_memory(chunks_to_check);
-    }
-
-    pub fn get_cached_chunk_len(&self) -> usize {
-        self.level.loaded_chunk_count()
     }
 
     /// IMPORTANT: Chunks have to be non-empty

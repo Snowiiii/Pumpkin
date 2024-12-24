@@ -220,18 +220,18 @@ impl Player {
         );
 
         // Decrement value of watched chunks
-        let chunks_to_clean = world.mark_chunks_as_not_watched(&radial_chunks);
+        let chunks_to_clean = world.level.mark_chunks_as_not_watched(&radial_chunks);
 
         // Remove chunks with no watchers from the cache
-        world.clean_chunks(&chunks_to_clean);
+        world.level.clean_chunks(&chunks_to_clean);
         // Remove left over entries from all possiblily loaded chunks
-        world.clean_memory(&radial_chunks);
+        world.level.clean_memory(&radial_chunks);
 
         log::debug!(
             "Removed player id {} ({}) ({} chunks remain cached)",
             self.gameprofile.name,
             self.client.id,
-            self.world().get_cached_chunk_len()
+            self.world().level.loaded_chunk_count()
         );
 
         //self.world().level.list_cached();
