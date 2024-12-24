@@ -128,8 +128,7 @@ trait LoadConfiguration {
     where
         Self: Sized + Default + Serialize + DeserializeOwned,
     {
-        let exe_path = env::current_exe().unwrap();
-        let exe_dir = exe_path.parent().unwrap();
+        let exe_dir = env::current_dir().unwrap();
         let config_dir = exe_dir.join(CONFIG_ROOT_FOLDER);
         if !config_dir.exists() {
             log::debug!("creating new config root folder");
