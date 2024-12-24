@@ -15,6 +15,7 @@ use crate::{
         anvil::AnvilChunkReader, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
     },
     generation::{get_world_gen, Seed, WorldGenerator},
+    world_info::{anvil::AnvilInfoReader, WorldInfo, WorldInfoReader},
 };
 
 /// The `Level` module provides functionality for working with chunks within or outside a Minecraft world.
