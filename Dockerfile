@@ -1,4 +1,4 @@
-FROM rust:1-alpine3.20 AS builder
+FROM rust:1-alpine3.21 AS builder
 ARG GIT_VERSION=Docker
 ENV GIT_VERSION=$GIT_VERSION
 ENV RUSTFLAGS="-C target-feature=-crt-static -C target-cpu=native"
@@ -16,7 +16,7 @@ RUN --mount=type=cache,sharing=private,target=/pumpkin/target \
 # strip debug symbols from binary
 RUN strip pumpkin.release
 
-FROM alpine:3.20
+FROM alpine:3.21
 
 # Identifying information for registries like ghcr.io
 LABEL org.opencontainers.image.source=https://github.com/Snowiiii/Pumpkin
