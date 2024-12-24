@@ -3,7 +3,10 @@ use bytes::{Buf, Bytes, BytesMut};
 use libdeflater::{DecompressionError, Decompressor};
 use thiserror::Error;
 
-use crate::{RawPacket, VarInt, VarIntDecodeError, MAX_PACKET_SIZE};
+use crate::{
+    codec::{Codec, DecodeError},
+    RawPacket, VarInt, MAX_PACKET_SIZE,
+};
 
 type Cipher = cfb8::Decryptor<aes::Aes128>;
 
@@ -13,8 +16,8 @@ type Cipher = cfb8::Decryptor<aes::Aes128>;
 pub struct PacketDecoder {
     buf: BytesMut,
     decompress_buf: BytesMut,
-    compression: bool,
     cipher: Option<Cipher>,
+    compression: bool,
     decompressor: Decompressor,
 }
 
@@ -25,8 +28,8 @@ impl Default for PacketDecoder {
         Self {
             buf: BytesMut::new(),
             decompress_buf: BytesMut::new(),
-            compression: false,
             cipher: None,
+            compression: false,
             decompressor: Decompressor::new(),
         }
     }
@@ -38,8 +41,8 @@ impl PacketDecoder {
 
         let packet_len = match VarInt::decode(&mut r) {
             Ok(len) => len,
-            Err(VarIntDecodeError::Incomplete) => return Ok(None),
-            Err(VarIntDecodeError::TooLarge) => Err(PacketDecodeError::MalformedLength)?,
+            Err(DecodeError::Incomplete) => return Ok(None),
+            Err(DecodeError::TooLarge) => Err(PacketDecodeError::MalformedLength)?,
         };
         let packet_len = packet_len.0;
 

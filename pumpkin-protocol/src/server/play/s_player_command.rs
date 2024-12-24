@@ -1,4 +1,4 @@
-use bytes::Bytes;
+use bytes::Buf;
 use num_derive::FromPrimitive;
 use pumpkin_macros::server_packet;
 
@@ -27,7 +27,7 @@ pub enum Action {
 }
 
 impl ServerPacket for SPlayerCommand {
-    fn read(bytebuf: &mut Bytes) -> Result<Self, ReadingError> {
+    fn read(bytebuf: &mut impl Buf) -> Result<Self, ReadingError> {
         Ok(Self {
             entity_id: bytebuf.try_get_var_int()?,
             action: bytebuf.try_get_var_int()?,

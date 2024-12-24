@@ -14,8 +14,7 @@ use crate::{
     chunk::{
         anvil::AnvilChunkReader, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
     },
-    world_gen::{get_world_gen, Seed, WorldGenerator},
-    world_info::{anvil::AnvilInfoReader, WorldInfo, WorldInfoReader},
+    generation::{get_world_gen, Seed, WorldGenerator},
 };
 
 /// The `Level` module provides functionality for working with chunks within or outside a Minecraft world.
@@ -81,7 +80,7 @@ impl Level {
             }
         } else {
             let seed = get_or_create_seed();
-            let world_gen = get_world_gen(seed).into(); // TODO Read Seed from config.
+            let world_gen = get_world_gen(seed).into();
             Self {
                 seed,
                 world_gen,

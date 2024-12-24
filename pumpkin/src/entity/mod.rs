@@ -12,7 +12,7 @@ use pumpkin_core::math::{
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
 use pumpkin_protocol::{
     client::play::{CSetEntityMetadata, CTeleportEntity, Metadata},
-    VarInt,
+    codec::var_int::VarInt,
 };
 
 use crate::world::World;

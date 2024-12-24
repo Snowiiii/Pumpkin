@@ -1,23 +1,21 @@
 use std::num::NonZeroU16;
 
 use bytebuf::{packet_id::Packet, ReadingError};
-use bytes::{Bytes, BytesMut};
+use bytes::{Buf, BufMut, Bytes};
+use codec::{identifier::Identifier, var_int::VarInt};
 use pumpkin_core::text::{style::Style, TextComponent};
 use serde::{Deserialize, Serialize, Serializer};
 
 pub mod bytebuf;
+#[cfg(feature = "clientbound")]
 pub mod client;
+pub mod codec;
 pub mod packet_decoder;
 pub mod packet_encoder;
+#[cfg(feature = "query")]
 pub mod query;
+#[cfg(feature = "serverbound")]
 pub mod server;
-pub mod slot;
-
-mod var_int;
-pub use var_int::*;
-
-mod var_long;
-pub use var_long::*;
 
 /// To current Minecraft protocol
 /// Don't forget to change this when porting
@@ -25,23 +23,7 @@ pub const CURRENT_MC_PROTOCOL: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(7
 
 pub const MAX_PACKET_SIZE: i32 = 2097152;
 
-/// usally uses a namespace like "minecraft:thing"
-pub type Identifier = String;
-pub type VarIntType = i32;
-pub type VarLongType = i64;
 pub type FixedBitSet = bytes::Bytes;
-
-pub struct BitSet<'a>(pub VarInt, pub &'a [i64]);
-
-impl Serialize for BitSet<'_> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        // TODO: make this right
-        (&self.0, self.1).serialize(serializer)
-    }
-}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ConnectionState {
@@ -89,7 +71,7 @@ pub struct IDOrSoundEvent {
 
 #[derive(Serialize)]
 pub struct SoundEvent {
-    pub sound_name: String,
+    pub sound_name: Identifier,
     pub range: Option<f32>,
 }
 
@@ -99,11 +81,11 @@ pub struct RawPacket {
 }
 
 pub trait ClientPacket: Packet {
-    fn write(&self, bytebuf: &mut BytesMut);
+    fn write(&self, bytebuf: &mut impl BufMut);
 }
 
 pub trait ServerPacket: Packet + Sized {
-    fn read(bytebuf: &mut Bytes) -> Result<Self, ReadingError>;
+    fn read(bytebuf: &mut impl Buf) -> Result<Self, ReadingError>;
 }
 
 #[derive(Serialize)]
@@ -202,5 +184,75 @@ impl PositionFlag {
 
     pub fn get_bitfield(flags: &[PositionFlag]) -> i32 {
         flags.iter().fold(0, |acc, flag| acc | flag.get_mask())
+    }
+}
+
+pub enum Label<'a> {
+    BuiltIn(LinkType),
+    TextComponent(TextComponent<'a>),
+}
+
+impl Serialize for Label<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Label::BuiltIn(link_type) => link_type.serialize(serializer),
+            Label::TextComponent(component) => component.serialize(serializer),
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub struct Link<'a> {
+    pub is_built_in: bool,
+    pub label: Label<'a>,
+    pub url: &'a String,
+}
+
+impl<'a> Link<'a> {
+    pub fn new(label: Label<'a>, url: &'a String) -> Self {
+        Self {
+            is_built_in: match label {
+                Label::BuiltIn(_) => true,
+                Label::TextComponent(_) => false,
+            },
+            label,
+            url,
+        }
+    }
+}
+
+pub enum LinkType {
+    BugReport,
+    CommunityGuidelines,
+    Support,
+    Status,
+    Feedback,
+    Community,
+    Website,
+    Forums,
+    News,
+    Announcements,
+}
+
+impl Serialize for LinkType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            LinkType::BugReport => VarInt(0).serialize(serializer),
+            LinkType::CommunityGuidelines => VarInt(1).serialize(serializer),
+            LinkType::Support => VarInt(2).serialize(serializer),
+            LinkType::Status => VarInt(3).serialize(serializer),
+            LinkType::Feedback => VarInt(4).serialize(serializer),
+            LinkType::Community => VarInt(5).serialize(serializer),
+            LinkType::Website => VarInt(6).serialize(serializer),
+            LinkType::Forums => VarInt(7).serialize(serializer),
+            LinkType::News => VarInt(8).serialize(serializer),
+            LinkType::Announcements => VarInt(9).serialize(serializer),
+        }
     }
 }

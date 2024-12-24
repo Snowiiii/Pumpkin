@@ -1,6 +1,12 @@
 use core::str;
 
-use crate::{BitSet, FixedBitSet, VarInt, VarLong};
+use crate::{
+    codec::{
+        bit_set::BitSet, identifier::Identifier, var_int::VarInt, var_long::VarLong, Codec,
+        DecodeError,
+    },
+    FixedBitSet,
+};
 use bytes::{Buf, BufMut};
 
 mod deserializer;
@@ -54,9 +60,11 @@ pub trait ByteBuf: Buf {
 
     fn try_get_var_long(&mut self) -> Result<VarLong, ReadingError>;
 
+    fn try_get_identifer(&mut self) -> Result<Identifier, ReadingError>;
+
     fn try_get_string(&mut self) -> Result<String, ReadingError>;
 
-    fn try_get_string_len(&mut self, max_size: u32) -> Result<String, ReadingError>;
+    fn try_get_string_len(&mut self, max_size: usize) -> Result<String, ReadingError>;
 
     /// Reads a boolean. If true, the closure is called, and the returned value is
     /// wrapped in Some. Otherwise, this returns None.
@@ -181,12 +189,8 @@ impl<T: Buf> ByteBuf for T {
         match VarInt::decode(self) {
             Ok(var_int) => Ok(var_int),
             Err(error) => match error {
-                crate::VarIntDecodeError::Incomplete => {
-                    Err(ReadingError::Incomplete("varint".to_string()))
-                }
-                crate::VarIntDecodeError::TooLarge => {
-                    Err(ReadingError::TooLarge("varint".to_string()))
-                }
+                DecodeError::Incomplete => Err(ReadingError::Incomplete("varint".to_string())),
+                DecodeError::TooLarge => Err(ReadingError::TooLarge("varint".to_string())),
             },
         }
     }
@@ -194,28 +198,24 @@ impl<T: Buf> ByteBuf for T {
         match VarLong::decode(self) {
             Ok(var_long) => Ok(var_long),
             Err(error) => match error {
-                crate::VarLongDecodeError::Incomplete => {
-                    Err(ReadingError::Incomplete("varint".to_string()))
-                }
-                crate::VarLongDecodeError::TooLarge => {
-                    Err(ReadingError::TooLarge("varlong".to_string()))
-                }
+                DecodeError::Incomplete => Err(ReadingError::Incomplete("varint".to_string())),
+                DecodeError::TooLarge => Err(ReadingError::TooLarge("varlong".to_string())),
             },
         }
     }
 
     fn try_get_string(&mut self) -> Result<String, ReadingError> {
-        self.try_get_string_len(i16::MAX as u32)
+        self.try_get_string_len(i16::MAX as usize)
     }
 
-    fn try_get_string_len(&mut self, max_size: u32) -> Result<String, ReadingError> {
+    fn try_get_string_len(&mut self, max_size: usize) -> Result<String, ReadingError> {
         let size = self.try_get_var_int()?.0;
-        if size as u32 > max_size {
+        if size as usize > max_size {
             return Err(ReadingError::TooLarge("string".to_string()));
         }
 
         let data = self.try_copy_to_bytes(size as usize)?;
-        if data.len() as u32 > max_size {
+        if data.len() > max_size {
             return Err(ReadingError::TooLarge("string".to_string()));
         }
         match str::from_utf8(&data) {
@@ -256,6 +256,16 @@ impl<T: Buf> ByteBuf for T {
     fn try_get_fixed_bitset(&mut self, bits: usize) -> Result<FixedBitSet, ReadingError> {
         self.try_copy_to_bytes(bits.div_ceil(8))
     }
+
+    fn try_get_identifer(&mut self) -> Result<Identifier, ReadingError> {
+        match Identifier::decode(self) {
+            Ok(identifer) => Ok(identifer),
+            Err(error) => match error {
+                DecodeError::Incomplete => Err(ReadingError::Incomplete("identifer".to_string())),
+                DecodeError::TooLarge => Err(ReadingError::TooLarge("identifer".to_string())),
+            },
+        }
+    }
 }
 
 pub trait ByteBufMut {
@@ -265,7 +275,7 @@ pub trait ByteBufMut {
 
     fn put_string(&mut self, val: &str);
 
-    fn put_string_len(&mut self, val: &str, max_size: u32);
+    fn put_string_len(&mut self, val: &str, max_size: usize);
 
     fn put_string_array(&mut self, array: &[String]);
 
@@ -276,6 +286,8 @@ pub trait ByteBufMut {
     fn put_option<G>(&mut self, val: &Option<G>, write: impl FnOnce(&mut Self, &G));
 
     fn put_list<G>(&mut self, list: &[G], write: impl Fn(&mut Self, &G));
+
+    fn put_identifier(&mut self, val: &Identifier);
 
     fn put_var_int(&mut self, value: &VarInt);
 
@@ -299,11 +311,11 @@ impl<T: BufMut> ByteBufMut for T {
     }
 
     fn put_string(&mut self, val: &str) {
-        self.put_string_len(val, i16::MAX as u32);
+        self.put_string_len(val, i16::MAX as usize);
     }
 
-    fn put_string_len(&mut self, val: &str, max_size: u32) {
-        if val.len() as u32 > max_size {
+    fn put_string_len(&mut self, val: &str, max_size: usize) {
+        if val.len() > max_size {
             // Should be panic?, I mean its our fault
             panic!("String is too big");
         }
@@ -317,15 +329,12 @@ impl<T: BufMut> ByteBufMut for T {
         }
     }
 
-    fn put_var_int(&mut self, value: &VarInt) {
-        value.encode(self);
+    fn put_var_int(&mut self, var_int: &VarInt) {
+        var_int.encode(self);
     }
 
-    fn put_bit_set(&mut self, set: &BitSet) {
-        self.put_var_int(&set.0);
-        for b in set.1 {
-            self.put_i64(*b);
-        }
+    fn put_bit_set(&mut self, bit_set: &BitSet) {
+        bit_set.encode(self);
     }
 
     fn put_option<G>(&mut self, val: &Option<G>, write: impl FnOnce(&mut Self, &G)) {
@@ -344,6 +353,10 @@ impl<T: BufMut> ByteBufMut for T {
 
     fn put_varint_arr(&mut self, v: &[i32]) {
         self.put_list(v, |p, &v| p.put_var_int(&v.into()))
+    }
+
+    fn put_identifier(&mut self, val: &Identifier) {
+        val.encode(self);
     }
 }
 
@@ -364,14 +377,12 @@ mod test {
             bar: i32,
         }
         let foo = Foo { bar: 69 };
-        let mut serializer = serializer::Serializer::new(BytesMut::new());
+        let mut bytes = BytesMut::new();
+        let mut serializer = serializer::Serializer::new(&mut bytes);
         foo.serialize(&mut serializer).unwrap();
 
-        let serialized: BytesMut = serializer.into();
-        let deserialized: Foo = Foo::deserialize(deserializer::Deserializer::new(
-            &mut Bytes::from(serialized),
-        ))
-        .unwrap();
+        let deserialized: Foo =
+            Foo::deserialize(deserializer::Deserializer::new(&mut Bytes::from(bytes))).unwrap();
 
         assert_eq!(foo, deserialized);
     }
@@ -383,14 +394,12 @@ mod test {
             bar: VarInt,
         }
         let foo = Foo { bar: 69.into() };
-        let mut serializer = serializer::Serializer::new(BytesMut::new());
+        let mut bytes = BytesMut::new();
+        let mut serializer = serializer::Serializer::new(&mut bytes);
         foo.serialize(&mut serializer).unwrap();
 
-        let serialized: BytesMut = serializer.into();
-        let deserialized: Foo = Foo::deserialize(deserializer::Deserializer::new(
-            &mut Bytes::from(serialized),
-        ))
-        .unwrap();
+        let deserialized: Foo =
+            Foo::deserialize(deserializer::Deserializer::new(&mut Bytes::from(bytes))).unwrap();
 
         assert_eq!(foo, deserialized);
     }

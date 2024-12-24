@@ -23,12 +23,12 @@ use tokio::sync::{Mutex, RwLock};
 
 use crate::block::block_manager::BlockManager;
 use crate::block::default_block_manager;
-use crate::client::EncryptionError;
+use crate::net::EncryptionError;
 use crate::world::custom_bossbar::CustomBossbars;
 use crate::{
-    client::Client,
     command::{default_dispatcher, dispatcher::CommandDispatcher},
     entity::player::Player,
+    net::Client,
     world::World,
 };
 
@@ -71,8 +71,6 @@ impl Server {
     #[allow(clippy::new_without_default)]
     #[must_use]
     pub fn new() -> Self {
-        // TODO: only create when needed
-
         let auth_client = BASIC_CONFIG.online_mode.then(|| {
             reqwest::Client::builder()
                 .timeout(Duration::from_millis(5000))

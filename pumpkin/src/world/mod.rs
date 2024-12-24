@@ -15,7 +15,10 @@ use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
-use pumpkin_protocol::client::play::CLevelEvent;
+use pumpkin_protocol::{
+    client::play::CLevelEvent,
+    codec::{identifier::Identifier, var_int::VarInt},
+};
 use pumpkin_protocol::{
     client::play::{CBlockUpdate, CRespawn, CSoundEffect, CWorldEvent},
     SoundCategory,
@@ -25,7 +28,7 @@ use pumpkin_protocol::{
         CChunkData, CGameEvent, CLogin, CPlayerInfoUpdate, CRemoveEntities, CRemovePlayerInfo,
         CSetEntityMetadata, CSpawnEntity, GameEvent, Metadata, PlayerAction,
     },
-    ClientPacket, VarInt,
+    ClientPacket,
 };
 use pumpkin_registry::DimensionType;
 use pumpkin_world::chunk::ChunkData;
@@ -223,7 +226,8 @@ impl World {
         server: &Server,
     ) {
         let command_dispatcher = &server.command_dispatcher;
-        let dimensions: Vec<&str> = server.dimensions.iter().map(DimensionType::name).collect();
+        let dimensions: Vec<Identifier> =
+            server.dimensions.iter().map(DimensionType::name).collect();
 
         // This code follows the vanilla packet order
         let entity_id = player.entity_id();

@@ -1,4 +1,4 @@
-use crate::slot::Slot;
+use crate::codec::slot::Slot;
 use crate::VarInt;
 
 use pumpkin_macros::client_packet;

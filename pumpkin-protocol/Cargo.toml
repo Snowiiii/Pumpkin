@@ -3,6 +3,13 @@ name = "pumpkin-protocol"
 version.workspace = true
 edition.workspace = true
 
+[features]
+default = ["packets", "query"]
+packets = ["serverbound", "clientbound"]
+serverbound = []
+clientbound = []
+query = []
+
 [dependencies]
 pumpkin-nbt = { path = "../pumpkin-nbt" }
 pumpkin-config = { path = "../pumpkin-config" }
