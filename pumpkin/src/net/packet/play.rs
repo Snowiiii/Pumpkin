@@ -18,7 +18,7 @@ use pumpkin_core::{
     text::TextComponent,
     GameMode,
 };
-use pumpkin_inventory::{InventoryError, WindowType};
+use pumpkin_inventory::InventoryError;
 use pumpkin_protocol::codec::var_int::VarInt;
 use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
 use pumpkin_protocol::{
