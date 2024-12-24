@@ -562,8 +562,6 @@ impl Player {
             "Setting the same gamemode as already is"
         );
         self.gamemode.store(gamemode);
-        // The client is using the same method for setting abilities when receiving the CGameEvent ChangeGameMode packet.
-        // So we can just update the abilities without sending them.
         {
             // use another scope so we instantly unlock abilities
             let mut abilities = self.abilities.lock().await;
@@ -587,6 +585,7 @@ impl Player {
                 }
             }
         }
+        self.send_abilities_update().await;
         self.living_entity
             .entity
             .world
@@ -796,7 +795,7 @@ impl Default for Abilities {
             flying: false,
             allow_flying: false,
             creative: false,
-            fly_speed: 0.4,
+            fly_speed: 0.05,
             walk_speed_fov: 0.1,
         }
     }
