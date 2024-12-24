@@ -4,13 +4,12 @@ use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::{
     client::{
-        config::{CConfigAddResourcePack, CKnownPacks},
+        config::{CConfigAddResourcePack, CConfigServerLinks, CKnownPacks},
         login::{CLoginSuccess, CSetCompression},
-        play::{CServerLinks, Label, Link, LinkType},
     },
     codec::var_int::VarInt,
     server::login::{SEncryptionResponse, SLoginCookieResponse, SLoginPluginResponse, SLoginStart},
-    ConnectionState, KnownPack,
+    ConnectionState, KnownPack, Label, Link, LinkType,
 };
 use uuid::Uuid;
 
@@ -326,8 +325,11 @@ impl Client {
         }
 
         if ADVANCED_CONFIG.server_links.enabled {
-            self.send_packet(&CServerLinks::new(&VarInt(LINKS.len() as i32), &LINKS))
-                .await;
+            self.send_packet(&CConfigServerLinks::new(
+                &VarInt(LINKS.len() as i32),
+                &LINKS,
+            ))
+            .await;
         }
 
         // known data packs
