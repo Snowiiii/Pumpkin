@@ -94,6 +94,13 @@ pub trait Container: Sync + Send {
 
     fn all_slots_ref(&self) -> Vec<Option<&ItemStack>>;
 
+    fn clear_all_slots(&mut self) {
+        let all_slots = self.all_slots();
+        for stack in all_slots {
+            *stack = None;
+        }
+    }
+
     fn all_combinable_slots(&self) -> Vec<Option<&ItemStack>> {
         self.all_slots_ref()
     }
