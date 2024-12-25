@@ -5,12 +5,13 @@ use std::{collections::VecDeque, fmt::Debug};
 /// see [`crate::commands::tree_builder::argument`]
 pub type RawArgs<'a> = Vec<&'a str>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Node<'a> {
     pub(crate) children: Vec<usize>,
     pub(crate) node_type: NodeType<'a>,
 }
 
+#[derive(Clone)]
 pub enum NodeType<'a> {
     ExecuteLeaf {
         executor: &'a dyn CommandExecutor,
@@ -50,7 +51,7 @@ pub enum Command<'a> {
     Alias(&'a str),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CommandTree<'a> {
     pub(crate) nodes: Vec<Node<'a>>,
     pub(crate) children: Vec<usize>,

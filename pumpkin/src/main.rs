@@ -306,7 +306,7 @@ fn setup_console(server: Arc<Server>) {
                 .expect("Failed to read console line");
 
             if !out.is_empty() {
-                let dispatcher = server.command_dispatcher.clone();
+                let dispatcher = server.command_dispatcher.read().await;
                 dispatcher
                     .handle_command(&mut command::CommandSender::Console, &server, &out)
                     .await;
