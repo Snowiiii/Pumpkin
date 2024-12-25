@@ -214,7 +214,6 @@ impl Server {
                 }
             }
         }
-        log::error!("No container found... this should not happen.");
 
         drop(open_containers);
 
