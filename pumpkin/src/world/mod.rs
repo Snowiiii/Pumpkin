@@ -649,14 +649,10 @@ impl World {
             .iter()
             .filter_map(|(uuid, player)| {
                 let player_block_pos = player.living_entity.entity.block_pos.load().0;
-                if position.0.x == player_block_pos.x
+                (position.0.x == player_block_pos.x
                     && position.0.y == player_block_pos.y
-                    && position.0.z == player_block_pos.z
-                {
-                    Some((*uuid, Arc::clone(player)))
-                } else {
-                    None
-                }
+                    && position.0.z == player_block_pos.z)
+                    .then(|| (*uuid, Arc::clone(player)))
             })
             .collect::<HashMap<uuid::Uuid, Arc<Player>>>()
     }
