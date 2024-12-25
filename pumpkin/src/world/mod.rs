@@ -630,6 +630,68 @@ impl World {
         return self.current_players.lock().await.get(&id).cloned();
     }
 
+    /// Gets a list of players who's location equals the given position in the world.
+    ///
+    /// It iterates through the players in the world and checks their location. If the player's location matches the
+    /// given position it will add this to a Vec which it later returns. If no
+    /// player was found in that position it will just return an empty Vec.
+    ///
+    /// # Arguments
+    ///
+    /// * `position`: The position the function will check.
+    pub async fn get_players_by_pos(
+        &self,
+        position: WorldPosition,
+    ) -> HashMap<uuid::Uuid, Arc<Player>> {
+        self.current_players
+            .lock()
+            .await
+            .iter()
+            .filter_map(|(uuid, player)| {
+                let player_block_pos = player.living_entity.entity.block_pos.load().0;
+                (position.0.x == player_block_pos.x
+                    && position.0.y == player_block_pos.y
+                    && position.0.z == player_block_pos.z)
+                    .then(|| (*uuid, Arc::clone(player)))
+            })
+            .collect::<HashMap<uuid::Uuid, Arc<Player>>>()
+    }
+
+    /// Gets the nearby players around a given world position
+    /// It "creates" a sphere and checks if whether players are inside
+    /// and returns a hashmap where the uuid is the key and the player
+    /// object the value.
+    ///
+    /// # Arguments
+    /// * `pos`: The middlepoint of the sphere
+    /// * `radius`: The radius of the sphere. The higher the radius
+    ///             the more area will be checked, in every direction.
+    pub async fn get_nearby_players(
+        &self,
+        pos: Vector3<f64>,
+        radius: u16,
+    ) -> HashMap<uuid::Uuid, Arc<Player>> {
+        let radius_squared = (f64::from(radius)).powi(2);
+
+        let mut found_players = HashMap::new();
+        for player in self.current_players.lock().await.iter() {
+            let player_pos = player.1.living_entity.entity.pos.load();
+
+            let diff = Vector3::new(
+                player_pos.x - pos.x,
+                player_pos.y - pos.y,
+                player_pos.z - pos.z,
+            );
+
+            let distance_squared = diff.x.powi(2) + diff.y.powi(2) + diff.z.powi(2);
+            if distance_squared <= radius_squared {
+                found_players.insert(*player.0, player.1.clone());
+            }
+        }
+
+        found_players
+    }
+
     /// Adds a player to the world and broadcasts a join message if enabled.
     ///
     /// This function takes a player's UUID and an `Arc<Player>` reference.
