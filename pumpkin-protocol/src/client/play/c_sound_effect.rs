@@ -1,4 +1,4 @@
-use bytes::{BufMut, BytesMut};
+use bytes::BufMut;
 use pumpkin_macros::client_packet;
 
 use crate::{bytebuf::ByteBufMut, ClientPacket, IDOrSoundEvent, SoundCategory, SoundEvent, VarInt};
@@ -45,11 +45,11 @@ impl CSoundEffect {
 }
 
 impl ClientPacket for CSoundEffect {
-    fn write(&self, bytebuf: &mut BytesMut) {
+    fn write(&self, bytebuf: &mut impl BufMut) {
         bytebuf.put_var_int(&self.sound_event.id);
         if self.sound_event.id.0 == 0 {
             if let Some(test) = &self.sound_event.sound_event {
-                bytebuf.put_string(&test.sound_name);
+                bytebuf.put_identifier(&test.sound_name);
 
                 bytebuf.put_option(&test.range, |p, v| {
                     p.put_f32(*v);

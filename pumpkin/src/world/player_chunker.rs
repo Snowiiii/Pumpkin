@@ -79,12 +79,18 @@ pub async fn update_position(player: &Arc<Player>) {
 
         // Make sure the watched section and the chunk watcher updates are async atomic. We want to
         // ensure what we unload when the player disconnects is correct
-        entity.world.mark_chunks_as_watched(&loading_chunks);
-        let chunks_to_clean = entity.world.mark_chunks_as_not_watched(&unloading_chunks);
+        entity
+            .world
+            .level
+            .mark_chunks_as_newly_watched(&loading_chunks);
+        let chunks_to_clean = entity
+            .world
+            .level
+            .mark_chunks_as_not_watched(&unloading_chunks);
         player.watched_section.store(new_cylindrical);
 
         if !chunks_to_clean.is_empty() {
-            entity.world.clean_chunks(&chunks_to_clean);
+            entity.world.level.clean_chunks(&chunks_to_clean);
 
             // This can take a little if we are sending a bunch of packets, queue it up :p
             let client = player.client.clone();

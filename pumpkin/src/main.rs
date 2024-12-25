@@ -35,8 +35,8 @@ compile_error!("Compiling for WASI targets is not supported!");
 
 use log::LevelFilter;
 
-use client::Client;
 use plugin::PluginManager;
+use net::{lan_broadcast, query, rcon::RCONServer, Client};
 use server::{ticker::Ticker, Server};
 use std::{
     io::{self},
@@ -55,20 +55,15 @@ use crate::server::CURRENT_MC_VERSION;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_protocol::CURRENT_MC_PROTOCOL;
-use rcon::RCONServer;
 use std::time::Instant;
 // Setup some tokens to allow us to identify which event is for which socket.
 
 pub mod block;
-pub mod client;
 pub mod command;
 pub mod entity;
 pub mod error;
-pub mod lan_broadcast;
 pub mod plugin;
-pub mod proxy;
-pub mod query;
-pub mod rcon;
+pub mod net;
 pub mod server;
 pub mod world;
 
@@ -326,7 +321,7 @@ fn setup_console(server: Arc<Server>) {
                 .expect("Failed to read console line");
 
             if !out.is_empty() {
-                let dispatcher = server.command_dispatcher.clone();
+                let dispatcher = server.command_dispatcher.read().await;
                 dispatcher
                     .handle_command(&mut command::CommandSender::Console, &server, &out)
                     .await;

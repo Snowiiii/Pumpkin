@@ -1,4 +1,4 @@
-use bytes::{BufMut, BytesMut};
+use bytes::BufMut;
 use pumpkin_core::text::TextComponent;
 use pumpkin_macros::client_packet;
 
@@ -29,7 +29,7 @@ impl<'a> CCommandSuggestions<'a> {
 }
 
 impl ClientPacket for CCommandSuggestions<'_> {
-    fn write(&self, bytebuf: &mut BytesMut) {
+    fn write(&self, bytebuf: &mut impl BufMut) {
         bytebuf.put_var_int(&self.id);
         bytebuf.put_var_int(&self.start);
         bytebuf.put_var_int(&self.length);

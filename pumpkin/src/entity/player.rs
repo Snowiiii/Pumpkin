@@ -24,7 +24,6 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
-use pumpkin_protocol::client::play::CUpdateTime;
 use pumpkin_protocol::server::play::{
     SCloseContainer, SCookieResponse as SPCookieResponse, SPlayPingRequest,
 };
@@ -41,23 +40,26 @@ use pumpkin_protocol::{
         SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
         SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
     },
-    RawPacket, ServerPacket, SoundCategory, VarInt,
+    RawPacket, ServerPacket, SoundCategory,
 };
+use pumpkin_protocol::{client::play::CUpdateTime, codec::var_int::VarInt};
 use pumpkin_protocol::{
     client::play::{CSetEntityMetadata, Metadata},
     server::play::{SClickContainer, SKeepAlive},
 };
 use pumpkin_world::{
     cylindrical_chunk_iterator::Cylindrical,
-    item::{item_registry::get_item_by_id, ItemStack},
+    item::{
+        item_registry::{get_item_by_id, Operation},
+        ItemStack,
+    },
 };
 use tokio::sync::{Mutex, Notify};
 
 use super::Entity;
-use crate::error::PumpkinError;
+use crate::{error::PumpkinError, net::GameProfile};
 use crate::{
-    client::{
-        authentication::GameProfile,
+    net::{
         combat::{self, player_attack_sound, AttackType},
         Client, PlayerConfig,
     },
@@ -218,18 +220,18 @@ impl Player {
         );
 
         // Decrement value of watched chunks
-        let chunks_to_clean = world.mark_chunks_as_not_watched(&radial_chunks);
+        let chunks_to_clean = world.level.mark_chunks_as_not_watched(&radial_chunks);
 
         // Remove chunks with no watchers from the cache
-        world.clean_chunks(&chunks_to_clean);
+        world.level.clean_chunks(&chunks_to_clean);
         // Remove left over entries from all possiblily loaded chunks
-        world.clean_memory(&radial_chunks);
+        world.level.clean_memory(&radial_chunks);
 
         log::debug!(
             "Removed player id {} ({}) ({} chunks remain cached)",
             self.gameprofile.name,
             self.client.id,
-            self.world().get_cached_chunk_len()
+            self.world().level.loaded_chunk_count()
         );
 
         //self.world().level.list_cached();
@@ -257,7 +259,7 @@ impl Player {
                 // TODO: this should be cached in memory
                 if let Some(modifiers) = &item.components.attribute_modifiers {
                     for item_mod in &modifiers.modifiers {
-                        if item_mod.operation == "add_value" {
+                        if item_mod.operation == Operation::AddValue {
                             if item_mod.id == "minecraft:base_attack_damage" {
                                 add_damage = item_mod.amount;
                             }
@@ -560,8 +562,6 @@ impl Player {
             "Setting the same gamemode as already is"
         );
         self.gamemode.store(gamemode);
-        // The client is using the same method for setting abilities when receiving the CGameEvent ChangeGameMode packet.
-        // So we can just update the abilities without sending them.
         {
             // use another scope so we instantly unlock abilities
             let mut abilities = self.abilities.lock().await;
@@ -585,6 +585,7 @@ impl Player {
                 }
             }
         }
+        self.send_abilities_update().await;
         self.living_entity
             .entity
             .world
@@ -794,7 +795,7 @@ impl Default for Abilities {
             flying: false,
             allow_flying: false,
             creative: false,
-            fly_speed: 0.4,
+            fly_speed: 0.05,
             walk_speed_fov: 0.1,
         }
     }

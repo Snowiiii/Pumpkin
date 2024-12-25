@@ -1,11 +1,11 @@
 use std::fmt::Display;
 
 use super::{ByteBuf, ReadingError};
-use bytes::Bytes;
+use bytes::Buf;
 use serde::de::{self, DeserializeSeed, SeqAccess};
 
-pub struct Deserializer<'a> {
-    inner: &'a mut Bytes,
+pub struct Deserializer<'a, B: Buf> {
+    inner: &'a mut B,
 }
 
 impl de::Error for ReadingError {
@@ -14,13 +14,13 @@ impl de::Error for ReadingError {
     }
 }
 
-impl<'a> Deserializer<'a> {
-    pub fn new(buf: &'a mut Bytes) -> Self {
+impl<'a, B: Buf> Deserializer<'a, B> {
+    pub fn new(buf: &'a mut B) -> Self {
         Self { inner: buf }
     }
 }
 
-impl<'de> de::Deserializer<'de> for Deserializer<'_> {
+impl<'de, B: Buf> de::Deserializer<'de> for Deserializer<'_, B> {
     type Error = ReadingError;
 
     fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
@@ -184,11 +184,11 @@ impl<'de> de::Deserializer<'de> for Deserializer<'_> {
     where
         V: de::Visitor<'de>,
     {
-        struct Access<'a, 'b> {
-            deserializer: &'a mut Deserializer<'b>,
+        struct Access<'a, 'b, B: Buf> {
+            deserializer: &'a mut Deserializer<'b, B>,
         }
 
-        impl<'de, 'a, 'b: 'a> SeqAccess<'de> for Access<'a, 'b> {
+        impl<'de, 'a, 'b: 'a, B: Buf> SeqAccess<'de> for Access<'a, 'b, B> {
             type Error = ReadingError;
 
             fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
@@ -216,12 +216,12 @@ impl<'de> de::Deserializer<'de> for Deserializer<'_> {
     where
         V: de::Visitor<'de>,
     {
-        struct Access<'a, 'b> {
-            deserializer: &'a mut Deserializer<'b>,
+        struct Access<'a, 'b, B: Buf> {
+            deserializer: &'a mut Deserializer<'b, B>,
             len: usize,
         }
 
-        impl<'de, 'a, 'b: 'a> SeqAccess<'de> for Access<'a, 'b> {
+        impl<'de, 'a, 'b: 'a, B: Buf> SeqAccess<'de> for Access<'a, 'b, B> {
             type Error = ReadingError;
 
             fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>

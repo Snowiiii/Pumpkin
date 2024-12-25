@@ -1,4 +1,4 @@
-use bytes::Bytes;
+use bytes::Buf;
 use pumpkin_macros::server_packet;
 
 use crate::{
@@ -13,7 +13,7 @@ pub struct SLoginStart {
 }
 
 impl ServerPacket for SLoginStart {
-    fn read(bytebuf: &mut Bytes) -> Result<Self, ReadingError> {
+    fn read(bytebuf: &mut impl Buf) -> Result<Self, ReadingError> {
         Ok(Self {
             name: bytebuf.try_get_string_len(16)?,
             uuid: bytebuf.try_get_uuid()?,

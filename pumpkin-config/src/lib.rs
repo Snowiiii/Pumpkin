@@ -5,7 +5,7 @@ use query::QueryConfig;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use std::{
-    fs,
+    env, fs,
     net::{Ipv4Addr, SocketAddr},
     num::NonZeroU8,
     path::Path,
@@ -35,6 +35,8 @@ mod server_links;
 
 use proxy::ProxyConfig;
 use resource_pack::ResourcePackConfig;
+
+const CONFIG_ROOT_FOLDER: &str = "config/";
 
 pub static ADVANCED_CONFIG: LazyLock<AdvancedConfiguration> =
     LazyLock::new(AdvancedConfiguration::load);
@@ -126,26 +128,32 @@ trait LoadConfiguration {
     where
         Self: Sized + Default + Serialize + DeserializeOwned,
     {
-        let path = Self::get_path();
+        let exe_dir = env::current_dir().unwrap();
+        let config_dir = exe_dir.join(CONFIG_ROOT_FOLDER);
+        if !config_dir.exists() {
+            log::debug!("creating new config root folder");
+            fs::create_dir(&config_dir).expect("Failed to create Config root folder");
+        }
+        let path = config_dir.join(Self::get_path());
 
         let config = if path.exists() {
-            let file_content = fs::read_to_string(path)
-                .unwrap_or_else(|_| panic!("Couldn't read configuration file at {:?}", path));
+            let file_content = fs::read_to_string(&path)
+                .unwrap_or_else(|_| panic!("Couldn't read configuration file at {:?}", &path));
 
             toml::from_str(&file_content).unwrap_or_else(|err| {
                 panic!(
                     "Couldn't parse config at {:?}. Reason: {}. This is is proberbly caused by an Config update, Just delete the old Config and start Pumpkin again",
-                    path,
+                    &path,
                     err.message()
                 )
             })
         } else {
             let content = Self::default();
 
-            if let Err(err) = fs::write(path, toml::to_string(&content).unwrap()) {
+            if let Err(err) = fs::write(&path, toml::to_string(&content).unwrap()) {
                 warn!(
                     "Couldn't write default config to {:?}. Reason: {}. This is is proberbly caused by an Config update, Just delete the old Config and start Pumpkin again",
-                    path, err
+                    &path, err
                 );
             }
 
