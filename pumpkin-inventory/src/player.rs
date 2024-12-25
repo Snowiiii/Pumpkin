@@ -106,6 +106,10 @@ impl PlayerInventory {
         self.selected = slot;
     }
 
+    pub fn get_selected(&self) -> usize {
+        self.selected + 36
+    }
+
     pub fn held_item(&self) -> Option<&ItemStack> {
         debug_assert!((0..9).contains(&self.selected));
         self.items[self.selected + 36 - 9].as_ref()
