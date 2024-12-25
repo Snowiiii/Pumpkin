@@ -1,16 +1,16 @@
-use bytes::BytesMut;
+use bytes::{BufMut, BytesMut};
 use pumpkin_macros::client_packet;
 
-use crate::{bytebuf::ByteBuffer, ClientPacket};
+use crate::{bytebuf::ByteBufMut, codec::identifier::Identifier, ClientPacket};
 
 #[client_packet("config:registry_data")]
 pub struct CRegistryData<'a> {
-    registry_id: &'a str,
-    entries: &'a [RegistryEntry<'a>],
+    registry_id: &'a Identifier,
+    entries: &'a [RegistryEntry],
 }
 
 impl<'a> CRegistryData<'a> {
-    pub fn new(registry_id: &'a str, entries: &'a [RegistryEntry]) -> Self {
+    pub fn new(registry_id: &'a Identifier, entries: &'a [RegistryEntry]) -> Self {
         Self {
             registry_id,
             entries,
@@ -18,18 +18,17 @@ impl<'a> CRegistryData<'a> {
     }
 }
 
-pub struct RegistryEntry<'a> {
-    pub entry_id: &'a str,
-    pub data: BytesMut,
+pub struct RegistryEntry {
+    pub entry_id: Identifier,
+    pub data: Option<BytesMut>,
 }
 
 impl ClientPacket for CRegistryData<'_> {
-    fn write(&self, bytebuf: &mut ByteBuffer) {
-        bytebuf.put_string(self.registry_id);
+    fn write(&self, bytebuf: &mut impl BufMut) {
+        bytebuf.put_identifier(self.registry_id);
         bytebuf.put_list::<RegistryEntry>(self.entries, |p, v| {
-            p.put_string(v.entry_id);
-            p.put_bool(!v.data.is_empty());
-            p.put_slice(&v.data);
+            p.put_identifier(&v.entry_id);
+            p.put_option(&v.data, |p, v| p.put_slice(v));
         });
     }
 }

@@ -105,7 +105,7 @@ impl Display for CommandTree<'_> {
                     }
 
                     for node in iter {
-                        f.write_char('|')?;
+                        f.write_str(" | ")?;
                         node.fmt(f)?;
                     }
 

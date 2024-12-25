@@ -101,6 +101,34 @@ impl Serialize for RGBColor {
     }
 }
 
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq, Deserialize)]
+pub struct ARGBColor {
+    alpha: u8,
+    red: u8,
+    green: u8,
+    blue: u8,
+}
+
+impl ARGBColor {
+    pub fn new(alpha: u8, red: u8, green: u8, blue: u8) -> Self {
+        ARGBColor {
+            alpha,
+            red,
+            green,
+            blue,
+        }
+    }
+}
+
+impl Serialize for ARGBColor {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_bytes([self.alpha, self.red, self.green, self.blue].as_ref())
+    }
+}
+
 /// Named Minecraft color
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

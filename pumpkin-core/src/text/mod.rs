@@ -1,6 +1,7 @@
 use core::str;
 use std::borrow::Cow;
 
+use crate::text::color::ARGBColor;
 use click::ClickEvent;
 use color::Color;
 use colored::Colorize;
@@ -13,12 +14,7 @@ pub mod color;
 pub mod hover;
 pub mod style;
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
-#[serde(transparent)]
-pub struct Text<'a>(pub Box<TextComponent<'a>>);
-
-// Represents a Text component
-// Reference: https://wiki.vg/Text_formatting#Text_components
+/// Represents a Text component
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct TextComponent<'a> {
@@ -29,6 +25,7 @@ pub struct TextComponent<'a> {
     /// Also has `ClickEvent
     #[serde(flatten)]
     pub style: Style<'a>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     /// Extra text components
     pub extra: Vec<TextComponent<'a>>,
 }
@@ -100,7 +97,7 @@ impl serde::Serialize for TextComponent<'_> {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_bytes(self.encode().as_slice())
+        serializer.serialize_bytes(&self.encode())
     }
 }
 
@@ -175,7 +172,13 @@ impl<'a> TextComponent<'a> {
         self
     }
 
-    pub fn encode(&self) -> Vec<u8> {
+    /// Overrides the shadow properties of text.
+    pub fn shadow_color(mut self, color: ARGBColor) -> Self {
+        self.style.shadow_color = Some(color);
+        self
+    }
+
+    pub fn encode(&self) -> bytes::BytesMut {
         // TODO: Somehow fix this ugly mess
         #[derive(serde::Serialize)]
         #[serde(rename_all = "camelCase")]
@@ -186,30 +189,30 @@ impl<'a> TextComponent<'a> {
             style: &'a Style<'a>,
             #[serde(default, skip_serializing_if = "Vec::is_empty")]
             #[serde(rename = "extra")]
-            extra: Vec<&'a TempStruct<'a>>,
+            extra: Vec<TempStruct<'a>>,
         }
-        let temp_extra: Vec<TempStruct> = self
-            .extra
-            .iter()
-            .map(|x| TempStruct {
-                text: &x.content,
-                style: &x.style,
-                extra: vec![],
-            })
-            .collect();
-        let temp_extra_refs: Vec<&TempStruct> = temp_extra.iter().collect();
+        fn convert_extra<'a>(extra: &'a [TextComponent<'a>]) -> Vec<TempStruct<'a>> {
+            extra
+                .iter()
+                .map(|x| TempStruct {
+                    text: &x.content,
+                    style: &x.style,
+                    extra: convert_extra(&x.extra),
+                })
+                .collect()
+        }
+
+        let temp_extra = convert_extra(&self.extra);
         let astruct = TempStruct {
             text: &self.content,
             style: &self.style,
-            extra: temp_extra_refs,
+            extra: temp_extra,
         };
         // dbg!(&serde_json::to_string(&astruct));
         // dbg!(pumpkin_nbt::serializer::to_bytes_unnamed(&astruct).unwrap().to_vec());
 
         // TODO
-        pumpkin_nbt::serializer::to_bytes_unnamed(&astruct)
-            .unwrap()
-            .to_vec()
+        pumpkin_nbt::serializer::to_bytes_unnamed(&astruct).unwrap()
     }
 }
 
@@ -222,7 +225,7 @@ pub enum TextContent<'a> {
     Translate {
         translate: Cow<'a, str>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        with: Vec<Text<'a>>,
+        with: Vec<TextComponent<'a>>,
     },
     /// Displays the name of one or more entities found by a selector.
     EntityNames {

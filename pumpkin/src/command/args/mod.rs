@@ -32,7 +32,7 @@ pub(crate) mod arg_message;
 pub(crate) mod arg_players;
 pub(crate) mod arg_position_2d;
 pub(crate) mod arg_position_3d;
-pub(crate) mod arg_postition_block;
+pub(crate) mod arg_position_block;
 pub(crate) mod arg_resource_location;
 pub(crate) mod arg_rotation;
 pub(crate) mod arg_simple;
@@ -50,7 +50,7 @@ pub(crate) trait ArgumentConsumer: Sync + GetClientSideArgParser {
 
     /// Used for tab completion (but only if argument suggestion type is "minecraft:ask_server"!).
     ///
-    /// NOTE: This is called after this consumer's [`ArgumentConsumer::consume`] method returnd None, so if args is used here, make sure [`ArgumentConsumer::consume`] never returns None after mutating args.
+    /// NOTE: This is called after this consumer's [`ArgumentConsumer::consume`] method returned None, so if args is used here, make sure [`ArgumentConsumer::consume`] never returns None after mutating args.
     async fn suggest<'a>(
         &self,
         sender: &CommandSender<'a>,
@@ -83,17 +83,17 @@ pub(crate) enum Arg<'a> {
     Pos2D(Vector2<f64>),
     Rotation(f32, f32),
     GameMode(GameMode),
-    CommandTree(&'a CommandTree<'a>),
-    Item(String),
-    ResourceLocation(String),
-    Block(String),
+    CommandTree(CommandTree<'a>),
+    Item(&'a str),
+    ResourceLocation(&'a str),
+    Block(&'a str),
     BossbarColor(BossbarColor),
     BossbarStyle(BossbarDivisions),
     Msg(String),
     Num(Result<Number, NotInBounds>),
     Bool(bool),
     #[allow(unused)]
-    Simple(String),
+    Simple(&'a str),
 }
 
 /// see [`crate::commands::tree_builder::argument`] and [`CommandTree::execute`]/[`crate::commands::tree_builder::NonLeafNodeBuilder::execute`]

@@ -10,9 +10,8 @@ use crate::world::World;
 use args::ConsumedArgs;
 use async_trait::async_trait;
 use commands::{
-    cmd_clear, cmd_craft, cmd_echest, cmd_fill, cmd_gamemode, cmd_give, cmd_help, cmd_kick,
-    cmd_kill, cmd_list, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_time,
-    cmd_worldborder,
+    cmd_clear, cmd_fill, cmd_gamemode, cmd_give, cmd_help, cmd_kick, cmd_kill, cmd_list,
+    cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_time, cmd_worldborder,
 };
 use dispatcher::CommandError;
 use pumpkin_core::math::vector3::Vector3;
@@ -108,7 +107,7 @@ impl<'a> CommandSender<'a> {
 }
 
 #[must_use]
-pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
+pub fn default_dispatcher<'a>() -> CommandDispatcher<'a> {
     let mut dispatcher = CommandDispatcher::default();
 
     dispatcher.register(cmd_pumpkin::init_command_tree());
@@ -117,8 +116,6 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_gamemode::init_command_tree());
     dispatcher.register(cmd_stop::init_command_tree());
     dispatcher.register(cmd_help::init_command_tree());
-    dispatcher.register(cmd_echest::init_command_tree());
-    dispatcher.register(cmd_craft::init_command_tree());
     dispatcher.register(cmd_kill::init_command_tree());
     dispatcher.register(cmd_kick::init_command_tree());
     dispatcher.register(cmd_worldborder::init_command_tree());
@@ -132,7 +129,7 @@ pub fn default_dispatcher<'a>() -> Arc<CommandDispatcher<'a>> {
     dispatcher.register(cmd_transfer::init_command_tree());
     dispatcher.register(cmd_fill::init_command_tree());
 
-    Arc::new(dispatcher)
+    dispatcher
 }
 
 #[async_trait]

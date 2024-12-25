@@ -14,7 +14,7 @@ use crate::server::Server;
 use super::super::args::ArgumentConsumer;
 use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
-/// todo: implement for entitites that aren't players
+/// todo: implement for entities that aren't players
 ///
 /// For selecting a single entity, eg. using @s, a player name or entity uuid.
 ///
@@ -84,7 +84,7 @@ impl DefaultNameArgConsumer for EntityArgumentConsumer {
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &EntityArgumentConsumer
+        &Self
     }
 }
 

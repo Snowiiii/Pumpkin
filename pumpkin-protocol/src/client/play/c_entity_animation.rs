@@ -20,10 +20,11 @@ impl CEntityAnimation {
     }
 }
 
+#[derive(Debug)]
 #[repr(u8)]
 pub enum Animation {
     SwingMainArm,
-    LeaveBed,
+    LeaveBed = 2,
     SwingOffhand,
     CriticalEffect,
     MagicCriticaleffect,

@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use itertools::Itertools;
 use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::text::TextComponent;
 
@@ -35,10 +34,7 @@ impl CommandExecutor for ListExecutor {
                 "There are {} of a max of {} players online: {}",
                 players.len(),
                 BASIC_CONFIG.max_players,
-                players
-                    .iter()
-                    .map(|player| &player.gameprofile.name)
-                    .join(", ")
+                get_player_names(players)
             )
         };
 
@@ -46,6 +42,17 @@ impl CommandExecutor for ListExecutor {
 
         Ok(())
     }
+}
+
+fn get_player_names(players: Vec<Arc<Player>>) -> String {
+    let mut names = String::new();
+    for player in players {
+        if !names.is_empty() {
+            names.push_str(", ");
+        }
+        names.push_str(&player.gameprofile.name);
+    }
+    names
 }
 
 pub fn init_command_tree<'a>() -> CommandTree<'a> {

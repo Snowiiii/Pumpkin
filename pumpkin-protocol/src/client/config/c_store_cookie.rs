@@ -1,4 +1,4 @@
-use crate::{Identifier, VarInt};
+use crate::{codec::identifier::Identifier, VarInt};
 use pumpkin_macros::client_packet;
 
 #[derive(serde::Serialize)]

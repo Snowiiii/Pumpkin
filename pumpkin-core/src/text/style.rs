@@ -1,10 +1,10 @@
-use serde::{Deserialize, Serialize};
-
 use super::{
     click::ClickEvent,
     color::{self, Color},
     hover::HoverEvent,
 };
+use crate::text::color::ARGBColor;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
@@ -38,6 +38,12 @@ pub struct Style<'a> {
     /// Allows you to change the font of the text.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub font: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "shadow_color"
+    )]
+    pub shadow_color: Option<ARGBColor>,
 }
 
 impl<'a> Style<'a> {
@@ -103,6 +109,12 @@ impl<'a> Style<'a> {
     /// Default fonts: `minecraft:default`, `minecraft:uniform`, `minecraft:alt`, `minecraft:illageralt`
     pub fn font(mut self, identifier: String) -> Self {
         self.font = Some(identifier);
+        self
+    }
+
+    /// Overrides the shadow properties of text.
+    pub fn shadow_color(mut self, color: ARGBColor) -> Self {
+        self.shadow_color = Some(color);
         self
     }
 }

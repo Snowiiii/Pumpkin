@@ -32,7 +32,7 @@ impl CommandExecutor for StopExecutor {
         for player in server.get_all_players().await {
             player.kick(kick_message.clone()).await;
         }
-
+        server.save().await;
         std::process::exit(0)
     }
 }

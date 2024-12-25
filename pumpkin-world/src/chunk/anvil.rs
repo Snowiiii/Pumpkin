@@ -4,9 +4,8 @@ use std::{
 };
 
 use flate2::bufread::{GzDecoder, ZlibDecoder};
-use itertools::Itertools;
 
-use crate::level::SaveFile;
+use crate::level::LevelFolder;
 
 use super::{ChunkData, ChunkReader, ChunkReadingError, CompressionError};
 
@@ -88,7 +87,7 @@ impl Compression {
 impl ChunkReader for AnvilChunkReader {
     fn read_chunk(
         &self,
-        save_file: &SaveFile,
+        save_file: &LevelFolder,
         at: &pumpkin_core::math::vector2::Vector2<i32>,
     ) -> Result<super::ChunkData, ChunkReadingError> {
         let region = (at.x >> 5, at.z >> 5);
@@ -143,7 +142,7 @@ impl ChunkReader for AnvilChunkReader {
         };
 
         // TODO: check checksum to make sure chunk is not corrupted
-        let header = file_buf.drain(0..5).collect_vec();
+        let header: Vec<u8> = file_buf.drain(0..5).collect();
 
         let compression = Compression::from_byte(header[4]).ok_or(
             ChunkReadingError::Compression(CompressionError::UnknownCompression),
@@ -152,12 +151,12 @@ impl ChunkReader for AnvilChunkReader {
         let size = u32::from_be_bytes(header[..4].try_into().unwrap());
 
         // size includes the compression scheme byte, so we need to subtract 1
-        let chunk_data = file_buf.drain(0..size as usize - 1).collect_vec();
+        let chunk_data = file_buf.drain(0..size as usize - 1).collect();
         let decompressed_chunk = compression
             .decompress_data(chunk_data)
             .map_err(ChunkReadingError::Compression)?;
 
-        ChunkData::from_bytes(decompressed_chunk, *at).map_err(ChunkReadingError::ParsingError)
+        ChunkData::from_bytes(&decompressed_chunk, *at).map_err(ChunkReadingError::ParsingError)
     }
 }
 
@@ -169,14 +168,14 @@ mod tests {
 
     use crate::{
         chunk::{anvil::AnvilChunkReader, ChunkReader, ChunkReadingError},
-        level::SaveFile,
+        level::LevelFolder,
     };
 
     #[test]
     fn not_existing() {
         let region_path = PathBuf::from("not_existing");
         let result = AnvilChunkReader::new().read_chunk(
-            &SaveFile {
+            &LevelFolder {
                 root_folder: PathBuf::from(""),
                 region_folder: region_path,
             },
