@@ -72,10 +72,6 @@ fn scrub_address(ip: &str) -> String {
     }
 }
 
-fn unused_function() {
-    println!("I'm unused!")
-}
-
 fn init_logger() {
     use pumpkin_config::ADVANCED_CONFIG;
     if ADVANCED_CONFIG.logging.enabled {
