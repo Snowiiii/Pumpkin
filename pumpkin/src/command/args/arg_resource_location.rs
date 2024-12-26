@@ -63,10 +63,6 @@ impl DefaultNameArgConsumer for ResourceLocationArgumentConsumer {
     fn default_name(&self) -> String {
         "id".to_string()
     }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        self
-    }
 }
 
 impl<'a> FindArg<'a> for ResourceLocationArgumentConsumer {

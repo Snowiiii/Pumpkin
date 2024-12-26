@@ -60,10 +60,6 @@ impl DefaultNameArgConsumer for EntitiesArgumentConsumer {
     fn default_name(&self) -> String {
         "targets".to_string()
     }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &Self
-    }
 }
 
 impl<'a> FindArg<'a> for EntitiesArgumentConsumer {

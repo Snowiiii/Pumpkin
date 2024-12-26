@@ -67,10 +67,6 @@ impl DefaultNameArgConsumer for BossbarColorArgumentConsumer {
     fn default_name(&self) -> String {
         "color".to_string()
     }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        self
-    }
 }
 
 impl<'a> FindArg<'a> for BossbarColorArgumentConsumer {

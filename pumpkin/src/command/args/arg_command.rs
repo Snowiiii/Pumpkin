@@ -68,10 +68,6 @@ impl DefaultNameArgConsumer for CommandTreeArgumentConsumer {
     fn default_name(&self) -> String {
         "cmd".to_string()
     }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &Self
-    }
 }
 
 impl<'a> FindArg<'a> for CommandTreeArgumentConsumer {

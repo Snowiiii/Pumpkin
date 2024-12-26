@@ -76,10 +76,6 @@ impl DefaultNameArgConsumer for Position2DArgumentConsumer {
     fn default_name(&self) -> String {
         "pos2d".to_string()
     }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &Self
-    }
 }
 
 impl<'a> FindArg<'a> for Position2DArgumentConsumer {

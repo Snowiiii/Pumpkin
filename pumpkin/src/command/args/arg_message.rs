@@ -58,10 +58,6 @@ impl DefaultNameArgConsumer for MsgArgConsumer {
     fn default_name(&self) -> String {
         "msg".to_string()
     }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &Self
-    }
 }
 
 impl<'a> FindArg<'a> for MsgArgConsumer {
