@@ -12,7 +12,6 @@ query = []
 
 [dependencies]
 pumpkin-nbt = { path = "../pumpkin-nbt" }
-pumpkin-config = { path = "../pumpkin-config" }
 pumpkin-macros = { path = "../pumpkin-macros" }
 pumpkin-world = { path = "../pumpkin-world" }
 pumpkin-core = { path = "../pumpkin-core" }

@@ -25,6 +25,21 @@ pub const MAX_PACKET_SIZE: i32 = 2097152;
 
 pub type FixedBitSet = bytes::Bytes;
 
+/// Represents a compression threshold.
+///
+/// The threshold determines the minimum size of data that should be compressed.
+/// Data smaller than the threshold will not be compressed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CompressionThreshold(pub u32);
+
+/// Represents a compression level.
+///
+/// The level controls the amount of compression applied to the data.
+/// Higher levels generally result in higher compression ratios but also
+/// increase CPU usage.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CompressionLevel(pub u32);
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ConnectionState {
     HandShake,
