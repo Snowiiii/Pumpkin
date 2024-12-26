@@ -17,8 +17,7 @@ pub struct PacketDecoder {
     buf: BytesMut,
     decompress_buf: BytesMut,
     cipher: Option<Cipher>,
-    compression: bool,
-    decompressor: Decompressor,
+    decompressor: Option<Decompressor>,
 }
 
 // Manual implementation of Default trait for PacketDecoder
@@ -29,8 +28,7 @@ impl Default for PacketDecoder {
             buf: BytesMut::new(),
             decompress_buf: BytesMut::new(),
             cipher: None,
-            compression: false,
-            decompressor: Decompressor::new(),
+            decompressor: None,
         }
     }
 }
@@ -58,7 +56,7 @@ impl PacketDecoder {
         let packet_len_len = VarInt(packet_len).written_size();
 
         let mut data;
-        if self.compression {
+        if let Some(decompressor) = &mut self.decompressor {
             r = &r[..packet_len as usize];
 
             let data_len = VarInt::decode(&mut r)
@@ -77,8 +75,7 @@ impl PacketDecoder {
                 self.decompress_buf.resize(data_len as usize, 0);
 
                 // Perform decompression using libdeflater
-                let decompressed_size = self
-                    .decompressor
+                let decompressed_size = decompressor
                     .zlib_decompress(r, &mut self.decompress_buf)
                     .map_err(PacketDecodeError::from)?;
 
@@ -135,7 +132,11 @@ impl PacketDecoder {
 
     /// Sets ZLib Decompression
     pub fn set_compression(&mut self, compression: bool) {
-        self.compression = compression;
+        if compression {
+            self.decompressor = Some(Decompressor::new());
+        } else {
+            self.decompressor = None
+        }
     }
 
     fn decrypt_bytes(cipher: &mut Cipher, bytes: &mut [u8]) {

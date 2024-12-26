@@ -22,8 +22,9 @@ const ARG_COMMAND: &str = "command";
 
 const COMMANDS_PER_PAGE: i32 = 7;
 
-static PAGE_NUMBER_CONSUMER: BoundedNumArgumentConsumer<i32> =
-    BoundedNumArgumentConsumer::new().name("page").min(1);
+fn page_number_consumer() -> BoundedNumArgumentConsumer<i32> {
+    BoundedNumArgumentConsumer::new().name("page").min(1)
+}
 
 struct CommandHelpExecutor;
 
@@ -41,7 +42,7 @@ impl CommandExecutor for CommandHelpExecutor {
 
         let command_names = tree.names.join(", /");
         let usage = format!("{tree}");
-        let description = tree.description;
+        let description = &tree.description;
 
         let header_text = format!(" Help - /{} ", tree.names[0]);
 
@@ -107,7 +108,7 @@ impl CommandExecutor for BaseHelpExecutor {
         server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
-        let page_number = match PAGE_NUMBER_CONSUMER.find_arg_default_name(args) {
+        let page_number = match page_number_consumer().find_arg_default_name(args) {
             Err(_) => 1,
             Ok(Ok(number)) => number,
             Ok(Err(())) => {
@@ -131,7 +132,7 @@ impl CommandExecutor for BaseHelpExecutor {
             })
             .collect();
 
-        commands.sort_by(|a, b| a.names[0].cmp(b.names[0]));
+        commands.sort_by(|a, b| a.names[0].cmp(&b.names[0]));
 
         let total_pages =
             (commands.len().to_i32().unwrap() + COMMANDS_PER_PAGE - 1) / COMMANDS_PER_PAGE;
@@ -183,7 +184,7 @@ impl CommandExecutor for BaseHelpExecutor {
                     .color_named(NamedColor::Gold)
                     .add_child(TextComponent::text(" - ").color_named(NamedColor::Yellow))
                     .add_child(
-                        TextComponent::text_string(tree.description.to_owned() + "\n")
+                        TextComponent::text_string(tree.description.clone() + "\n")
                             .color_named(NamedColor::White),
                     )
                     .add_child(TextComponent::text("    Usage: ").color_named(NamedColor::Yellow))
@@ -220,11 +221,9 @@ impl CommandExecutor for BaseHelpExecutor {
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION)
-        .with_child(
-            argument(ARG_COMMAND, &CommandTreeArgumentConsumer).execute(&CommandHelpExecutor),
-        )
-        .with_child(argument_default_name(&PAGE_NUMBER_CONSUMER).execute(&BaseHelpExecutor))
-        .execute(&BaseHelpExecutor)
+        .with_child(argument(ARG_COMMAND, CommandTreeArgumentConsumer).execute(CommandHelpExecutor))
+        .with_child(argument_default_name(page_number_consumer()).execute(BaseHelpExecutor))
+        .execute(BaseHelpExecutor)
 }

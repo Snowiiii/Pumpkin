@@ -1,6 +1,5 @@
 use bytes::Buf;
 use pumpkin_macros::server_packet;
-use serde::de;
 
 use crate::{
     bytebuf::{ByteBuf, ReadingError},
@@ -18,7 +17,7 @@ pub struct SConfigCookieResponse {
     pub payload: Option<bytes::Bytes>, // 5120,
 }
 
-const MAX_PAYLOAD_SIZE: i32 = 5120;
+const MAX_COOKIE_LENGTH: usize = 5120;
 
 impl ServerPacket for SConfigCookieResponse {
     fn read(bytebuf: &mut impl Buf) -> Result<Self, ReadingError> {
@@ -37,13 +36,7 @@ impl ServerPacket for SConfigCookieResponse {
         let payload_length = bytebuf.try_get_var_int()?;
         let length = payload_length.0;
 
-        if length > MAX_PAYLOAD_SIZE {
-            return Err(de::Error::custom(
-                "Payload exceeds the maximum allowed size (5120 bytes)",
-            ));
-        }
-
-        let payload = bytebuf.try_copy_to_bytes(length as usize)?;
+        let payload = bytebuf.try_copy_to_bytes_len(length as usize, MAX_COOKIE_LENGTH)?;
 
         Ok(Self {
             key,
