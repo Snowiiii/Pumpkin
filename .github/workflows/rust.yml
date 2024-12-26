@@ -31,8 +31,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - run: cargo install clippy-sarif
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy --all-targets --all-features
+      - run: cargo clippy --all-targets --all-features --message-format=json | clippy-sarif | tee results.sarif
+      - name: Upload analysis results to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
   build_and_test:
     name: Build project and test
     runs-on: ${{ matrix.os }}
