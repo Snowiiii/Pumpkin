@@ -501,56 +501,6 @@ impl Client {
         Ok(())
     }
 
-    /// Reads the connection until our buffer of len 4096 is full, then decode
-    /// Close connection when an error occurs or when the Client closed the connection
-    /// Returns if connection is still open
-    /* pub async fn poll(&self) -> bool {
-        loop {
-            if self.closed.load(std::sync::atomic::Ordering::Relaxed) {
-                // If we manually close (like a kick) we dont want to keep reading bytes
-                return false;
-            }
-
-            let mut dec = self.dec.lock().await;
-
-            match dec.decode() {
-                Ok(Some(packet)) => {
-                    self.add_packet(packet).await;
-                    return true;
-                }
-                Ok(None) => (), //log::debug!("Waiting for more data to complete packet..."),
-                Err(err) => {
-                    log::warn!("Failed to decode packet for: {}", err.to_string());
-                    self.close();
-                    return false; // return to avoid reserving additional bytes
-                }
-            }
-
-            dec.reserve(4096);
-            let mut buf = dec.take_capacity();
-
-            let bytes_read = self.connection_reader.lock().await.read_buf(&mut buf).await;
-            match bytes_read {
-                Ok(cnt) => {
-                    //log::debug!("Read {} bytes", cnt);
-                    if cnt == 0 {
-                        self.close();
-                        return false;
-                    }
-                }
-                Err(error) => {
-                    log::error!("Error while reading incoming packet {}", error);
-                    self.close();
-                    return false;
-                }
-            };
-
-            // This should always be an O(1) unsplit because we reserved space earlier and
-            // the call to `read_buf` shouldn't have grown the allocation.
-            dec.queue_bytes(buf);
-        }
-    } */
-
     /// Disconnects a client from the server with a specified reason.
     ///
     /// This function kicks a client identified by its ID from the server. The appropriate disconnect packet is sent based on the client's current connection state.

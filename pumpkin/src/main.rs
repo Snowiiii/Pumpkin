@@ -240,7 +240,7 @@ async fn main() {
 
         let client_clone = client.clone();
         tokio::spawn(async move {
-            while let Some(_) = rx.recv().await {
+            while (rx.recv().await).is_some() {
                 let mut enc = client_clone.enc.lock().await;
                 let buf = enc.take();
                 if let Err(e) = connection_writer.lock().await.write_all(&buf).await {

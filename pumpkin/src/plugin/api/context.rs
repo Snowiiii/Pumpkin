@@ -69,7 +69,7 @@ pub enum ContextAction {
 
 pub fn handle_context(
     metadata: PluginMetadata<'static>, /* , dispatcher: Arc<CommandDispatcher<'static>> */
-    server: Arc<Server>,
+    server: &Arc<Server>,
 ) -> Context {
     let (send, mut recv) = mpsc::channel(1);
     let server = server.clone();

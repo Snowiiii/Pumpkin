@@ -7,6 +7,7 @@ use super::CommandExecutor;
 
 impl<'a> CommandTree<'a> {
     /// Add a child [Node] to the root of this [`CommandTree`].
+    #[must_use]
     pub fn with_child(mut self, child: impl NodeBuilder<'a>) -> Self {
         let node = child.build(&mut self);
         self.children.push(self.nodes.len());
@@ -15,6 +16,7 @@ impl<'a> CommandTree<'a> {
     }
 
     /// provide at least one name
+    #[must_use]
     pub fn new<const NAME_COUNT: usize>(
         names: [&'a str; NAME_COUNT],
         description: &'a str,
@@ -42,6 +44,7 @@ impl<'a> CommandTree<'a> {
     /// desired type.
     ///
     /// Also see [`NonLeafNodeBuilder::execute`].
+    #[must_use]
     pub fn execute(mut self, executor: &'a dyn CommandExecutor) -> Self {
         let node = Node {
             node_type: NodeType::ExecuteLeaf { executor },

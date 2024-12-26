@@ -103,7 +103,7 @@ impl PluginManager {
         // The chance that this will panic is non-existent, but just in case
         let context = handle_context(
             metadata.clone(), /* , dispatcher */
-            self.server.clone().expect("Server not set"),
+            &self.server.clone().expect("Server not set"),
         );
         let mut plugin_box = plugin_fn();
         let res = plugin_box.on_load(&context).await;
@@ -137,7 +137,7 @@ impl PluginManager {
 
             let context = handle_context(
                 metadata.clone(), /* , dispatcher */
-                self.server.clone().expect("Server not set"),
+                &self.server.clone().expect("Server not set"),
             );
             let res = plugin.on_load(&context).await;
             res?;
@@ -157,7 +157,7 @@ impl PluginManager {
         if let Some((metadata, plugin, _, loaded)) = plugin {
             let context = handle_context(
                 metadata.clone(), /* , dispatcher */
-                self.server.clone().expect("Server not set"),
+                &self.server.clone().expect("Server not set"),
             );
             let res = plugin.on_unload(&context).await;
             res?;
@@ -200,7 +200,7 @@ impl PluginManager {
             if let Some(matching_event) = registered_events.iter().find(|e| e.name == event_name) {
                 let context = handle_context(
                     metadata.clone(), /* , dispatcher.clone() */
-                    self.server.clone().expect("Server not set"),
+                    &self.server.clone().expect("Server not set"),
                 );
 
                 if matching_event.blocking {

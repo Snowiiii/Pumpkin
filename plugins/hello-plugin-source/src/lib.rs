@@ -1,18 +1,17 @@
+use async_trait::async_trait;
+use pumpkin::command::args::ConsumedArgs;
+use pumpkin::command::dispatcher::CommandError;
+use pumpkin::command::tree::CommandTree;
+use pumpkin::command::CommandExecutor;
+use pumpkin::command::CommandSender;
 use pumpkin::plugin::api::types::player::PlayerEvent;
 use pumpkin::plugin::*;
+use pumpkin::server::Server;
 use pumpkin_api_macros::{plugin_event, plugin_impl, plugin_method};
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use pumpkin::command::tree::CommandTree;
-use pumpkin::command::dispatcher::CommandError;
-use pumpkin::command::args::ConsumedArgs;
-use pumpkin::server::Server;
-use pumpkin::command::CommandSender;
-use pumpkin::command::CommandExecutor;
-use async_trait::async_trait;
-use pumpkin_protocol::client::play::CSystemChatMessage;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Config {
@@ -80,11 +79,7 @@ async fn on_unload(&mut self, server: &Context) -> Result<(), String> {
 }
 
 #[plugin_event(blocking = true, priority = Highest)]
-async fn on_player_join(
-    &mut self,
-    server: &Context,
-    player: &PlayerEvent,
-) -> Result<bool, String> {
+async fn on_player_join(&mut self, server: &Context, player: &PlayerEvent) -> Result<bool, String> {
     server.get_logger().info(
         format!(
             "Player {} joined the game. Config is {:#?}",
@@ -136,5 +131,11 @@ impl MyPlugin {
                 bans: Bans { players: vec![] },
             },
         }
+    }
+}
+
+impl Default for MyPlugin {
+    fn default() -> Self {
+        Self::new()
     }
 }
