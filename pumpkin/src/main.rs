@@ -42,7 +42,7 @@ use std::{
     io::{self},
     sync::LazyLock,
 };
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::{io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader}, net::tcp::OwnedReadHalf};
 #[cfg(not(unix))]
 use tokio::signal::ctrl_c;
 #[cfg(unix)]
@@ -54,7 +54,7 @@ use std::sync::Arc;
 use crate::server::CURRENT_MC_VERSION;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
-use pumpkin_protocol::CURRENT_MC_PROTOCOL;
+use pumpkin_protocol::{client, CURRENT_MC_PROTOCOL};
 use std::time::Instant;
 // Setup some tokens to allow us to identify which event is for which socket.
 
@@ -228,7 +228,27 @@ async fn main() {
             id
         );
 
-        let client = Arc::new(Client::new(connection, addr, id));
+        let (tx, mut rx) = tokio::sync::mpsc::channel(16);
+        let (connection_reader, connection_writer) = connection.into_split();
+        let connection_reader = Arc::new(Mutex::new(connection_reader));
+        let connection_writer = Arc::new(Mutex::new(connection_writer));
+
+        let client = Arc::new(Client::new(tx, addr, id));
+
+        let client_clone = client.clone();
+        tokio::spawn(async move {
+            while let Some(packet) = rx.recv().await {
+                let mut writer = connection_writer.lock().await;
+                match writer.write_all(&packet).await {
+                    Ok(_) => (),
+                    Err(e) => {
+                        log::warn!("Failed to write packet to client: {e}");
+                        client_clone.close();
+                        break;
+                    }
+                }
+            }
+        });
 
         let server = server.clone();
         tokio::spawn(async move {
@@ -237,7 +257,7 @@ async fn main() {
                     .make_player
                     .load(std::sync::atomic::Ordering::Relaxed)
             {
-                let open = client.poll().await;
+                let open = poll(&client, connection_reader.clone()).await;
                 if open {
                     client.process_packets(&server).await;
                 };
@@ -257,7 +277,7 @@ async fn main() {
                     .closed
                     .load(core::sync::atomic::Ordering::Relaxed)
                 {
-                    let open = player.client.poll().await;
+                    let open = poll(&player.client, connection_reader.clone()).await;
                     if open {
                         player.process_packets(&server).await;
                     };
@@ -267,6 +287,53 @@ async fn main() {
                 server.remove_player().await;
             }
         });
+    }
+}
+
+async fn poll(client: &Client, connection_reader: Arc<Mutex<OwnedReadHalf>>) -> bool {
+    loop {
+        if client.closed.load(std::sync::atomic::Ordering::Relaxed) {
+            // If we manually close (like a kick) we dont want to keep reading bytes
+            return false;
+        }
+
+        let mut dec = client.dec.lock().await;
+
+        match dec.decode() {
+            Ok(Some(packet)) => {
+                client.add_packet(packet).await;
+                return true;
+            }
+            Ok(None) => (), //log::debug!("Waiting for more data to complete packet..."),
+            Err(err) => {
+                log::warn!("Failed to decode packet for: {}", err.to_string());
+                client.close();
+                return false; // return to avoid reserving additional bytes
+            }
+        }
+
+        dec.reserve(4096);
+        let mut buf = dec.take_capacity();
+
+        let bytes_read = connection_reader.lock().await.read_buf(&mut buf).await;
+        match bytes_read {
+            Ok(cnt) => {
+                //log::debug!("Read {} bytes", cnt);
+                if cnt == 0 {
+                    client.close();
+                    return false;
+                }
+            }
+            Err(error) => {
+                log::error!("Error while reading incoming packet {}", error);
+                client.close();
+                return false;
+            }
+        };
+
+        // This should always be an O(1) unsplit because we reserved space earlier and
+        // the call to `read_buf` shouldn't have grown the allocation.
+        dec.queue_bytes(buf);
     }
 }
 
