@@ -22,7 +22,7 @@ pub mod args;
 pub mod client_cmd_suggestions;
 mod commands;
 pub mod dispatcher;
-mod tree;
+pub mod tree;
 mod tree_builder;
 mod tree_format;
 
@@ -136,7 +136,7 @@ pub fn default_dispatcher<'a>() -> CommandDispatcher<'a> {
 }
 
 #[async_trait]
-pub(crate) trait CommandExecutor: Sync {
+pub trait CommandExecutor: Sync {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,

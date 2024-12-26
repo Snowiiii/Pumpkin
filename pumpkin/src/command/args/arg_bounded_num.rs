@@ -80,10 +80,10 @@ impl<T: ToFromNumber> FindArg<'_> for BoundedNumArgumentConsumer<T> {
     }
 }
 
-pub(crate) type NotInBounds = ();
+pub type NotInBounds = ();
 
 #[derive(Clone, Copy)]
-pub(crate) enum Number {
+pub enum Number {
     F64(f64),
     F32(f32),
     I32(i32),

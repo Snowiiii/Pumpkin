@@ -50,10 +50,12 @@ impl Context {
         recv.await.unwrap()
     }
 
-    /*  TODO: Implement when dispatcher is mutable
     pub async fn register_command(&self, tree: crate::command::tree::CommandTree<'static>) {
-        self.channel.send(ContextAction::RegisterCommand(tree)).await;
-    } */
+        let _ = self
+            .channel
+            .send(ContextAction::RegisterCommand(tree))
+            .await;
+    }
 }
 
 pub enum ContextAction {
@@ -62,6 +64,7 @@ pub enum ContextAction {
         player_name: String,
         response: oneshot::Sender<Result<PlayerEvent<'static>, String>>,
     },
+    RegisterCommand(crate::command::tree::CommandTree<'static>),
 }
 
 pub fn handle_context(
@@ -69,6 +72,7 @@ pub fn handle_context(
     server: Arc<Server>,
 ) -> Context {
     let (send, mut recv) = mpsc::channel(1);
+    let server = server.clone();
     tokio::spawn(async move {
         while let Some(action) = recv.recv().await {
             match action {
@@ -89,6 +93,10 @@ pub fn handle_context(
                     } else {
                         response.send(Err("Player not found".to_string())).unwrap();
                     }
+                }
+                ContextAction::RegisterCommand(tree) => {
+                    let mut dispatcher_lock = server.command_dispatcher.write().await;
+                    dispatcher_lock.register(tree);
                 }
             }
         }
