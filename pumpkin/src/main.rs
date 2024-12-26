@@ -35,8 +35,8 @@ compile_error!("Compiling for WASI targets is not supported!");
 
 use log::LevelFilter;
 
-use plugin::PluginManager;
 use net::{lan_broadcast, query, rcon::RCONServer, Client};
+use plugin::PluginManager;
 use server::{ticker::Ticker, Server};
 use std::{
     io::{self},
@@ -62,8 +62,8 @@ pub mod block;
 pub mod command;
 pub mod entity;
 pub mod error;
-pub mod plugin;
 pub mod net;
+pub mod plugin;
 pub mod server;
 pub mod world;
 
