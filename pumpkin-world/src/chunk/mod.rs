@@ -9,7 +9,7 @@ use thiserror::Error;
 use crate::{
     block::BlockState,
     coordinates::{ChunkRelativeBlockCoordinates, Height},
-    level::SaveFile,
+    level::LevelFolder,
     WORLD_HEIGHT,
 };
 
@@ -22,7 +22,7 @@ const CHUNK_VOLUME: usize = CHUNK_AREA * WORLD_HEIGHT;
 pub trait ChunkReader: Sync + Send {
     fn read_chunk(
         &self,
-        save_file: &SaveFile,
+        save_file: &LevelFolder,
         at: &Vector2<i32>,
     ) -> Result<ChunkData, ChunkReadingError>;
 }

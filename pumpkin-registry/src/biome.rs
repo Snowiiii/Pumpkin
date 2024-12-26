@@ -1,4 +1,4 @@
-use pumpkin_protocol::VarInt;
+use pumpkin_protocol::codec::var_int::VarInt;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

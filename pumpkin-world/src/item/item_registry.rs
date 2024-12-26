@@ -57,6 +57,15 @@ pub struct Modifier {
     pub type_val: String,
     pub id: String,
     pub amount: f64,
-    pub operation: String,
+    pub operation: Operation,
+    // TODO: Make this an enum
     pub slot: String,
+}
+
+#[derive(Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum Operation {
+    AddValue,
+    AddMultipliedBase,
+    AddMultipliedTotal,
 }

@@ -9,7 +9,7 @@ pub use schemars::JsonSchema;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Serialize, Deserialize)]
+#[derive(PartialEq, Serialize, Deserialize, Clone)]
 #[cfg_attr(feature = "schemars", derive(JsonSchema))]
 pub enum Difficulty {
     Peaceful,

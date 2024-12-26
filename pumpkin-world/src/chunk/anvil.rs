@@ -5,7 +5,7 @@ use std::{
 
 use flate2::bufread::{GzDecoder, ZlibDecoder};
 
-use crate::level::SaveFile;
+use crate::level::LevelFolder;
 
 use super::{ChunkData, ChunkReader, ChunkReadingError, CompressionError};
 
@@ -87,7 +87,7 @@ impl Compression {
 impl ChunkReader for AnvilChunkReader {
     fn read_chunk(
         &self,
-        save_file: &SaveFile,
+        save_file: &LevelFolder,
         at: &pumpkin_core::math::vector2::Vector2<i32>,
     ) -> Result<super::ChunkData, ChunkReadingError> {
         let region = (at.x >> 5, at.z >> 5);
@@ -168,14 +168,14 @@ mod tests {
 
     use crate::{
         chunk::{anvil::AnvilChunkReader, ChunkReader, ChunkReadingError},
-        level::SaveFile,
+        level::LevelFolder,
     };
 
     #[test]
     fn not_existing() {
         let region_path = PathBuf::from("not_existing");
         let result = AnvilChunkReader::new().read_chunk(
-            &SaveFile {
+            &LevelFolder {
                 root_folder: PathBuf::from(""),
                 region_folder: region_path,
             },

@@ -59,6 +59,32 @@ impl CommandExecutor for PumpkinExecutor {
                             "Click to Copy Minecraft Version",
                         )))
                         .color_named(NamedColor::Gold),
+                    )
+                    .add_child(TextComponent::text(" "))
+                    // https://snowiiii.github.io/Pumpkin/
+                    .add_child(
+                        TextComponent::text("Github Repository")
+                            .click_event(ClickEvent::OpenUrl(Cow::from(
+                                "https://github.com/Snowiiii/Pumpkin",
+                            )))
+                            .hover_event(HoverEvent::ShowText(Cow::from(
+                                "Click to open repository.",
+                            )))
+                            .color_named(NamedColor::Blue)
+                            .bold()
+                            .underlined(),
+                    )
+                    // Added docs. and a space for spacing
+                    .add_child(TextComponent::text(" "))
+                    .add_child(
+                        TextComponent::text("Docs")
+                            .click_event(ClickEvent::OpenUrl(Cow::from(
+                                "https://snowiiii.github.io/Pumpkin/",
+                            )))
+                            .hover_event(HoverEvent::ShowText(Cow::from("Click to open docs.")))
+                            .color_named(NamedColor::Blue)
+                            .bold()
+                            .underlined(),
                     ),
             )
             .await;

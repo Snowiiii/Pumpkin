@@ -1,4 +1,4 @@
-use bytes::Bytes;
+use bytes::Buf;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use pumpkin_core::math::vector3::Vector3;
@@ -20,7 +20,7 @@ pub struct SInteract {
 
 // Great job Mojang ;D
 impl ServerPacket for SInteract {
-    fn read(bytebuf: &mut Bytes) -> Result<Self, ReadingError> {
+    fn read(bytebuf: &mut impl Buf) -> Result<Self, ReadingError> {
         let entity_id = bytebuf.try_get_var_int()?;
         let typ = bytebuf.try_get_var_int()?;
         let action = ActionType::from_i32(typ.0)

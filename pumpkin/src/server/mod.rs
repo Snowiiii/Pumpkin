@@ -23,12 +23,12 @@ use tokio::sync::{Mutex, RwLock};
 
 use crate::block::block_manager::BlockManager;
 use crate::block::default_block_manager;
-use crate::client::EncryptionError;
+use crate::net::EncryptionError;
 use crate::world::custom_bossbar::CustomBossbars;
 use crate::{
-    client::Client,
     command::{default_dispatcher, dispatcher::CommandDispatcher},
     entity::player::Player,
+    net::Client,
     world::World,
 };
 
@@ -47,7 +47,7 @@ pub struct Server {
     /// Saves server branding information.
     server_branding: CachedBranding,
     /// Saves and Dispatches commands to appropriate handlers.
-    pub command_dispatcher: Arc<CommandDispatcher<'static>>,
+    pub command_dispatcher: RwLock<CommandDispatcher<'static>>,
     /// Saves and calls blocks blocks
     pub block_manager: Arc<BlockManager>,
     /// Manages multiple worlds within the server.
@@ -71,8 +71,6 @@ impl Server {
     #[allow(clippy::new_without_default)]
     #[must_use]
     pub fn new() -> Self {
-        // TODO: only create when needed
-
         let auth_client = BASIC_CONFIG.online_mode.then(|| {
             reqwest::Client::builder()
                 .timeout(Duration::from_millis(5000))
@@ -81,7 +79,7 @@ impl Server {
         });
 
         // First register default command, after that plugins can put in their own
-        let command_dispatcher = default_dispatcher();
+        let command_dispatcher = RwLock::new(default_dispatcher());
 
         let world = World::load(
             Dimension::OverWorld.into_level(
@@ -174,6 +172,12 @@ impl Server {
     pub async fn remove_player(&self) {
         // TODO: Config if we want decrease online
         self.server_listing.lock().await.remove_player();
+    }
+
+    pub async fn save(&self) {
+        for world in &self.worlds {
+            world.save().await;
+        }
     }
 
     pub async fn try_get_container(

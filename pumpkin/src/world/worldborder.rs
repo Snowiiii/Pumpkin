@@ -3,7 +3,7 @@ use pumpkin_protocol::client::play::{
     CSetBorderWarningDelay, CSetBorderWarningDistance,
 };
 
-use crate::client::Client;
+use crate::net::Client;
 
 use super::World;
 

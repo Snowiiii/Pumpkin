@@ -82,7 +82,7 @@ impl DefaultNameArgConsumer for BlockPosArgumentConsumer {
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &BlockPosArgumentConsumer
+        &Self
     }
 }
 

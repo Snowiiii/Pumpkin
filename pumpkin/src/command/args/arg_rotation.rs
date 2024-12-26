@@ -66,7 +66,7 @@ impl DefaultNameArgConsumer for RotationArgumentConsumer {
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &RotationArgumentConsumer
+        &Self
     }
 }
 

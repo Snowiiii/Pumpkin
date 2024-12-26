@@ -62,7 +62,7 @@ impl DefaultNameArgConsumer for EntitiesArgumentConsumer {
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &EntitiesArgumentConsumer
+        &Self
     }
 }
 
