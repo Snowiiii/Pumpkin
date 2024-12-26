@@ -316,7 +316,7 @@ impl Player {
         let source_slot = pick_item.slot.0 as usize;
         let mut inventory = self.inventory().lock().await;
         
-        let dest_slot = inventory.get_hotbar_slot().unwrap();
+        let dest_slot = inventory.get_hotbar_slot().unwrap() + 36;
         let dest_item = inventory.get_slot(source_slot).unwrap().as_ref();
 
         log::warn!("Picking item from slot {} to slot {}", source_slot, dest_slot);
@@ -324,8 +324,8 @@ impl Player {
         // Set Container Slot with window ID set to -2, updating the chosen hotbar slot.
         let slot = Slot::from(dest_item);
         let packet = CSetContainerSlot::new(
-            -2,
-            inventory.state_id as i32,
+            (-2) as i8,
+            (inventory.state_id) as i32,
             dest_slot,
             &slot
         );
@@ -334,8 +334,8 @@ impl Player {
         // Set Container Slot with window ID set to -2, updating the slot where the picked item used to be.
         let slot = Slot::from(None);
         let packet = CSetContainerSlot::new(
-            -2,
-            inventory.state_id as i32,
+            (-2) as i8,
+            (inventory.state_id) as i32,
             source_slot,
             &slot
         );
