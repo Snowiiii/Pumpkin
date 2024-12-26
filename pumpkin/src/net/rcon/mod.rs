@@ -104,7 +104,7 @@ impl RCONClient {
             ServerboundPacket::ExecCommand => {
                 if self.logged_in {
                     let output = tokio::sync::Mutex::new(Vec::new());
-                    let dispatcher = server.command_dispatcher.clone();
+                    let dispatcher = server.command_dispatcher.read().await;
                     dispatcher
                         .handle_command(
                             &mut crate::command::CommandSender::Rcon(&output),

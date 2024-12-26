@@ -40,6 +40,7 @@ use pumpkin_protocol::{
         SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status,
     },
 };
+use pumpkin_world::block::block_registry::Block;
 use pumpkin_world::item::item_registry::get_item_by_id;
 use pumpkin_world::{
     block::{block_registry::get_block_by_item, BlockFace},
@@ -293,7 +294,7 @@ impl Player {
         server: &Arc<Server>,
         command: SChatCommand,
     ) {
-        let dispatcher = server.command_dispatcher.clone();
+        let dispatcher = server.command_dispatcher.read().await;
         dispatcher
             .handle_command(
                 &mut CommandSender::Player(self.clone()),
@@ -747,7 +748,7 @@ impl Player {
                 // check if item is a block, Because Not every item can be placed :D
                 if let Some(block) = get_block_by_item(item_stack.item_id) {
                     should_try_decrement = self
-                        .run_is_block_place(block.default_state_id, use_item_on, location, &face)
+                        .run_is_block_place(block.clone(), server, use_item_on, location, &face)
                         .await?;
                 }
                 // check if item is a spawn egg
@@ -779,11 +780,10 @@ impl Player {
                                 &mut state_id,
                             )
                             .await;
-
-                        // drop(inventory);
                     }
                 }
             }
+
             Ok(())
         } else {
             Err(BlockPlacingError::InvalidBlockFace.into())
@@ -870,10 +870,8 @@ impl Player {
             return;
         };
 
-        let suggestions = server
-            .command_dispatcher
-            .find_suggestions(&mut src, server, cmd)
-            .await;
+        let dispatcher = server.command_dispatcher.read().await;
+        let suggestions = dispatcher.find_suggestions(&mut src, server, cmd).await;
 
         let response = CCommandSuggestions::new(
             packet.id,
@@ -941,7 +939,8 @@ impl Player {
 
     async fn run_is_block_place(
         &self,
-        block: u16,
+        block: Block,
+        server: &Server,
         use_item_on: SUseItemOn,
         location: WorldPosition,
         face: &BlockFace,
@@ -974,10 +973,21 @@ impl Player {
         }
 
         let block_bounding_box = BoundingBox::from_block(&world_pos);
-        let bounding_box = entity.bounding_box.load();
-        //TODO: Make this check for every entity in that posistion
-        if !bounding_box.intersects(&block_bounding_box) {
-            world.set_block_state(world_pos, block).await;
+        let mut intersects = false;
+        for player in world.get_nearby_players(entity.pos.load(), 20).await {
+            let bounding_box = player.1.living_entity.entity.bounding_box.load();
+            if bounding_box.intersects(&block_bounding_box) {
+                intersects = true;
+            }
+        }
+        if !intersects {
+            world
+                .set_block_state(world_pos, block.default_state_id)
+                .await;
+            server
+                .block_manager
+                .on_placed(&block, self, world_pos, server)
+                .await;
         }
         self.client
             .send_packet(&CAcknowledgeBlockChange::new(use_item_on.sequence))

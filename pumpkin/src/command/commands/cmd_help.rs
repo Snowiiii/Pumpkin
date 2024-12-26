@@ -121,8 +121,8 @@ impl CommandExecutor for BaseHelpExecutor {
             }
         };
 
-        let mut commands: Vec<&CommandTree> = server
-            .command_dispatcher
+        let dispatcher = server.command_dispatcher.read().await;
+        let mut commands: Vec<&CommandTree> = dispatcher
             .commands
             .values()
             .filter_map(|cmd| match cmd {

@@ -102,7 +102,7 @@ impl<'a> CommandDispatcher<'a> {
         // try paths and collect the nodes that fail
         // todo: make this more fine-grained
         for path in tree.iter_paths() {
-            match Self::try_find_suggestions_on_path(src, server, &path, tree, &mut raw_args, cmd)
+            match Self::try_find_suggestions_on_path(src, server, &path, &tree, &mut raw_args, cmd)
                 .await
             {
                 Err(InvalidConsumption(s)) => {
@@ -151,7 +151,7 @@ impl<'a> CommandDispatcher<'a> {
 
         // try paths until fitting path is found
         for path in tree.iter_paths() {
-            if Self::try_is_fitting_path(src, server, &path, tree, &mut raw_args.clone()).await? {
+            if Self::try_is_fitting_path(src, server, &path, &tree, &mut raw_args.clone()).await? {
                 return Ok(());
             }
         }
@@ -160,22 +160,22 @@ impl<'a> CommandDispatcher<'a> {
         )))
     }
 
-    pub(crate) fn get_tree(&'a self, key: &str) -> Result<&'a CommandTree<'a>, CommandError> {
+    pub(crate) fn get_tree(&self, key: &str) -> Result<CommandTree<'a>, CommandError> {
         let command = self
             .commands
             .get(key)
             .ok_or(GeneralCommandIssue("Command not found".to_string()))?;
 
         match command {
-            Command::Tree(tree) => Ok(tree),
+            Command::Tree(tree) => Ok(tree.clone()),
             Command::Alias(target) => {
-                let Some(Command::Tree(tree)) = &self.commands.get(target) else {
+                let Some(Command::Tree(tree)) = self.commands.get(target) else {
                     log::error!("Error while parsing command alias \"{key}\": pointing to \"{target}\" which is not a valid tree");
                     return Err(GeneralCommandIssue(
                         "Internal Error (See logs for details)".into(),
                     ));
                 };
-                Ok(tree)
+                Ok(tree.clone())
             }
         }
     }
@@ -280,5 +280,17 @@ impl<'a> CommandDispatcher<'a> {
         }
 
         self.commands.insert(primary_name, Command::Tree(tree));
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::command::{default_dispatcher, tree::CommandTree};
+
+    #[test]
+    fn test_dynamic_command() {
+        let mut dispatcher = default_dispatcher();
+        let tree = CommandTree::new(["test"], "test_desc");
+        dispatcher.register(tree);
     }
 }
