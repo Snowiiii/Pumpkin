@@ -28,7 +28,7 @@ impl<'a> CCommandSuggestions<'a> {
     }
 }
 
-impl<'a> ClientPacket for CCommandSuggestions<'a> {
+impl ClientPacket for CCommandSuggestions<'_> {
     fn write(&self, bytebuf: &mut impl BufMut) {
         bytebuf.put_var_int(&self.id);
         bytebuf.put_var_int(&self.start);
@@ -51,7 +51,7 @@ pub struct CommandSuggestion<'a> {
 }
 
 impl<'a> CommandSuggestion<'a> {
-    pub fn new(suggestion: String, tooltip: Option<TextComponent<'static>>) -> Self {
+    pub fn new(suggestion: String, tooltip: Option<TextComponent<'a>>) -> Self {
         Self {
             suggestion,
             tooltip,
