@@ -36,6 +36,7 @@ jobs:
       - run: cargo clippy --all-targets --all-features --message-format=json | clippy-sarif | tee results.sarif
       - name: Upload analysis results to GitHub
         uses: github/codeql-action/upload-sarif@v3
+        if: success() || failure()
         with:
           sarif_file: results.sarif
   build_and_test:
