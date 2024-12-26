@@ -186,21 +186,34 @@ impl Server {
         }
     }
 
-    // TODO: move to world
-    pub fn add_mob(&self, entity_type: EntityType) -> (Arc<LivingEntity>, Arc<World>, Uuid) {
+    /// Adds a new living entity to the server.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing:
+    ///
+    /// - `Arc<LivingEntity>`: A reference to the newly created living entity.
+    /// - `Arc<World>`: A reference to the world that the living entity was added to.
+    /// - `Uuid`: The uuid of the newly created living entity to be used to send to the client.
+    pub async fn add_living_entity(
+        &self,
+        entity_type: EntityType,
+    ) -> (Arc<LivingEntity>, Arc<World>, Uuid) {
         let entity_id = self.new_entity_id();
         // Basically the default world
         // TODO: select default from config
         let world = &self.worlds[0];
 
-        // TODO: set per each mob
+        // TODO: set per each mob and update per state (death)
         let bounding_box_size = BoundingBoxSize {
             width: 0.6,
             height: 1.8,
         };
 
+        let new_uuid = uuid::Uuid::new_v4();
         let mob = Arc::new(LivingEntity::new(Entity::new(
             entity_id,
+            new_uuid,
             world.clone(),
             entity_type,
             1.62,
@@ -208,7 +221,9 @@ impl Server {
             AtomicCell::new(bounding_box_size),
         )));
 
-        (mob, world.clone(), uuid::Uuid::new_v4())
+        world.add_living_entity(new_uuid, mob.clone()).await;
+
+        (mob, world.clone(), new_uuid)
     }
 
     pub async fn try_get_container(

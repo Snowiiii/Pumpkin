@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use crate::block::block_manager::BlockActionResult;
 use crate::net::PlayerConfig;
+use crate::world::World;
 use crate::{
     command::CommandSender,
     entity::player::{ChatMode, Hand, Player},
@@ -555,18 +556,32 @@ impl Player {
                 }
 
                 let world = &entity.world;
-                let victim = world.get_player_by_entityid(entity_id.0).await;
-                let Some(victim) = victim else {
+                let player_victim = world.get_player_by_entityid(entity_id.0).await;
+                let entity_victim = world.get_living_entity_by_entityid(entity_id.0).await;
+                if let Some(player_victim) = player_victim {
+                    if player_victim.living_entity.health.load() <= 0.0 {
+                        // you can trigger this from a non-modded / innocent client client,
+                        // so we shouldn't kick the player
+                        return;
+                    }
+                    self.attack(&player_victim).await;
+                } else if let Some(entity_victim) = entity_victim {
+                    if entity_victim.health.load() <= 0.0 {
+                        return;
+                    }
+                    entity_victim.kill().await;
+                    World::remove_living_entity(entity_victim, world.clone()).await;
+                    // TODO: block entities should be checked here (signs)
+                } else {
+                    log::error!(
+                        "Player id {} interacted with entity id {} which was not found.",
+                        self.entity_id(),
+                        entity_id.0
+                    );
                     self.kick(TextComponent::text("Interacted with invalid entity id"))
                         .await;
                     return;
                 };
-                if victim.living_entity.health.load() <= 0.0 {
-                    // you can trigger this from a non-modded / innocent client client,
-                    // so we shouldn't kick the player
-                    return;
-                }
-                self.attack(&victim).await;
             }
             ActionType::Interact | ActionType::InteractAt => {
                 log::debug!("todo");
@@ -749,9 +764,6 @@ impl Player {
                         let Some(item_stack) = item_slot else {
                             return Err(BlockPlacingError::InventoryInvalid.into());
                         };
-                        // inventory.hel
-                        // drop(item_stack);
-                        // item_stack = inventory.held_item_mut();
                         item_stack.item_count -= 1;
                         if item_stack.item_count == 0 {
                             *item_slot = None;
@@ -892,10 +904,11 @@ impl Player {
             // TODO: should be at precise spot not just the block location
             let world_pos = WorldPosition(location.0 + face.to_offset());
 
-            let (mob, _world, uuid) = server.add_mob(EntityType::Chicken);
+            // TODO: this should not be hardcoded
+            let (mob, _world, uuid) = server.add_living_entity(EntityType::Chicken).await;
 
-            self.client
-                .send_packet(&CSpawnEntity::new(
+            server
+                .broadcast_packet_all(&CSpawnEntity::new(
                     VarInt(mob.entity.entity_id),
                     uuid,
                     // VarInt(server.new_entity_id()),
