@@ -107,7 +107,7 @@ impl CommandExecutor for ClearSelfExecutor {
 }
 
 #[allow(clippy::redundant_closure_for_method_calls)] // causes lifetime issues
-pub fn init_command_tree<'a>() -> CommandTree {
+pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION)
         .with_child(argument(ARG_TARGET, EntitiesArgumentConsumer).execute(ClearExecutor))
         .with_child(require(|sender| sender.is_player()).execute(ClearSelfExecutor))

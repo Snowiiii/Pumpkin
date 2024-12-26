@@ -92,6 +92,6 @@ impl CommandExecutor for PumpkinExecutor {
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree {
+pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).execute(PumpkinExecutor)
 }

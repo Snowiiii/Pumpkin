@@ -11,7 +11,6 @@ use crate::command::CommandSender;
 use crate::error::PumpkinError;
 use crate::server::Server;
 use pumpkin_core::text::color::{Color, NamedColor};
-use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
@@ -103,7 +102,7 @@ impl CommandDispatcher {
         // try paths and collect the nodes that fail
         // todo: make this more fine-grained
         for path in tree.iter_paths() {
-            match Self::try_find_suggestions_on_path(src, server, &path, &tree, &mut raw_args, cmd)
+            match Self::try_find_suggestions_on_path(src, server, &path, tree, &mut raw_args, cmd)
                 .await
             {
                 Err(InvalidConsumption(s)) => {
@@ -152,7 +151,7 @@ impl CommandDispatcher {
 
         // try paths until fitting path is found
         for path in tree.iter_paths() {
-            if Self::try_is_fitting_path(src, server, &path, &tree, &mut raw_args.clone()).await? {
+            if Self::try_is_fitting_path(src, server, &path, tree, &mut raw_args.clone()).await? {
                 return Ok(());
             }
         }
@@ -201,14 +200,14 @@ impl CommandDispatcher {
                     };
                 }
                 NodeType::Literal { string, .. } => {
-                    if raw_args.pop() != Some(&string) {
+                    if raw_args.pop() != Some(string) {
                         return Ok(false);
                     }
                 }
                 NodeType::Argument { consumer, name, .. } => {
                     match consumer.consume(src, server, raw_args).await {
                         Some(consumed) => {
-                            parsed_args.insert(&name, consumed);
+                            parsed_args.insert(name, consumed);
                         }
                         None => return Ok(false),
                     }
@@ -240,14 +239,14 @@ impl CommandDispatcher {
                     return Ok(None);
                 }
                 NodeType::Literal { string, .. } => {
-                    if raw_args.pop() != Some(&string) {
+                    if raw_args.pop() != Some(string) {
                         return Ok(None);
                     }
                 }
                 NodeType::Argument { consumer, name } => {
                     match consumer.consume(src, server, raw_args).await {
                         Some(consumed) => {
-                            parsed_args.insert(&name, consumed);
+                            parsed_args.insert(name, consumed);
                         }
                         None => {
                             return if raw_args.is_empty() {

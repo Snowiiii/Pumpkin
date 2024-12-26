@@ -107,7 +107,7 @@ impl<'a> CommandSender<'a> {
 }
 
 #[must_use]
-pub fn default_dispatcher<'a>() -> CommandDispatcher {
+pub fn default_dispatcher() -> CommandDispatcher {
     let mut dispatcher = CommandDispatcher::default();
 
     dispatcher.register(cmd_pumpkin::init_command_tree());

@@ -61,7 +61,7 @@ impl ArgumentConsumer for BossbarStyleArgumentConsumer {
         ];
         let suggestions: Vec<CommandSuggestion> = styles
             .iter()
-            .map(|style| CommandSuggestion::new(style.to_string(), None))
+            .map(|style| CommandSuggestion::new((*style).to_string(), None))
             .collect();
         Ok(Some(suggestions))
     }

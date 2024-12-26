@@ -53,7 +53,7 @@ pub struct CommandSuggestion<'a> {
 impl<'a> CommandSuggestion<'a> {
     pub fn new(suggestion: String, tooltip: Option<TextComponent<'static>>) -> Self {
         Self {
-            suggestion: suggestion,
+            suggestion,
             tooltip,
         }
     }

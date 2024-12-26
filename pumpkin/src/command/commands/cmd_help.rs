@@ -184,7 +184,7 @@ impl CommandExecutor for BaseHelpExecutor {
                     .color_named(NamedColor::Gold)
                     .add_child(TextComponent::text(" - ").color_named(NamedColor::Yellow))
                     .add_child(
-                        TextComponent::text_string(tree.description.to_owned() + "\n")
+                        TextComponent::text_string(tree.description.clone() + "\n")
                             .color_named(NamedColor::White),
                     )
                     .add_child(TextComponent::text("    Usage: ").color_named(NamedColor::Yellow))
@@ -221,7 +221,7 @@ impl CommandExecutor for BaseHelpExecutor {
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree {
+pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION)
         .with_child(argument(ARG_COMMAND, CommandTreeArgumentConsumer).execute(CommandHelpExecutor))
         .with_child(argument_default_name(page_number_consumer()).execute(BaseHelpExecutor))

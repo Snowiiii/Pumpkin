@@ -498,7 +498,7 @@ fn value_consumer() -> BoundedNumArgumentConsumer<i32> {
     BoundedNumArgumentConsumer::new().min(0).name("value")
 }
 
-pub fn init_command_tree<'a>() -> CommandTree {
+pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION)
         .with_child(
             literal("add").with_child(

@@ -1,6 +1,6 @@
 use super::{args::ArgumentConsumer, CommandExecutor};
 use crate::command::CommandSender;
-use std::{borrow::Cow, collections::VecDeque, fmt::Debug, rc::Rc, sync::Arc};
+use std::{collections::VecDeque, fmt::Debug, sync::Arc};
 
 /// see [`crate::commands::tree_builder::argument`]
 pub type RawArgs<'a> = Vec<&'a str>;

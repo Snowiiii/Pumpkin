@@ -119,7 +119,7 @@ impl CommandExecutor for TransferTargetPlayer {
 }
 
 #[allow(clippy::redundant_closure_for_method_calls)]
-pub fn init_command_tree<'a>() -> CommandTree {
+pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
         require(|sender| sender.has_permission_lvl(PermissionLvl::Three)).with_child(
             argument(ARG_HOSTNAME, SimpleArgConsumer)

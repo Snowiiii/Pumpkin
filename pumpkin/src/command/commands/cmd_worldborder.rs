@@ -551,7 +551,7 @@ impl CommandExecutor for WorldborderWarningTimeExecutor {
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree {
+pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION)
         .with_child(
             literal("add").with_child(

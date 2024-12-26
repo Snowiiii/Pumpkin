@@ -55,6 +55,6 @@ fn get_player_names(players: Vec<Arc<Player>>) -> String {
     names
 }
 
-pub fn init_command_tree<'a>() -> CommandTree {
+pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).execute(ListExecutor)
 }

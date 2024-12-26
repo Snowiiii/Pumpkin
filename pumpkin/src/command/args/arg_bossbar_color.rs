@@ -57,7 +57,7 @@ impl ArgumentConsumer for BossbarColorArgumentConsumer {
         let colors = ["blue", "green", "pink", "purple", "red", "white", "yellow"];
         let suggestions: Vec<CommandSuggestion> = colors
             .iter()
-            .map(|color| CommandSuggestion::new(color.to_string(), None))
+            .map(|color| CommandSuggestion::new((*color).to_string(), None))
             .collect();
         Ok(Some(suggestions))
     }
