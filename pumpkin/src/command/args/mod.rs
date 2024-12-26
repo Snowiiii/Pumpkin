@@ -42,21 +42,21 @@ mod coordinate;
 #[async_trait]
 pub(crate) trait ArgumentConsumer: Sync + GetClientSideArgParser {
     async fn consume<'a>(
-        &self,
+        &'a self,
         sender: &CommandSender<'a>,
         server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>>;
+    ) -> Option<Arg>;
 
     /// Used for tab completion (but only if argument suggestion type is "minecraft:ask_server"!).
     ///
     /// NOTE: This is called after this consumer's [`ArgumentConsumer::consume`] method returned None, so if args is used here, make sure [`ArgumentConsumer::consume`] never returns None after mutating args.
     async fn suggest<'a>(
-        &self,
+        &'a self,
         sender: &CommandSender<'a>,
         server: &'a Server,
         input: &'a str,
-    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError>;
+    ) -> Result<Option<Vec<CommandSuggestion>>, CommandError>;
 }
 
 pub(crate) trait GetClientSideArgParser {
@@ -67,10 +67,7 @@ pub(crate) trait GetClientSideArgParser {
 }
 
 pub(crate) trait DefaultNameArgConsumer: ArgumentConsumer {
-    fn default_name(&self) -> &'static str;
-
-    /// needed because trait upcasting is not stable
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer;
+    fn default_name(&self) -> String;
 }
 
 #[derive(Clone)]
@@ -83,7 +80,7 @@ pub(crate) enum Arg<'a> {
     Pos2D(Vector2<f64>),
     Rotation(f32, f32),
     GameMode(GameMode),
-    CommandTree(CommandTree<'a>),
+    CommandTree(CommandTree),
     Item(&'a str),
     ResourceLocation(&'a str),
     Block(&'a str),
@@ -112,7 +109,7 @@ impl<K: Eq + Hash, V: Clone> GetCloned<K, V> for HashMap<K, V> {
 pub(crate) trait FindArg<'a> {
     type Data;
 
-    fn find_arg(args: &'a ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError>;
+    fn find_arg(args: &'a ConsumedArgs, name: &str) -> Result<Self::Data, CommandError>;
 }
 
 pub(crate) trait FindArgDefaultName<'a, T> {
@@ -121,7 +118,7 @@ pub(crate) trait FindArgDefaultName<'a, T> {
 
 impl<'a, T, C: FindArg<'a, Data = T> + DefaultNameArgConsumer> FindArgDefaultName<'a, T> for C {
     fn find_arg_default_name(&self, args: &'a ConsumedArgs) -> Result<T, CommandError> {
-        C::find_arg(args, self.default_name())
+        C::find_arg(args, &self.default_name())
     }
 }
 
