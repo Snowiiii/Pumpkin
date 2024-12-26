@@ -722,7 +722,8 @@ impl Player {
             let mut inventory = self.inventory().lock().await;
             let entity = &self.living_entity.entity;
             let world = &entity.world;
-            let s = inventory.get_selected();
+            let slot_id = inventory.get_selected();
+            let cursor_pos = use_item_on.cursor_pos;
             let mut state_id = inventory.state_id;
             let item_slot = inventory.held_item_mut();
 
@@ -752,7 +753,7 @@ impl Player {
                 // check if item is a spawn egg
                 if let Some(item_t) = get_spawn_egg(item_stack.item_id) {
                     should_try_decrement = self
-                        .run_is_spawn_egg(item_t, server, location, &face)
+                        .run_is_spawn_egg(item_t, server, location, cursor_pos, &face)
                         .await?;
                 };
 
@@ -771,7 +772,12 @@ impl Player {
 
                         // TODO: this should be by use item on not currently selected as they might be different
                         let _ = self
-                            .handle_decrease_item(server, s, item_slot.as_ref(), &mut state_id)
+                            .handle_decrease_item(
+                                server,
+                                slot_id,
+                                item_slot.as_ref(),
+                                &mut state_id,
+                            )
                             .await;
 
                         // drop(inventory);
@@ -894,33 +900,29 @@ impl Player {
         item_t: String,
         server: &Server,
         location: WorldPosition,
+        cursor_pos: Vector3<f32>,
         face: &BlockFace,
     ) -> Result<bool, Box<dyn PumpkinError>> {
-        // check if spawn egg has corresponding entity name
+        // checks if spawn egg has a corresponding entity name
         if let Some(spawn_item_name) = get_entity_id(&item_t) {
-            // TODO: should be facing player
-            let yaw = 10.0;
-            let pitch = 10.0;
-            // TODO: should be at precise spot not just the block location
+            let head_yaw = 10.0;
             let world_pos = WorldPosition(location.0 + face.to_offset());
 
             // TODO: this should not be hardcoded
             let (mob, _world, uuid) = server.add_living_entity(EntityType::Chicken).await;
 
+            let opposite_yaw = self.living_entity.entity.yaw.load() + 180.0;
             server
                 .broadcast_packet_all(&CSpawnEntity::new(
                     VarInt(mob.entity.entity_id),
                     uuid,
-                    // VarInt(server.new_entity_id()),
-                    // uuid::Uuid::new_v4(),
                     VarInt((*spawn_item_name).into()),
-                    // (EntityType::Sheep as i32).into(),
-                    world_pos.0.x.into(),
-                    world_pos.0.y.into(),
-                    world_pos.0.z.into(),
-                    pitch,
-                    yaw,
-                    yaw,
+                    f64::from(world_pos.0.x) + f64::from(cursor_pos.x),
+                    f64::from(world_pos.0.y),
+                    f64::from(world_pos.0.z) + f64::from(cursor_pos.z),
+                    10.0,
+                    head_yaw,
+                    opposite_yaw,
                     0.into(),
                     0.0,
                     0.0,
@@ -928,12 +930,10 @@ impl Player {
                 ))
                 .await;
 
-            // TODO: send update inventory command?
-
             // TODO: send/configure additional commands/data based on type of entity (horse, slime, etc)
         } else {
-            // TODO: fix
-            return Err(BlockPlacingError::BlockOutOfWorld.into());
+            // TODO: maybe include additional error types
+            return Ok(false);
         };
 
         Ok(true)
