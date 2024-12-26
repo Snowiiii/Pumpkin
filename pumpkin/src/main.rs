@@ -42,19 +42,22 @@ use std::{
     io::{self},
     sync::LazyLock,
 };
-use tokio::{io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader}, net::tcp::OwnedReadHalf};
 #[cfg(not(unix))]
 use tokio::signal::ctrl_c;
 #[cfg(unix)]
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::Mutex;
+use tokio::{
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
+    net::tcp::OwnedReadHalf,
+};
 
 use std::sync::Arc;
 
 use crate::server::CURRENT_MC_VERSION;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
-use pumpkin_protocol::{client, CURRENT_MC_PROTOCOL};
+use pumpkin_protocol::CURRENT_MC_PROTOCOL;
 use std::time::Instant;
 // Setup some tokens to allow us to identify which event is for which socket.
 
@@ -237,15 +240,12 @@ async fn main() {
 
         let client_clone = client.clone();
         tokio::spawn(async move {
-            while let Some(packet) = rx.recv().await {
-                let mut writer = connection_writer.lock().await;
-                match writer.write_all(&packet).await {
-                    Ok(_) => (),
-                    Err(e) => {
-                        log::warn!("Failed to write packet to client: {e}");
-                        client_clone.close();
-                        break;
-                    }
+            while let Some(_) = rx.recv().await {
+                let mut enc = client_clone.enc.lock().await;
+                let buf = enc.take();
+                if let Err(e) = connection_writer.lock().await.write_all(&buf).await {
+                    log::warn!("Failed to write packet to client: {e}");
+                    client_clone.close();
                 }
             }
         });

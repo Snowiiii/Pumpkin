@@ -13,7 +13,6 @@ use crate::{
     server::Server,
 };
 
-use bytes::BytesMut;
 use crossbeam::atomic::AtomicCell;
 use pumpkin_config::compression::CompressionInfo;
 use pumpkin_core::{text::TextComponent, ProfileAction};
@@ -135,7 +134,7 @@ pub struct Client {
     /// The packet decoder for incoming packets.
     pub dec: Arc<Mutex<PacketDecoder>>,
     /// A channel for sending packets to the client.
-    pub server_packets_channel: mpsc::Sender<BytesMut>,
+    pub server_packets_channel: mpsc::Sender<()>,
     /// A queue of raw packets received from the client, waiting to be processed.
     pub client_packets_queue: Arc<Mutex<VecDeque<RawPacket>>>,
     /// Indicates whether the client should be converted into a player.
@@ -144,7 +143,7 @@ pub struct Client {
 
 impl Client {
     #[must_use]
-    pub fn new(server_packets_channel: mpsc::Sender<BytesMut>, address: SocketAddr, id: u16) -> Self {
+    pub fn new(server_packets_channel: mpsc::Sender<()>, address: SocketAddr, id: u16) -> Self {
         Self {
             id,
             protocol_version: AtomicI32::new(0),
@@ -243,7 +242,7 @@ impl Client {
             return;
         }
 
-        let _ = self.server_packets_channel.send(enc.take()).await;
+        let _ = self.server_packets_channel.send(()).await;
 
         /* let mut writer = self.connection_writer.lock().await;
         if let Err(error) = writer.write_all(&enc.take()).await {
@@ -290,7 +289,7 @@ impl Client {
         let mut enc = self.enc.lock().await;
         enc.append_packet(packet)?;
 
-        let _ = self.server_packets_channel.send(enc.take()).await;
+        let _ = self.server_packets_channel.send(()).await;
 
         /* let mut writer = self.connection_writer.lock().await;
         let _ = writer.write_all(&enc.take()).await; */
