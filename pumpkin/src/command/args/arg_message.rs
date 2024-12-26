@@ -29,7 +29,7 @@ impl GetClientSideArgParser for MsgArgConsumer {
 #[async_trait]
 impl ArgumentConsumer for MsgArgConsumer {
     async fn consume<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
@@ -45,7 +45,7 @@ impl ArgumentConsumer for MsgArgConsumer {
     }
 
     async fn suggest<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
@@ -55,8 +55,8 @@ impl ArgumentConsumer for MsgArgConsumer {
 }
 
 impl DefaultNameArgConsumer for MsgArgConsumer {
-    fn default_name(&self) -> &'static str {
-        "msg"
+    fn default_name(&self) -> String {
+        "msg".to_string()
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
@@ -67,7 +67,7 @@ impl DefaultNameArgConsumer for MsgArgConsumer {
 impl<'a> FindArg<'a> for MsgArgConsumer {
     type Data = &'a str;
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::Msg(data)) => Ok(data),
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),

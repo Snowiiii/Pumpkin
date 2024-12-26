@@ -65,8 +65,8 @@ impl CommandExecutor for KillSelfExecutor {
 }
 
 #[allow(clippy::redundant_closure_for_method_calls)] // causes lifetime issues
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree<'a>() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION)
-        .with_child(argument(ARG_TARGET, &EntitiesArgumentConsumer).execute(&KillExecutor))
-        .with_child(require(&|sender| sender.is_player()).execute(&KillSelfExecutor))
+        .with_child(argument(ARG_TARGET, EntitiesArgumentConsumer).execute(KillExecutor))
+        .with_child(require(|sender| sender.is_player()).execute(KillSelfExecutor))
 }

@@ -18,10 +18,12 @@ const NAMES: [&str; 1] = ["time"];
 const DESCRIPTION: &str = "Query the world time.";
 
 // TODO: This should be either higher or not bounded
-static ARG_NUMBER: BoundedNumArgumentConsumer<i32> = BoundedNumArgumentConsumer::new()
-    .name("time")
-    .min(0)
-    .max(24000);
+fn arg_number() -> BoundedNumArgumentConsumer<i32> {
+    BoundedNumArgumentConsumer::new()
+        .name("time")
+        .min(0)
+        .max(24000)
+}
 
 #[derive(Clone, Copy)]
 enum Mode {
@@ -83,7 +85,7 @@ impl CommandExecutor for TimeChangeExecutor {
         server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
-        let time_count = match ARG_NUMBER.find_arg_default_name(args) {
+        let time_count = match arg_number().find_arg_default_name(args) {
             Err(_) => 1,
             Ok(Ok(count)) => count,
             Ok(Err(())) => {
@@ -124,22 +126,20 @@ impl CommandExecutor for TimeChangeExecutor {
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree<'a>() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| sender.has_permission_lvl(PermissionLvl::Two))
+        require(|sender| sender.has_permission_lvl(PermissionLvl::Two))
             .with_child(literal("add").with_child(
-                argument_default_name(&ARG_NUMBER).execute(&TimeChangeExecutor(Mode::Add)),
+                argument_default_name(arg_number()).execute(TimeChangeExecutor(Mode::Add)),
             ))
             .with_child(
                 literal("query")
-                    .with_child(literal("daytime").execute(&TimeQueryExecutor(QueryMode::DayTime)))
-                    .with_child(
-                        literal("gametime").execute(&TimeQueryExecutor(QueryMode::GameTime)),
-                    )
-                    .with_child(literal("day").execute(&TimeQueryExecutor(QueryMode::Day))),
+                    .with_child(literal("daytime").execute(TimeQueryExecutor(QueryMode::DayTime)))
+                    .with_child(literal("gametime").execute(TimeQueryExecutor(QueryMode::GameTime)))
+                    .with_child(literal("day").execute(TimeQueryExecutor(QueryMode::Day))),
             )
             .with_child(literal("set").with_child(
-                argument_default_name(&ARG_NUMBER).execute(&TimeChangeExecutor(Mode::Set)),
+                argument_default_name(arg_number()).execute(TimeChangeExecutor(Mode::Set)),
             )),
     )
 }

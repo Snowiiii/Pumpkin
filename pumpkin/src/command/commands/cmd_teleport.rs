@@ -237,41 +237,41 @@ impl CommandExecutor for TpSelfToPosExecutor {
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree<'a>() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| sender.has_permission_lvl(PermissionLvl::Two))
+        require(|sender| sender.has_permission_lvl(PermissionLvl::Two))
             .with_child(
-                argument(ARG_LOCATION, &Position3DArgumentConsumer).execute(&TpSelfToPosExecutor),
+                argument(ARG_LOCATION, Position3DArgumentConsumer).execute(TpSelfToPosExecutor),
             )
             .with_child(
-                argument(ARG_DESTINATION, &EntityArgumentConsumer).execute(&TpSelfToEntityExecutor),
+                argument(ARG_DESTINATION, EntityArgumentConsumer).execute(TpSelfToEntityExecutor),
             )
             .with_child(
-                argument(ARG_TARGETS, &EntitiesArgumentConsumer)
+                argument(ARG_TARGETS, EntitiesArgumentConsumer)
                     .with_child(
-                        argument(ARG_LOCATION, &Position3DArgumentConsumer)
-                            .execute(&TpEntitiesToPosExecutor)
+                        argument(ARG_LOCATION, Position3DArgumentConsumer)
+                            .execute(TpEntitiesToPosExecutor)
                             .with_child(
-                                argument(ARG_ROTATION, &RotationArgumentConsumer)
-                                    .execute(&TpEntitiesToPosWithRotationExecutor),
+                                argument(ARG_ROTATION, RotationArgumentConsumer)
+                                    .execute(TpEntitiesToPosWithRotationExecutor),
                             )
                             .with_child(
                                 literal("facing")
                                     .with_child(
                                         literal("entity").with_child(
-                                            argument(ARG_FACING_ENTITY, &EntityArgumentConsumer)
-                                                .execute(&TpEntitiesToPosFacingEntityExecutor),
+                                            argument(ARG_FACING_ENTITY, EntityArgumentConsumer)
+                                                .execute(TpEntitiesToPosFacingEntityExecutor),
                                         ),
                                     )
                                     .with_child(
-                                        argument(ARG_FACING_LOCATION, &Position3DArgumentConsumer)
-                                            .execute(&TpEntitiesToPosFacingPosExecutor),
+                                        argument(ARG_FACING_LOCATION, Position3DArgumentConsumer)
+                                            .execute(TpEntitiesToPosFacingPosExecutor),
                                     ),
                             ),
                     )
                     .with_child(
-                        argument(ARG_DESTINATION, &EntityArgumentConsumer)
-                            .execute(&TpEntitiesToEntityExecutor),
+                        argument(ARG_DESTINATION, EntityArgumentConsumer)
+                            .execute(TpEntitiesToEntityExecutor),
                     ),
             ),
     )

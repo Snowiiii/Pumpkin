@@ -30,7 +30,7 @@ impl GetClientSideArgParser for CommandTreeArgumentConsumer {
 #[async_trait]
 impl ArgumentConsumer for CommandTreeArgumentConsumer {
     async fn consume<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         server: &'a Server,
         args: &mut RawArgs<'a>,
@@ -40,11 +40,11 @@ impl ArgumentConsumer for CommandTreeArgumentConsumer {
         let dispatcher = server.command_dispatcher.read().await;
         dispatcher
             .get_tree(s)
-            .map_or_else(|_| None, |tree| Some(Arg::CommandTree(tree)))
+            .map_or_else(|_| None, |tree| Some(Arg::CommandTree(tree.clone())))
     }
 
     async fn suggest<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         server: &'a Server,
         input: &'a str,
@@ -58,15 +58,15 @@ impl ArgumentConsumer for CommandTreeArgumentConsumer {
             .commands
             .keys()
             .filter(|suggestion| suggestion.starts_with(input))
-            .map(|suggestion| CommandSuggestion::new(suggestion, None))
+            .map(|suggestion| CommandSuggestion::new(suggestion.to_string(), None))
             .collect();
         Ok(Some(suggestions))
     }
 }
 
 impl DefaultNameArgConsumer for CommandTreeArgumentConsumer {
-    fn default_name(&self) -> &'static str {
-        "cmd"
+    fn default_name(&self) -> String {
+        "cmd".to_string()
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
@@ -75,9 +75,9 @@ impl DefaultNameArgConsumer for CommandTreeArgumentConsumer {
 }
 
 impl<'a> FindArg<'a> for CommandTreeArgumentConsumer {
-    type Data = &'a CommandTree<'a>;
+    type Data = &'a CommandTree;
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::CommandTree(tree)) => Ok(tree),
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),

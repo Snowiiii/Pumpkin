@@ -28,10 +28,12 @@ const ARG_NAME: &str = "name";
 
 const ARG_VISIBLE: &str = "visible";
 
-const AUTOCOMPLETE_CONSUMER: ResourceLocationArgumentConsumer =
-    ResourceLocationArgumentConsumer::new(true);
-const NON_AUTOCOMPLETE_CONSUMER: ResourceLocationArgumentConsumer =
-    ResourceLocationArgumentConsumer::new(false);
+const fn autocomplete_consumer() -> ResourceLocationArgumentConsumer {
+    ResourceLocationArgumentConsumer::new(true)
+}
+const fn non_autocomplete_consumer() -> ResourceLocationArgumentConsumer {
+    ResourceLocationArgumentConsumer::new(false)
+}
 
 enum CommandValueGet {
     Max,
@@ -61,7 +63,7 @@ impl CommandExecutor for BossbarAddExecuter {
         server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
-        let namespace = NON_AUTOCOMPLETE_CONSUMER.find_arg_default_name(args)?;
+        let namespace = non_autocomplete_consumer().find_arg_default_name(args)?;
         let Some(Arg::Simple(name)) = args.get(ARG_NAME) else {
             return Err(InvalidConsumption(Some(ARG_NAME.into())));
         };
@@ -96,7 +98,7 @@ impl CommandExecutor for BossbarGetExecuter {
         server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
-        let namespace = AUTOCOMPLETE_CONSUMER.find_arg_default_name(args)?;
+        let namespace = autocomplete_consumer().find_arg_default_name(args)?;
 
         let Some(bossbar) = server.bossbars.lock().await.get_bossbar(namespace) else {
             send_error_message(
@@ -197,7 +199,7 @@ impl CommandExecutor for BossbarRemoveExecuter {
         server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
-        let namespace = AUTOCOMPLETE_CONSUMER.find_arg_default_name(args)?;
+        let namespace = autocomplete_consumer().find_arg_default_name(args)?;
 
         if !server.bossbars.lock().await.has_bossbar(namespace) {
             send_error_message(
@@ -237,7 +239,7 @@ impl CommandExecutor for BossbarSetExecuter {
         server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
-        let namespace = AUTOCOMPLETE_CONSUMER.find_arg_default_name(args)?;
+        let namespace = autocomplete_consumer().find_arg_default_name(args)?;
 
         let Some(bossbar) = server.bossbars.lock().await.get_bossbar(namespace) else {
             handle_bossbar_error(
@@ -275,10 +277,10 @@ impl CommandExecutor for BossbarSetExecuter {
                 Ok(())
             }
             CommandValueSet::Max => {
-                let Ok(max_value) = MAX_VALUE_CONSUMER.find_arg_default_name(args)? else {
+                let Ok(max_value) = max_value_consumer().find_arg_default_name(args)? else {
                     send_error_message(
                         sender,
-                        format!("{} is out of bounds.", MAX_VALUE_CONSUMER.default_name()),
+                        format!("{} is out of bounds.", max_value_consumer().default_name()),
                     )
                     .await;
                     return Ok(());
@@ -423,10 +425,10 @@ impl CommandExecutor for BossbarSetExecuter {
                 Ok(())
             }
             CommandValueSet::Value => {
-                let Ok(value) = VALUE_CONSUMER.find_arg_default_name(args)? else {
+                let Ok(value) = value_consumer().find_arg_default_name(args)? else {
                     send_error_message(
                         sender,
-                        format!("{} is out of bounds.", VALUE_CONSUMER.default_name()),
+                        format!("{} is out of bounds.", value_consumer().default_name()),
                     )
                     .await;
                     return Ok(());
@@ -488,85 +490,86 @@ impl CommandExecutor for BossbarSetExecuter {
     }
 }
 
-static MAX_VALUE_CONSUMER: BoundedNumArgumentConsumer<i32> =
-    BoundedNumArgumentConsumer::new().min(0).name("max");
+fn max_value_consumer() -> BoundedNumArgumentConsumer<i32> {
+    BoundedNumArgumentConsumer::new().min(0).name("max")
+}
 
-static VALUE_CONSUMER: BoundedNumArgumentConsumer<i32> =
-    BoundedNumArgumentConsumer::new().min(0).name("value");
+fn value_consumer() -> BoundedNumArgumentConsumer<i32> {
+    BoundedNumArgumentConsumer::new().min(0).name("value")
+}
 
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree<'a>() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION)
         .with_child(
             literal("add").with_child(
-                argument_default_name(&NON_AUTOCOMPLETE_CONSUMER).with_child(
-                    argument(ARG_NAME, &SimpleArgConsumer).execute(&BossbarAddExecuter),
-                ),
+                argument_default_name(non_autocomplete_consumer())
+                    .with_child(argument(ARG_NAME, SimpleArgConsumer).execute(BossbarAddExecuter)),
             ),
         )
         .with_child(
             literal("get").with_child(
-                argument_default_name(&AUTOCOMPLETE_CONSUMER)
-                    .with_child(literal("max").execute(&BossbarGetExecuter(CommandValueGet::Max)))
+                argument_default_name(autocomplete_consumer())
+                    .with_child(literal("max").execute(BossbarGetExecuter(CommandValueGet::Max)))
                     .with_child(
-                        literal("players").execute(&BossbarGetExecuter(CommandValueGet::Players)),
+                        literal("players").execute(BossbarGetExecuter(CommandValueGet::Players)),
                     )
                     .with_child(
-                        literal("value").execute(&BossbarGetExecuter(CommandValueGet::Value)),
+                        literal("value").execute(BossbarGetExecuter(CommandValueGet::Value)),
                     )
                     .with_child(
-                        literal("visible").execute(&BossbarGetExecuter(CommandValueGet::Visible)),
+                        literal("visible").execute(BossbarGetExecuter(CommandValueGet::Visible)),
                     ),
             ),
         )
-        .with_child(literal("list").execute(&BossbarListExecuter))
+        .with_child(literal("list").execute(BossbarListExecuter))
         .with_child(literal("remove").with_child(
-            argument_default_name(&AUTOCOMPLETE_CONSUMER).execute(&BossbarRemoveExecuter),
+            argument_default_name(autocomplete_consumer()).execute(BossbarRemoveExecuter),
         ))
         .with_child(
             literal("set").with_child(
-                argument_default_name(&AUTOCOMPLETE_CONSUMER)
+                argument_default_name(autocomplete_consumer())
                     .with_child(
                         literal("color").with_child(
-                            argument_default_name(&BossbarColorArgumentConsumer)
-                                .execute(&BossbarSetExecuter(CommandValueSet::Color)),
+                            argument_default_name(BossbarColorArgumentConsumer)
+                                .execute(BossbarSetExecuter(CommandValueSet::Color)),
                         ),
                     )
                     .with_child(
                         literal("max").with_child(
-                            argument_default_name(&MAX_VALUE_CONSUMER)
-                                .execute(&BossbarSetExecuter(CommandValueSet::Max)),
+                            argument_default_name(max_value_consumer())
+                                .execute(BossbarSetExecuter(CommandValueSet::Max)),
                         ),
                     )
                     .with_child(
                         literal("name").with_child(
-                            argument(ARG_NAME, &SimpleArgConsumer)
-                                .execute(&BossbarSetExecuter(CommandValueSet::Name)),
+                            argument(ARG_NAME, SimpleArgConsumer)
+                                .execute(BossbarSetExecuter(CommandValueSet::Name)),
                         ),
                     )
                     .with_child(
                         literal("players")
                             .with_child(
-                                argument_default_name(&PlayersArgumentConsumer)
-                                    .execute(&BossbarSetExecuter(CommandValueSet::Players(true))),
+                                argument_default_name(PlayersArgumentConsumer)
+                                    .execute(BossbarSetExecuter(CommandValueSet::Players(true))),
                             )
-                            .execute(&BossbarSetExecuter(CommandValueSet::Players(false))),
+                            .execute(BossbarSetExecuter(CommandValueSet::Players(false))),
                     )
                     .with_child(
                         literal("style").with_child(
-                            argument_default_name(&BossbarStyleArgumentConsumer)
-                                .execute(&BossbarSetExecuter(CommandValueSet::Style)),
+                            argument_default_name(BossbarStyleArgumentConsumer)
+                                .execute(BossbarSetExecuter(CommandValueSet::Style)),
                         ),
                     )
                     .with_child(
                         literal("value").with_child(
-                            argument_default_name(&VALUE_CONSUMER)
-                                .execute(&BossbarSetExecuter(CommandValueSet::Value)),
+                            argument_default_name(value_consumer())
+                                .execute(BossbarSetExecuter(CommandValueSet::Value)),
                         ),
                     )
                     .with_child(
                         literal("visible").with_child(
-                            argument(ARG_VISIBLE, &BoolArgConsumer)
-                                .execute(&BossbarSetExecuter(CommandValueSet::Visible)),
+                            argument(ARG_VISIBLE, BoolArgConsumer)
+                                .execute(BossbarSetExecuter(CommandValueSet::Visible)),
                         ),
                     ),
             ),

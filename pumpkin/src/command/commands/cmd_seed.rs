@@ -54,10 +54,10 @@ impl CommandExecutor for PumpkinExecutor {
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree<'a>() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION)
-        .with_child(require(&|sender| {
+        .with_child(require(|sender| {
             sender.has_permission_lvl(PermissionLvl::Two)
         }))
-        .execute(&PumpkinExecutor)
+        .execute(PumpkinExecutor)
 }

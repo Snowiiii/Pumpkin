@@ -23,10 +23,12 @@ const ARG_HOSTNAME: &str = "hostname";
 
 const ARG_PLAYERS: &str = "players";
 
-static PORT_CONSUMER: BoundedNumArgumentConsumer<i32> = BoundedNumArgumentConsumer::new()
-    .name("port")
-    .min(1)
-    .max(65535);
+fn port_consumer() -> BoundedNumArgumentConsumer<i32> {
+    BoundedNumArgumentConsumer::new()
+        .name("port")
+        .min(1)
+        .max(65535)
+}
 
 struct TransferTargetSelf;
 
@@ -42,7 +44,7 @@ impl CommandExecutor for TransferTargetSelf {
             return Err(InvalidConsumption(Some(ARG_HOSTNAME.into())));
         };
 
-        let port = match PORT_CONSUMER.find_arg_default_name(args) {
+        let port = match port_consumer().find_arg_default_name(args) {
             Err(_) => 25565,
             Ok(Ok(count)) => count,
             Ok(Err(())) => {
@@ -84,7 +86,7 @@ impl CommandExecutor for TransferTargetPlayer {
             return Err(InvalidConsumption(Some(ARG_HOSTNAME.into())));
         };
 
-        let port = match PORT_CONSUMER.find_arg_default_name(args) {
+        let port = match port_consumer().find_arg_default_name(args) {
             Err(_) => 25565,
             Ok(Ok(count)) => count,
             Ok(Err(())) => {
@@ -117,19 +119,19 @@ impl CommandExecutor for TransferTargetPlayer {
 }
 
 #[allow(clippy::redundant_closure_for_method_calls)]
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree<'a>() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| sender.has_permission_lvl(PermissionLvl::Three)).with_child(
-            argument(ARG_HOSTNAME, &SimpleArgConsumer)
-                .with_child(require(&|sender| sender.is_player()).execute(&TransferTargetSelf))
+        require(|sender| sender.has_permission_lvl(PermissionLvl::Three)).with_child(
+            argument(ARG_HOSTNAME, SimpleArgConsumer)
+                .with_child(require(|sender| sender.is_player()).execute(TransferTargetSelf))
                 .with_child(
-                    argument_default_name(&PORT_CONSUMER)
+                    argument_default_name(port_consumer())
                         .with_child(
-                            require(&|sender| sender.is_player()).execute(&TransferTargetSelf),
+                            require(|sender| sender.is_player()).execute(TransferTargetSelf),
                         )
                         .with_child(
-                            argument(ARG_PLAYERS, &PlayersArgumentConsumer)
-                                .execute(&TransferTargetPlayer),
+                            argument(ARG_PLAYERS, PlayersArgumentConsumer)
+                                .execute(TransferTargetPlayer),
                         ),
                 ),
         ),

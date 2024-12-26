@@ -27,7 +27,7 @@ impl GetClientSideArgParser for BossbarStyleArgumentConsumer {
 #[async_trait]
 impl ArgumentConsumer for BossbarStyleArgumentConsumer {
     async fn consume<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
@@ -47,7 +47,7 @@ impl ArgumentConsumer for BossbarStyleArgumentConsumer {
     }
 
     async fn suggest<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
@@ -61,15 +61,15 @@ impl ArgumentConsumer for BossbarStyleArgumentConsumer {
         ];
         let suggestions: Vec<CommandSuggestion> = styles
             .iter()
-            .map(|style| CommandSuggestion::new(style, None))
+            .map(|style| CommandSuggestion::new(style.to_string(), None))
             .collect();
         Ok(Some(suggestions))
     }
 }
 
 impl DefaultNameArgConsumer for BossbarStyleArgumentConsumer {
-    fn default_name(&self) -> &'static str {
-        "style"
+    fn default_name(&self) -> String {
+        "style".to_string()
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
@@ -80,7 +80,7 @@ impl DefaultNameArgConsumer for BossbarStyleArgumentConsumer {
 impl<'a> FindArg<'a> for BossbarStyleArgumentConsumer {
     type Data = &'a BossbarDivisions;
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::BossbarStyle(data)) => Ok(data),
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),

@@ -30,7 +30,7 @@ impl GetClientSideArgParser for BlockPosArgumentConsumer {
 #[async_trait]
 impl ArgumentConsumer for BlockPosArgumentConsumer {
     async fn consume<'a>(
-        &self,
+        &'a self,
         src: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
@@ -43,7 +43,7 @@ impl ArgumentConsumer for BlockPosArgumentConsumer {
     }
 
     async fn suggest<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
@@ -77,8 +77,8 @@ impl MaybeRelativeBlockPos {
 }
 
 impl DefaultNameArgConsumer for BlockPosArgumentConsumer {
-    fn default_name(&self) -> &'static str {
-        "block_pos"
+    fn default_name(&self) -> String {
+        "block_pos".to_string()
     }
 
     fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
@@ -89,7 +89,7 @@ impl DefaultNameArgConsumer for BlockPosArgumentConsumer {
 impl<'a> FindArg<'a> for BlockPosArgumentConsumer {
     type Data = WorldPosition;
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::BlockPos(data)) => Ok(*data),
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),
