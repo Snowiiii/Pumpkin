@@ -39,7 +39,7 @@ use pumpkin_protocol::{
         SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SClientTickEnd,
         SCommandSuggestion, SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction,
         SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
-        SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn, SPickItem,
+        SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn, SPickItemFromBlock,
     },
     RawPacket, ServerPacket, SoundCategory,
 };
@@ -726,8 +726,8 @@ impl Player {
             SSetPlayerGround::PACKET_ID => {
                 self.handle_player_ground(&SSetPlayerGround::read(bytebuf)?);
             }
-            SPickItem::PACKET_ID => {
-                self.handle_pick_item(SPickItem::read(bytebuf)?).await;
+            SPickItemFromBlock::PACKET_ID => {
+                self.handle_pick_item_from_block(SPickItemFromBlock::read(bytebuf)?).await;
             }
             SPlayerAbilities::PACKET_ID => {
                 self.handle_player_abilities(SPlayerAbilities::read(bytebuf)?)

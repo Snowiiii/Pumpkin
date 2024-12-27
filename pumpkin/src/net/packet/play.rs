@@ -36,11 +36,12 @@ use pumpkin_protocol::{
         Action, ActionType, SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay,
         SConfirmTeleport, SInteract, SPlayPingRequest, SPlayerAbilities, SPlayerAction,
         SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
-        SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status, SPickItem,
+        SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status, SPickItemFromBlock,
     },
 };
 use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
 use pumpkin_world::item::item_registry::get_item_by_id;
+use pumpkin_world::item::ItemStack;
 use thiserror::Error;
 
 fn modulus(a: f32, b: f32) -> f32 {
@@ -312,38 +313,66 @@ impl Player {
             .store(ground.on_ground, std::sync::atomic::Ordering::Relaxed);
     }
 
-    pub async fn handle_pick_item(&self, pick_item: SPickItem) {
-        let source_slot = pick_item.slot.0 as usize;
-        let mut inventory = self.inventory().lock().await;
-        
-        let dest_slot = inventory.get_hotbar_slot().unwrap() + 36;
-        let dest_item = inventory.get_slot(source_slot).unwrap().as_ref();
+    pub async fn handle_pick_item_from_block(&self, pick_item: SPickItemFromBlock) {
+        let pos = pick_item.pos;
+        // If player is in creative mode && include_data, then pick block with additional data
+        let include_data = pick_item.include_data;
 
-        log::warn!("Picking item from slot {} to slot {}", source_slot, dest_slot);
-        
+        if self.can_interact_with_block_at(&pos, 1.0) {
+            let world = self.world();
+            let block = world.get_block(pos).await;
+            if let Ok(block) = block {
+                let item_id = block.item_id;
+                let mut inventory = self.inventory().lock().await;
+
+                log::warn!("Item id: {}", item_id);
+
+                let dest_slot = inventory.get_pick_item_hotbar_slot(item_id);
+                log::warn!("Dest slot: {}", dest_slot);
+                //         let picked_item = ItemStack::new(1, item_id);
+                //         let slot = Slot::from(&picked_item);
+                //         // Returns previous value
+                //         inventory.state_id += 1;
+                //         // Set Container Slot with window ID set to -2, updating the chosen hotbar slot.
+                //         let packet = CSetContainerSlot::new(
+                //             (-2) as i8,
+                //             (inventory.state_id) as i32,
+                //             dest_slot,
+                //             &slot
+                //         );
+                //         self.client.send_packet(&packet).await;
+
+                // Set held item
+                let packet = CSetHeldItem::new((dest_slot - 36) as i8);
+                self.client.send_packet(&packet).await;
+            }
+        } else {
+            log::warn!("Player cannot interact with block at {}", pos);
+        }
+
+
         // Set Container Slot with window ID set to -2, updating the chosen hotbar slot.
-        let slot = Slot::from(dest_item);
-        let packet = CSetContainerSlot::new(
-            (-2) as i8,
-            (inventory.state_id) as i32,
-            dest_slot,
-            &slot
-        );
-        self.client.send_packet(&packet).await;
+        // let packet = CSetContainerSlot::new(
+        //     (-2) as i8,
+        //     (inventory.state_id) as i32,
+        //     dest_slot,
+        //     &slot
+        // );
+        // self.client.send_packet(&packet).await;
 
-        // Set Container Slot with window ID set to -2, updating the slot where the picked item used to be.
-        let slot = Slot::from(None);
-        let packet = CSetContainerSlot::new(
-            (-2) as i8,
-            (inventory.state_id) as i32,
-            source_slot,
-            &slot
-        );
-        self.client.send_packet(&packet).await;
+        // // Set Container Slot with window ID set to -2, updating the slot where the picked item used to be.
+        // let slot = Slot::from(None);
+        // let packet = CSetContainerSlot::new(
+        //     (-2) as i8,
+        //     (inventory.state_id) as i32,
+        //     source_slot,
+        //     &slot
+        // );
+        // self.client.send_packet(&packet).await;
 
-        // Set Held Item, switching to the newly chosen slot.
-        let packet = CSetHeldItem::new(dest_slot as i8);
-        self.client.send_packet(&packet).await;
+        // // Set Held Item, switching to the newly chosen slot.
+        // let packet = CSetHeldItem::new(dest_slot as i8);
+        // self.client.send_packet(&packet).await;
     }
 
     pub async fn handle_player_command(&self, command: SPlayerCommand) {

@@ -121,17 +121,15 @@ impl PlayerInventory {
         self.items[self.selected + 36 - 9] = item;
     }
 
-    pub fn get_hotbar_slot(&mut self) -> Option<usize> {
-        // // first searches the player's hotbar for an empty slot, starting from the current slot and looping around to the slot before it.
-        // for i in 0..9 {
-        //     let slot = (self.selected + i) % 9;
-        //     if self.items[slot + 36].is_none() {
-        //         return Some(slot + 36);
-        //     }
-        // }
+    pub fn get_pick_item_hotbar_slot(&mut self, item_id: u16) -> usize {
+        for slot in 35..=44 {
+            match &self.items[slot - 9] {
+                Some(item) if item.item_id == item_id => return slot,
+                _ => continue,
+            }
+        }
     
-        // If there still are no slots that meet that criteria, then the server uses the currently selected slot
-        Some(self.selected)
+        self.selected + 36
     }
     
 
