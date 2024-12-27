@@ -41,6 +41,7 @@ use std::time::Instant;
 pub mod block;
 pub mod client;
 pub mod command;
+pub mod data;
 pub mod entity;
 pub mod error;
 pub mod lan_broadcast;

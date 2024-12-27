@@ -5,7 +5,7 @@ use crate::{
         tree_builder::{argument, require},
         CommandError, CommandExecutor, CommandSender,
     },
-    server::json_config::{SaveJSONConfiguration, OPERATOR_CONFIG},
+    data::{op_data::OPERATOR_CONFIG, SaveJSONConfiguration},
 };
 use async_trait::async_trait;
 use pumpkin_config::{op::Op, BASIC_CONFIG};

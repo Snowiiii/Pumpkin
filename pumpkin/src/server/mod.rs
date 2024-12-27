@@ -33,7 +33,6 @@ use crate::{
 };
 
 mod connection_cache;
-pub mod json_config;
 mod key_store;
 pub mod ticker;
 

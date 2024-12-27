@@ -51,6 +51,7 @@ use pumpkin_world::{
 use tokio::sync::{Mutex, Notify};
 
 use super::Entity;
+use crate::error::PumpkinError;
 use crate::{
     client::{
         authentication::GameProfile,
@@ -58,10 +59,10 @@ use crate::{
         Client, PlayerConfig,
     },
     command::{client_cmd_suggestions, dispatcher::CommandDispatcher},
+    data::op_data::OPERATOR_CONFIG,
     server::Server,
     world::World,
 };
-use crate::{error::PumpkinError, server::json_config::OPERATOR_CONFIG};
 
 use super::living::LivingEntity;
 

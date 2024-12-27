@@ -1,17 +1,8 @@
-use std::{fs, path::Path, sync::LazyLock};
+use std::{fs, path::Path};
 
-use log::warn;
-use pumpkin_config::op;
 use serde::{Deserialize, Serialize};
 
-pub static OPERATOR_CONFIG: LazyLock<tokio::sync::RwLock<OperatorConfig>> =
-    LazyLock::new(|| tokio::sync::RwLock::new(OperatorConfig::load()));
-
-#[derive(Deserialize, Serialize, Default)]
-#[serde(transparent)]
-pub struct OperatorConfig {
-    pub ops: Vec<op::Op>,
-}
+pub mod op_data;
 
 pub trait LoadJSONConfiguration {
     #[must_use]
@@ -63,30 +54,21 @@ pub trait SaveJSONConfiguration: LoadJSONConfiguration {
         let content = match serde_json::to_string_pretty(self) {
             Ok(content) => content,
             Err(err) => {
-                warn!(
+                log::warn!(
                     "Couldn't serialize operator config to {:?}. Reason: {}",
-                    path, err
+                    path,
+                    err
                 );
                 return;
             }
         };
 
-        if let Err(err) = fs::write(path, content) {
-            warn!(
+        if let Err(err) = std::fs::write(path, content) {
+            log::warn!(
                 "Couldn't write operator config to {:?}. Reason: {}",
-                path, err
+                path,
+                err
             );
         }
     }
 }
-
-impl LoadJSONConfiguration for OperatorConfig {
-    fn get_path() -> &'static Path {
-        Path::new("data/ops.json")
-    }
-    fn validate(&self) {
-        // TODO: Validate the operator configuration
-    }
-}
-
-impl SaveJSONConfiguration for OperatorConfig {}
