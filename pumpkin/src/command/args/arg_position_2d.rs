@@ -32,20 +32,20 @@ impl GetClientSideArgParser for Position2DArgumentConsumer {
 #[async_trait]
 impl ArgumentConsumer for Position2DArgumentConsumer {
     async fn consume<'a>(
-        &self,
+        &'a self,
         src: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
     ) -> Option<Arg<'a>> {
         let pos = MaybeRelativePosition2D::try_new(args.pop()?, args.pop()?)?;
 
-        let vec2 = pos.try_to_abolute(src.position())?;
+        let vec2 = pos.try_to_absolute(src.position())?;
 
         Some(Arg::Pos2D(vec2))
     }
 
     async fn suggest<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
@@ -64,7 +64,7 @@ impl MaybeRelativePosition2D {
         Some(Self(x.try_into().ok()?, z.try_into().ok()?))
     }
 
-    fn try_to_abolute(self, origin: Option<Vector3<f64>>) -> Option<Vector2<f64>> {
+    fn try_to_absolute(self, origin: Option<Vector3<f64>>) -> Option<Vector2<f64>> {
         Some(Vector2::new(
             self.0.into_absolute(origin.map(|o| o.x))?,
             self.1.into_absolute(origin.map(|o| o.z))?,
@@ -73,19 +73,15 @@ impl MaybeRelativePosition2D {
 }
 
 impl DefaultNameArgConsumer for Position2DArgumentConsumer {
-    fn default_name(&self) -> &'static str {
-        "pos2d"
-    }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &Position2DArgumentConsumer
+    fn default_name(&self) -> String {
+        "pos2d".to_string()
     }
 }
 
 impl<'a> FindArg<'a> for Position2DArgumentConsumer {
     type Data = Vector2<f64>;
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::Pos2D(data)) => Ok(*data),
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),

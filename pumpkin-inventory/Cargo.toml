@@ -4,15 +4,15 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-# For items
+pumpkin-protocol = { path = "../pumpkin-protocol" }
+
 pumpkin-world = { path = "../pumpkin-world" }
 pumpkin-registry = {path = "../pumpkin-registry"}
 pumpkin-macros = { path = "../pumpkin-macros" }
+pumpkin-core = { path = "../pumpkin-core" }
 
 log.workspace = true
 rayon.workspace = true
-itertools.workspace = true
-crossbeam.workspace = true
 tokio.workspace = true
 thiserror.workspace = true
 

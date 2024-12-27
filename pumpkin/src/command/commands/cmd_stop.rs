@@ -32,13 +32,13 @@ impl CommandExecutor for StopExecutor {
         for player in server.get_all_players().await {
             player.kick(kick_message.clone()).await;
         }
-
+        server.save().await;
         std::process::exit(0)
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| sender.has_permission_lvl(PermissionLvl::Four)).execute(&StopExecutor),
+        require(|sender| sender.has_permission_lvl(PermissionLvl::Four)).execute(StopExecutor),
     )
 }

@@ -3,9 +3,15 @@ name = "pumpkin-protocol"
 version.workspace = true
 edition.workspace = true
 
+[features]
+default = ["packets", "query"]
+packets = ["serverbound", "clientbound"]
+serverbound = []
+clientbound = []
+query = []
+
 [dependencies]
 pumpkin-nbt = { path = "../pumpkin-nbt" }
-pumpkin-config = { path = "../pumpkin-config" }
 pumpkin-macros = { path = "../pumpkin-macros" }
 pumpkin-world = { path = "../pumpkin-world" }
 pumpkin-core = { path = "../pumpkin-core" }
@@ -13,7 +19,6 @@ pumpkin-core = { path = "../pumpkin-core" }
 uuid.workspace = true
 serde.workspace = true
 thiserror.workspace = true
-itertools.workspace = true
 log.workspace = true
 tokio.workspace = true
 num-traits.workspace = true
@@ -25,4 +30,4 @@ aes = "0.8.4"
 cfb8 = "0.8.1"
 
 # decryption
-libdeflater = "1.22.0"
+libdeflater = "1.23.0"

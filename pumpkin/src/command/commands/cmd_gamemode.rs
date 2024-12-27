@@ -107,13 +107,13 @@ impl CommandExecutor for GamemodeTargetPlayer {
 }
 
 #[allow(clippy::redundant_closure_for_method_calls)]
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| sender.has_permission_lvl(PermissionLvl::Two)).with_child(
-            argument(ARG_GAMEMODE, &GamemodeArgumentConsumer)
-                .with_child(require(&|sender| sender.is_player()).execute(&GamemodeTargetSelf))
+        require(|sender| sender.has_permission_lvl(PermissionLvl::Two)).with_child(
+            argument(ARG_GAMEMODE, GamemodeArgumentConsumer)
+                .with_child(require(|sender| sender.is_player()).execute(GamemodeTargetSelf))
                 .with_child(
-                    argument(ARG_TARGET, &PlayersArgumentConsumer).execute(&GamemodeTargetPlayer),
+                    argument(ARG_TARGET, PlayersArgumentConsumer).execute(GamemodeTargetPlayer),
                 ),
         ),
     )

@@ -1,11 +1,18 @@
 use crate::crafting::check_if_matches_crafting;
 use crate::{Container, WindowType};
+use pumpkin_core::math::position::WorldPosition;
+use pumpkin_world::block::block_registry::Block;
 use pumpkin_world::item::ItemStack;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+
 pub struct OpenContainer {
+    // TODO: unique id should be here
+    // TODO: should this be uuid?
     players: Vec<i32>,
     container: Arc<Mutex<Box<dyn Container>>>,
+    location: Option<WorldPosition>,
+    block: Option<Block>,
 }
 
 impl OpenContainer {
@@ -36,15 +43,49 @@ impl OpenContainer {
         }
     }
 
-    pub fn new_empty_container<C: Container + Default + 'static>(player_id: i32) -> Self {
+    pub fn new_empty_container<C: Container + Default + 'static>(
+        player_id: i32,
+        location: Option<WorldPosition>,
+        block: Option<Block>,
+    ) -> Self {
         Self {
             players: vec![player_id],
             container: Arc::new(Mutex::new(Box::new(C::default()))),
+            location,
+            block,
         }
+    }
+
+    pub fn is_location(&self, try_position: WorldPosition) -> bool {
+        if let Some(location) = self.location {
+            location == try_position
+        } else {
+            false
+        }
+    }
+
+    pub async fn clear_all_slots(&self) {
+        self.container.lock().await.clear_all_slots();
+    }
+
+    pub fn clear_all_players(&mut self) {
+        self.players = vec![];
     }
 
     pub fn all_player_ids(&self) -> Vec<i32> {
         self.players.clone()
+    }
+
+    pub fn get_location(&self) -> Option<WorldPosition> {
+        self.location
+    }
+
+    pub async fn set_location(&mut self, location: Option<WorldPosition>) {
+        self.location = location;
+    }
+
+    pub fn get_block(&self) -> Option<Block> {
+        self.block.clone()
     }
 }
 #[derive(Default)]
@@ -137,5 +178,35 @@ impl Container for CraftingTable {
                 }
             }
         })
+    }
+}
+
+#[derive(Default)]
+pub struct Furnace {
+    cook: Option<ItemStack>,
+    fuel: Option<ItemStack>,
+    output: Option<ItemStack>,
+}
+
+impl Container for Furnace {
+    fn window_type(&self) -> &'static WindowType {
+        &WindowType::Furnace
+    }
+
+    fn window_name(&self) -> &'static str {
+        "Furnace"
+    }
+    fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
+        let mut slots = vec![&mut self.cook];
+        slots.push(&mut self.fuel);
+        slots.push(&mut self.output);
+        slots
+    }
+
+    fn all_slots_ref(&self) -> Vec<Option<&ItemStack>> {
+        let mut slots = vec![self.cook.as_ref()];
+        slots.push(self.fuel.as_ref());
+        slots.push(self.output.as_ref());
+        slots
     }
 }

@@ -1,6 +1,6 @@
 use pumpkin_macros::client_packet;
 
-use crate::Identifier;
+use crate::codec::identifier::Identifier;
 
 #[derive(serde::Serialize)]
 #[client_packet("config:cookie_request")]

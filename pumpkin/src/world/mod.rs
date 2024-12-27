@@ -9,14 +9,16 @@ use crate::{
     error::PumpkinError,
     server::Server,
 };
-use itertools::Itertools;
 use level_time::LevelTime;
 use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
 use pumpkin_entity::{entity_type::EntityType, EntityId};
-use pumpkin_protocol::client::play::CLevelEvent;
+use pumpkin_protocol::{
+    client::play::CLevelEvent,
+    codec::{identifier::Identifier, var_int::VarInt},
+};
 use pumpkin_protocol::{
     client::play::{CBlockUpdate, CRespawn, CSoundEffect, CWorldEvent},
     SoundCategory,
@@ -26,7 +28,7 @@ use pumpkin_protocol::{
         CChunkData, CGameEvent, CLogin, CPlayerInfoUpdate, CRemoveEntities, CRemovePlayerInfo,
         CSetEntityMetadata, CSpawnEntity, GameEvent, Metadata, PlayerAction,
     },
-    ClientPacket, VarInt,
+    ClientPacket,
 };
 use pumpkin_registry::DimensionType;
 use pumpkin_world::chunk::ChunkData;
@@ -116,6 +118,10 @@ impl World {
         }
     }
 
+    pub async fn save(&self) {
+        self.level.save().await;
+    }
+
     /// Broadcasts a packet to all connected players within the world.
     ///
     /// Sends the specified packet to every player currently logged in to the world.
@@ -150,21 +156,31 @@ impl World {
         &self,
         sound_id: u16,
         category: SoundCategory,
-        posistion: &Vector3<f64>,
+        position: &Vector3<f64>,
     ) {
         let seed = thread_rng().gen::<f64>();
         self.broadcast_packet_all(&CSoundEffect::new(
             VarInt(i32::from(sound_id)),
             None,
             category,
-            posistion.x,
-            posistion.y,
-            posistion.z,
+            position.x,
+            position.y,
+            position.z,
             1.0,
             1.0,
             seed,
         ))
         .await;
+    }
+
+    pub async fn play_block_sound(&self, sound_id: u16, position: WorldPosition) {
+        let new_vec = Vector3::new(
+            f64::from(position.0.x) + 0.5,
+            f64::from(position.0.y) + 0.5,
+            f64::from(position.0.z) + 0.5,
+        );
+        self.play_sound(sound_id, SoundCategory::Blocks, &new_vec)
+            .await;
     }
 
     pub async fn play_record(&self, record_id: i32, position: WorldPosition) {
@@ -213,12 +229,8 @@ impl World {
         player: Arc<Player>,
         server: &Server,
     ) {
-        let command_dispatcher = &server.command_dispatcher;
-        let dimensions = &server
-            .dimensions
-            .iter()
-            .map(DimensionType::name)
-            .collect_vec();
+        let dimensions: Vec<Identifier> =
+            server.dimensions.iter().map(DimensionType::name).collect();
 
         // This code follows the vanilla packet order
         let entity_id = player.entity_id();
@@ -235,10 +247,10 @@ impl World {
             .send_packet(&CLogin::new(
                 entity_id,
                 base_config.hardcore,
-                dimensions,
+                &dimensions,
                 base_config.max_players.into(),
-                base_config.view_distance.into(), //  TODO: view distance
-                base_config.simulation_distance.into(), // TODO: sim view dinstance
+                base_config.view_distance.get().into(), //  TODO: view distance
+                base_config.simulation_distance.get().into(), // TODO: sim view dinstance
                 false,
                 true,
                 false,
@@ -257,8 +269,7 @@ impl World {
             .await;
         // permissions, i. e. the commands a player may use
         player.send_permission_lvl_update().await;
-        client_cmd_suggestions::send_c_commands_packet(&player, command_dispatcher).await;
-
+        client_cmd_suggestions::send_c_commands_packet(&player, &server.command_dispatcher).await;
         // teleport
         let mut position = Vector3::new(10.0, 120.0, 10.0);
         let yaw = 10.0;
@@ -319,7 +330,7 @@ impl World {
                 .client
                 .send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries))
                 .await;
-        }
+        };
 
         let gameprofile = &player.gameprofile;
 
@@ -401,8 +412,11 @@ impl World {
             .init_client(&player.client)
             .await;
 
+        // Sends initial time
+        player.send_time(self).await;
+
         // Spawn in initial chunks
-        player_chunker::player_join(self, player.clone()).await;
+        player_chunker::player_join(&player).await;
 
         // if let Some(bossbars) = self..lock().await.get_player_bars(&player.gameprofile.id) {
         //     for bossbar in bossbars {
@@ -442,7 +456,7 @@ impl World {
             .await;
 
         log::debug!("Sending player abilities to {}", player.gameprofile.name);
-        player.send_abilties_update().await;
+        player.send_abilities_update().await;
 
         player.send_permission_lvl_update().await;
 
@@ -504,31 +518,11 @@ impl World {
         )
         .await;
 
-        player_chunker::player_join(self, player.clone()).await;
+        player_chunker::player_join(player).await;
         self.broadcast_packet_all(&entity_metadata_packet).await;
         // update commands
 
         player.set_health(20.0, 20, 20.0).await;
-    }
-
-    pub fn mark_chunks_as_not_watched(&self, chunks: &[Vector2<i32>]) -> Vec<Vector2<i32>> {
-        self.level.mark_chunks_as_not_watched(chunks)
-    }
-
-    pub fn mark_chunks_as_watched(&self, chunks: &[Vector2<i32>]) {
-        self.level.mark_chunks_as_newly_watched(chunks);
-    }
-
-    pub fn clean_chunks(&self, chunks: &[Vector2<i32>]) {
-        self.level.clean_chunks(chunks);
-    }
-
-    pub fn clean_memory(&self, chunks_to_check: &[Vector2<i32>]) {
-        self.level.clean_memory(chunks_to_check);
-    }
-
-    pub fn get_cached_chunk_len(&self) -> usize {
-        self.level.loaded_chunk_count()
     }
 
     /// IMPORTANT: Chunks have to be non-empty
@@ -557,7 +551,6 @@ impl World {
             rel_x * rel_x + rel_z * rel_z
         });
 
-        player.world().mark_chunks_as_watched(&chunks);
         let mut receiver = self.receive_chunks(chunks);
         let level = self.level.clone();
 
@@ -567,10 +560,9 @@ impl World {
                 let packet = CChunkData(&chunk_data);
                 #[cfg(debug_assertions)]
                 if chunk_data.position == (0, 0).into() {
-                    use pumpkin_protocol::bytebuf::ByteBuffer;
-                    let mut test = ByteBuffer::empty();
+                    let mut test = bytes::BytesMut::new();
                     packet.write(&mut test);
-                    let len = test.buf().len();
+                    let len = test.len();
                     log::debug!(
                         "Chunk packet size: {}B {}KB {}MB",
                         len,
@@ -636,6 +628,68 @@ impl World {
     /// An `Option<Arc<Player>>` containing the player if found, or `None` if not.
     pub async fn get_player_by_uuid(&self, id: uuid::Uuid) -> Option<Arc<Player>> {
         return self.current_players.lock().await.get(&id).cloned();
+    }
+
+    /// Gets a list of players who's location equals the given position in the world.
+    ///
+    /// It iterates through the players in the world and checks their location. If the player's location matches the
+    /// given position it will add this to a Vec which it later returns. If no
+    /// player was found in that position it will just return an empty Vec.
+    ///
+    /// # Arguments
+    ///
+    /// * `position`: The position the function will check.
+    pub async fn get_players_by_pos(
+        &self,
+        position: WorldPosition,
+    ) -> HashMap<uuid::Uuid, Arc<Player>> {
+        self.current_players
+            .lock()
+            .await
+            .iter()
+            .filter_map(|(uuid, player)| {
+                let player_block_pos = player.living_entity.entity.block_pos.load().0;
+                (position.0.x == player_block_pos.x
+                    && position.0.y == player_block_pos.y
+                    && position.0.z == player_block_pos.z)
+                    .then(|| (*uuid, Arc::clone(player)))
+            })
+            .collect::<HashMap<uuid::Uuid, Arc<Player>>>()
+    }
+
+    /// Gets the nearby players around a given world position
+    /// It "creates" a sphere and checks if whether players are inside
+    /// and returns a hashmap where the uuid is the key and the player
+    /// object the value.
+    ///
+    /// # Arguments
+    /// * `pos`: The middlepoint of the sphere
+    /// * `radius`: The radius of the sphere. The higher the radius
+    ///             the more area will be checked, in every direction.
+    pub async fn get_nearby_players(
+        &self,
+        pos: Vector3<f64>,
+        radius: u16,
+    ) -> HashMap<uuid::Uuid, Arc<Player>> {
+        let radius_squared = (f64::from(radius)).powi(2);
+
+        let mut found_players = HashMap::new();
+        for player in self.current_players.lock().await.iter() {
+            let player_pos = player.1.living_entity.entity.pos.load();
+
+            let diff = Vector3::new(
+                player_pos.x - pos.x,
+                player_pos.y - pos.y,
+                player_pos.z - pos.z,
+            );
+
+            let distance_squared = diff.x.powi(2) + diff.y.powi(2) + diff.z.powi(2);
+            if distance_squared <= radius_squared {
+                found_players.insert(*player.0, player.1.clone());
+            }
+        }
+
+        found_players
     }
 
     /// Adds a player to the world and broadcasts a join message if enabled.

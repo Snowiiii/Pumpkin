@@ -33,7 +33,7 @@ impl GetClientSideArgParser for PlayersArgumentConsumer {
 #[async_trait]
 impl ArgumentConsumer for PlayersArgumentConsumer {
     async fn consume<'a>(
-        &self,
+        &'a self,
         src: &CommandSender<'a>,
         server: &'a Server,
         args: &mut RawArgs<'a>,
@@ -53,11 +53,7 @@ impl ArgumentConsumer for PlayersArgumentConsumer {
                 _ => None,
             },
             "@r" => {
-                if let Some(p) = server.get_random_player().await {
-                    Some(vec![p.clone()])
-                } else {
-                    Some(vec![])
-                }
+                (server.get_random_player().await).map_or_else(|| Some(vec![]), |p| Some(vec![p]))
             }
             "@a" | "@e" => Some(server.get_all_players().await),
             name => server.get_player_by_name(name).await.map(|p| vec![p]),
@@ -67,7 +63,7 @@ impl ArgumentConsumer for PlayersArgumentConsumer {
     }
 
     async fn suggest<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
@@ -77,19 +73,15 @@ impl ArgumentConsumer for PlayersArgumentConsumer {
 }
 
 impl DefaultNameArgConsumer for PlayersArgumentConsumer {
-    fn default_name(&self) -> &'static str {
-        "player"
-    }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &PlayersArgumentConsumer
+    fn default_name(&self) -> String {
+        "player".to_string()
     }
 }
 
 impl<'a> FindArg<'a> for PlayersArgumentConsumer {
     type Data = &'a [Arc<Player>];
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::Players(data)) => Ok(data),
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),

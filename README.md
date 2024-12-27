@@ -9,7 +9,7 @@
 
 </div>
 
-[Pumpkin](https://snowiiii.github.io/Pumpkin/) is a Minecraft server built entirely in Rust, offering a fast, efficient,
+[Pumpkin](https://snowiiii.github.io/Pumpkin-Website/) is a Minecraft server built entirely in Rust, offering a fast, efficient,
 and customizable experience. It prioritizes performance and player enjoyment while adhering to the core mechanics of the game.
 
 ![image](https://github.com/user-attachments/assets/7e2e865e-b150-4675-a2d5-b52f9900378e)
@@ -88,7 +88,7 @@ Check out our [Github Project](https://github.com/users/Snowiiii/projects/12/vie
 
 ## How to run
 
-See our [Quick Start](https://snowiiii.github.io/Pumpkin/about/quick-start.html) Guide to get Pumpkin running
+See our [Quick Start](https://snowiiii.github.io/Pumpkin-Website/about/quick-start.html) Guide to get Pumpkin running
 
 ## Contributions
 
@@ -96,7 +96,7 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Docs
 
-The Documentation of Pumpkin can be found at https://snowiiii.github.io/Pumpkin/
+The Documentation of Pumpkin can be found at https://snowiiii.github.io/Pumpkin-Website/
 
 ## Communication
 

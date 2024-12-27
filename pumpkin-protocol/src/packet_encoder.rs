@@ -1,25 +1,24 @@
-use std::io::Write;
-
 use aes::cipher::{generic_array::GenericArray, BlockEncryptMut, BlockSizeUser, KeyIvInit};
 use bytes::{BufMut, BytesMut};
-use pumpkin_config::compression::CompressionInfo;
 use thiserror::Error;
 
 use libdeflater::{CompressionLvl, Compressor};
 
-use crate::{bytebuf::ByteBuffer, ClientPacket, VarInt, MAX_PACKET_SIZE};
+use crate::{
+    codec::Codec, ClientPacket, CompressionLevel, CompressionThreshold, VarInt, MAX_PACKET_SIZE,
+};
 
 type Cipher = cfb8::Encryptor<aes::Aes128>;
 
-// Encoder: Server -> Client
-// Supports ZLib endecoding/compression
-// Supports Aes128 Encyption
+/// Encoder: Server -> Client
+/// Supports ZLib endecoding/compression
+/// Supports Aes128 Encryption
 pub struct PacketEncoder {
     buf: BytesMut,
     compress_buf: Vec<u8>,
-    compression: Option<CompressionInfo>,
     cipher: Option<Cipher>,
-    compressor: Compressor, // Reuse the compressor for all packets
+    // compression and compression threshold
+    compression: Option<(Compressor, CompressionThreshold)>,
 }
 
 // Manual implementation of Default trait for PacketEncoder
@@ -29,32 +28,53 @@ impl Default for PacketEncoder {
         Self {
             buf: BytesMut::with_capacity(1024),
             compress_buf: Vec::with_capacity(1024),
-            compression: None,
             cipher: None,
-            compressor: Compressor::new(CompressionLvl::fastest()), // init compressor with no compression level
+            compression: None, // init compressor with fastest compression level
         }
     }
 }
 
 impl PacketEncoder {
+    /// Appends a Clientbound `ClientPacket` to the internal buffer and applies compression when needed.
+    ///
+    /// If compression is enabled and the packet size exceeds the threshold, the packet is compressed.
+    /// The packet is prefixed with its length and, if compressed, the uncompressed data length.
+    /// The packet format is as follows:
+    ///
+    /// **Uncompressed:**
+    /// |-----------------------|
+    /// | Packet Length (VarInt)|
+    /// |-----------------------|
+    /// | Packet ID (VarInt)    |
+    /// |-----------------------|
+    /// | Data (Byte Array)     |
+    /// |-----------------------|
+    ///
+    /// **Compressed:**
+    /// |------------------------|
+    /// | Packet Length (VarInt) |
+    /// |------------------------|
+    /// | Data Length (VarInt)   |
+    /// |------------------------|
+    /// | Packet ID (VarInt)     |
+    /// |------------------------|
+    /// | Data (Byte Array)      |
+    /// |------------------------|
+    ///
+    /// -   `Packet Length`: The total length of the packet *excluding* the `Packet Length` field itself.
+    /// -   `Data Length`: (Only present in compressed packets) The length of the uncompressed `Packet ID` and `Data`.
+    /// -   `Packet ID`: The ID of the packet.
+    /// -   `Data`: The packet's data.
     pub fn append_packet<P: ClientPacket>(&mut self, packet: &P) -> Result<(), PacketEncodeError> {
         let start_len = self.buf.len();
-        let mut writer = (&mut self.buf).writer();
-
-        let mut packet_buf = ByteBuffer::empty();
-        VarInt(P::PACKET_ID)
-            .encode(&mut writer)
-            .map_err(|_| PacketEncodeError::EncodeID)?;
-        packet.write(&mut packet_buf);
-
-        writer
-            .write(packet_buf.buf())
-            .map_err(|_| PacketEncodeError::EncodeFailedWrite)?;
-
+        // Write the Packet ID first
+        VarInt(P::PACKET_ID).encode(&mut self.buf);
+        // Now write the packet into an empty buffer
+        packet.write(&mut self.buf);
         let data_len = self.buf.len() - start_len;
 
-        if let Some(compression) = &self.compression {
-            if data_len > compression.threshold as usize {
+        if let Some((compressor, compression_threshold)) = &mut self.compression {
+            if data_len > compression_threshold.0 as usize {
                 // Get the data to compress
                 let data_to_compress = &self.buf[start_len..];
 
@@ -62,17 +82,15 @@ impl PacketEncoder {
                 self.compress_buf.clear();
 
                 // Compute the maximum size of compressed data
-                let max_compressed_size =
-                    self.compressor.zlib_compress_bound(data_to_compress.len());
+                let max_compressed_size = compressor.zlib_compress_bound(data_to_compress.len());
 
                 // Ensure compress_buf has enough capacity
                 self.compress_buf.resize(max_compressed_size, 0);
 
                 // Compress the data
-                let compressed_size = self
-                    .compressor
+                let compressed_size = compressor
                     .zlib_compress(data_to_compress, &mut self.compress_buf)
-                    .map_err(|_| PacketEncodeError::CompressionFailed)?;
+                    .map_err(|e| PacketEncodeError::CompressionFailed(e.to_string()))?;
 
                 // Resize compress_buf to actual compressed size
                 self.compress_buf.resize(compressed_size, 0);
@@ -82,26 +100,20 @@ impl PacketEncoder {
                 let packet_len = data_len_size + compressed_size;
 
                 if packet_len >= MAX_PACKET_SIZE as usize {
-                    return Err(PacketEncodeError::TooLong);
+                    return Err(PacketEncodeError::TooLong(packet_len));
                 }
 
                 self.buf.truncate(start_len);
 
-                let mut writer = (&mut self.buf).writer();
-
-                VarInt(packet_len as i32)
-                    .encode(&mut writer)
-                    .map_err(|_| PacketEncodeError::EncodeLength)?;
-                VarInt(data_len as i32)
-                    .encode(&mut writer)
-                    .map_err(|_| PacketEncodeError::EncodeData)?;
+                VarInt(packet_len as i32).encode(&mut self.buf);
+                VarInt(data_len as i32).encode(&mut self.buf);
                 self.buf.extend_from_slice(&self.compress_buf);
             } else {
                 let data_len_size = 1;
                 let packet_len = data_len_size + data_len;
 
                 if packet_len >= MAX_PACKET_SIZE as usize {
-                    Err(PacketEncodeError::TooLong)?
+                    Err(PacketEncodeError::TooLong(packet_len))?
                 }
 
                 let packet_len_size = VarInt(packet_len as i32).written_size();
@@ -114,13 +126,9 @@ impl PacketEncoder {
 
                 let mut front = &mut self.buf[start_len..];
 
-                VarInt(packet_len as i32)
-                    .encode(&mut front)
-                    .map_err(|_| PacketEncodeError::EncodeLength)?;
+                VarInt(packet_len as i32).encode(&mut front);
                 // Zero for no compression on this packet.
-                VarInt(0)
-                    .encode(front)
-                    .map_err(|_| PacketEncodeError::EncodeData)?;
+                VarInt(0).encode(&mut front);
             }
 
             return Ok(());
@@ -129,7 +137,7 @@ impl PacketEncoder {
         let packet_len = data_len;
 
         if packet_len >= MAX_PACKET_SIZE as usize {
-            Err(PacketEncodeError::TooLong)?
+            Err(PacketEncodeError::TooLong(packet_len))?
         }
 
         let packet_len_size = VarInt(packet_len as i32).written_size();
@@ -138,13 +146,12 @@ impl PacketEncoder {
         self.buf
             .copy_within(start_len..start_len + data_len, start_len + packet_len_size);
 
-        let front = &mut self.buf[start_len..];
-        VarInt(packet_len as i32)
-            .encode(front)
-            .map_err(|_| PacketEncodeError::EncodeID)?;
+        let mut front = &mut self.buf[start_len..];
+        VarInt(packet_len as i32).encode(&mut front);
         Ok(())
     }
 
+    /// Enable encryption for taking all packets buffer `
     pub fn set_encryption(&mut self, key: Option<&[u8; 16]>) {
         if let Some(key) = key {
             assert!(self.cipher.is_none(), "encryption is already enabled");
@@ -157,23 +164,41 @@ impl PacketEncoder {
         }
     }
 
-    /// Enables ZLib Compression
-    pub fn set_compression(&mut self, compression: Option<CompressionInfo>) {
-        self.compression = compression;
-
-        // Reset the compressor with the new compression level
-        if let Some(compression) = &self.compression {
-            let compression_level = compression.level as i32;
-
-            let level = match CompressionLvl::new(compression_level) {
-                Ok(level) => level,
-                Err(_) => return,
-            };
-
-            self.compressor = Compressor::new(level);
+    /// Enables or disables Zlib compression.
+    ///
+    /// If `compression` is `Some`, compression is enabled with the given `threshold`
+    /// for triggering compression and the specified `level`. If `compression` is
+    /// `None`, compression is disabled.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `CompressionLevelError` if an invalid compression level is provided.
+    pub fn set_compression(
+        &mut self,
+        compression: Option<(CompressionThreshold, CompressionLevel)>,
+    ) -> Result<(), CompressionLevelError> {
+        match compression {
+            Some((threshold, level)) => {
+                let level =
+                    CompressionLvl::new(level.0 as i32).map_err(|_| CompressionLevelError)?;
+                self.compression = Some((Compressor::new(level), threshold));
+            }
+            None => {
+                self.compression = None;
+            }
         }
+        Ok(())
     }
 
+    /// Encrypts the data in the internal buffer and returns it as a `BytesMut`.
+    ///
+    /// If a cipher is set, the data is encrypted in-place using block cipher encryption.
+    /// The buffer is processed in chunks of the cipher's block size. If the buffer's
+    /// length is not a multiple of the block size, the last partial block is *not* encrypted.
+    /// It's important to ensure that the data being encrypted is padded appropriately
+    /// beforehand if necessary.
+    ///
+    /// If no cipher is set, the buffer is returned as is.
     pub fn take(&mut self) -> BytesMut {
         if let Some(cipher) = &mut self.cipher {
             for chunk in self.buf.chunks_mut(Cipher::block_size()) {
@@ -187,36 +212,23 @@ impl PacketEncoder {
 }
 
 #[derive(Error, Debug)]
-pub enum PacketEncodeError {
-    #[error("failed to encode packet ID")]
-    EncodeID,
-    #[error("failed to encode packet Length")]
-    EncodeLength,
-    #[error("failed to encode packet data")]
-    EncodeData,
-    #[error("failed to write encoded packet")]
-    EncodeFailedWrite,
-    #[error("packet exceeds maximum length")]
-    TooLong,
-    #[error("invalid compression level")]
-    InvalidCompressionLevel,
-    #[error("compression failed")]
-    CompressionFailed,
-}
+#[error("Invalid compression Level")]
+pub struct CompressionLevelError;
 
-impl PacketEncodeError {
-    pub fn kickable(&self) -> bool {
-        // We no longer have a connection, so dont try to kick the player, just close
-        !matches!(self, Self::EncodeData | Self::EncodeFailedWrite)
-    }
+/// Errors that can occur during packet encoding.
+#[derive(Error, Debug)]
+pub enum PacketEncodeError {
+    #[error("Packet exceeds maximum length: {0}")]
+    TooLong(usize),
+    #[error("Compression failed {0}")]
+    CompressionFailed(String),
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bytebuf::packet_id::Packet;
     use crate::client::status::CStatusResponse;
-    use crate::VarIntDecodeError;
+    use crate::{bytebuf::packet_id::Packet, codec::DecodeError};
     use aes::Aes128;
     use cfb8::cipher::AsyncStreamCipher;
     use cfb8::Decryptor as Cfb8Decryptor;
@@ -240,7 +252,7 @@ mod tests {
     }
 
     /// Helper function to decode a VarInt from bytes
-    fn decode_varint(buffer: &mut &[u8]) -> Result<i32, VarIntDecodeError> {
+    fn decode_varint(buffer: &mut &[u8]) -> Result<i32, DecodeError> {
         VarInt::decode(buffer).map(|varint| varint.0)
     }
 
@@ -254,25 +266,23 @@ mod tests {
     }
 
     /// Helper function to decrypt data using AES-128 CFB-8 mode
-    fn decrypt_aes128(encrypted_data: &[u8], key: &[u8; 16], iv: &[u8; 16]) -> Vec<u8> {
+    fn decrypt_aes128(encrypted_data: &mut [u8], key: &[u8; 16], iv: &[u8; 16]) {
         let decryptor = Cfb8Decryptor::<Aes128>::new_from_slices(key, iv).expect("Invalid key/iv");
-        let mut decrypted = encrypted_data.to_vec();
-        decryptor.decrypt(&mut decrypted);
-        decrypted
+        decryptor.decrypt(encrypted_data);
     }
 
     /// Helper function to build a packet with optional compression and encryption
     fn build_packet_with_encoder<T: ClientPacket>(
         packet: &T,
-        compression_info: Option<CompressionInfo>,
+        compression_info: Option<(CompressionThreshold, CompressionLevel)>,
         key: Option<&[u8; 16]>,
     ) -> BytesMut {
         let mut encoder = PacketEncoder::default();
 
         if let Some(compression) = compression_info {
-            encoder.set_compression(Some(compression));
+            encoder.set_compression(Some(compression)).unwrap();
         } else {
-            encoder.set_compression(None);
+            encoder.set_compression(None).unwrap();
         }
 
         if let Some(key) = key {
@@ -312,10 +322,10 @@ mod tests {
 
         // Remaining buffer is the payload
         // We need to obtain the expected payload
-        let mut expected_payload = ByteBuffer::empty();
+        let mut expected_payload = BytesMut::new();
         packet.write(&mut expected_payload);
 
-        assert_eq!(buffer, expected_payload.buf());
+        assert_eq!(buffer, expected_payload);
     }
 
     /// Test encoding with compression
@@ -324,14 +334,12 @@ mod tests {
         // Create a CStatusResponse packet
         let packet = CStatusResponse::new("{\"description\": \"A Minecraft Server\"}");
 
-        // Compression threshold is set to 0 to force compression
-        let compression_info = CompressionInfo {
-            threshold: 0,
-            level: 6, // Standard compression level
-        };
-
         // Build the packet with compression enabled
-        let packet_bytes = build_packet_with_encoder(&packet, Some(compression_info), None);
+        let packet_bytes = build_packet_with_encoder(
+            &packet,
+            Some((CompressionThreshold(0), CompressionLevel(6))),
+            None,
+        );
 
         // Decode the packet manually to verify correctness
         let mut buffer = &packet_bytes[..];
@@ -346,10 +354,10 @@ mod tests {
 
         // Read data length VarInt (uncompressed data length)
         let data_length = decode_varint(&mut buffer).expect("Failed to decode data length");
-        let mut expected_payload = ByteBuffer::empty();
+        let mut expected_payload = BytesMut::new();
         packet.write(&mut expected_payload);
         let uncompressed_data_length =
-            VarInt(CStatusResponse::PACKET_ID).written_size() + expected_payload.buf().len();
+            VarInt(CStatusResponse::PACKET_ID).written_size() + expected_payload.len();
         assert_eq!(data_length as usize, uncompressed_data_length);
 
         // Remaining buffer is the compressed data
@@ -368,7 +376,7 @@ mod tests {
         assert_eq!(decoded_packet_id, CStatusResponse::PACKET_ID);
 
         // Remaining buffer is the payload
-        assert_eq!(decompressed_buffer, expected_payload.buf());
+        assert_eq!(decompressed_buffer, expected_payload);
     }
 
     /// Test encoding with encryption
@@ -381,13 +389,13 @@ mod tests {
         let key = [0x00u8; 16]; // Example key
 
         // Build the packet with encryption enabled (no compression)
-        let packet_bytes = build_packet_with_encoder(&packet, None, Some(&key));
+        let mut packet_bytes = build_packet_with_encoder(&packet, None, Some(&key));
 
         // Decrypt the packet
-        let decrypted_packet = decrypt_aes128(&packet_bytes, &key, &key);
+        decrypt_aes128(&mut packet_bytes, &key, &key);
 
         // Decode the packet manually to verify correctness
-        let mut buffer = &decrypted_packet[..];
+        let mut buffer = &packet_bytes[..];
 
         // Read packet length VarInt
         let packet_length = decode_varint(&mut buffer).expect("Failed to decode packet length");
@@ -402,10 +410,10 @@ mod tests {
         assert_eq!(decoded_packet_id, CStatusResponse::PACKET_ID);
 
         // Remaining buffer is the payload
-        let mut expected_payload = ByteBuffer::empty();
+        let mut expected_payload = BytesMut::new();
         packet.write(&mut expected_payload);
 
-        assert_eq!(buffer, expected_payload.buf());
+        assert_eq!(buffer, expected_payload);
     }
 
     /// Test encoding with both compression and encryption
@@ -414,23 +422,22 @@ mod tests {
         // Create a CStatusResponse packet
         let packet = CStatusResponse::new("{\"description\": \"A Minecraft Server\"}");
 
-        // Compression threshold is set to 0 to force compression
-        let compression_info = CompressionInfo {
-            threshold: 0,
-            level: 6, // Standard compression level
-        };
-
         // Encryption key and IV (IV is the same as key in this case)
         let key = [0x01u8; 16]; // Example key
 
         // Build the packet with both compression and encryption enabled
-        let packet_bytes = build_packet_with_encoder(&packet, Some(compression_info), Some(&key));
+        // Compression threshold is set to 0 to force compression
+        let mut packet_bytes = build_packet_with_encoder(
+            &packet,
+            Some((CompressionThreshold(0), CompressionLevel(6))),
+            Some(&key),
+        );
 
         // Decrypt the packet
-        let decrypted_packet = decrypt_aes128(&packet_bytes, &key, &key);
+        decrypt_aes128(&mut packet_bytes, &key, &key);
 
         // Decode the packet manually to verify correctness
-        let mut buffer = &decrypted_packet[..];
+        let mut buffer = &packet_bytes[..];
 
         // Read packet length VarInt
         let packet_length = decode_varint(&mut buffer).expect("Failed to decode packet length");
@@ -442,10 +449,10 @@ mod tests {
 
         // Read data length VarInt (uncompressed data length)
         let data_length = decode_varint(&mut buffer).expect("Failed to decode data length");
-        let mut expected_payload = ByteBuffer::empty();
+        let mut expected_payload = BytesMut::new();
         packet.write(&mut expected_payload);
         let uncompressed_data_length =
-            VarInt(CStatusResponse::PACKET_ID).written_size() + expected_payload.buf().len();
+            VarInt(CStatusResponse::PACKET_ID).written_size() + expected_payload.len();
         assert_eq!(data_length as usize, uncompressed_data_length);
 
         // Remaining buffer is the compressed data
@@ -464,7 +471,7 @@ mod tests {
         assert_eq!(decoded_packet_id, CStatusResponse::PACKET_ID);
 
         // Remaining buffer is the payload
-        assert_eq!(decompressed_buffer, expected_payload.buf());
+        assert_eq!(decompressed_buffer, expected_payload);
     }
 
     /// Test encoding with zero-length payload
@@ -492,15 +499,15 @@ mod tests {
         assert_eq!(decoded_packet_id, CStatusResponse::PACKET_ID);
 
         // Remaining buffer is the payload (empty)
-        let mut expected_payload = ByteBuffer::empty();
+        let mut expected_payload = BytesMut::new();
         packet.write(&mut expected_payload);
 
         assert_eq!(
             buffer.len(),
-            expected_payload.buf().len(),
+            expected_payload.len(),
             "Payload length mismatch"
         );
-        assert_eq!(buffer, expected_payload.buf());
+        assert_eq!(buffer, expected_payload);
     }
 
     /// Test encoding with maximum length payload
@@ -537,10 +544,10 @@ mod tests {
         assert_eq!(decoded_packet_id, CStatusResponse::PACKET_ID);
 
         // Remaining buffer is the payload
-        let mut expected_payload = ByteBuffer::empty();
+        let mut expected_payload = BytesMut::new();
         packet.write(&mut expected_payload);
 
-        assert_eq!(buffer, expected_payload.buf());
+        assert_eq!(buffer, expected_payload);
     }
 
     /// Test encoding a packet that exceeds MAX_PACKET_SIZE
@@ -562,14 +569,13 @@ mod tests {
         // Create a CStatusResponse packet with small payload
         let packet = CStatusResponse::new("Hi");
 
-        // Compression threshold is set to a value higher than payload length
-        let compression_info = CompressionInfo {
-            threshold: 10,
-            level: 6, // Standard compression level
-        };
-
         // Build the packet with compression enabled
-        let packet_bytes = build_packet_with_encoder(&packet, Some(compression_info), None);
+        // Compression threshold is set to a value higher than payload length
+        let packet_bytes = build_packet_with_encoder(
+            &packet,
+            Some((CompressionThreshold(10), CompressionLevel(6))),
+            None,
+        );
 
         // Decode the packet manually to verify that it was not compressed
         let mut buffer = &packet_bytes[..];
@@ -594,9 +600,9 @@ mod tests {
         assert_eq!(decoded_packet_id, CStatusResponse::PACKET_ID);
 
         // Remaining buffer is the payload
-        let mut expected_payload = ByteBuffer::empty();
+        let mut expected_payload = BytesMut::new();
         packet.write(&mut expected_payload);
 
-        assert_eq!(buffer, expected_payload.buf());
+        assert_eq!(buffer, expected_payload);
     }
 }

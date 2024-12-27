@@ -1,4 +1,5 @@
 use std::{
+    num::NonZeroU8,
     sync::{
         atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU32, AtomicU8},
         Arc,
@@ -24,7 +25,9 @@ use pumpkin_core::{
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
-use pumpkin_protocol::server::play::{SCookieResponse as SPCookieResponse, SPlayPingRequest};
+use pumpkin_protocol::server::play::{
+    SCloseContainer, SCookieResponse as SPCookieResponse, SPlayPingRequest,
+};
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
@@ -38,23 +41,26 @@ use pumpkin_protocol::{
         SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
         SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
     },
-    RawPacket, ServerPacket, SoundCategory, VarInt,
+    RawPacket, ServerPacket, SoundCategory,
 };
+use pumpkin_protocol::{client::play::CUpdateTime, codec::var_int::VarInt};
 use pumpkin_protocol::{
     client::play::{CSetEntityMetadata, Metadata},
     server::play::{SClickContainer, SKeepAlive},
 };
 use pumpkin_world::{
     cylindrical_chunk_iterator::Cylindrical,
-    item::{item_registry::get_item_by_id, ItemStack},
+    item::{
+        item_registry::{get_item_by_id, Operation},
+        ItemStack,
+    },
 };
 use tokio::sync::{Mutex, Notify};
 
 use super::Entity;
-use crate::error::PumpkinError;
+use crate::{error::PumpkinError, net::GameProfile};
 use crate::{
-    client::{
-        authentication::GameProfile,
+    net::{
         combat::{self, player_attack_sound, AttackType},
         Client, PlayerConfig,
     },
@@ -89,7 +95,7 @@ pub struct Player {
     /// The item currently being held by the player.
     pub carried_item: AtomicCell<Option<ItemStack>>,
 
-    /// send `send_abilties_update` when changed
+    /// send `send_abilities_update` when changed
     /// The player's abilities and special powers.
     ///
     /// This field represents the various abilities that the player possesses, such as flight, invulnerability, and other special effects.
@@ -130,7 +136,7 @@ impl Player {
     ) -> Self {
         let gameprofile = client.gameprofile.lock().await.clone().map_or_else(
             || {
-                log::error!("No gameprofile?. Impossible");
+                log::error!("Client {} has no game profile!", client.id);
                 GameProfile {
                     id: uuid::Uuid::new_v4(),
                     name: String::new(),
@@ -143,7 +149,6 @@ impl Player {
 
         let gameprofile_clone = gameprofile.clone();
         let config = client.config.lock().await.clone().unwrap_or_default();
-        let view_distance = config.view_distance;
         let bounding_box_size = BoundingBoxSize {
             width: 0.6,
             height: 1.8,
@@ -174,7 +179,13 @@ impl Player {
             teleport_id_count: AtomicI32::new(0),
             abilities: Mutex::new(Abilities::default()),
             gamemode: AtomicCell::new(gamemode),
-            watched_section: AtomicCell::new(Cylindrical::new(Vector2::new(0, 0), view_distance)),
+            // We want this to be an impossible watched section so that `player_chunker::update_position`
+            // will mark chunks as watched for a new join rather than a respawn
+            // (We left shift by one so we can search around that chunk)
+            watched_section: AtomicCell::new(Cylindrical::new(
+                Vector2::new(i32::MAX >> 1, i32::MAX >> 1),
+                unsafe { NonZeroU8::new_unchecked(1) },
+            )),
             wait_for_keep_alive: AtomicBool::new(false),
             keep_alive_id: AtomicI64::new(0),
             last_keep_alive_time: AtomicCell::new(std::time::Instant::now()),
@@ -223,18 +234,18 @@ impl Player {
         );
 
         // Decrement value of watched chunks
-        let chunks_to_clean = world.mark_chunks_as_not_watched(&radial_chunks);
+        let chunks_to_clean = world.level.mark_chunks_as_not_watched(&radial_chunks);
 
         // Remove chunks with no watchers from the cache
-        world.clean_chunks(&chunks_to_clean);
+        world.level.clean_chunks(&chunks_to_clean);
         // Remove left over entries from all possiblily loaded chunks
-        world.clean_memory(&radial_chunks);
+        world.level.clean_memory(&radial_chunks);
 
         log::debug!(
             "Removed player id {} ({}) ({} chunks remain cached)",
             self.gameprofile.name,
             self.client.id,
-            self.world().get_cached_chunk_len()
+            self.world().level.loaded_chunk_count()
         );
 
         //self.world().level.list_cached();
@@ -262,7 +273,7 @@ impl Player {
                 // TODO: this should be cached in memory
                 if let Some(modifiers) = &item.components.attribute_modifiers {
                     for item_mod in &modifiers.modifiers {
-                        if item_mod.operation == "add_value" {
+                        if item_mod.operation == Operation::AddValue {
                             if item_mod.id == "minecraft:base_attack_damage" {
                                 add_damage = item_mod.amount;
                             }
@@ -404,7 +415,7 @@ impl Player {
     }
 
     /// Updates the current abilities the Player has
-    pub async fn send_abilties_update(&self) {
+    pub async fn send_abilities_update(&self) {
         let mut b = 0i8;
         let abilities = &self.abilities.lock().await;
 
@@ -457,6 +468,18 @@ impl Player {
     /// get the players permission level
     pub fn permission_lvl(&self) -> PermissionLvl {
         *self.permission_lvl.lock()
+    }
+
+    /// Sends the world time to just the player.
+    pub async fn send_time(&self, world: &World) {
+        let l_world = world.level_time.lock().await;
+        self.client
+            .send_packet(&CUpdateTime::new(
+                l_world.world_age,
+                l_world.time_of_day,
+                true,
+            ))
+            .await;
     }
 
     /// Yaw and Pitch in degrees
@@ -562,8 +585,6 @@ impl Player {
             "Setting the same gamemode as already is"
         );
         self.gamemode.store(gamemode);
-        // The client is using the same method for setting abilities when receiving the CGameEvent ChangeGameMode packet.
-        // So we can just update the abilities without sending them.
         {
             // use another scope so we instantly unlock abilities
             let mut abilities = self.abilities.lock().await;
@@ -587,6 +608,7 @@ impl Player {
                 }
             }
         }
+        self.send_abilities_update().await;
         self.living_entity
             .entity
             .world
@@ -757,6 +779,10 @@ impl Player {
             SPCookieResponse::PACKET_ID => {
                 self.handle_cookie_response(SPCookieResponse::read(bytebuf)?);
             }
+            SCloseContainer::PACKET_ID => {
+                self.handle_close_container(server, SCloseContainer::read(bytebuf)?)
+                    .await;
+            }
             _ => {
                 log::warn!("Failed to handle player packet id {}", packet.id.0);
                 // TODO: We give an error if all play packets are implemented
@@ -792,7 +818,7 @@ impl Default for Abilities {
             flying: false,
             allow_flying: false,
             creative: false,
-            fly_speed: 0.4,
+            fly_speed: 0.05,
             walk_speed_fov: 0.1,
         }
     }

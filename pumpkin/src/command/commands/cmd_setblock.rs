@@ -3,7 +3,7 @@ use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
 
 use crate::command::args::arg_block::BlockArgumentConsumer;
-use crate::command::args::arg_postition_block::BlockPosArgumentConsumer;
+use crate::command::args::arg_position_block::BlockPosArgumentConsumer;
 use crate::command::args::{ConsumedArgs, FindArg};
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, literal, require};
@@ -79,19 +79,17 @@ impl CommandExecutor for SetblockExecutor {
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| {
-            sender.has_permission_lvl(PermissionLvl::Two) && sender.world().is_some()
-        })
-        .with_child(
-            argument(ARG_BLOCK_POS, &BlockPosArgumentConsumer).with_child(
-                argument(ARG_BLOCK, &BlockArgumentConsumer)
-                    .with_child(literal("replace").execute(&SetblockExecutor(Mode::Replace)))
-                    .with_child(literal("destroy").execute(&SetblockExecutor(Mode::Destroy)))
-                    .with_child(literal("keep").execute(&SetblockExecutor(Mode::Keep)))
-                    .execute(&SetblockExecutor(Mode::Replace)),
+        require(|sender| sender.has_permission_lvl(PermissionLvl::Two) && sender.world().is_some())
+            .with_child(
+                argument(ARG_BLOCK_POS, BlockPosArgumentConsumer).with_child(
+                    argument(ARG_BLOCK, BlockArgumentConsumer)
+                        .with_child(literal("replace").execute(SetblockExecutor(Mode::Replace)))
+                        .with_child(literal("destroy").execute(SetblockExecutor(Mode::Destroy)))
+                        .with_child(literal("keep").execute(SetblockExecutor(Mode::Keep)))
+                        .execute(SetblockExecutor(Mode::Replace)),
+                ),
             ),
-        ),
     )
 }

@@ -1,14 +1,15 @@
-use itertools::Itertools;
+use std::num::NonZeroU8;
+
 use pumpkin_core::math::vector2::Vector2;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Cylindrical {
     pub center: Vector2<i32>,
-    pub view_distance: u8,
+    pub view_distance: NonZeroU8,
 }
 
 impl Cylindrical {
-    pub fn new(center: Vector2<i32>, view_distance: u8) -> Self {
+    pub fn new(center: Vector2<i32>, view_distance: NonZeroU8) -> Self {
         Self {
             center,
             view_distance,
@@ -37,19 +38,19 @@ impl Cylindrical {
     }
 
     fn left(&self) -> i32 {
-        self.center.x - self.view_distance as i32 - 1
+        self.center.x - self.view_distance.get() as i32 - 1
     }
 
     fn bottom(&self) -> i32 {
-        self.center.z - self.view_distance as i32 - 1
+        self.center.z - self.view_distance.get() as i32 - 1
     }
 
     fn right(&self) -> i32 {
-        self.center.x + self.view_distance as i32 + 1
+        self.center.x + self.view_distance.get() as i32 + 1
     }
 
     fn top(&self) -> i32 {
-        self.center.z + self.view_distance as i32 + 1
+        self.center.z + self.view_distance.get() as i32 + 1
     }
 
     fn is_within_distance(&self, x: i32, z: i32) -> bool {
@@ -60,7 +61,7 @@ impl Cylindrical {
         let min_leg = rel_x.min(rel_z) as i64;
 
         let hyp_sqr = max_leg * max_leg + min_leg * min_leg;
-        hyp_sqr < (self.view_distance as i64 * self.view_distance as i64)
+        hyp_sqr < (self.view_distance.get() as i64 * self.view_distance.get() as i64)
     }
 
     /// Returns an iterator of all chunks within this cylinder
@@ -76,19 +77,21 @@ impl Cylindrical {
         all_chunks
             .into_iter()
             .filter(|chunk| self.is_within_distance(chunk.x, chunk.z))
-            .collect_vec()
+            .collect()
     }
 }
 
 #[cfg(test)]
 mod test {
 
+    use std::num::NonZeroU8;
+
     use super::Cylindrical;
     use pumpkin_core::math::vector2::Vector2;
 
     #[test]
     fn test_bounds() {
-        let cylinder = Cylindrical::new(Vector2::new(0, 0), 10);
+        let cylinder = Cylindrical::new(Vector2::new(0, 0), unsafe { NonZeroU8::new_unchecked(1) });
         for chunk in cylinder.all_chunks_within() {
             assert!(chunk.x >= cylinder.left() && chunk.x <= cylinder.right());
             assert!(chunk.z >= cylinder.bottom() && chunk.z <= cylinder.top());
