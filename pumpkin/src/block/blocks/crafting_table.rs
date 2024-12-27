@@ -53,7 +53,7 @@ impl PumpkinBlock for CraftingTableBlock {
         player: &Player,
         _location: WorldPosition,
         _server: &Server,
-        container: &OpenContainer,
+        container: &mut OpenContainer,
     ) {
         let entity_id = player.entity_id();
         for player_id in container.all_player_ids() {
@@ -61,6 +61,8 @@ impl PumpkinBlock for CraftingTableBlock {
                 container.clear_all_slots().await;
             }
         }
+
+        container.remove_player(entity_id);
 
         // TODO: items should be re-added to player inventory or dropped dependending on if they are in movement.
         // TODO: unique containers should be implemented as a separate stack internally (optimizes large player servers for example)

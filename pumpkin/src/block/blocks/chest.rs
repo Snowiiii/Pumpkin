@@ -63,16 +63,23 @@ impl PumpkinBlock for ChestBlock {
         player: &Player,
         location: WorldPosition,
         server: &Server,
-        _container: &OpenContainer,
+        container: &mut OpenContainer,
     ) {
         player
             .world()
             .play_block_sound(sound!("block.chest.close"), location)
             .await;
 
+        container.remove_player(player.entity_id());
+
         if let Some(e) = get_block("minecraft:chest").cloned() {
             server
-                .broadcast_packet_all(&CBlockAction::new(&location, 1, 0, VarInt(e.id.into())))
+                .broadcast_packet_all(&CBlockAction::new(
+                    &location,
+                    1,
+                    container.get_number_of_players() as u8,
+                    VarInt(e.id.into()),
+                ))
                 .await;
         }
     }
@@ -96,10 +103,20 @@ impl ChestBlock {
         )
         .await;
 
-        if let Some(e) = get_block("minecraft:chest").cloned() {
-            server
-                .broadcast_packet_all(&CBlockAction::new(&location, 1, 1, VarInt(e.id.into())))
-                .await;
+        if let Some(container_id) = server.get_container_id(location, block.clone()).await {
+            let open_containers = server.open_containers.read().await;
+            if let Some(container) = open_containers.get(&u64::from(container_id)) {
+                if let Some(e) = get_block("minecraft:chest").cloned() {
+                    server
+                        .broadcast_packet_all(&CBlockAction::new(
+                            &location,
+                            1,
+                            container.get_number_of_players() as u8,
+                            VarInt(e.id.into()),
+                        ))
+                        .await;
+                }
+            }
         }
     }
 }
