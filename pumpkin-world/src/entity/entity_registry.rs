@@ -20,6 +20,10 @@ pub fn get_entity_id(name: &str) -> Option<&u16> {
     ENTITIES_BY_ID.get(&name.replace("minecraft:", ""))
 }
 
+pub fn get_entity_by_id<'a>(entity_id: u16) -> Option<&'a Entity> {
+    ENTITIES.values().find(|&entity| entity.id == entity_id)
+}
+
 #[derive(Deserialize, Clone, Debug)]
 pub struct Entity {
     pub id: u16,
