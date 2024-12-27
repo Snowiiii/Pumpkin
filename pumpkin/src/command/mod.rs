@@ -78,7 +78,7 @@ impl<'a> CommandSender<'a> {
     pub fn permission_lvl(&self) -> PermissionLvl {
         match self {
             CommandSender::Console | CommandSender::Rcon(_) => PermissionLvl::Four,
-            CommandSender::Player(p) => p.permission_lvl(),
+            CommandSender::Player(p) => p.permission_lvl.load(),
         }
     }
 
@@ -86,7 +86,7 @@ impl<'a> CommandSender<'a> {
     pub fn has_permission_lvl(&self, lvl: PermissionLvl) -> bool {
         match self {
             CommandSender::Console | CommandSender::Rcon(_) => true,
-            CommandSender::Player(p) => (p.permission_lvl() as i8) >= (lvl as i8),
+            CommandSender::Player(p) => p.permission_lvl.load().ge(&lvl),
         }
     }
 

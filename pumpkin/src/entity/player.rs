@@ -55,20 +55,20 @@ use pumpkin_world::{
         ItemStack,
     },
 };
-use tokio::sync::{Mutex, Notify};
+use tokio::sync::{Mutex, Notify, RwLock};
 
 use super::Entity;
-use crate::{error::PumpkinError, net::GameProfile};
 use crate::{
+    command::{client_cmd_suggestions, dispatcher::CommandDispatcher},
+    data::op_data::OPERATOR_CONFIG,
     net::{
         combat::{self, player_attack_sound, AttackType},
         Client, PlayerConfig,
     },
-    command::{client_cmd_suggestions, dispatcher::CommandDispatcher},
-    data::op_data::OPERATOR_CONFIG,
     server::Server,
     world::World,
 };
+use crate::{error::PumpkinError, net::GameProfile};
 
 use super::living::LivingEntity;
 
@@ -119,12 +119,10 @@ pub struct Player {
     pub last_keep_alive_time: AtomicCell<Instant>,
     /// Amount of ticks since last attack
     pub last_attacked_ticks: AtomicU32,
-
+    /// The players op permission level
+    pub permission_lvl: AtomicCell<PermissionLvl>,
     /// Tell tasks to stop if we are closing
     cancel_tasks: Notify,
-
-    /// the players op permission level
-    permission_lvl: parking_lot::Mutex<PermissionLvl>,
 }
 
 impl Player {
@@ -199,8 +197,8 @@ impl Player {
                 .ops
                 .iter()
                 .find(|op| op.uuid == gameprofile_clone.id)
-                .map_or(parking_lot::Mutex::new(PermissionLvl::Zero), |op| {
-                    parking_lot::Mutex::new(op.level)
+                .map_or(AtomicCell::new(PermissionLvl::Zero), |op| {
+                    AtomicCell::new(op.level)
                 }),
         }
     }
@@ -445,7 +443,7 @@ impl Player {
         self.client
             .send_packet(&CEntityStatus::new(
                 self.entity_id(),
-                24 + self.permission_lvl() as i8,
+                24 + self.permission_lvl.load() as i8,
             ))
             .await;
     }
@@ -454,20 +452,11 @@ impl Player {
     pub async fn set_permission_lvl(
         self: &Arc<Self>,
         lvl: PermissionLvl,
-        command_dispatcher: &Arc<CommandDispatcher<'static>>,
+        command_dispatcher: &RwLock<CommandDispatcher>,
     ) {
-        {
-            let mut level = self.permission_lvl.lock();
-            *level = lvl;
-        }
-
+        self.permission_lvl.store(lvl);
         self.send_permission_lvl_update().await;
         client_cmd_suggestions::send_c_commands_packet(self, command_dispatcher).await;
-    }
-
-    /// get the players permission level
-    pub fn permission_lvl(&self) -> PermissionLvl {
-        *self.permission_lvl.lock()
     }
 
     /// Sends the world time to just the player.
