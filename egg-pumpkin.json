@@ -4,7 +4,7 @@
         "version": "PTDL_v2",
         "update_url": null
     },
-    "exported_at": "2024-12-27T22:08:25+01:00",
+    "exported_at": "2024-12-27T23:40:43+01:00",
     "name": "pumpkin",
     "author": "unknown@unknown.com",
     "description": "Pumpkin is a Minecraft server built entirely in Rust, offering a fast, efficient, and customizable experience. It prioritizes performance and player enjoyment while adhering to the core mechanics of the game. Requires around 2GB RAM to build, adjust docker.installer_limits.memory in your wing accordingly! Currently, you need to adjust the port in the config manually!",
@@ -16,13 +16,13 @@
     "startup": ".\/pumpkin",
     "config": {
         "files": "{}",
-        "startup": "{}",
+        "startup": "{\r\n    \"done\": \"Started Server took\"\r\n}",
         "logs": "{}",
         "stop": "stop"
     },
     "scripts": {
         "installation": {
-            "script": "#!\/bin\/ash\r\nset -eux\r\n\r\napk add --no-cache musl-dev git\r\nmkdir -p \/mnt\/server\r\n\r\nREPO_URL=\"${GIT_URL:-https:\/\/github.com\/Snowiiii\/Pumpkin.git}\"\r\n\r\nif [ -n \"$GIT_BRANCH\" ]; then\r\n    git clone --depth 1 --single-branch --branch \"$GIT_BRANCH\" \"$REPO_URL\"\r\nelse\r\n    git clone --depth 1 --single-branch \"$REPO_URL\"\r\nfi\r\n\r\nif [ -n \"$GIT_COMMIT\" ]; then\r\n    git checkout \"$GIT_COMMIT\"\r\nfi\r\n\r\ncd Pumpkin\r\n\r\nif [[ \"$BUILD_RELEASE\" == \"1\" || \"$BUILD_RELEASE\" == \"true\" ]]; then\r\n    cargo build --release\r\n    strip target\/release\/pumpkin\r\n    cp target\/release\/pumpkin \/mnt\/server\/pumpkin\r\nelse\r\n    cargo build\r\n    cp target\/debug\/pumpkin \/mnt\/server\/pumpkin\r\nfi",
+            "script": "#!\/bin\/ash\r\nset -eux\r\n\r\napk add --no-cache musl-dev git\r\nmkdir -p \/mnt\/server\r\n\r\nREPO_URL=\"${GIT_URL:-https:\/\/github.com\/Snowiiii\/Pumpkin.git}\"\r\n\r\nif [ -n \"$GIT_BRANCH\" ]; then\r\n    git clone --depth 1 --single-branch --branch \"$GIT_BRANCH\" \"$REPO_URL\"\r\nelse\r\n    git clone --depth 1 --single-branch \"$REPO_URL\"\r\nfi\r\n\r\nif [ -n \"$GIT_COMMIT\" ]; then\r\n    git checkout \"$GIT_COMMIT\"\r\nfi\r\n\r\ncd Pumpkin\r\n\r\n#export RUSTFLAGS=\"-C target-feature=-crt-static -C target-cpu=native\"\r\n\r\nif [[ \"$BUILD_RELEASE\" == \"1\" || \"$BUILD_RELEASE\" == \"true\" ]]; then\r\n    cargo build --release\r\n    strip target\/release\/pumpkin\r\n    cp target\/release\/pumpkin \/mnt\/server\/pumpkin\r\nelse\r\n    cargo build\r\n    cp target\/debug\/pumpkin \/mnt\/server\/pumpkin\r\nfi",
             "container": "docker.io\/rust:1-alpine3.21",
             "entrypoint": "ash"
         }
@@ -76,6 +76,16 @@
             "user_viewable": true,
             "user_editable": true,
             "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Cargo build jobs",
+            "description": "Amount of jobs that cargo spawns to compile. Try to reduce them if you encounter a deadlock.\r\nScope: installation",
+            "env_variable": "CARGO_BUILD_JOBS",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer",
             "field_type": "text"
         }
     ]
