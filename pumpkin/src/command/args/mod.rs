@@ -109,7 +109,7 @@ impl<K: Eq + Hash, V: Clone> GetCloned<K, V> for HashMap<K, V> {
     }
 }
 
-pub(crate) trait FindArg<'a> {
+pub trait FindArg<'a> {
     type Data;
 
     fn find_arg(args: &'a ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError>;
