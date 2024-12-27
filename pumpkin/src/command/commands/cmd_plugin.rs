@@ -178,17 +178,17 @@ impl CommandExecutor for UnloadExecutor {
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| sender.has_permission_lvl(PermissionLvl::Three))
+        require(|sender| sender.has_permission_lvl(PermissionLvl::Three))
             .with_child(
                 literal("load")
-                    .with_child(argument(PLUGIN_NAME, &SimpleArgConsumer).execute(&LoadExecutor)),
+                    .with_child(argument(PLUGIN_NAME, SimpleArgConsumer).execute(LoadExecutor)),
             )
             .with_child(
                 literal("unload")
-                    .with_child(argument(PLUGIN_NAME, &SimpleArgConsumer).execute(&UnloadExecutor)),
+                    .with_child(argument(PLUGIN_NAME, SimpleArgConsumer).execute(UnloadExecutor)),
             )
-            .with_child(literal("list").execute(&ListExecutor)),
+            .with_child(literal("list").execute(ListExecutor)),
     )
 }

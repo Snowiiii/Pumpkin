@@ -62,6 +62,6 @@ impl CommandExecutor for ListExecutor {
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
-    CommandTree::new(NAMES, DESCRIPTION).execute(&ListExecutor)
+pub fn init_command_tree() -> CommandTree {
+    CommandTree::new(NAMES, DESCRIPTION).execute(ListExecutor)
 }

@@ -50,7 +50,7 @@ impl Context {
         recv.await.unwrap()
     }
 
-    pub async fn register_command(&self, tree: crate::command::tree::CommandTree<'static>) {
+    pub async fn register_command(&self, tree: crate::command::tree::CommandTree) {
         let _ = self
             .channel
             .send(ContextAction::RegisterCommand(tree))
@@ -64,7 +64,7 @@ pub enum ContextAction {
         player_name: String,
         response: oneshot::Sender<Result<PlayerEvent<'static>, String>>,
     },
-    RegisterCommand(crate::command::tree::CommandTree<'static>),
+    RegisterCommand(crate::command::tree::CommandTree),
 }
 
 pub fn handle_context(

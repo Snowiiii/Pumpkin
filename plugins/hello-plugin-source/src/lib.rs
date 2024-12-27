@@ -19,7 +19,6 @@ use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use tokio::runtime::Handle;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Config {
@@ -61,7 +60,6 @@ impl CommandExecutor for SetblockExecutor {
         _server: &Server,
         args: &ConsumedArgs<'a>,
     ) -> Result<(), CommandError> {
-        log::error!("Runtime is {:?}", Handle::current());
         let block = BlockArgumentConsumer::find_arg(args, ARG_BLOCK)?;
         let block_state_id = block.default_state_id;
         let pos = BlockPosArgumentConsumer::find_arg(args, ARG_BLOCK_POS)?;
@@ -102,18 +100,18 @@ impl CommandExecutor for SetblockExecutor {
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| {
+        require(|sender| {
             sender.has_permission_lvl(PermissionLvl::Two) && sender.world().is_some()
         })
         .with_child(
-            argument(ARG_BLOCK_POS, &BlockPosArgumentConsumer).with_child(
-                argument(ARG_BLOCK, &BlockArgumentConsumer)
-                    .with_child(literal("replace").execute(&SetblockExecutor(Mode::Replace)))
-                    .with_child(literal("destroy").execute(&SetblockExecutor(Mode::Destroy)))
-                    .with_child(literal("keep").execute(&SetblockExecutor(Mode::Keep)))
-                    .execute(&SetblockExecutor(Mode::Replace)),
+            argument(ARG_BLOCK_POS, BlockPosArgumentConsumer).with_child(
+                argument(ARG_BLOCK, BlockArgumentConsumer)
+                    .with_child(literal("replace").execute(SetblockExecutor(Mode::Replace)))
+                    .with_child(literal("destroy").execute(SetblockExecutor(Mode::Destroy)))
+                    .with_child(literal("keep").execute(SetblockExecutor(Mode::Keep)))
+                    .execute(SetblockExecutor(Mode::Replace)),
             ),
         ),
     )
