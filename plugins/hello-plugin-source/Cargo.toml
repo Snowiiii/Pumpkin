@@ -18,3 +18,15 @@ pumpkin-api-macros = { path = "../../pumpkin-api-macros" }
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8.19"
 async-trait = "0.1.83"
+tokio = { version = "1.42", features = [
+    "fs",
+    "io-util",
+    "macros",
+    "net",
+    "rt-multi-thread",
+    "sync",
+    "io-std",
+    "signal",
+] }
+env_logger = "0.11.6"
+log = "0.4.22"
