@@ -208,10 +208,7 @@ mod test {
     use crate::BytesArray;
     use crate::IntArray;
     use crate::LongArray;
-    use crate::{
-        deserializer::from_bytes_unnamed,
-        serializer::to_bytes_unnamed,
-    };
+    use crate::{deserializer::from_bytes_unnamed, serializer::to_bytes_unnamed};
 
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     struct Test {
