@@ -30,7 +30,7 @@ impl GetClientSideArgParser for SimpleArgConsumer {
 #[async_trait]
 impl ArgumentConsumer for SimpleArgConsumer {
     async fn consume<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
@@ -39,7 +39,7 @@ impl ArgumentConsumer for SimpleArgConsumer {
     }
 
     async fn suggest<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
@@ -51,7 +51,7 @@ impl ArgumentConsumer for SimpleArgConsumer {
 impl<'a> FindArg<'a> for SimpleArgConsumer {
     type Data = &'a str;
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::Simple(data)) => Ok(data),
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),

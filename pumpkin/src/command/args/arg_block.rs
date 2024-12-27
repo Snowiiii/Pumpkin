@@ -31,7 +31,7 @@ impl GetClientSideArgParser for BlockArgumentConsumer {
 #[async_trait]
 impl ArgumentConsumer for BlockArgumentConsumer {
     async fn consume<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
@@ -41,7 +41,7 @@ impl ArgumentConsumer for BlockArgumentConsumer {
     }
 
     async fn suggest<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
@@ -51,19 +51,15 @@ impl ArgumentConsumer for BlockArgumentConsumer {
 }
 
 impl DefaultNameArgConsumer for BlockArgumentConsumer {
-    fn default_name(&self) -> &'static str {
-        "block"
-    }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        self
+    fn default_name(&self) -> String {
+        "block".to_string()
     }
 }
 
 impl<'a> FindArg<'a> for BlockArgumentConsumer {
     type Data = &'a Block;
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::Block(name)) => block_registry::get_block(name).map_or_else(
                 || {

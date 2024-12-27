@@ -33,7 +33,8 @@ use pumpkin_protocol::{
         },
         status::{SStatusPingRequest, SStatusRequest},
     },
-    ClientPacket, ConnectionState, Property, RawPacket, ServerPacket,
+    ClientPacket, CompressionLevel, CompressionThreshold, ConnectionState, Property, RawPacket,
+    ServerPacket,
 };
 use serde::Deserialize;
 use sha1::Digest;
@@ -221,7 +222,13 @@ impl Client {
     /// * `compression`: An optional `CompressionInfo` struct containing the compression threshold and compression level.
     pub async fn set_compression(&self, compression: Option<CompressionInfo>) {
         self.dec.lock().await.set_compression(compression.is_some());
-        self.enc.lock().await.set_compression(compression);
+        self.enc
+            .lock()
+            .await
+            .set_compression(
+                compression.map(|s| (CompressionThreshold(s.threshold), CompressionLevel(s.level))),
+            )
+            .unwrap_or_else(|_| log::warn!("invalid compression level"));
     }
 
     /// Sends a clientbound packet to the connected client.

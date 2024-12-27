@@ -47,7 +47,7 @@ pub struct Server {
     /// Saves server branding information.
     server_branding: CachedBranding,
     /// Saves and Dispatches commands to appropriate handlers.
-    pub command_dispatcher: RwLock<CommandDispatcher<'static>>,
+    pub command_dispatcher: RwLock<CommandDispatcher>,
     /// Saves and calls blocks blocks
     pub block_manager: Arc<BlockManager>,
     /// Manages multiple worlds within the server.

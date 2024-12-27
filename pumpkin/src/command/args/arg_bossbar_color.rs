@@ -27,7 +27,7 @@ impl GetClientSideArgParser for BossbarColorArgumentConsumer {
 #[async_trait]
 impl ArgumentConsumer for BossbarColorArgumentConsumer {
     async fn consume<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
@@ -49,7 +49,7 @@ impl ArgumentConsumer for BossbarColorArgumentConsumer {
     }
 
     async fn suggest<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
@@ -57,26 +57,22 @@ impl ArgumentConsumer for BossbarColorArgumentConsumer {
         let colors = ["blue", "green", "pink", "purple", "red", "white", "yellow"];
         let suggestions: Vec<CommandSuggestion> = colors
             .iter()
-            .map(|color| CommandSuggestion::new(color, None))
+            .map(|color| CommandSuggestion::new((*color).to_string(), None))
             .collect();
         Ok(Some(suggestions))
     }
 }
 
 impl DefaultNameArgConsumer for BossbarColorArgumentConsumer {
-    fn default_name(&self) -> &'static str {
-        "color"
-    }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        self
+    fn default_name(&self) -> String {
+        "color".to_string()
     }
 }
 
 impl<'a> FindArg<'a> for BossbarColorArgumentConsumer {
     type Data = &'a BossbarColor;
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::BossbarColor(data)) => Ok(data),
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),

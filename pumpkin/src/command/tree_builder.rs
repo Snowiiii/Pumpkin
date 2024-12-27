@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::command::args::ArgumentConsumer;
 use crate::command::tree::{CommandTree, Node, NodeType};
 use crate::command::CommandSender;
@@ -5,10 +7,10 @@ use crate::command::CommandSender;
 use super::args::DefaultNameArgConsumer;
 use super::CommandExecutor;
 
-impl<'a> CommandTree<'a> {
+impl CommandTree {
     /// Add a child [Node] to the root of this [`CommandTree`].
     #[must_use]
-    pub fn with_child(mut self, child: impl NodeBuilder<'a>) -> Self {
+    pub fn with_child(mut self, child: impl NodeBuilder) -> Self {
         let node = child.build(&mut self);
         self.children.push(self.nodes.len());
         self.nodes.push(node);
@@ -17,23 +19,17 @@ impl<'a> CommandTree<'a> {
 
     /// provide at least one name
     #[must_use]
-    pub fn new<const NAME_COUNT: usize>(
-        names: [&'a str; NAME_COUNT],
-        description: &'a str,
+    pub fn new(
+        names: impl IntoIterator<Item: Into<String>>,
+        description: impl Into<String>,
     ) -> Self {
-        assert!(NAME_COUNT > 0);
-
-        let mut names_vec = Vec::with_capacity(NAME_COUNT);
-
-        for name in names {
-            names_vec.push(name);
-        }
+        let names_vec = names.into_iter().map(Into::into).collect();
 
         Self {
             nodes: Vec::new(),
             children: Vec::new(),
             names: names_vec,
-            description,
+            description: description.into(),
         }
     }
 
@@ -45,9 +41,11 @@ impl<'a> CommandTree<'a> {
     ///
     /// Also see [`NonLeafNodeBuilder::execute`].
     #[must_use]
-    pub fn execute(mut self, executor: &'a dyn CommandExecutor) -> Self {
+    pub fn execute(mut self, executor: impl CommandExecutor + 'static + Send) -> Self {
         let node = Node {
-            node_type: NodeType::ExecuteLeaf { executor },
+            node_type: NodeType::ExecuteLeaf {
+                executor: Arc::new(executor),
+            },
             children: Vec::new(),
         };
 
@@ -58,16 +56,16 @@ impl<'a> CommandTree<'a> {
     }
 }
 
-pub trait NodeBuilder<'a> {
-    fn build(self, tree: &mut CommandTree<'a>) -> Node<'a>;
+pub trait NodeBuilder {
+    fn build(self, tree: &mut CommandTree) -> Node;
 }
 
-struct LeafNodeBuilder<'a> {
-    node_type: NodeType<'a>,
+struct LeafNodeBuilder {
+    node_type: NodeType,
 }
 
-impl<'a> NodeBuilder<'a> for LeafNodeBuilder<'a> {
-    fn build(self, _tree: &mut CommandTree<'a>) -> Node<'a> {
+impl NodeBuilder for LeafNodeBuilder {
+    fn build(self, _tree: &mut CommandTree) -> Node {
         Node {
             children: Vec::new(),
             node_type: self.node_type,
@@ -75,14 +73,14 @@ impl<'a> NodeBuilder<'a> for LeafNodeBuilder<'a> {
     }
 }
 
-pub struct NonLeafNodeBuilder<'a> {
-    node_type: NodeType<'a>,
-    child_nodes: Vec<NonLeafNodeBuilder<'a>>,
-    leaf_nodes: Vec<LeafNodeBuilder<'a>>,
+pub struct NonLeafNodeBuilder {
+    node_type: NodeType,
+    child_nodes: Vec<NonLeafNodeBuilder>,
+    leaf_nodes: Vec<LeafNodeBuilder>,
 }
 
-impl<'a> NodeBuilder<'a> for NonLeafNodeBuilder<'a> {
-    fn build(self, tree: &mut CommandTree<'a>) -> Node<'a> {
+impl NodeBuilder for NonLeafNodeBuilder {
+    fn build(self, tree: &mut CommandTree) -> Node {
         let mut child_indices = Vec::new();
 
         for node_builder in self.child_nodes {
@@ -104,7 +102,7 @@ impl<'a> NodeBuilder<'a> for NonLeafNodeBuilder<'a> {
     }
 }
 
-impl<'a> NonLeafNodeBuilder<'a> {
+impl NonLeafNodeBuilder {
     /// Add a child [Node] to this one.
     #[must_use]
     pub fn with_child(mut self, child: Self) -> Self {
@@ -120,9 +118,11 @@ impl<'a> NonLeafNodeBuilder<'a> {
     ///
     /// Also see [`CommandTree::execute`].
     #[must_use]
-    pub fn execute(mut self, executor: &'a dyn CommandExecutor) -> Self {
+    pub fn execute(mut self, executor: impl CommandExecutor + 'static + Send) -> Self {
         self.leaf_nodes.push(LeafNodeBuilder {
-            node_type: NodeType::ExecuteLeaf { executor },
+            node_type: NodeType::ExecuteLeaf {
+                executor: Arc::new(executor),
+            },
         });
 
         self
@@ -131,9 +131,11 @@ impl<'a> NonLeafNodeBuilder<'a> {
 
 /// Matches a sting literal.
 #[must_use]
-pub const fn literal(string: &str) -> NonLeafNodeBuilder {
+pub fn literal(string: impl Into<String>) -> NonLeafNodeBuilder {
     NonLeafNodeBuilder {
-        node_type: NodeType::Literal { string },
+        node_type: NodeType::Literal {
+            string: string.into(),
+        },
         child_nodes: Vec::new(),
         leaf_nodes: Vec::new(),
     }
@@ -147,20 +149,28 @@ pub const fn literal(string: &str) -> NonLeafNodeBuilder {
 /// [`NonLeafNodeBuilder::execute`] nodes in a [`ConsumedArgs`] instance. It must remove consumed arg(s)
 /// from [`RawArgs`] and return them. It must return None if [`RawArgs`] are invalid. [`RawArgs`] is
 /// reversed, so [`Vec::pop`] can be used to obtain args in ltr order.
-pub fn argument<'a>(name: &'a str, consumer: &'a dyn ArgumentConsumer) -> NonLeafNodeBuilder<'a> {
+pub fn argument(
+    name: impl Into<String>,
+    consumer: impl ArgumentConsumer + 'static + Send,
+) -> NonLeafNodeBuilder {
     NonLeafNodeBuilder {
-        node_type: NodeType::Argument { name, consumer },
+        node_type: NodeType::Argument {
+            name: name.into(),
+            consumer: Arc::new(consumer),
+        },
         child_nodes: Vec::new(),
         leaf_nodes: Vec::new(),
     }
 }
 
 /// same as [`crate::command::tree_builder::argument`], but uses default arg name of consumer
-pub fn argument_default_name(consumer: &dyn DefaultNameArgConsumer) -> NonLeafNodeBuilder<'_> {
+pub fn argument_default_name(
+    consumer: impl DefaultNameArgConsumer + 'static + Send,
+) -> NonLeafNodeBuilder {
     NonLeafNodeBuilder {
         node_type: NodeType::Argument {
             name: consumer.default_name(),
-            consumer: consumer.get_argument_consumer(),
+            consumer: Arc::new(consumer),
         },
         child_nodes: Vec::new(),
         leaf_nodes: Vec::new(),
@@ -169,9 +179,13 @@ pub fn argument_default_name(consumer: &dyn DefaultNameArgConsumer) -> NonLeafNo
 
 /// ```predicate``` should return ```false``` if requirement for reaching following [Node]s is not
 /// met.
-pub fn require(predicate: &(dyn Fn(&CommandSender) -> bool + Sync)) -> NonLeafNodeBuilder {
+pub fn require(
+    predicate: impl Fn(&CommandSender) -> bool + Send + Sync + 'static,
+) -> NonLeafNodeBuilder {
     NonLeafNodeBuilder {
-        node_type: NodeType::Require { predicate },
+        node_type: NodeType::Require {
+            predicate: Arc::new(predicate),
+        },
         child_nodes: Vec::new(),
         leaf_nodes: Vec::new(),
     }

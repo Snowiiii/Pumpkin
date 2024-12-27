@@ -54,6 +54,12 @@ pub trait ByteBuf: Buf {
 
     fn try_copy_to_bytes(&mut self, len: usize) -> Result<bytes::Bytes, ReadingError>;
 
+    fn try_copy_to_bytes_len(
+        &mut self,
+        len: usize,
+        max_length: usize,
+    ) -> Result<bytes::Bytes, ReadingError>;
+
     fn try_copy_to_slice(&mut self, dst: &mut [u8]) -> Result<(), ReadingError>;
 
     fn try_get_var_int(&mut self) -> Result<VarInt, ReadingError>;
@@ -169,6 +175,23 @@ impl<T: Buf> ByteBuf for T {
     }
 
     fn try_copy_to_bytes(&mut self, len: usize) -> Result<bytes::Bytes, ReadingError> {
+        if self.remaining() >= len {
+            Ok(self.copy_to_bytes(len))
+        } else {
+            Err(ReadingError::Message("Unable to copy bytes".to_string()))
+        }
+    }
+
+    fn try_copy_to_bytes_len(
+        &mut self,
+        len: usize,
+        max_size: usize,
+    ) -> Result<bytes::Bytes, ReadingError> {
+        if len > max_size {
+            return Err(ReadingError::Message(
+                "Tried to copy bytes but length exceeds maximum length".to_string(),
+            ));
+        }
         if self.remaining() >= len {
             Ok(self.copy_to_bytes(len))
         } else {

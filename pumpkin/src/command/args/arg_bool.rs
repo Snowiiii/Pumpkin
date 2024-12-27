@@ -23,7 +23,7 @@ impl GetClientSideArgParser for BoolArgConsumer {
 #[async_trait]
 impl ArgumentConsumer for BoolArgConsumer {
     async fn consume<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
@@ -38,7 +38,7 @@ impl ArgumentConsumer for BoolArgConsumer {
     }
 
     async fn suggest<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
@@ -50,7 +50,7 @@ impl ArgumentConsumer for BoolArgConsumer {
 impl<'a> FindArg<'a> for BoolArgConsumer {
     type Data = bool;
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::Bool(data)) => Ok(*data),
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),

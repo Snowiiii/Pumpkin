@@ -12,7 +12,6 @@ query = []
 
 [dependencies]
 pumpkin-nbt = { path = "../pumpkin-nbt" }
-pumpkin-config = { path = "../pumpkin-config" }
 pumpkin-macros = { path = "../pumpkin-macros" }
 pumpkin-world = { path = "../pumpkin-world" }
 pumpkin-core = { path = "../pumpkin-core" }
@@ -31,4 +30,4 @@ aes = "0.8.4"
 cfb8 = "0.8.1"
 
 # decryption
-libdeflater = "1.22.0"
+libdeflater = "1.23.0"
