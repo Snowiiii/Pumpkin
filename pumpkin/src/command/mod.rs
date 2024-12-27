@@ -23,7 +23,7 @@ pub mod client_cmd_suggestions;
 mod commands;
 pub mod dispatcher;
 pub mod tree;
-mod tree_builder;
+pub mod tree_builder;
 mod tree_format;
 
 pub enum CommandSender<'a> {

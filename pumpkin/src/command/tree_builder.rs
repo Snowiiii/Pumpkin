@@ -106,6 +106,7 @@ impl<'a> NodeBuilder<'a> for NonLeafNodeBuilder<'a> {
 
 impl<'a> NonLeafNodeBuilder<'a> {
     /// Add a child [Node] to this one.
+    #[must_use]
     pub fn with_child(mut self, child: Self) -> Self {
         self.child_nodes.push(child);
         self
@@ -118,6 +119,7 @@ impl<'a> NonLeafNodeBuilder<'a> {
     /// desired type.
     ///
     /// Also see [`CommandTree::execute`].
+    #[must_use]
     pub fn execute(mut self, executor: &'a dyn CommandExecutor) -> Self {
         self.leaf_nodes.push(LeafNodeBuilder {
             node_type: NodeType::ExecuteLeaf { executor },
@@ -128,6 +130,7 @@ impl<'a> NonLeafNodeBuilder<'a> {
 }
 
 /// Matches a sting literal.
+#[must_use]
 pub const fn literal(string: &str) -> NonLeafNodeBuilder {
     NonLeafNodeBuilder {
         node_type: NodeType::Literal { string },
