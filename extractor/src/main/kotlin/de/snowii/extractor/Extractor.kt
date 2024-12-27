@@ -33,7 +33,6 @@ class Extractor : ModInitializer {
             Entities(),
             Items(),
             Blocks(),
-            Entities(),
             Tests(),
         )
 
