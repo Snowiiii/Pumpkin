@@ -49,6 +49,7 @@ impl CommandExecutor for KickExecutor {
     }
 }
 
+// TODO: Permission
 pub fn init_command_tree<'a>() -> CommandTree<'a> {
     CommandTree::new(NAMES, DESCRIPTION)
         .with_child(argument(ARG_TARGET, &PlayersArgumentConsumer).execute(&KickExecutor))
