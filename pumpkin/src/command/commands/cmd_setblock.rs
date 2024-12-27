@@ -8,7 +8,7 @@ use crate::command::args::{ConsumedArgs, FindArg};
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, literal, require};
 use crate::command::{CommandError, CommandExecutor, CommandSender};
-use crate::entity::player::PermissionLvl;
+use pumpkin_core::permission::PermissionLvl;
 
 const NAMES: [&str; 1] = ["setblock"];
 

@@ -79,6 +79,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Particles
   - [x] Chat
   - [x] Commands
+  - [x] OP Permission
 - Proxy
   - [x] Bungeecord
   - [x] Velocity

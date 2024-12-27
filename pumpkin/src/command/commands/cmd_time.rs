@@ -5,13 +5,11 @@ use pumpkin_core::text::TextComponent;
 use crate::command::args::arg_bounded_num::BoundedNumArgumentConsumer;
 use crate::command::args::FindArgDefaultName;
 use crate::command::tree_builder::{argument_default_name, literal};
-use crate::{
-    command::{
-        tree::CommandTree, tree_builder::require, CommandError, CommandExecutor, CommandSender,
-        ConsumedArgs,
-    },
-    entity::player::PermissionLvl,
+use crate::command::{
+    tree::CommandTree, tree_builder::require, CommandError, CommandExecutor, CommandSender,
+    ConsumedArgs,
 };
+use pumpkin_core::permission::PermissionLvl;
 
 const NAMES: [&str; 1] = ["time"];
 
