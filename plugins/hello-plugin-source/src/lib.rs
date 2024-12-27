@@ -102,18 +102,16 @@ impl CommandExecutor for SetblockExecutor {
 
 pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(|sender| {
-            sender.has_permission_lvl(PermissionLvl::Two) && sender.world().is_some()
-        })
-        .with_child(
-            argument(ARG_BLOCK_POS, BlockPosArgumentConsumer).with_child(
-                argument(ARG_BLOCK, BlockArgumentConsumer)
-                    .with_child(literal("replace").execute(SetblockExecutor(Mode::Replace)))
-                    .with_child(literal("destroy").execute(SetblockExecutor(Mode::Destroy)))
-                    .with_child(literal("keep").execute(SetblockExecutor(Mode::Keep)))
-                    .execute(SetblockExecutor(Mode::Replace)),
+        require(|sender| sender.has_permission_lvl(PermissionLvl::Two) && sender.world().is_some())
+            .with_child(
+                argument(ARG_BLOCK_POS, BlockPosArgumentConsumer).with_child(
+                    argument(ARG_BLOCK, BlockArgumentConsumer)
+                        .with_child(literal("replace").execute(SetblockExecutor(Mode::Replace)))
+                        .with_child(literal("destroy").execute(SetblockExecutor(Mode::Destroy)))
+                        .with_child(literal("keep").execute(SetblockExecutor(Mode::Keep)))
+                        .execute(SetblockExecutor(Mode::Replace)),
+                ),
             ),
-        ),
     )
 }
 

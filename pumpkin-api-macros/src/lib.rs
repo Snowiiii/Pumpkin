@@ -222,14 +222,14 @@ pub fn plugin_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn with_runtime(attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(item as ItemImpl);
-    
+
     let use_global = attr.to_string() == "global";
-    
+
     for item in &mut input.items {
         if let ImplItem::Fn(method) = item {
             if method.sig.asyncness.is_some() {
                 let original_body = &method.block;
-                
+
                 method.block = if use_global {
                     parse_quote!({
                         crate::GLOBAL_RUNTIME.block_on(async move {
@@ -245,11 +245,11 @@ pub fn with_runtime(attr: TokenStream, item: TokenStream) -> TokenStream {
                             })
                     })
                 };
-                
+
                 method.sig.asyncness = None;
             }
         }
     }
-    
+
     TokenStream::from(quote!(#input))
 }

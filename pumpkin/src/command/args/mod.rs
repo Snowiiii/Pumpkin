@@ -66,7 +66,6 @@ pub trait GetClientSideArgParser {
     fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType>;
 }
 
-
 pub trait DefaultNameArgConsumer: ArgumentConsumer {
     fn default_name(&self) -> String;
 }
