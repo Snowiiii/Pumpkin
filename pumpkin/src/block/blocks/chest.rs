@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use pumpkin_core::math::position::WorldPosition;
 use pumpkin_inventory::{Chest, OpenContainer, WindowType};
 use pumpkin_macros::{pumpkin_block, sound};
+use pumpkin_protocol::{client::play::CBlockAction, codec::var_int::VarInt};
 use pumpkin_world::{block::block_registry::get_block, item::item_registry::Item};
 
 use crate::{
@@ -34,11 +35,17 @@ impl PumpkinBlock for ChestBlock {
         BlockActionResult::Consume
     }
 
-    async fn on_close<'a>(&self, player: &Player, _location: WorldPosition, _server: &Server) {
+    async fn on_close<'a>(&self, player: &Player, location: WorldPosition, server: &Server) {
         player
             .world()
-            .play_block_sound(sound!("block.chest.close"), _location)
+            .play_block_sound(sound!("block.chest.close"), location)
             .await;
+
+        if let Some(e) = get_block("minecraft:chest").cloned() {
+            server
+                .broadcast_packet_all(&CBlockAction::new(&location, 1, 0, VarInt(e.id.into())))
+                .await;
+        }
     }
 }
 
@@ -66,5 +73,11 @@ impl ChestBlock {
             }
         }
         player.open_container(server, WindowType::Generic9x3).await;
+
+        if let Some(e) = get_block("minecraft:chest").cloned() {
+            server
+                .broadcast_packet_all(&CBlockAction::new(&location, 1, 1, VarInt(e.id.into())))
+                .await;
+        }
     }
 }
