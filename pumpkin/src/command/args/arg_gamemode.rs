@@ -14,7 +14,7 @@ use crate::{
 
 use super::{Arg, ArgumentConsumer, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
-pub(crate) struct GamemodeArgumentConsumer;
+pub struct GamemodeArgumentConsumer;
 
 impl GetClientSideArgParser for GamemodeArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {

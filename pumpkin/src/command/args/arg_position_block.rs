@@ -15,7 +15,7 @@ use super::coordinate::MaybeRelativeBlockCoordinate;
 use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// x, y and z coordinates
-pub(crate) struct BlockPosArgumentConsumer;
+pub struct BlockPosArgumentConsumer;
 
 impl GetClientSideArgParser for BlockPosArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {

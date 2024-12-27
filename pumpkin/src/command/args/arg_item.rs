@@ -14,7 +14,7 @@ use super::{
     Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser,
 };
 
-pub(crate) struct ItemArgumentConsumer;
+pub struct ItemArgumentConsumer;
 
 impl GetClientSideArgParser for ItemArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {

@@ -12,7 +12,7 @@ use super::super::args::ArgumentConsumer;
 use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// yaw and pitch
-pub(crate) struct RotationArgumentConsumer;
+pub struct RotationArgumentConsumer;
 
 impl GetClientSideArgParser for RotationArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {

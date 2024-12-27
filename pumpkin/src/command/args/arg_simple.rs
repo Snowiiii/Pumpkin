@@ -15,7 +15,7 @@ use super::{
 
 /// Should never be a permanent solution
 #[allow(unused)]
-pub(crate) struct SimpleArgConsumer;
+pub struct SimpleArgConsumer;
 
 impl GetClientSideArgParser for SimpleArgConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {
