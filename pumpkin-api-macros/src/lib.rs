@@ -3,7 +3,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use std::collections::HashMap;
 use std::sync::Mutex;
-use syn::{parse_macro_input, ItemFn, ItemStruct};
+use syn::{parse_macro_input, parse_quote, ImplItem, ItemFn, ItemImpl, ItemStruct};
 
 static PLUGIN_METHODS: Lazy<Mutex<HashMap<String, Vec<String>>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
@@ -29,7 +29,9 @@ pub fn plugin_method(attr: TokenStream, item: TokenStream) -> TokenStream {
     let method = quote! {
         #[allow(unused_mut)]
         async fn #fn_name(#fn_inputs) #fn_output {
-            #fn_body
+            crate::GLOBAL_RUNTIME.block_on(async move {
+                #fn_body
+            })
         }
     }
     .to_string();
@@ -93,7 +95,9 @@ pub fn plugin_event(attr: TokenStream, item: TokenStream) -> TokenStream {
     let method = quote! {
         #[allow(unused_mut)]
         async fn #fn_name(#fn_inputs) #fn_output {
-            #fn_body
+            crate::GLOBAL_RUNTIME.block_on(async move {
+                #fn_body
+            })
         }
     }
     .to_string();
@@ -176,6 +180,9 @@ pub fn plugin_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     // Combine the original struct definition with the impl block and plugin() function
     let expanded = quote! {
+        pub static GLOBAL_RUNTIME: std::sync::LazyLock<std::sync::Arc<tokio::runtime::Runtime>> =
+            std::sync::LazyLock::new(|| std::sync::Arc::new(tokio::runtime::Runtime::new().unwrap()));
+
         #[no_mangle]
         pub static METADATA: pumpkin::plugin::PluginMetadata = pumpkin::plugin::PluginMetadata {
             name: env!("CARGO_PKG_NAME"),
@@ -210,4 +217,39 @@ pub fn plugin_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     TokenStream::from(expanded)
+}
+
+#[proc_macro_attribute]
+pub fn with_runtime(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let mut input = parse_macro_input!(item as ItemImpl);
+    
+    let use_global = attr.to_string() == "global";
+    
+    for item in &mut input.items {
+        if let ImplItem::Fn(method) = item {
+            if method.sig.asyncness.is_some() {
+                let original_body = &method.block;
+                
+                method.block = if use_global {
+                    parse_quote!({
+                        crate::GLOBAL_RUNTIME.block_on(async move {
+                            #original_body
+                        })
+                    })
+                } else {
+                    parse_quote!({
+                        tokio::runtime::Runtime::new()
+                            .unwrap()
+                            .block_on(async move {
+                                #original_body
+                            })
+                    })
+                };
+                
+                method.sig.asyncness = None;
+            }
+        }
+    }
+    
+    TokenStream::from(quote!(#input))
 }
