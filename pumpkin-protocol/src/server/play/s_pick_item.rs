@@ -8,3 +8,11 @@ pub struct SPickItemFromBlock {
     pub pos: WorldPosition,
     pub include_data: bool,
 }
+
+// TODO: Handler for this packet
+#[derive(Deserialize)]
+#[server_packet("play:pick_item_from_entity")]
+pub struct SPickItemFromEntity {
+    pub id: i32,
+    pub include_data: bool,
+}

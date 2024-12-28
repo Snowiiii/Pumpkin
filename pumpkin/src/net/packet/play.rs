@@ -34,9 +34,9 @@ use pumpkin_protocol::{
     },
     server::play::{
         Action, ActionType, SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay,
-        SConfirmTeleport, SInteract, SPickItemFromBlock, SPlayPingRequest, SPlayerAbilities,
-        SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
-        SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status,
+        SConfirmTeleport, SInteract, SPickItemFromBlock, SPickItemFromEntity, SPlayPingRequest,
+        SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
+        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status,
     },
 };
 use pumpkin_world::block::{block_registry::get_block_by_item, BlockFace};
@@ -350,7 +350,10 @@ impl Player {
                 );
                 self.client.send_packet(&dest_packet).await;
 
-                if inventory.set_slot(dest_slot + 36, Some(item_stack), false).is_err() {
+                if inventory
+                    .set_slot(dest_slot + 36, Some(item_stack), false)
+                    .is_err()
+                {
                     log::error!("Pick item set slot error!");
                     return;
                 }
@@ -383,7 +386,10 @@ impl Player {
                 );
                 self.client.send_packet(&packet).await;
 
-                if inventory.set_slot(dest_slot + 36, Some(item_stack), false).is_err() {
+                if inventory
+                    .set_slot(dest_slot + 36, Some(item_stack), false)
+                    .is_err()
+                {
                     log::error!("Pick item set slot error!");
                     return;
                 }
@@ -396,6 +402,10 @@ impl Player {
         self.client
             .send_packet(&CSetHeldItem::new(dest_slot as i8))
             .await;
+    }
+
+    pub fn handle_pick_item_from_entity(&self, _pick_item: SPickItemFromEntity) {
+        // TODO: Implement and merge any redundant code with pick_item_from_block
     }
 
     pub async fn handle_player_command(&self, command: SPlayerCommand) {
