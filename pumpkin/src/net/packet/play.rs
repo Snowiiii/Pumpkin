@@ -18,6 +18,7 @@ use pumpkin_core::{
     text::TextComponent,
     GameMode,
 };
+use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_inventory::InventoryError;
 use pumpkin_protocol::codec::var_int::VarInt;
 use pumpkin_protocol::client::play::{CSetContainerSlot, CSetHeldItem};
@@ -313,6 +314,24 @@ impl Player {
             .store(ground.on_ground, std::sync::atomic::Ordering::Relaxed);
     }
 
+    async fn update_single_slot(
+        &self,
+        inventory: &mut tokio::sync::MutexGuard<'_, PlayerInventory>,
+        slot: usize,
+        slot_data: Slot,
+    ) {
+        inventory.state_id += 1;
+        let dest_packet = CSetContainerSlot::new(0, inventory.state_id as i32, slot, &slot_data);
+        self.client.send_packet(&dest_packet).await;
+
+        if inventory
+            .set_slot(slot, slot_data.to_item(), false)
+            .is_err()
+        {
+            log::error!("Pick item set slot error!");
+        }
+    }
+
     pub async fn handle_pick_item_from_block(&self, pick_item: SPickItemFromBlock) {
         if !self.can_interact_with_block_at(&pick_item.pos, 1.0) {
             return;
@@ -327,6 +346,11 @@ impl Player {
         let source_slot = inventory.get_slot_with_item(block.item_id);
         let mut dest_slot = inventory.get_pick_item_hotbar_slot();
 
+        let dest_slot_data = match inventory.get_slot(dest_slot + 36) {
+            Ok(Some(stack)) => Slot::from(&*stack),
+            _ => Slot::from(None),
+        };
+
         // Early return if no source slot and not in creative mode
         if source_slot.is_none() && self.gamemode.load() != GameMode::Creative {
             return;
@@ -335,89 +359,36 @@ impl Player {
         match source_slot {
             Some(slot_index) if !(slot_index > 36 && slot_index <= 44) => {
                 // Case where item is in inventory
-                
-                // Save items
+
+                // Update destination slot
                 let source_slot_data = match inventory.get_slot(slot_index) {
                     Ok(Some(stack)) => Slot::from(&*stack),
                     _ => return,
                 };
-                let dest_slot_data = match inventory.get_slot(dest_slot + 36) {
-                    Ok(Some(stack)) => Slot::from(&*stack),
-                    _ => Slot::from(None),
-                };
-
-                // Update destination slot
-                inventory.state_id += 1;
-                let dest_packet = CSetContainerSlot::new(
-                    0,
-                    inventory.state_id as i32,
-                    dest_slot + 36,
-                    &source_slot_data,
-                );
-                self.client.send_packet(&dest_packet).await;
-
-                if inventory
-                    .set_slot(dest_slot + 36, source_slot_data.to_item(), false)
-                    .is_err()
-                {
-                    log::error!("Pick item set slot error!");
-                    return;
-                }
+                self.update_single_slot(&mut inventory, dest_slot + 36, source_slot_data)
+                    .await;
 
                 // Update source slot
-                inventory.state_id += 1;
-                let source_packet =
-                    CSetContainerSlot::new(0, inventory.state_id as i32, slot_index, &dest_slot_data);
-                self.client.send_packet(&source_packet).await;
-
-                if inventory.set_slot(slot_index, dest_slot_data.to_item(), false).is_err() {
-                    log::error!("Failed to clear source slot!");
-                    return;
-                }
+                self.update_single_slot(&mut inventory, slot_index, dest_slot_data)
+                    .await;
             }
             Some(slot_index) => {
                 // Case where item is in hotbar
                 dest_slot = slot_index - 36;
             }
             None if self.gamemode.load() == GameMode::Creative => {
-                // Save dest slot data
-                let dest_slot_data = match inventory.get_slot(dest_slot + 36) {
-                    Ok(Some(stack)) => Slot::from(&*stack),
-                    _ => Slot::from(None),
-                };
-
                 // Case where item is not present, if in creative mode create the item
                 let item_stack = ItemStack::new(1, block.item_id);
                 let slot_data = Slot::from(&item_stack);
-                inventory.state_id += 1;
-                let packet = CSetContainerSlot::new(
-                    0,
-                    inventory.state_id as i32,
-                    dest_slot + 36,
-                    &slot_data,
-                );
-                self.client.send_packet(&packet).await;
-
-                if inventory
-                    .set_slot(dest_slot + 36, Some(item_stack), false)
-                    .is_err()
-                {
-                    log::error!("Pick item set slot error!");
-                    return;
-                }
+                self.update_single_slot(&mut inventory, dest_slot + 36, slot_data)
+                    .await;
 
                 // Check if there is any empty slot in the player inventory
                 if let Some(slot_index) = inventory.get_empty_slot() {
                     inventory.state_id += 1;
-                    let source_packet = CSetContainerSlot::new(0, inventory.state_id as i32, slot_index, &dest_slot_data);
-                    self.client.send_packet(&source_packet).await;
-                
-                    if inventory.set_slot(slot_index, dest_slot_data.to_item(), false).is_err() {
-                        log::error!("Failed to clear source slot!");
-                        return;
-                    }
+                    self.update_single_slot(&mut inventory, slot_index, dest_slot_data)
+                        .await;
                 }
-                
             }
             _ => return,
         }

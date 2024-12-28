@@ -147,13 +147,7 @@ impl PlayerInventory {
     }
 
     pub fn get_empty_slot(&self) -> Option<usize> {
-        for slot in 9..=44 {
-            if self.items[slot - 9].is_none() {
-                return Some(slot);
-            }
-        }
-
-        None
+        (9..=44).find(|&slot| self.items[slot - 9].is_none())
     }
 
     pub fn slots(&self) -> Vec<Option<&ItemStack>> {
