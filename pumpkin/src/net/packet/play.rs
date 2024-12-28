@@ -20,10 +20,10 @@ use pumpkin_core::{
 };
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_inventory::InventoryError;
-use pumpkin_protocol::codec::var_int::VarInt;
 use pumpkin_protocol::client::play::{CSetContainerSlot, CSetHeldItem};
+use pumpkin_protocol::codec::slot::Slot;
+use pumpkin_protocol::codec::var_int::VarInt;
 use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
-use pumpkin_protocol::slot::Slot;
 use pumpkin_protocol::{
     client::play::CCommandSuggestions,
     server::play::{SCloseContainer, SCommandSuggestion, SKeepAlive, SSetPlayerGround, SUseItem},
