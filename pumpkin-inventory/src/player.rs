@@ -121,17 +121,30 @@ impl PlayerInventory {
         self.items[self.selected + 36 - 9] = item;
     }
 
-    pub fn get_pick_item_hotbar_slot(&mut self, item_id: u16) -> usize {
-        for slot in 35..=44 {
+    pub fn get_slot_with_item(&self, item_id: u16) -> Option<usize> {
+        for slot in 9..=44 {
             match &self.items[slot - 9] {
-                Some(item) if item.item_id == item_id => return slot,
+                Some(item) if item.item_id == item_id => return Some(slot),
                 _ => continue,
             }
         }
     
-        self.selected + 36
+        None
     }
+
+    pub fn get_pick_item_hotbar_slot(&self) -> usize {
+        if self.items[self.selected + 36 - 9].is_none() {
+            return self.selected
+        }
+
+        for slot in 0..9 {
+            if self.items[slot + 36 - 9].is_none() {
+                return slot;
+            }
+        }
     
+        self.selected
+    }
 
     pub fn slots(&self) -> Vec<Option<&ItemStack>> {
         let mut slots = vec![self.crafting_output.as_ref()];
