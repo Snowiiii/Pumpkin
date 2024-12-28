@@ -88,7 +88,7 @@ pub struct Player {
     /// The player's food saturation level.
     pub food_saturation: AtomicCell<f32>,
     /// The ID of the currently open container (if any).
-    pub open_container: AtomicCell<Option<u64>>,
+    pub open_container: AtomicCell<Option<usize>>,
     /// The item currently being held by the player.
     pub carried_item: AtomicCell<Option<ItemStack>>,
 

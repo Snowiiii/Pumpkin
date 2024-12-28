@@ -549,7 +549,7 @@ impl Player {
                 }
 
                 let world = &entity.world;
-                let victim = world.get_player_by_entityid(entity_id.0).await;
+                let victim = world.get_player_by_entity_id(*entity_id).await;
                 let Some(victim) = victim else {
                     self.kick(TextComponent::text("Interacted with invalid entity id"))
                         .await;
@@ -852,18 +852,9 @@ impl Player {
         let open_container = self.open_container.load();
         if let Some(id) = open_container {
             let mut open_containers = server.open_containers.write().await;
-            if let Some(container) = open_containers.get_mut(&id) {
-                // If container contains both a location and a type, run the on_close block_manager handler
-                if let Some(pos) = container.get_location() {
-                    if let Some(block) = container.get_block() {
-                        server
-                            .block_manager
-                            .on_close(&block, self, pos, server, container) //block, self, location, server)
-                            .await;
-                    }
-                }
-                // Remove the player from the container
-                container.remove_player(self.entity_id());
+            if let Some(container) = open_containers.containers_by_id.get_mut(&id) {
+                container.remove_player(self.gameprofile.id);
+                if container.unique {}
             }
             self.open_container.store(None);
         }

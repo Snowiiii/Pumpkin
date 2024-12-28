@@ -2,7 +2,6 @@ use crate::block::pumpkin_block::{BlockMetadata, PumpkinBlock};
 use crate::entity::player::Player;
 use crate::server::Server;
 use pumpkin_core::math::position::WorldPosition;
-use pumpkin_inventory::OpenContainer;
 use pumpkin_world::block::block_registry::Block;
 use pumpkin_world::item::item_registry::Item;
 use std::collections::HashMap;
@@ -91,13 +90,10 @@ impl BlockManager {
         player: &Player,
         location: WorldPosition,
         server: &Server,
-        container: &mut OpenContainer,
     ) {
         let pumpkin_block = self.get_pumpkin_block(block);
         if let Some(pumpkin_block) = pumpkin_block {
-            pumpkin_block
-                .on_close(block, player, location, server, container)
-                .await;
+            pumpkin_block.on_close(player, location, server).await;
         }
     }
 

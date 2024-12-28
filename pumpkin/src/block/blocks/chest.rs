@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 use pumpkin_core::math::position::WorldPosition;
-use pumpkin_inventory::{Chest, OpenContainer, WindowType};
+use pumpkin_inventory::Chest;
 use pumpkin_macros::{pumpkin_block, sound};
 use pumpkin_world::{block::block_registry::Block, item::item_registry::Item};
 
+use crate::block::container::ContainerBlock;
 use crate::{
     block::{block_manager::BlockActionResult, pumpkin_block::PumpkinBlock},
     entity::player::Player,
@@ -19,14 +20,13 @@ impl PumpkinBlock for ChestBlock {
         &self,
         block: &Block,
         player: &Player,
-        _location: WorldPosition,
+        location: WorldPosition,
         server: &Server,
     ) {
-        self.open_chest_block(block, player, _location, server)
-            .await;
+        self.open(block, player, location, server).await;
         player
             .world()
-            .play_block_sound(sound!("block.chest.open"), _location)
+            .play_block_sound(sound!("block.chest.open"), location)
             .await;
     }
 
@@ -34,58 +34,33 @@ impl PumpkinBlock for ChestBlock {
         &self,
         block: &Block,
         player: &Player,
-        _location: WorldPosition,
+        location: WorldPosition,
         _item: &Item,
         server: &Server,
     ) -> BlockActionResult {
-        self.open_chest_block(block, player, _location, server)
-            .await;
+        self.open(block, player, location, server).await;
         BlockActionResult::Consume
     }
 
     async fn on_broken<'a>(
         &self,
-        block: &Block,
+        _block: &Block,
         player: &Player,
         location: WorldPosition,
         server: &Server,
     ) {
-        super::standard_on_broken_with_container(block, player, location, server).await;
+        self.destroy(location, server, player).await;
     }
 
-    async fn on_close<'a>(
-        &self,
-        _block: &Block,
-        player: &Player,
-        _location: WorldPosition,
-        _server: &Server,
-        _container: &OpenContainer,
-    ) {
+    async fn on_close<'a>(&self, player: &Player, location: WorldPosition, server: &Server) {
+        self.close(location, server, player).await;
         player
             .world()
-            .play_block_sound(sound!("block.chest.close"), _location)
+            .play_block_sound(sound!("block.chest.close"), location)
             .await;
         // TODO: send entity updates close
     }
 }
-
-impl ChestBlock {
-    pub async fn open_chest_block(
-        &self,
-        block: &Block,
-        player: &Player,
-        location: WorldPosition,
-        server: &Server,
-    ) {
-        // TODO: shouldn't Chest and window type be constrained together to avoid errors?
-        super::standard_open_container::<Chest>(
-            block,
-            player,
-            location,
-            server,
-            WindowType::Generic9x3,
-        )
-        .await;
-        // TODO: send entity updates open
-    }
+impl ContainerBlock<Chest> for ChestBlock {
+    const UNIQUE: bool = false;
 }

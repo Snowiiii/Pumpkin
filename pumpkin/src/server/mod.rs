@@ -1,29 +1,3 @@
-use connection_cache::{CachedBranding, CachedStatus};
-use key_store::KeyStore;
-use pumpkin_config::BASIC_CONFIG;
-use pumpkin_core::math::position::WorldPosition;
-use pumpkin_core::math::vector2::Vector2;
-use pumpkin_core::GameMode;
-use pumpkin_entity::EntityId;
-use pumpkin_inventory::drag_handler::DragHandler;
-use pumpkin_inventory::{Container, OpenContainer};
-use pumpkin_protocol::client::login::CEncryptionRequest;
-use pumpkin_protocol::{client::config::CPluginMessage, ClientPacket};
-use pumpkin_registry::{DimensionType, Registry};
-use pumpkin_world::block::block_registry::Block;
-use pumpkin_world::dimension::Dimension;
-use rand::prelude::SliceRandom;
-use std::collections::HashMap;
-use std::sync::atomic::AtomicU32;
-use std::{
-    sync::{
-        atomic::{AtomicI32, Ordering},
-        Arc,
-    },
-    time::Duration,
-};
-use tokio::sync::{Mutex, RwLock};
-
 use crate::block::block_manager::BlockManager;
 use crate::block::default_block_manager;
 use crate::net::EncryptionError;
@@ -34,6 +8,29 @@ use crate::{
     net::Client,
     world::World,
 };
+use connection_cache::{CachedBranding, CachedStatus};
+use key_store::KeyStore;
+use pumpkin_config::BASIC_CONFIG;
+use pumpkin_core::math::vector2::Vector2;
+use pumpkin_core::GameMode;
+use pumpkin_entity::EntityId;
+use pumpkin_inventory::drag_handler::DragHandler;
+use pumpkin_inventory::{Container, ContainerHolder};
+use pumpkin_protocol::client::login::CEncryptionRequest;
+use pumpkin_protocol::{client::config::CPluginMessage, ClientPacket};
+use pumpkin_registry::{DimensionType, Registry};
+use pumpkin_world::dimension::Dimension;
+use rand::prelude::SliceRandom;
+use std::sync::atomic::AtomicU32;
+use std::{
+    sync::{
+        atomic::{AtomicI32, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
+use tokio::sync::{Mutex, RwLock};
+use uuid::Uuid;
 
 mod connection_cache;
 mod key_store;
@@ -61,7 +58,7 @@ pub struct Server {
     pub cached_registry: Vec<Registry>,
     /// Tracks open containers used for item interactions.
     // TODO: should have per player open_containers
-    pub open_containers: RwLock<HashMap<u64, OpenContainer>>,
+    pub open_containers: RwLock<ContainerHolder>,
     pub drag_handler: DragHandler,
     /// Assigns unique IDs to entities.
     entity_id: AtomicI32,
@@ -104,7 +101,7 @@ impl Server {
 
         Self {
             cached_registry: Registry::get_synced(),
-            open_containers: RwLock::new(HashMap::new()),
+            open_containers: RwLock::new(ContainerHolder::default()),
             drag_handler: DragHandler::new(),
             // 0 is invalid
             entity_id: 2.into(),
@@ -189,59 +186,15 @@ impl Server {
 
     pub async fn try_get_container(
         &self,
-        player_id: EntityId,
-        container_id: u64,
+        player_id: Uuid,
+        container_id: usize,
     ) -> Option<Arc<Mutex<Box<dyn Container>>>> {
         let open_containers = self.open_containers.read().await;
         open_containers
+            .containers_by_id
             .get(&container_id)?
             .try_open(player_id)
             .cloned()
-    }
-
-    /// Returns the first id with a matching location and block type. If this is used with unique
-    /// blocks, the output will return a random result.
-    pub async fn get_container_id(&self, location: WorldPosition, block: Block) -> Option<u32> {
-        let open_containers = self.open_containers.read().await;
-        // TODO: do better than brute force
-        for (id, container) in open_containers.iter() {
-            if container.is_location(location) {
-                if let Some(container_block) = container.get_block() {
-                    if container_block.id == block.id {
-                        log::debug!("Found container id: {}", id);
-                        return Some(*id as u32);
-                    }
-                }
-            }
-        }
-
-        drop(open_containers);
-
-        None
-    }
-
-    pub async fn get_all_container_ids(
-        &self,
-        location: WorldPosition,
-        block: Block,
-    ) -> Option<Vec<u32>> {
-        let open_containers = self.open_containers.read().await;
-        let mut matching_container_ids: Vec<u32> = vec![];
-        // TODO: do better than brute force
-        for (id, container) in open_containers.iter() {
-            if container.is_location(location) {
-                if let Some(container_block) = container.get_block() {
-                    if container_block.id == block.id {
-                        log::debug!("Found matching container id: {}", id);
-                        matching_container_ids.push(*id as u32);
-                    }
-                }
-            }
-        }
-
-        drop(open_containers);
-
-        Some(matching_container_ids)
     }
 
     /// Broadcasts a packet to all players in all worlds.
