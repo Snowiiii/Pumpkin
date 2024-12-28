@@ -197,9 +197,10 @@ impl Player {
                 .ops
                 .iter()
                 .find(|op| op.uuid == gameprofile_clone.id)
-                .map_or(AtomicCell::new(PermissionLvl::Zero), |op| {
-                    AtomicCell::new(op.level)
-                }),
+                .map_or(
+                    AtomicCell::new(ADVANCED_CONFIG.commands.default_op_level),
+                    |op| AtomicCell::new(op.level),
+                ),
         }
     }
 
