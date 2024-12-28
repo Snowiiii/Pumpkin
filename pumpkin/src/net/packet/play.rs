@@ -323,6 +323,7 @@ impl Player {
         };
 
         let mut inventory = self.inventory().lock().await;
+
         let source_slot = inventory.get_slot_with_item(block.item_id);
         let mut dest_slot = inventory.get_pick_item_hotbar_slot();
 
@@ -333,48 +334,59 @@ impl Player {
 
         match source_slot {
             Some(slot_index) if !(slot_index > 36 && slot_index <= 44) => {
-                // Handle existing item case
-                let item_stack = match inventory.get_slot(slot_index) {
-                    Ok(Some(stack)) => *stack,
+                // Case where item is in inventory
+                
+                // Save items
+                let source_slot_data = match inventory.get_slot(slot_index) {
+                    Ok(Some(stack)) => Slot::from(&*stack),
                     _ => return,
+                };
+                let dest_slot_data = match inventory.get_slot(dest_slot + 36) {
+                    Ok(Some(stack)) => Slot::from(&*stack),
+                    _ => Slot::from(None),
                 };
 
                 // Update destination slot
-                let slot_data = Slot::from(&item_stack);
                 inventory.state_id += 1;
                 let dest_packet = CSetContainerSlot::new(
                     0,
                     inventory.state_id as i32,
                     dest_slot + 36,
-                    &slot_data,
+                    &source_slot_data,
                 );
                 self.client.send_packet(&dest_packet).await;
 
                 if inventory
-                    .set_slot(dest_slot + 36, Some(item_stack), false)
+                    .set_slot(dest_slot + 36, source_slot_data.to_item(), false)
                     .is_err()
                 {
                     log::error!("Pick item set slot error!");
                     return;
                 }
 
-                // Clear source slot
-                let slot_data = Slot::from(None);
+                // Update source slot
                 inventory.state_id += 1;
                 let source_packet =
-                    CSetContainerSlot::new(0, inventory.state_id as i32, slot_index, &slot_data);
+                    CSetContainerSlot::new(0, inventory.state_id as i32, slot_index, &dest_slot_data);
                 self.client.send_packet(&source_packet).await;
 
-                if inventory.set_slot(slot_index, None, false).is_err() {
+                if inventory.set_slot(slot_index, dest_slot_data.to_item(), false).is_err() {
                     log::error!("Failed to clear source slot!");
                     return;
                 }
             }
             Some(slot_index) => {
+                // Case where item is in hotbar
                 dest_slot = slot_index - 36;
             }
             None if self.gamemode.load() == GameMode::Creative => {
-                // Handle creative mode case
+                // Save dest slot data
+                let dest_slot_data = match inventory.get_slot(dest_slot + 36) {
+                    Ok(Some(stack)) => Slot::from(&*stack),
+                    _ => Slot::from(None),
+                };
+
+                // Case where item is not present, if in creative mode create the item
                 let item_stack = ItemStack::new(1, block.item_id);
                 let slot_data = Slot::from(&item_stack);
                 inventory.state_id += 1;
@@ -393,6 +405,19 @@ impl Player {
                     log::error!("Pick item set slot error!");
                     return;
                 }
+
+                // Check if there is any empty slot in the player inventory
+                if let Some(slot_index) = inventory.get_empty_slot() {
+                    inventory.state_id += 1;
+                    let source_packet = CSetContainerSlot::new(0, inventory.state_id as i32, slot_index, &dest_slot_data);
+                    self.client.send_packet(&source_packet).await;
+                
+                    if inventory.set_slot(slot_index, dest_slot_data.to_item(), false).is_err() {
+                        log::error!("Failed to clear source slot!");
+                        return;
+                    }
+                }
+                
             }
             _ => return,
         }

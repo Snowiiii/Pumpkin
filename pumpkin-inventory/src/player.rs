@@ -146,6 +146,16 @@ impl PlayerInventory {
         self.selected
     }
 
+    pub fn get_empty_slot(&self) -> Option<usize> {
+        for slot in 9..=44 {
+            if self.items[slot - 9].is_none() {
+                return Some(slot);
+            }
+        }
+
+        None
+    }
+
     pub fn slots(&self) -> Vec<Option<&ItemStack>> {
         let mut slots = vec![self.crafting_output.as_ref()];
         slots.extend(self.crafting.iter().map(|c| c.as_ref()));
