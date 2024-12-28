@@ -23,20 +23,12 @@ impl<'de, T: Buf> Deserializer<'de, T> {
     }
 }
 
-/// Deserializes struct using Serde Deserializer from unnamed (network) NBT
+/// Deserializes struct using Serde Deserializer from normal NBT
 pub fn from_bytes<'a, T>(s: &'a mut impl Buf) -> Result<T>
 where
     T: Deserialize<'a>,
 {
     let mut deserializer = Deserializer::new(s, true);
-    T::deserialize(&mut deserializer)
-}
-
-pub fn from_cursor<'a, T>(cursor: &'a mut Cursor<&[u8]>) -> Result<T>
-where
-    T: Deserialize<'a>,
-{
-    let mut deserializer = Deserializer::new(cursor, true);
     T::deserialize(&mut deserializer)
 }
 
@@ -46,6 +38,14 @@ where
     T: Deserialize<'a>,
 {
     let mut deserializer = Deserializer::new(s, false);
+    T::deserialize(&mut deserializer)
+}
+
+pub fn from_cursor<'a, T>(cursor: &'a mut Cursor<&[u8]>) -> Result<T>
+where
+    T: Deserialize<'a>,
+{
+    let mut deserializer = Deserializer::new(cursor, true);
     T::deserialize(&mut deserializer)
 }
 

@@ -46,13 +46,13 @@ impl CommandError {
 }
 
 #[derive(Default)]
-pub struct CommandDispatcher<'a> {
-    pub(crate) commands: HashMap<&'a str, Command<'a>>,
+pub struct CommandDispatcher {
+    pub(crate) commands: HashMap<String, Command>,
 }
 
 /// Stores registered [`CommandTree`]s and dispatches commands to them.
-impl<'a> CommandDispatcher<'a> {
-    pub async fn handle_command(
+impl CommandDispatcher {
+    pub async fn handle_command<'a>(
         &'a self,
         sender: &mut CommandSender<'a>,
         server: &'a Server,
@@ -81,7 +81,7 @@ impl<'a> CommandDispatcher<'a> {
     /// # todo
     /// - make this less ugly
     /// - do not query suggestions for the same consumer multiple times just because they are on different paths through the tree
-    pub(crate) async fn find_suggestions(
+    pub(crate) async fn find_suggestions<'a>(
         &'a self,
         src: &mut CommandSender<'a>,
         server: &'a Server,
@@ -102,7 +102,7 @@ impl<'a> CommandDispatcher<'a> {
         // try paths and collect the nodes that fail
         // todo: make this more fine-grained
         for path in tree.iter_paths() {
-            match Self::try_find_suggestions_on_path(src, server, &path, &tree, &mut raw_args, cmd)
+            match Self::try_find_suggestions_on_path(src, server, &path, tree, &mut raw_args, cmd)
                 .await
             {
                 Err(InvalidConsumption(s)) => {
@@ -129,12 +129,12 @@ impl<'a> CommandDispatcher<'a> {
         }
 
         let mut suggestions = Vec::from_iter(suggestions);
-        suggestions.sort_by(|a, b| a.suggestion.cmp(b.suggestion));
+        suggestions.sort_by(|a, b| a.suggestion.cmp(&b.suggestion));
         suggestions
     }
 
     /// Execute a command using its corresponding [`CommandTree`].
-    pub(crate) async fn dispatch(
+    pub(crate) async fn dispatch<'a>(
         &'a self,
         src: &mut CommandSender<'a>,
         server: &'a Server,
@@ -151,7 +151,7 @@ impl<'a> CommandDispatcher<'a> {
 
         // try paths until fitting path is found
         for path in tree.iter_paths() {
-            if Self::try_is_fitting_path(src, server, &path, &tree, &mut raw_args.clone()).await? {
+            if Self::try_is_fitting_path(src, server, &path, tree, &mut raw_args.clone()).await? {
                 return Ok(());
             }
         }
@@ -160,14 +160,14 @@ impl<'a> CommandDispatcher<'a> {
         )))
     }
 
-    pub(crate) fn get_tree(&self, key: &str) -> Result<CommandTree<'a>, CommandError> {
+    pub(crate) fn get_tree(&self, key: &str) -> Result<&CommandTree, CommandError> {
         let command = self
             .commands
             .get(key)
             .ok_or(GeneralCommandIssue("Command not found".to_string()))?;
 
         match command {
-            Command::Tree(tree) => Ok(tree.clone()),
+            Command::Tree(tree) => Ok(tree),
             Command::Alias(target) => {
                 let Some(Command::Tree(tree)) = self.commands.get(target) else {
                     log::error!("Error while parsing command alias \"{key}\": pointing to \"{target}\" which is not a valid tree");
@@ -175,22 +175,22 @@ impl<'a> CommandDispatcher<'a> {
                         "Internal Error (See logs for details)".into(),
                     ));
                 };
-                Ok(tree.clone())
+                Ok(tree)
             }
         }
     }
 
-    async fn try_is_fitting_path(
+    async fn try_is_fitting_path<'a>(
         src: &mut CommandSender<'a>,
         server: &'a Server,
         path: &[usize],
-        tree: &CommandTree<'a>,
+        tree: &'a CommandTree,
         raw_args: &mut RawArgs<'a>,
     ) -> Result<bool, CommandError> {
         let mut parsed_args: ConsumedArgs = HashMap::new();
 
         for node in path.iter().map(|&i| &tree.nodes[i]) {
-            match node.node_type {
+            match &node.node_type {
                 NodeType::ExecuteLeaf { executor } => {
                     return if raw_args.is_empty() {
                         executor.execute(src, server, &parsed_args).await?;
@@ -223,18 +223,18 @@ impl<'a> CommandDispatcher<'a> {
         Ok(false)
     }
 
-    async fn try_find_suggestions_on_path(
+    async fn try_find_suggestions_on_path<'a>(
         src: &mut CommandSender<'a>,
         server: &'a Server,
         path: &[usize],
-        tree: &CommandTree<'a>,
+        tree: &'a CommandTree,
         raw_args: &mut RawArgs<'a>,
         input: &'a str,
     ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
         let mut parsed_args: ConsumedArgs = HashMap::new();
 
         for node in path.iter().map(|&i| &tree.nodes[i]) {
-            match node.node_type {
+            match &node.node_type {
                 NodeType::ExecuteLeaf { .. } => {
                     return Ok(None);
                 }
@@ -270,16 +270,18 @@ impl<'a> CommandDispatcher<'a> {
     }
 
     /// Register a command with the dispatcher.
-    pub(crate) fn register(&mut self, tree: CommandTree<'a>) {
+    pub(crate) fn register(&mut self, tree: CommandTree) {
         let mut names = tree.names.iter();
 
         let primary_name = names.next().expect("at least one name must be provided");
 
-        for &name in names {
-            self.commands.insert(name, Command::Alias(primary_name));
+        for name in names {
+            self.commands
+                .insert(name.to_string(), Command::Alias(primary_name.to_string()));
         }
 
-        self.commands.insert(primary_name, Command::Tree(tree));
+        self.commands
+            .insert(primary_name.to_string(), Command::Tree(tree));
     }
 }
 

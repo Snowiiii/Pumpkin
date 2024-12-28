@@ -25,6 +25,28 @@ const NAMES: [&str; 1] = ["worldborder"];
 
 const DESCRIPTION: &str = "Worldborder command.";
 
+fn distance_consumer() -> BoundedNumArgumentConsumer<f64> {
+    BoundedNumArgumentConsumer::new().min(0.0).name("distance")
+}
+
+fn time_consumer() -> BoundedNumArgumentConsumer<i32> {
+    BoundedNumArgumentConsumer::new().min(0).name("time")
+}
+
+fn damage_per_block_consumer() -> BoundedNumArgumentConsumer<f32> {
+    BoundedNumArgumentConsumer::new()
+        .min(0.0)
+        .name("damage_per_block")
+}
+
+fn damage_buffer_consumer() -> BoundedNumArgumentConsumer<f32> {
+    BoundedNumArgumentConsumer::new().min(0.0).name("buffer")
+}
+
+fn warning_distance_consumer() -> BoundedNumArgumentConsumer<i32> {
+    BoundedNumArgumentConsumer::new().min(0).name("distance")
+}
+
 struct WorldborderGetExecutor;
 
 #[async_trait]
@@ -67,12 +89,12 @@ impl CommandExecutor for WorldborderSetExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let Ok(distance) = DISTANCE_CONSUMER.find_arg_default_name(args)? else {
+        let Ok(distance) = distance_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
                     TextComponent::text_string(format!(
                         "{} is out of bounds.",
-                        DISTANCE_CONSUMER.default_name()
+                        distance_consumer().default_name()
                     ))
                     .color(Color::Named(NamedColor::Red)),
                 )
@@ -116,24 +138,24 @@ impl CommandExecutor for WorldborderSetTimeExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let Ok(distance) = DISTANCE_CONSUMER.find_arg_default_name(args)? else {
+        let Ok(distance) = distance_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
                     TextComponent::text_string(format!(
                         "{} is out of bounds.",
-                        DISTANCE_CONSUMER.default_name()
+                        distance_consumer().default_name()
                     ))
                     .color(Color::Named(NamedColor::Red)),
                 )
                 .await;
             return Ok(());
         };
-        let Ok(time) = TIME_CONSUMER.find_arg_default_name(args)? else {
+        let Ok(time) = time_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
                     TextComponent::text_string(format!(
                         "{} is out of bounds.",
-                        TIME_CONSUMER.default_name()
+                        time_consumer().default_name()
                     ))
                     .color(Color::Named(NamedColor::Red)),
                 )
@@ -188,12 +210,12 @@ impl CommandExecutor for WorldborderAddExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let Ok(distance) = DISTANCE_CONSUMER.find_arg_default_name(args)? else {
+        let Ok(distance) = distance_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
                     TextComponent::text_string(format!(
                         "{} is out of bounds.",
-                        DISTANCE_CONSUMER.default_name()
+                        distance_consumer().default_name()
                     ))
                     .color(Color::Named(NamedColor::Red)),
                 )
@@ -239,24 +261,24 @@ impl CommandExecutor for WorldborderAddTimeExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let Ok(distance) = DISTANCE_CONSUMER.find_arg_default_name(args)? else {
+        let Ok(distance) = distance_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
                     TextComponent::text_string(format!(
                         "{} is out of bounds.",
-                        DISTANCE_CONSUMER.default_name()
+                        distance_consumer().default_name()
                     ))
                     .color(Color::Named(NamedColor::Red)),
                 )
                 .await;
             return Ok(());
         };
-        let Ok(time) = TIME_CONSUMER.find_arg_default_name(args)? else {
+        let Ok(time) = time_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
                     TextComponent::text_string(format!(
                         "{} is out of bounds.",
-                        TIME_CONSUMER.default_name()
+                        time_consumer().default_name()
                     ))
                     .color(Color::Named(NamedColor::Red)),
                 )
@@ -341,12 +363,12 @@ impl CommandExecutor for WorldborderDamageAmountExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let Ok(damage_per_block) = DAMAGE_PER_BLOCK_CONSUMER.find_arg_default_name(args)? else {
+        let Ok(damage_per_block) = damage_per_block_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
                     TextComponent::text_string(format!(
                         "{} is out of bounds.",
-                        DAMAGE_PER_BLOCK_CONSUMER.default_name()
+                        damage_per_block_consumer().default_name()
                     ))
                     .color(Color::Named(NamedColor::Red)),
                 )
@@ -392,12 +414,12 @@ impl CommandExecutor for WorldborderDamageBufferExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let Ok(buffer) = DAMAGE_BUFFER_CONSUMER.find_arg_default_name(args)? else {
+        let Ok(buffer) = damage_buffer_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
                     TextComponent::text_string(format!(
                         "{} is out of bounds.",
-                        DAMAGE_BUFFER_CONSUMER.default_name()
+                        damage_buffer_consumer().default_name()
                     ))
                     .color(Color::Named(NamedColor::Red)),
                 )
@@ -443,12 +465,12 @@ impl CommandExecutor for WorldborderWarningDistanceExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let Ok(distance) = WARNING_DISTANCE_CONSUMER.find_arg_default_name(args)? else {
+        let Ok(distance) = warning_distance_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
                     TextComponent::text_string(format!(
                         "{} is out of bounds.",
-                        WARNING_DISTANCE_CONSUMER.default_name()
+                        warning_distance_consumer().default_name()
                     ))
                     .color(Color::Named(NamedColor::Red)),
                 )
@@ -494,12 +516,12 @@ impl CommandExecutor for WorldborderWarningTimeExecutor {
             .expect("There should always be atleast one world");
         let mut border = world.worldborder.lock().await;
 
-        let Ok(time) = TIME_CONSUMER.find_arg_default_name(args)? else {
+        let Ok(time) = time_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
                     TextComponent::text_string(format!(
                         "{} is out of bounds.",
-                        TIME_CONSUMER.default_name()
+                        time_consumer().default_name()
                     ))
                     .color(Color::Named(NamedColor::Red)),
                 )
@@ -529,59 +551,42 @@ impl CommandExecutor for WorldborderWarningTimeExecutor {
     }
 }
 
-static DISTANCE_CONSUMER: BoundedNumArgumentConsumer<f64> =
-    BoundedNumArgumentConsumer::new().min(0.0).name("distance");
-
-static TIME_CONSUMER: BoundedNumArgumentConsumer<i32> =
-    BoundedNumArgumentConsumer::new().min(0).name("time");
-
-static DAMAGE_PER_BLOCK_CONSUMER: BoundedNumArgumentConsumer<f32> =
-    BoundedNumArgumentConsumer::new()
-        .min(0.0)
-        .name("damage_per_block");
-
-static DAMAGE_BUFFER_CONSUMER: BoundedNumArgumentConsumer<f32> =
-    BoundedNumArgumentConsumer::new().min(0.0).name("buffer");
-
-static WARNING_DISTANCE_CONSUMER: BoundedNumArgumentConsumer<i32> =
-    BoundedNumArgumentConsumer::new().min(0).name("distance");
-
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION)
         .with_child(
             literal("add").with_child(
-                argument_default_name(&DISTANCE_CONSUMER)
-                    .execute(&WorldborderAddExecutor)
+                argument_default_name(distance_consumer())
+                    .execute(WorldborderAddExecutor)
                     .with_child(
-                        argument_default_name(&TIME_CONSUMER).execute(&WorldborderAddTimeExecutor),
+                        argument_default_name(time_consumer()).execute(WorldborderAddTimeExecutor),
                     ),
             ),
         )
         .with_child(literal("center").with_child(
-            argument_default_name(&Position2DArgumentConsumer).execute(&WorldborderCenterExecutor),
+            argument_default_name(Position2DArgumentConsumer).execute(WorldborderCenterExecutor),
         ))
         .with_child(
             literal("damage")
                 .with_child(
                     literal("amount").with_child(
-                        argument_default_name(&DAMAGE_PER_BLOCK_CONSUMER)
-                            .execute(&WorldborderDamageAmountExecutor),
+                        argument_default_name(damage_per_block_consumer())
+                            .execute(WorldborderDamageAmountExecutor),
                     ),
                 )
                 .with_child(
                     literal("buffer").with_child(
-                        argument_default_name(&DAMAGE_BUFFER_CONSUMER)
-                            .execute(&WorldborderDamageBufferExecutor),
+                        argument_default_name(damage_buffer_consumer())
+                            .execute(WorldborderDamageBufferExecutor),
                     ),
                 ),
         )
-        .with_child(literal("get").execute(&WorldborderGetExecutor))
+        .with_child(literal("get").execute(WorldborderGetExecutor))
         .with_child(
             literal("set").with_child(
-                argument_default_name(&DISTANCE_CONSUMER)
-                    .execute(&WorldborderSetExecutor)
+                argument_default_name(distance_consumer())
+                    .execute(WorldborderSetExecutor)
                     .with_child(
-                        argument_default_name(&TIME_CONSUMER).execute(&WorldborderSetTimeExecutor),
+                        argument_default_name(time_consumer()).execute(WorldborderSetTimeExecutor),
                     ),
             ),
         )
@@ -589,12 +594,12 @@ pub fn init_command_tree<'a>() -> CommandTree<'a> {
             literal("warning")
                 .with_child(
                     literal("distance").with_child(
-                        argument_default_name(&WARNING_DISTANCE_CONSUMER)
-                            .execute(&WorldborderWarningDistanceExecutor),
+                        argument_default_name(warning_distance_consumer())
+                            .execute(WorldborderWarningDistanceExecutor),
                     ),
                 )
                 .with_child(literal("time").with_child(
-                    argument_default_name(&TIME_CONSUMER).execute(&WorldborderWarningTimeExecutor),
+                    argument_default_name(time_consumer()).execute(WorldborderWarningTimeExecutor),
                 )),
         )
 }

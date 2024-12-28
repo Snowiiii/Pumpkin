@@ -4,10 +4,11 @@ use crate::command::args::{ConsumedArgs, FindArg};
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, literal, require};
 use crate::command::{CommandError, CommandExecutor, CommandSender};
-use crate::entity::player::PermissionLvl;
+
 use async_trait::async_trait;
 use pumpkin_core::math::position::WorldPosition;
 use pumpkin_core::math::vector3::Vector3;
+use pumpkin_core::permission::PermissionLvl;
 use pumpkin_core::text::TextComponent;
 
 const NAMES: [&str; 1] = ["fill"];
@@ -154,23 +155,21 @@ impl CommandExecutor for SetblockExecutor {
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
+pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| {
-            sender.has_permission_lvl(PermissionLvl::Two) && sender.world().is_some()
-        })
-        .with_child(
-            argument(ARG_FROM, &BlockPosArgumentConsumer).with_child(
-                argument(ARG_TO, &BlockPosArgumentConsumer).with_child(
-                    argument(ARG_BLOCK, &BlockArgumentConsumer)
-                        .with_child(literal("destroy").execute(&SetblockExecutor(Mode::Destroy)))
-                        .with_child(literal("hollow").execute(&SetblockExecutor(Mode::Hollow)))
-                        .with_child(literal("keep").execute(&SetblockExecutor(Mode::Keep)))
-                        .with_child(literal("outline").execute(&SetblockExecutor(Mode::Outline)))
-                        .with_child(literal("replace").execute(&SetblockExecutor(Mode::Replace)))
-                        .execute(&SetblockExecutor(Mode::Replace)),
+        require(|sender| sender.has_permission_lvl(PermissionLvl::Two) && sender.world().is_some())
+            .with_child(
+                argument(ARG_FROM, BlockPosArgumentConsumer).with_child(
+                    argument(ARG_TO, BlockPosArgumentConsumer).with_child(
+                        argument(ARG_BLOCK, BlockArgumentConsumer)
+                            .with_child(literal("destroy").execute(SetblockExecutor(Mode::Destroy)))
+                            .with_child(literal("hollow").execute(SetblockExecutor(Mode::Hollow)))
+                            .with_child(literal("keep").execute(SetblockExecutor(Mode::Keep)))
+                            .with_child(literal("outline").execute(SetblockExecutor(Mode::Outline)))
+                            .with_child(literal("replace").execute(SetblockExecutor(Mode::Replace)))
+                            .execute(SetblockExecutor(Mode::Replace)),
+                    ),
                 ),
             ),
-        ),
     )
 }

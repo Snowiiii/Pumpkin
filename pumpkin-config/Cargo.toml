@@ -7,5 +7,6 @@ edition.workspace = true
 pumpkin-core = { path = "../pumpkin-core" }
 serde.workspace = true
 log.workspace = true
+uuid.workspace = true
 
 toml = "0.8"
