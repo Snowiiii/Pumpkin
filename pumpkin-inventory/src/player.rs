@@ -128,13 +128,13 @@ impl PlayerInventory {
                 _ => continue,
             }
         }
-    
+
         None
     }
 
     pub fn get_pick_item_hotbar_slot(&self) -> usize {
         if self.items[self.selected + 36 - 9].is_none() {
-            return self.selected
+            return self.selected;
         }
 
         for slot in 0..9 {
@@ -142,7 +142,7 @@ impl PlayerInventory {
                 return slot;
             }
         }
-    
+
         self.selected
     }
 
