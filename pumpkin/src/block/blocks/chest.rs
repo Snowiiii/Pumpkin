@@ -14,6 +14,12 @@ use crate::{
     server::Server,
 };
 
+#[derive(PartialEq)]
+pub enum ChestState {
+    IsOpened,
+    IsClosed,
+}
+
 #[pumpkin_block("minecraft:chest")]
 pub struct ChestBlock;
 
@@ -27,10 +33,6 @@ impl PumpkinBlock for ChestBlock {
         server: &Server,
     ) {
         self.open_chest_block(block, player, _location, server)
-            .await;
-        player
-            .world()
-            .play_block_sound(sound!("block.chest.open"), _location)
             .await;
     }
 
@@ -65,23 +67,10 @@ impl PumpkinBlock for ChestBlock {
         server: &Server,
         container: &mut OpenContainer,
     ) {
-        player
-            .world()
-            .play_block_sound(sound!("block.chest.close"), location)
-            .await;
-
         container.remove_player(player.entity_id());
 
-        if let Some(e) = get_block("minecraft:chest").cloned() {
-            server
-                .broadcast_packet_all(&CBlockAction::new(
-                    &location,
-                    1,
-                    container.get_number_of_players() as u8,
-                    VarInt(e.id.into()),
-                ))
-                .await;
-        }
+        self.play_chest_action(container, player, location, server, ChestState::IsClosed)
+            .await;
     }
 }
 
@@ -106,17 +95,42 @@ impl ChestBlock {
         if let Some(container_id) = server.get_container_id(location, block.clone()).await {
             let open_containers = server.open_containers.read().await;
             if let Some(container) = open_containers.get(&u64::from(container_id)) {
-                if let Some(e) = get_block("minecraft:chest").cloned() {
-                    server
-                        .broadcast_packet_all(&CBlockAction::new(
-                            &location,
-                            1,
-                            container.get_number_of_players() as u8,
-                            VarInt(e.id.into()),
-                        ))
-                        .await;
-                }
+                self.play_chest_action(container, player, location, server, ChestState::IsOpened)
+                    .await;
             }
+        }
+    }
+
+    pub async fn play_chest_action(
+        &self,
+        container: &OpenContainer,
+        player: &Player,
+        location: WorldPosition,
+        server: &Server,
+        state: ChestState,
+    ) {
+        let num_players = container.get_number_of_players() as u8;
+        if state == ChestState::IsClosed && num_players == 0 {
+            player
+                .world()
+                .play_block_sound(sound!("block.chest.close"), location)
+                .await;
+        } else if state == ChestState::IsOpened && num_players == 1 {
+            player
+                .world()
+                .play_block_sound(sound!("block.chest.open"), location)
+                .await;
+        }
+
+        if let Some(e) = get_block("minecraft:chest").cloned() {
+            server
+                .broadcast_packet_all(&CBlockAction::new(
+                    &location,
+                    1,
+                    num_players,
+                    VarInt(e.id.into()),
+                ))
+                .await;
         }
     }
 }
