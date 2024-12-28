@@ -47,7 +47,7 @@ pub struct Server {
     /// Saves server branding information.
     server_branding: CachedBranding,
     /// Saves and Dispatches commands to appropriate handlers.
-    pub command_dispatcher: RwLock<CommandDispatcher<'static>>,
+    pub command_dispatcher: RwLock<CommandDispatcher>,
     /// Saves and calls blocks blocks
     pub block_manager: Arc<BlockManager>,
     /// Manages multiple worlds within the server.
@@ -57,7 +57,6 @@ pub struct Server {
     /// Caches game registries for efficient access.
     pub cached_registry: Vec<Registry>,
     /// Tracks open containers used for item interactions.
-    // TODO: should have per player open_containers
     pub open_containers: RwLock<ContainerHolder>,
     pub drag_handler: DragHandler,
     /// Assigns unique IDs to entities.

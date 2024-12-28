@@ -10,10 +10,7 @@ use super::{
     tree::{Node, NodeType},
 };
 
-pub async fn send_c_commands_packet<'a>(
-    player: &Arc<Player>,
-    dispatcher: &RwLock<CommandDispatcher<'a>>,
-) {
+pub async fn send_c_commands_packet(player: &Arc<Player>, dispatcher: &RwLock<CommandDispatcher>) {
     let cmd_src = super::CommandSender::Player(player.clone());
     let mut first_level = Vec::new();
 
@@ -74,7 +71,7 @@ impl<'a> ProtoNodeBuilder<'a> {
 
 fn nodes_to_proto_node_builders<'a>(
     cmd_src: &super::CommandSender,
-    nodes: &[Node<'a>],
+    nodes: &'a [Node],
     children: &[usize],
 ) -> (bool, Vec<ProtoNodeBuilder<'a>>) {
     let mut child_nodes = Vec::new();
@@ -82,7 +79,7 @@ fn nodes_to_proto_node_builders<'a>(
 
     for i in children {
         let node = &nodes[*i];
-        match node.node_type {
+        match &node.node_type {
             NodeType::Argument { name, consumer } => {
                 let (node_is_executable, node_children) =
                     nodes_to_proto_node_builders(cmd_src, nodes, &node.children);

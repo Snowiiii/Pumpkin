@@ -1,4 +1,4 @@
-// TODO
+// TODO make this dynamic
 #[derive(Clone)]
 #[repr(i32)]
 pub enum EntityType {

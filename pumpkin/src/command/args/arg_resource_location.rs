@@ -27,7 +27,7 @@ impl GetClientSideArgParser for ResourceLocationArgumentConsumer {
 #[async_trait]
 impl ArgumentConsumer for ResourceLocationArgumentConsumer {
     async fn consume<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
@@ -36,7 +36,7 @@ impl ArgumentConsumer for ResourceLocationArgumentConsumer {
     }
 
     async fn suggest<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
@@ -60,19 +60,15 @@ impl ArgumentConsumer for ResourceLocationArgumentConsumer {
 }
 
 impl DefaultNameArgConsumer for ResourceLocationArgumentConsumer {
-    fn default_name(&self) -> &'static str {
-        "id"
-    }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        self
+    fn default_name(&self) -> String {
+        "id".to_string()
     }
 }
 
 impl<'a> FindArg<'a> for ResourceLocationArgumentConsumer {
     type Data = &'a str;
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::ResourceLocation(data)) => Ok(data),
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),

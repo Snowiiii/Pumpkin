@@ -25,6 +25,8 @@ dashmap = "6.1.0"
 flate2 = "1.0"
 lz4 = "1.28.0"
 
+file-guard = "0.2.0"
+
 enum_dispatch = "0.3.13"
 
 fastnbt = { git = "https://github.com/owengage/fastnbt.git" }
