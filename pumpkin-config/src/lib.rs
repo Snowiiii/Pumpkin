@@ -1,6 +1,6 @@
 use log::warn;
 use logging::LoggingConfig;
-use pumpkin_core::{Difficulty, GameMode};
+use pumpkin_core::{Difficulty, GameMode, PermissionLvl};
 use query::QueryConfig;
 #[cfg(feature = "schemars")]
 use schemars::JsonSchema;
@@ -31,6 +31,7 @@ pub use server_links::ServerLinksConfig;
 mod commands;
 pub mod compression;
 mod lan_broadcast;
+pub mod op;
 mod pvp;
 mod rcon;
 mod server_links;
@@ -82,6 +83,8 @@ pub struct BasicConfiguration {
     pub simulation_distance: NonZeroU8,
     /// The default game difficulty.
     pub default_difficulty: Difficulty,
+    /// The op level assign by the /op command
+    pub op_permission_level: PermissionLvl,
     /// Whether the Nether dimension is enabled.
     pub allow_nether: bool,
     /// Whether the server is in hardcore mode.
@@ -112,6 +115,7 @@ impl Default for BasicConfiguration {
             view_distance: NonZeroU8::new(10).unwrap(),
             simulation_distance: NonZeroU8::new(10).unwrap(),
             default_difficulty: Difficulty::Normal,
+            op_permission_level: PermissionLvl::Four,
             allow_nether: true,
             hardcore: false,
             online_mode: true,

@@ -29,7 +29,7 @@ impl GetClientSideArgParser for ItemArgumentConsumer {
 #[async_trait]
 impl ArgumentConsumer for ItemArgumentConsumer {
     async fn consume<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
@@ -39,7 +39,7 @@ impl ArgumentConsumer for ItemArgumentConsumer {
     }
 
     async fn suggest<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
@@ -49,19 +49,15 @@ impl ArgumentConsumer for ItemArgumentConsumer {
 }
 
 impl DefaultNameArgConsumer for ItemArgumentConsumer {
-    fn default_name(&self) -> &'static str {
-        "item"
-    }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        self
+    fn default_name(&self) -> String {
+        "item".to_string()
     }
 }
 
 impl<'a> FindArg<'a> for ItemArgumentConsumer {
     type Data = (&'a str, &'a Item);
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::Item(name)) => item_registry::get_item(name).map_or_else(
                 || {

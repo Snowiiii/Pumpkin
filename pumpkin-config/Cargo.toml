@@ -10,6 +10,7 @@ schemars = ["dep:schemars", "pumpkin-core/schemars"]
 pumpkin-core = { path = "../pumpkin-core" }
 serde.workspace = true
 log.workspace = true
+uuid.workspace = true
 
 toml = "0.8"
 # used by the generate schemas script
