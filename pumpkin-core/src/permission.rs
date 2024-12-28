@@ -1,6 +1,6 @@
+use num_derive::{FromPrimitive, ToPrimitive};
 #[cfg(feature = "schemars")]
 use schemars::JsonSchema;
-use num_derive::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// Represents the player's permission level

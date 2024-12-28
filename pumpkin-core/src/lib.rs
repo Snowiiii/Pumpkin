@@ -5,9 +5,9 @@ pub mod random;
 pub mod text;
 
 pub use gamemode::GameMode;
+pub use permission::PermissionLvl;
 #[cfg(feature = "schemars")]
 pub use schemars::JsonSchema;
-pub use permission::PermissionLvl;
 
 use serde::{Deserialize, Serialize};
 
