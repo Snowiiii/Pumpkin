@@ -4,17 +4,19 @@ use std::sync::Arc;
 use crate::command::commands::cmd_seed;
 use crate::command::commands::{cmd_bossbar, cmd_transfer};
 use crate::command::dispatcher::CommandDispatcher;
-use crate::entity::player::{PermissionLvl, Player};
+use crate::entity::player::Player;
 use crate::server::Server;
 use crate::world::World;
 use args::ConsumedArgs;
 use async_trait::async_trait;
+use commands::cmd_op;
 use commands::{
     cmd_clear, cmd_fill, cmd_gamemode, cmd_give, cmd_help, cmd_kick, cmd_kill, cmd_list,
     cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_time, cmd_worldborder,
 };
 use dispatcher::CommandError;
 use pumpkin_core::math::vector3::Vector3;
+use pumpkin_core::permission::PermissionLvl;
 use pumpkin_core::text::TextComponent;
 
 pub mod args;
@@ -76,7 +78,7 @@ impl<'a> CommandSender<'a> {
     pub fn permission_lvl(&self) -> PermissionLvl {
         match self {
             CommandSender::Console | CommandSender::Rcon(_) => PermissionLvl::Four,
-            CommandSender::Player(p) => p.permission_lvl(),
+            CommandSender::Player(p) => p.permission_lvl.load(),
         }
     }
 
@@ -84,7 +86,7 @@ impl<'a> CommandSender<'a> {
     pub fn has_permission_lvl(&self, lvl: PermissionLvl) -> bool {
         match self {
             CommandSender::Console | CommandSender::Rcon(_) => true,
-            CommandSender::Player(p) => (p.permission_lvl() as i8) >= (lvl as i8),
+            CommandSender::Player(p) => p.permission_lvl.load().ge(&lvl),
         }
     }
 
@@ -128,6 +130,7 @@ pub fn default_dispatcher() -> CommandDispatcher {
     dispatcher.register(cmd_seed::init_command_tree());
     dispatcher.register(cmd_transfer::init_command_tree());
     dispatcher.register(cmd_fill::init_command_tree());
+    dispatcher.register(cmd_op::init_command_tree());
 
     dispatcher
 }

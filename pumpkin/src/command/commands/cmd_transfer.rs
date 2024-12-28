@@ -13,7 +13,7 @@ use crate::command::tree_builder::{argument, argument_default_name, require};
 use crate::command::{
     args::ConsumedArgs, tree::CommandTree, CommandError, CommandExecutor, CommandSender,
 };
-use crate::entity::player::PermissionLvl;
+use pumpkin_core::permission::PermissionLvl;
 
 const NAMES: [&str; 1] = ["transfer"];
 

@@ -3,6 +3,7 @@ use crossbeam::atomic::AtomicCell;
 use key_store::KeyStore;
 use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::math::boundingbox::{BoundingBox, BoundingBoxSize};
+use pumpkin_core::math::position::WorldPosition;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::GameMode;
 use pumpkin_entity::entity_type::EntityType;
@@ -12,10 +13,12 @@ use pumpkin_inventory::{Container, OpenContainer};
 use pumpkin_protocol::client::login::CEncryptionRequest;
 use pumpkin_protocol::{client::config::CPluginMessage, ClientPacket};
 use pumpkin_registry::{DimensionType, Registry};
+use pumpkin_world::block::block_registry::Block;
 use pumpkin_world::dimension::Dimension;
 use pumpkin_world::entity::entity_registry::get_entity_by_id;
 use rand::prelude::SliceRandom;
 use std::collections::HashMap;
+use std::sync::atomic::AtomicU32;
 use std::{
     sync::{
         atomic::{AtomicI32, Ordering},
@@ -64,10 +67,13 @@ pub struct Server {
     /// Caches game registries for efficient access.
     pub cached_registry: Vec<Registry>,
     /// Tracks open containers used for item interactions.
+    // TODO: should have per player open_containers
     pub open_containers: RwLock<HashMap<u64, OpenContainer>>,
     pub drag_handler: DragHandler,
     /// Assigns unique IDs to entities.
     entity_id: AtomicI32,
+    /// Assigns unique IDs to containers.
+    container_id: AtomicU32,
     /// Manages authentication with a authentication server, if enabled.
     pub auth_client: Option<reqwest::Client>,
     /// The server's custom bossbars
@@ -109,6 +115,7 @@ impl Server {
             drag_handler: DragHandler::new(),
             // 0 is invalid
             entity_id: 2.into(),
+            container_id: 0.into(),
             worlds: vec![Arc::new(world)],
             dimensions: vec![
                 DimensionType::Overworld,
@@ -247,6 +254,51 @@ impl Server {
             .cloned()
     }
 
+    /// Returns the first id with a matching location and block type. If this is used with unique
+    /// blocks, the output will return a random result.
+    pub async fn get_container_id(&self, location: WorldPosition, block: Block) -> Option<u32> {
+        let open_containers = self.open_containers.read().await;
+        // TODO: do better than brute force
+        for (id, container) in open_containers.iter() {
+            if container.is_location(location) {
+                if let Some(container_block) = container.get_block() {
+                    if container_block.id == block.id {
+                        log::debug!("Found container id: {}", id);
+                        return Some(*id as u32);
+                    }
+                }
+            }
+        }
+
+        drop(open_containers);
+
+        None
+    }
+
+    pub async fn get_all_container_ids(
+        &self,
+        location: WorldPosition,
+        block: Block,
+    ) -> Option<Vec<u32>> {
+        let open_containers = self.open_containers.read().await;
+        let mut matching_container_ids: Vec<u32> = vec![];
+        // TODO: do better than brute force
+        for (id, container) in open_containers.iter() {
+            if container.is_location(location) {
+                if let Some(container_block) = container.get_block() {
+                    if container_block.id == block.id {
+                        log::debug!("Found matching container id: {}", id);
+                        matching_container_ids.push(*id as u32);
+                    }
+                }
+            }
+        }
+
+        drop(open_containers);
+
+        Some(matching_container_ids)
+    }
+
     /// Broadcasts a packet to all players in all worlds.
     ///
     /// This function sends the specified packet to every connected player in every world managed by the server.
@@ -356,6 +408,11 @@ impl Server {
     /// This should be global
     pub fn new_entity_id(&self) -> EntityId {
         self.entity_id.fetch_add(1, Ordering::SeqCst)
+    }
+
+    /// Generates a new container id
+    pub fn new_container_id(&self) -> u32 {
+        self.container_id.fetch_add(1, Ordering::SeqCst)
     }
 
     pub fn get_branding(&self) -> CPluginMessage<'_> {

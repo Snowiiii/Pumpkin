@@ -81,6 +81,7 @@ impl Player {
     }
 
     /// The official Minecraft client is weird, and will always just close *any* window that is opened when this gets sent
+    // TODO: is this just bc ids are not synced?
     pub async fn close_container(&self) {
         let mut inventory = self.inventory().lock().await;
         inventory.total_opened_containers += 1;

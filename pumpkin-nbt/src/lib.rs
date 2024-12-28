@@ -200,3 +200,62 @@ macro_rules! impl_array {
 impl_array!(IntArray, "int");
 impl_array!(LongArray, "long");
 impl_array!(BytesArray, "byte");
+
+#[cfg(test)]
+mod test {
+    use serde::{Deserialize, Serialize};
+
+    use crate::BytesArray;
+    use crate::IntArray;
+    use crate::LongArray;
+    use crate::{deserializer::from_bytes_unnamed, serializer::to_bytes_unnamed};
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct Test {
+        byte: i8,
+        short: i16,
+        int: i32,
+        long: i64,
+        float: f32,
+        string: String,
+    }
+
+    #[test]
+    fn test_simple_ser_de_unamed() {
+        let test = Test {
+            byte: 123,
+            short: 1342,
+            int: 4313,
+            long: 34,
+            float: 1.00,
+            string: "Hello test".to_string(),
+        };
+        let mut bytes = to_bytes_unnamed(&test).unwrap();
+        let recreated_struct: Test = from_bytes_unnamed(&mut bytes).unwrap();
+
+        assert_eq!(test, recreated_struct);
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct TestArray {
+        #[serde(with = "BytesArray")]
+        byte_array: Vec<u8>,
+        #[serde(with = "IntArray")]
+        int_array: Vec<i32>,
+        #[serde(with = "LongArray")]
+        long_array: Vec<i64>,
+    }
+
+    #[test]
+    fn test_simple_ser_de_array() {
+        let test = TestArray {
+            byte_array: vec![0, 3, 2],
+            int_array: vec![13, 1321, 2],
+            long_array: vec![1, 0, 200301, 1],
+        };
+        let mut bytes = to_bytes_unnamed(&test).unwrap();
+        let recreated_struct: TestArray = from_bytes_unnamed(&mut bytes).unwrap();
+
+        assert_eq!(test, recreated_struct);
+    }
+}

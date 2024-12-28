@@ -20,7 +20,7 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_entity::entity_type::EntityType;
-use pumpkin_inventory::{InventoryError, WindowType};
+use pumpkin_inventory::InventoryError;
 use pumpkin_protocol::client::play::CSpawnEntity;
 use pumpkin_protocol::codec::var_int::VarInt;
 use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
@@ -826,11 +826,13 @@ impl Player {
     // TODO:
     // This function will in the future be used to keep track of if the client is in a valid state.
     // But this is not possible yet
-    pub async fn handle_close_container(&self, server: &Server, packet: SCloseContainer) {
-        let Some(_window_type) = WindowType::from_i32(packet.window_id.0) else {
-            self.kick(TextComponent::text("Invalid window ID")).await;
-            return;
-        };
+    pub async fn handle_close_container(&self, server: &Server, _packet: SCloseContainer) {
+        // TODO: This should check if player sent this packet before
+        // let Some(_window_type) = WindowType::from_i32(packet.window_id.0) else {
+        //     log::info!("Closed ID: {}", packet.window_id.0);
+        //     self.kick(TextComponent::text("Invalid window ID")).await;
+        //     return;
+        // };
         // window_id 0 represents both 9x1 Generic AND inventory here
         let mut inventory = self.inventory().lock().await;
 
@@ -844,7 +846,7 @@ impl Player {
                     if let Some(block) = container.get_block() {
                         server
                             .block_manager
-                            .on_close(&block, self, pos, server) //block, self, location, server)
+                            .on_close(&block, self, pos, server, container) //block, self, location, server)
                             .await;
                     }
                 }

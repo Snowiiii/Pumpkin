@@ -9,7 +9,7 @@ use crate::command::args::{ConsumedArgs, FindArg, FindArgDefaultName};
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, argument_default_name, require};
 use crate::command::{CommandError, CommandExecutor, CommandSender};
-use crate::entity::player::PermissionLvl;
+use pumpkin_core::permission::PermissionLvl;
 
 const NAMES: [&str; 1] = ["give"];
 

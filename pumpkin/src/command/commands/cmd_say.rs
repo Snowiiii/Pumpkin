@@ -2,15 +2,13 @@ use async_trait::async_trait;
 use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::client::play::CSystemChatMessage;
 
-use crate::{
-    command::{
-        args::{arg_message::MsgArgConsumer, Arg, ConsumedArgs},
-        tree::CommandTree,
-        tree_builder::{argument, require},
-        CommandError, CommandExecutor, CommandSender,
-    },
-    entity::player::PermissionLvl,
+use crate::command::{
+    args::{arg_message::MsgArgConsumer, Arg, ConsumedArgs},
+    tree::CommandTree,
+    tree_builder::{argument, require},
+    CommandError, CommandExecutor, CommandSender,
 };
+use pumpkin_core::permission::PermissionLvl;
 use CommandError::InvalidConsumption;
 
 const NAMES: [&str; 1] = ["say"];

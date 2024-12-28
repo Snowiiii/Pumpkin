@@ -30,4 +30,4 @@ aes = "0.8.4"
 cfb8 = "0.8.1"
 
 # decryption
-libdeflater = "1.22.0"
+libdeflater = "1.23.0"
