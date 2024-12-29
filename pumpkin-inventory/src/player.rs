@@ -116,11 +116,6 @@ impl PlayerInventory {
         &mut self.items[self.selected + 36 - 9]
     }
 
-    pub fn set_held_item(&mut self, item: Option<ItemStack>) {
-        debug_assert!((0..9).contains(&self.selected));
-        self.items[self.selected + 36 - 9] = item;
-    }
-
     pub fn get_slot_with_item(&self, item_id: u16) -> Option<usize> {
         for slot in 9..=44 {
             match &self.items[slot - 9] {
