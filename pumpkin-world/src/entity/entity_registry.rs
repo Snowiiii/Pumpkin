@@ -27,9 +27,9 @@ pub fn get_entity_by_id<'a>(entity_id: u16) -> Option<&'a Entity> {
 #[derive(Deserialize, Clone, Debug)]
 pub struct Entity {
     pub id: u16,
-    pub max_health: Option<f64>,
+    pub max_health: Option<f32>,
     pub attackable: bool,
     pub summonable: bool,
     pub fire_immune: bool,
-    pub dimension: Vec<f32>,
+    pub dimension: [f32; 2],
 }
