@@ -560,6 +560,10 @@ impl Player {
                     // so we shouldn't kick the player
                     return;
                 }
+                if (victim == self) {
+                    self.kick(TextComponent::text("You can't attack yourself")).await;
+                    return;
+                }
                 self.attack(&victim).await;
             }
             ActionType::Interact | ActionType::InteractAt => {
