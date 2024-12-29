@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::command::args::ArgumentConsumer;
 use crate::command::tree::{CommandTree, Node, NodeType};
 use crate::command::CommandSender;
-
 use super::args::DefaultNameArgConsumer;
 use super::CommandExecutor;
 

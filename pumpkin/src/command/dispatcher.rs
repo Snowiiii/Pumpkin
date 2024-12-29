@@ -1,10 +1,11 @@
 use pumpkin_core::text::TextComponent;
+use pumpkin_core::permission::PermissionLvl;
 use pumpkin_protocol::client::play::CommandSuggestion;
 
 use super::args::ConsumedArgs;
 
 use crate::command::dispatcher::CommandError::{
-    GeneralCommandIssue, InvalidConsumption, InvalidRequirement, OtherPumpkin,
+    GeneralCommandIssue, InvalidConsumption, InvalidRequirement, PermissionDenied, OtherPumpkin,
 };
 use crate::command::tree::{Command, CommandTree, NodeType, RawArgs};
 use crate::command::CommandSender;
@@ -23,6 +24,8 @@ pub(crate) enum CommandError {
     /// Return this if a condition that a [`Node::Require`] should ensure is met is not met.
     InvalidRequirement,
 
+    PermissionDenied,
+
     OtherPumpkin(Box<dyn PumpkinError>),
 
     GeneralCommandIssue(String),
@@ -39,6 +42,10 @@ impl CommandError {
                 log::error!("Error while parsing command \"{cmd}\": a requirement that was expected was not met.");
                 Ok("Internal Error (See logs for details)".into())
             }
+            PermissionDenied => {
+                log::warn!("Permission denied for command \"{cmd}\"");
+                Ok("I'm sorry, but you do not have permission to perform this command. Please contact the server administrator if you believe this is an error.".into())
+            }
             GeneralCommandIssue(s) => Ok(s),
             OtherPumpkin(e) => Err(e),
         }
@@ -48,6 +55,7 @@ impl CommandError {
 #[derive(Default)]
 pub struct CommandDispatcher {
     pub(crate) commands: HashMap<String, Command>,
+    pub(crate) permissions: HashMap<String, PermissionLvl>,
 }
 
 /// Stores registered [`CommandTree`]s and dispatches commands to them.
@@ -113,6 +121,10 @@ impl CommandDispatcher {
                     log::error!("Error while parsing command \"{cmd}\": a requirement that was expected was not met.");
                     return Vec::new();
                 }
+                Err(PermissionDenied) => {
+                    log::warn!("Permission denied for command \"{cmd}\"");
+                    return Vec::new();
+                }
                 Err(GeneralCommandIssue(issue)) => {
                     log::error!("Error while parsing command \"{cmd}\": {issue}");
                     return Vec::new();
@@ -147,6 +159,14 @@ impl CommandDispatcher {
             .ok_or(GeneralCommandIssue("Empty Command".to_string()))?;
         let raw_args: Vec<&str> = parts.rev().collect();
 
+        let Some(permission) = self.permissions.get(key) else {
+            return Err(GeneralCommandIssue("Command not found".to_string()));
+        };
+
+        if !src.has_permission_lvl(*permission) {
+            return Err(PermissionDenied);
+        }
+
         let tree = self.get_tree(key)?;
 
         // try paths until fitting path is found
@@ -178,6 +198,10 @@ impl CommandDispatcher {
                 Ok(tree)
             }
         }
+    }
+
+    pub(crate) fn get_permission_lvl(&self, key: &str) -> Option<PermissionLvl> {
+        self.permissions.get(key).copied()
     }
 
     async fn try_is_fitting_path<'a>(
@@ -270,7 +294,7 @@ impl CommandDispatcher {
     }
 
     /// Register a command with the dispatcher.
-    pub(crate) fn register(&mut self, tree: CommandTree) {
+    pub(crate) fn register(&mut self, tree: CommandTree, permission: PermissionLvl) {
         let mut names = tree.names.iter();
 
         let primary_name = names.next().expect("at least one name must be provided");
@@ -280,6 +304,7 @@ impl CommandDispatcher {
                 .insert(name.to_string(), Command::Alias(primary_name.to_string()));
         }
 
+        self.permissions.insert(primary_name.to_string(), permission);
         self.commands
             .insert(primary_name.to_string(), Command::Tree(tree));
     }
@@ -288,11 +313,11 @@ impl CommandDispatcher {
 #[cfg(test)]
 mod test {
     use crate::command::{default_dispatcher, tree::CommandTree};
-
+    use pumpkin_core::permission::PermissionLvl;
     #[test]
     fn test_dynamic_command() {
         let mut dispatcher = default_dispatcher();
         let tree = CommandTree::new(["test"], "test_desc");
-        dispatcher.register(tree);
+        dispatcher.register(tree, PermissionLvl::Zero);
     }
 }
