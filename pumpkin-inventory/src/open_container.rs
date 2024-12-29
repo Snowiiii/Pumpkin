@@ -76,6 +76,10 @@ impl OpenContainer {
         self.players.clone()
     }
 
+    pub fn get_number_of_players(&self) -> usize {
+        self.players.len()
+    }
+
     pub fn get_location(&self) -> Option<WorldPosition> {
         self.location
     }

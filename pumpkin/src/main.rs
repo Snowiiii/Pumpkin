@@ -142,7 +142,7 @@ async fn main() {
     );
 
     log::warn!("Pumpkin is currently under heavy development!");
-    log::info!("Report Issues on https://github.com/Snowiiii/Pumpkin/issues");
+    log::info!("Report Issues on https://github.com/Pumpkin-MC/Pumpkin/issues");
     log::info!("Join our Discord for community support https://discord.com/invite/wT8XjrjKkf");
 
     tokio::spawn(async {

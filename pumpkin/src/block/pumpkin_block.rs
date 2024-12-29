@@ -60,7 +60,7 @@ pub trait PumpkinBlock: Send + Sync {
         _player: &Player,
         _location: WorldPosition,
         _server: &Server,
-        _container: &OpenContainer,
+        _container: &mut OpenContainer,
     ) {
     }
 }

@@ -19,7 +19,7 @@ RUN strip pumpkin.release
 FROM alpine:3.21
 
 # Identifying information for registries like ghcr.io
-LABEL org.opencontainers.image.source=https://github.com/Snowiiii/Pumpkin
+LABEL org.opencontainers.image.source=https://github.com/Pumpkin-MC/Pumpkin
 
 RUN apk add --no-cache libgcc
 
