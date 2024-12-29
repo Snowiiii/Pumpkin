@@ -3,11 +3,11 @@ use crate::entity::player::Player;
 use async_trait::async_trait;
 use pumpkin_core::math::position::WorldPosition;
 use pumpkin_inventory::Furnace;
-use pumpkin_inventory::WindowType;
 use pumpkin_macros::pumpkin_block;
 use pumpkin_world::block::block_registry::Block;
 use pumpkin_world::item::item_registry::Item;
 
+use crate::block::container::ContainerBlock;
 use crate::{block::pumpkin_block::PumpkinBlock, server::Server};
 
 #[pumpkin_block("minecraft:furnace")]
@@ -22,49 +22,32 @@ impl PumpkinBlock for FurnaceBlock {
         _location: WorldPosition,
         server: &Server,
     ) {
-        self.open_furnace_screen(block, player, _location, server)
-            .await;
+        self.open(block, player, _location, server).await;
     }
 
     async fn on_use_with_item<'a>(
         &self,
         block: &Block,
         player: &Player,
-        _location: WorldPosition,
+        location: WorldPosition,
         _item: &Item,
         server: &Server,
     ) -> BlockActionResult {
-        self.open_furnace_screen(block, player, _location, server)
-            .await;
+        self.open(block, player, location, server).await;
         BlockActionResult::Consume
     }
 
     async fn on_broken<'a>(
         &self,
-        block: &Block,
+        _block: &Block,
         player: &Player,
         location: WorldPosition,
         server: &Server,
     ) {
-        super::standard_on_broken_with_container(block, player, location, server).await;
+        self.destroy(location, server, player).await;
     }
 }
 
-impl FurnaceBlock {
-    pub async fn open_furnace_screen(
-        &self,
-        block: &Block,
-        player: &Player,
-        location: WorldPosition,
-        server: &Server,
-    ) {
-        super::standard_open_container::<Furnace>(
-            block,
-            player,
-            location,
-            server,
-            WindowType::Furnace,
-        )
-        .await;
-    }
+impl ContainerBlock<Furnace> for FurnaceBlock {
+    const UNIQUE: bool = false;
 }

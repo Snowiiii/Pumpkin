@@ -1,22 +1,111 @@
 use crate::crafting::check_if_matches_crafting;
+use crate::player::PlayerInventory;
 use crate::{Container, WindowType};
 use pumpkin_core::math::position::WorldPosition;
 use pumpkin_world::block::block_registry::Block;
 use pumpkin_world::item::ItemStack;
+use rand::random;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use uuid::Uuid;
+
+#[derive(Default)]
+pub struct ContainerHolder {
+    pub containers_by_id: HashMap<usize, OpenContainer>,
+    pub location_to_container_id: HashMap<WorldPosition, usize>,
+}
+
+impl ContainerHolder {
+    pub async fn destroy(
+        &mut self,
+        id: usize,
+        player_inventory: &mut PlayerInventory,
+        carried_item: &mut Option<ItemStack>,
+    ) -> Vec<Uuid> {
+        if let Some(container) = self.containers_by_id.remove(&id) {
+            let unique = container.unique;
+            let players = container.players;
+            let mut container = container.container.lock().await;
+            container.destroy_container(player_inventory, carried_item, unique);
+            players
+        } else {
+            vec![]
+        }
+    }
+
+    pub async fn destroy_by_location(
+        &mut self,
+        location: &WorldPosition,
+        player_inventory: &mut PlayerInventory,
+        carried_item: &mut Option<ItemStack>,
+    ) -> Vec<Uuid> {
+        if let Some(id) = self.location_to_container_id.remove(location) {
+            self.destroy(id, player_inventory, carried_item).await
+        } else {
+            vec![]
+        }
+    }
+
+    pub fn get_by_location(&self, location: &WorldPosition) -> Option<&OpenContainer> {
+        self.containers_by_id
+            .get(self.location_to_container_id.get(location)?)
+    }
+
+    pub fn get_mut_by_location(&mut self, location: &WorldPosition) -> Option<&mut OpenContainer> {
+        self.containers_by_id
+            .get_mut(self.location_to_container_id.get(location)?)
+    }
+
+    pub fn new_by_location<C: Container + Default + 'static>(
+        &mut self,
+        location: WorldPosition,
+        block: Option<Block>,
+    ) -> Option<&mut OpenContainer> {
+        if self.location_to_container_id.contains_key(&location) {
+            return None;
+        }
+        let id = self.new_container::<C>(block, false);
+        self.location_to_container_id.insert(location, id);
+        self.containers_by_id.get_mut(&id)
+    }
+
+    pub fn new_container<C: Container + Default + 'static>(
+        &mut self,
+        block: Option<Block>,
+        unique: bool,
+    ) -> usize {
+        let mut id: usize = random();
+        let mut new_container = OpenContainer::new_empty_container::<C>(block, unique);
+        while let Some(container) = self.containers_by_id.insert(id, new_container) {
+            new_container = container;
+            id = random();
+        }
+        id
+    }
+
+    pub fn new_unique<C: Container + Default + 'static>(
+        &mut self,
+        block: Option<Block>,
+        player_id: Uuid,
+    ) -> usize {
+        let id = self.new_container::<C>(block, true);
+        let container = self.containers_by_id.get_mut(&id).expect("just created it");
+        container.players.push(player_id);
+        id
+    }
+}
 
 pub struct OpenContainer {
-    // TODO: unique id should be here
-    // TODO: should this be uuid?
-    players: Vec<i32>,
-    container: Arc<Mutex<Box<dyn Container>>>,
-    location: Option<WorldPosition>,
+    pub unique: bool,
     block: Option<Block>,
+    pub id: usize,
+    container: Arc<Mutex<Box<dyn Container>>>,
+    players: Vec<Uuid>,
 }
 
 impl OpenContainer {
-    pub fn try_open(&self, player_id: i32) -> Option<&Arc<Mutex<Box<dyn Container>>>> {
+    pub fn try_open(&self, player_id: Uuid) -> Option<&Arc<Mutex<Box<dyn Container>>>> {
         if !self.players.contains(&player_id) {
             log::debug!("couldn't open container");
             return None;
@@ -25,13 +114,13 @@ impl OpenContainer {
         Some(container)
     }
 
-    pub fn add_player(&mut self, player_id: i32) {
+    pub fn add_player(&mut self, player_id: Uuid) {
         if !self.players.contains(&player_id) {
             self.players.push(player_id);
         }
     }
 
-    pub fn remove_player(&mut self, player_id: i32) {
+    pub fn remove_player(&mut self, player_id: Uuid) {
         if let Some(index) = self.players.iter().enumerate().find_map(|(index, id)| {
             if *id == player_id {
                 Some(index)
@@ -44,52 +133,33 @@ impl OpenContainer {
     }
 
     pub fn new_empty_container<C: Container + Default + 'static>(
-        player_id: i32,
-        location: Option<WorldPosition>,
         block: Option<Block>,
+        unique: bool,
     ) -> Self {
         Self {
-            players: vec![player_id],
+            unique,
+            players: vec![],
             container: Arc::new(Mutex::new(Box::new(C::default()))),
-            location,
             block,
+            id: 0,
         }
-    }
-
-    pub fn is_location(&self, try_position: WorldPosition) -> bool {
-        if let Some(location) = self.location {
-            location == try_position
-        } else {
-            false
-        }
-    }
-
-    pub async fn clear_all_slots(&self) {
-        self.container.lock().await.clear_all_slots();
     }
 
     pub fn clear_all_players(&mut self) {
         self.players = vec![];
     }
 
-    pub fn all_player_ids(&self) -> Vec<i32> {
-        self.players.clone()
-    }
-
-    pub fn get_number_of_players(&self) -> usize {
-        self.players.len()
-    }
-
-    pub fn get_location(&self) -> Option<WorldPosition> {
-        self.location
-    }
-
-    pub async fn set_location(&mut self, location: Option<WorldPosition>) {
-        self.location = location;
+    pub fn all_player_ids(&self) -> &[Uuid] {
+        &self.players
     }
 
     pub fn get_block(&self) -> Option<Block> {
         self.block.clone()
+    }
+
+    pub async fn window_type(&self) -> &'static WindowType {
+        let container = self.container.lock().await;
+        container.window_type()
     }
 }
 #[derive(Default)]

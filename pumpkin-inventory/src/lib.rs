@@ -94,11 +94,18 @@ pub trait Container: Sync + Send {
 
     fn all_slots_ref(&self) -> Vec<Option<&ItemStack>>;
 
-    fn clear_all_slots(&mut self) {
-        let all_slots = self.all_slots();
-        for stack in all_slots {
-            *stack = None;
+    fn destroy_container(
+        &mut self,
+        player_inventory: &mut PlayerInventory,
+        carried_item: &mut Option<ItemStack>,
+        unique: bool,
+    ) {
+        if unique {
+            self.combine_container_with_player_inventory(player_inventory)
         }
+        // TODO: Add drop for these remaining things
+        self.all_slots().into_iter().for_each(|slot| *slot = None);
+        *carried_item = None;
     }
 
     fn all_combinable_slots(&self) -> Vec<Option<&ItemStack>> {
@@ -132,6 +139,44 @@ pub trait Container: Sync + Send {
     }
 
     fn recipe_used(&mut self) {}
+
+    fn combine_container_with_player_inventory(&mut self, player_inventory: &mut PlayerInventory) {
+        let slots = self
+            .all_slots()
+            .into_iter()
+            .filter_map(|slot| {
+                if let Some(stack) = slot {
+                    let stack = *stack;
+                    Some((slot, stack))
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        let mut receiving_slots = player_inventory
+            .slots_with_hotbar_first()
+            .collect::<Vec<_>>();
+
+        for (slot, stack) in slots {
+            let matches = receiving_slots.iter_mut().filter_map(|slot| {
+                if let Some(receiving_stack) = slot {
+                    if receiving_stack.item_id == stack.item_id {
+                        Some(receiving_stack)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            });
+            for receiving_slot in matches {
+                if slot.is_none() {
+                    break;
+                }
+                combine_stacks(slot, receiving_slot, MouseClick::Left);
+            }
+        }
+    }
 }
 
 pub struct EmptyContainer;

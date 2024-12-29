@@ -47,6 +47,7 @@ use tokio::{
     runtime::Handle,
     sync::{mpsc, RwLock},
 };
+use uuid::Uuid;
 use worldborder::Worldborder;
 
 pub mod bossbar;
@@ -595,7 +596,7 @@ impl World {
     }
 
     /// Gets a Player by entity id
-    pub async fn get_player_by_entityid(&self, id: EntityId) -> Option<Arc<Player>> {
+    pub async fn get_player_by_entity_id(&self, id: EntityId) -> Option<Arc<Player>> {
         for player in self.current_players.lock().await.values() {
             if player.entity_id() == id {
                 return Some(player.clone());
@@ -626,8 +627,8 @@ impl World {
     /// # Returns
     ///
     /// An `Option<Arc<Player>>` containing the player if found, or `None` if not.
-    pub async fn get_player_by_uuid(&self, id: uuid::Uuid) -> Option<Arc<Player>> {
-        return self.current_players.lock().await.get(&id).cloned();
+    pub async fn get_player_by_uuid(&self, id: Uuid) -> Option<Arc<Player>> {
+        self.current_players.lock().await.get(&id).cloned()
     }
 
     /// Gets a list of players who's location equals the given position in the world.

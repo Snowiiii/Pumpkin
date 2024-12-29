@@ -18,9 +18,10 @@ use pumpkin_protocol::server::play::SClickContainer;
 use pumpkin_world::item::item_registry::Item;
 use pumpkin_world::item::ItemStack;
 use std::sync::Arc;
+use uuid::Uuid;
 
 impl Player {
-    pub async fn open_container(&self, server: &Server, window_type: WindowType) {
+    pub async fn open_container(&self, server: &Server, window_type: &'static WindowType) {
         let mut inventory = self.inventory().lock().await;
         inventory.state_id = 0;
         inventory.total_opened_containers += 1;
@@ -38,7 +39,7 @@ impl Player {
         self.client
             .send_packet(&COpenScreen::new(
                 inventory.total_opened_containers.into(),
-                VarInt(window_type as i32),
+                VarInt(*window_type as i32),
                 title,
             ))
             .await;
@@ -454,14 +455,16 @@ impl Player {
     }
 
     async fn get_current_players_in_container(&self, server: &Server) -> Vec<Arc<Self>> {
-        let player_ids: Vec<i32> = {
+        let player_ids: Vec<Uuid> = {
             let open_containers = server.open_containers.read().await;
             open_containers
+                .containers_by_id
                 .get(&self.open_container.load().unwrap())
                 .unwrap()
                 .all_player_ids()
-                .into_iter()
-                .filter(|player_id| *player_id != self.entity_id())
+                .iter()
+                .filter(|&player_id| (*player_id != self.gameprofile.id))
+                .copied()
                 .collect()
         };
         let player_token = self.gameprofile.id;
@@ -481,7 +484,7 @@ impl Player {
                 if *token == player_token {
                     None
                 } else {
-                    let entity_id = player.entity_id();
+                    let entity_id = player.gameprofile.id;
                     player_ids.contains(&entity_id).then(|| player.clone())
                 }
             })
@@ -531,7 +534,7 @@ impl Player {
         server: &Server,
     ) -> Option<Arc<tokio::sync::Mutex<Box<dyn Container>>>> {
         match self.open_container.load() {
-            Some(id) => server.try_get_container(self.entity_id(), id).await,
+            Some(id) => server.try_get_container(self.gameprofile.id, id).await,
             None => None,
         }
     }

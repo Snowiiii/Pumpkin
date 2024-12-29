@@ -3,7 +3,6 @@ use crate::entity::player::Player;
 use crate::server::Server;
 use async_trait::async_trait;
 use pumpkin_core::math::position::WorldPosition;
-use pumpkin_inventory::OpenContainer;
 use pumpkin_world::block::block_registry::Block;
 use pumpkin_world::item::item_registry::Item;
 
@@ -54,13 +53,5 @@ pub trait PumpkinBlock: Send + Sync {
     ) {
     }
 
-    async fn on_close<'a>(
-        &self,
-        _block: &Block,
-        _player: &Player,
-        _location: WorldPosition,
-        _server: &Server,
-        _container: &mut OpenContainer,
-    ) {
-    }
+    async fn on_close<'a>(&self, _player: &Player, _location: WorldPosition, _server: &Server) {}
 }

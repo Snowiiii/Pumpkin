@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 pub mod block_manager;
 mod blocks;
+mod container;
 pub mod pumpkin_block;
 
 #[must_use]
