@@ -560,7 +560,7 @@ impl Player {
                     // so we shouldn't kick the player
                     return;
                 }
-                if (victim == self) {
+                if victim == self {
                     // this, however, can't be triggered from a non-modded client.
                     self.kick(TextComponent::text("You can't attack yourself")).await;
                     return;
