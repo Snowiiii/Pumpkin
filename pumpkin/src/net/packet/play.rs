@@ -686,7 +686,6 @@ impl Player {
                     // this, however, can't be triggered from a non-modded client.
                     self.kick(TextComponent::text("You can't attack yourself"))
                         .await;
-                    return;
                 }
             }
             ActionType::Interact | ActionType::InteractAt => {
