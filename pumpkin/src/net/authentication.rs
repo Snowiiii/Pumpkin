@@ -43,7 +43,7 @@ const MOJANG_PREVENT_PROXY_AUTHENTICATION_URL: &str = "https://sessionserver.moj
 /// 2. Mojang's servers verify the client's credentials and add the player to the their Servers
 /// 3. Now our server will send a Request to the Session servers and check if the Player has joined the Session Server .
 ///
-/// See <https://snowiiii.github.io/Pumpkin-Website/developer/authentication.html>
+/// See <https://pumpkinmc.org/developer/authentication.html>
 pub async fn authenticate(
     username: &str,
     server_hash: &str,

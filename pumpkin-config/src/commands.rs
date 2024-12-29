@@ -1,3 +1,4 @@
+use pumpkin_core::PermissionLvl;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
@@ -7,6 +8,8 @@ pub struct CommandsConfig {
     pub use_console: bool,
     /// Should be commands from players be logged in console?
     pub log_console: bool, // TODO: commands...
+    /// The op permission level of everyone that is not in the ops file
+    pub default_op_level: PermissionLvl,
 }
 
 impl Default for CommandsConfig {
@@ -14,6 +17,7 @@ impl Default for CommandsConfig {
         Self {
             use_console: true,
             log_console: true,
+            default_op_level: PermissionLvl::Zero,
         }
     }
 }

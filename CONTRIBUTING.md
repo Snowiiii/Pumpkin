@@ -27,7 +27,7 @@ There are several ways you can contribute to Pumpkin:
 
 ### Docs
 
-The Documentation of Pumpkin can be found at <https://snowiiii.github.io/Pumpkin/>
+The Documentation of Pumpkin can be found at <https://pumpkinmc.org/>
 
 **Tip: [typos](https://github.com/crate-ci/typos) is a great Project to detect and automatically fix typos
 

@@ -9,10 +9,9 @@ use crate::command::args::arg_rotation::RotationArgumentConsumer;
 use crate::command::args::ConsumedArgs;
 use crate::command::args::FindArg;
 use crate::command::tree::CommandTree;
-use crate::command::tree_builder::{argument, literal, require};
+use crate::command::tree_builder::{argument, literal};
 use crate::command::CommandError;
 use crate::command::{CommandExecutor, CommandSender};
-use pumpkin_core::permission::PermissionLvl;
 
 const NAMES: [&str; 2] = ["teleport", "tp"];
 const DESCRIPTION: &str = "Teleports entities, including players."; // todo
@@ -238,41 +237,37 @@ impl CommandExecutor for TpSelfToPosExecutor {
 }
 
 pub fn init_command_tree() -> CommandTree {
-    CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(|sender| sender.has_permission_lvl(PermissionLvl::Two))
-            .with_child(
-                argument(ARG_LOCATION, Position3DArgumentConsumer).execute(TpSelfToPosExecutor),
-            )
-            .with_child(
-                argument(ARG_DESTINATION, EntityArgumentConsumer).execute(TpSelfToEntityExecutor),
-            )
-            .with_child(
-                argument(ARG_TARGETS, EntitiesArgumentConsumer)
-                    .with_child(
-                        argument(ARG_LOCATION, Position3DArgumentConsumer)
-                            .execute(TpEntitiesToPosExecutor)
-                            .with_child(
-                                argument(ARG_ROTATION, RotationArgumentConsumer)
-                                    .execute(TpEntitiesToPosWithRotationExecutor),
-                            )
-                            .with_child(
-                                literal("facing")
-                                    .with_child(
-                                        literal("entity").with_child(
-                                            argument(ARG_FACING_ENTITY, EntityArgumentConsumer)
-                                                .execute(TpEntitiesToPosFacingEntityExecutor),
-                                        ),
-                                    )
-                                    .with_child(
-                                        argument(ARG_FACING_LOCATION, Position3DArgumentConsumer)
-                                            .execute(TpEntitiesToPosFacingPosExecutor),
+    CommandTree::new(NAMES, DESCRIPTION)
+        .with_child(argument(ARG_LOCATION, Position3DArgumentConsumer).execute(TpSelfToPosExecutor))
+        .with_child(
+            argument(ARG_DESTINATION, EntityArgumentConsumer).execute(TpSelfToEntityExecutor),
+        )
+        .with_child(
+            argument(ARG_TARGETS, EntitiesArgumentConsumer)
+                .with_child(
+                    argument(ARG_LOCATION, Position3DArgumentConsumer)
+                        .execute(TpEntitiesToPosExecutor)
+                        .with_child(
+                            argument(ARG_ROTATION, RotationArgumentConsumer)
+                                .execute(TpEntitiesToPosWithRotationExecutor),
+                        )
+                        .with_child(
+                            literal("facing")
+                                .with_child(
+                                    literal("entity").with_child(
+                                        argument(ARG_FACING_ENTITY, EntityArgumentConsumer)
+                                            .execute(TpEntitiesToPosFacingEntityExecutor),
                                     ),
-                            ),
-                    )
-                    .with_child(
-                        argument(ARG_DESTINATION, EntityArgumentConsumer)
-                            .execute(TpEntitiesToEntityExecutor),
-                    ),
-            ),
-    )
+                                )
+                                .with_child(
+                                    argument(ARG_FACING_LOCATION, Position3DArgumentConsumer)
+                                        .execute(TpEntitiesToPosFacingPosExecutor),
+                                ),
+                        ),
+                )
+                .with_child(
+                    argument(ARG_DESTINATION, EntityArgumentConsumer)
+                        .execute(TpEntitiesToEntityExecutor),
+                ),
+        )
 }

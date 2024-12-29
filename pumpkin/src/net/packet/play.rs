@@ -20,8 +20,10 @@ use pumpkin_core::{
     GameMode,
 };
 use pumpkin_entity::entity_type::EntityType;
+use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_inventory::InventoryError;
-use pumpkin_protocol::client::play::CSpawnEntity;
+use pumpkin_protocol::client::play::{CSetContainerSlot, CSetHeldItem, CSpawnEntity};
+use pumpkin_protocol::codec::slot::Slot;
 use pumpkin_protocol::codec::var_int::VarInt;
 use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
 use pumpkin_protocol::{
@@ -35,13 +37,14 @@ use pumpkin_protocol::{
     },
     server::play::{
         Action, ActionType, SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay,
-        SConfirmTeleport, SInteract, SPlayPingRequest, SPlayerAbilities, SPlayerAction,
-        SPlayerCommand, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
-        SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status,
+        SConfirmTeleport, SInteract, SPickItemFromBlock, SPickItemFromEntity, SPlayPingRequest,
+        SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerPosition, SPlayerPositionRotation,
+        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSwingArm, SUseItemOn, Status,
     },
 };
 use pumpkin_world::block::block_registry::Block;
 use pumpkin_world::item::item_registry::get_item_by_id;
+use pumpkin_world::item::ItemStack;
 use pumpkin_world::{
     block::{block_registry::get_block_by_item, BlockFace},
     entity::entity_registry::get_entity_id,
@@ -318,6 +321,101 @@ impl Player {
             .store(ground.on_ground, std::sync::atomic::Ordering::Relaxed);
     }
 
+    async fn update_single_slot(
+        &self,
+        inventory: &mut tokio::sync::MutexGuard<'_, PlayerInventory>,
+        slot: usize,
+        slot_data: Slot,
+    ) {
+        inventory.state_id += 1;
+        let dest_packet = CSetContainerSlot::new(0, inventory.state_id as i32, slot, &slot_data);
+        self.client.send_packet(&dest_packet).await;
+
+        if inventory
+            .set_slot(slot, slot_data.to_item(), false)
+            .is_err()
+        {
+            log::error!("Pick item set slot error!");
+        }
+    }
+
+    pub async fn handle_pick_item_from_block(&self, pick_item: SPickItemFromBlock) {
+        if !self.can_interact_with_block_at(&pick_item.pos, 1.0) {
+            return;
+        }
+
+        let Ok(block) = self.world().get_block(pick_item.pos).await else {
+            return;
+        };
+
+        if block.item_id == 0 {
+            // Invalid block id (blocks such as tall seagrass)
+            return;
+        }
+
+        let mut inventory = self.inventory().lock().await;
+
+        let source_slot = inventory.get_slot_with_item(block.item_id);
+        let mut dest_slot = inventory.get_pick_item_hotbar_slot();
+
+        let dest_slot_data = match inventory.get_slot(dest_slot + 36) {
+            Ok(Some(stack)) => Slot::from(&*stack),
+            _ => Slot::from(None),
+        };
+
+        // Early return if no source slot and not in creative mode
+        if source_slot.is_none() && self.gamemode.load() != GameMode::Creative {
+            return;
+        }
+
+        match source_slot {
+            Some(slot_index) if (36..=44).contains(&slot_index) => {
+                // Case where item is in hotbar
+                dest_slot = slot_index - 36;
+            }
+            Some(slot_index) => {
+                // Case where item is in inventory
+
+                // Update destination slot
+                let source_slot_data = match inventory.get_slot(slot_index) {
+                    Ok(Some(stack)) => Slot::from(&*stack),
+                    _ => return,
+                };
+                self.update_single_slot(&mut inventory, dest_slot + 36, source_slot_data)
+                    .await;
+
+                // Update source slot
+                self.update_single_slot(&mut inventory, slot_index, dest_slot_data)
+                    .await;
+            }
+            None if self.gamemode.load() == GameMode::Creative => {
+                // Case where item is not present, if in creative mode create the item
+                let item_stack = ItemStack::new(1, block.item_id);
+                let slot_data = Slot::from(&item_stack);
+                self.update_single_slot(&mut inventory, dest_slot + 36, slot_data)
+                    .await;
+
+                // Check if there is any empty slot in the player inventory
+                if let Some(slot_index) = inventory.get_empty_slot() {
+                    inventory.state_id += 1;
+                    self.update_single_slot(&mut inventory, slot_index, dest_slot_data)
+                        .await;
+                }
+            }
+            _ => return,
+        }
+
+        // Update held item
+        inventory.set_selected(dest_slot);
+        self.client
+            .send_packet(&CSetHeldItem::new(dest_slot as i8))
+            .await;
+    }
+
+    pub fn handle_pick_item_from_entity(&self, _pick_item: SPickItemFromEntity) {
+        // TODO: Implement and merge any redundant code with pick_item_from_block
+    }
+
     pub async fn handle_player_command(&self, command: SPlayerCommand) {
         if command.entity_id != self.entity_id().into() {
             return;
@@ -583,6 +681,13 @@ impl Player {
                         .await;
                     return;
                 };
+
+                if entity_id.0 == self.entity_id() {
+                    // this, however, can't be triggered from a non-modded client.
+                    self.kick(TextComponent::text("You can't attack yourself"))
+                        .await;
+                    return;
+                }
             }
             ActionType::Interact | ActionType::InteractAt => {
                 log::debug!("todo");
