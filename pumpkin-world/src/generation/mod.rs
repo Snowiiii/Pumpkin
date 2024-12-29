@@ -8,6 +8,7 @@ mod generator;
 mod generic_generator;
 pub mod height_limit;
 mod implementation;
+pub mod multi_noise_sampler;
 pub mod noise;
 pub mod ore_sampler;
 mod positions;
