@@ -2,14 +2,13 @@ use crate::{
     command::{
         args::{arg_players::PlayersArgumentConsumer, Arg, ConsumedArgs},
         tree::CommandTree,
-        tree_builder::{argument, require},
+        tree_builder::argument,
         CommandError, CommandExecutor, CommandSender,
     },
     data::{op_data::OPERATOR_CONFIG, SaveJSONConfiguration},
 };
 use async_trait::async_trait;
 use pumpkin_config::{op::Op, BASIC_CONFIG};
-use pumpkin_core::permission::PermissionLvl;
 use pumpkin_core::text::TextComponent;
 use CommandError::InvalidConsumption;
 
@@ -73,8 +72,6 @@ impl CommandExecutor for OpExecutor {
 }
 
 pub fn init_command_tree() -> CommandTree {
-    CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(|sender| sender.has_permission_lvl(PermissionLvl::Three))
-            .with_child(argument(ARG_TARGET, PlayersArgumentConsumer).execute(OpExecutor)),
-    )
+    CommandTree::new(NAMES, DESCRIPTION)
+        .with_child(argument(ARG_TARGET, PlayersArgumentConsumer).execute(OpExecutor))
 }
