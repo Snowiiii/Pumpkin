@@ -133,11 +133,12 @@ impl Player {
         entity_id: EntityId,
         gamemode: GameMode,
     ) -> Self {
+        let player_uuid = uuid::Uuid::new_v4();
         let gameprofile = client.gameprofile.lock().await.clone().map_or_else(
             || {
                 log::error!("Client {} has no game profile!", client.id);
                 GameProfile {
-                    id: uuid::Uuid::new_v4(),
+                    id: player_uuid,
                     name: String::new(),
                     properties: vec![],
                     profile_actions: None,
@@ -157,6 +158,7 @@ impl Player {
             living_entity: LivingEntity::new_with_container(
                 Entity::new(
                     entity_id,
+                    player_uuid,
                     world,
                     EntityType::Player,
                     1.62,

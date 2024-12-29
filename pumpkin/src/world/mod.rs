@@ -5,7 +5,7 @@ pub mod player_chunker;
 
 use crate::{
     command::client_cmd_suggestions,
-    entity::{player::Player, Entity},
+    entity::{living::LivingEntity, player::Player, Entity},
     error::PumpkinError,
     server::Server,
 };
@@ -14,7 +14,7 @@ use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
-use pumpkin_entity::{entity_type::EntityType, EntityId};
+use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
 use pumpkin_protocol::{
     client::play::CLevelEvent,
     codec::{identifier::Identifier, var_int::VarInt},
@@ -102,6 +102,8 @@ pub struct World {
     pub level_time: Mutex<LevelTime>,
     /// The type of dimension the world is in
     pub dimension_type: DimensionType,
+    /// A map of active entities within the world, keyed by their unique UUID.
+    pub current_living_entities: Arc<Mutex<HashMap<uuid::Uuid, Arc<LivingEntity>>>>,
     // TODO: entities
 }
 
@@ -115,6 +117,7 @@ impl World {
             worldborder: Mutex::new(Worldborder::new(0.0, 0.0, 29_999_984.0, 0, 0, 0)),
             level_time: Mutex::new(LevelTime::new()),
             dimension_type,
+            current_living_entities: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -604,6 +607,16 @@ impl World {
         None
     }
 
+    /// Gets a Living Entity by entity id
+    pub async fn get_living_entity_by_entityid(&self, id: EntityId) -> Option<Arc<LivingEntity>> {
+        for living_entity in self.current_living_entities.lock().await.values() {
+            if living_entity.entity_id() == id {
+                return Some(living_entity.clone());
+            }
+        }
+        None
+    }
+
     /// Gets a Player by username
     pub async fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
         for player in self.current_players.lock().await.values() {
@@ -757,6 +770,31 @@ impl World {
             player.send_system_message(&disconn_msg_cmp).await;
         }
         log::info!("{}", disconn_msg_cmp.to_pretty_console());
+    }
+
+    /// Adds a living entity to the world.
+    ///
+    /// This function takes a living entity's UUID and an `Arc<LivingEntity>` reference.
+    /// It inserts the living entity into the world's `current_living_entities` map using the UUID as the key.
+    ///
+    /// # Arguments
+    ///
+    /// * `uuid`: The unique UUID of the living entity to add.
+    /// * `living_entity`: A `Arc<LivingEntity>` reference to the living entity object.
+    pub async fn add_living_entity(&self, uuid: uuid::Uuid, living_entity: Arc<LivingEntity>) {
+        let mut current_living_entities = self.current_living_entities.lock().await;
+        current_living_entities.insert(uuid, living_entity);
+    }
+
+    pub async fn remove_living_entity(living_entity: Arc<LivingEntity>, world: Arc<Self>) {
+        let mut current_living_entities = world.current_living_entities.lock().await.clone();
+        // TODO: does this work with collisions?
+        living_entity.entity.set_pose(EntityPose::Dying).await;
+        tokio::spawn(async move {
+            tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+            world.remove_entity(&living_entity.entity).await;
+            current_living_entities.remove(&living_entity.entity.entity_uuid);
+        });
     }
 
     pub async fn remove_entity(&self, entity: &Entity) {

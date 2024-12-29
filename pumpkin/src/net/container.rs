@@ -200,6 +200,22 @@ impl Player {
         Ok(())
     }
 
+    pub async fn handle_decrease_item(
+        &self,
+        _server: &Server,
+        slot_index: usize,
+        item_stack: Option<&ItemStack>,
+        state_id: &mut u32,
+    ) -> Result<(), InventoryError> {
+        // TODO: this will not update hotbar when server admin is peeking
+        // TODO: check and iterate over all players in player inventory
+        let slot = Slot::from(item_stack);
+        *state_id += 1;
+        let packet = CSetContainerSlot::new(0, *state_id as i32, slot_index, &slot);
+        self.client.send_packet(&packet).await;
+        Ok(())
+    }
+
     async fn match_click_behaviour(
         &self,
         opened_container: Option<&mut Box<dyn Container>>,
