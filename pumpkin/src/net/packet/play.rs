@@ -562,7 +562,8 @@ impl Player {
                 }
                 if victim.entity_id() == self.entity_id() {
                     // this, however, can't be triggered from a non-modded client.
-                    self.kick(TextComponent::text("You can't attack yourself")).await;
+                    self.kick(TextComponent::text("You can't attack yourself"))
+                        .await;
                     return;
                 }
                 self.attack(&victim).await;
