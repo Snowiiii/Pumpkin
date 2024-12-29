@@ -38,4 +38,3 @@ impl CommandExecutor for StopExecutor {
 pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).execute(StopExecutor)
 }
-

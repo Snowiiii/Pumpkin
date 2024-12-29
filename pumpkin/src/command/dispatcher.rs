@@ -1,11 +1,11 @@
-use pumpkin_core::text::TextComponent;
 use pumpkin_core::permission::PermissionLvl;
+use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::client::play::CommandSuggestion;
 
 use super::args::ConsumedArgs;
 
 use crate::command::dispatcher::CommandError::{
-    GeneralCommandIssue, InvalidConsumption, InvalidRequirement, PermissionDenied, OtherPumpkin,
+    GeneralCommandIssue, InvalidConsumption, InvalidRequirement, OtherPumpkin, PermissionDenied,
 };
 use crate::command::tree::{Command, CommandTree, NodeType, RawArgs};
 use crate::command::CommandSender;
@@ -304,7 +304,8 @@ impl CommandDispatcher {
                 .insert(name.to_string(), Command::Alias(primary_name.to_string()));
         }
 
-        self.permissions.insert(primary_name.to_string(), permission);
+        self.permissions
+            .insert(primary_name.to_string(), permission);
         self.commands
             .insert(primary_name.to_string(), Command::Tree(tree));
     }

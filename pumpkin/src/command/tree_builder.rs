@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
+use super::args::DefaultNameArgConsumer;
+use super::CommandExecutor;
 use crate::command::args::ArgumentConsumer;
 use crate::command::tree::{CommandTree, Node, NodeType};
 use crate::command::CommandSender;
-use super::args::DefaultNameArgConsumer;
-use super::CommandExecutor;
 
 impl CommandTree {
     /// Add a child [Node] to the root of this [`CommandTree`].

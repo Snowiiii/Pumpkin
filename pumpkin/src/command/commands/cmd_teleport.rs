@@ -238,9 +238,7 @@ impl CommandExecutor for TpSelfToPosExecutor {
 
 pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION)
-        .with_child(
-            argument(ARG_LOCATION, Position3DArgumentConsumer).execute(TpSelfToPosExecutor),
-        )
+        .with_child(argument(ARG_LOCATION, Position3DArgumentConsumer).execute(TpSelfToPosExecutor))
         .with_child(
             argument(ARG_DESTINATION, EntityArgumentConsumer).execute(TpSelfToEntityExecutor),
         )

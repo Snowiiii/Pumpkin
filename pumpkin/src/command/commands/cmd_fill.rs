@@ -155,18 +155,17 @@ impl CommandExecutor for SetblockExecutor {
 }
 
 pub fn init_command_tree() -> CommandTree {
-    CommandTree::new(NAMES, DESCRIPTION)
-        .with_child(
-            argument(ARG_FROM, BlockPosArgumentConsumer).with_child(
-                argument(ARG_TO, BlockPosArgumentConsumer).with_child(
-                    argument(ARG_BLOCK, BlockArgumentConsumer)
-                        .with_child(literal("destroy").execute(SetblockExecutor(Mode::Destroy)))
-                        .with_child(literal("hollow").execute(SetblockExecutor(Mode::Hollow)))
-                        .with_child(literal("keep").execute(SetblockExecutor(Mode::Keep)))
-                        .with_child(literal("outline").execute(SetblockExecutor(Mode::Outline)))
-                        .with_child(literal("replace").execute(SetblockExecutor(Mode::Replace)))
-                        .execute(SetblockExecutor(Mode::Replace)),
-                ),
+    CommandTree::new(NAMES, DESCRIPTION).with_child(
+        argument(ARG_FROM, BlockPosArgumentConsumer).with_child(
+            argument(ARG_TO, BlockPosArgumentConsumer).with_child(
+                argument(ARG_BLOCK, BlockArgumentConsumer)
+                    .with_child(literal("destroy").execute(SetblockExecutor(Mode::Destroy)))
+                    .with_child(literal("hollow").execute(SetblockExecutor(Mode::Hollow)))
+                    .with_child(literal("keep").execute(SetblockExecutor(Mode::Keep)))
+                    .with_child(literal("outline").execute(SetblockExecutor(Mode::Outline)))
+                    .with_child(literal("replace").execute(SetblockExecutor(Mode::Replace)))
+                    .execute(SetblockExecutor(Mode::Replace)),
             ),
-        )
+        ),
+    )
 }

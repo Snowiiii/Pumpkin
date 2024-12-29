@@ -6,8 +6,7 @@ use crate::command::args::arg_bounded_num::BoundedNumArgumentConsumer;
 use crate::command::args::FindArgDefaultName;
 use crate::command::tree_builder::{argument_default_name, literal};
 use crate::command::{
-    tree::CommandTree, CommandError, CommandExecutor, CommandSender,
-    ConsumedArgs,
+    tree::CommandTree, CommandError, CommandExecutor, CommandSender, ConsumedArgs,
 };
 
 const NAMES: [&str; 1] = ["time"];
@@ -125,16 +124,20 @@ impl CommandExecutor for TimeChangeExecutor {
 
 pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION)
-        .with_child(literal("add").with_child(
-            argument_default_name(arg_number()).execute(TimeChangeExecutor(Mode::Add)),
-        ))
+        .with_child(
+            literal("add").with_child(
+                argument_default_name(arg_number()).execute(TimeChangeExecutor(Mode::Add)),
+            ),
+        )
         .with_child(
             literal("query")
                 .with_child(literal("daytime").execute(TimeQueryExecutor(QueryMode::DayTime)))
                 .with_child(literal("gametime").execute(TimeQueryExecutor(QueryMode::GameTime)))
                 .with_child(literal("day").execute(TimeQueryExecutor(QueryMode::Day))),
         )
-        .with_child(literal("set").with_child(
-            argument_default_name(arg_number()).execute(TimeChangeExecutor(Mode::Set)),
-        ))
+        .with_child(
+            literal("set").with_child(
+                argument_default_name(arg_number()).execute(TimeChangeExecutor(Mode::Set)),
+            ),
+        )
 }

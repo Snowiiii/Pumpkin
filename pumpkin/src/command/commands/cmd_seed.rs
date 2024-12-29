@@ -53,6 +53,5 @@ impl CommandExecutor for PumpkinExecutor {
 }
 
 pub fn init_command_tree() -> CommandTree {
-    CommandTree::new(NAMES, DESCRIPTION)
-        .execute(PumpkinExecutor)
+    CommandTree::new(NAMES, DESCRIPTION).execute(PumpkinExecutor)
 }
