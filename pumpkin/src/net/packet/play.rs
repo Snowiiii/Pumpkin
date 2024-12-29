@@ -556,8 +556,14 @@ impl Player {
                     return;
                 };
                 if victim.living_entity.health.load() <= 0.0 {
-                    // you can trigger this from a non-modded / innocent client client,
+                    // you can trigger this from a non-modded / innocent client,
                     // so we shouldn't kick the player
+                    return;
+                }
+                if victim.entity_id() == self.entity_id() {
+                    // this, however, can't be triggered from a non-modded client.
+                    self.kick(TextComponent::text("You can't attack yourself"))
+                        .await;
                     return;
                 }
                 self.attack(&victim).await;
