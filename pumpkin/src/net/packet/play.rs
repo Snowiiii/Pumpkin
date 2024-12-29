@@ -341,6 +341,11 @@ impl Player {
             return;
         };
 
+        if block.item_id == 0 {
+            // Invalid block id (blocks such as tall seagrass)
+            return;
+        }
+
         let mut inventory = self.inventory().lock().await;
 
         let source_slot = inventory.get_slot_with_item(block.item_id);
@@ -357,7 +362,11 @@ impl Player {
         }
 
         match source_slot {
-            Some(slot_index) if !(slot_index > 36 && slot_index <= 44) => {
+            Some(slot_index) if (36..=44).contains(&slot_index) => {
+                // Case where item is in hotbar
+                dest_slot = slot_index - 36;
+            }
+            Some(slot_index) => {
                 // Case where item is in inventory
 
                 // Update destination slot
@@ -371,10 +380,6 @@ impl Player {
                 // Update source slot
                 self.update_single_slot(&mut inventory, slot_index, dest_slot_data)
                     .await;
-            }
-            Some(slot_index) => {
-                // Case where item is in hotbar
-                dest_slot = slot_index - 36;
             }
             None if self.gamemode.load() == GameMode::Creative => {
                 // Case where item is not present, if in creative mode create the item
