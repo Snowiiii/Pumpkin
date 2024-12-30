@@ -2,26 +2,20 @@ use std::{collections::HashMap, sync::LazyLock};
 
 use proc_macro::TokenStream;
 use quote::quote;
-use serde::Deserialize;
 
-#[derive(Deserialize)]
-pub struct Particle {
-    name: String,
-    id: u16,
-}
-
-static SOUNDS: LazyLock<HashMap<String, u16>> = LazyLock::new(|| {
-    serde_json::from_str::<Vec<Particle>>(include_str!("../../assets/particles.json"))
-        .expect("Could not parse particles.json registry.")
+static PARTICLES: LazyLock<HashMap<String, u16>> = LazyLock::new(|| {
+    serde_json::from_str::<Vec<String>>(include_str!("../../assets/particles.json"))
+        .expect("Could not parse particles.json registry")
         .into_iter()
-        .map(|val| (val.name, val.id))
+        .enumerate()
+        .map(|(i, s)| (s, i as u16))
         .collect()
 });
 
 pub(crate) fn particle_impl(item: TokenStream) -> TokenStream {
     let input_string = item.to_string();
-    let sound_name = input_string.trim_matches('"');
+    let particle_name = input_string.trim_matches('"');
 
-    let id = SOUNDS.get(sound_name).expect("Invalid particle");
+    let id = *PARTICLES.get(particle_name).expect("Invalid Particle");
     quote! { #id }.into()
 }

@@ -7,7 +7,7 @@ trait IsVisible {
     fn is_visible(&self) -> bool;
 }
 
-impl<'a> IsVisible for Node<'a> {
+impl IsVisible for Node {
     fn is_visible(&self) -> bool {
         matches!(
             self.node_type,
@@ -16,9 +16,9 @@ impl<'a> IsVisible for Node<'a> {
     }
 }
 
-impl<'a> Display for Node<'a> {
+impl Display for Node {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self.node_type {
+        match &self.node_type {
             NodeType::Literal { string } => {
                 f.write_str(string)?;
             }
@@ -50,10 +50,10 @@ fn flatten_require_nodes(nodes: &[Node], children: &[usize]) -> Vec<usize> {
     new_children
 }
 
-impl<'a> Display for CommandTree<'a> {
+impl Display for CommandTree {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_char('/')?;
-        f.write_str(self.names[0])?;
+        f.write_str(&self.names[0])?;
 
         let mut todo = VecDeque::<&[usize]>::with_capacity(self.children.len());
         todo.push_back(&self.children);
@@ -105,7 +105,7 @@ impl<'a> Display for CommandTree<'a> {
                     }
 
                     for node in iter {
-                        f.write_char('|')?;
+                        f.write_str(" | ")?;
                         node.fmt(f)?;
                     }
 

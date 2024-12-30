@@ -2,7 +2,7 @@ use colored::{ColoredString, Colorize};
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// Text color
-#[derive(Default, Debug, Clone, Copy, Serialize)]
+#[derive(Default, Debug, Clone, Copy, Serialize, PartialEq, Eq, Hash)]
 #[serde(untagged)]
 pub enum Color {
     /// The default color for the text will be used, which varies by context
@@ -11,7 +11,7 @@ pub enum Color {
     #[default]
     Reset,
     /// RGB Color
-    Rgb(u32),
+    Rgb(RGBColor),
     /// One of the 16 named Minecraft colors
     Named(NamedColor),
 }
@@ -25,10 +25,21 @@ impl<'de> Deserialize<'de> for Color {
 
         if s == "reset" {
             Ok(Color::Reset)
-        } else if s.starts_with('#') {
-            let rgb = u32::from_str_radix(&s.replace("#", ""), 16)
-                .map_err(|_| serde::de::Error::custom("Invalid hex color"))?;
-            Ok(Color::Rgb(rgb))
+        } else if let Some(hex) = s.strip_prefix('#') {
+            if s.len() != 7 {
+                return Err(serde::de::Error::custom(
+                    "Hex color must be in the format '#RRGGBB'",
+                ));
+            }
+
+            let r = u8::from_str_radix(&hex[0..2], 16)
+                .map_err(|_| serde::de::Error::custom("Invalid red component in hex color"))?;
+            let g = u8::from_str_radix(&hex[2..4], 16)
+                .map_err(|_| serde::de::Error::custom("Invalid green component in hex color"))?;
+            let b = u8::from_str_radix(&hex[4..6], 16)
+                .map_err(|_| serde::de::Error::custom("Invalid blue component in hex color"))?;
+
+            return Ok(Color::Rgb(RGBColor::new(r, g, b)));
         } else {
             Ok(Color::Named(NamedColor::try_from(s.as_str()).map_err(
                 |_| serde::de::Error::custom("Invalid named color"),
@@ -59,8 +70,62 @@ impl Color {
                 NamedColor::Yellow => text.bright_yellow(),
                 NamedColor::White => text.white(),
             },
-            Color::Rgb(_) => todo!(),
+            // TODO: Check if terminal supports true color
+            Color::Rgb(color) => text.truecolor(color.red, color.green, color.blue),
         }
+    }
+}
+
+#[derive(Debug, Deserialize, Clone, Copy, Eq, Hash, PartialEq)]
+pub struct RGBColor {
+    red: u8,
+    green: u8,
+    blue: u8,
+}
+
+impl RGBColor {
+    pub fn new(red: u8, green: u8, blue: u8) -> Self {
+        RGBColor { red, green, blue }
+    }
+}
+
+impl Serialize for RGBColor {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&format!(
+            "#{:02X}{:02X}{:02X}",
+            self.red, self.green, self.blue
+        ))
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq, Deserialize)]
+pub struct ARGBColor {
+    alpha: u8,
+    red: u8,
+    green: u8,
+    blue: u8,
+}
+
+impl ARGBColor {
+    pub fn new(alpha: u8, red: u8, green: u8, blue: u8) -> Self {
+        ARGBColor {
+            alpha,
+            red,
+            green,
+            blue,
+        }
+    }
+}
+
+impl Serialize for ARGBColor {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_bytes([self.alpha, self.red, self.green, self.blue].as_ref())
     }
 }
 

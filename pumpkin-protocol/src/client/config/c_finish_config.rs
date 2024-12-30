@@ -1,7 +1,7 @@
 use pumpkin_macros::client_packet;
 
 #[derive(serde::Serialize)]
-#[client_packet("configuration:finish_configuration")]
+#[client_packet("config:finish_configuration")]
 pub struct CFinishConfig {}
 
 impl Default for CFinishConfig {

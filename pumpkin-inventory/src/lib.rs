@@ -5,6 +5,7 @@ use pumpkin_macros::screen;
 use pumpkin_world::item::ItemStack;
 
 pub mod container_click;
+mod crafting;
 pub mod drag_handler;
 mod error;
 mod open_container;
@@ -12,47 +13,46 @@ pub mod player;
 pub mod window_property;
 
 pub use error::InventoryError;
-pub use open_container::OpenContainer;
+pub use open_container::*;
 
-/// https://wiki.vg/Inventory
 #[derive(Debug, FromPrimitive, Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
 pub enum WindowType {
     // not used
-    Generic9x1 = screen!("minecraft:generic_9x1"),
+    Generic9x1 = screen!("generic_9x1"),
     // not used
-    Generic9x2 = screen!("minecraft:generic_9x2"),
+    Generic9x2 = screen!("generic_9x2"),
     // General-purpose 3-row inventory. Used by Chest, minecart with chest, ender chest, and barrel
-    Generic9x3 = screen!("minecraft:generic_9x3"),
+    Generic9x3 = screen!("generic_9x3"),
     // not used
-    Generic9x4 = screen!("minecraft:generic_9x4"),
+    Generic9x4 = screen!("generic_9x4"),
     // not used
-    Generic9x5 = screen!("minecraft:generic_9x5"),
+    Generic9x5 = screen!("generic_9x5"),
     // Used by large chests
-    Generic9x6 = screen!("minecraft:generic_9x6"),
+    Generic9x6 = screen!("generic_9x6"),
     // General-purpose 3-by-3 square inventory, used by Dispenser and Dropper
-    Generic3x3 = screen!("minecraft:generic_3x3"),
+    Generic3x3 = screen!("generic_3x3"),
     // General-purpose 3-by-3 square inventory, used by the Crafter
-    Craft3x3 = screen!("minecraft:crafter_3x3"),
-    Anvil = screen!("minecraft:anvil"),
-    Beacon = screen!("minecraft:beacon"),
-    BlastFurnace = screen!("minecraft:blast_furnace"),
-    BrewingStand = screen!("minecraft:brewing_stand"),
-    CraftingTable = screen!("minecraft:crafting"),
-    EnchantmentTable = screen!("minecraft:enchantment"),
-    Furnace = screen!("minecraft:furnace"),
-    Grindstone = screen!("minecraft:grindstone"),
+    Craft3x3 = screen!("crafter_3x3"),
+    Anvil = screen!("anvil"),
+    Beacon = screen!("beacon"),
+    BlastFurnace = screen!("blast_furnace"),
+    BrewingStand = screen!("brewing_stand"),
+    CraftingTable = screen!("crafting"),
+    EnchantmentTable = screen!("enchantment"),
+    Furnace = screen!("furnace"),
+    Grindstone = screen!("grindstone"),
     // Hopper or minecart with hopper
-    Hopper = screen!("minecraft:hopper"),
-    Lectern = screen!("minecraft:lectern"),
-    Loom = screen!("minecraft:loom"),
+    Hopper = screen!("hopper"),
+    Lectern = screen!("lectern"),
+    Loom = screen!("loom"),
     // Villager, Wandering Trader
-    Merchant = screen!("minecraft:merchant"),
-    ShulkerBox = screen!("minecraft:shulker_box"),
-    SmithingTable = screen!("minecraft:smithing"),
-    Smoker = screen!("minecraft:smoker"),
-    CartographyTable = screen!("minecraft:cartography_table"),
-    Stonecutter = screen!("minecraft:stonecutter"),
+    Merchant = screen!("merchant"),
+    ShulkerBox = screen!("shulker_box"),
+    SmithingTable = screen!("smithing"),
+    Smoker = screen!("smoker"),
+    CartographyTable = screen!("cartography_table"),
+    Stonecutter = screen!("stonecutter"),
 }
 pub struct ContainerStruct<const SLOTS: usize>([Option<ItemStack>; SLOTS]);
 
@@ -67,18 +67,39 @@ pub trait Container: Sync + Send {
         carried_item: &mut Option<ItemStack>,
         slot: usize,
         mouse_click: MouseClick,
+        taking_crafted: bool,
     ) -> Result<(), InventoryError> {
         let mut all_slots = self.all_slots();
         if slot > all_slots.len() {
             Err(InventoryError::InvalidSlot)?
         }
+        if taking_crafted {
+            match (all_slots[slot].as_mut(), carried_item.as_mut()) {
+                (Some(s1), Some(s2)) => {
+                    if s1.item_id == s2.item_id {
+                        handle_item_change(all_slots[slot], carried_item, mouse_click);
+                    }
+                }
+                (Some(_), None) => handle_item_change(all_slots[slot], carried_item, mouse_click),
+                (None, None) | (None, Some(_)) => (),
+            }
+            return Ok(());
+        }
         handle_item_change(carried_item, all_slots[slot], mouse_click);
+
         Ok(())
     }
 
     fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>>;
 
     fn all_slots_ref(&self) -> Vec<Option<&ItemStack>>;
+
+    fn clear_all_slots(&mut self) {
+        let all_slots = self.all_slots();
+        for stack in all_slots {
+            *stack = None;
+        }
+    }
 
     fn all_combinable_slots(&self) -> Vec<Option<&ItemStack>> {
         self.all_slots_ref()
@@ -90,6 +111,54 @@ pub trait Container: Sync + Send {
 
     fn internal_pumpkin_id(&self) -> u64 {
         0
+    }
+
+    fn craft(&mut self) -> bool {
+        false
+    }
+
+    fn crafting_output_slot(&self) -> Option<usize> {
+        None
+    }
+
+    fn slot_in_crafting_input_slots(&self, _slot: &usize) -> bool {
+        false
+    }
+
+    fn crafted_item_slot(&self) -> Option<ItemStack> {
+        self.all_slots_ref()
+            .get(self.crafting_output_slot()?)?
+            .copied()
+    }
+
+    fn recipe_used(&mut self) {}
+}
+
+pub struct EmptyContainer;
+
+impl Container for EmptyContainer {
+    fn window_type(&self) -> &'static WindowType {
+        unreachable!(
+            "you should never be able to get here because this type is always wrapped in an option"
+        );
+    }
+
+    fn window_name(&self) -> &'static str {
+        unreachable!(
+            "you should never be able to get here because this type is always wrapped in an option"
+        );
+    }
+
+    fn all_slots(&mut self) -> Vec<&mut Option<ItemStack>> {
+        unreachable!(
+            "you should never be able to get here because this type is always wrapped in an option"
+        );
+    }
+
+    fn all_slots_ref(&self) -> Vec<Option<&ItemStack>> {
+        unreachable!(
+            "you should never be able to get here because this type is always wrapped in an option"
+        );
     }
 }
 
@@ -234,6 +303,38 @@ impl<'a> Container for OptionallyCombinedContainer<'a, 'a> {
                 slots
             }
             None => self.inventory.all_slots_ref(),
+        }
+    }
+
+    fn craft(&mut self) -> bool {
+        match &mut self.container {
+            Some(container) => container.craft(),
+            None => self.inventory.craft(),
+        }
+    }
+
+    fn crafting_output_slot(&self) -> Option<usize> {
+        match &self.container {
+            Some(container) => container.crafting_output_slot(),
+            None => self.inventory.crafting_output_slot(),
+        }
+    }
+
+    fn slot_in_crafting_input_slots(&self, slot: &usize) -> bool {
+        match &self.container {
+            Some(container) => {
+                // We don't have to worry about length due to inventory crafting slots being inaccessible
+                // while inside container interfaces
+                container.slot_in_crafting_input_slots(slot)
+            }
+            None => self.inventory.slot_in_crafting_input_slots(slot),
+        }
+    }
+
+    fn recipe_used(&mut self) {
+        match &mut self.container {
+            Some(container) => container.recipe_used(),
+            None => self.inventory.recipe_used(),
         }
     }
 }

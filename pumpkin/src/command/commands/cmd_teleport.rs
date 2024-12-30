@@ -9,8 +9,8 @@ use crate::command::args::arg_rotation::RotationArgumentConsumer;
 use crate::command::args::ConsumedArgs;
 use crate::command::args::FindArg;
 use crate::command::tree::CommandTree;
-use crate::command::tree_builder::{argument, literal, require};
-use crate::command::InvalidTreeError;
+use crate::command::tree_builder::{argument, literal};
+use crate::command::CommandError;
 use crate::command::{CommandExecutor, CommandSender};
 
 const NAMES: [&str; 2] = ["teleport", "tp"];
@@ -58,7 +58,7 @@ impl CommandExecutor for TpEntitiesToEntityExecutor {
         _sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
         let destination = EntityArgumentConsumer::find_arg(args, ARG_DESTINATION)?;
@@ -67,7 +67,7 @@ impl CommandExecutor for TpEntitiesToEntityExecutor {
         for target in targets {
             let yaw = target.living_entity.entity.yaw.load();
             let pitch = target.living_entity.entity.pitch.load();
-            target.teleport(pos, yaw, pitch).await;
+            target.living_entity.entity.teleport(pos, yaw, pitch).await;
         }
 
         Ok(())
@@ -83,7 +83,7 @@ impl CommandExecutor for TpEntitiesToPosFacingPosExecutor {
         _sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
         let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
@@ -92,7 +92,7 @@ impl CommandExecutor for TpEntitiesToPosFacingPosExecutor {
         let (yaw, pitch) = yaw_pitch_facing_position(&pos, &facing_pos);
 
         for target in targets {
-            target.teleport(pos, yaw, pitch).await;
+            target.living_entity.entity.teleport(pos, yaw, pitch).await;
         }
 
         Ok(())
@@ -108,7 +108,7 @@ impl CommandExecutor for TpEntitiesToPosFacingEntityExecutor {
         _sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
         let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
@@ -119,7 +119,7 @@ impl CommandExecutor for TpEntitiesToPosFacingEntityExecutor {
         let (yaw, pitch) = yaw_pitch_facing_position(&pos, &facing_entity.pos.load());
 
         for target in targets {
-            target.teleport(pos, yaw, pitch).await;
+            target.living_entity.entity.teleport(pos, yaw, pitch).await;
         }
 
         Ok(())
@@ -135,7 +135,7 @@ impl CommandExecutor for TpEntitiesToPosWithRotationExecutor {
         _sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
         let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
@@ -143,7 +143,7 @@ impl CommandExecutor for TpEntitiesToPosWithRotationExecutor {
         let (yaw, pitch) = RotationArgumentConsumer::find_arg(args, ARG_ROTATION)?;
 
         for target in targets {
-            target.teleport(pos, yaw, pitch).await;
+            target.living_entity.entity.teleport(pos, yaw, pitch).await;
         }
 
         Ok(())
@@ -159,7 +159,7 @@ impl CommandExecutor for TpEntitiesToPosExecutor {
         _sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let targets = EntitiesArgumentConsumer::find_arg(args, ARG_TARGETS)?;
 
         let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
@@ -167,7 +167,7 @@ impl CommandExecutor for TpEntitiesToPosExecutor {
         for target in targets {
             let yaw = target.living_entity.entity.yaw.load();
             let pitch = target.living_entity.entity.pitch.load();
-            target.teleport(pos, yaw, pitch).await;
+            target.living_entity.entity.teleport(pos, yaw, pitch).await;
         }
 
         Ok(())
@@ -183,7 +183,7 @@ impl CommandExecutor for TpSelfToEntityExecutor {
         sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let destination = EntityArgumentConsumer::find_arg(args, ARG_DESTINATION)?;
         let pos = destination.living_entity.entity.pos.load();
 
@@ -191,7 +191,7 @@ impl CommandExecutor for TpSelfToEntityExecutor {
             CommandSender::Player(player) => {
                 let yaw = player.living_entity.entity.yaw.load();
                 let pitch = player.living_entity.entity.pitch.load();
-                player.teleport(pos, yaw, pitch).await;
+                player.living_entity.entity.teleport(pos, yaw, pitch).await;
             }
             _ => {
                 sender
@@ -215,13 +215,13 @@ impl CommandExecutor for TpSelfToPosExecutor {
         sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         match sender {
             CommandSender::Player(player) => {
                 let pos = Position3DArgumentConsumer::find_arg(args, ARG_LOCATION)?;
                 let yaw = player.living_entity.entity.yaw.load();
                 let pitch = player.living_entity.entity.pitch.load();
-                player.teleport(pos, yaw, pitch).await;
+                player.living_entity.entity.teleport(pos, yaw, pitch).await;
             }
             _ => {
                 sender
@@ -236,42 +236,38 @@ impl CommandExecutor for TpSelfToPosExecutor {
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
-    CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| sender.permission_lvl() >= 2)
-            .with_child(
-                argument(ARG_TARGETS, &EntitiesArgumentConsumer)
-                    .with_child(
-                        argument(ARG_LOCATION, &Position3DArgumentConsumer)
-                            .execute(&TpEntitiesToPosExecutor)
-                            .with_child(
-                                argument(ARG_ROTATION, &RotationArgumentConsumer)
-                                    .execute(&TpEntitiesToPosWithRotationExecutor),
-                            )
-                            .with_child(
-                                literal("facing")
-                                    .with_child(
-                                        literal("entity").with_child(
-                                            argument(ARG_FACING_ENTITY, &EntityArgumentConsumer)
-                                                .execute(&TpEntitiesToPosFacingEntityExecutor),
-                                        ),
-                                    )
-                                    .with_child(
-                                        argument(ARG_FACING_LOCATION, &Position3DArgumentConsumer)
-                                            .execute(&TpEntitiesToPosFacingPosExecutor),
+pub fn init_command_tree() -> CommandTree {
+    CommandTree::new(NAMES, DESCRIPTION)
+        .with_child(argument(ARG_LOCATION, Position3DArgumentConsumer).execute(TpSelfToPosExecutor))
+        .with_child(
+            argument(ARG_DESTINATION, EntityArgumentConsumer).execute(TpSelfToEntityExecutor),
+        )
+        .with_child(
+            argument(ARG_TARGETS, EntitiesArgumentConsumer)
+                .with_child(
+                    argument(ARG_LOCATION, Position3DArgumentConsumer)
+                        .execute(TpEntitiesToPosExecutor)
+                        .with_child(
+                            argument(ARG_ROTATION, RotationArgumentConsumer)
+                                .execute(TpEntitiesToPosWithRotationExecutor),
+                        )
+                        .with_child(
+                            literal("facing")
+                                .with_child(
+                                    literal("entity").with_child(
+                                        argument(ARG_FACING_ENTITY, EntityArgumentConsumer)
+                                            .execute(TpEntitiesToPosFacingEntityExecutor),
                                     ),
-                            ),
-                    )
-                    .with_child(
-                        argument(ARG_DESTINATION, &EntityArgumentConsumer)
-                            .execute(&TpEntitiesToEntityExecutor),
-                    ),
-            )
-            .with_child(
-                argument(ARG_LOCATION, &Position3DArgumentConsumer).execute(&TpSelfToPosExecutor),
-            )
-            .with_child(
-                argument(ARG_DESTINATION, &EntityArgumentConsumer).execute(&TpSelfToEntityExecutor),
-            ),
-    )
+                                )
+                                .with_child(
+                                    argument(ARG_FACING_LOCATION, Position3DArgumentConsumer)
+                                        .execute(TpEntitiesToPosFacingPosExecutor),
+                                ),
+                        ),
+                )
+                .with_child(
+                    argument(ARG_DESTINATION, EntityArgumentConsumer)
+                        .execute(TpEntitiesToEntityExecutor),
+                ),
+        )
 }

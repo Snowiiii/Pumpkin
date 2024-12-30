@@ -5,10 +5,10 @@ use pumpkin_protocol::client::play::CSystemChatMessage;
 use crate::command::{
     args::{arg_message::MsgArgConsumer, Arg, ConsumedArgs},
     tree::CommandTree,
-    tree_builder::{argument, require},
-    CommandExecutor, CommandSender, InvalidTreeError,
+    tree_builder::argument,
+    CommandError, CommandExecutor, CommandSender,
 };
-use InvalidTreeError::InvalidConsumptionError;
+use CommandError::InvalidConsumption;
 
 const NAMES: [&str; 1] = ["say"];
 
@@ -25,15 +25,9 @@ impl CommandExecutor for SayExecutor {
         sender: &mut CommandSender<'a>,
         server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
-        let sender = match sender {
-            CommandSender::Console => "Console",
-            CommandSender::Rcon(_) => "Rcon",
-            CommandSender::Player(player) => &player.gameprofile.name,
-        };
-
+    ) -> Result<(), CommandError> {
         let Some(Arg::Msg(msg)) = args.get(ARG_MESSAGE) else {
-            return Err(InvalidConsumptionError(Some(ARG_MESSAGE.into())));
+            return Err(InvalidConsumption(Some(ARG_MESSAGE.into())));
         };
 
         server
@@ -46,9 +40,7 @@ impl CommandExecutor for SayExecutor {
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
-    CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| sender.permission_lvl() >= 2)
-            .with_child(argument(ARG_MESSAGE, &MsgArgConsumer).execute(&SayExecutor)),
-    )
+pub fn init_command_tree() -> CommandTree {
+    CommandTree::new(NAMES, DESCRIPTION)
+        .with_child(argument(ARG_MESSAGE, MsgArgConsumer).execute(SayExecutor))
 }

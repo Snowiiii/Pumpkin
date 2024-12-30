@@ -2,26 +2,30 @@ use core::f64;
 use std::str::FromStr;
 
 use async_trait::async_trait;
+use pumpkin_protocol::client::play::{CommandSuggestion, ProtoCmdArgParser};
 
-use crate::command::dispatcher::InvalidTreeError;
+use crate::command::dispatcher::CommandError;
 use crate::command::tree::RawArgs;
 use crate::command::CommandSender;
 use crate::server::Server;
 
 use super::super::args::ArgumentConsumer;
-use super::{Arg, DefaultNameArgConsumer, FindArg};
+use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// Consumes a single generic num, but only if it's in bounds.
-pub(crate) struct BoundedNumArgumentConsumer<T: ArgNum> {
+pub(crate) struct BoundedNumArgumentConsumer<T: ToFromNumber> {
     min_inclusive: Option<T>,
     max_inclusive: Option<T>,
     name: Option<&'static str>,
 }
 
 #[async_trait]
-impl<T: ArgNum> ArgumentConsumer for BoundedNumArgumentConsumer<T> {
+impl<T: ToFromNumber> ArgumentConsumer for BoundedNumArgumentConsumer<T>
+where
+    Self: GetClientSideArgParser,
+{
     async fn consume<'a>(
-        &self,
+        &'a self,
         _src: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
@@ -30,39 +34,64 @@ impl<T: ArgNum> ArgumentConsumer for BoundedNumArgumentConsumer<T> {
 
         if let Some(max) = self.max_inclusive {
             if x > max {
-                return None;
+                return Some(Arg::Num(Err(())));
             }
         }
 
         if let Some(min) = self.min_inclusive {
             if x < min {
-                return None;
+                return Some(Arg::Num(Err(())));
             }
         }
 
-        Some(x.to_arg())
+        Some(Arg::Num(Ok(x.to_number())))
+    }
+
+    async fn suggest<'a>(
+        &'a self,
+        _sender: &CommandSender<'a>,
+        _server: &'a Server,
+        _input: &'a str,
+    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
+        Ok(None)
     }
 }
 
-impl<'a, T: ArgNum> FindArg<'a> for BoundedNumArgumentConsumer<T> {
-    type Data = T;
+impl<T: ToFromNumber> FindArg<'_> for BoundedNumArgumentConsumer<T> {
+    type Data = Result<T, NotInBounds>;
 
-    fn find_arg(args: &super::ConsumedArgs, name: &str) -> Result<Self::Data, InvalidTreeError> {
-        match args.get(name) {
-            Some(arg) => match T::from_arg(arg) {
-                Some(x) => Ok(x),
-                _ => Err(InvalidTreeError::InvalidConsumptionError(Some(
-                    name.to_string(),
-                ))),
-            },
-            _ => Err(InvalidTreeError::InvalidConsumptionError(Some(
-                name.to_string(),
-            ))),
-        }
+    fn find_arg(args: &super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
+        let Some(Arg::Num(result)) = args.get(name) else {
+            return Err(CommandError::InvalidConsumption(Some(name.to_string())));
+        };
+
+        let data: Self::Data = match result {
+            Ok(num) => {
+                if let Some(x) = T::from_number(num) {
+                    Ok(x)
+                } else {
+                    return Err(CommandError::InvalidConsumption(Some(name.to_string())));
+                }
+            }
+            Err(()) => Err(()),
+        };
+
+        Ok(data)
     }
 }
 
-impl<T: ArgNum> BoundedNumArgumentConsumer<T> {
+pub(crate) type NotInBounds = ();
+
+#[derive(Clone, Copy)]
+pub(crate) enum Number {
+    F64(f64),
+    F32(f32),
+    I32(i32),
+    #[allow(unused)]
+    I64(i64),
+}
+
+impl<T: ToFromNumber> BoundedNumArgumentConsumer<T> {
     pub(crate) const fn new() -> Self {
         Self {
             min_inclusive: None,
@@ -88,70 +117,129 @@ impl<T: ArgNum> BoundedNumArgumentConsumer<T> {
     }
 }
 
-pub(crate) trait ArgNum: PartialOrd + Copy + Send + Sync + FromStr {
-    fn to_arg<'a>(self) -> Arg<'a>;
-    fn from_arg(arg: &Arg<'_>) -> Option<Self>;
+pub(crate) trait ToFromNumber: PartialOrd + Copy + Send + Sync + FromStr {
+    fn to_number(self) -> Number;
+    fn from_number(arg: &Number) -> Option<Self>;
 }
 
-impl ArgNum for f64 {
-    fn to_arg<'a>(self) -> Arg<'a> {
-        Arg::F64(self)
+impl ToFromNumber for f64 {
+    fn to_number(self) -> Number {
+        Number::F64(self)
     }
 
-    fn from_arg(arg: &Arg<'_>) -> Option<Self> {
+    fn from_number(arg: &Number) -> Option<Self> {
         match arg {
-            Arg::F64(x) => Some(*x),
+            Number::F64(x) => Some(*x),
             _ => None,
         }
     }
 }
 
-impl ArgNum for f32 {
-    fn to_arg<'a>(self) -> Arg<'a> {
-        Arg::F32(self)
+impl GetClientSideArgParser for BoundedNumArgumentConsumer<f64> {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::Double {
+            min: self.min_inclusive,
+            max: self.max_inclusive,
+        }
     }
 
-    fn from_arg(arg: &Arg<'_>) -> Option<Self> {
+    fn get_client_side_suggestion_type_override(
+        &self,
+    ) -> Option<pumpkin_protocol::client::play::ProtoCmdArgSuggestionType> {
+        None
+    }
+}
+
+impl ToFromNumber for f32 {
+    fn to_number(self) -> Number {
+        Number::F32(self)
+    }
+
+    fn from_number(arg: &Number) -> Option<Self> {
         match arg {
-            Arg::F32(x) => Some(*x),
+            Number::F32(x) => Some(*x),
             _ => None,
         }
     }
 }
 
-impl ArgNum for i32 {
-    fn to_arg<'a>(self) -> Arg<'a> {
-        Arg::I32(self)
+impl GetClientSideArgParser for BoundedNumArgumentConsumer<f32> {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::Float {
+            min: self.min_inclusive,
+            max: self.max_inclusive,
+        }
     }
 
-    fn from_arg(arg: &Arg<'_>) -> Option<Self> {
+    fn get_client_side_suggestion_type_override(
+        &self,
+    ) -> Option<pumpkin_protocol::client::play::ProtoCmdArgSuggestionType> {
+        None
+    }
+}
+
+impl ToFromNumber for i32 {
+    fn to_number(self) -> Number {
+        Number::I32(self)
+    }
+
+    fn from_number(arg: &Number) -> Option<Self> {
         match arg {
-            Arg::I32(x) => Some(*x),
+            Number::I32(x) => Some(*x),
             _ => None,
         }
     }
 }
 
-impl ArgNum for u32 {
-    fn to_arg<'a>(self) -> Arg<'a> {
-        Arg::U32(self)
+impl GetClientSideArgParser for BoundedNumArgumentConsumer<i32> {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::Integer {
+            min: self.min_inclusive,
+            max: self.max_inclusive,
+        }
     }
 
-    fn from_arg(arg: &Arg<'_>) -> Option<Self> {
+    fn get_client_side_suggestion_type_override(
+        &self,
+    ) -> Option<pumpkin_protocol::client::play::ProtoCmdArgSuggestionType> {
+        None
+    }
+}
+
+impl ToFromNumber for i64 {
+    fn to_number(self) -> Number {
+        Number::I64(self)
+    }
+
+    fn from_number(arg: &Number) -> Option<Self> {
         match arg {
-            Arg::U32(x) => Some(*x),
+            Number::I64(x) => Some(*x),
             _ => None,
         }
     }
 }
 
-impl<T: ArgNum> DefaultNameArgConsumer for BoundedNumArgumentConsumer<T> {
-    fn default_name(&self) -> &'static str {
+impl GetClientSideArgParser for BoundedNumArgumentConsumer<i64> {
+    fn get_client_side_parser(&self) -> ProtoCmdArgParser {
+        ProtoCmdArgParser::Long {
+            min: self.min_inclusive,
+            max: self.max_inclusive,
+        }
+    }
+
+    fn get_client_side_suggestion_type_override(
+        &self,
+    ) -> Option<pumpkin_protocol::client::play::ProtoCmdArgSuggestionType> {
+        None
+    }
+}
+
+impl<T: ToFromNumber> DefaultNameArgConsumer for BoundedNumArgumentConsumer<T>
+where
+    Self: ArgumentConsumer,
+{
+    fn default_name(&self) -> String {
         // setting a single default name for all BoundedNumArgumentConsumer variants is probably a bad idea since it would lead to confusion
-        self.name.expect("Only use *_default variants of methods with a BoundedNumArgumentConsumer that has a name.")
-    }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        self
+        self.name.expect("Only use *_default variants of methods with a BoundedNumArgumentConsumer that has a name.").to_string()
     }
 }

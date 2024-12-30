@@ -2,14 +2,20 @@ use std::sync::atomic::AtomicI32;
 
 use crossbeam::atomic::AtomicCell;
 use pumpkin_core::math::vector3::Vector3;
+use pumpkin_entity::EntityId;
+use pumpkin_inventory::{Container, EmptyContainer};
 use pumpkin_protocol::client::play::{CDamageEvent, CEntityStatus, CSetEntityMetadata, Metadata};
+use tokio::sync::Mutex;
 
 use super::Entity;
 
 /// Represents a living entity within the game world.
 ///
 /// This struct encapsulates the core properties and behaviors of living entities, including players, mobs, and other creatures.
-pub struct LivingEntity {
+pub struct LivingEntity<C = EmptyContainer>
+where
+    C: Container,
+{
     /// The underlying entity object, providing basic entity information and functionality.
     pub entity: Entity,
     /// Previously last known position of the entity
@@ -22,8 +28,9 @@ pub struct LivingEntity {
     pub health: AtomicCell<f32>,
     /// The distance the entity has been falling
     pub fall_distance: AtomicCell<f64>,
+    /// Inventory if it exists on the entity
+    pub inventory: Option<Mutex<C>>,
 }
-
 impl LivingEntity {
     pub const fn new(entity: Entity) -> Self {
         Self {
@@ -33,6 +40,21 @@ impl LivingEntity {
             last_damage_taken: AtomicCell::new(0.0),
             health: AtomicCell::new(20.0),
             fall_distance: AtomicCell::new(0.0),
+            // This automatically gets inferred as Option::<EmptyContainer>::None
+            inventory: None,
+        }
+    }
+}
+impl<C: Container> LivingEntity<C> {
+    pub fn new_with_container(entity: Entity, inventory: C) -> Self {
+        Self {
+            entity,
+            last_pos: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
+            time_until_regen: AtomicI32::new(0),
+            last_damage_taken: AtomicCell::new(0.0),
+            health: AtomicCell::new(20.0),
+            fall_distance: AtomicCell::new(0.0),
+            inventory: Some(Mutex::new(inventory)),
         }
     }
 
@@ -47,9 +69,9 @@ impl LivingEntity {
         }
     }
 
-    pub fn set_pos(&self, x: f64, y: f64, z: f64) {
+    pub fn set_pos(&self, position: Vector3<f64>) {
         self.last_pos.store(self.entity.pos.load());
-        self.entity.set_pos(x, y, z);
+        self.entity.set_pos(position);
     }
 
     pub async fn set_health(&self, health: f32) {
@@ -64,13 +86,17 @@ impl LivingEntity {
             .await;
     }
 
-    pub async fn damage(&self, amount: f32) {
+    pub const fn entity_id(&self) -> EntityId {
+        self.entity.entity_id
+    }
+
+    // TODO add damage_type enum
+    pub async fn damage(&self, amount: f32, damage_type: u8) {
         self.entity
             .world
             .broadcast_packet_all(&CDamageEvent::new(
                 self.entity.entity_id.into(),
-                // TODO add damage_type id
-                0.into(),
+                damage_type.into(),
                 None,
                 None,
                 None,
@@ -78,10 +104,11 @@ impl LivingEntity {
             .await;
 
         let new_health = (self.health.load() - amount).max(0.0);
-        self.set_health(new_health).await;
 
         if new_health == 0.0 {
             self.kill().await;
+        } else {
+            self.set_health(new_health).await;
         }
     }
 
@@ -129,7 +156,7 @@ impl LivingEntity {
                 return;
             }
 
-            self.damage(damage).await;
+            self.damage(damage, 10).await; // Fall
         } else if y_diff < 0.0 {
             self.fall_distance.store(0.0);
         } else {
@@ -142,6 +169,8 @@ impl LivingEntity {
     ///
     /// This is similar to `kill` but Spawn Particles, Animation and plays death sound
     pub async fn kill(&self) {
+        self.set_health(0.0).await;
+
         // Spawns death smoke particles
         self.entity
             .world

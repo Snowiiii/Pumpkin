@@ -1,33 +1,34 @@
 use super::{args::ArgumentConsumer, CommandExecutor};
 use crate::command::CommandSender;
-use std::{collections::VecDeque, fmt::Debug};
+use std::{collections::VecDeque, fmt::Debug, sync::Arc};
 
 /// see [`crate::commands::tree_builder::argument`]
 pub type RawArgs<'a> = Vec<&'a str>;
 
-#[derive(Debug)]
-pub struct Node<'a> {
+#[derive(Debug, Clone)]
+pub struct Node {
     pub(crate) children: Vec<usize>,
-    pub(crate) node_type: NodeType<'a>,
+    pub(crate) node_type: NodeType,
 }
 
-pub enum NodeType<'a> {
+#[derive(Clone)]
+pub enum NodeType {
     ExecuteLeaf {
-        executor: &'a dyn CommandExecutor,
+        executor: Arc<dyn CommandExecutor + Send>,
     },
     Literal {
-        string: &'a str,
+        string: String,
     },
     Argument {
-        name: &'a str,
-        consumer: &'a dyn ArgumentConsumer,
+        name: String,
+        consumer: Arc<dyn ArgumentConsumer + Send>,
     },
     Require {
-        predicate: &'a (dyn Fn(&CommandSender) -> bool + Sync),
+        predicate: Arc<dyn Fn(&CommandSender) -> bool + Send + Sync>,
     },
 }
 
-impl Debug for NodeType<'_> {
+impl Debug for NodeType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::ExecuteLeaf { .. } => f
@@ -45,28 +46,28 @@ impl Debug for NodeType<'_> {
     }
 }
 
-pub enum Command<'a> {
-    Tree(CommandTree<'a>),
-    Alias(&'a str),
+pub enum Command {
+    Tree(CommandTree),
+    Alias(String),
 }
 
-#[derive(Debug)]
-pub struct CommandTree<'a> {
-    pub(crate) nodes: Vec<Node<'a>>,
+#[derive(Debug, Clone)]
+pub struct CommandTree {
+    pub(crate) nodes: Vec<Node>,
     pub(crate) children: Vec<usize>,
-    pub(crate) names: Vec<&'a str>,
-    pub(crate) description: &'a str,
+    pub(crate) names: Vec<String>,
+    pub(crate) description: String,
 }
 
-impl<'a> CommandTree<'a> {
+impl CommandTree {
     /// iterate over all possible paths that end in a [`NodeType::ExecuteLeaf`]
-    pub(crate) fn iter_paths(&'a self) -> impl Iterator<Item = Vec<usize>> + 'a {
+    pub(crate) fn iter_paths(&self) -> impl Iterator<Item = Vec<usize>> + use<'_> {
         let mut todo = VecDeque::<(usize, usize)>::new();
 
         // add root's children
         todo.extend(self.children.iter().map(|&i| (0, i)));
 
-        TraverseAllPathsIter::<'a> {
+        TraverseAllPathsIter {
             tree: self,
             path: Vec::<usize>::new(),
             todo,
@@ -75,13 +76,13 @@ impl<'a> CommandTree<'a> {
 }
 
 struct TraverseAllPathsIter<'a> {
-    tree: &'a CommandTree<'a>,
+    tree: &'a CommandTree,
     path: Vec<usize>,
     /// (depth, i)
     todo: VecDeque<(usize, usize)>,
 }
 
-impl<'a> Iterator for TraverseAllPathsIter<'a> {
+impl Iterator for TraverseAllPathsIter<'_> {
     type Item = Vec<usize>;
 
     fn next(&mut self) -> Option<Self::Item> {

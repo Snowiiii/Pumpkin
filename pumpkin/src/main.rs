@@ -2,6 +2,22 @@
 #![deny(clippy::pedantic)]
 // #![warn(clippy::restriction)]
 #![deny(clippy::cargo)]
+// to keep consistency
+#![deny(clippy::if_then_some_else_none)]
+#![deny(clippy::empty_enum_variants_with_brackets)]
+#![deny(clippy::empty_structs_with_brackets)]
+#![deny(clippy::separated_literal_suffix)]
+#![deny(clippy::semicolon_outside_block)]
+#![deny(clippy::non_zero_suggestions)]
+#![deny(clippy::string_lit_chars_any)]
+#![deny(clippy::use_self)]
+#![deny(clippy::useless_let_if_seq)]
+#![deny(clippy::branches_sharing_code)]
+#![deny(clippy::equatable_if_let)]
+#![deny(clippy::option_if_let_else)]
+// use log crate
+#![deny(clippy::print_stdout)]
+#![deny(clippy::print_stderr)]
 // REMOVE SOME WHEN RELEASE
 #![expect(clippy::cargo_common_metadata)]
 #![expect(clippy::multiple_crate_versions)]
@@ -19,7 +35,7 @@ compile_error!("Compiling for WASI targets is not supported!");
 
 use log::LevelFilter;
 
-use client::Client;
+use net::{lan_broadcast, query, rcon::RCONServer, Client};
 use server::{ticker::Ticker, Server};
 use std::io::{self};
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -30,20 +46,19 @@ use tokio::signal::unix::{signal, SignalKind};
 
 use std::sync::Arc;
 
+use crate::server::CURRENT_MC_VERSION;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
-use rcon::RCONServer;
+use pumpkin_protocol::CURRENT_MC_PROTOCOL;
 use std::time::Instant;
-
 // Setup some tokens to allow us to identify which event is for which socket.
 
-pub mod client;
+pub mod block;
 pub mod command;
+pub mod data;
 pub mod entity;
 pub mod error;
-pub mod proxy;
-pub mod query;
-pub mod rcon;
+pub mod net;
 pub mod server;
 pub mod world;
 
@@ -62,6 +77,9 @@ fn init_logger() {
     use pumpkin_config::ADVANCED_CONFIG;
     if ADVANCED_CONFIG.logging.enabled {
         let mut logger = simple_logger::SimpleLogger::new();
+        logger = logger.with_timestamp_format(time::macros::format_description!(
+            "[year]-[month]-[day] [hour]:[minute]:[second]"
+        ));
 
         if !ADVANCED_CONFIG.logging.timestamp {
             logger = logger.without_timestamps();
@@ -90,22 +108,18 @@ const fn convert_logger_filter(level: pumpkin_config::logging::LevelFilter) -> L
     }
 }
 
+const CARGO_PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
+const GIT_VERSION: &str = env!("GIT_VERSION");
+
+// WARNING: All rayon calls from the tokio runtime must be non-blocking! This includes things
+// like `par_iter`. These should be spawned in the the rayon pool and then passed to the tokio
+// runtime with a channel! See `Level::fetch_chunks` as an example!
 #[tokio::main]
-async fn main() -> io::Result<()> {
+#[expect(clippy::too_many_lines)]
+async fn main() {
+    let time = Instant::now();
     init_logger();
-    // let rt = tokio::runtime::Builder::new_multi_thread()
-    //     .enable_all()
-    //     .build()
-    //     .unwrap();
 
-    tokio::spawn(async {
-        setup_sighandler()
-            .await
-            .expect("Unable to setup signal handlers");
-    });
-
-    // ensure rayon is built outside of tokio scope
-    rayon::ThreadPoolBuilder::new().build_global().unwrap();
     let default_panic = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         default_panic(info);
@@ -113,7 +127,29 @@ async fn main() -> io::Result<()> {
         std::process::exit(1);
     }));
 
-    let time = Instant::now();
+    log::info!("Starting Pumpkin {CARGO_PKG_VERSION} ({GIT_VERSION}) for Minecraft {CURRENT_MC_VERSION} (Protocol {CURRENT_MC_PROTOCOL})",);
+
+    log::debug!(
+        "Build info: FAMILY: \"{}\", OS: \"{}\", ARCH: \"{}\", BUILD: \"{}\"",
+        std::env::consts::FAMILY,
+        std::env::consts::OS,
+        std::env::consts::ARCH,
+        if cfg!(debug_assertions) {
+            "Debug"
+        } else {
+            "Release"
+        }
+    );
+
+    log::warn!("Pumpkin is currently under heavy development!");
+    log::info!("Report Issues on https://github.com/Pumpkin-MC/Pumpkin/issues");
+    log::info!("Join our Discord for community support https://discord.com/invite/wT8XjrjKkf");
+
+    tokio::spawn(async {
+        setup_sighandler()
+            .await
+            .expect("Unable to setup signal handlers");
+    });
 
     // Setup the TCP server socket.
     let listener = tokio::net::TcpListener::bind(BASIC_CONFIG.server_address)
@@ -148,17 +184,22 @@ async fn main() -> io::Result<()> {
         tokio::spawn(query::start_query_handler(server.clone(), addr));
     }
 
+    if ADVANCED_CONFIG.lan_broadcast.enabled {
+        log::info!("LAN broadcast enabled. Starting...");
+        tokio::spawn(lan_broadcast::start_lan_broadcast(addr));
+    }
+
     {
         let server = server.clone();
         tokio::spawn(async move {
             ticker.run(&server).await;
-        });
-    }
+        })
+    };
 
     let mut master_client_id: u16 = 0;
     loop {
         // Asynchronously wait for an inbound socket.
-        let (connection, address) = listener.accept().await?;
+        let (connection, address) = listener.accept().await.unwrap();
 
         if let Err(e) = connection.set_nodelay(true) {
             log::warn!("failed to set TCP_NODELAY {e}");
@@ -192,7 +233,10 @@ async fn main() -> io::Result<()> {
                 .load(std::sync::atomic::Ordering::Relaxed)
             {
                 let (player, world) = server.add_player(client).await;
-                world.spawn_player(&BASIC_CONFIG, player.clone()).await;
+                world
+                    .spawn_player(&BASIC_CONFIG, player.clone(), &server)
+                    .await;
+
                 // poll Player
                 while !player
                     .client
@@ -263,7 +307,7 @@ fn setup_console(server: Arc<Server>) {
                 .expect("Failed to read console line");
 
             if !out.is_empty() {
-                let dispatcher = server.command_dispatcher.clone();
+                let dispatcher = server.command_dispatcher.read().await;
                 dispatcher
                     .handle_command(&mut command::CommandSender::Console, &server, &out)
                     .await;

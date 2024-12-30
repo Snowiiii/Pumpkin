@@ -1,7 +1,7 @@
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-use crate::VarLong;
+use crate::codec::var_long::VarLong;
 
 #[derive(Serialize)]
 #[client_packet("play:set_border_lerp_size")]

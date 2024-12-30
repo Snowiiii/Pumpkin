@@ -1,6 +1,5 @@
 use crate::container_click::MouseDragType;
 use crate::{Container, InventoryError};
-use itertools::Itertools;
 use num_traits::Euclid;
 use pumpkin_world::item::ItemStack;
 use std::collections::HashMap;
@@ -73,10 +72,10 @@ impl DragHandler {
             Err(InventoryError::MultiplePlayersDragging)?
         }
         let mut slots = container.all_slots();
-        let slots_cloned = slots
+        let slots_cloned: Vec<Option<ItemStack>> = slots
             .iter()
             .map(|stack| stack.map(|item| item.to_owned()))
-            .collect_vec();
+            .collect();
         let Some(carried_item) = maybe_carried_item else {
             return Ok(());
         };
@@ -121,8 +120,12 @@ impl DragHandler {
                 let changing_slots =
                     drag.possibly_changing_slots(&slots_cloned, carried_item.item_id);
                 let amount_of_slots = changing_slots.clone().count();
-                let (amount_per_slot, remainder) =
-                    (carried_item.item_count as usize).div_rem_euclid(&amount_of_slots);
+                let (amount_per_slot, remainder) = if amount_of_slots == 0 {
+                    // TODO: please work lol
+                    (1, 0)
+                } else {
+                    (carried_item.item_count as usize).div_rem_euclid(&amount_of_slots)
+                };
                 let mut item_in_each_slot = *carried_item;
                 item_in_each_slot.item_count = amount_per_slot as u8;
                 changing_slots.for_each(|slot| *slots[slot] = Some(item_in_each_slot));

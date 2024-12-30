@@ -3,7 +3,7 @@ Here we build Mojang's Textcomponent, Which is used across many places, Often wh
 
 ### Features
 - Colors
-  - [ ] RBG
+  - [x] RBG
   - [x] Black
   - [x] Dark Blue  
   - [x] Dark Green  
@@ -27,6 +27,7 @@ Here we build Mojang's Textcomponent, Which is used across many places, Often wh
   - [x] Strikethrough
   - [x] Obfuscated
   - [x] Insertion
+  - [x] Shadow Color
 - Click Event
   - [x] Open URL
   - [x] Run Command
@@ -39,8 +40,6 @@ Here we build Mojang's Textcomponent, Which is used across many places, Often wh
   - [x] ShowEntity
 - Fonts
   - [x] Default
-  - [ ] Uniform (Unicode)
-  - [ ] Alt
-  - [ ] Illageralt
-  
-Reference: https://wiki.vg/Text_formatting
+  - [x] Uniform (Unicode)
+  - [x] Alt
+  - [x] Illageralt

@@ -2,13 +2,13 @@ use async_trait::async_trait;
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
 
-use crate::command::args::arg_player::PlayersArgumentConsumer;
+use crate::command::args::arg_players::PlayersArgumentConsumer;
 use crate::command::args::{Arg, ConsumedArgs};
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::argument;
-use crate::command::InvalidTreeError;
+use crate::command::CommandError;
 use crate::command::{CommandExecutor, CommandSender};
-use InvalidTreeError::InvalidConsumptionError;
+use CommandError::InvalidConsumption;
 
 const NAMES: [&str; 1] = ["kick"];
 const DESCRIPTION: &str = "Kicks the target player from the server.";
@@ -24,9 +24,9 @@ impl CommandExecutor for KickExecutor {
         sender: &mut CommandSender<'a>,
         _server: &crate::server::Server,
         args: &ConsumedArgs<'a>,
-    ) -> Result<(), InvalidTreeError> {
+    ) -> Result<(), CommandError> {
         let Some(Arg::Players(targets)) = args.get(&ARG_TARGET) else {
-            return Err(InvalidConsumptionError(Some(ARG_TARGET.into())));
+            return Err(InvalidConsumption(Some(ARG_TARGET.into())));
         };
 
         let target_count = targets.len();
@@ -49,7 +49,8 @@ impl CommandExecutor for KickExecutor {
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
+// TODO: Permission
+pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION)
-        .with_child(argument(ARG_TARGET, &PlayersArgumentConsumer).execute(&KickExecutor))
+        .with_child(argument(ARG_TARGET, PlayersArgumentConsumer).execute(KickExecutor))
 }

@@ -19,6 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --check
   clippy:
     name: Run lints
@@ -30,7 +31,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-      - run: cargo clippy --all-targets --all-features --no-default-features
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --all-targets --all-features
   build_and_test:
     name: Build project and test
     runs-on: ${{ matrix.os }}
@@ -42,6 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - uses: Swatinem/rust-cache@v2
       - run: cargo test --verbose
   build_release:
     name: Build project in release
@@ -55,6 +58,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - uses: Swatinem/rust-cache@v2
       - run: cargo build --verbose --release
       - name: Export executable
         uses: actions/upload-artifact@v4
@@ -72,4 +76,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-      - run: cargo clippy --release --all-targets --all-features --no-default-features
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --release --all-targets --all-features

@@ -1,38 +1,21 @@
 use std::fmt::Display;
 
+use bytes::BufMut;
 use serde::{
     ser::{self},
     Serialize,
 };
 use thiserror::Error;
 
-use super::ByteBuffer;
+use super::ByteBufMut;
 
-pub struct Serializer {
-    pub output: ByteBuffer,
+pub struct Serializer<B: BufMut> {
+    pub output: B,
 }
 
-impl Serializer {
-    pub fn new(buf: ByteBuffer) -> Self {
+impl<B: BufMut> Serializer<B> {
+    pub fn new(buf: B) -> Self {
         Self { output: buf }
-    }
-}
-
-impl From<Serializer> for ByteBuffer {
-    fn from(val: Serializer) -> Self {
-        val.output
-    }
-}
-
-impl AsRef<ByteBuffer> for Serializer {
-    fn as_ref(&self) -> &ByteBuffer {
-        &self.output
-    }
-}
-
-impl AsMut<ByteBuffer> for Serializer {
-    fn as_mut(&mut self) -> &mut ByteBuffer {
-        &mut self.output
     }
 }
 
@@ -55,8 +38,8 @@ impl ser::Error for SerializerError {
 // Enums are written as a varint of the index
 // Structs are ignored
 // Iterables' values are written in order, but NO information (e.g. size) about the
-// iterable itself is written (list sizes should be a seperate field)
-impl<'a> ser::Serializer for &'a mut Serializer {
+// iterable itself is written (list sizes should be a separate field)
+impl<B: BufMut> ser::Serializer for &mut Serializer<B> {
     type Ok = ();
     type Error = SerializerError;
 
@@ -137,7 +120,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         Ok(())
     }
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
-        // here is where all arrays/list getting written, usally we prefix the length of every length with an var int. The problem is
+        // here is where all arrays/list getting written, usually we prefix the length of every length with an var int. The problem is
         // that byte arrays also getting thrown in here, and we don't want to prefix them
         Ok(self)
     }
@@ -226,7 +209,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
 }
 
-impl<'a> ser::SerializeSeq for &'a mut Serializer {
+impl<B: BufMut> ser::SerializeSeq for &mut Serializer<B> {
     // Must match the `Ok` type of the serializer.
     type Ok = ();
     // Must match the `Error` type of the serializer.
@@ -246,7 +229,7 @@ impl<'a> ser::SerializeSeq for &'a mut Serializer {
     }
 }
 
-impl<'a> ser::SerializeTuple for &'a mut Serializer {
+impl<B: BufMut> ser::SerializeTuple for &mut Serializer<B> {
     type Ok = ();
     type Error = SerializerError;
 
@@ -263,7 +246,7 @@ impl<'a> ser::SerializeTuple for &'a mut Serializer {
 }
 
 // Same thing but for tuple structs.
-impl<'a> ser::SerializeTupleStruct for &'a mut Serializer {
+impl<B: BufMut> ser::SerializeTupleStruct for &mut Serializer<B> {
     type Ok = ();
     type Error = SerializerError;
 
@@ -288,7 +271,7 @@ impl<'a> ser::SerializeTupleStruct for &'a mut Serializer {
 //
 // So the `end` method in this impl is responsible for closing both the `]` and
 // the `}`.
-impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
+impl<B: BufMut> ser::SerializeTupleVariant for &mut Serializer<B> {
     type Ok = ();
     type Error = SerializerError;
 
@@ -312,7 +295,7 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
 // `serialize_entry` method allows serializers to optimize for the case where
 // key and value are both available simultaneously. In JSON it doesn't make a
 // difference so the default behavior for `serialize_entry` is fine.
-impl<'a> ser::SerializeMap for &'a mut Serializer {
+impl<B: BufMut> ser::SerializeMap for &mut Serializer<B> {
     type Ok = ();
     type Error = SerializerError;
 
@@ -348,7 +331,7 @@ impl<'a> ser::SerializeMap for &'a mut Serializer {
 
 // Structs are like maps in which the keys are constrained to be compile-time
 // constant strings.
-impl<'a> ser::SerializeStruct for &'a mut Serializer {
+impl<B: BufMut> ser::SerializeStruct for &mut Serializer<B> {
     type Ok = ();
     type Error = SerializerError;
 
@@ -371,7 +354,7 @@ impl<'a> ser::SerializeStruct for &'a mut Serializer {
 
 // Similar to `SerializeTupleVariant`, here the `end` method is responsible for
 // closing both of the curly braces opened by `serialize_struct_variant`.
-impl<'a> ser::SerializeStructVariant for &'a mut Serializer {
+impl<B: BufMut> ser::SerializeStructVariant for &mut Serializer<B> {
     type Ok = ();
     type Error = SerializerError;
 

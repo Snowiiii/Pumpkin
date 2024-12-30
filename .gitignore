@@ -74,7 +74,6 @@ gradle-app.setting
 *.zip
 *.tar.gz
 *.rar
-
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
@@ -106,6 +105,9 @@ Cargo.lock
 plugins/*
 world/*
 
+# docker-compose
+data/*
+
 # project's configurations
 configuration.toml
 features.toml
@@ -122,3 +124,8 @@ docs/.vitepress/cache
 node_modules
 
 run/
+
+# Benchmarking
+*perf.data*
+*flamegraph.svg
+

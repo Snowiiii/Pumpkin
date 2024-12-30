@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, VecDeque},
+    num::NonZeroU8,
     sync::{
         atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU32, AtomicU8},
         Arc,
@@ -8,94 +8,77 @@ use std::{
 };
 
 use crossbeam::atomic::AtomicCell;
-use itertools::Itertools;
 use num_derive::FromPrimitive;
-use pumpkin_config::ADVANCED_CONFIG;
+use num_traits::Pow;
+use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::{
-    math::{boundingbox::BoundingBox, position::WorldPosition, vector2::Vector2, vector3::Vector3},
+    math::{
+        boundingbox::{BoundingBox, BoundingBoxSize},
+        position::WorldPosition,
+        vector2::Vector2,
+        vector3::Vector3,
+    },
+    permission::PermissionLvl,
     text::TextComponent,
     GameMode,
 };
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
+use pumpkin_protocol::server::play::{
+    SCloseContainer, SCookieResponse as SPCookieResponse, SPlayPingRequest,
+};
 use pumpkin_protocol::{
     bytebuf::packet_id::Packet,
     client::play::{
-        CCombatDeath, CGameEvent, CHurtAnimation, CKeepAlive, CPlayDisconnect, CPlayerAbilities,
-        CPlayerInfoUpdate, CRespawn, CSetHealth, CSpawnEntity, CSyncPlayerPosition,
-        CSystemChatMessage, GameEvent, PlayerAction,
+        CCombatDeath, CEntityStatus, CGameEvent, CHurtAnimation, CKeepAlive, CPlayDisconnect,
+        CPlayerAbilities, CPlayerInfoUpdate, CPlayerPosition, CSetHealth, CSystemChatMessage,
+        GameEvent, PlayerAction,
     },
     server::play::{
         SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SClientTickEnd,
-        SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction, SPlayerCommand, SPlayerInput,
-        SPlayerPosition, SPlayerPositionRotation, SPlayerRotation, SSetCreativeSlot, SSetHeldItem,
-        SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
+        SCommandSuggestion, SConfirmTeleport, SInteract, SPickItemFromBlock, SPlayerAbilities,
+        SPlayerAction, SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation,
+        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem,
+        SUseItemOn,
     },
-    RawPacket, ServerPacket, SoundCategory, VarInt,
+    RawPacket, ServerPacket, SoundCategory,
 };
-use tokio::sync::{Mutex, Notify};
-use tokio::task::JoinHandle;
-
-use pumpkin_protocol::server::play::SKeepAlive;
-use pumpkin_world::{cylindrical_chunk_iterator::Cylindrical, item::ItemStack};
+use pumpkin_protocol::{client::play::CUpdateTime, codec::var_int::VarInt};
+use pumpkin_protocol::{
+    client::play::{CSetEntityMetadata, Metadata},
+    server::play::{SClickContainer, SKeepAlive},
+};
+use pumpkin_world::{
+    cylindrical_chunk_iterator::Cylindrical,
+    item::{
+        item_registry::{get_item_by_id, Operation},
+        ItemStack,
+    },
+};
+use tokio::sync::{Mutex, Notify, RwLock};
 
 use super::Entity;
 use crate::{
-    client::{
-        authentication::GameProfile,
+    command::{client_cmd_suggestions, dispatcher::CommandDispatcher},
+    data::op_data::OPERATOR_CONFIG,
+    net::{
         combat::{self, player_attack_sound, AttackType},
         Client, PlayerConfig,
     },
     server::Server,
-    world::{player_chunker, World},
+    world::World,
 };
-use crate::{error::PumpkinError, world::player_chunker::get_view_distance};
+use crate::{error::PumpkinError, net::GameProfile};
 
 use super::living::LivingEntity;
-
-pub struct ChunkHandleWrapper {
-    handle: Option<JoinHandle<()>>,
-    aborted: bool,
-}
-
-impl ChunkHandleWrapper {
-    #[must_use]
-    pub fn new(handle: JoinHandle<()>) -> Self {
-        Self {
-            handle: Some(handle),
-            aborted: false,
-        }
-    }
-
-    pub fn abort(&mut self) {
-        self.aborted = true;
-        if let Some(handle) = &self.handle {
-            handle.abort();
-        } else {
-            log::error!("Trying to abort without a handle!");
-        }
-    }
-
-    pub fn take_handle(&mut self) -> JoinHandle<()> {
-        self.handle.take().unwrap()
-    }
-
-    #[must_use]
-    pub fn aborted(&self) -> bool {
-        self.aborted
-    }
-}
-
-pub type PlayerPendingChunks =
-    Arc<parking_lot::Mutex<HashMap<Vector2<i32>, VecDeque<ChunkHandleWrapper>>>>;
 
 /// Represents a Minecraft player entity.
 ///
 /// A `Player` is a special type of entity that represents a human player connected to the server.
 pub struct Player {
     /// The underlying living entity object that represents the player.
-    pub living_entity: LivingEntity,
+    pub living_entity: LivingEntity<PlayerInventory>,
     /// The player's game profile information, including their username and UUID.
     pub gameprofile: GameProfile,
     /// The client connection associated with the player.
@@ -108,14 +91,12 @@ pub struct Player {
     pub food: AtomicI32,
     /// The player's food saturation level.
     pub food_saturation: AtomicCell<f32>,
-    /// The player's inventory, containing items and equipment.
-    pub inventory: Mutex<PlayerInventory>,
     /// The ID of the currently open container (if any).
     pub open_container: AtomicCell<Option<u64>>,
     /// The item currently being held by the player.
     pub carried_item: AtomicCell<Option<ItemStack>>,
 
-    /// send `send_abilties_update` when changed
+    /// send `send_abilities_update` when changed
     /// The player's abilities and special powers.
     ///
     /// This field represents the various abilities that the player possesses, such as flight, invulnerability, and other special effects.
@@ -130,7 +111,7 @@ pub struct Player {
     /// The pending teleport information, including the teleport ID and target location.
     pub awaiting_teleport: Mutex<Option<(VarInt, Vector3<f64>)>>,
     /// The coordinates of the chunk section the player is currently watching.
-    pub watched_section: AtomicCell<Vector3<i32>>,
+    pub watched_section: AtomicCell<Cylindrical>,
     /// Did we send a keep alive Packet and wait for the response?
     pub wait_for_keep_alive: AtomicBool,
     /// Whats the keep alive packet payload we send, The client should responde with the same id
@@ -139,16 +120,8 @@ pub struct Player {
     pub last_keep_alive_time: AtomicCell<Instant>,
     /// Amount of ticks since last attack
     pub last_attacked_ticks: AtomicU32,
-
-    //TODO: Is there a way to consolidate these two?
-    //Need to lookup by chunk, but also would be need to contain all the stuff
-    //In a PendingBatch struct. Is there a cheap way to map multiple keys to a single element?
-    //
-    /// Individual chunk tasks that this client is waiting for
-    pub pending_chunks: PlayerPendingChunks,
-    /// Chunk batches that this client is waiting for
-    pub pending_chunk_batch: parking_lot::Mutex<HashMap<uuid::Uuid, JoinHandle<()>>>,
-
+    /// The players op permission level
+    pub permission_lvl: AtomicCell<PermissionLvl>,
     /// Tell tasks to stop if we are closing
     cancel_tasks: Notify,
 }
@@ -160,11 +133,12 @@ impl Player {
         entity_id: EntityId,
         gamemode: GameMode,
     ) -> Self {
+        let player_uuid = uuid::Uuid::new_v4();
         let gameprofile = client.gameprofile.lock().await.clone().map_or_else(
             || {
-                log::error!("No gameprofile?. Impossible");
+                log::error!("Client {} has no game profile!", client.id);
                 GameProfile {
-                    id: uuid::Uuid::new_v4(),
+                    id: player_uuid,
                     name: String::new(),
                     properties: vec![],
                     profile_actions: None,
@@ -172,14 +146,27 @@ impl Player {
             },
             |profile| profile,
         );
+
+        let gameprofile_clone = gameprofile.clone();
         let config = client.config.lock().await.clone().unwrap_or_default();
+        let bounding_box_size = BoundingBoxSize {
+            width: 0.6,
+            height: 1.8,
+        };
+
         Self {
-            living_entity: LivingEntity::new(Entity::new(
-                entity_id,
-                world,
-                EntityType::Player,
-                1.62,
-            )),
+            living_entity: LivingEntity::new_with_container(
+                Entity::new(
+                    entity_id,
+                    player_uuid,
+                    world,
+                    EntityType::Player,
+                    1.62,
+                    AtomicCell::new(BoundingBox::new_default(&bounding_box_size)),
+                    AtomicCell::new(bounding_box_size),
+                ),
+                PlayerInventory::new(),
+            ),
             config: Mutex::new(config),
             gameprofile,
             client,
@@ -188,40 +175,54 @@ impl Player {
             food: AtomicI32::new(20),
             food_saturation: AtomicCell::new(20.0),
             current_block_destroy_stage: AtomicU8::new(0),
-            inventory: Mutex::new(PlayerInventory::new()),
             open_container: AtomicCell::new(None),
             carried_item: AtomicCell::new(None),
             teleport_id_count: AtomicI32::new(0),
             abilities: Mutex::new(Abilities::default()),
             gamemode: AtomicCell::new(gamemode),
-            watched_section: AtomicCell::new(Vector3::new(0, 0, 0)),
+            // We want this to be an impossible watched section so that `player_chunker::update_position`
+            // will mark chunks as watched for a new join rather than a respawn
+            // (We left shift by one so we can search around that chunk)
+            watched_section: AtomicCell::new(Cylindrical::new(
+                Vector2::new(i32::MAX >> 1, i32::MAX >> 1),
+                unsafe { NonZeroU8::new_unchecked(1) },
+            )),
             wait_for_keep_alive: AtomicBool::new(false),
             keep_alive_id: AtomicI64::new(0),
             last_keep_alive_time: AtomicCell::new(std::time::Instant::now()),
             last_attacked_ticks: AtomicU32::new(0),
-            pending_chunks: Arc::new(parking_lot::Mutex::new(HashMap::new())),
-            pending_chunk_batch: parking_lot::Mutex::new(HashMap::new()),
             cancel_tasks: Notify::new(),
+            // Minecraft has no why to change the default permission level of new players.
+            // Minecrafts default permission level is 0
+            permission_lvl: OPERATOR_CONFIG
+                .read()
+                .await
+                .ops
+                .iter()
+                .find(|op| op.uuid == gameprofile_clone.id)
+                .map_or(
+                    AtomicCell::new(ADVANCED_CONFIG.commands.default_op_level),
+                    |op| AtomicCell::new(op.level),
+                ),
         }
+    }
+
+    pub fn inventory(&self) -> &Mutex<PlayerInventory> {
+        self.living_entity
+            .inventory
+            .as_ref()
+            .expect("Player always has inventory")
     }
 
     /// Removes the Player out of the current World
     #[allow(unused_variables)]
     pub async fn remove(&self) {
-        let world = &self.living_entity.entity.world;
-        // Abort pending chunks here too because we might clean up before chunk tasks are done
-        self.abort_chunks("closed");
-
+        let world = self.world();
         self.cancel_tasks.notify_waiters();
 
         world.remove_player(self).await;
 
-        let watched = self.watched_section.load();
-        let view_distance = get_view_distance(self).await;
-        let cylindrical = Cylindrical::new(Vector2::new(watched.x, watched.z), view_distance);
-
-        // NOTE: This all must be synchronous to make sense! The chunks are handled asynhrously.
-        // Non-async code is atomic to async code
+        let cylindrical = self.watched_section.load();
 
         // Radial chunks are all of the chunks the player is theoretically viewing
         // Giving enough time, all of these chunks will be in memory
@@ -234,124 +235,82 @@ impl Player {
             radial_chunks.len()
         );
 
-        let (watched_chunks, to_await) = {
-            let mut pending_chunks = self.pending_chunks.lock();
-
-            // Don't try to clean chunks that dont exist yet
-            // If they are still pending, we never sent the client the chunk,
-            // And the watcher value is not set
-            //
-            // The chunk may or may not be in the cache at this point
-            let watched_chunks = radial_chunks
-                .iter()
-                .filter(|chunk| !pending_chunks.contains_key(chunk))
-                .copied()
-                .collect::<Vec<_>>();
-
-            // Mark all pending chunks to be cancelled
-            // Cant use abort chunk because we use the lock for more
-            pending_chunks.iter_mut().for_each(|(chunk, handles)| {
-                handles.iter_mut().enumerate().for_each(|(count, handle)| {
-                    if !handle.aborted() {
-                        log::debug!("Aborting chunk {:?} ({}) (disconnect)", chunk, count);
-                        handle.abort();
-                    }
-                });
-            });
-
-            let to_await = pending_chunks
-                .iter_mut()
-                .map(|(chunk, pending)| {
-                    (
-                        *chunk,
-                        pending
-                            .iter_mut()
-                            .map(ChunkHandleWrapper::take_handle)
-                            .collect_vec(),
-                    )
-                })
-                .collect_vec();
-
-            // Return chunks to stop watching and what to wait for
-            (watched_chunks, to_await)
-        };
-
-        // Wait for individual chunks to finish after we cancel them
-        for (chunk, awaitables) in to_await {
-            for (count, handle) in awaitables.into_iter().enumerate() {
-                #[cfg(debug_assertions)]
-                log::debug!("Waiting for chunk {:?} ({})", chunk, count);
-                let _ = handle.await;
-            }
-        }
-
-        // Allow the batch jobs to properly cull stragglers before we do our clean up
-        log::debug!("Collecting chunk batches...");
-        let batches = {
-            let mut chunk_batches = self.pending_chunk_batch.lock();
-            let keys = chunk_batches.keys().copied().collect_vec();
-            let handles = keys
-                .iter()
-                .filter_map(|batch_id| {
-                    #[cfg(debug_assertions)]
-                    log::debug!("Batch id: {}", batch_id);
-                    chunk_batches.remove(batch_id)
-                })
-                .collect_vec();
-            assert!(chunk_batches.is_empty());
-            handles
-        };
-
-        log::debug!("Awaiting chunk batches ({})...", batches.len());
-
-        for (count, batch) in batches.into_iter().enumerate() {
-            #[cfg(debug_assertions)]
-            log::debug!("Awaiting batch {}", count);
-            let _ = batch.await;
-            #[cfg(debug_assertions)]
-            log::debug!("Done awaiting batch {}", count);
-        }
-        log::debug!("Done waiting for chunk batches");
-
         // Decrement value of watched chunks
-        let chunks_to_clean = world.mark_chunks_as_not_watched(&watched_chunks);
+        let chunks_to_clean = world.level.mark_chunks_as_not_watched(&radial_chunks);
 
         // Remove chunks with no watchers from the cache
-        world.clean_chunks(&chunks_to_clean);
-
+        world.level.clean_chunks(&chunks_to_clean);
         // Remove left over entries from all possiblily loaded chunks
-        world.clean_memory(&radial_chunks);
+        world.level.clean_memory(&radial_chunks);
 
         log::debug!(
             "Removed player id {} ({}) ({} chunks remain cached)",
             self.gameprofile.name,
             self.client.id,
-            self.living_entity.entity.world.get_cached_chunk_len()
+            self.world().level.loaded_chunk_count()
         );
 
-        //self.living_entity.entity.world.level.list_cached();
+        //self.world().level.list_cached();
     }
 
     pub async fn attack(&self, victim: &Arc<Self>) {
-        let world = &self.living_entity.entity.world;
+        let world = self.world();
         let victim_entity = &victim.living_entity.entity;
         let attacker_entity = &self.living_entity.entity;
         let config = &ADVANCED_CONFIG.pvp;
 
-        let pos = victim_entity.pos.load();
+        let inventory = self.inventory().lock().await;
+        let item_slot = inventory.held_item();
 
-        let attack_cooldown_progress = self.get_attack_cooldown_progress(0.5);
+        let base_damage = 1.0;
+        let base_attack_speed = 4.0;
+
+        let mut damage_multiplier = 1.0;
+        let mut add_damage = 0.0;
+        let mut add_speed = 0.0;
+
+        // get attack damage
+        if let Some(item_stack) = item_slot {
+            if let Some(item) = get_item_by_id(item_stack.item_id) {
+                // TODO: this should be cached in memory
+                if let Some(modifiers) = &item.components.attribute_modifiers {
+                    for item_mod in &modifiers.modifiers {
+                        if item_mod.operation == Operation::AddValue {
+                            if item_mod.id == "minecraft:base_attack_damage" {
+                                add_damage = item_mod.amount;
+                            }
+                            if item_mod.id == "minecraft:base_attack_speed" {
+                                add_speed = item_mod.amount;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        drop(inventory);
+
+        let attack_speed = base_attack_speed + add_speed;
+
+        let attack_cooldown_progress = self.get_attack_cooldown_progress(0.5, attack_speed);
         self.last_attacked_ticks
             .store(0, std::sync::atomic::Ordering::Relaxed);
 
-        // TODO: attack damage attribute and deal damage
-        let mut damage = 1.0;
+        // only reduce attack damage if in cooldown
+        // TODO: Enchantments are reduced same way just without the square
+        if attack_cooldown_progress < 1.0 {
+            damage_multiplier = 0.2 + attack_cooldown_progress.pow(2) * 0.8;
+        }
+        // modify added damage based on multiplier
+        let mut damage = base_damage + add_damage * damage_multiplier;
+
+        let pos = victim_entity.pos.load();
+
         if (config.protect_creative && victim.gamemode.load() == GameMode::Creative)
-            || !victim.living_entity.check_damage(damage)
+            || !victim.living_entity.check_damage(damage as f32)
         {
             world
                 .play_sound(
-                    sound!("minecraft:entity.player.attack.nodamage"),
+                    sound!("entity.player.attack.nodamage"),
                     SoundCategory::Players,
                     &pos,
                 )
@@ -360,14 +319,10 @@ impl Player {
         }
 
         world
-            .play_sound(
-                sound!("minecraft:entity.player.hurt"),
-                SoundCategory::Players,
-                &pos,
-            )
+            .play_sound(sound!("entity.player.hurt"), SoundCategory::Players, &pos)
             .await;
 
-        let attack_type = AttackType::new(self, attack_cooldown_progress).await;
+        let attack_type = AttackType::new(self, attack_cooldown_progress as f32).await;
 
         player_attack_sound(&pos, world, attack_type).await;
 
@@ -375,7 +330,10 @@ impl Player {
             damage *= 1.5;
         }
 
-        victim.living_entity.damage(damage).await;
+        victim
+            .living_entity
+            .damage(damage as f32, 34) // PlayerAttack
+            .await;
 
         let mut knockback_strength = 1.0;
         match attack_type {
@@ -438,16 +396,14 @@ impl Player {
         }
     }
 
-    pub fn get_attack_cooldown_progress(&self, base_time: f32) -> f32 {
+    pub fn get_attack_cooldown_progress(&self, base_time: f64, attack_speed: f64) -> f64 {
         #[allow(clippy::cast_precision_loss)]
-        let x = self
-            .last_attacked_ticks
-            .load(std::sync::atomic::Ordering::Acquire) as f32
-            + base_time;
-        // TODO attack speed attribute
-        let attack_speed = 4.0;
-        let progress_per_tick = 1.0 / attack_speed * 20.0;
+        let x = f64::from(
+            self.last_attacked_ticks
+                .load(std::sync::atomic::Ordering::Acquire),
+        ) + base_time;
 
+        let progress_per_tick = f64::from(BASIC_CONFIG.tps) / attack_speed;
         let progress = x / progress_per_tick;
         progress.clamp(0.0, 1.0)
     }
@@ -456,8 +412,12 @@ impl Player {
         self.living_entity.entity.entity_id
     }
 
+    pub const fn world(&self) -> &Arc<World> {
+        &self.living_entity.entity.world
+    }
+
     /// Updates the current abilities the Player has
-    pub async fn send_abilties_update(&self) {
+    pub async fn send_abilities_update(&self) {
         let mut b = 0i8;
         let abilities = &self.abilities.lock().await;
 
@@ -482,122 +442,62 @@ impl Player {
             .await;
     }
 
-    pub async fn respawn(self: &Arc<Self>, alive: bool) {
-        let last_pos = self.living_entity.last_pos.load();
-        let death_location = WorldPosition(Vector3::new(
-            last_pos.x.round() as i32,
-            last_pos.y.round() as i32,
-            last_pos.z.round() as i32,
-        ));
-
-        let data_kept = u8::from(alive);
-
+    /// syncs the players permission level with the client
+    pub async fn send_permission_lvl_update(&self) {
         self.client
-            .send_packet(&CRespawn::new(
-                0.into(),
-                "minecraft:overworld",
-                0, // seed
-                self.gamemode.load() as u8,
-                self.gamemode.load() as i8,
-                false,
-                false,
-                Some(("minecraft:overworld", death_location)),
-                0.into(),
-                0.into(),
-                data_kept,
+            .send_packet(&CEntityStatus::new(
+                self.entity_id(),
+                24 + self.permission_lvl.load() as i8,
             ))
             .await;
-
-        log::debug!("Sending player abilities to {}", self.gameprofile.name);
-        self.send_abilties_update().await;
-
-        let world = &self.living_entity.entity.world;
-
-        // teleport
-        let mut position = Vector3::new(10.0, 120.0, 10.0);
-        let yaw = 10.0;
-        let pitch = 10.0;
-
-        let top = world
-            .get_top_block(Vector2::new(position.x as i32, position.z as i32))
-            .await;
-        position.y = f64::from(top + 1);
-
-        log::debug!("Sending player teleport to {}", self.gameprofile.name);
-        self.teleport(position, yaw, pitch).await;
-
-        self.living_entity.last_pos.store(position);
-
-        // TODO: difficulty, exp bar, status effect
-
-        let world = &self.living_entity.entity.world;
-        world
-            .worldborder
-            .lock()
-            .await
-            .init_client(&self.client)
-            .await;
-
-        // TODO: world spawn (compass stuff)
-
-        self.client
-            .send_packet(&CGameEvent::new(GameEvent::StartWaitingChunks, 0.0))
-            .await;
-
-        let entity = &self.living_entity.entity;
-        world
-            .broadcast_packet_except(
-                &[self.gameprofile.id],
-                // TODO: add velo
-                &CSpawnEntity::new(
-                    entity.entity_id.into(),
-                    self.gameprofile.id,
-                    (EntityType::Player as i32).into(),
-                    position.x,
-                    position.y,
-                    position.z,
-                    pitch,
-                    yaw,
-                    yaw,
-                    0.into(),
-                    0.0,
-                    0.0,
-                    0.0,
-                ),
-            )
-            .await;
-
-        player_chunker::player_join(world, self.clone()).await;
-
-        // update commands
-
-        self.set_health(20.0, 20, 20.0).await;
     }
 
-    /// yaw and pitch in degrees
-    pub async fn teleport(&self, position: Vector3<f64>, yaw: f32, pitch: f32) {
+    /// sets the players permission level and syncs it with the client
+    pub async fn set_permission_lvl(
+        self: &Arc<Self>,
+        lvl: PermissionLvl,
+        command_dispatcher: &RwLock<CommandDispatcher>,
+    ) {
+        self.permission_lvl.store(lvl);
+        self.send_permission_lvl_update().await;
+        client_cmd_suggestions::send_c_commands_packet(self, command_dispatcher).await;
+    }
+
+    /// Sends the world time to just the player.
+    pub async fn send_time(&self, world: &World) {
+        let l_world = world.level_time.lock().await;
+        self.client
+            .send_packet(&CUpdateTime::new(
+                l_world.world_age,
+                l_world.time_of_day,
+                true,
+            ))
+            .await;
+    }
+
+    /// Yaw and Pitch in degrees
+    /// Rarly used, For example when waking up player from bed or first time spawn. Otherwise entity teleport is used
+    /// Player should respond with the `SConfirmTeleport` packet
+    pub async fn request_teleport(&self, position: Vector3<f64>, yaw: f32, pitch: f32) {
         // this is the ultra special magic code used to create the teleport id
         // This returns the old value
+        // This operation wraps around on overflow.
         let i = self
             .teleport_id_count
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        if i + 2 == i32::MAX {
-            self.teleport_id_count
-                .store(0, std::sync::atomic::Ordering::Relaxed);
-        }
         let teleport_id = i + 1;
-        self.living_entity
-            .set_pos(position.x, position.y, position.z);
+        self.living_entity.set_pos(position);
         let entity = &self.living_entity.entity;
         entity.set_rotation(yaw, pitch);
         *self.awaiting_teleport.lock().await = Some((teleport_id.into(), position));
         self.client
-            .send_packet(&CSyncPlayerPosition::new(
+            .send_packet(&CPlayerPosition::new(
                 teleport_id.into(),
                 position,
                 Vector3::new(0.0, 0.0, 0.0),
                 yaw,
                 pitch,
+                // TODO
                 &[],
             ))
             .await;
@@ -672,15 +572,36 @@ impl Player {
 
     pub async fn set_gamemode(&self, gamemode: GameMode) {
         // We could send the same gamemode without problems. But why waste bandwidth ?
-        let current_gamemode = self.gamemode.load();
-        assert!(
-            current_gamemode != gamemode,
+        assert_ne!(
+            self.gamemode.load(),
+            gamemode,
             "Setting the same gamemode as already is"
         );
         self.gamemode.store(gamemode);
-        self.abilities.lock().await.flying = false;
-        // So a little story time. I actually made an abilties_from_gamemode function. I looked at vanilla and they always send the abilties from the gamemode. But the funny thing actually is. That the client
-        // does actually use the same method and set the abilties when receiving the CGameEvent gamemode packet. Just Mojang nonsense
+        {
+            // use another scope so we instantly unlock abilities
+            let mut abilities = self.abilities.lock().await;
+            match gamemode {
+                GameMode::Undefined | GameMode::Survival | GameMode::Adventure => {
+                    abilities.flying = false;
+                    abilities.allow_flying = false;
+                    abilities.creative = false;
+                    abilities.invulnerable = false;
+                }
+                GameMode::Creative => {
+                    abilities.allow_flying = true;
+                    abilities.creative = true;
+                    abilities.invulnerable = true;
+                }
+                GameMode::Spectator => {
+                    abilities.flying = true;
+                    abilities.allow_flying = true;
+                    abilities.creative = false;
+                    abilities.invulnerable = true;
+                }
+            }
+        }
+        self.send_abilities_update().await;
         self.living_entity
             .entity
             .world
@@ -701,22 +622,28 @@ impl Player {
             .await;
     }
 
+    /// Send skin layers and used hand to all players
+    pub async fn update_client_information(&self) {
+        let config = self.config.lock().await;
+        let world = self.world();
+        world
+            .broadcast_packet_all(&CSetEntityMetadata::new(
+                self.entity_id().into(),
+                Metadata::new(17, 0.into(), config.skin_parts),
+            ))
+            .await;
+        world
+            .broadcast_packet_all(&CSetEntityMetadata::new(
+                self.entity_id().into(),
+                Metadata::new(18, 0.into(), config.main_hand as u8),
+            ))
+            .await;
+    }
+
     pub async fn send_system_message<'a>(&self, text: &TextComponent<'a>) {
         self.client
             .send_packet(&CSystemChatMessage::new(text, false))
             .await;
-    }
-
-    pub fn abort_chunks(&self, reason: &str) {
-        let mut pending_chunks = self.pending_chunks.lock();
-        pending_chunks.iter_mut().for_each(|(chunk, handles)| {
-            handles.iter_mut().enumerate().for_each(|(count, handle)| {
-                if !handle.aborted() {
-                    log::debug!("Aborting chunk {:?} ({}) ({})", chunk, count, reason);
-                    handle.abort();
-                }
-            });
-        });
     }
 }
 
@@ -724,16 +651,12 @@ impl Player {
     pub async fn process_packets(self: &Arc<Self>, server: &Arc<Server>) {
         let mut packets = self.client.client_packets_queue.lock().await;
         while let Some(mut packet) = packets.pop_back() {
-            #[cfg(debug_assertions)]
-            let inst = std::time::Instant::now();
             tokio::select! {
                 () = self.await_cancel() => {
                     log::debug!("Canceling player packet processing");
                     return;
                 },
                 packet_result = self.handle_play_packet(server, &mut packet) => {
-                    #[cfg(debug_assertions)]
-                    log::debug!("Handled play packet in {:?}", inst.elapsed());
                     match packet_result {
                         Ok(()) => {}
                         Err(e) => {
@@ -755,6 +678,7 @@ impl Player {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     pub async fn handle_play_packet(
         self: &Arc<Self>,
         server: &Arc<Server>,
@@ -806,17 +730,29 @@ impl Player {
             SSetPlayerGround::PACKET_ID => {
                 self.handle_player_ground(&SSetPlayerGround::read(bytebuf)?);
             }
+            SPickItemFromBlock::PACKET_ID => {
+                self.handle_pick_item_from_block(SPickItemFromBlock::read(bytebuf)?)
+                    .await;
+            }
             SPlayerAbilities::PACKET_ID => {
                 self.handle_player_abilities(SPlayerAbilities::read(bytebuf)?)
                     .await;
             }
             SPlayerAction::PACKET_ID => {
-                self.handle_player_action(SPlayerAction::read(bytebuf)?)
+                self.handle_player_action(SPlayerAction::read(bytebuf)?, server)
                     .await;
             }
             SPlayerCommand::PACKET_ID => {
                 self.handle_player_command(SPlayerCommand::read(bytebuf)?)
                     .await;
+            }
+            SPlayPingRequest::PACKET_ID => {
+                self.handle_play_ping_request(SPlayPingRequest::read(bytebuf)?)
+                    .await;
+            }
+            SClickContainer::PACKET_ID => {
+                self.handle_click_container(server, SClickContainer::read(bytebuf)?)
+                    .await?;
             }
             SSetHeldItem::PACKET_ID => {
                 self.handle_set_held_item(SSetHeldItem::read(bytebuf)?)
@@ -830,9 +766,21 @@ impl Player {
                 self.handle_swing_arm(SSwingArm::read(bytebuf)?).await;
             }
             SUseItemOn::PACKET_ID => {
-                self.handle_use_item_on(SUseItemOn::read(bytebuf)?).await;
+                self.handle_use_item_on(SUseItemOn::read(bytebuf)?, server)
+                    .await?;
             }
             SUseItem::PACKET_ID => self.handle_use_item(&SUseItem::read(bytebuf)?),
+            SCommandSuggestion::PACKET_ID => {
+                self.handle_command_suggestion(SCommandSuggestion::read(bytebuf)?, server)
+                    .await;
+            }
+            SPCookieResponse::PACKET_ID => {
+                self.handle_cookie_response(SPCookieResponse::read(bytebuf)?);
+            }
+            SCloseContainer::PACKET_ID => {
+                self.handle_close_container(server, SCloseContainer::read(bytebuf)?)
+                    .await;
+            }
             _ => {
                 log::warn!("Failed to handle player packet id {}", packet.id.0);
                 // TODO: We give an error if all play packets are implemented
@@ -868,23 +816,24 @@ impl Default for Abilities {
             flying: false,
             allow_flying: false,
             creative: false,
-            fly_speed: 0.4,
+            fly_speed: 0.05,
             walk_speed_fov: 0.1,
         }
     }
 }
 
 /// Represents the player's dominant hand.
-#[derive(FromPrimitive, Clone)]
+#[derive(Debug, FromPrimitive, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
 pub enum Hand {
-    /// The player's primary hand (usually the right hand).
-    Main,
-    /// The player's off-hand (usually the left hand).
-    Off,
+    /// Usually the player's off-hand.
+    Left,
+    /// Usually the player's primary hand.
+    Right,
 }
 
 /// Represents the player's chat mode settings.
-#[derive(FromPrimitive, Clone)]
+#[derive(Debug, FromPrimitive, Clone)]
 pub enum ChatMode {
     /// Chat is enabled for the player.
     Enabled,
