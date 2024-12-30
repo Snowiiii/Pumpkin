@@ -1,11 +1,13 @@
-use async_trait::async_trait;
-use pumpkin_core::text::TextComponent;
-use pumpkin_protocol::client::play::{CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType};
 use crate::command::args::{Arg, ArgumentConsumer, FindArg, GetClientSideArgParser};
-use crate::command::CommandSender;
 use crate::command::dispatcher::CommandError;
 use crate::command::tree::RawArgs;
+use crate::command::CommandSender;
 use crate::server::Server;
+use async_trait::async_trait;
+use pumpkin_core::text::TextComponent;
+use pumpkin_protocol::client::play::{
+    CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
+};
 
 pub(crate) struct TextComponentArgConsumer;
 
@@ -32,8 +34,8 @@ impl ArgumentConsumer for TextComponentArgConsumer {
         let text_component = parse_text_component(s);
 
         let Some(text_component) = text_component else {
-            if s.starts_with("\"") && s.ends_with("\"") {
-                let s = s.replace("\"", "");
+            if s.starts_with('"') && s.ends_with('"') {
+                let s = s.replace('"', "");
                 return Some(Arg::TextComponent(TextComponent::text(s)));
             }
             return None;
@@ -52,7 +54,7 @@ impl ArgumentConsumer for TextComponentArgConsumer {
     }
 }
 
-impl<'a> FindArg<'a> for TextComponentArgConsumer {
+impl FindArg<'_> for TextComponentArgConsumer {
     type Data = TextComponent;
 
     fn find_arg(args: &super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
@@ -64,11 +66,10 @@ impl<'a> FindArg<'a> for TextComponentArgConsumer {
 }
 
 fn parse_text_component(input: &str) -> Option<TextComponent> {
-    if input.starts_with("[") && input.ends_with("]") {
-        let text_component_array: Option<Vec<TextComponent>> = serde_json::from_str(input).unwrap_or(None);
-        let Some(mut text_component_array) = text_component_array else {
-            return None;
-        };
+    if input.starts_with('[') && input.ends_with(']') {
+        let text_component_array: Option<Vec<TextComponent>> =
+            serde_json::from_str(input).unwrap_or(None);
+        let mut text_component_array = text_component_array?;
         let mut constructed_text_component = text_component_array[0].clone();
         text_component_array.remove(0);
         constructed_text_component.extra = text_component_array;

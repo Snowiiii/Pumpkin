@@ -5,11 +5,10 @@ use crate::command::args::arg_bounded_num::BoundedNumArgumentConsumer;
 use crate::command::args::arg_players::PlayersArgumentConsumer;
 use crate::command::args::arg_resource_location::ResourceLocationArgumentConsumer;
 
-use crate::command::args::{
-    ConsumedArgs, DefaultNameArgConsumer, FindArg, FindArgDefaultName,
-};
+use crate::command::args::{ConsumedArgs, DefaultNameArgConsumer, FindArg, FindArgDefaultName};
 use crate::command::dispatcher::CommandError;
 
+use crate::command::args::arg_textcomponent::TextComponentArgConsumer;
 use crate::command::tree::CommandTree;
 use crate::command::tree_builder::{argument, argument_default_name, literal};
 use crate::command::{CommandExecutor, CommandSender};
@@ -20,7 +19,6 @@ use async_trait::async_trait;
 use pumpkin_core::text::color::{Color, NamedColor};
 use pumpkin_core::text::TextComponent;
 use uuid::Uuid;
-use crate::command::args::arg_textcomponent::TextComponentArgConsumer;
 
 const NAMES: [&str; 1] = ["bossbar"];
 const DESCRIPTION: &str = "Display bossbar";
@@ -56,7 +54,6 @@ enum CommandValueSet {
 struct BossbarAddExecuter;
 
 #[async_trait]
-#[expect(clippy::inefficient_to_string)]
 impl CommandExecutor for BossbarAddExecuter {
     async fn execute<'a>(
         &self,
@@ -308,7 +305,7 @@ impl CommandExecutor for BossbarSetExecuter {
                 send_prefix_success_message(
                     sender,
                     bossbar.bossbar_data.title,
-                    format!("has changed maximum to {}", max_value),
+                    format!("has changed maximum to {max_value}"),
                 )
                 .await;
                 Ok(())
@@ -329,8 +326,12 @@ impl CommandExecutor for BossbarSetExecuter {
                     }
                 }
 
-                send_prefix_success_message(sender, text_component, String::from("has been renamed"))
-                    .await;
+                send_prefix_success_message(
+                    sender,
+                    text_component,
+                    String::from("has been renamed"),
+                )
+                .await;
                 Ok(())
             }
             CommandValueSet::Players(has_players) => {
@@ -440,7 +441,7 @@ impl CommandExecutor for BossbarSetExecuter {
                 send_prefix_success_message(
                     sender,
                     bossbar.bossbar_data.title,
-                    format!("changed value to {}", value),
+                    format!("changed value to {value}"),
                 )
                 .await;
                 Ok(())
@@ -485,12 +486,11 @@ fn value_consumer() -> BoundedNumArgumentConsumer<i32> {
 
 pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION)
-        .with_child(
-            literal("add").with_child(
-                argument_default_name(non_autocomplete_consumer())
-                    .with_child(argument(ARG_NAME, TextComponentArgConsumer).execute(BossbarAddExecuter)),
+        .with_child(literal("add").with_child(
+            argument_default_name(non_autocomplete_consumer()).with_child(
+                argument(ARG_NAME, TextComponentArgConsumer).execute(BossbarAddExecuter),
             ),
-        )
+        ))
         .with_child(
             literal("get").with_child(
                 argument_default_name(autocomplete_consumer())
@@ -561,7 +561,7 @@ pub fn init_command_tree() -> CommandTree {
         )
 }
 
-fn bossbar_prefix(title: TextComponent, trailing: String) -> TextComponent {
+fn bossbar_prefix(title: TextComponent, trailing: &str) -> TextComponent {
     TextComponent::text("Custom bossbar [")
         .add_child(title)
         .add_child(TextComponent::text(format!("] {trailing}")))
@@ -572,7 +572,9 @@ async fn send_prefix_success_message(
     title: TextComponent,
     message: String,
 ) {
-    sender.send_message(bossbar_prefix(title, message)).await;
+    sender
+        .send_message(bossbar_prefix(title, message.as_str()))
+        .await;
 }
 async fn send_success_message(sender: &CommandSender<'_>, message: String) {
     sender.send_message(TextComponent::text(message)).await;
