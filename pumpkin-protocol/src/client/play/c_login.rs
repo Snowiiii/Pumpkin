@@ -3,7 +3,7 @@ use pumpkin_core::math::position::WorldPosition;
 use pumpkin_macros::client_packet;
 use serde::Serialize;
 
-use crate::VarInt;
+use crate::{codec::identifier::Identifier, VarInt};
 
 #[derive(Serialize)]
 #[client_packet("play:login")]
@@ -11,7 +11,7 @@ pub struct CLogin<'a> {
     entity_id: i32,
     is_hardcore: bool,
     dimension_count: VarInt,
-    dimension_names: &'a [&'a str],
+    dimension_names: &'a [Identifier],
     max_players: VarInt,
     view_distance: VarInt,
     simulated_distance: VarInt,
@@ -20,13 +20,13 @@ pub struct CLogin<'a> {
     limited_crafting: bool,
     // Spawn Info
     dimension_type: VarInt,
-    dimension_name: &'a str,
+    dimension_name: Identifier,
     hashed_seed: i64,
     game_mode: u8,
     previous_gamemode: i8,
     debug: bool,
     is_flat: bool,
-    death_dimension_name: Option<(&'a str, WorldPosition)>,
+    death_dimension_name: Option<(Identifier, WorldPosition)>,
     portal_cooldown: VarInt,
     sealevel: VarInt,
     enforce_secure_chat: bool,
@@ -37,7 +37,7 @@ impl<'a> CLogin<'a> {
     pub fn new(
         entity_id: i32,
         is_hardcore: bool,
-        dimension_names: &'a [&'a str],
+        dimension_names: &'a [Identifier],
         max_players: VarInt,
         view_distance: VarInt,
         simulated_distance: VarInt,
@@ -45,13 +45,13 @@ impl<'a> CLogin<'a> {
         enabled_respawn_screen: bool,
         limited_crafting: bool,
         dimension_type: VarInt,
-        dimension_name: &'a str,
+        dimension_name: Identifier,
         hashed_seed: i64,
         game_mode: u8,
         previous_gamemode: i8,
         debug: bool,
         is_flat: bool,
-        death_dimension_name: Option<(&'a str, WorldPosition)>,
+        death_dimension_name: Option<(Identifier, WorldPosition)>,
         portal_cooldown: VarInt,
         sealevel: VarInt,
         enforce_secure_chat: bool,

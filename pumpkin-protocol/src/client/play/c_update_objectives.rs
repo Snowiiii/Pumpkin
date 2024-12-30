@@ -1,4 +1,4 @@
-use bytes::{BufMut, BytesMut};
+use bytes::BufMut;
 use pumpkin_core::text::TextComponent;
 use pumpkin_macros::client_packet;
 
@@ -32,7 +32,7 @@ impl<'a> CUpdateObjectives<'a> {
 }
 
 impl ClientPacket for CUpdateObjectives<'_> {
-    fn write(&self, bytebuf: &mut BytesMut) {
+    fn write(&self, bytebuf: &mut impl BufMut) {
         bytebuf.put_string(self.objective_name);
         bytebuf.put_u8(self.mode);
         if self.mode == 0 || self.mode == 2 {

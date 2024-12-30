@@ -3,7 +3,10 @@ use bytes::{Buf, Bytes, BytesMut};
 use libdeflater::{DecompressionError, Decompressor};
 use thiserror::Error;
 
-use crate::{RawPacket, VarInt, VarIntDecodeError, MAX_PACKET_SIZE};
+use crate::{
+    codec::{Codec, DecodeError},
+    RawPacket, VarInt, MAX_PACKET_SIZE,
+};
 
 type Cipher = cfb8::Decryptor<aes::Aes128>;
 
@@ -13,9 +16,8 @@ type Cipher = cfb8::Decryptor<aes::Aes128>;
 pub struct PacketDecoder {
     buf: BytesMut,
     decompress_buf: BytesMut,
-    compression: bool,
     cipher: Option<Cipher>,
-    decompressor: Decompressor,
+    decompressor: Option<Decompressor>,
 }
 
 // Manual implementation of Default trait for PacketDecoder
@@ -25,9 +27,8 @@ impl Default for PacketDecoder {
         Self {
             buf: BytesMut::new(),
             decompress_buf: BytesMut::new(),
-            compression: false,
             cipher: None,
-            decompressor: Decompressor::new(),
+            decompressor: None,
         }
     }
 }
@@ -38,8 +39,8 @@ impl PacketDecoder {
 
         let packet_len = match VarInt::decode(&mut r) {
             Ok(len) => len,
-            Err(VarIntDecodeError::Incomplete) => return Ok(None),
-            Err(VarIntDecodeError::TooLarge) => Err(PacketDecodeError::MalformedLength)?,
+            Err(DecodeError::Incomplete) => return Ok(None),
+            Err(DecodeError::TooLarge) => Err(PacketDecodeError::MalformedLength)?,
         };
         let packet_len = packet_len.0;
 
@@ -55,7 +56,7 @@ impl PacketDecoder {
         let packet_len_len = VarInt(packet_len).written_size();
 
         let mut data;
-        if self.compression {
+        if let Some(decompressor) = &mut self.decompressor {
             r = &r[..packet_len as usize];
 
             let data_len = VarInt::decode(&mut r)
@@ -74,8 +75,7 @@ impl PacketDecoder {
                 self.decompress_buf.resize(data_len as usize, 0);
 
                 // Perform decompression using libdeflater
-                let decompressed_size = self
-                    .decompressor
+                let decompressed_size = decompressor
                     .zlib_decompress(r, &mut self.decompress_buf)
                     .map_err(PacketDecodeError::from)?;
 
@@ -132,7 +132,11 @@ impl PacketDecoder {
 
     /// Sets ZLib Decompression
     pub fn set_compression(&mut self, compression: bool) {
-        self.compression = compression;
+        if compression {
+            self.decompressor = Some(Decompressor::new());
+        } else {
+            self.decompressor = None
+        }
     }
 
     fn decrypt_bytes(cipher: &mut Cipher, bytes: &mut [u8]) {

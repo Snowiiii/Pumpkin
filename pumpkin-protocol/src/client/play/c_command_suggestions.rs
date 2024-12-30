@@ -1,4 +1,4 @@
-use bytes::{BufMut, BytesMut};
+use bytes::BufMut;
 use pumpkin_core::text::TextComponent;
 use pumpkin_macros::client_packet;
 
@@ -29,13 +29,13 @@ impl<'a> CCommandSuggestions<'a> {
 }
 
 impl ClientPacket for CCommandSuggestions<'_> {
-    fn write(&self, bytebuf: &mut BytesMut) {
+    fn write(&self, bytebuf: &mut impl BufMut) {
         bytebuf.put_var_int(&self.id);
         bytebuf.put_var_int(&self.start);
         bytebuf.put_var_int(&self.length);
 
         bytebuf.put_list(&self.matches, |bytebuf, suggestion| {
-            bytebuf.put_string(suggestion.suggestion);
+            bytebuf.put_string(&suggestion.suggestion);
             bytebuf.put_bool(suggestion.tooltip.is_some());
             if let Some(tooltip) = &suggestion.tooltip {
                 bytebuf.put_slice(&tooltip.encode());
@@ -46,12 +46,12 @@ impl ClientPacket for CCommandSuggestions<'_> {
 
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub struct CommandSuggestion<'a> {
-    pub suggestion: &'a str,
+    pub suggestion: String,
     pub tooltip: Option<TextComponent<'a>>,
 }
 
 impl<'a> CommandSuggestion<'a> {
-    pub fn new(suggestion: &'a str, tooltip: Option<TextComponent<'a>>) -> Self {
+    pub fn new(suggestion: String, tooltip: Option<TextComponent<'a>>) -> Self {
         Self {
             suggestion,
             tooltip,

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use pumpkin_protocol::client::play::{CCommands, ProtoNode, ProtoNodeType};
+use tokio::sync::RwLock;
 
 use crate::entity::player::Player;
 
@@ -9,17 +10,23 @@ use super::{
     tree::{Node, NodeType},
 };
 
-pub async fn send_c_commands_packet<'a>(
-    player: &Arc<Player>,
-    dispatcher: &'a CommandDispatcher<'a>,
-) {
+pub async fn send_c_commands_packet(player: &Arc<Player>, dispatcher: &RwLock<CommandDispatcher>) {
     let cmd_src = super::CommandSender::Player(player.clone());
     let mut first_level = Vec::new();
 
+    let dispatcher = dispatcher.read().await;
     for key in dispatcher.commands.keys() {
         let Ok(tree) = dispatcher.get_tree(key) else {
             continue;
         };
+
+        let Some(permission) = dispatcher.get_permission_lvl(key) else {
+            continue;
+        };
+
+        if !cmd_src.has_permission_lvl(permission) {
+            continue;
+        }
 
         let (is_executable, child_nodes) =
             nodes_to_proto_node_builders(&cmd_src, &tree.nodes, &tree.children);
@@ -72,15 +79,15 @@ impl<'a> ProtoNodeBuilder<'a> {
 
 fn nodes_to_proto_node_builders<'a>(
     cmd_src: &super::CommandSender,
-    nodes: &'a [Node<'a>],
-    children: &'a [usize],
+    nodes: &'a [Node],
+    children: &[usize],
 ) -> (bool, Vec<ProtoNodeBuilder<'a>>) {
     let mut child_nodes = Vec::new();
     let mut is_executable = false;
 
     for i in children {
         let node = &nodes[*i];
-        match node.node_type {
+        match &node.node_type {
             NodeType::Argument { name, consumer } => {
                 let (node_is_executable, node_children) =
                     nodes_to_proto_node_builders(cmd_src, nodes, &node.children);

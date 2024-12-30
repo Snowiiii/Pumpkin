@@ -61,11 +61,11 @@ impl CommandExecutor for PumpkinExecutor {
                         .color_named(NamedColor::Gold),
                     )
                     .add_child(TextComponent::text(" "))
-                    // https://snowiiii.github.io/Pumpkin/
+                    // https://pumpkinmc.org/
                     .add_child(
                         TextComponent::text("Github Repository")
                             .click_event(ClickEvent::OpenUrl(Cow::from(
-                                "https://github.com/Snowiiii/Pumpkin",
+                                "https://github.com/Pumpkin-MC/Pumpkin",
                             )))
                             .hover_event(HoverEvent::ShowText(Cow::from(
                                 "Click to open repository.",
@@ -77,11 +77,9 @@ impl CommandExecutor for PumpkinExecutor {
                     // Added docs. and a space for spacing
                     .add_child(TextComponent::text(" "))
                     .add_child(
-                        TextComponent::text("Docs")
-                            .click_event(ClickEvent::OpenUrl(Cow::from(
-                                "https://snowiiii.github.io/Pumpkin/",
-                            )))
-                            .hover_event(HoverEvent::ShowText(Cow::from("Click to open docs.")))
+                        TextComponent::text("Website")
+                            .click_event(ClickEvent::OpenUrl(Cow::from("https://pumpkinmc.org/")))
+                            .hover_event(HoverEvent::ShowText(Cow::from("Click to open website.")))
                             .color_named(NamedColor::Blue)
                             .bold()
                             .underlined(),
@@ -92,6 +90,6 @@ impl CommandExecutor for PumpkinExecutor {
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
-    CommandTree::new(NAMES, DESCRIPTION).execute(&PumpkinExecutor)
+pub fn init_command_tree() -> CommandTree {
+    CommandTree::new(NAMES, DESCRIPTION).execute(PumpkinExecutor)
 }

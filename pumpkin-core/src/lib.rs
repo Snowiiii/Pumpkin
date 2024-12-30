@@ -1,13 +1,15 @@
 pub mod gamemode;
 pub mod math;
+pub mod permission;
 pub mod random;
 pub mod text;
 
 pub use gamemode::GameMode;
+pub use permission::PermissionLvl;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Serialize, Deserialize)]
+#[derive(PartialEq, Serialize, Deserialize, Clone)]
 pub enum Difficulty {
     Peaceful,
     Easy,

@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+pumpkin-nbt = { path = "../pumpkin-nbt" }
 pumpkin-core = { path = "../pumpkin-core" }
 pumpkin-config = { path = "../pumpkin-config" }
 pumpkin-macros = { path = "../pumpkin-macros" }
@@ -26,6 +27,8 @@ dashmap = "6.1.0"
 # Compression   
 flate2 = "1.0"
 lz4 = "1.28.0"
+
+file-guard = "0.2.0"
 
 enum_dispatch = "0.3.13"
 

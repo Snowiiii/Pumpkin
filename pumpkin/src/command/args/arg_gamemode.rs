@@ -29,7 +29,7 @@ impl GetClientSideArgParser for GamemodeArgumentConsumer {
 #[async_trait]
 impl ArgumentConsumer for GamemodeArgumentConsumer {
     async fn consume<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
@@ -50,7 +50,7 @@ impl ArgumentConsumer for GamemodeArgumentConsumer {
     }
 
     async fn suggest<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
@@ -60,19 +60,15 @@ impl ArgumentConsumer for GamemodeArgumentConsumer {
 }
 
 impl DefaultNameArgConsumer for GamemodeArgumentConsumer {
-    fn default_name(&self) -> &'static str {
-        "gamemode"
-    }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &GamemodeArgumentConsumer
+    fn default_name(&self) -> String {
+        "gamemode".to_string()
     }
 }
 
 impl<'a> FindArg<'a> for GamemodeArgumentConsumer {
     type Data = GameMode;
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::GameMode(data)) => Ok(*data),
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),

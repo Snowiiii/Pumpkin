@@ -5,7 +5,7 @@ pub mod player_chunker;
 
 use crate::{
     command::client_cmd_suggestions,
-    entity::{player::Player, Entity},
+    entity::{living::LivingEntity, player::Player, Entity},
     error::PumpkinError,
     server::Server,
 };
@@ -14,8 +14,11 @@ use pumpkin_config::BasicConfiguration;
 use pumpkin_core::math::vector2::Vector2;
 use pumpkin_core::math::{position::WorldPosition, vector3::Vector3};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
-use pumpkin_entity::{entity_type::EntityType, EntityId};
-use pumpkin_protocol::client::play::CLevelEvent;
+use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
+use pumpkin_protocol::{
+    client::play::CLevelEvent,
+    codec::{identifier::Identifier, var_int::VarInt},
+};
 use pumpkin_protocol::{
     client::play::{CBlockUpdate, CRespawn, CSoundEffect, CWorldEvent},
     SoundCategory,
@@ -25,7 +28,7 @@ use pumpkin_protocol::{
         CChunkData, CGameEvent, CLogin, CPlayerInfoUpdate, CRemoveEntities, CRemovePlayerInfo,
         CSetEntityMetadata, CSpawnEntity, GameEvent, Metadata, PlayerAction,
     },
-    ClientPacket, VarInt,
+    ClientPacket,
 };
 use pumpkin_registry::DimensionType;
 use pumpkin_world::chunk::ChunkData;
@@ -99,6 +102,8 @@ pub struct World {
     pub level_time: Mutex<LevelTime>,
     /// The type of dimension the world is in
     pub dimension_type: DimensionType,
+    /// A map of active entities within the world, keyed by their unique UUID.
+    pub current_living_entities: Arc<Mutex<HashMap<uuid::Uuid, Arc<LivingEntity>>>>,
     // TODO: entities
 }
 
@@ -112,7 +117,12 @@ impl World {
             worldborder: Mutex::new(Worldborder::new(0.0, 0.0, 29_999_984.0, 0, 0, 0)),
             level_time: Mutex::new(LevelTime::new()),
             dimension_type,
+            current_living_entities: Arc::new(Mutex::new(HashMap::new())),
         }
+    }
+
+    pub async fn save(&self) {
+        self.level.save().await;
     }
 
     /// Broadcasts a packet to all connected players within the world.
@@ -222,8 +232,8 @@ impl World {
         player: Arc<Player>,
         server: &Server,
     ) {
-        let command_dispatcher = &server.command_dispatcher;
-        let dimensions: Vec<&str> = server.dimensions.iter().map(DimensionType::name).collect();
+        let dimensions: Vec<Identifier> =
+            server.dimensions.iter().map(DimensionType::name).collect();
 
         // This code follows the vanilla packet order
         let entity_id = player.entity_id();
@@ -242,8 +252,8 @@ impl World {
                 base_config.hardcore,
                 &dimensions,
                 base_config.max_players.into(),
-                base_config.view_distance.into(), //  TODO: view distance
-                base_config.simulation_distance.into(), // TODO: sim view dinstance
+                base_config.view_distance.get().into(), //  TODO: view distance
+                base_config.simulation_distance.get().into(), // TODO: sim view dinstance
                 false,
                 true,
                 false,
@@ -262,8 +272,7 @@ impl World {
             .await;
         // permissions, i. e. the commands a player may use
         player.send_permission_lvl_update().await;
-        client_cmd_suggestions::send_c_commands_packet(&player, command_dispatcher).await;
-
+        client_cmd_suggestions::send_c_commands_packet(&player, &server.command_dispatcher).await;
         // teleport
         let mut position = Vector3::new(10.0, 120.0, 10.0);
         let yaw = 10.0;
@@ -324,7 +333,7 @@ impl World {
                 .client
                 .send_packet(&CPlayerInfoUpdate::new(0x01 | 0x08, &entries))
                 .await;
-        }
+        };
 
         let gameprofile = &player.gameprofile;
 
@@ -598,6 +607,16 @@ impl World {
         None
     }
 
+    /// Gets a Living Entity by entity id
+    pub async fn get_living_entity_by_entityid(&self, id: EntityId) -> Option<Arc<LivingEntity>> {
+        for living_entity in self.current_living_entities.lock().await.values() {
+            if living_entity.entity_id() == id {
+                return Some(living_entity.clone());
+            }
+        }
+        None
+    }
+
     /// Gets a Player by username
     pub async fn get_player_by_name(&self, name: &str) -> Option<Arc<Player>> {
         for player in self.current_players.lock().await.values() {
@@ -622,6 +641,68 @@ impl World {
     /// An `Option<Arc<Player>>` containing the player if found, or `None` if not.
     pub async fn get_player_by_uuid(&self, id: uuid::Uuid) -> Option<Arc<Player>> {
         return self.current_players.lock().await.get(&id).cloned();
+    }
+
+    /// Gets a list of players who's location equals the given position in the world.
+    ///
+    /// It iterates through the players in the world and checks their location. If the player's location matches the
+    /// given position it will add this to a Vec which it later returns. If no
+    /// player was found in that position it will just return an empty Vec.
+    ///
+    /// # Arguments
+    ///
+    /// * `position`: The position the function will check.
+    pub async fn get_players_by_pos(
+        &self,
+        position: WorldPosition,
+    ) -> HashMap<uuid::Uuid, Arc<Player>> {
+        self.current_players
+            .lock()
+            .await
+            .iter()
+            .filter_map(|(uuid, player)| {
+                let player_block_pos = player.living_entity.entity.block_pos.load().0;
+                (position.0.x == player_block_pos.x
+                    && position.0.y == player_block_pos.y
+                    && position.0.z == player_block_pos.z)
+                    .then(|| (*uuid, Arc::clone(player)))
+            })
+            .collect::<HashMap<uuid::Uuid, Arc<Player>>>()
+    }
+
+    /// Gets the nearby players around a given world position
+    /// It "creates" a sphere and checks if whether players are inside
+    /// and returns a hashmap where the uuid is the key and the player
+    /// object the value.
+    ///
+    /// # Arguments
+    /// * `pos`: The middlepoint of the sphere
+    /// * `radius`: The radius of the sphere. The higher the radius
+    ///             the more area will be checked, in every direction.
+    pub async fn get_nearby_players(
+        &self,
+        pos: Vector3<f64>,
+        radius: u16,
+    ) -> HashMap<uuid::Uuid, Arc<Player>> {
+        let radius_squared = (f64::from(radius)).powi(2);
+
+        let mut found_players = HashMap::new();
+        for player in self.current_players.lock().await.iter() {
+            let player_pos = player.1.living_entity.entity.pos.load();
+
+            let diff = Vector3::new(
+                player_pos.x - pos.x,
+                player_pos.y - pos.y,
+                player_pos.z - pos.z,
+            );
+
+            let distance_squared = diff.x.powi(2) + diff.y.powi(2) + diff.z.powi(2);
+            if distance_squared <= radius_squared {
+                found_players.insert(*player.0, player.1.clone());
+            }
+        }
+
+        found_players
     }
 
     /// Adds a player to the world and broadcasts a join message if enabled.
@@ -689,6 +770,31 @@ impl World {
             player.send_system_message(&disconn_msg_cmp).await;
         }
         log::info!("{}", disconn_msg_cmp.to_pretty_console());
+    }
+
+    /// Adds a living entity to the world.
+    ///
+    /// This function takes a living entity's UUID and an `Arc<LivingEntity>` reference.
+    /// It inserts the living entity into the world's `current_living_entities` map using the UUID as the key.
+    ///
+    /// # Arguments
+    ///
+    /// * `uuid`: The unique UUID of the living entity to add.
+    /// * `living_entity`: A `Arc<LivingEntity>` reference to the living entity object.
+    pub async fn add_living_entity(&self, uuid: uuid::Uuid, living_entity: Arc<LivingEntity>) {
+        let mut current_living_entities = self.current_living_entities.lock().await;
+        current_living_entities.insert(uuid, living_entity);
+    }
+
+    pub async fn remove_living_entity(living_entity: Arc<LivingEntity>, world: Arc<Self>) {
+        let mut current_living_entities = world.current_living_entities.lock().await.clone();
+        // TODO: does this work with collisions?
+        living_entity.entity.set_pose(EntityPose::Dying).await;
+        tokio::spawn(async move {
+            tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+            world.remove_entity(&living_entity.entity).await;
+            current_living_entities.remove(&living_entity.entity.entity_uuid);
+        });
     }
 
     pub async fn remove_entity(&self, entity: &Entity) {

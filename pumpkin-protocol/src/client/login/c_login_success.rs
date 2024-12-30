@@ -1,4 +1,4 @@
-use bytes::BytesMut;
+use bytes::BufMut;
 use pumpkin_macros::client_packet;
 
 use crate::{bytebuf::ByteBufMut, ClientPacket, Property};
@@ -21,7 +21,7 @@ impl<'a> CLoginSuccess<'a> {
 }
 
 impl ClientPacket for CLoginSuccess<'_> {
-    fn write(&self, bytebuf: &mut BytesMut) {
+    fn write(&self, bytebuf: &mut impl BufMut) {
         bytebuf.put_uuid(self.uuid);
         bytebuf.put_string(self.username);
         bytebuf.put_list::<Property>(self.properties, |p, v| {

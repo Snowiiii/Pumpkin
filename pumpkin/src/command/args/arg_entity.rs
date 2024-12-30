@@ -37,7 +37,7 @@ impl GetClientSideArgParser for EntityArgumentConsumer {
 #[async_trait]
 impl ArgumentConsumer for EntityArgumentConsumer {
     async fn consume<'a>(
-        &self,
+        &'a self,
         src: &CommandSender<'a>,
         server: &'a Server,
         args: &mut RawArgs<'a>,
@@ -69,7 +69,7 @@ impl ArgumentConsumer for EntityArgumentConsumer {
     }
 
     async fn suggest<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
@@ -79,19 +79,15 @@ impl ArgumentConsumer for EntityArgumentConsumer {
 }
 
 impl DefaultNameArgConsumer for EntityArgumentConsumer {
-    fn default_name(&self) -> &'static str {
-        "target"
-    }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &EntityArgumentConsumer
+    fn default_name(&self) -> String {
+        "target".to_string()
     }
 }
 
 impl<'a> FindArg<'a> for EntityArgumentConsumer {
     type Data = Arc<Player>;
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::Entity(data)) => Ok(data.clone()),
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),

@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 pub enum ClickEvent<'a> {
     /// Opens a URL
     OpenUrl(Cow<'a, str>),
+    /// Opens a File
+    OpenFile(Cow<'a, str>),
     /// Works in signs, but only on the root text component
     RunCommand(Cow<'a, str>),
     /// Replaces the contents of the chat box with the text, not necessarily a

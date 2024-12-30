@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{num::NonZeroU8, sync::Arc};
 
 use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::{
@@ -10,13 +10,11 @@ use pumpkin_world::cylindrical_chunk_iterator::Cylindrical;
 
 use crate::entity::player::Player;
 
-pub async fn get_view_distance(player: &Player) -> u8 {
-    player
-        .config
-        .lock()
-        .await
-        .view_distance
-        .clamp(2, BASIC_CONFIG.view_distance)
+pub async fn get_view_distance(player: &Player) -> NonZeroU8 {
+    player.config.lock().await.view_distance.clamp(
+        unsafe { NonZeroU8::new_unchecked(2) },
+        BASIC_CONFIG.view_distance,
+    )
 }
 
 pub async fn player_join(player: &Arc<Player>) {

@@ -1,10 +1,10 @@
 use crate::{
     bytebuf::{ByteBuf, ReadingError},
-    Identifier, ServerPacket, VarInt,
+    codec::identifier::Identifier,
+    ServerPacket, VarInt,
 };
-use bytes::Bytes;
+use bytes::Buf;
 use pumpkin_macros::server_packet;
-use serde::de;
 
 #[server_packet("play:cookie_response")]
 /// Response to a Cookie Request (play) from the server.
@@ -16,11 +16,11 @@ pub struct SCookieResponse {
     pub payload: Option<bytes::Bytes>, // 5120,
 }
 
-const MAX_PAYLOAD_SIZE: i32 = 5120;
+const MAX_COOKIE_LENGTH: usize = 5120;
 
 impl ServerPacket for SCookieResponse {
-    fn read(bytebuf: &mut Bytes) -> Result<Self, ReadingError> {
-        let key = bytebuf.try_get_string()?;
+    fn read(bytebuf: &mut impl Buf) -> Result<Self, ReadingError> {
+        let key = bytebuf.try_get_identifer()?;
         let has_payload = bytebuf.try_get_bool()?;
 
         if !has_payload {
@@ -35,13 +35,7 @@ impl ServerPacket for SCookieResponse {
         let payload_length = bytebuf.try_get_var_int()?;
         let length = payload_length.0;
 
-        if length > MAX_PAYLOAD_SIZE {
-            return Err(de::Error::custom(
-                "Payload exceeds the maximum allowed size (5120 bytes)",
-            ));
-        }
-
-        let payload = bytebuf.try_copy_to_bytes(length as usize)?;
+        let payload = bytebuf.try_copy_to_bytes_len(length as usize, MAX_COOKIE_LENGTH)?;
 
         Ok(Self {
             key,

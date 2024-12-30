@@ -22,10 +22,10 @@ pub(crate) struct BoundedNumArgumentConsumer<T: ToFromNumber> {
 #[async_trait]
 impl<T: ToFromNumber> ArgumentConsumer for BoundedNumArgumentConsumer<T>
 where
-    BoundedNumArgumentConsumer<T>: GetClientSideArgParser,
+    Self: GetClientSideArgParser,
 {
     async fn consume<'a>(
-        &self,
+        &'a self,
         _src: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
@@ -48,7 +48,7 @@ where
     }
 
     async fn suggest<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
@@ -236,14 +236,10 @@ impl GetClientSideArgParser for BoundedNumArgumentConsumer<i64> {
 
 impl<T: ToFromNumber> DefaultNameArgConsumer for BoundedNumArgumentConsumer<T>
 where
-    BoundedNumArgumentConsumer<T>: ArgumentConsumer,
+    Self: ArgumentConsumer,
 {
-    fn default_name(&self) -> &'static str {
+    fn default_name(&self) -> String {
         // setting a single default name for all BoundedNumArgumentConsumer variants is probably a bad idea since it would lead to confusion
-        self.name.expect("Only use *_default variants of methods with a BoundedNumArgumentConsumer that has a name.")
-    }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        self
+        self.name.expect("Only use *_default variants of methods with a BoundedNumArgumentConsumer that has a name.").to_string()
     }
 }

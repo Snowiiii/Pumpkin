@@ -21,7 +21,7 @@ impl Default for ServerLinksConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            bug_report: "https://github.com/Snowiiii/Pumpkin/issues".to_string(),
+            bug_report: "https://github.com/Pumpkin-MC/Pumpkin/issues".to_string(),
             support: "".to_string(),
             status: "".to_string(),
             feedback: "".to_string(),

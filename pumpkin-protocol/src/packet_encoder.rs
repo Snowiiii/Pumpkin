@@ -1,11 +1,12 @@
 use aes::cipher::{generic_array::GenericArray, BlockEncryptMut, BlockSizeUser, KeyIvInit};
 use bytes::{BufMut, BytesMut};
-use pumpkin_config::compression::CompressionInfo;
 use thiserror::Error;
 
 use libdeflater::{CompressionLvl, Compressor};
 
-use crate::{ClientPacket, VarInt, MAX_PACKET_SIZE};
+use crate::{
+    codec::Codec, ClientPacket, CompressionLevel, CompressionThreshold, VarInt, MAX_PACKET_SIZE,
+};
 
 type Cipher = cfb8::Encryptor<aes::Aes128>;
 
@@ -15,9 +16,9 @@ type Cipher = cfb8::Encryptor<aes::Aes128>;
 pub struct PacketEncoder {
     buf: BytesMut,
     compress_buf: Vec<u8>,
-    compression_threshold: Option<u32>,
     cipher: Option<Cipher>,
-    compressor: Compressor, // Reuse the compressor for all packets
+    // compression and compression threshold
+    compression: Option<(Compressor, CompressionThreshold)>,
 }
 
 // Manual implementation of Default trait for PacketEncoder
@@ -27,9 +28,8 @@ impl Default for PacketEncoder {
         Self {
             buf: BytesMut::with_capacity(1024),
             compress_buf: Vec::with_capacity(1024),
-            compression_threshold: None,
             cipher: None,
-            compressor: Compressor::new(CompressionLvl::fastest()), // init compressor with fastest compression level
+            compression: None, // init compressor with fastest compression level
         }
     }
 }
@@ -73,8 +73,8 @@ impl PacketEncoder {
         packet.write(&mut self.buf);
         let data_len = self.buf.len() - start_len;
 
-        if let Some(compression_threshold) = self.compression_threshold {
-            if data_len > compression_threshold as usize {
+        if let Some((compressor, compression_threshold)) = &mut self.compression {
+            if data_len > compression_threshold.0 as usize {
                 // Get the data to compress
                 let data_to_compress = &self.buf[start_len..];
 
@@ -82,15 +82,13 @@ impl PacketEncoder {
                 self.compress_buf.clear();
 
                 // Compute the maximum size of compressed data
-                let max_compressed_size =
-                    self.compressor.zlib_compress_bound(data_to_compress.len());
+                let max_compressed_size = compressor.zlib_compress_bound(data_to_compress.len());
 
                 // Ensure compress_buf has enough capacity
                 self.compress_buf.resize(max_compressed_size, 0);
 
                 // Compress the data
-                let compressed_size = self
-                    .compressor
+                let compressed_size = compressor
                     .zlib_compress(data_to_compress, &mut self.compress_buf)
                     .map_err(|e| PacketEncodeError::CompressionFailed(e.to_string()))?;
 
@@ -166,26 +164,30 @@ impl PacketEncoder {
         }
     }
 
-    /// Enables or disables Zlib compression with the given options.
+    /// Enables or disables Zlib compression.
     ///
-    /// If `compression` is `Some`, compression is enabled with the provided
-    /// options. If `compression` is `None`, compression is disabled.
-    pub fn set_compression(&mut self, compression: Option<CompressionInfo>) {
-        // Reset the compressor with the new compression level
-        if let Some(compression) = &compression {
-            self.compression_threshold = Some(compression.threshold);
-            let compression_level = compression.level as i32;
-            let level = match CompressionLvl::new(compression_level) {
-                Ok(level) => level,
-                Err(error) => {
-                    log::error!("Invalid compression level {:?}", error);
-                    return;
-                }
-            };
-            self.compressor = Compressor::new(level);
-        } else {
-            self.compression_threshold = None;
+    /// If `compression` is `Some`, compression is enabled with the given `threshold`
+    /// for triggering compression and the specified `level`. If `compression` is
+    /// `None`, compression is disabled.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `CompressionLevelError` if an invalid compression level is provided.
+    pub fn set_compression(
+        &mut self,
+        compression: Option<(CompressionThreshold, CompressionLevel)>,
+    ) -> Result<(), CompressionLevelError> {
+        match compression {
+            Some((threshold, level)) => {
+                let level =
+                    CompressionLvl::new(level.0 as i32).map_err(|_| CompressionLevelError)?;
+                self.compression = Some((Compressor::new(level), threshold));
+            }
+            None => {
+                self.compression = None;
+            }
         }
+        Ok(())
     }
 
     /// Encrypts the data in the internal buffer and returns it as a `BytesMut`.
@@ -209,6 +211,10 @@ impl PacketEncoder {
     }
 }
 
+#[derive(Error, Debug)]
+#[error("Invalid compression Level")]
+pub struct CompressionLevelError;
+
 /// Errors that can occur during packet encoding.
 #[derive(Error, Debug)]
 pub enum PacketEncodeError {
@@ -221,9 +227,8 @@ pub enum PacketEncodeError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bytebuf::packet_id::Packet;
     use crate::client::status::CStatusResponse;
-    use crate::VarIntDecodeError;
+    use crate::{bytebuf::packet_id::Packet, codec::DecodeError};
     use aes::Aes128;
     use cfb8::cipher::AsyncStreamCipher;
     use cfb8::Decryptor as Cfb8Decryptor;
@@ -247,7 +252,7 @@ mod tests {
     }
 
     /// Helper function to decode a VarInt from bytes
-    fn decode_varint(buffer: &mut &[u8]) -> Result<i32, VarIntDecodeError> {
+    fn decode_varint(buffer: &mut &[u8]) -> Result<i32, DecodeError> {
         VarInt::decode(buffer).map(|varint| varint.0)
     }
 
@@ -269,15 +274,15 @@ mod tests {
     /// Helper function to build a packet with optional compression and encryption
     fn build_packet_with_encoder<T: ClientPacket>(
         packet: &T,
-        compression_info: Option<CompressionInfo>,
+        compression_info: Option<(CompressionThreshold, CompressionLevel)>,
         key: Option<&[u8; 16]>,
     ) -> BytesMut {
         let mut encoder = PacketEncoder::default();
 
         if let Some(compression) = compression_info {
-            encoder.set_compression(Some(compression));
+            encoder.set_compression(Some(compression)).unwrap();
         } else {
-            encoder.set_compression(None);
+            encoder.set_compression(None).unwrap();
         }
 
         if let Some(key) = key {
@@ -329,14 +334,12 @@ mod tests {
         // Create a CStatusResponse packet
         let packet = CStatusResponse::new("{\"description\": \"A Minecraft Server\"}");
 
-        // Compression threshold is set to 0 to force compression
-        let compression_info = CompressionInfo {
-            threshold: 0,
-            level: 6, // Standard compression level
-        };
-
         // Build the packet with compression enabled
-        let packet_bytes = build_packet_with_encoder(&packet, Some(compression_info), None);
+        let packet_bytes = build_packet_with_encoder(
+            &packet,
+            Some((CompressionThreshold(0), CompressionLevel(6))),
+            None,
+        );
 
         // Decode the packet manually to verify correctness
         let mut buffer = &packet_bytes[..];
@@ -419,18 +422,16 @@ mod tests {
         // Create a CStatusResponse packet
         let packet = CStatusResponse::new("{\"description\": \"A Minecraft Server\"}");
 
-        // Compression threshold is set to 0 to force compression
-        let compression_info = CompressionInfo {
-            threshold: 0,
-            level: 6, // Standard compression level
-        };
-
         // Encryption key and IV (IV is the same as key in this case)
         let key = [0x01u8; 16]; // Example key
 
         // Build the packet with both compression and encryption enabled
-        let mut packet_bytes =
-            build_packet_with_encoder(&packet, Some(compression_info), Some(&key));
+        // Compression threshold is set to 0 to force compression
+        let mut packet_bytes = build_packet_with_encoder(
+            &packet,
+            Some((CompressionThreshold(0), CompressionLevel(6))),
+            Some(&key),
+        );
 
         // Decrypt the packet
         decrypt_aes128(&mut packet_bytes, &key, &key);
@@ -568,14 +569,13 @@ mod tests {
         // Create a CStatusResponse packet with small payload
         let packet = CStatusResponse::new("Hi");
 
-        // Compression threshold is set to a value higher than payload length
-        let compression_info = CompressionInfo {
-            threshold: 10,
-            level: 6, // Standard compression level
-        };
-
         // Build the packet with compression enabled
-        let packet_bytes = build_packet_with_encoder(&packet, Some(compression_info), None);
+        // Compression threshold is set to a value higher than payload length
+        let packet_bytes = build_packet_with_encoder(
+            &packet,
+            Some((CompressionThreshold(10), CompressionLevel(6))),
+            None,
+        );
 
         // Decode the packet manually to verify that it was not compressed
         let mut buffer = &packet_bytes[..];

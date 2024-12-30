@@ -1,4 +1,4 @@
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use pumpkin_macros::server_packet;
 
 use crate::{
@@ -19,7 +19,7 @@ pub struct SChatMessage {
 
 // TODO
 impl ServerPacket for SChatMessage {
-    fn read(bytebuf: &mut Bytes) -> Result<Self, ReadingError> {
+    fn read(bytebuf: &mut impl Buf) -> Result<Self, ReadingError> {
         Ok(Self {
             message: bytebuf.try_get_string()?,
             timestamp: bytebuf.try_get_i64()?,

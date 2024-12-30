@@ -1,4 +1,5 @@
 use std::{
+    num::NonZeroU8,
     sync::{
         atomic::{AtomicBool, AtomicI32, AtomicI64, AtomicU32, AtomicU8},
         Arc,
@@ -7,7 +8,7 @@ use std::{
 };
 
 use crossbeam::atomic::AtomicCell;
-use num_derive::{FromPrimitive, ToPrimitive};
+use num_derive::FromPrimitive;
 use num_traits::Pow;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::{
@@ -17,13 +18,13 @@ use pumpkin_core::{
         vector2::Vector2,
         vector3::Vector3,
     },
+    permission::PermissionLvl,
     text::TextComponent,
     GameMode,
 };
 use pumpkin_entity::{entity_type::EntityType, EntityId};
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_macros::sound;
-use pumpkin_protocol::client::play::CUpdateTime;
 use pumpkin_protocol::server::play::{
     SCloseContainer, SCookieResponse as SPCookieResponse, SPlayPingRequest,
 };
@@ -36,33 +37,39 @@ use pumpkin_protocol::{
     },
     server::play::{
         SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SClientTickEnd,
-        SCommandSuggestion, SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction,
-        SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
-        SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
+        SCommandSuggestion, SConfirmTeleport, SInteract, SPickItemFromBlock, SPlayerAbilities,
+        SPlayerAction, SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation,
+        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem,
+        SUseItemOn,
     },
-    RawPacket, ServerPacket, SoundCategory, VarInt,
+    RawPacket, ServerPacket, SoundCategory,
 };
+use pumpkin_protocol::{client::play::CUpdateTime, codec::var_int::VarInt};
 use pumpkin_protocol::{
     client::play::{CSetEntityMetadata, Metadata},
     server::play::{SClickContainer, SKeepAlive},
 };
 use pumpkin_world::{
     cylindrical_chunk_iterator::Cylindrical,
-    item::{item_registry::get_item_by_id, ItemStack},
+    item::{
+        item_registry::{get_item_by_id, Operation},
+        ItemStack,
+    },
 };
-use tokio::sync::{Mutex, Notify};
+use tokio::sync::{Mutex, Notify, RwLock};
 
 use super::Entity;
-use crate::error::PumpkinError;
 use crate::{
-    client::{
-        authentication::GameProfile,
+    command::{client_cmd_suggestions, dispatcher::CommandDispatcher},
+    data::op_data::OPERATOR_CONFIG,
+    net::{
         combat::{self, player_attack_sound, AttackType},
         Client, PlayerConfig,
     },
     server::Server,
     world::World,
 };
+use crate::{error::PumpkinError, net::GameProfile};
 
 use super::living::LivingEntity;
 
@@ -113,12 +120,10 @@ pub struct Player {
     pub last_keep_alive_time: AtomicCell<Instant>,
     /// Amount of ticks since last attack
     pub last_attacked_ticks: AtomicU32,
-
+    /// The players op permission level
+    pub permission_lvl: AtomicCell<PermissionLvl>,
     /// Tell tasks to stop if we are closing
     cancel_tasks: Notify,
-
-    /// the players op permission level
-    permission_lvl: PermissionLvl,
 }
 
 impl Player {
@@ -128,11 +133,12 @@ impl Player {
         entity_id: EntityId,
         gamemode: GameMode,
     ) -> Self {
+        let player_uuid = uuid::Uuid::new_v4();
         let gameprofile = client.gameprofile.lock().await.clone().map_or_else(
             || {
                 log::error!("Client {} has no game profile!", client.id);
                 GameProfile {
-                    id: uuid::Uuid::new_v4(),
+                    id: player_uuid,
                     name: String::new(),
                     properties: vec![],
                     profile_actions: None,
@@ -140,6 +146,8 @@ impl Player {
             },
             |profile| profile,
         );
+
+        let gameprofile_clone = gameprofile.clone();
         let config = client.config.lock().await.clone().unwrap_or_default();
         let bounding_box_size = BoundingBoxSize {
             width: 0.6,
@@ -150,6 +158,7 @@ impl Player {
             living_entity: LivingEntity::new_with_container(
                 Entity::new(
                     entity_id,
+                    player_uuid,
                     world,
                     EntityType::Player,
                     1.62,
@@ -176,15 +185,25 @@ impl Player {
             // (We left shift by one so we can search around that chunk)
             watched_section: AtomicCell::new(Cylindrical::new(
                 Vector2::new(i32::MAX >> 1, i32::MAX >> 1),
-                0,
+                unsafe { NonZeroU8::new_unchecked(1) },
             )),
             wait_for_keep_alive: AtomicBool::new(false),
             keep_alive_id: AtomicI64::new(0),
             last_keep_alive_time: AtomicCell::new(std::time::Instant::now()),
             last_attacked_ticks: AtomicU32::new(0),
             cancel_tasks: Notify::new(),
-            // TODO: change this
-            permission_lvl: PermissionLvl::Four,
+            // Minecraft has no why to change the default permission level of new players.
+            // Minecrafts default permission level is 0
+            permission_lvl: OPERATOR_CONFIG
+                .read()
+                .await
+                .ops
+                .iter()
+                .find(|op| op.uuid == gameprofile_clone.id)
+                .map_or(
+                    AtomicCell::new(ADVANCED_CONFIG.commands.default_op_level),
+                    |op| AtomicCell::new(op.level),
+                ),
         }
     }
 
@@ -226,6 +245,7 @@ impl Player {
         // Remove left over entries from all possiblily loaded chunks
         level.clean_memory(&radial_chunks);
 
+
         log::debug!(
             "Removed player id {} ({}) ({} chunks remain cached)",
             self.gameprofile.name,
@@ -258,7 +278,7 @@ impl Player {
                 // TODO: this should be cached in memory
                 if let Some(modifiers) = &item.components.attribute_modifiers {
                     for item_mod in &modifiers.modifiers {
-                        if item_mod.operation == "add_value" {
+                        if item_mod.operation == Operation::AddValue {
                             if item_mod.id == "minecraft:base_attack_damage" {
                                 add_damage = item_mod.amount;
                             }
@@ -430,20 +450,20 @@ impl Player {
         self.client
             .send_packet(&CEntityStatus::new(
                 self.entity_id(),
-                24 + self.permission_lvl as i8,
+                24 + self.permission_lvl.load() as i8,
             ))
             .await;
     }
 
     /// sets the players permission level and syncs it with the client
-    pub async fn set_permission_lvl(&mut self, lvl: PermissionLvl) {
-        self.permission_lvl = lvl;
+    pub async fn set_permission_lvl(
+        self: &Arc<Self>,
+        lvl: PermissionLvl,
+        command_dispatcher: &RwLock<CommandDispatcher>,
+    ) {
+        self.permission_lvl.store(lvl);
         self.send_permission_lvl_update().await;
-    }
-
-    /// get the players permission level
-    pub fn permission_lvl(&self) -> PermissionLvl {
-        self.permission_lvl
+        client_cmd_suggestions::send_c_commands_packet(self, command_dispatcher).await;
     }
 
     /// Sends the world time to just the player.
@@ -561,8 +581,6 @@ impl Player {
             "Setting the same gamemode as already is"
         );
         self.gamemode.store(gamemode);
-        // The client is using the same method for setting abilities when receiving the CGameEvent ChangeGameMode packet.
-        // So we can just update the abilities without sending them.
         {
             // use another scope so we instantly unlock abilities
             let mut abilities = self.abilities.lock().await;
@@ -586,6 +604,7 @@ impl Player {
                 }
             }
         }
+        self.send_abilities_update().await;
         self.living_entity
             .entity
             .world
@@ -662,6 +681,7 @@ impl Player {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     pub async fn handle_play_packet(
         self: &Arc<Self>,
         server: &Arc<Server>,
@@ -712,6 +732,10 @@ impl Player {
             }
             SSetPlayerGround::PACKET_ID => {
                 self.handle_player_ground(&SSetPlayerGround::read(bytebuf)?);
+            }
+            SPickItemFromBlock::PACKET_ID => {
+                self.handle_pick_item_from_block(SPickItemFromBlock::read(bytebuf)?)
+                    .await;
             }
             SPlayerAbilities::PACKET_ID => {
                 self.handle_player_abilities(SPlayerAbilities::read(bytebuf)?)
@@ -795,7 +819,7 @@ impl Default for Abilities {
             flying: false,
             allow_flying: false,
             creative: false,
-            fly_speed: 0.4,
+            fly_speed: 0.05,
             walk_speed_fov: 0.1,
         }
     }
@@ -820,20 +844,4 @@ pub enum ChatMode {
     CommandsOnly,
     /// All messages should be hidden
     Hidden,
-}
-
-/// the player's permission level
-#[derive(Debug, FromPrimitive, ToPrimitive, Clone, Copy)]
-#[repr(i8)]
-pub enum PermissionLvl {
-    /// `normal`: Player can use basic commands.
-    Zero = 0,
-    /// `moderator`: Player can bypass spawn protection.
-    One = 1,
-    /// `gamemaster`: Player or executor can use more commands and player can use command blocks.
-    Two = 2,
-    /// `admin`: Player or executor can use commands related to multiplayer management.
-    Three = 3,
-    /// `owner`: Player or executor can use all of the commands, including commands related to server management.
-    Four = 4,
 }

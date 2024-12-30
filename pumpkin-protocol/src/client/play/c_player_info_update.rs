@@ -1,4 +1,4 @@
-use bytes::{BufMut, BytesMut};
+use bytes::BufMut;
 use pumpkin_macros::client_packet;
 
 use crate::{bytebuf::ByteBufMut, ClientPacket, Property};
@@ -23,7 +23,7 @@ impl<'a> CPlayerInfoUpdate<'a> {
 }
 
 impl ClientPacket for CPlayerInfoUpdate<'_> {
-    fn write(&self, bytebuf: &mut BytesMut) {
+    fn write(&self, bytebuf: &mut impl BufMut) {
         bytebuf.put_i8(self.actions);
         bytebuf.put_list::<Player>(self.players, |p, v| {
             p.put_uuid(&v.uuid);

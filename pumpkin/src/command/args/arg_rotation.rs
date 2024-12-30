@@ -27,7 +27,7 @@ impl GetClientSideArgParser for RotationArgumentConsumer {
 #[async_trait]
 impl ArgumentConsumer for RotationArgumentConsumer {
     async fn consume<'a>(
-        &self,
+        &'a self,
         _src: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
@@ -51,7 +51,7 @@ impl ArgumentConsumer for RotationArgumentConsumer {
     }
 
     async fn suggest<'a>(
-        &self,
+        &'a self,
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
@@ -61,19 +61,15 @@ impl ArgumentConsumer for RotationArgumentConsumer {
 }
 
 impl DefaultNameArgConsumer for RotationArgumentConsumer {
-    fn default_name(&self) -> &'static str {
-        "rotation"
-    }
-
-    fn get_argument_consumer(&self) -> &dyn ArgumentConsumer {
-        &RotationArgumentConsumer
+    fn default_name(&self) -> String {
+        "rotation".to_string()
     }
 }
 
 impl<'a> FindArg<'a> for RotationArgumentConsumer {
     type Data = (f32, f32);
 
-    fn find_arg(args: &'a super::ConsumedArgs, name: &'a str) -> Result<Self::Data, CommandError> {
+    fn find_arg(args: &'a super::ConsumedArgs, name: &str) -> Result<Self::Data, CommandError> {
         match args.get(name) {
             Some(Arg::Rotation(yaw, pitch)) => Ok((*yaw, *pitch)),
             _ => Err(CommandError::InvalidConsumption(Some(name.to_string()))),

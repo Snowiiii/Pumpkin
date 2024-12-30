@@ -4,9 +4,7 @@ use pumpkin_core::text::TextComponent;
 
 use crate::command::args::ConsumedArgs;
 use crate::command::tree::CommandTree;
-use crate::command::tree_builder::require;
 use crate::command::{CommandError, CommandExecutor, CommandSender};
-use crate::entity::player::PermissionLvl;
 
 const NAMES: [&str; 1] = ["stop"];
 
@@ -32,13 +30,11 @@ impl CommandExecutor for StopExecutor {
         for player in server.get_all_players().await {
             player.kick(kick_message.clone()).await;
         }
-
+        server.save().await;
         std::process::exit(0)
     }
 }
 
-pub fn init_command_tree<'a>() -> CommandTree<'a> {
-    CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(&|sender| sender.has_permission_lvl(PermissionLvl::Four)).execute(&StopExecutor),
-    )
+pub fn init_command_tree() -> CommandTree {
+    CommandTree::new(NAMES, DESCRIPTION).execute(StopExecutor)
 }

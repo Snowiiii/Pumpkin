@@ -12,7 +12,7 @@ use pumpkin_core::math::{
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
 use pumpkin_protocol::{
     client::play::{CSetEntityMetadata, CTeleportEntity, Metadata},
-    VarInt,
+    codec::var_int::VarInt,
 };
 
 use crate::world::World;
@@ -24,6 +24,8 @@ pub mod player;
 pub struct Entity {
     /// A unique identifier for the entity
     pub entity_id: EntityId,
+    /// A persistant, unique identifier for the entity
+    pub entity_uuid: uuid::Uuid,
     /// The type of entity (e.g., player, zombie, item)
     pub entity_type: EntityType,
     /// The world in which the entity exists.
@@ -63,6 +65,7 @@ pub struct Entity {
 impl Entity {
     pub fn new(
         entity_id: EntityId,
+        entity_uuid: uuid::Uuid,
         world: Arc<World>,
         entity_type: EntityType,
         standing_eye_height: f32,
@@ -71,6 +74,7 @@ impl Entity {
     ) -> Self {
         Self {
             entity_id,
+            entity_uuid,
             entity_type,
             on_ground: AtomicBool::new(false),
             pos: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),

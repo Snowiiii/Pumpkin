@@ -1,4 +1,4 @@
-use bytes::Bytes;
+use bytes::Buf;
 use pumpkin_macros::server_packet;
 
 use crate::{
@@ -15,7 +15,7 @@ pub struct SHandShake {
 }
 
 impl ServerPacket for SHandShake {
-    fn read(bytebuf: &mut Bytes) -> Result<Self, ReadingError> {
+    fn read(bytebuf: &mut impl Buf) -> Result<Self, ReadingError> {
         Ok(Self {
             protocol_version: bytebuf.try_get_var_int()?,
             server_address: bytebuf.try_get_string_len(255)?,

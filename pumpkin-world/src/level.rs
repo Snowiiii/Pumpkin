@@ -2,7 +2,6 @@ use std::{path::PathBuf, sync::Arc};
 
 use dashmap::{DashMap, Entry};
 use num_traits::Zero;
-use pumpkin_config::BASIC_CONFIG;
 use pumpkin_core::math::vector2::Vector2;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use tokio::{
@@ -15,7 +14,9 @@ use crate::{
         anvil::AnvilChunkFormat, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
         ChunkWriter,
     },
-    world_gen::{get_world_gen, Seed, WorldGenerator},
+    generation::{get_world_gen, Seed, WorldGenerator},
+    lock::{anvil::AnvilLevelLocker, LevelLocker},
+    world_info::{anvil::AnvilLevelInfo, LevelData, WorldInfoReader, WorldInfoWriter},
 };
 
 /// The `Level` module provides functionality for working with chunks within or outside a Minecraft world.
@@ -29,12 +30,17 @@ use crate::{
 /// For more details on world generation, refer to the `WorldGenerator` module.
 pub struct Level {
     pub seed: Seed,
+    pub level_info: LevelData,
+    world_info_writer: Arc<dyn WorldInfoWriter>,
     level_folder: LevelFolder,
     loaded_chunks: Arc<DashMap<Vector2<i32>, Arc<RwLock<ChunkData>>>>,
     chunk_watchers: Arc<DashMap<Vector2<i32>, usize>>,
     chunk_reader: Arc<dyn ChunkReader>,
     chunk_writer: Arc<dyn ChunkWriter>,
     world_gen: Arc<dyn WorldGenerator>,
+    // Gets unlocked when dropped
+    // TODO: Make this a trait
+    _locker: Arc<AnvilLevelLocker>,
 }
 
 #[derive(Clone)]
@@ -43,32 +49,54 @@ pub struct LevelFolder {
     pub region_folder: PathBuf,
 }
 
-fn get_or_create_seed() -> Seed {
-    // TODO: if there is a seed in the config (!= 0) use it. Otherwise make a random one
-    Seed::from(BASIC_CONFIG.seed.as_str())
-}
-
 impl Level {
     pub fn from_root_folder(root_folder: PathBuf) -> Self {
-        let seed = get_or_create_seed();
-        let world_gen = get_world_gen(seed).into();
-        // Check if region folder exists, if not lets make one
+        // If we are using an already existing world we want to read the seed from the level.dat, If not we want to check if there is a seed in the config, if not lets create a random one
         let region_folder = root_folder.join("region");
         if !region_folder.exists() {
             std::fs::create_dir_all(&region_folder).expect("Failed to create Region folder");
         }
+        let level_folder = LevelFolder {
+            root_folder,
+            region_folder,
+        };
+
+        // if we fail to lock, lets crash ???. maybe not the best soultion when we have a large server with many worlds and one is locked.
+        // So TODO
+        let locker = AnvilLevelLocker::look(&level_folder).expect("Failed to lock level");
+
+        // TODO: Load info correctly based on world format type
+        let level_info = AnvilLevelInfo
+            .read_world_info(&level_folder)
+            .unwrap_or_default(); // TODO: Improve error handling
+        let seed = Seed(level_info.world_gen_settings.seed as u64);
+        let world_gen = get_world_gen(seed).into();
+
         Self {
-            world_gen,
-            level_folder: LevelFolder {
-                root_folder,
-                region_folder,
-            },
             seed,
+            world_gen,
+            world_info_writer: Arc::new(AnvilLevelInfo),
+            level_folder,
             chunk_reader: Arc::new(AnvilChunkFormat),
             chunk_writer: Arc::new(AnvilChunkFormat),
             loaded_chunks: Arc::new(DashMap::new()),
             chunk_watchers: Arc::new(DashMap::new()),
+            level_info,
+            _locker: Arc::new(locker),
         }
+    }
+
+    pub async fn save(&self) {
+        log::info!("Saving level...");
+        // lets first save all chunks
+        for chunk in self.loaded_chunks.iter() {
+            let chunk = chunk.read().await;
+            self.clean_chunk(&chunk.position).await;
+        }
+        // then lets save the world info
+        self.world_info_writer
+            .write_world_info(self.level_info.clone(), &self.level_folder)
+            .expect("Failed to save world info");
     }
 
     pub fn get_block() {}
