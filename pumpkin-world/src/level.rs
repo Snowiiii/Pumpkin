@@ -14,6 +14,7 @@ use crate::{
         anvil::AnvilChunkReader, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
     },
     generation::{get_world_gen, Seed, WorldGenerator},
+    lock::{anvil::AnvilLevelLocker, LevelLocker},
     world_info::{anvil::AnvilLevelInfo, LevelData, WorldInfoReader, WorldInfoWriter},
 };
 
@@ -35,6 +36,9 @@ pub struct Level {
     chunk_watchers: Arc<DashMap<Vector2<i32>, usize>>,
     chunk_reader: Arc<dyn ChunkReader>,
     world_gen: Arc<dyn WorldGenerator>,
+    // Gets unlocked when dropped
+    // TODO: Make this a trait
+    _locker: Arc<AnvilLevelLocker>,
 }
 
 #[derive(Clone)]
@@ -55,6 +59,10 @@ impl Level {
             region_folder,
         };
 
+        // if we fail to lock, lets crash ???. maybe not the best soultion when we have a large server with many worlds and one is locked.
+        // So TODO
+        let locker = AnvilLevelLocker::look(&level_folder).expect("Failed to lock level");
+
         // TODO: Load info correctly based on world format type
         let level_info = AnvilLevelInfo
             .read_world_info(&level_folder)
@@ -71,6 +79,7 @@ impl Level {
             loaded_chunks: Arc::new(DashMap::new()),
             chunk_watchers: Arc::new(DashMap::new()),
             level_info,
+            _locker: Arc::new(locker),
         }
     }
 

@@ -78,18 +78,18 @@ impl Scoreboard {
 
 pub struct ScoreboardObjective<'a> {
     name: &'a str,
-    display_name: TextComponent<'a>,
+    display_name: TextComponent,
     render_type: RenderType,
-    number_format: Option<NumberFormat<'a>>,
+    number_format: Option<NumberFormat>,
 }
 
 impl<'a> ScoreboardObjective<'a> {
     #[must_use]
     pub const fn new(
         name: &'a str,
-        display_name: TextComponent<'a>,
+        display_name: TextComponent,
         render_type: RenderType,
-        number_format: Option<NumberFormat<'a>>,
+        number_format: Option<NumberFormat>,
     ) -> Self {
         Self {
             name,
@@ -104,8 +104,8 @@ pub struct ScoreboardScore<'a> {
     entity_name: &'a str,
     objective_name: &'a str,
     value: VarInt,
-    display_name: Option<TextComponent<'a>>,
-    number_format: Option<NumberFormat<'a>>,
+    display_name: Option<TextComponent>,
+    number_format: Option<NumberFormat>,
 }
 
 impl<'a> ScoreboardScore<'a> {
@@ -114,8 +114,8 @@ impl<'a> ScoreboardScore<'a> {
         entity_name: &'a str,
         objective_name: &'a str,
         value: VarInt,
-        display_name: Option<TextComponent<'a>>,
-        number_format: Option<NumberFormat<'a>>,
+        display_name: Option<TextComponent>,
+        number_format: Option<NumberFormat>,
     ) -> Self {
         Self {
             entity_name,

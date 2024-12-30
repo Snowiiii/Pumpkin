@@ -6,12 +6,12 @@ use serde::Serialize;
 #[derive(Serialize)]
 #[client_packet("play:system_chat")]
 pub struct CSystemChatMessage<'a> {
-    content: &'a TextComponent<'a>,
+    content: &'a TextComponent,
     overlay: bool,
 }
 
 impl<'a> CSystemChatMessage<'a> {
-    pub fn new(content: &'a TextComponent<'a>, overlay: bool) -> Self {
+    pub fn new(content: &'a TextComponent, overlay: bool) -> Self {
         Self { content, overlay }
     }
 }

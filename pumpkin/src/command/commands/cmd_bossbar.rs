@@ -577,14 +577,12 @@ pub fn init_command_tree() -> CommandTree {
 }
 
 async fn send_success_message(sender: &CommandSender<'_>, message: String) {
-    sender
-        .send_message(TextComponent::text(message.as_str()))
-        .await;
+    sender.send_message(TextComponent::text(message)).await;
 }
 
 async fn send_error_message(sender: &CommandSender<'_>, message: String) {
     sender
-        .send_message(TextComponent::text(message.as_str()).color(Color::Named(NamedColor::Red)))
+        .send_message(TextComponent::text(message).color(Color::Named(NamedColor::Red)))
         .await;
 }
 

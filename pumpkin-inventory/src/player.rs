@@ -106,6 +106,10 @@ impl PlayerInventory {
         self.selected = slot;
     }
 
+    pub fn get_selected(&self) -> usize {
+        self.selected + 36
+    }
+
     pub fn held_item(&self) -> Option<&ItemStack> {
         debug_assert!((0..9).contains(&self.selected));
         self.items[self.selected + 36 - 9].as_ref()
@@ -114,6 +118,35 @@ impl PlayerInventory {
     pub fn held_item_mut(&mut self) -> &mut Option<ItemStack> {
         debug_assert!((0..9).contains(&self.selected));
         &mut self.items[self.selected + 36 - 9]
+    }
+
+    pub fn get_slot_with_item(&self, item_id: u16) -> Option<usize> {
+        for slot in 9..=44 {
+            match &self.items[slot - 9] {
+                Some(item) if item.item_id == item_id => return Some(slot),
+                _ => continue,
+            }
+        }
+
+        None
+    }
+
+    pub fn get_pick_item_hotbar_slot(&self) -> usize {
+        if self.items[self.selected + 36 - 9].is_none() {
+            return self.selected;
+        }
+
+        for slot in 0..9 {
+            if self.items[slot + 36 - 9].is_none() {
+                return slot;
+            }
+        }
+
+        self.selected
+    }
+
+    pub fn get_empty_slot(&self) -> Option<usize> {
+        (9..=44).find(|&slot| self.items[slot - 9].is_none())
     }
 
     pub fn slots(&self) -> Vec<Option<&ItemStack>> {

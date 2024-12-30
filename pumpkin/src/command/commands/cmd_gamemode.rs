@@ -3,7 +3,6 @@ use async_trait::async_trait;
 use crate::command::args::arg_gamemode::GamemodeArgumentConsumer;
 use crate::command::args::GetCloned;
 
-use crate::entity::player::PermissionLvl;
 use crate::TextComponent;
 
 use crate::command::args::arg_players::PlayersArgumentConsumer;
@@ -41,14 +40,14 @@ impl CommandExecutor for GamemodeTargetSelf {
         if let Player(target) = sender {
             if target.gamemode.load() == gamemode {
                 target
-                    .send_system_message(&TextComponent::text(&format!(
+                    .send_system_message(&TextComponent::text(format!(
                         "You already in {gamemode:?} gamemode"
                     )))
                     .await;
             } else {
                 target.set_gamemode(gamemode).await;
                 target
-                    .send_system_message(&TextComponent::text(&format!(
+                    .send_system_message(&TextComponent::text(format!(
                         "Game mode was set to {gamemode:?}"
                     )))
                     .await;
@@ -83,7 +82,7 @@ impl CommandExecutor for GamemodeTargetPlayer {
             if target.gamemode.load() == gamemode {
                 if target_count == 1 {
                     sender
-                        .send_message(TextComponent::text(&format!(
+                        .send_message(TextComponent::text(format!(
                             "{} is already in {:?} gamemode",
                             target.gameprofile.name, gamemode
                         )))
@@ -93,7 +92,7 @@ impl CommandExecutor for GamemodeTargetPlayer {
                 target.set_gamemode(gamemode).await;
                 if target_count == 1 {
                     sender
-                        .send_message(TextComponent::text(&format!(
+                        .send_message(TextComponent::text(format!(
                             "{}'s Game mode was set to {:?}",
                             target.gameprofile.name, gamemode
                         )))
@@ -109,12 +108,10 @@ impl CommandExecutor for GamemodeTargetPlayer {
 #[allow(clippy::redundant_closure_for_method_calls)]
 pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(|sender| sender.has_permission_lvl(PermissionLvl::Two)).with_child(
-            argument(ARG_GAMEMODE, GamemodeArgumentConsumer)
-                .with_child(require(|sender| sender.is_player()).execute(GamemodeTargetSelf))
-                .with_child(
-                    argument(ARG_TARGET, PlayersArgumentConsumer).execute(GamemodeTargetPlayer),
-                ),
-        ),
+        argument(ARG_GAMEMODE, GamemodeArgumentConsumer)
+            .with_child(require(|sender| sender.is_player()).execute(GamemodeTargetSelf))
+            .with_child(
+                argument(ARG_TARGET, PlayersArgumentConsumer).execute(GamemodeTargetPlayer),
+            ),
     )
 }

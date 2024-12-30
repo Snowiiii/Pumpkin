@@ -17,11 +17,11 @@ pub struct CPlayerChatMessage<'a> {
     salt: i64,
     previous_messages_count: VarInt,
     previous_messages: &'a [PreviousMessage<'a>], // max 20
-    unsigned_content: Option<TextComponent<'a>>,
+    unsigned_content: Option<TextComponent>,
     filter_type: FilterType,
     chat_type: VarInt,
-    sender_name: TextComponent<'a>,
-    target_name: Option<TextComponent<'a>>,
+    sender_name: TextComponent,
+    target_name: Option<TextComponent>,
 }
 
 impl<'a> CPlayerChatMessage<'a> {
@@ -34,11 +34,11 @@ impl<'a> CPlayerChatMessage<'a> {
         timestamp: i64,
         salt: i64,
         previous_messages: &'a [PreviousMessage<'a>],
-        unsigned_content: Option<TextComponent<'a>>,
+        unsigned_content: Option<TextComponent>,
         filter_type: FilterType,
         chat_type: VarInt,
-        sender_name: TextComponent<'a>,
-        target_name: Option<TextComponent<'a>>,
+        sender_name: TextComponent,
+        target_name: Option<TextComponent>,
     ) -> Self {
         Self {
             sender,

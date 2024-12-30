@@ -53,7 +53,7 @@ impl ArgumentConsumer for BossbarColorArgumentConsumer {
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
-    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
+    ) -> Result<Option<Vec<CommandSuggestion>>, CommandError> {
         let colors = ["blue", "green", "pink", "purple", "red", "white", "yellow"];
         let suggestions: Vec<CommandSuggestion> = colors
             .iter()

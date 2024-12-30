@@ -9,7 +9,7 @@
 
 </div>
 
-[Pumpkin](https://snowiiii.github.io/Pumpkin/) is a Minecraft server built entirely in Rust, offering a fast, efficient,
+[Pumpkin](https://pumpkinmc.org/) is a Minecraft server built entirely in Rust, offering a fast, efficient,
 and customizable experience. It prioritizes performance and player enjoyment while adhering to the core mechanics of the game.
 
 ![image](https://github.com/user-attachments/assets/7e2e865e-b150-4675-a2d5-b52f9900378e)
@@ -34,7 +34,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 
 - [x] Configuration (toml)
 - [x] Server Status/Ping
-- Login
+- Networking
   - [x] Encryption
   - [x] Packet Compression
 - Player Configuration
@@ -52,10 +52,11 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Bossbar
   - [x] Chunk Loading
   - [x] Chunk Generation
+  - [ ] Chunk Saving
   - [x] World Time
   - [x] Scoreboard
   - [x] World Borders
-  - [ ] World Saving
+  - [x] World Saving
 - Player
   - [x] Player Skins
   - [x] Player Client brand
@@ -65,11 +66,11 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Player Inventory
   - [x] Player Combat
 - Entities
+  - [ ] Non-Living (Minecart, Eggs...)
   - [x] Players
-  - [ ] Mobs
-  - [ ] Animals
+  - [x] Mobs
+  - [x] Animals
   - [ ] Entity AI
-  - [ ] Minecart
   - [ ] Boss
 - Server
   - [x] Plugins
@@ -79,6 +80,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Particles
   - [x] Chat
   - [x] Commands
+  - [x] Permissions
 - Proxy
   - [x] Bungeecord
   - [x] Velocity
@@ -87,7 +89,7 @@ Check out our [Github Project](https://github.com/users/Snowiiii/projects/12/vie
 
 ## How to run
 
-See our [Quick Start](https://snowiiii.github.io/Pumpkin/about/quick-start.html) Guide to get Pumpkin running
+See our [Quick Start](https://pumpkinmc.org/about/quick-start.html) Guide to get Pumpkin running
 
 ## Contributions
 
@@ -95,7 +97,7 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Docs
 
-The Documentation of Pumpkin can be found at https://snowiiii.github.io/Pumpkin/
+The Documentation of Pumpkin can be found at https://pumpkinmc.org/
 
 ## Communication
 
