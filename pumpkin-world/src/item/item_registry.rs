@@ -54,6 +54,8 @@ pub struct ItemComponents {
     pub max_damage: Option<u16>,
     #[serde(rename = "minecraft:attribute_modifiers")]
     pub attribute_modifiers: Option<AttributeModifiers>,
+    #[serde(rename = "minecraft:food")]
+    pub food: Option<Food>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -75,6 +77,12 @@ pub struct Modifier {
     pub operation: Operation,
     // TODO: Make this an enum
     pub slot: String,
+}
+
+#[derive(Deserialize, Clone, Copy, Debug)]
+pub struct Food {
+    pub nutrition: u8,
+    pub saturation: f32,
 }
 
 #[derive(Deserialize, Clone, Debug, PartialEq)]
