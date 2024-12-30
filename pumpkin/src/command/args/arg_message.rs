@@ -14,7 +14,7 @@ use super::{
 };
 
 /// Consumes all remaining words/args. Does not consume if there is no word.
-pub(crate) struct MsgArgConsumer;
+pub struct MsgArgConsumer;
 
 impl GetClientSideArgParser for MsgArgConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {

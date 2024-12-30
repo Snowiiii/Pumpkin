@@ -15,7 +15,7 @@ use crate::{
 
 use super::{Arg, ArgumentConsumer, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
-pub(crate) struct CommandTreeArgumentConsumer;
+pub struct CommandTreeArgumentConsumer;
 
 impl GetClientSideArgParser for CommandTreeArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {

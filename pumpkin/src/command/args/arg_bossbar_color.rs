@@ -11,7 +11,7 @@ use pumpkin_protocol::client::play::{
     CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
 };
 
-pub(crate) struct BossbarColorArgumentConsumer;
+pub struct BossbarColorArgumentConsumer;
 
 impl GetClientSideArgParser for BossbarColorArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {

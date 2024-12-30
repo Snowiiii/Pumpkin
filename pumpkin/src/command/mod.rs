@@ -12,7 +12,8 @@ use async_trait::async_trait;
 use commands::cmd_op;
 use commands::{
     cmd_clear, cmd_fill, cmd_gamemode, cmd_give, cmd_help, cmd_kick, cmd_kill, cmd_list,
-    cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_time, cmd_worldborder,
+    cmd_plugin, cmd_plugins, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_time,
+    cmd_worldborder,
 };
 use dispatcher::CommandError;
 use pumpkin_core::math::vector3::Vector3;
@@ -23,8 +24,8 @@ pub mod args;
 pub mod client_cmd_suggestions;
 mod commands;
 pub mod dispatcher;
-mod tree;
-mod tree_builder;
+pub mod tree;
+pub mod tree_builder;
 mod tree_format;
 
 pub enum CommandSender<'a> {
@@ -120,6 +121,8 @@ pub fn default_dispatcher() -> CommandDispatcher {
     dispatcher.register(cmd_help::init_command_tree(), PermissionLvl::Zero);
     dispatcher.register(cmd_kill::init_command_tree(), PermissionLvl::Two);
     dispatcher.register(cmd_kick::init_command_tree(), PermissionLvl::Three);
+    dispatcher.register(cmd_plugin::init_command_tree(), PermissionLvl::Three);
+    dispatcher.register(cmd_plugins::init_command_tree(), PermissionLvl::Three);
     dispatcher.register(cmd_worldborder::init_command_tree(), PermissionLvl::Two);
     dispatcher.register(cmd_teleport::init_command_tree(), PermissionLvl::Two);
     dispatcher.register(cmd_time::init_command_tree(), PermissionLvl::Two);
@@ -136,7 +139,7 @@ pub fn default_dispatcher() -> CommandDispatcher {
 }
 
 #[async_trait]
-pub(crate) trait CommandExecutor: Sync {
+pub trait CommandExecutor: Sync {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,

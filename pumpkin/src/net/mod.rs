@@ -39,7 +39,7 @@ use pumpkin_protocol::{
 use serde::Deserialize;
 use sha1::Digest;
 use sha2::Sha256;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::mpsc;
 use tokio::sync::Mutex;
 
 use thiserror::Error;
@@ -128,15 +128,14 @@ pub struct Client {
     pub connection_state: AtomicCell<ConnectionState>,
     /// Indicates if the client connection is closed.
     pub closed: AtomicBool,
-    /// The underlying TCP connection to the client.
-    pub connection_reader: Arc<Mutex<tokio::net::tcp::OwnedReadHalf>>,
-    pub connection_writer: Arc<Mutex<tokio::net::tcp::OwnedWriteHalf>>,
     /// The client's IP address.
     pub address: Mutex<SocketAddr>,
     /// The packet encoder for outgoing packets.
-    enc: Arc<Mutex<PacketEncoder>>,
+    pub enc: Arc<Mutex<PacketEncoder>>,
     /// The packet decoder for incoming packets.
-    dec: Arc<Mutex<PacketDecoder>>,
+    pub dec: Arc<Mutex<PacketDecoder>>,
+    /// A channel for sending packets to the client.
+    pub server_packets_channel: mpsc::Sender<()>,
     /// A queue of raw packets received from the client, waiting to be processed.
     pub client_packets_queue: Arc<Mutex<VecDeque<RawPacket>>>,
     /// Indicates whether the client should be converted into a player.
@@ -145,8 +144,7 @@ pub struct Client {
 
 impl Client {
     #[must_use]
-    pub fn new(connection: tokio::net::TcpStream, address: SocketAddr, id: u16) -> Self {
-        let (connection_reader, connection_writer) = connection.into_split();
+    pub fn new(server_packets_channel: mpsc::Sender<()>, address: SocketAddr, id: u16) -> Self {
         Self {
             id,
             protocol_version: AtomicI32::new(0),
@@ -156,11 +154,10 @@ impl Client {
             server_address: Mutex::new(String::new()),
             address: Mutex::new(address),
             connection_state: AtomicCell::new(ConnectionState::HandShake),
-            connection_reader: Arc::new(Mutex::new(connection_reader)),
-            connection_writer: Arc::new(Mutex::new(connection_writer)),
             enc: Arc::new(Mutex::new(PacketEncoder::default())),
             dec: Arc::new(Mutex::new(PacketDecoder::default())),
             closed: AtomicBool::new(false),
+            server_packets_channel,
             client_packets_queue: Arc::new(Mutex::new(VecDeque::new())),
             make_player: AtomicBool::new(false),
         }
@@ -252,10 +249,12 @@ impl Client {
             return;
         }
 
-        let mut writer = self.connection_writer.lock().await;
+        let _ = self.server_packets_channel.send(()).await;
+
+        /* let mut writer = self.connection_writer.lock().await;
         if let Err(error) = writer.write_all(&enc.take()).await {
             log::debug!("Unable to write to connection: {}", error.to_string());
-        }
+        } */
 
         /*
         else if let Err(error) = writer.flush().await {
@@ -297,8 +296,10 @@ impl Client {
         let mut enc = self.enc.lock().await;
         enc.append_packet(packet)?;
 
-        let mut writer = self.connection_writer.lock().await;
-        let _ = writer.write_all(&enc.take()).await;
+        let _ = self.server_packets_channel.send(()).await;
+
+        /* let mut writer = self.connection_writer.lock().await;
+        let _ = writer.write_all(&enc.take()).await; */
 
         /*
         writer
@@ -505,56 +506,6 @@ impl Client {
             }
         };
         Ok(())
-    }
-
-    /// Reads the connection until our buffer of len 4096 is full, then decode
-    /// Close connection when an error occurs or when the Client closed the connection
-    /// Returns if connection is still open
-    pub async fn poll(&self) -> bool {
-        loop {
-            if self.closed.load(std::sync::atomic::Ordering::Relaxed) {
-                // If we manually close (like a kick) we dont want to keep reading bytes
-                return false;
-            }
-
-            let mut dec = self.dec.lock().await;
-
-            match dec.decode() {
-                Ok(Some(packet)) => {
-                    self.add_packet(packet).await;
-                    return true;
-                }
-                Ok(None) => (), //log::debug!("Waiting for more data to complete packet..."),
-                Err(err) => {
-                    log::warn!("Failed to decode packet for: {}", err.to_string());
-                    self.close();
-                    return false; // return to avoid reserving additional bytes
-                }
-            }
-
-            dec.reserve(4096);
-            let mut buf = dec.take_capacity();
-
-            let bytes_read = self.connection_reader.lock().await.read_buf(&mut buf).await;
-            match bytes_read {
-                Ok(cnt) => {
-                    //log::debug!("Read {} bytes", cnt);
-                    if cnt == 0 {
-                        self.close();
-                        return false;
-                    }
-                }
-                Err(error) => {
-                    log::error!("Error while reading incoming packet {}", error);
-                    self.close();
-                    return false;
-                }
-            };
-
-            // This should always be an O(1) unsplit because we reserved space earlier and
-            // the call to `read_buf` shouldn't have grown the allocation.
-            dec.queue_bytes(buf);
-        }
     }
 
     /// Disconnects a client from the server with a specified reason.

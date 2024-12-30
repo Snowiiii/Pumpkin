@@ -8,6 +8,8 @@ pub mod cmd_kick;
 pub mod cmd_kill;
 pub mod cmd_list;
 pub mod cmd_op;
+pub mod cmd_plugin;
+pub mod cmd_plugins;
 pub mod cmd_pumpkin;
 pub mod cmd_say;
 pub mod cmd_seed;

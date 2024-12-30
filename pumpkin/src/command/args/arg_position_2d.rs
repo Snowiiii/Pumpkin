@@ -17,7 +17,7 @@ use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 /// x and z coordinates only
 ///
 /// todo: implememnt ~ ^ notations
-pub(crate) struct Position2DArgumentConsumer;
+pub struct Position2DArgumentConsumer;
 
 impl GetClientSideArgParser for Position2DArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {

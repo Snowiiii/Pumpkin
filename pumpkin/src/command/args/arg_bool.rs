@@ -8,7 +8,7 @@ use pumpkin_protocol::client::play::{
     CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
 };
 
-pub(crate) struct BoolArgConsumer;
+pub struct BoolArgConsumer;
 
 impl GetClientSideArgParser for BoolArgConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {

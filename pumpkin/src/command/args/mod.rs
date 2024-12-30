@@ -18,29 +18,29 @@ use super::{
 use crate::world::bossbar::{BossbarColor, BossbarDivisions};
 use crate::{entity::player::Player, server::Server};
 
-pub(crate) mod arg_block;
-pub(crate) mod arg_bool;
-pub(crate) mod arg_bossbar_color;
-pub(crate) mod arg_bossbar_style;
-pub(crate) mod arg_bounded_num;
-pub(crate) mod arg_command;
-pub(crate) mod arg_entities;
-pub(crate) mod arg_entity;
-pub(crate) mod arg_gamemode;
-pub(crate) mod arg_item;
-pub(crate) mod arg_message;
-pub(crate) mod arg_players;
-pub(crate) mod arg_position_2d;
-pub(crate) mod arg_position_3d;
-pub(crate) mod arg_position_block;
-pub(crate) mod arg_resource_location;
-pub(crate) mod arg_rotation;
-pub(crate) mod arg_simple;
+pub mod arg_block;
+pub mod arg_bool;
+pub mod arg_bossbar_color;
+pub mod arg_bossbar_style;
+pub mod arg_bounded_num;
+pub mod arg_command;
+pub mod arg_entities;
+pub mod arg_entity;
+pub mod arg_gamemode;
+pub mod arg_item;
+pub mod arg_message;
+pub mod arg_players;
+pub mod arg_position_2d;
+pub mod arg_position_3d;
+pub mod arg_position_block;
+pub mod arg_resource_location;
+pub mod arg_rotation;
+pub mod arg_simple;
 mod coordinate;
 
 /// see [`crate::commands::tree_builder::argument`]
 #[async_trait]
-pub(crate) trait ArgumentConsumer: Sync + GetClientSideArgParser {
+pub trait ArgumentConsumer: Sync + GetClientSideArgParser {
     async fn consume<'a>(
         &'a self,
         sender: &CommandSender<'a>,
@@ -59,19 +59,19 @@ pub(crate) trait ArgumentConsumer: Sync + GetClientSideArgParser {
     ) -> Result<Option<Vec<CommandSuggestion>>, CommandError>;
 }
 
-pub(crate) trait GetClientSideArgParser {
+pub trait GetClientSideArgParser {
     /// Return the parser the client should use while typing a command in chat.
     fn get_client_side_parser(&self) -> ProtoCmdArgParser;
     /// Usually this should return None. This can be used to force suggestions to be processed on serverside.
     fn get_client_side_suggestion_type_override(&self) -> Option<ProtoCmdArgSuggestionType>;
 }
 
-pub(crate) trait DefaultNameArgConsumer: ArgumentConsumer {
+pub trait DefaultNameArgConsumer: ArgumentConsumer {
     fn default_name(&self) -> String;
 }
 
 #[derive(Clone)]
-pub(crate) enum Arg<'a> {
+pub enum Arg<'a> {
     Entities(Vec<Arc<Player>>),
     Entity(Arc<Player>),
     Players(Vec<Arc<Player>>),
@@ -94,7 +94,7 @@ pub(crate) enum Arg<'a> {
 }
 
 /// see [`crate::commands::tree_builder::argument`] and [`CommandTree::execute`]/[`crate::commands::tree_builder::NonLeafNodeBuilder::execute`]
-pub(crate) type ConsumedArgs<'a> = HashMap<&'a str, Arg<'a>>;
+pub type ConsumedArgs<'a> = HashMap<&'a str, Arg<'a>>;
 
 pub(crate) trait GetCloned<K, V: Clone> {
     fn get_cloned(&self, key: &K) -> Option<V>;
@@ -106,7 +106,7 @@ impl<K: Eq + Hash, V: Clone> GetCloned<K, V> for HashMap<K, V> {
     }
 }
 
-pub(crate) trait FindArg<'a> {
+pub trait FindArg<'a> {
     type Data;
 
     fn find_arg(args: &'a ConsumedArgs, name: &str) -> Result<Self::Data, CommandError>;

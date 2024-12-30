@@ -36,13 +36,21 @@ compile_error!("Compiling for WASI targets is not supported!");
 use log::LevelFilter;
 
 use net::{lan_broadcast, query, rcon::RCONServer, Client};
+use plugin::PluginManager;
 use server::{ticker::Ticker, Server};
-use std::io::{self};
-use tokio::io::{AsyncBufReadExt, BufReader};
+use std::{
+    io::{self},
+    sync::LazyLock,
+};
 #[cfg(not(unix))]
 use tokio::signal::ctrl_c;
 #[cfg(unix)]
 use tokio::signal::unix::{signal, SignalKind};
+use tokio::sync::Mutex;
+use tokio::{
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
+    net::tcp::OwnedReadHalf,
+};
 
 use std::sync::Arc;
 
@@ -59,8 +67,12 @@ pub mod data;
 pub mod entity;
 pub mod error;
 pub mod net;
+pub mod plugin;
 pub mod server;
 pub mod world;
+
+pub static PLUGIN_MANAGER: LazyLock<Mutex<PluginManager>> =
+    LazyLock::new(|| Mutex::new(PluginManager::new()));
 
 fn scrub_address(ip: &str) -> String {
     use pumpkin_config::BASIC_CONFIG;
@@ -166,6 +178,12 @@ async fn main() {
     let server = Arc::new(Server::new());
     let mut ticker = Ticker::new(BASIC_CONFIG.tps);
 
+    {
+        let mut loader_lock = PLUGIN_MANAGER.lock().await;
+        loader_lock.set_server(server.clone());
+        loader_lock.load_plugins().await.unwrap();
+    };
+
     log::info!("Started Server took {}ms", time.elapsed().as_millis());
     log::info!("You now can connect to the server, Listening on {}", addr);
 
@@ -214,7 +232,24 @@ async fn main() {
             id
         );
 
-        let client = Arc::new(Client::new(connection, addr, id));
+        let (tx, mut rx) = tokio::sync::mpsc::channel(16);
+        let (connection_reader, connection_writer) = connection.into_split();
+        let connection_reader = Arc::new(Mutex::new(connection_reader));
+        let connection_writer = Arc::new(Mutex::new(connection_writer));
+
+        let client = Arc::new(Client::new(tx, addr, id));
+
+        let client_clone = client.clone();
+        tokio::spawn(async move {
+            while (rx.recv().await).is_some() {
+                let mut enc = client_clone.enc.lock().await;
+                let buf = enc.take();
+                if let Err(e) = connection_writer.lock().await.write_all(&buf).await {
+                    log::warn!("Failed to write packet to client: {e}");
+                    client_clone.close();
+                }
+            }
+        });
 
         let server = server.clone();
         tokio::spawn(async move {
@@ -223,7 +258,7 @@ async fn main() {
                     .make_player
                     .load(std::sync::atomic::Ordering::Relaxed)
             {
-                let open = client.poll().await;
+                let open = poll(&client, connection_reader.clone()).await;
                 if open {
                     client.process_packets(&server).await;
                 };
@@ -243,7 +278,7 @@ async fn main() {
                     .closed
                     .load(core::sync::atomic::Ordering::Relaxed)
                 {
-                    let open = player.client.poll().await;
+                    let open = poll(&player.client, connection_reader.clone()).await;
                     if open {
                         player.process_packets(&server).await;
                     };
@@ -253,6 +288,53 @@ async fn main() {
                 server.remove_player().await;
             }
         });
+    }
+}
+
+async fn poll(client: &Client, connection_reader: Arc<Mutex<OwnedReadHalf>>) -> bool {
+    loop {
+        if client.closed.load(std::sync::atomic::Ordering::Relaxed) {
+            // If we manually close (like a kick) we dont want to keep reading bytes
+            return false;
+        }
+
+        let mut dec = client.dec.lock().await;
+
+        match dec.decode() {
+            Ok(Some(packet)) => {
+                client.add_packet(packet).await;
+                return true;
+            }
+            Ok(None) => (), //log::debug!("Waiting for more data to complete packet..."),
+            Err(err) => {
+                log::warn!("Failed to decode packet for: {}", err.to_string());
+                client.close();
+                return false; // return to avoid reserving additional bytes
+            }
+        }
+
+        dec.reserve(4096);
+        let mut buf = dec.take_capacity();
+
+        let bytes_read = connection_reader.lock().await.read_buf(&mut buf).await;
+        match bytes_read {
+            Ok(cnt) => {
+                //log::debug!("Read {} bytes", cnt);
+                if cnt == 0 {
+                    client.close();
+                    return false;
+                }
+            }
+            Err(error) => {
+                log::error!("Error while reading incoming packet {}", error);
+                client.close();
+                return false;
+            }
+        };
+
+        // This should always be an O(1) unsplit because we reserved space earlier and
+        // the call to `read_buf` shouldn't have grown the allocation.
+        dec.queue_bytes(buf);
     }
 }
 

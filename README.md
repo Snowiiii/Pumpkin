@@ -73,7 +73,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [ ] Entity AI
   - [ ] Boss
 - Server
-  - [ ] Plugins
+  - [x] Plugins
   - [x] Query
   - [x] RCON
   - [x] Inventories

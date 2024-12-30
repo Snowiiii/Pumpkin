@@ -133,11 +133,19 @@ async fn handle_packet(
                                 }
                             }
 
+                            let plugin_manager = crate::PLUGIN_MANAGER.lock().await;
+                            let plugins = plugin_manager
+                                .list_plugins()
+                                .iter()
+                                .map(|(meta, _)| meta.name.to_string())
+                                .reduce(|acc, name| format!("{acc}, {name}"))
+                                .unwrap_or_default();
+
                             let response = CFullStatus {
                                 session_id: packet.session_id,
                                 hostname: CString::new(BASIC_CONFIG.motd.as_str())?,
                                 version: CString::new(CURRENT_MC_VERSION)?,
-                                plugins: CString::new("Pumpkin on 1.21.4")?, // TODO: Fill this with plugins when plugins are working
+                                plugins: CString::new(plugins)?,
                                 map: CString::new("world")?, // TODO: Get actual world name
                                 num_players: server.get_player_count().await,
                                 max_players: BASIC_CONFIG.max_players as usize,

@@ -18,7 +18,7 @@ use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 /// todo: implement (currently just calls [`super::arg_player::PlayerArgumentConsumer`])
 ///
 /// For selecting zero, one or multiple entities, eg. using @s, a player name, @a or @e
-pub(crate) struct EntitiesArgumentConsumer;
+pub struct EntitiesArgumentConsumer;
 
 impl GetClientSideArgParser for EntitiesArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {

@@ -15,7 +15,7 @@ use super::super::args::ArgumentConsumer;
 use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 
 /// Select zero, one or multiple players
-pub(crate) struct PlayersArgumentConsumer;
+pub struct PlayersArgumentConsumer;
 
 impl GetClientSideArgParser for PlayersArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {

@@ -19,7 +19,7 @@ use super::{Arg, DefaultNameArgConsumer, FindArg, GetClientSideArgParser};
 /// For selecting a single entity, eg. using @s, a player name or entity uuid.
 ///
 /// Use [`super::arg_entities::EntitiesArgumentConsumer`] when there may be multiple targets.
-pub(crate) struct EntityArgumentConsumer;
+pub struct EntityArgumentConsumer;
 
 impl GetClientSideArgParser for EntityArgumentConsumer {
     fn get_client_side_parser(&self) -> ProtoCmdArgParser {
