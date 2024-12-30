@@ -2,6 +2,7 @@ use crate::command::args::GetCloned;
 use crate::entity::player::Player;
 use crate::server::Server;
 use crate::world::bossbar::{Bossbar, BossbarColor, BossbarDivisions};
+use pumpkin_core::text::TextComponent;
 use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
@@ -236,7 +237,7 @@ impl CustomBossbars {
         &mut self,
         server: &Server,
         resource_location: &str,
-        new_title: &str,
+        new_title: TextComponent,
     ) -> Result<(), BossbarUpdateError> {
         let bossbar = self.custom_bossbars.get_mut(resource_location);
         if let Some(bossbar) = bossbar {
@@ -246,7 +247,7 @@ impl CustomBossbars {
                 )));
             }
 
-            bossbar.bossbar_data.title = new_title.to_string();
+            bossbar.bossbar_data.title = new_title;
 
             if !bossbar.visible {
                 return Ok(());

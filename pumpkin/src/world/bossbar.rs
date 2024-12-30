@@ -34,7 +34,7 @@ pub enum BossbarFlags {
 #[derive(Clone)]
 pub struct Bossbar {
     pub uuid: Uuid,
-    pub title: String,
+    pub title: TextComponent,
     pub health: f32,
     pub color: BossbarColor,
     pub division: BossbarDivisions,
@@ -43,7 +43,7 @@ pub struct Bossbar {
 
 impl Bossbar {
     #[must_use]
-    pub fn new(title: String) -> Self {
+    pub fn new(title: TextComponent) -> Self {
         let uuid = Uuid::new_v4();
 
         Self {
@@ -63,7 +63,7 @@ impl Player {
         // Maybe this section could be implemented. feel free to change
         let bossbar = bossbar.clone();
         let boss_action = BosseventAction::Add {
-            title: TextComponent::text(bossbar.title),
+            title: bossbar.title,
             health: bossbar.health,
             color: (bossbar.color as u8).into(),
             division: (bossbar.division as u8).into(),
@@ -87,8 +87,8 @@ impl Player {
         self.client.send_packet(&packet).await;
     }
 
-    pub async fn update_bossbar_title(&self, uuid: &Uuid, title: String) {
-        let boss_action = BosseventAction::UpdateTile(TextComponent::text(title));
+    pub async fn update_bossbar_title(&self, uuid: &Uuid, title: TextComponent) {
+        let boss_action = BosseventAction::UpdateTile(title);
 
         let packet = CBossEvent::new(uuid, boss_action);
         self.client.send_packet(&packet).await;
