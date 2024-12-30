@@ -6,6 +6,7 @@ use pumpkin_core::{
     math::{position::WorldPosition, vector2::Vector2, vector3::Vector3},
     GameMode,
 };
+use pumpkin_core::text::TextComponent;
 use pumpkin_protocol::client::play::{
     CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
 };
@@ -37,6 +38,7 @@ pub(crate) mod arg_resource_location;
 pub(crate) mod arg_rotation;
 pub(crate) mod arg_simple;
 mod coordinate;
+pub(crate) mod arg_textcomponent;
 
 /// see [`crate::commands::tree_builder::argument`]
 #[async_trait]
@@ -87,6 +89,7 @@ pub(crate) enum Arg<'a> {
     BossbarColor(BossbarColor),
     BossbarStyle(BossbarDivisions),
     Msg(String),
+    TextComponent(TextComponent),
     Num(Result<Number, NotInBounds>),
     Bool(bool),
     #[allow(unused)]

@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
 use uuid::Uuid;
+use pumpkin_core::text::TextComponent;
 
 #[derive(Debug, Error)]
 pub enum BossbarUpdateError {
@@ -236,7 +237,7 @@ impl CustomBossbars {
         &mut self,
         server: &Server,
         resource_location: &str,
-        new_title: &str,
+        new_title: TextComponent,
     ) -> Result<(), BossbarUpdateError> {
         let bossbar = self.custom_bossbars.get_mut(resource_location);
         if let Some(bossbar) = bossbar {
@@ -246,7 +247,7 @@ impl CustomBossbars {
                 )));
             }
 
-            bossbar.bossbar_data.title = new_title.to_string();
+            bossbar.bossbar_data.title = new_title;
 
             if !bossbar.visible {
                 return Ok(());
