@@ -767,7 +767,8 @@ impl Player {
                         .await;
                 }
                 Status::ShootArrowOrFinishEating => {
-                    println!("sas")
+                    // TODO: Handle this correctly
+                    log::debug!("Player stop eating food");
                 }
                 Status::DropItemStack | Status::DropItem | Status::SwapItem => {
                     log::debug!("todo");
@@ -907,7 +908,7 @@ impl Player {
 
         if let Some(food) = item.components.food {
             // TODO + HELP WANTED: Needs server -> client packed, what stops client from eating food.
-            log::info!("Player tried eat food: {:?}", food);
+            log::debug!("Player tried eat food: {:?}", food);
         } else {
             log::error!(
                 "An item was used ({}), but the use is not implemented yet",
