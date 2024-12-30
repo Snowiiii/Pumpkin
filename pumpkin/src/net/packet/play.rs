@@ -523,10 +523,10 @@ impl Player {
                 chat_message.timestamp,
                 chat_message.salt,
                 &[],
-                Some(TextComponent::text(&message)),
+                Some(TextComponent::text(message.clone())),
                 FilterType::PassThrough,
                 1.into(),
-                TextComponent::text(&gameprofile.name),
+                TextComponent::text(gameprofile.name.clone()),
                 None,
             ))
             .await;

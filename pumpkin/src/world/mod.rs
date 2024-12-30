@@ -722,7 +722,7 @@ impl World {
         // Handle join message
         // TODO: Config
         let msg_txt = format!("{} joined the game.", player.gameprofile.name.as_str());
-        let msg_comp = TextComponent::text(msg_txt.as_str()).color_named(NamedColor::Yellow);
+        let msg_comp = TextComponent::text(msg_txt).color_named(NamedColor::Yellow);
         for player in current_players.values() {
             player.send_system_message(&msg_comp).await;
         }
@@ -764,8 +764,7 @@ impl World {
         // Send disconnect message / quit message to players in the same world
         // TODO: Config
         let disconn_msg_txt = format!("{} left the game.", player.gameprofile.name.as_str());
-        let disconn_msg_cmp =
-            TextComponent::text(disconn_msg_txt.as_str()).color_named(NamedColor::Yellow);
+        let disconn_msg_cmp = TextComponent::text(disconn_msg_txt).color_named(NamedColor::Yellow);
         for player in self.current_players.lock().await.values() {
             player.send_system_message(&disconn_msg_cmp).await;
         }

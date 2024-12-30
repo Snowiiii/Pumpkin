@@ -28,9 +28,9 @@ impl CommandExecutor for ListExecutor {
         let players: Vec<Arc<Player>> = server.get_all_players().await;
 
         let message = if players.is_empty() {
-            "There are no players online."
+            "There are no players online.".to_owned()
         } else {
-            &format!(
+            format!(
                 "There are {} of a max of {} players online: {}",
                 players.len(),
                 BASIC_CONFIG.max_players,

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
-pub struct Style<'a> {
+pub struct Style {
     /// Changes the color to render the content
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
@@ -31,10 +31,10 @@ pub struct Style<'a> {
     pub insertion: Option<String>,
     /// Allows for events to occur when the player clicks on text. Only work in chat.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub click_event: Option<ClickEvent<'a>>,
+    pub click_event: Option<ClickEvent>,
     /// Allows for a tooltip to be displayed when the player hovers their mouse over text.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub hover_event: Option<HoverEvent<'a>>,
+    pub hover_event: Option<HoverEvent>,
     /// Allows you to change the font of the text.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub font: Option<String>,
@@ -46,7 +46,7 @@ pub struct Style<'a> {
     pub shadow_color: Option<ARGBColor>,
 }
 
-impl<'a> Style<'a> {
+impl Style {
     pub fn color(mut self, color: Color) -> Self {
         self.color = Some(color);
         self
@@ -94,13 +94,13 @@ impl<'a> Style<'a> {
     }
 
     /// Allows for events to occur when the player clicks on text. Only work in chat.
-    pub fn click_event(mut self, event: ClickEvent<'a>) -> Self {
+    pub fn click_event(mut self, event: ClickEvent) -> Self {
         self.click_event = Some(event);
         self
     }
 
     /// Allows for a tooltip to be displayed when the player hovers their mouse over text.
-    pub fn hover_event(mut self, event: HoverEvent<'a>) -> Self {
+    pub fn hover_event(mut self, event: HoverEvent) -> Self {
         self.hover_event = Some(event);
         self
     }

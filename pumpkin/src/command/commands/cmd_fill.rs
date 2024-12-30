@@ -144,7 +144,7 @@ impl CommandExecutor for SetblockExecutor {
         };
 
         sender
-            .send_message(TextComponent::text_string(format!(
+            .send_message(TextComponent::text(format!(
                 "Placed {} blocks of {} from {from} to {to}",
                 placed_blocks, block.name
             )))

@@ -48,7 +48,7 @@ impl fmt::Display for CommandSender<'_> {
 }
 
 impl<'a> CommandSender<'a> {
-    pub async fn send_message(&self, text: TextComponent<'a>) {
+    pub async fn send_message(&self, text: TextComponent) {
         match self {
             CommandSender::Console => log::info!("{}", text.to_pretty_console()),
             CommandSender::Player(c) => c.send_system_message(&text).await,

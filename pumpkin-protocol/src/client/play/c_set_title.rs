@@ -6,11 +6,11 @@ use serde::Serialize;
 #[derive(Serialize)]
 #[client_packet("play:set_title_text")]
 pub struct CTitleText<'a> {
-    title: TextComponent<'a>,
+    title: &'a TextComponent,
 }
 
 impl<'a> CTitleText<'a> {
-    pub fn new(title: TextComponent<'a>) -> Self {
+    pub fn new(title: &'a TextComponent) -> Self {
         Self { title }
     }
 }

@@ -63,7 +63,7 @@ impl CommandExecutor for OpExecutor {
 
             let player_name = player.gameprofile.name.clone();
             let message = format!("Made {player_name} a server operator.");
-            let msg = TextComponent::text(&message);
+            let msg = TextComponent::text(message);
             sender.send_message(msg).await;
         }
 

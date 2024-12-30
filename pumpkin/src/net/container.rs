@@ -39,7 +39,7 @@ impl Player {
             .send_packet(&COpenScreen::new(
                 inventory.total_opened_containers.into(),
                 VarInt(window_type as i32),
-                title,
+                &title,
             ))
             .await;
         drop(inventory);

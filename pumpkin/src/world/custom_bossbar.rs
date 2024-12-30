@@ -178,7 +178,7 @@ impl CustomBossbars {
                 .collect();
             for player in matching_players {
                 player
-                    .update_bossbar_health(bossbar.bossbar_data.uuid, bossbar.bossbar_data.health)
+                    .update_bossbar_health(&bossbar.bossbar_data.uuid, bossbar.bossbar_data.health)
                     .await;
             }
 
@@ -260,7 +260,7 @@ impl CustomBossbars {
             for player in matching_players {
                 player
                     .update_bossbar_title(
-                        bossbar.bossbar_data.uuid,
+                        &bossbar.bossbar_data.uuid,
                         bossbar.bossbar_data.title.clone(),
                     )
                     .await;
@@ -301,7 +301,7 @@ impl CustomBossbars {
             for player in matching_players {
                 player
                     .update_bossbar_style(
-                        bossbar.bossbar_data.uuid,
+                        &bossbar.bossbar_data.uuid,
                         bossbar.bossbar_data.color.clone(),
                         bossbar.bossbar_data.division.clone(),
                     )
@@ -343,7 +343,7 @@ impl CustomBossbars {
             for player in matching_players {
                 player
                     .update_bossbar_style(
-                        bossbar.bossbar_data.uuid,
+                        &bossbar.bossbar_data.uuid,
                         bossbar.bossbar_data.color.clone(),
                         bossbar.bossbar_data.division.clone(),
                     )

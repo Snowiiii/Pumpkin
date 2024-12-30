@@ -5,20 +5,15 @@ use pumpkin_macros::client_packet;
 use crate::{bytebuf::ByteBufMut, ClientPacket, VarInt};
 
 #[client_packet("play:command_suggestions")]
-pub struct CCommandSuggestions<'a> {
+pub struct CCommandSuggestions {
     id: VarInt,
     start: VarInt,
     length: VarInt,
-    matches: Vec<CommandSuggestion<'a>>,
+    matches: Vec<CommandSuggestion>,
 }
 
-impl<'a> CCommandSuggestions<'a> {
-    pub fn new(
-        id: VarInt,
-        start: VarInt,
-        length: VarInt,
-        matches: Vec<CommandSuggestion<'a>>,
-    ) -> Self {
+impl CCommandSuggestions {
+    pub fn new(id: VarInt, start: VarInt, length: VarInt, matches: Vec<CommandSuggestion>) -> Self {
         Self {
             id,
             start,
@@ -28,7 +23,7 @@ impl<'a> CCommandSuggestions<'a> {
     }
 }
 
-impl ClientPacket for CCommandSuggestions<'_> {
+impl ClientPacket for CCommandSuggestions {
     fn write(&self, bytebuf: &mut impl BufMut) {
         bytebuf.put_var_int(&self.id);
         bytebuf.put_var_int(&self.start);
@@ -45,13 +40,13 @@ impl ClientPacket for CCommandSuggestions<'_> {
 }
 
 #[derive(PartialEq, Eq, Hash, Debug)]
-pub struct CommandSuggestion<'a> {
+pub struct CommandSuggestion {
     pub suggestion: String,
-    pub tooltip: Option<TextComponent<'a>>,
+    pub tooltip: Option<TextComponent>,
 }
 
-impl<'a> CommandSuggestion<'a> {
-    pub fn new(suggestion: String, tooltip: Option<TextComponent<'a>>) -> Self {
+impl CommandSuggestion {
+    pub fn new(suggestion: String, tooltip: Option<TextComponent>) -> Self {
         Self {
             suggestion,
             tooltip,
