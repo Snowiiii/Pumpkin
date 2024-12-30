@@ -769,9 +769,7 @@ impl Player {
                 Status::ShootArrowOrFinishEating => {
                     println!("sas")
                 }
-                Status::DropItemStack
-                | Status::DropItem
-                | Status::SwapItem => {
+                Status::DropItemStack | Status::DropItem | Status::SwapItem => {
                     log::debug!("todo");
                 }
             },
@@ -898,14 +896,23 @@ impl Player {
 
     // TODO: handle packet correctly
     pub async fn handle_use_item(&self, _use_item: &SUseItem) -> Result<(), Box<dyn PumpkinError>> {
-        let item_stack = *self.inventory().lock().await.held_item().ok_or(InventoryError::InvalidPacket)?;
-        let item = item_registry::get_item_by_id(item_stack.item_id).ok_or(InventoryError::InvalidPacket)?;
-        
+        let item_stack = *self
+            .inventory()
+            .lock()
+            .await
+            .held_item()
+            .ok_or(InventoryError::InvalidPacket)?;
+        let item = item_registry::get_item_by_id(item_stack.item_id)
+            .ok_or(InventoryError::InvalidPacket)?;
+
         if let Some(food) = item.components.food {
             // TODO + HELP WANTED: Needs server -> client packed, what stops client from eating food.
             log::info!("Player tried eat food: {:?}", food);
         } else {
-            log::error!("An item was used ({}), but the use is not implemented yet", ITEMS_REGISTRY_NAME_BY_ID.get(&item.id).unwrap());
+            log::error!(
+                "An item was used ({}), but the use is not implemented yet",
+                ITEMS_REGISTRY_NAME_BY_ID.get(&item.id).unwrap()
+            );
         }
         Ok(())
     }
