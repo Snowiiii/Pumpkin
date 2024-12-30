@@ -761,10 +761,6 @@ impl Player {
                             .on_broken(block, self, location, server)
                             .await;
                     }
-                    // TODO: Send this every tick
-                    self.client
-                        .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence))
-                        .await;
                 }
                 Status::DropItemStack
                 | Status::DropItem
@@ -775,6 +771,10 @@ impl Player {
             },
             None => self.kick(TextComponent::text("Invalid status")).await,
         }
+
+        self.client
+            .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence))
+            .await;
     }
 
     pub async fn handle_keep_alive(&self, keep_alive: SKeepAlive) {
