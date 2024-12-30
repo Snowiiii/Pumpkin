@@ -6,14 +6,14 @@ use uuid::Uuid;
 
 use crate::{entity::player::Player, server::Server};
 
-pub enum PlayerEventAction<'a> {
+pub enum PlayerEventAction {
     SendMessage {
-        message: TextComponent<'a>,
+        message: TextComponent,
         player_id: Uuid,
         response: oneshot::Sender<()>,
     },
     Kick {
-        reason: TextComponent<'a>,
+        reason: TextComponent,
         player_id: Uuid,
         response: oneshot::Sender<()>,
     },
@@ -35,12 +35,12 @@ pub enum PlayerEventAction<'a> {
     },
 }
 
-pub struct PlayerEvent<'a> {
+pub struct PlayerEvent {
     pub player: Arc<Player>,
-    channel: mpsc::Sender<PlayerEventAction<'a>>,
+    channel: mpsc::Sender<PlayerEventAction>,
 }
 
-impl Deref for PlayerEvent<'_> {
+impl Deref for PlayerEvent {
     type Target = Player;
 
     fn deref(&self) -> &Self::Target {
@@ -48,13 +48,13 @@ impl Deref for PlayerEvent<'_> {
     }
 }
 
-impl<'a> PlayerEvent<'a> {
+impl PlayerEvent {
     #[must_use]
-    pub fn new(player: Arc<Player>, channel: mpsc::Sender<PlayerEventAction<'a>>) -> Self {
+    pub fn new(player: Arc<Player>, channel: mpsc::Sender<PlayerEventAction>) -> Self {
         Self { player, channel }
     }
 
-    pub async fn send_message(&self, message: TextComponent<'a>) {
+    pub async fn send_message(&self, message: TextComponent) {
         let (tx, rx) = oneshot::channel();
         self.channel
             .send(PlayerEventAction::SendMessage {
@@ -67,7 +67,7 @@ impl<'a> PlayerEvent<'a> {
         rx.await.unwrap();
     }
 
-    pub async fn kick(&self, reason: TextComponent<'a>) {
+    pub async fn kick(&self, reason: TextComponent) {
         let (tx, rx) = oneshot::channel();
         self.channel
             .send(PlayerEventAction::Kick {
@@ -81,10 +81,7 @@ impl<'a> PlayerEvent<'a> {
     }
 }
 
-pub async fn player_event_handler(
-    server: Arc<Server>,
-    player: Arc<Player>,
-) -> PlayerEvent<'static> {
+pub async fn player_event_handler(server: Arc<Server>, player: Arc<Player>) -> PlayerEvent {
     let (send, mut recv) = mpsc::channel(1);
     let player_event = PlayerEvent::new(player.clone(), send);
     let players_copy = server.get_all_players().await;

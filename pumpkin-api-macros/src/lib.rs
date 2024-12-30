@@ -227,27 +227,23 @@ pub fn with_runtime(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     for item in &mut input.items {
         if let ImplItem::Fn(method) = item {
-            if method.sig.asyncness.is_some() {
-                let original_body = &method.block;
+            let original_body = &method.block;
 
-                method.block = if use_global {
-                    parse_quote!({
-                        crate::GLOBAL_RUNTIME.block_on(async move {
+            method.block = if use_global {
+                parse_quote!({
+                    GLOBAL_RUNTIME.block_on(async move {
+                        #original_body
+                    })
+                })
+            } else {
+                parse_quote!({
+                    tokio::runtime::Runtime::new()
+                        .unwrap()
+                        .block_on(async move {
                             #original_body
                         })
-                    })
-                } else {
-                    parse_quote!({
-                        tokio::runtime::Runtime::new()
-                            .unwrap()
-                            .block_on(async move {
-                                #original_body
-                            })
-                    })
-                };
-
-                method.sig.asyncness = None;
-            }
+                })
+            };
         }
     }
 

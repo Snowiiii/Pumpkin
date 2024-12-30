@@ -1,5 +1,8 @@
 use async_trait::async_trait;
-use pumpkin_core::text::{color::NamedColor, hover::HoverEvent, TextComponent};
+use pumpkin_core::{
+    text::{color::NamedColor, hover::HoverEvent, TextComponent},
+    PermissionLvl,
+};
 
 use crate::{
     command::{
@@ -8,7 +11,6 @@ use crate::{
         tree_builder::{argument, literal, require},
         CommandError, CommandExecutor, CommandSender,
     },
-    entity::player::PermissionLvl,
     PLUGIN_MANAGER,
 };
 
@@ -34,11 +36,11 @@ impl CommandExecutor for ListExecutor {
         let plugins = plugin_manager.list_plugins();
 
         let message_text = if plugins.is_empty() {
-            "There are no loaded plugins."
+            "There are no loaded plugins.".to_string()
         } else if plugins.len() == 1 {
-            "There is 1 plugin loaded:\n"
+            "There is 1 plugin loaded:\n".to_string()
         } else {
-            &format!("There are {} plugins loaded:\n", plugins.len(),)
+            format!("There are {} plugins loaded:\n", plugins.len())
         };
         let mut message = TextComponent::text(message_text);
 
@@ -53,11 +55,11 @@ impl CommandExecutor for ListExecutor {
                 metadata.version, metadata.authors, metadata.description
             );
             let component = if *loaded {
-                TextComponent::text_string(fmt)
+                TextComponent::text(fmt)
                     .color_named(NamedColor::Green)
                     .hover_event(HoverEvent::ShowText(hover_text.into()))
             } else {
-                TextComponent::text_string(fmt)
+                TextComponent::text(fmt)
                     .color_named(NamedColor::Red)
                     .hover_event(HoverEvent::ShowText(hover_text.into()))
             };
@@ -88,7 +90,7 @@ impl CommandExecutor for LoadExecutor {
         if plugin_manager.is_plugin_loaded(plugin_name) {
             sender
                 .send_message(
-                    TextComponent::text_string(format!("Plugin {plugin_name} is already loaded"))
+                    TextComponent::text(format!("Plugin {plugin_name} is already loaded"))
                         .color_named(NamedColor::Red),
                 )
                 .await;
@@ -101,20 +103,16 @@ impl CommandExecutor for LoadExecutor {
             Ok(()) => {
                 sender
                     .send_message(
-                        TextComponent::text_string(format!(
-                            "Plugin {plugin_name} loaded successfully"
-                        ))
-                        .color_named(NamedColor::Green),
+                        TextComponent::text(format!("Plugin {plugin_name} loaded successfully"))
+                            .color_named(NamedColor::Green),
                     )
                     .await;
             }
             Err(e) => {
                 sender
                     .send_message(
-                        TextComponent::text_string(format!(
-                            "Failed to load plugin {plugin_name}: {e}"
-                        ))
-                        .color_named(NamedColor::Red),
+                        TextComponent::text(format!("Failed to load plugin {plugin_name}: {e}"))
+                            .color_named(NamedColor::Red),
                     )
                     .await;
             }
@@ -142,7 +140,7 @@ impl CommandExecutor for UnloadExecutor {
         if !plugin_manager.is_plugin_loaded(plugin_name) {
             sender
                 .send_message(
-                    TextComponent::text_string(format!("Plugin {plugin_name} is not loaded"))
+                    TextComponent::text(format!("Plugin {plugin_name} is not loaded"))
                         .color_named(NamedColor::Red),
                 )
                 .await;
@@ -155,20 +153,16 @@ impl CommandExecutor for UnloadExecutor {
             Ok(()) => {
                 sender
                     .send_message(
-                        TextComponent::text_string(format!(
-                            "Plugin {plugin_name} unloaded successfully",
-                        ))
-                        .color_named(NamedColor::Green),
+                        TextComponent::text(format!("Plugin {plugin_name} unloaded successfully",))
+                            .color_named(NamedColor::Green),
                     )
                     .await;
             }
             Err(e) => {
                 sender
                     .send_message(
-                        TextComponent::text_string(format!(
-                            "Failed to unload plugin {plugin_name}: {e}"
-                        ))
-                        .color_named(NamedColor::Red),
+                        TextComponent::text(format!("Failed to unload plugin {plugin_name}: {e}"))
+                            .color_named(NamedColor::Red),
                     )
                     .await;
             }

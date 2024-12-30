@@ -10,13 +10,13 @@ use pumpkin::command::tree_builder::literal;
 use pumpkin::command::tree_builder::require;
 use pumpkin::command::CommandExecutor;
 use pumpkin::command::CommandSender;
-use pumpkin::entity::player::PermissionLvl;
 use pumpkin::plugin::api::types::player::PlayerEvent;
 use pumpkin::plugin::*;
 use pumpkin::server::Server;
 use pumpkin_api_macros::{plugin_event, plugin_impl, plugin_method, with_runtime};
 use pumpkin_core::text::color::NamedColor;
 use pumpkin_core::text::TextComponent;
+use pumpkin_core::PermissionLvl;
 use serde::{Deserialize, Serialize};
 use std::fs;
 
@@ -51,8 +51,10 @@ enum Mode {
 
 struct SetblockExecutor(Mode);
 
-#[async_trait]
+// IMPORTANT: If using something that requires a tokio runtime, the #[with_runtime] attribute must be used.
+// EVEN MORE IMPORTANT: The #[with_runtime] attribute must be used **BRFORE** the #[async_trait] attribute.
 #[with_runtime(global)]
+#[async_trait]
 impl CommandExecutor for SetblockExecutor {
     async fn execute<'a>(
         &self,
@@ -89,10 +91,9 @@ impl CommandExecutor for SetblockExecutor {
 
         sender
             .send_message(if success {
-                TextComponent::text_string(format!("Placed block {} at {pos}", block.name,))
+                TextComponent::text(format!("Placed block {} at {pos}", block.name,))
             } else {
-                TextComponent::text_string(format!("Kept block at {pos}"))
-                    .color_named(NamedColor::Red)
+                TextComponent::text(format!("Kept block at {pos}")).color_named(NamedColor::Red)
             })
             .await;
 
@@ -118,7 +119,9 @@ pub fn init_command_tree() -> CommandTree {
 #[plugin_method]
 async fn on_load(&mut self, server: &Context) -> Result<(), String> {
     env_logger::init();
-    server.register_command(init_command_tree()).await;
+    server
+        .register_command(init_command_tree(), PermissionLvl::Two)
+        .await;
     let data_folder = server.get_data_folder();
     if !fs::exists(format!("{}/data.toml", data_folder)).unwrap() {
         let cfg = toml::to_string(&self.config).unwrap();
@@ -167,7 +170,7 @@ async fn on_player_join(&mut self, server: &Context, player: &PlayerEvent) -> Re
 
     let _ = player
         .send_message(
-            TextComponent::text_string(format!(
+            TextComponent::text(format!(
                 "Hello {}, welocme to the server",
                 player.gameprofile.name
             ))

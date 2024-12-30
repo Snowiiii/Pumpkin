@@ -26,11 +26,11 @@ impl CommandExecutor for ListExecutor {
         let plugins = plugin_manager.list_plugins();
 
         let message_text = if plugins.is_empty() {
-            "There are no loaded plugins."
+            "There are no loaded plugins.".to_string()
         } else if plugins.len() == 1 {
-            "There is 1 plugin loaded:\n"
+            "There is 1 plugin loaded:\n".to_string()
         } else {
-            &format!("There are {} plugins loaded:\n", plugins.len(),)
+            format!("There are {} plugins loaded:\n", plugins.len())
         };
         let mut message = TextComponent::text(message_text);
 
@@ -45,11 +45,11 @@ impl CommandExecutor for ListExecutor {
                 metadata.version, metadata.authors, metadata.description
             );
             let component = if *loaded {
-                TextComponent::text_string(fmt)
+                TextComponent::text(fmt)
                     .color_named(NamedColor::Green)
                     .hover_event(HoverEvent::ShowText(hover_text.into()))
             } else {
-                TextComponent::text_string(fmt)
+                TextComponent::text(fmt)
                     .color_named(NamedColor::Red)
                     .hover_event(HoverEvent::ShowText(hover_text.into()))
             };

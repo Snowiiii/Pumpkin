@@ -795,8 +795,7 @@ impl World {
                 // Handle join message
                 // TODO: Config
                 let msg_txt = format!("{} joined the game.", player.gameprofile.name.as_str());
-                let msg_comp =
-                    TextComponent::text(msg_txt).color_named(NamedColor::Yellow);
+                let msg_comp = TextComponent::text(msg_txt).color_named(NamedColor::Yellow);
                 let players = current_players.lock().await;
                 for player in players.values() {
                     player.send_system_message(&msg_comp).await;

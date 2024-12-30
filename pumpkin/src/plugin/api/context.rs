@@ -1,5 +1,6 @@
 use std::{fs, path::Path, sync::Arc};
 
+use pumpkin_core::PermissionLvl;
 use tokio::sync::mpsc::{self, Sender};
 
 use crate::server::Server;
@@ -35,10 +36,7 @@ impl Context {
         path
     }
 
-    pub async fn get_player_by_name(
-        &self,
-        player_name: String,
-    ) -> Result<PlayerEvent<'static>, String> {
+    pub async fn get_player_by_name(&self, player_name: String) -> Result<PlayerEvent, String> {
         let (send, recv) = oneshot::channel();
         let _ = self
             .channel
@@ -50,10 +48,14 @@ impl Context {
         recv.await.unwrap()
     }
 
-    pub async fn register_command(&self, tree: crate::command::tree::CommandTree) {
+    pub async fn register_command(
+        &self,
+        tree: crate::command::tree::CommandTree,
+        permission: PermissionLvl,
+    ) {
         let _ = self
             .channel
-            .send(ContextAction::RegisterCommand(tree))
+            .send(ContextAction::RegisterCommand(tree, permission))
             .await;
     }
 }
@@ -62,9 +64,12 @@ pub enum ContextAction {
     // TODO: Implement when dispatcher is mutable
     GetPlayerByName {
         player_name: String,
-        response: oneshot::Sender<Result<PlayerEvent<'static>, String>>,
+        response: oneshot::Sender<Result<PlayerEvent, String>>,
     },
-    RegisterCommand(crate::command::tree::CommandTree),
+    RegisterCommand(
+        crate::command::tree::CommandTree,
+        pumpkin_core::PermissionLvl,
+    ),
 }
 
 pub fn handle_context(
@@ -94,9 +99,9 @@ pub fn handle_context(
                         response.send(Err("Player not found".to_string())).unwrap();
                     }
                 }
-                ContextAction::RegisterCommand(tree) => {
+                ContextAction::RegisterCommand(tree, permission) => {
                     let mut dispatcher_lock = server.command_dispatcher.write().await;
-                    dispatcher_lock.register(tree);
+                    dispatcher_lock.register(tree, permission);
                 }
             }
         }
