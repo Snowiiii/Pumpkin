@@ -245,7 +245,6 @@ impl Player {
         // Remove left over entries from all possiblily loaded chunks
         level.clean_memory(&radial_chunks);
 
-
         log::debug!(
             "Removed player id {} ({}) ({} chunks remain cached)",
             self.gameprofile.name,
