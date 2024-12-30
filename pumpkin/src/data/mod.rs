@@ -6,6 +6,10 @@ const DATA_FOLDER: &str = "data/";
 
 pub mod op_data;
 
+pub mod banlist_serializer;
+pub mod banned_ip_data;
+pub mod banned_player_data;
+
 pub trait LoadJSONConfiguration {
     #[must_use]
     fn load() -> Self

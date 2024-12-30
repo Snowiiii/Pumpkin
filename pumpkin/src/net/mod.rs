@@ -9,6 +9,7 @@ use std::{
 };
 
 use crate::{
+    data::{banned_ip_data::BANNED_IP_LIST, banned_player_data::BANNED_PLAYER_LIST},
     entity::player::{ChatMode, Hand},
     server::Server,
 };
@@ -591,6 +592,28 @@ impl Client {
         }
         log::debug!("Closing connection for {}", self.id);
         self.close();
+    }
+
+    /// Checks if the client can join the server.
+    pub async fn can_join(&self) -> bool {
+        let profile = self.gameprofile.lock().await;
+
+        let Some(profile) = profile.as_ref() else {
+            return false;
+        };
+
+        let banned_players = BANNED_PLAYER_LIST.read().await;
+        if banned_players.is_banned(profile) {
+            return false;
+        }
+
+        let banned_ips = BANNED_IP_LIST.read().await;
+        let address = self.address.lock().await;
+        if banned_ips.is_banned(&address.ip()) {
+            return false;
+        }
+
+        true
     }
 
     /// Closes the connection to the client.

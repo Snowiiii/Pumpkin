@@ -66,7 +66,10 @@ png = "0.17.15"
 
 # logging
 simple_logger = { version = "5.0.0", features = ["threads"] }
+# Remove time in favor of chrono?
 time = "0.3.37"
+
+chrono = { version = "0.4.39", features = ["serde"]}
 
 # commands
 async-trait = "0.1.83"
