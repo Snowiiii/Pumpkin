@@ -723,6 +723,10 @@ impl Player {
                                 .on_broken(block, self, location, server)
                                 .await;
                         }
+
+                        self.client
+                            .send_packet(&CAcknowledgeBlockChange::new(player_action.sequence))
+                            .await;
                     }
                 }
                 Status::CancelledDigging => {
