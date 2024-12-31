@@ -930,6 +930,18 @@ impl Player {
                     .send_packet(&CEntityStatus::new(player.entity_id(), 9))
                     .await;
 
+                if player.gamemode.load() != GameMode::Creative {
+                    let mut inventory = player.inventory().lock().await;
+                    let item_count = &mut inventory.held_item_mut().as_mut().unwrap().item_count;
+                    *item_count -= 1;
+
+                    if *item_count == 0 {
+                        *inventory.held_item_mut() = None;
+                    }
+
+                    drop(inventory);
+                }
+
                 player
                     .set_health(
                         player.living_entity.health.load(),
