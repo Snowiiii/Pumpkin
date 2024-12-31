@@ -1,6 +1,7 @@
 #![expect(dead_code)]
 
 use std::{
+    collections::HashMap,
     fs::File,
     io::{BufRead, BufReader},
     path::PathBuf,
@@ -12,18 +13,20 @@ use pumpkin_core::text::{style::Style, TextComponent, TextContent};
 use serde_json::Value;
 use thiserror::Error;
 
-static EN_US: LazyLock<&str> = LazyLock::new(|| "assets/lang/en_us/en_us.json");
+static EN_US: LazyLock<&str> = LazyLock::new(|| "../assets/lang/en_us/en_us.json");
 
 #[derive(Error, Debug)]
 pub enum TranslationError {
-    #[error("File does not exist")]
+    #[error("File does not exist.")]
     NoFileFound,
     #[error("File cannot be opened.")]
     InvalidFile,
+    #[error("Invalid translation format. Ensure that all entries are strings, and none is empty")]
+    InvalidFormat,
     #[error("Failed to read file. Error: {0}")]
     FileRead(std::io::Error),
-    #[error("Invalid JSON encountered. Use only objects in the translation file.")]
-    JsonParse,
+    #[error("Invalid JSON encountered. Use 1 JSON Object in the translation file. Error: {0}")]
+    JsonParse(serde_json::Error),
 }
 
 pub fn translate(message: &'_ str) -> Result<TextComponent<'_>, TranslationError> {
@@ -58,14 +61,14 @@ fn get_translations(
     path: impl Into<PathBuf>,
     message: &str,
 ) -> Result<TextComponent, TranslationError> {
-    let translation_file = File::open(path.into()).map_err(|_| TranslationError::InvalidFile)?;
+    let translation_file = File::open(path.into()).map_err(TranslationError::FileRead)?;
     let reader = BufReader::new(translation_file);
 
-    let json_results = read_translation_file(reader, message)?;
-    let parsed_results = parse_json_object(json_results, message);
+    let dict = read_translation_file(reader)?;
+    let translation_results = find_translation(&dict, message);
     let text_components = TextComponent {
         content: TextContent::Text {
-            text: std::borrow::Cow::Owned(parsed_results),
+            text: std::borrow::Cow::Owned(translation_results),
         },
         style: Style::default(),
         extra: vec![],
@@ -75,60 +78,65 @@ fn get_translations(
 }
 ///Read a huge object line by line and tricking `serde_json` into thinking they are individual objects
 fn read_translation_file(
-    mut reader: impl BufRead,
-    message: &str,
-) -> Result<Vec<Value>, TranslationError> {
-    let mut buf = String::new();
-    let mut results = Vec::new();
+    reader: impl BufRead,
+) -> Result<HashMap<String, String>, TranslationError> {
+    let mut results = HashMap::new();
+    let translation_json: Value =
+        serde_json::from_reader(BufReader::new(reader)).map_err(TranslationError::JsonParse)?;
 
-    loop {
-        let bytes_read = reader
-            .read_line(&mut buf)
-            .map_err(TranslationError::FileRead)?;
+    if let Value::Object(map) = translation_json {
+        for (text, value) in map {
+            if let Value::String(translation) = value {
+                if text.is_empty() {
+                    return Err(TranslationError::InvalidFormat);
+                }
 
-        if bytes_read == 0 {
-            break;
+                results.insert(text, translation);
+            } else {
+                return Err(TranslationError::InvalidFormat);
+            }
         }
-
-        if buf == "{" || buf == "}" {
-            continue;
-        }
-
-        if buf.contains(message) {
-            let mut buf = buf.trim().replace(',', "");
-            buf.insert(0, '{');
-            buf.push('}');
-            let v: Value = serde_json::from_str(&buf).map_err(|_| TranslationError::JsonParse)?;
-
-            results.push(v);
-        }
-
-        buf.clear();
+    } else {
+        return Err(TranslationError::InvalidFormat);
     }
 
     Ok(results)
 }
 
-fn parse_json_object(vec: Vec<Value>, message: &str) -> String {
-    for value in vec {
-        //breaking up a serde_json object, looks really ugly not gonna lie
-        if let Value::Object(map) = value {
-            if let Some(text) = map.keys().next() {
-                if text.trim() == message {
-                    if let Some(Value::String(translation)) = map.values().next() {
-                        return translation.to_owned();
-                    }
-                }
-            }
+fn find_translation(dict: &HashMap<String, String>, message: &str) -> String {
+    for text in dict.keys() {
+        if text == message {
+            return dict.get(text).unwrap().to_string(); //unwrap because the dictionary should be populated
         }
     }
 
-    String::default()
+    String::new()
 }
 
 #[cfg(test)]
 mod test {
-    use super::{parse_json_object, read_translation_file};
+
+    use pumpkin_core::text::{style::Style, TextComponent, TextContent};
+
+    use crate::server::translation::{get_translations, EN_US};
+
+    use super::{find_translation, read_translation_file};
+
+    #[test]
+    fn test_lang_en_us() {
+        let intended_result = TextComponent {
+            content: TextContent::Text {
+                text: std::borrow::Cow::Owned("Unknown advancement: %s".to_string()),
+            },
+            style: Style::default(),
+            extra: vec![],
+        };
+
+        assert_eq!(
+            intended_result,
+            get_translations(*EN_US, "advancement.advancementNotFound").unwrap()
+        );
+    }
 
     #[test]
     fn test_lang_ja_jp() {
@@ -147,8 +155,8 @@ mod test {
 
         assert_eq!(
             intended_result,
-            parse_json_object(
-                read_translation_file(reader, "advancement.advancementNotFound").unwrap(),
+            find_translation(
+                &read_translation_file(reader).unwrap(),
                 "advancement.advancementNotFound"
             )
         );
@@ -171,8 +179,8 @@ mod test {
 
         assert_eq!(
             intended_result,
-            parse_json_object(
-                read_translation_file(reader, "advancement.advancementNotFound").unwrap(),
+            find_translation(
+                &read_translation_file(reader).unwrap(),
                 "advancement.advancementNotFound"
             )
         );
@@ -194,8 +202,8 @@ mod test {
 
         assert_eq!(
             intended_result,
-            parse_json_object(
-                read_translation_file(reader, "advancement.advancementNotFound").unwrap(),
+            find_translation(
+                &read_translation_file(reader).unwrap(),
                 "advancement.advancementNotFound"
             )
         );
