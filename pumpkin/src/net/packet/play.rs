@@ -25,7 +25,7 @@ use pumpkin_entity::entity_type::EntityType;
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_inventory::InventoryError;
 use pumpkin_protocol::client::play::{
-    CEntityStatus, CSetContainerSlot, CSetEntityMetadata, CSetHeldItem, CSpawnEntity, Metadata,
+    CEntityStatus, CSetContainerSlot, CSetHeldItem, CSpawnEntity,
 };
 use pumpkin_protocol::codec::slot::Slot;
 use pumpkin_protocol::codec::var_int::VarInt;
@@ -923,13 +923,13 @@ impl Player {
             let player = self.clone();
 
             *self.eating.lock().await = Some(tokio::spawn(async move {
-                sleep(Duration::from_millis(1600)).await;
+                sleep(Duration::from_millis(1610)).await;
 
                 player
                     .client
                     .send_packet(&CEntityStatus::new(player.entity_id(), 9))
                     .await;
-                
+
                 player
                     .set_health(
                         player.living_entity.health.load(),

@@ -56,7 +56,10 @@ use pumpkin_world::{
         ItemStack,
     },
 };
-use tokio::{sync::{Mutex, Notify, RwLock}, task::JoinHandle};
+use tokio::{
+    sync::{Mutex, Notify, RwLock},
+    task::JoinHandle,
+};
 
 use super::Entity;
 use crate::{
@@ -555,7 +558,8 @@ impl Player {
 
     pub async fn set_health(&self, health: f32, food: u32, food_saturation: f32) {
         self.living_entity.set_health(health.min(20.0)).await;
-        self.food.store(food.min(20), std::sync::atomic::Ordering::Relaxed);
+        self.food
+            .store(food.min(20), std::sync::atomic::Ordering::Relaxed);
         self.food_saturation.store(food_saturation.min(20.0));
         self.client
             .send_packet(&CSetHealth::new(health, food.into(), food_saturation))
