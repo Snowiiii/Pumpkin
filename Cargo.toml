@@ -22,7 +22,6 @@ opt-level = 1
 
 [profile.release]
 lto = true
-strip = true
 codegen-units = 1
 
 [profile.bench]
