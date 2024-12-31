@@ -91,7 +91,7 @@ pub struct ChunkBlocks {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct PaletteEntry {
-    // bloc name
+    // block name
     name: String,
     properties: Option<HashMap<String, String>>,
 }

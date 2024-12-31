@@ -233,15 +233,19 @@ impl ChunkWriter for AnvilChunkFormat {
             )
             .map_err(|err| ChunkWritingError::IoError(err.kind()))?;
 
-        let bytes = self
+        let raw_bytes = self
             .to_bytes(chunk_data)
             .map_err(|err| ChunkWritingError::ChunkSerializingError(err.to_string()))?;
+        let mut buf = Vec::with_capacity(4096);
         // TODO: config
         let compression = Compression::ZLib;
-        let bytes = compression
-            // TODO: config
-            .compress_data(&bytes, 6)
-            .map_err(ChunkWritingError::Compression)?;
+        buf.put_u8(compression as u8);
+        buf.put_slice(
+            &compression
+                // TODO: config
+                .compress_data(&raw_bytes, 6)
+                .map_err(ChunkWritingError::Compression)?,
+        );
 
         let mut location_table: [u8; 4096] = [0; 4096];
         let mut timestamp_table: [u8; 4096] = [0; 4096];
@@ -359,7 +363,7 @@ impl ChunkWriter for AnvilChunkFormat {
         }
 
         let location_bytes = &(end_index as u32 / 4096).to_be_bytes()[1..4];
-        let size_bytes = [(bytes.len().div_ceil(4096)) as u8];
+        let size_bytes = [(buf.len().div_ceil(4096)) as u8];
         location_table[table_entry as usize..table_entry as usize + 4]
             .as_mut()
             .copy_from_slice(&[location_bytes, &size_bytes].concat());
@@ -374,23 +378,20 @@ impl ChunkWriter for AnvilChunkFormat {
 
         region_file.seek(SeekFrom::Start(end_index)).unwrap(); // TODO
 
-        let mut header: BytesMut = BytesMut::with_capacity(5);
-        // total chunk size includes the byte representing the compression
-        // scheme, so +1.
-        header.put_u32(bytes.len() as u32 + 1);
-        // compression scheme
-        header.put_u8(compression as u8);
+        let mut header: BytesMut = BytesMut::new();
+        // length
+        header.put_u32(buf.len() as u32);
         region_file
             .write_all(&header)
             .expect("Failed to write header");
-        region_file.write_all(&bytes).unwrap_or_else(|_| {
+        region_file.write_all(&buf).unwrap_or_else(|_| {
             panic!(
                 "Region file r.-{},{}.mca got corrupted, sorry",
                 region.0, region.1
             )
         });
 
-        let sector_count = (bytes.len() + 4).div_ceil(4096) * 4096;
+        let sector_count = (buf.len() + 4).div_ceil(4096) * 4096;
 
         // padding
         region_file
@@ -407,18 +408,19 @@ impl AnvilChunkFormat {
 
         for (i, blocks) in chunk_data.blocks.blocks.chunks(16 * 16 * 16).enumerate() {
             // get unique blocks
+            let palette = HashMap::<u16, &String>::from_iter(blocks.iter().map(|v| {
+                (
+                    *v,
+                    BLOCK_ID_TO_REGISTRY_ID
+                        .get(v)
+                        .expect("Tried saving a block which does not exist."),
+                )
+            }));
             let palette = HashMap::<u16, (&String, usize)>::from_iter(
-                blocks.iter().enumerate().map(|(i, v)| {
-                    (
-                        *v,
-                        (
-                            BLOCK_ID_TO_REGISTRY_ID
-                                .get(v)
-                                .expect("Tried saving a block which does not exist."),
-                            i,
-                        ),
-                    )
-                }),
+                palette
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, (block_id, registry_str))| (block_id, (registry_str, index))),
             );
 
             let block_bit_size = if palette.len() < 16 {
