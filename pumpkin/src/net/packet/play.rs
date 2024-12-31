@@ -1,5 +1,7 @@
 use std::num::NonZeroU8;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::block::block_manager::BlockActionResult;
 use crate::net::PlayerConfig;
@@ -22,7 +24,9 @@ use pumpkin_core::{
 use pumpkin_entity::entity_type::EntityType;
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_inventory::InventoryError;
-use pumpkin_protocol::client::play::{CSetContainerSlot, CSetHeldItem, CSpawnEntity};
+use pumpkin_protocol::client::play::{
+    CEntityStatus, CSetContainerSlot, CSetEntityMetadata, CSetHeldItem, CSpawnEntity, Metadata,
+};
 use pumpkin_protocol::codec::slot::Slot;
 use pumpkin_protocol::codec::var_int::VarInt;
 use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
@@ -51,6 +55,7 @@ use pumpkin_world::{
     item::item_registry::get_spawn_egg,
 };
 use thiserror::Error;
+use tokio::time::sleep;
 
 fn modulus(a: f32, b: f32) -> f32 {
     ((a % b) + b) % b
@@ -767,8 +772,11 @@ impl Player {
                         .await;
                 }
                 Status::ShootArrowOrFinishEating => {
-                    // TODO: Handle this correctly
-                    log::debug!("Player stop eating food");
+                    // TODO: Handle this correctly, not only food eating stop
+                    if let Some(eating) = &*self.eating.lock().await {
+                        log::debug!("player stopped eat food");
+                        eating.abort();
+                    }
                 }
                 Status::DropItemStack | Status::DropItem | Status::SwapItem => {
                     log::debug!("todo");
@@ -896,7 +904,10 @@ impl Player {
     }
 
     // TODO: handle packet correctly
-    pub async fn handle_use_item(&self, _use_item: &SUseItem) -> Result<(), Box<dyn PumpkinError>> {
+    pub async fn handle_use_item(
+        self: &Arc<Self>,
+        _use_item: &SUseItem,
+    ) -> Result<(), Box<dyn PumpkinError>> {
         let item_stack = *self
             .inventory()
             .lock()
@@ -907,8 +918,28 @@ impl Player {
             .ok_or(InventoryError::InvalidPacket)?;
 
         if let Some(food) = item.components.food {
-            // TODO + HELP WANTED: Needs server -> client packed, what stops client from eating food.
             log::debug!("Player tried eat food: {:?}", food);
+
+            let player = self.clone();
+
+            *self.eating.lock().await = Some(tokio::spawn(async move {
+                sleep(Duration::from_millis(1600)).await;
+
+                player
+                    .client
+                    .send_packet(&CEntityStatus::new(player.entity_id(), 9))
+                    .await;
+                
+                player
+                    .set_health(
+                        player.living_entity.health.load(),
+                        player.food.load(Ordering::Relaxed) + food.nutrition,
+                        player.food_saturation.load() + food.saturation,
+                    )
+                    .await;
+
+                log::debug!("Player eated food: {:?}", food);
+            }));
         } else {
             log::error!(
                 "An item was used ({}), but the use is not implemented yet",

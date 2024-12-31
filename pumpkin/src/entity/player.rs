@@ -56,7 +56,7 @@ use pumpkin_world::{
         ItemStack,
     },
 };
-use tokio::sync::{Mutex, Notify, RwLock};
+use tokio::{sync::{Mutex, Notify, RwLock}, task::JoinHandle};
 
 use super::Entity;
 use crate::{
@@ -88,9 +88,11 @@ pub struct Player {
     /// The player's current gamemode (e.g., Survival, Creative, Adventure).
     pub gamemode: AtomicCell<GameMode>,
     /// The player's hunger level.
-    pub food: AtomicI32,
+    pub food: AtomicU32,
     /// The player's food saturation level.
     pub food_saturation: AtomicCell<f32>,
+    /// Becomes some if player eating
+    pub eating: Mutex<Option<JoinHandle<()>>>,
     /// The ID of the currently open container (if any).
     pub open_container: AtomicCell<Option<u64>>,
     /// The item currently being held by the player.
@@ -98,7 +100,7 @@ pub struct Player {
 
     /// send `send_abilities_update` when changed
     /// The player's abilities and special powers.
-    ///
+    ///t
     /// This field represents the various abilities that the player possesses, such as flight, invulnerability, and other special effects.
     ///
     /// **Note:** When the `abilities` field is updated, the server should send a `send_abilities_update` packet to the client to notify them of the changes.
@@ -172,8 +174,9 @@ impl Player {
             client,
             awaiting_teleport: Mutex::new(None),
             // TODO: Load this from previous instance
-            food: AtomicI32::new(20),
+            food: AtomicU32::new(20),
             food_saturation: AtomicCell::new(20.0),
+            eating: Mutex::new(None),
             current_block_destroy_stage: AtomicU8::new(0),
             open_container: AtomicCell::new(None),
             carried_item: AtomicCell::new(None),
@@ -550,10 +553,10 @@ impl Player {
         self.client.close();
     }
 
-    pub async fn set_health(&self, health: f32, food: i32, food_saturation: f32) {
-        self.living_entity.set_health(health).await;
-        self.food.store(food, std::sync::atomic::Ordering::Relaxed);
-        self.food_saturation.store(food_saturation);
+    pub async fn set_health(&self, health: f32, food: u32, food_saturation: f32) {
+        self.living_entity.set_health(health.min(20.0)).await;
+        self.food.store(food.min(20), std::sync::atomic::Ordering::Relaxed);
+        self.food_saturation.store(food_saturation.min(20.0));
         self.client
             .send_packet(&CSetHealth::new(health, food.into(), food_saturation))
             .await;

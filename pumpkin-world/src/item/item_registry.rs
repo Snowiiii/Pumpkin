@@ -81,8 +81,9 @@ pub struct Modifier {
 
 #[derive(Deserialize, Clone, Copy, Debug)]
 pub struct Food {
-    pub nutrition: u8,
+    pub nutrition: u32,
     pub saturation: f32,
+    pub can_always_eat: Option<bool>,
 }
 
 #[derive(Deserialize, Clone, Debug, PartialEq)]
