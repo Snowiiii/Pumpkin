@@ -28,15 +28,16 @@ impl CommandExecutor for OpExecutor {
     ) -> Result<(), CommandError> {
         let mut config = OPERATOR_CONFIG.write().await;
 
-        let targets = match args.get(&ARG_TARGET) {
-            Some(Arg::Players(players)) => players,
-            _ => return Err(InvalidConsumption(Some(ARG_TARGET.into()))),
+        let Some(Arg::Players(targets)) = args.get(&ARG_TARGET) else {
+            return Err(InvalidConsumption(Some(ARG_TARGET.into())))
         };
 
         // from the command tree, the command can only be executed with one player
         let player = &targets[0];
 
-        let new_level = BASIC_CONFIG.op_permission_level.min(sender.permission_lvl());
+        let new_level = BASIC_CONFIG
+            .op_permission_level
+            .min(sender.permission_lvl());
 
         if let Some(op) = config
             .ops

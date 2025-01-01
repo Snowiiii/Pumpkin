@@ -1,5 +1,6 @@
 pub mod cmd_bossbar;
 pub mod cmd_clear;
+pub mod cmd_deop;
 pub mod cmd_fill;
 pub mod cmd_gamemode;
 pub mod cmd_give;
@@ -8,7 +9,6 @@ pub mod cmd_kick;
 pub mod cmd_kill;
 pub mod cmd_list;
 pub mod cmd_op;
-pub mod cmd_deop;
 pub mod cmd_pumpkin;
 pub mod cmd_say;
 pub mod cmd_seed;

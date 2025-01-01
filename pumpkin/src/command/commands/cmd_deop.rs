@@ -27,9 +27,8 @@ impl CommandExecutor for DeopExecutor {
     ) -> Result<(), CommandError> {
         let mut config = OPERATOR_CONFIG.write().await;
 
-        let targets = match args.get(&ARG_TARGET) {
-            Some(Arg::Players(players)) => players,
-            _ => return Err(InvalidConsumption(Some(ARG_TARGET.into()))),
+        let Some(Arg::Players(targets)) = args.get(&ARG_TARGET) else {
+            return Err(InvalidConsumption(Some(ARG_TARGET.into())))
         };
 
         // from the command tree, the command can only be executed with one player

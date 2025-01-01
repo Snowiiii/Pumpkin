@@ -10,9 +10,8 @@ use crate::world::World;
 use args::ConsumedArgs;
 use async_trait::async_trait;
 use commands::{
-    cmd_clear, cmd_fill, cmd_gamemode, cmd_give, cmd_help, cmd_kick, cmd_kill, cmd_list,
-    cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_time, cmd_worldborder,
-    cmd_op, cmd_deop,
+    cmd_clear, cmd_deop, cmd_fill, cmd_gamemode, cmd_give, cmd_help, cmd_kick, cmd_kill, cmd_list,
+    cmd_op, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_time, cmd_worldborder,
 };
 use dispatcher::CommandError;
 use pumpkin_core::math::vector3::Vector3;
