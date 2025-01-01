@@ -48,12 +48,12 @@ impl CommandExecutor for CommandHelpExecutor {
 
         let mut message = TextComponent::text("")
             .add_child(
-                TextComponent::text_string("-".repeat((52 - header_text.len()) / 2) + " ")
+                TextComponent::text("-".repeat((52 - header_text.len()) / 2) + " ")
                     .color_named(NamedColor::Yellow),
             )
-            .add_child(TextComponent::text(&header_text))
+            .add_child(TextComponent::text(header_text.clone()))
             .add_child(
-                TextComponent::text_string(
+                TextComponent::text(
                     " ".to_owned() + &"-".repeat((52 - header_text.len()) / 2) + "\n",
                 )
                 .color_named(NamedColor::Yellow),
@@ -62,7 +62,7 @@ impl CommandExecutor for CommandHelpExecutor {
                 TextComponent::text("Command: ")
                     .color_named(NamedColor::Aqua)
                     .add_child(
-                        TextComponent::text_string(format!("/{command_names}"))
+                        TextComponent::text(format!("/{command_names}"))
                             .color_named(NamedColor::Gold)
                             .bold(),
                     )
@@ -75,7 +75,7 @@ impl CommandExecutor for CommandHelpExecutor {
                 TextComponent::text("Description: ")
                     .color_named(NamedColor::Aqua)
                     .add_child(
-                        TextComponent::text_string(format!("{description}\n"))
+                        TextComponent::text(format!("{description}\n"))
                             .color_named(NamedColor::White),
                     ),
             )
@@ -83,14 +83,13 @@ impl CommandExecutor for CommandHelpExecutor {
                 TextComponent::text("Usage: ")
                     .color_named(NamedColor::Aqua)
                     .add_child(
-                        TextComponent::text_string(format!("{usage}\n"))
-                            .color_named(NamedColor::White),
+                        TextComponent::text(format!("{usage}\n")).color_named(NamedColor::White),
                     )
                     .click_event(ClickEvent::SuggestCommand(format!("{tree}").into())),
             );
 
-        message = message
-            .add_child(TextComponent::text_string("-".repeat(52)).color_named(NamedColor::Yellow));
+        message =
+            message.add_child(TextComponent::text("-".repeat(52)).color_named(NamedColor::Yellow));
 
         sender.send_message(message).await;
 
@@ -165,14 +164,14 @@ impl CommandExecutor for BaseHelpExecutor {
 
         let mut message = TextComponent::text("")
             .add_child(
-                TextComponent::text_string("-".repeat((52 - header_text.len() - 3) / 2) + " ")
+                TextComponent::text("-".repeat((52 - header_text.len() - 3) / 2) + " ")
                     .color_named(NamedColor::Yellow),
             )
             .add_child(arrow_left.clone())
-            .add_child(TextComponent::text(&header_text))
+            .add_child(TextComponent::text(header_text.clone()))
             .add_child(arrow_right.clone())
             .add_child(
-                TextComponent::text_string(
+                TextComponent::text(
                     " ".to_owned() + &"-".repeat((52 - header_text.len() - 3) / 2) + "\n",
                 )
                 .color_named(NamedColor::Yellow),
@@ -180,17 +179,16 @@ impl CommandExecutor for BaseHelpExecutor {
 
         for tree in page_commands {
             message = message.add_child(
-                TextComponent::text_string("/".to_owned() + &tree.names.join(", /"))
+                TextComponent::text("/".to_owned() + &tree.names.join(", /"))
                     .color_named(NamedColor::Gold)
                     .add_child(TextComponent::text(" - ").color_named(NamedColor::Yellow))
                     .add_child(
-                        TextComponent::text_string(tree.description.clone() + "\n")
+                        TextComponent::text(tree.description.clone() + "\n")
                             .color_named(NamedColor::White),
                     )
                     .add_child(TextComponent::text("    Usage: ").color_named(NamedColor::Yellow))
                     .add_child(
-                        TextComponent::text_string(format!("{tree}"))
-                            .color_named(NamedColor::White),
+                        TextComponent::text(format!("{tree}")).color_named(NamedColor::White),
                     )
                     .add_child(TextComponent::text("\n").color_named(NamedColor::White))
                     .click_event(ClickEvent::SuggestCommand(
@@ -202,17 +200,15 @@ impl CommandExecutor for BaseHelpExecutor {
         let footer_text = format!(" Page {page}/{total_pages} ");
         message = message
             .add_child(
-                TextComponent::text_string("-".repeat((52 - footer_text.len() - 3) / 2) + " ")
+                TextComponent::text("-".repeat((52 - footer_text.len() - 3) / 2) + " ")
                     .color_named(NamedColor::Yellow),
             )
             .add_child(arrow_left)
-            .add_child(TextComponent::text(&footer_text))
+            .add_child(TextComponent::text(footer_text.clone()))
             .add_child(arrow_right)
             .add_child(
-                TextComponent::text_string(
-                    " ".to_owned() + &"-".repeat((52 - footer_text.len() - 3) / 2),
-                )
-                .color_named(NamedColor::Yellow),
+                TextComponent::text(" ".to_owned() + &"-".repeat((52 - footer_text.len() - 3) / 2))
+                    .color_named(NamedColor::Yellow),
             );
 
         sender.send_message(message).await;

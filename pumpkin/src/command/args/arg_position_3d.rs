@@ -46,7 +46,7 @@ impl ArgumentConsumer for Position3DArgumentConsumer {
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
-    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
+    ) -> Result<Option<Vec<CommandSuggestion>>, CommandError> {
         Ok(None)
     }
 }

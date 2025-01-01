@@ -67,10 +67,9 @@ impl CommandExecutor for SetblockExecutor {
 
         sender
             .send_message(if success {
-                TextComponent::text_string(format!("Placed block {} at {pos}", block.name,))
+                TextComponent::text(format!("Placed block {} at {pos}", block.name,))
             } else {
-                TextComponent::text_string(format!("Kept block at {pos}"))
-                    .color_named(NamedColor::Red)
+                TextComponent::text(format!("Kept block at {pos}")).color_named(NamedColor::Red)
             })
             .await;
 

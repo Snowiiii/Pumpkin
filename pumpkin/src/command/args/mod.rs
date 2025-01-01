@@ -2,6 +2,7 @@ use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use arg_bounded_num::{NotInBounds, Number};
 use async_trait::async_trait;
+use pumpkin_core::text::TextComponent;
 use pumpkin_core::{
     math::{position::WorldPosition, vector2::Vector2, vector3::Vector3},
     GameMode,
@@ -36,6 +37,7 @@ pub(crate) mod arg_position_block;
 pub(crate) mod arg_resource_location;
 pub(crate) mod arg_rotation;
 pub(crate) mod arg_simple;
+pub(crate) mod arg_textcomponent;
 mod coordinate;
 
 /// see [`crate::commands::tree_builder::argument`]
@@ -87,6 +89,7 @@ pub(crate) enum Arg<'a> {
     BossbarColor(BossbarColor),
     BossbarStyle(BossbarDivisions),
     Msg(String),
+    TextComponent(TextComponent),
     Num(Result<Number, NotInBounds>),
     Bool(bool),
     #[allow(unused)]

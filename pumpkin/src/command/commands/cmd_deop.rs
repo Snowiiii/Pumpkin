@@ -52,7 +52,7 @@ impl CommandExecutor for DeopExecutor {
 
         let player_name = &player.gameprofile.name;
         let message = format!("Revoked {player_name}'s server operator status.");
-        let msg = TextComponent::text(&message);
+        let msg = TextComponent::text(message);
         sender.send_message(msg).await;
         player
             .send_system_message(&TextComponent::text("You are no longer a server operator."))

@@ -40,14 +40,14 @@ impl CommandExecutor for GamemodeTargetSelf {
         if let Player(target) = sender {
             if target.gamemode.load() == gamemode {
                 target
-                    .send_system_message(&TextComponent::text(&format!(
+                    .send_system_message(&TextComponent::text(format!(
                         "You already in {gamemode:?} gamemode"
                     )))
                     .await;
             } else {
                 target.set_gamemode(gamemode).await;
                 target
-                    .send_system_message(&TextComponent::text(&format!(
+                    .send_system_message(&TextComponent::text(format!(
                         "Game mode was set to {gamemode:?}"
                     )))
                     .await;
@@ -82,7 +82,7 @@ impl CommandExecutor for GamemodeTargetPlayer {
             if target.gamemode.load() == gamemode {
                 if target_count == 1 {
                     sender
-                        .send_message(TextComponent::text(&format!(
+                        .send_message(TextComponent::text(format!(
                             "{} is already in {:?} gamemode",
                             target.gameprofile.name, gamemode
                         )))
@@ -92,7 +92,7 @@ impl CommandExecutor for GamemodeTargetPlayer {
                 target.set_gamemode(gamemode).await;
                 if target_count == 1 {
                     sender
-                        .send_message(TextComponent::text(&format!(
+                        .send_message(TextComponent::text(format!(
                             "{}'s Game mode was set to {:?}",
                             target.gameprofile.name, gamemode
                         )))

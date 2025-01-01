@@ -66,7 +66,7 @@ impl CommandExecutor for TimeQueryExecutor {
             }
         };
 
-        sender.send_message(TextComponent::text(&msg)).await;
+        sender.send_message(TextComponent::text(msg)).await;
         Ok(())
     }
 }
@@ -117,7 +117,7 @@ impl CommandExecutor for TimeChangeExecutor {
             }
         };
 
-        sender.send_message(TextComponent::text(&msg)).await;
+        sender.send_message(TextComponent::text(msg)).await;
         Ok(())
     }
 }
