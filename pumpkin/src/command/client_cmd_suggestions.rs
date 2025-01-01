@@ -20,6 +20,14 @@ pub async fn send_c_commands_packet(player: &Arc<Player>, dispatcher: &RwLock<Co
             continue;
         };
 
+        let Some(permission) = dispatcher.get_permission_lvl(key) else {
+            continue;
+        };
+
+        if !cmd_src.has_permission_lvl(permission) {
+            continue;
+        }
+
         let (is_executable, child_nodes) =
             nodes_to_proto_node_builders(&cmd_src, &tree.nodes, &tree.children);
 

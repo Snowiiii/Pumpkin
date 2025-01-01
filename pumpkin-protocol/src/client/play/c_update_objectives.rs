@@ -8,18 +8,18 @@ use crate::{bytebuf::ByteBufMut, ClientPacket, NumberFormat, VarInt};
 pub struct CUpdateObjectives<'a> {
     objective_name: &'a str,
     mode: u8,
-    display_name: TextComponent<'a>,
+    display_name: TextComponent,
     render_type: VarInt,
-    number_format: Option<NumberFormat<'a>>,
+    number_format: Option<NumberFormat>,
 }
 
 impl<'a> CUpdateObjectives<'a> {
     pub fn new(
         objective_name: &'a str,
         mode: Mode,
-        display_name: TextComponent<'a>,
+        display_name: TextComponent,
         render_type: RenderType,
-        number_format: Option<NumberFormat<'a>>,
+        number_format: Option<NumberFormat>,
     ) -> Self {
         Self {
             objective_name,

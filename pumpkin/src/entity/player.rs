@@ -37,9 +37,10 @@ use pumpkin_protocol::{
     },
     server::play::{
         SChatCommand, SChatMessage, SClientCommand, SClientInformationPlay, SClientTickEnd,
-        SCommandSuggestion, SConfirmTeleport, SInteract, SPlayerAbilities, SPlayerAction,
-        SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation, SPlayerRotation,
-        SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem, SUseItemOn,
+        SCommandSuggestion, SConfirmTeleport, SInteract, SPickItemFromBlock, SPlayerAbilities,
+        SPlayerAction, SPlayerCommand, SPlayerInput, SPlayerPosition, SPlayerPositionRotation,
+        SPlayerRotation, SSetCreativeSlot, SSetHeldItem, SSetPlayerGround, SSwingArm, SUseItem,
+        SUseItemOn,
     },
     RawPacket, ServerPacket, SoundCategory,
 };
@@ -132,11 +133,12 @@ impl Player {
         entity_id: EntityId,
         gamemode: GameMode,
     ) -> Self {
+        let player_uuid = uuid::Uuid::new_v4();
         let gameprofile = client.gameprofile.lock().await.clone().map_or_else(
             || {
                 log::error!("Client {} has no game profile!", client.id);
                 GameProfile {
-                    id: uuid::Uuid::new_v4(),
+                    id: player_uuid,
                     name: String::new(),
                     properties: vec![],
                     profile_actions: None,
@@ -156,6 +158,7 @@ impl Player {
             living_entity: LivingEntity::new_with_container(
                 Entity::new(
                     entity_id,
+                    player_uuid,
                     world,
                     EntityType::Player,
                     1.62,
@@ -521,7 +524,7 @@ impl Player {
     }
 
     /// Kicks the Client with a reason depending on the connection state
-    pub async fn kick<'a>(&self, reason: TextComponent<'a>) {
+    pub async fn kick(&self, reason: TextComponent) {
         if self
             .client
             .closed
@@ -562,7 +565,7 @@ impl Player {
         self.client
             .send_packet(&CCombatDeath::new(
                 self.entity_id().into(),
-                TextComponent::text("noob"),
+                &TextComponent::text("noob"),
             ))
             .await;
     }
@@ -637,7 +640,7 @@ impl Player {
             .await;
     }
 
-    pub async fn send_system_message<'a>(&self, text: &TextComponent<'a>) {
+    pub async fn send_system_message(&self, text: &TextComponent) {
         self.client
             .send_packet(&CSystemChatMessage::new(text, false))
             .await;
@@ -659,9 +662,9 @@ impl Player {
                         Err(e) => {
                             if e.is_kick() {
                                 if let Some(kick_reason) = e.client_kick_reason() {
-                                    self.kick(TextComponent::text(&kick_reason)).await;
+                                    self.kick(TextComponent::text(kick_reason)).await;
                                 } else {
-                                    self.kick(TextComponent::text(&format!(
+                                    self.kick(TextComponent::text(format!(
                                         "Error while reading incoming packet {e}"
                                     )))
                                     .await;
@@ -675,6 +678,7 @@ impl Player {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     pub async fn handle_play_packet(
         self: &Arc<Self>,
         server: &Arc<Server>,
@@ -725,6 +729,10 @@ impl Player {
             }
             SSetPlayerGround::PACKET_ID => {
                 self.handle_player_ground(&SSetPlayerGround::read(bytebuf)?);
+            }
+            SPickItemFromBlock::PACKET_ID => {
+                self.handle_pick_item_from_block(SPickItemFromBlock::read(bytebuf)?)
+                    .await;
             }
             SPlayerAbilities::PACKET_ID => {
                 self.handle_player_abilities(SPlayerAbilities::read(bytebuf)?)

@@ -37,7 +37,7 @@ impl CommandExecutor for KillExecutor {
         let msg = if target_count == 1 {
             TextComponent::text("Entity has been killed.")
         } else {
-            TextComponent::text_string(format!("{target_count} entities have been killed."))
+            TextComponent::text(format!("{target_count} entities have been killed."))
         };
 
         sender.send_message(msg.color_named(NamedColor::Blue)).await;

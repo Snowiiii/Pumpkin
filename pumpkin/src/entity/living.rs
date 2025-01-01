@@ -2,6 +2,7 @@ use std::sync::atomic::AtomicI32;
 
 use crossbeam::atomic::AtomicCell;
 use pumpkin_core::math::vector3::Vector3;
+use pumpkin_entity::EntityId;
 use pumpkin_inventory::{Container, EmptyContainer};
 use pumpkin_protocol::client::play::{CDamageEvent, CEntityStatus, CSetEntityMetadata, Metadata};
 use tokio::sync::Mutex;
@@ -83,6 +84,10 @@ impl<C: Container> LivingEntity<C> {
                 Metadata::new(9, 3.into(), health),
             ))
             .await;
+    }
+
+    pub const fn entity_id(&self) -> EntityId {
+        self.entity.entity_id
     }
 
     // TODO add damage_type enum

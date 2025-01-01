@@ -7,9 +7,8 @@ use crate::command::args::arg_item::ItemArgumentConsumer;
 use crate::command::args::arg_players::PlayersArgumentConsumer;
 use crate::command::args::{ConsumedArgs, FindArg, FindArgDefaultName};
 use crate::command::tree::CommandTree;
-use crate::command::tree_builder::{argument, argument_default_name, require};
+use crate::command::tree_builder::{argument, argument_default_name};
 use crate::command::{CommandError, CommandExecutor, CommandSender};
-use pumpkin_core::permission::PermissionLvl;
 
 const NAMES: [&str; 1] = ["give"];
 
@@ -57,7 +56,7 @@ impl CommandExecutor for GiveExecutor {
         }
 
         sender
-            .send_message(TextComponent::text_string(match targets {
+            .send_message(TextComponent::text(match targets {
                 [target] => format!(
                     "Gave {item_count} {} to {}",
                     item_name, target.gameprofile.name
@@ -76,12 +75,10 @@ impl CommandExecutor for GiveExecutor {
 
 pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(|sender| sender.has_permission_lvl(PermissionLvl::Two)).with_child(
-            argument_default_name(PlayersArgumentConsumer).with_child(
-                argument(ARG_ITEM, ItemArgumentConsumer)
-                    .execute(GiveExecutor)
-                    .with_child(argument_default_name(item_count_consumer()).execute(GiveExecutor)),
-            ),
+        argument_default_name(PlayersArgumentConsumer).with_child(
+            argument(ARG_ITEM, ItemArgumentConsumer)
+                .execute(GiveExecutor)
+                .with_child(argument_default_name(item_count_consumer()).execute(GiveExecutor)),
         ),
     )
 }
