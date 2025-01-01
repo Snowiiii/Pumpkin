@@ -39,8 +39,8 @@ impl ArgumentConsumer for Position2DArgumentConsumer {
     ) -> Result<Option<Arg<'a>>, CommandError> {
         let x = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
         let z = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
-        let pos = MaybeRelativePosition2D::try_new(x, z)
-            .ok_or(CommandError::InvalidConsumption(None))?;
+        let pos =
+            MaybeRelativePosition2D::try_new(x, z).ok_or(CommandError::InvalidConsumption(None))?;
 
         let vec2 = pos
             .try_to_absolute(src.position())
