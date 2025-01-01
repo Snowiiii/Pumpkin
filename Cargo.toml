@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
+members = [ "generate-schemas",
     "pumpkin-config",
     "pumpkin-core",
     "pumpkin-entity",

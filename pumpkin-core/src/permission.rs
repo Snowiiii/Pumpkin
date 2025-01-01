@@ -1,4 +1,6 @@
 use num_derive::{FromPrimitive, ToPrimitive};
+#[cfg(feature = "schemars")]
+use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// Represents the player's permission level
@@ -11,6 +13,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 /// - `Three`:  `admin`: Player or executor can use commands related to multiplayer management.
 /// - `Four`: `owner`: Player or executor can use all of the commands, including commands related to server management.
 #[derive(FromPrimitive, ToPrimitive, Clone, Copy, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(JsonSchema))]
 #[repr(i8)]
 pub enum PermissionLvl {
     #[default]

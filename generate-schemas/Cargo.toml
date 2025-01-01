@@ -1,0 +1,9 @@
+[package]
+name = "generate-schemas"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+schemars = "=1.0.0-alpha.17"
+serde_json.workspace = true
+pumpkin-config = { path = "../pumpkin-config", features = ["schemars"] }
