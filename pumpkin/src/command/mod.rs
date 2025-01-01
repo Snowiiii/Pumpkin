@@ -48,7 +48,7 @@ impl fmt::Display for CommandSender<'_> {
 }
 
 impl<'a> CommandSender<'a> {
-    pub async fn send_message(&self, text: TextComponent<'a>) {
+    pub async fn send_message(&self, text: TextComponent) {
         match self {
             CommandSender::Console => log::info!("{}", text.to_pretty_console()),
             CommandSender::Player(c) => c.send_system_message(&text).await,
@@ -112,25 +112,25 @@ impl<'a> CommandSender<'a> {
 pub fn default_dispatcher() -> CommandDispatcher {
     let mut dispatcher = CommandDispatcher::default();
 
-    dispatcher.register(cmd_pumpkin::init_command_tree());
-    dispatcher.register(cmd_bossbar::init_command_tree());
-    dispatcher.register(cmd_say::init_command_tree());
-    dispatcher.register(cmd_gamemode::init_command_tree());
-    dispatcher.register(cmd_stop::init_command_tree());
-    dispatcher.register(cmd_help::init_command_tree());
-    dispatcher.register(cmd_kill::init_command_tree());
-    dispatcher.register(cmd_kick::init_command_tree());
-    dispatcher.register(cmd_worldborder::init_command_tree());
-    dispatcher.register(cmd_teleport::init_command_tree());
-    dispatcher.register(cmd_time::init_command_tree());
-    dispatcher.register(cmd_give::init_command_tree());
-    dispatcher.register(cmd_list::init_command_tree());
-    dispatcher.register(cmd_clear::init_command_tree());
-    dispatcher.register(cmd_setblock::init_command_tree());
-    dispatcher.register(cmd_seed::init_command_tree());
-    dispatcher.register(cmd_transfer::init_command_tree());
-    dispatcher.register(cmd_fill::init_command_tree());
-    dispatcher.register(cmd_op::init_command_tree());
+    dispatcher.register(cmd_pumpkin::init_command_tree(), PermissionLvl::Zero);
+    dispatcher.register(cmd_bossbar::init_command_tree(), PermissionLvl::Two);
+    dispatcher.register(cmd_say::init_command_tree(), PermissionLvl::Two);
+    dispatcher.register(cmd_gamemode::init_command_tree(), PermissionLvl::Two);
+    dispatcher.register(cmd_stop::init_command_tree(), PermissionLvl::Four);
+    dispatcher.register(cmd_help::init_command_tree(), PermissionLvl::Zero);
+    dispatcher.register(cmd_kill::init_command_tree(), PermissionLvl::Two);
+    dispatcher.register(cmd_kick::init_command_tree(), PermissionLvl::Three);
+    dispatcher.register(cmd_worldborder::init_command_tree(), PermissionLvl::Two);
+    dispatcher.register(cmd_teleport::init_command_tree(), PermissionLvl::Two);
+    dispatcher.register(cmd_time::init_command_tree(), PermissionLvl::Two);
+    dispatcher.register(cmd_give::init_command_tree(), PermissionLvl::Two);
+    dispatcher.register(cmd_list::init_command_tree(), PermissionLvl::Zero);
+    dispatcher.register(cmd_clear::init_command_tree(), PermissionLvl::Two);
+    dispatcher.register(cmd_setblock::init_command_tree(), PermissionLvl::Two);
+    dispatcher.register(cmd_seed::init_command_tree(), PermissionLvl::Two);
+    dispatcher.register(cmd_transfer::init_command_tree(), PermissionLvl::Zero);
+    dispatcher.register(cmd_fill::init_command_tree(), PermissionLvl::Two);
+    dispatcher.register(cmd_op::init_command_tree(), PermissionLvl::Three);
 
     dispatcher
 }

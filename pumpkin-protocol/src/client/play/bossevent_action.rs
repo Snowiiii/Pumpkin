@@ -1,9 +1,9 @@
 use crate::VarInt;
 use pumpkin_core::text::TextComponent;
 
-pub enum BosseventAction<'a> {
+pub enum BosseventAction {
     Add {
-        title: TextComponent<'a>,
+        title: TextComponent,
         health: f32,
         color: VarInt,
         division: VarInt,
@@ -11,7 +11,7 @@ pub enum BosseventAction<'a> {
     },
     Remove,
     UpdateHealth(f32),
-    UpdateTile(TextComponent<'a>),
+    UpdateTile(TextComponent),
     UpdateStyle {
         color: VarInt,
         dividers: VarInt,

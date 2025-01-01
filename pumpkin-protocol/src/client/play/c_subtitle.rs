@@ -6,11 +6,11 @@ use serde::Serialize;
 #[derive(Serialize)]
 #[client_packet("play:set_subtitle_text")]
 pub struct CSubtitle<'a> {
-    subtitle: TextComponent<'a>,
+    subtitle: &'a TextComponent,
 }
 
 impl<'a> CSubtitle<'a> {
-    pub fn new(subtitle: TextComponent<'a>) -> Self {
+    pub fn new(subtitle: &'a TextComponent) -> Self {
         Self { subtitle }
     }
 }

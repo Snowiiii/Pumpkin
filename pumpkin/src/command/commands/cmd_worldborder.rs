@@ -65,7 +65,7 @@ impl CommandExecutor for WorldborderGetExecutor {
 
         let diameter = border.new_diameter.round() as i32;
         sender
-            .send_message(TextComponent::text(&format!(
+            .send_message(TextComponent::text(format!(
                 "The world border is currently {diameter} block(s) wide"
             )))
             .await;
@@ -92,7 +92,7 @@ impl CommandExecutor for WorldborderSetExecutor {
         let Ok(distance) = distance_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
-                    TextComponent::text_string(format!(
+                    TextComponent::text(format!(
                         "{} is out of bounds.",
                         distance_consumer().default_name()
                     ))
@@ -113,7 +113,7 @@ impl CommandExecutor for WorldborderSetExecutor {
         }
 
         sender
-            .send_message(TextComponent::text(&format!(
+            .send_message(TextComponent::text(format!(
                 "Set the world border to {distance:.1} block(s) wide"
             )))
             .await;
@@ -141,7 +141,7 @@ impl CommandExecutor for WorldborderSetTimeExecutor {
         let Ok(distance) = distance_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
-                    TextComponent::text_string(format!(
+                    TextComponent::text(format!(
                         "{} is out of bounds.",
                         distance_consumer().default_name()
                     ))
@@ -153,7 +153,7 @@ impl CommandExecutor for WorldborderSetTimeExecutor {
         let Ok(time) = time_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
-                    TextComponent::text_string(format!(
+                    TextComponent::text(format!(
                         "{} is out of bounds.",
                         time_consumer().default_name()
                     ))
@@ -176,11 +176,11 @@ impl CommandExecutor for WorldborderSetTimeExecutor {
                 return Ok(());
             }
             std::cmp::Ordering::Less => {
-                sender.send_message(TextComponent::text(&format!("Shrinking the world border to {distance:.2} blocks wide over {time} second(s)"))).await;
+                sender.send_message(TextComponent::text(format!("Shrinking the world border to {distance:.2} blocks wide over {time} second(s)"))).await;
             }
             std::cmp::Ordering::Greater => {
                 sender
-                    .send_message(TextComponent::text(&format!(
+                    .send_message(TextComponent::text(format!(
                         "Growing the world border to {distance:.2} blocks wide over {time} seconds"
                     )))
                     .await;
@@ -213,7 +213,7 @@ impl CommandExecutor for WorldborderAddExecutor {
         let Ok(distance) = distance_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
-                    TextComponent::text_string(format!(
+                    TextComponent::text(format!(
                         "{} is out of bounds.",
                         distance_consumer().default_name()
                     ))
@@ -236,7 +236,7 @@ impl CommandExecutor for WorldborderAddExecutor {
         let distance = border.new_diameter + distance;
 
         sender
-            .send_message(TextComponent::text(&format!(
+            .send_message(TextComponent::text(format!(
                 "Set the world border to {distance:.1} block(s) wide"
             )))
             .await;
@@ -264,7 +264,7 @@ impl CommandExecutor for WorldborderAddTimeExecutor {
         let Ok(distance) = distance_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
-                    TextComponent::text_string(format!(
+                    TextComponent::text(format!(
                         "{} is out of bounds.",
                         distance_consumer().default_name()
                     ))
@@ -276,7 +276,7 @@ impl CommandExecutor for WorldborderAddTimeExecutor {
         let Ok(time) = time_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
-                    TextComponent::text_string(format!(
+                    TextComponent::text(format!(
                         "{} is out of bounds.",
                         time_consumer().default_name()
                     ))
@@ -301,11 +301,11 @@ impl CommandExecutor for WorldborderAddTimeExecutor {
                 return Ok(());
             }
             std::cmp::Ordering::Less => {
-                sender.send_message(TextComponent::text(&format!("Shrinking the world border to {distance:.2} blocks wide over {time} second(s)"))).await;
+                sender.send_message(TextComponent::text(format!("Shrinking the world border to {distance:.2} blocks wide over {time} second(s)"))).await;
             }
             std::cmp::Ordering::Greater => {
                 sender
-                    .send_message(TextComponent::text(&format!(
+                    .send_message(TextComponent::text(format!(
                         "Growing the world border to {distance:.2} blocks wide over {time} seconds"
                     )))
                     .await;
@@ -338,7 +338,7 @@ impl CommandExecutor for WorldborderCenterExecutor {
         let Vector2 { x, z } = Position2DArgumentConsumer.find_arg_default_name(args)?;
 
         sender
-            .send_message(TextComponent::text(&format!(
+            .send_message(TextComponent::text(format!(
                 "Set the center of world border to {x:.2}, {z:.2}"
             )))
             .await;
@@ -366,7 +366,7 @@ impl CommandExecutor for WorldborderDamageAmountExecutor {
         let Ok(damage_per_block) = damage_per_block_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
-                    TextComponent::text_string(format!(
+                    TextComponent::text(format!(
                         "{} is out of bounds.",
                         damage_per_block_consumer().default_name()
                     ))
@@ -389,7 +389,7 @@ impl CommandExecutor for WorldborderDamageAmountExecutor {
         }
 
         sender
-            .send_message(TextComponent::text(&format!(
+            .send_message(TextComponent::text(format!(
                 "Set the world border damage to {damage_per_block:.2} per block each second"
             )))
             .await;
@@ -417,7 +417,7 @@ impl CommandExecutor for WorldborderDamageBufferExecutor {
         let Ok(buffer) = damage_buffer_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
-                    TextComponent::text_string(format!(
+                    TextComponent::text(format!(
                         "{} is out of bounds.",
                         damage_buffer_consumer().default_name()
                     ))
@@ -440,7 +440,7 @@ impl CommandExecutor for WorldborderDamageBufferExecutor {
         }
 
         sender
-            .send_message(TextComponent::text(&format!(
+            .send_message(TextComponent::text(format!(
                 "Set the world border damage buffer to {buffer:.2} block(s)"
             )))
             .await;
@@ -468,7 +468,7 @@ impl CommandExecutor for WorldborderWarningDistanceExecutor {
         let Ok(distance) = warning_distance_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
-                    TextComponent::text_string(format!(
+                    TextComponent::text(format!(
                         "{} is out of bounds.",
                         warning_distance_consumer().default_name()
                     ))
@@ -491,7 +491,7 @@ impl CommandExecutor for WorldborderWarningDistanceExecutor {
         }
 
         sender
-            .send_message(TextComponent::text(&format!(
+            .send_message(TextComponent::text(format!(
                 "Set the world border warning distance to {distance} block(s)"
             )))
             .await;
@@ -519,7 +519,7 @@ impl CommandExecutor for WorldborderWarningTimeExecutor {
         let Ok(time) = time_consumer().find_arg_default_name(args)? else {
             sender
                 .send_message(
-                    TextComponent::text_string(format!(
+                    TextComponent::text(format!(
                         "{} is out of bounds.",
                         time_consumer().default_name()
                     ))
@@ -542,7 +542,7 @@ impl CommandExecutor for WorldborderWarningTimeExecutor {
         }
 
         sender
-            .send_message(TextComponent::text(&format!(
+            .send_message(TextComponent::text(format!(
                 "Set the world border warning time to {time} second(s)"
             )))
             .await;

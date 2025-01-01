@@ -6,19 +6,19 @@ use pumpkin_macros::client_packet;
 
 #[client_packet("play:boss_event")]
 pub struct CBossEvent<'a> {
-    pub uuid: uuid::Uuid,
-    pub action: BosseventAction<'a>,
+    pub uuid: &'a uuid::Uuid,
+    pub action: BosseventAction,
 }
 
 impl<'a> CBossEvent<'a> {
-    pub fn new(uuid: uuid::Uuid, action: BosseventAction<'a>) -> Self {
+    pub fn new(uuid: &'a uuid::Uuid, action: BosseventAction) -> Self {
         Self { uuid, action }
     }
 }
 
 impl ClientPacket for CBossEvent<'_> {
     fn write(&self, bytebuf: &mut impl BufMut) {
-        bytebuf.put_uuid(&self.uuid);
+        bytebuf.put_uuid(self.uuid);
         let action = &self.action;
         match action {
             BosseventAction::Add {

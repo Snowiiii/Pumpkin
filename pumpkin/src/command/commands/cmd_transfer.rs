@@ -13,7 +13,6 @@ use crate::command::tree_builder::{argument, argument_default_name, require};
 use crate::command::{
     args::ConsumedArgs, tree::CommandTree, CommandError, CommandExecutor, CommandSender,
 };
-use pumpkin_core::permission::PermissionLvl;
 
 const NAMES: [&str; 1] = ["transfer"];
 
@@ -121,19 +120,15 @@ impl CommandExecutor for TransferTargetPlayer {
 #[allow(clippy::redundant_closure_for_method_calls)]
 pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION).with_child(
-        require(|sender| sender.has_permission_lvl(PermissionLvl::Three)).with_child(
-            argument(ARG_HOSTNAME, SimpleArgConsumer)
-                .with_child(require(|sender| sender.is_player()).execute(TransferTargetSelf))
-                .with_child(
-                    argument_default_name(port_consumer())
-                        .with_child(
-                            require(|sender| sender.is_player()).execute(TransferTargetSelf),
-                        )
-                        .with_child(
-                            argument(ARG_PLAYERS, PlayersArgumentConsumer)
-                                .execute(TransferTargetPlayer),
-                        ),
-                ),
-        ),
+        argument(ARG_HOSTNAME, SimpleArgConsumer)
+            .with_child(require(|sender| sender.is_player()).execute(TransferTargetSelf))
+            .with_child(
+                argument_default_name(port_consumer())
+                    .with_child(require(|sender| sender.is_player()).execute(TransferTargetSelf))
+                    .with_child(
+                        argument(ARG_PLAYERS, PlayersArgumentConsumer)
+                            .execute(TransferTargetPlayer),
+                    ),
+            ),
     )
 }

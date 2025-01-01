@@ -8,11 +8,11 @@ use crate::VarInt;
 #[client_packet("play:player_combat_kill")]
 pub struct CCombatDeath<'a> {
     player_id: VarInt,
-    message: TextComponent<'a>,
+    message: &'a TextComponent,
 }
 
 impl<'a> CCombatDeath<'a> {
-    pub fn new(player_id: VarInt, message: TextComponent<'a>) -> Self {
+    pub fn new(player_id: VarInt, message: &'a TextComponent) -> Self {
         Self { player_id, message }
     }
 }

@@ -32,14 +32,14 @@ impl CommandExecutor for PumpkinExecutor {
     ) -> Result<(), CommandError> {
         sender
             .send_message(
-                TextComponent::text(&format!("Pumpkin {CARGO_PKG_VERSION} ({GIT_VERSION})"))
+                TextComponent::text(format!("Pumpkin {CARGO_PKG_VERSION} ({GIT_VERSION})"))
                     .hover_event(HoverEvent::ShowText(Cow::from("Click to Copy Version")))
                     .click_event(ClickEvent::CopyToClipboard(Cow::from(format!(
                         "Pumpkin {CARGO_PKG_VERSION} ({GIT_VERSION})"
                     ))))
                     .color_named(NamedColor::Green)
                     .add_child(
-                        TextComponent::text(&format!(", {CARGO_PKG_DESCRIPTION}"))
+                        TextComponent::text(format!(", {CARGO_PKG_DESCRIPTION}"))
                             .click_event(ClickEvent::CopyToClipboard(Cow::from(
                                 CARGO_PKG_DESCRIPTION,
                             )))
@@ -49,7 +49,7 @@ impl CommandExecutor for PumpkinExecutor {
                             .color_named(NamedColor::White),
                     )
                     .add_child(
-                        TextComponent::text(&format!(
+                        TextComponent::text(format!(
                             " (Minecraft {CURRENT_MC_VERSION}, Protocol {CURRENT_MC_PROTOCOL})"
                         ))
                         .click_event(ClickEvent::CopyToClipboard(Cow::from(format!(
