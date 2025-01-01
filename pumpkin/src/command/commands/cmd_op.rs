@@ -29,7 +29,7 @@ impl CommandExecutor for OpExecutor {
         let mut config = OPERATOR_CONFIG.write().await;
 
         let Some(Arg::Players(targets)) = args.get(&ARG_TARGET) else {
-            return Err(InvalidConsumption(Some(ARG_TARGET.into())))
+            return Err(InvalidConsumption(Some(ARG_TARGET.into())));
         };
 
         // from the command tree, the command can only be executed with one player
