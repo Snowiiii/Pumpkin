@@ -24,6 +24,14 @@ pub static BLOCK_ID_BY_REGISTRY_ID: LazyLock<HashMap<String, u16>> = LazyLock::n
     map
 });
 
+pub static BLOCK_ID_TO_REGISTRY_ID: LazyLock<HashMap<u16, String>> = LazyLock::new(|| {
+    let mut map = HashMap::new();
+    for block in &*BLOCKS.blocks {
+        map.insert(block.default_state_id, block.name.clone());
+    }
+    map
+});
+
 pub static BLOCK_ID_BY_STATE_ID: LazyLock<HashMap<u16, u16>> = LazyLock::new(|| {
     let mut map = HashMap::new();
     for block in &BLOCKS.blocks {
