@@ -8,18 +8,17 @@ use crate::{
     data::{op_data::OPERATOR_CONFIG, SaveJSONConfiguration},
 };
 use async_trait::async_trait;
-use pumpkin_config::{op::Op, BASIC_CONFIG};
 use pumpkin_core::text::TextComponent;
 use CommandError::InvalidConsumption;
 
-const NAMES: [&str; 1] = ["op"];
-const DESCRIPTION: &str = "Grants operator status to a player.";
+const NAMES: [&str; 1] = ["deop"];
+const DESCRIPTION: &str = "Revokes operator status from a player.";
 const ARG_TARGET: &str = "player";
 
-struct OpExecutor;
+struct DeopExecutor;
 
 #[async_trait]
-impl CommandExecutor for OpExecutor {
+impl CommandExecutor for DeopExecutor {
     async fn execute<'a>(
         &self,
         sender: &mut CommandSender<'a>,
@@ -35,38 +34,28 @@ impl CommandExecutor for OpExecutor {
         // from the command tree, the command can only be executed with one player
         let player = &targets[0];
 
-        let new_level = BASIC_CONFIG
-            .op_permission_level
-            .min(sender.permission_lvl());
-
-        if let Some(op) = config
+        if let Some(op_index) = config
             .ops
-            .iter_mut()
-            .find(|o| o.uuid == player.gameprofile.id)
+            .iter()
+            .position(|o| o.uuid == player.gameprofile.id)
         {
-            op.level = new_level;
-        } else {
-            let op_entry = Op::new(
-                player.gameprofile.id,
-                player.gameprofile.name.clone(),
-                new_level,
-                false,
-            );
-            config.ops.push(op_entry);
+            config.ops.remove(op_index);
         }
-
         config.save();
 
         player
-            .set_permission_lvl(new_level, &server.command_dispatcher)
+            .set_permission_lvl(
+                pumpkin_core::PermissionLvl::Zero,
+                &server.command_dispatcher,
+            )
             .await;
 
         let player_name = &player.gameprofile.name;
-        let message = format!("Made {player_name} a server operator.");
+        let message = format!("Revoked {player_name}'s server operator status.");
         let msg = TextComponent::text(message);
         sender.send_message(msg).await;
         player
-            .send_system_message(&TextComponent::text("You are now a server operator."))
+            .send_system_message(&TextComponent::text("You are no longer a server operator."))
             .await;
 
         Ok(())
@@ -75,5 +64,5 @@ impl CommandExecutor for OpExecutor {
 
 pub fn init_command_tree() -> CommandTree {
     CommandTree::new(NAMES, DESCRIPTION)
-        .with_child(argument(ARG_TARGET, PlayersArgumentConsumer).execute(OpExecutor))
+        .with_child(argument(ARG_TARGET, PlayersArgumentConsumer).execute(DeopExecutor))
 }

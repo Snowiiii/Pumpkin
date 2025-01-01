@@ -1,5 +1,6 @@
 pub mod cmd_bossbar;
 pub mod cmd_clear;
+pub mod cmd_deop;
 pub mod cmd_fill;
 pub mod cmd_gamemode;
 pub mod cmd_give;
