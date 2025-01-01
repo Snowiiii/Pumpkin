@@ -938,8 +938,6 @@ impl Player {
                     if *item_count == 0 {
                         *inventory.held_item_mut() = None;
                     }
-
-                    drop(inventory);
                 }
 
                 player

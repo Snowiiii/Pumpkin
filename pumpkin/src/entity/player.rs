@@ -103,7 +103,6 @@ pub struct Player {
 
     /// send `send_abilities_update` when changed
     /// The player's abilities and special powers.
-    ///t
     /// This field represents the various abilities that the player possesses, such as flight, invulnerability, and other special effects.
     ///
     /// **Note:** When the `abilities` field is updated, the server should send a `send_abilities_update` packet to the client to notify them of the changes.
