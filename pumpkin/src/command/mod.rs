@@ -130,10 +130,7 @@ pub fn default_dispatcher() -> CommandDispatcher {
     dispatcher.register(cmd_transfer::init_command_tree(), PermissionLvl::Zero);
     dispatcher.register(cmd_fill::init_command_tree(), PermissionLvl::Two);
     dispatcher.register(cmd_op::init_command_tree(), PermissionLvl::Three);
-<<<<<<< HEAD
     dispatcher.register(cmd_deop::init_command_tree(), PermissionLvl::Three);
-=======
->>>>>>> master
 
     dispatcher
 }
