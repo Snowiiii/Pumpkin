@@ -950,12 +950,23 @@ impl Player {
 
                 log::debug!("Player eated food: {:?}", food);
             }));
-        } else {
-            log::error!(
-                "An item was used ({}), but the use is not implemented yet",
-                ITEMS_REGISTRY_NAME_BY_ID.get(&item.id).unwrap()
-            );
+            return Ok(());
         }
+
+        if let Some(equippable) = &item.components.equippable {
+            let mut inventory = self.inventory().lock().await;
+            let slot = equippable.slot as usize + 5;
+
+            if inventory.get_slot(slot)?.is_none() {
+                *inventory.get_slot(slot)? = inventory.held_item_mut().take();
+            }
+            return Ok(());
+        }
+
+        log::error!(
+            "An item was used ({}), but the use is not implemented yet",
+            ITEMS_REGISTRY_NAME_BY_ID.get(&item.id).unwrap()
+        );
         Ok(())
     }
 

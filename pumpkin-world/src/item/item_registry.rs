@@ -56,6 +56,8 @@ pub struct ItemComponents {
     pub attribute_modifiers: Option<AttributeModifiers>,
     #[serde(rename = "minecraft:food")]
     pub food: Option<Food>,
+    #[serde(rename = "minecraft:equippable")]
+    pub equippable: Option<Equippable>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -84,6 +86,21 @@ pub struct Food {
     pub nutrition: u32,
     pub saturation: f32,
     pub can_always_eat: Option<bool>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct Equippable {
+    pub slot: ArmorSlot,
+    pub equip_sound: String,
+    pub asset_id: String,
+}
+
+#[derive(Deserialize, Clone, Copy, Debug)]
+pub enum ArmorSlot {
+    Head,
+    Chest,
+    Legs,
+    Feet,
 }
 
 #[derive(Deserialize, Clone, Debug, PartialEq)]
