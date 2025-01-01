@@ -30,7 +30,8 @@ use tokio::sync::{Mutex, RwLock};
 use uuid::Uuid;
 
 use crate::block::block_manager::BlockManager;
-use crate::block::default_block_manager;
+use crate::block::block_properties_manager::BlockPropertiesManager;
+use crate::block::{default_block_manager, default_block_properties_manager};
 use crate::entity::living::LivingEntity;
 use crate::entity::Entity;
 use crate::net::EncryptionError;
@@ -60,6 +61,8 @@ pub struct Server {
     pub command_dispatcher: RwLock<CommandDispatcher>,
     /// Saves and calls blocks blocks
     pub block_manager: Arc<BlockManager>,
+    /// Creates and stores block property registry and managed behaviours.
+    pub block_properties_manager: Arc<BlockPropertiesManager>,
     /// Manages multiple worlds within the server.
     pub worlds: Vec<Arc<World>>,
     // All the dimensions that exists on the server,
@@ -125,6 +128,7 @@ impl Server {
             ],
             command_dispatcher,
             block_manager: default_block_manager(),
+            block_properties_manager: default_block_properties_manager(),
             auth_client,
             key_store: KeyStore::new(),
             server_listing: Mutex::new(CachedStatus::new()),

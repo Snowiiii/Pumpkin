@@ -101,11 +101,10 @@ pub struct Block {
     pub default_state_id: u16,
     pub states: Vec<State>,
 }
-#[expect(dead_code)]
 #[derive(Deserialize, Clone, Debug)]
 pub struct Property {
-    name: String,
-    values: Vec<String>,
+    pub name: String,
+    pub values: Vec<String>,
 }
 #[derive(Deserialize, Clone, Debug)]
 pub struct State {
