@@ -46,7 +46,7 @@ pub(crate) trait ArgumentConsumer: Sync + GetClientSideArgParser {
         sender: &CommandSender<'a>,
         server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg>;
+    ) -> Result<Option<Arg>, CommandError>;
 
     /// Used for tab completion (but only if argument suggestion type is "minecraft:ask_server"!).
     ///

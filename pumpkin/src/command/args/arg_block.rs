@@ -35,9 +35,9 @@ impl ArgumentConsumer for BlockArgumentConsumer {
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
-        let s = args.pop()?;
-        Some(Arg::Block(s))
+    ) -> Result<Option<Arg<'a>>, CommandError> {
+        let s = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
+        Ok(Some(Arg::Block(s)))
     }
 
     async fn suggest<'a>(

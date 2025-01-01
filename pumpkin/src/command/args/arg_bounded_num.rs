@@ -29,22 +29,30 @@ where
         _src: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
-        let x = args.pop()?.parse::<T>().ok()?;
+    ) -> Result<Option<Arg<'a>>, CommandError> {
+        let x = args
+            .pop()
+            .ok_or(CommandError::InvalidConsumption(None))?
+            .parse::<T>()
+            .map_err(|_| CommandError::InvalidConsumption(None))?;
 
         if let Some(max) = self.max_inclusive {
             if x > max {
-                return Some(Arg::Num(Err(())));
+                return Err(CommandError::InvalidConsumption(Some(
+                    x.to_number().to_string(),
+                )));
             }
         }
 
         if let Some(min) = self.min_inclusive {
             if x < min {
-                return Some(Arg::Num(Err(())));
+                return Err(CommandError::InvalidConsumption(Some(
+                    x.to_number().to_string(),
+                )));
             }
         }
 
-        Some(Arg::Num(Ok(x.to_number())))
+        Ok(Some(Arg::Num(Ok(x.to_number()))))
     }
 
     async fn suggest<'a>(
@@ -89,6 +97,17 @@ pub(crate) enum Number {
     I32(i32),
     #[allow(unused)]
     I64(i64),
+}
+
+impl std::fmt::Display for Number {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::F64(value) => write!(f, "{value}"),
+            Self::F32(value) => write!(f, "{value}"),
+            Self::I32(value) => write!(f, "{value}"),
+            Self::I64(value) => write!(f, "{value}"),
+        }
+    }
 }
 
 impl<T: ToFromNumber> BoundedNumArgumentConsumer<T> {

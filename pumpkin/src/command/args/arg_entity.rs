@@ -41,8 +41,8 @@ impl ArgumentConsumer for EntityArgumentConsumer {
         src: &CommandSender<'a>,
         server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
-        let s = args.pop()?;
+    ) -> Result<Option<Arg<'a>>, CommandError> {
+        let s = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
 
         let entity = match s {
             // @s is always valid when sender is a player
@@ -62,10 +62,24 @@ impl ArgumentConsumer for EntityArgumentConsumer {
             // @a/@e/@r are not valid because we're looking for a single entity
             "@a" | "@e" => None,
             // player name is only valid if player is online
-            name => server.get_player_by_name(name).await,
+            name => {
+                let player = server.get_player_by_name(name).await;
+                if player.is_none() {
+                    return Err(CommandError::GeneralCommandIssue(format!(
+                        "Player not found: {name}"
+                    )));
+                }
+                Some(player.unwrap())
+            }
         };
 
-        entity.map(Arg::Entity)
+        if entity.is_none() {
+            return Err(CommandError::GeneralCommandIssue(
+                "Entity not found".to_string(),
+            ));
+        }
+
+        Ok(entity.map(Arg::Entity))
     }
 
     async fn suggest<'a>(

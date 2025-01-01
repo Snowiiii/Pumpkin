@@ -27,14 +27,19 @@ impl ArgumentConsumer for BoolArgConsumer {
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
-        let s = args.pop()?;
+    ) -> Result<Option<Arg<'a>>, CommandError> {
+        let s = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
 
-        match s {
+        let bool = match s {
             "false" => Some(Arg::Bool(false)),
             "true" => Some(Arg::Bool(true)),
             _ => None,
-        }
+        };
+
+        bool.map_or_else(
+            || Err(CommandError::InvalidConsumption(Some(s.to_string()))),
+            |b| Ok(Some(b)),
+        )
     }
 
     async fn suggest<'a>(

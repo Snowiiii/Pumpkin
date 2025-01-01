@@ -193,28 +193,37 @@ impl CommandDispatcher {
             match &node.node_type {
                 NodeType::ExecuteLeaf { executor } => {
                     return if raw_args.is_empty() {
-                        executor.execute(src, server, &parsed_args).await?;
-                        Ok(true)
+                        let res = executor.execute(src, server, &parsed_args).await;
+                        if res.is_ok() {
+                            Ok(true)
+                        } else {
+                            Err(res.err().unwrap())
+                        }
                     } else {
                         Ok(false)
                     };
                 }
                 NodeType::Literal { string, .. } => {
                     if raw_args.pop() != Some(string) {
-                        return Ok(false);
+                        return Err(CommandError::GeneralCommandIssue("test2".to_string()));
                     }
                 }
                 NodeType::Argument { consumer, name, .. } => {
                     match consumer.consume(src, server, raw_args).await {
-                        Some(consumed) => {
+                        Ok(Some(consumed)) => {
                             parsed_args.insert(name, consumed);
                         }
-                        None => return Ok(false),
+                        Ok(None) => {
+                            return Err(CommandError::GeneralCommandIssue(
+                                "Could not consume argument".to_string(),
+                            ))
+                        }
+                        Err(e) => return Err(e),
                     }
                 }
                 NodeType::Require { predicate, .. } => {
                     if !predicate(src) {
-                        return Ok(false);
+                        return Err(CommandError::GeneralCommandIssue("test4".to_string()));
                     }
                 }
             }
@@ -245,10 +254,10 @@ impl CommandDispatcher {
                 }
                 NodeType::Argument { consumer, name } => {
                     match consumer.consume(src, server, raw_args).await {
-                        Some(consumed) => {
+                        Ok(Some(consumed)) => {
                             parsed_args.insert(name, consumed);
                         }
-                        None => {
+                        Ok(None) => {
                             return if raw_args.is_empty() {
                                 let suggestions = consumer.suggest(src, server, input).await?;
                                 Ok(suggestions)
@@ -256,6 +265,7 @@ impl CommandDispatcher {
                                 Ok(None)
                             };
                         }
+                        Err(e) => return Err(e),
                     }
                 }
                 NodeType::Require { predicate, .. } => {

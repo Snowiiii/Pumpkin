@@ -36,12 +36,17 @@ impl ArgumentConsumer for Position2DArgumentConsumer {
         src: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
-        let pos = MaybeRelativePosition2D::try_new(args.pop()?, args.pop()?)?;
+    ) -> Result<Option<Arg<'a>>, CommandError> {
+        let x = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
+        let z = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
+        let pos = MaybeRelativePosition2D::try_new(x, z)
+            .ok_or(CommandError::InvalidConsumption(None))?;
 
-        let vec2 = pos.try_to_absolute(src.position())?;
+        let vec2 = pos
+            .try_to_absolute(src.position())
+            .ok_or(CommandError::InvalidConsumption(None))?;
 
-        Some(Arg::Pos2D(vec2))
+        Ok(Some(Arg::Pos2D(vec2)))
     }
 
     async fn suggest<'a>(

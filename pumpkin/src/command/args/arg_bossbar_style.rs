@@ -31,8 +31,8 @@ impl ArgumentConsumer for BossbarStyleArgumentConsumer {
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
-        let s = args.pop()?;
+    ) -> Result<Option<Arg<'a>>, CommandError> {
+        let s = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
 
         let style = match s {
             "notched_10" => Some(BossbarDivisions::Notches10),
@@ -43,7 +43,10 @@ impl ArgumentConsumer for BossbarStyleArgumentConsumer {
             _ => None,
         };
 
-        style.map(Arg::BossbarStyle)
+        style.map_or_else(
+            || Err(CommandError::InvalidConsumption(Some(s.to_string()))),
+            |s| Ok(Some(Arg::BossbarStyle(s))),
+        )
     }
 
     async fn suggest<'a>(

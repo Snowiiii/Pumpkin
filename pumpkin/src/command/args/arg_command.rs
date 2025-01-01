@@ -34,13 +34,14 @@ impl ArgumentConsumer for CommandTreeArgumentConsumer {
         _sender: &CommandSender<'a>,
         server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
-        let s = args.pop()?;
+    ) -> Result<Option<Arg<'a>>, CommandError> {
+        let s = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
 
         let dispatcher = server.command_dispatcher.read().await;
-        dispatcher
-            .get_tree(s)
-            .map_or_else(|_| None, |tree| Some(Arg::CommandTree(tree.clone())))
+        dispatcher.get_tree(s).map_or_else(
+            |_| Err(CommandError::InvalidConsumption(Some(s.to_string()))),
+            |tree| Ok(Some(Arg::CommandTree(tree.clone()))),
+        )
     }
 
     async fn suggest<'a>(

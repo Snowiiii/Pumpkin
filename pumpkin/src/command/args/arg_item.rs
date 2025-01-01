@@ -33,9 +33,11 @@ impl ArgumentConsumer for ItemArgumentConsumer {
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
+    ) -> Result<Option<Arg<'a>>, CommandError> {
         // todo: get an actual item
-        Some(Arg::Item(args.pop()?))
+        Ok(Some(Arg::Item(
+            args.pop().ok_or(CommandError::InvalidConsumption(None))?,
+        )))
     }
 
     async fn suggest<'a>(

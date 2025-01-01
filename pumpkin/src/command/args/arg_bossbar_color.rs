@@ -31,8 +31,8 @@ impl ArgumentConsumer for BossbarColorArgumentConsumer {
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
-        let s = args.pop()?;
+    ) -> Result<Option<Arg<'a>>, CommandError> {
+        let s = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
 
         let color = match s {
             "blue" => Some(BossbarColor::Blue),
@@ -45,7 +45,10 @@ impl ArgumentConsumer for BossbarColorArgumentConsumer {
             _ => None,
         };
 
-        color.map(Arg::BossbarColor)
+        color.map_or_else(
+            || Err(CommandError::InvalidConsumption(Some(s.to_string()))),
+            |c| Ok(Some(Arg::BossbarColor(c))),
+        )
     }
 
     async fn suggest<'a>(

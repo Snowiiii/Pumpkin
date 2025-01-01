@@ -33,19 +33,21 @@ impl ArgumentConsumer for GamemodeArgumentConsumer {
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
-        let s = args.pop()?;
+    ) -> Result<Option<Arg<'a>>, CommandError> {
+        let s = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
 
         if let Ok(id) = s.parse::<u8>() {
             match GameMode::from_u8(id) {
                 None | Some(GameMode::Undefined) => {}
-                Some(gamemode) => return Some(Arg::GameMode(gamemode)),
+                Some(gamemode) => return Ok(Some(Arg::GameMode(gamemode))),
             };
         };
 
         match GameMode::from_str(s) {
-            Err(_) | Ok(GameMode::Undefined) => None,
-            Ok(gamemode) => Some(Arg::GameMode(gamemode)),
+            Err(_) | Ok(GameMode::Undefined) => {
+                Err(CommandError::InvalidConsumption(Some(s.to_string())))
+            }
+            Ok(gamemode) => Ok(Some(Arg::GameMode(gamemode))),
         }
     }
 

@@ -37,8 +37,8 @@ impl ArgumentConsumer for PlayersArgumentConsumer {
         src: &CommandSender<'a>,
         server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
-        let s = args.pop()?;
+    ) -> Result<Option<Arg<'a>>, CommandError> {
+        let s = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
 
         let players = match s {
             "@s" => match src {
@@ -56,10 +56,24 @@ impl ArgumentConsumer for PlayersArgumentConsumer {
                 (server.get_random_player().await).map_or_else(|| Some(vec![]), |p| Some(vec![p]))
             }
             "@a" | "@e" => Some(server.get_all_players().await),
-            name => server.get_player_by_name(name).await.map(|p| vec![p]),
+            name => {
+                let player = server.get_player_by_name(name).await;
+                if player.is_none() {
+                    return Err(CommandError::GeneralCommandIssue(format!(
+                        "Player not found: {name}"
+                    )));
+                }
+                Some(vec![player.unwrap()])
+            }
         };
 
-        players.map(Arg::Players)
+        if players.is_none() {
+            return Err(CommandError::GeneralCommandIssue(
+                "Players not found".to_string(),
+            ));
+        }
+
+        Ok(players.map(Arg::Players))
     }
 
     async fn suggest<'a>(

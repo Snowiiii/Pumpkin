@@ -31,8 +31,10 @@ impl ArgumentConsumer for ResourceLocationArgumentConsumer {
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
-        Some(Arg::ResourceLocation(args.pop()?))
+    ) -> Result<Option<Arg<'a>>, CommandError> {
+        Ok(Some(Arg::ResourceLocation(
+            args.pop().ok_or(CommandError::InvalidConsumption(None))?,
+        )))
     }
 
     async fn suggest<'a>(

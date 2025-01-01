@@ -34,8 +34,10 @@ impl ArgumentConsumer for SimpleArgConsumer {
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
-        Some(Arg::Simple(args.pop()?))
+    ) -> Result<Option<Arg<'a>>, CommandError> {
+        Ok(Some(Arg::Simple(
+            args.pop().ok_or(CommandError::InvalidConsumption(None))?,
+        )))
     }
 
     async fn suggest<'a>(

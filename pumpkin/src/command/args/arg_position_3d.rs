@@ -33,12 +33,18 @@ impl ArgumentConsumer for Position3DArgumentConsumer {
         src: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
-        let pos = MaybeRelativePosition3D::try_new(args.pop()?, args.pop()?, args.pop()?)?;
+    ) -> Result<Option<Arg<'a>>, CommandError> {
+        let x = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
+        let y = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
+        let z = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
+        let pos = MaybeRelativePosition3D::try_new(x, y, z)
+            .ok_or(CommandError::InvalidConsumption(None))?;
 
-        let vec3 = pos.try_to_absolute(src.position())?;
+        let vec3 = pos
+            .try_to_absolute(src.position())
+            .ok_or(CommandError::InvalidConsumption(None))?;
 
-        Some(Arg::Pos3D(vec3))
+        Ok(Some(Arg::Pos3D(vec3)))
     }
 
     async fn suggest<'a>(

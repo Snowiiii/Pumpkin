@@ -33,15 +33,18 @@ impl ArgumentConsumer for MsgArgConsumer {
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
-        let mut msg = args.pop()?.to_string();
+    ) -> Result<Option<Arg<'a>>, CommandError> {
+        let mut msg = args
+            .pop()
+            .ok_or(CommandError::InvalidConsumption(None))?
+            .to_string();
 
         while let Some(word) = args.pop() {
             msg.push(' ');
             msg.push_str(word);
         }
 
-        Some(Arg::Msg(msg))
+        Ok(Some(Arg::Msg(msg)))
     }
 
     async fn suggest<'a>(

@@ -31,12 +31,16 @@ impl ArgumentConsumer for RotationArgumentConsumer {
         _src: &CommandSender<'a>,
         _server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
-        let yaw = args.pop()?;
-        let pitch = args.pop()?;
+    ) -> Result<Option<Arg<'a>>, CommandError> {
+        let yaw = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
+        let pitch = args.pop().ok_or(CommandError::InvalidConsumption(None))?;
 
-        let mut yaw = yaw.parse::<f32>().ok()?;
-        let mut pitch = pitch.parse::<f32>().ok()?;
+        let mut yaw = yaw
+            .parse::<f32>()
+            .map_err(|_| CommandError::InvalidConsumption(None))?;
+        let mut pitch = pitch
+            .parse::<f32>()
+            .map_err(|_| CommandError::InvalidConsumption(None))?;
 
         yaw %= 360.0;
         if yaw >= 180.0 {
@@ -47,7 +51,7 @@ impl ArgumentConsumer for RotationArgumentConsumer {
             pitch -= 360.0;
         };
 
-        Some(Arg::Rotation(yaw, pitch))
+        Ok(Some(Arg::Rotation(yaw, pitch)))
     }
 
     async fn suggest<'a>(

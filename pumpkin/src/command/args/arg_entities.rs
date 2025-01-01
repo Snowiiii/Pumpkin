@@ -38,11 +38,11 @@ impl ArgumentConsumer for EntitiesArgumentConsumer {
         src: &CommandSender<'a>,
         server: &'a Server,
         args: &mut RawArgs<'a>,
-    ) -> Option<Arg<'a>> {
+    ) -> Result<Option<Arg<'a>>, CommandError> {
         // todo
-        match PlayersArgumentConsumer.consume(src, server, args).await {
-            Some(Arg::Players(p)) => Some(Arg::Entities(p)),
-            _ => None,
+        match PlayersArgumentConsumer.consume(src, server, args).await? {
+            Some(Arg::Players(p)) => Ok(Some(Arg::Entities(p))),
+            _ => Ok(None),
         }
     }
 
