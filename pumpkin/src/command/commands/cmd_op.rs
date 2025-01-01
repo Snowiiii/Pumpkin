@@ -28,44 +28,45 @@ impl CommandExecutor for OpExecutor {
     ) -> Result<(), CommandError> {
         let mut config = OPERATOR_CONFIG.write().await;
 
-        let Some(Arg::Players(targets)) = args.get(&ARG_TARGET) else {
-            return Err(InvalidConsumption(Some(ARG_TARGET.into())));
+        let targets = match args.get(&ARG_TARGET) {
+            Some(Arg::Players(players)) => players,
+            _ => return Err(InvalidConsumption(Some(ARG_TARGET.into()))),
         };
 
-        // log each player to the console.
-        for player in targets {
-            let new_level = if BASIC_CONFIG.op_permission_level > sender.permission_lvl() {
-                sender.permission_lvl()
-            } else {
-                BASIC_CONFIG.op_permission_level
-            };
+        // from the command tree, the command can only be executed with one player
+        let player = &targets[0];
 
+        let new_level = BASIC_CONFIG.op_permission_level.min(sender.permission_lvl());
+
+        if let Some(op) = config
+            .ops
+            .iter_mut()
+            .find(|o| o.uuid == player.gameprofile.id)
+        {
+            op.level = new_level;
+        } else {
             let op_entry = Op::new(
                 player.gameprofile.id,
                 player.gameprofile.name.clone(),
                 new_level,
                 false,
             );
-            if let Some(op) = config
-                .ops
-                .iter_mut()
-                .find(|o| o.uuid == player.gameprofile.id)
-            {
-                op.level = new_level;
-            } else {
-                config.ops.push(op_entry);
-            }
-            config.save();
-
-            player
-                .set_permission_lvl(new_level, &server.command_dispatcher)
-                .await;
-
-            let player_name = player.gameprofile.name.clone();
-            let message = format!("Made {player_name} a server operator.");
-            let msg = TextComponent::text(&message);
-            sender.send_message(msg).await;
+            config.ops.push(op_entry);
         }
+
+        config.save();
+
+        player
+            .set_permission_lvl(new_level, &server.command_dispatcher)
+            .await;
+
+        let player_name = &player.gameprofile.name;
+        let message = format!("Made {player_name} a server operator.");
+        let msg = TextComponent::text(&message);
+        sender.send_message(msg).await;
+        player
+            .send_system_message(&TextComponent::text("You are now a server operator."))
+            .await;
 
         Ok(())
     }
