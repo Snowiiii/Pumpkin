@@ -1,18 +1,28 @@
+use std::sync::LazyLock;
+
 use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
+use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 use crate::generation::{
     multi_noise_sampler::{BiomeEntries, MultiNoiseSampler},
     noise::density::{NoisePos, UnblendedNoisePos},
 };
 
+static ENTRIES: LazyLock<BiomeEntries> = LazyLock::new(|| {
+    serde_json::from_str(include_str!("../../assets/multi_noise.json"))
+        .expect("Could not parse synced_registries.json registry.")
+});
+
 // TODO make this work with the protocol
 // Send by the registry
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
 #[non_exhaustive]
 pub enum Biome {
+    #[serde(rename = "minecraft:plains")]
     Plains,
-    SnowyTiga,
+    #[serde(rename = "minecraft:snowy_taiga")]
+    SnowyTaiga,
     // TODO list all Biomes
 }
 

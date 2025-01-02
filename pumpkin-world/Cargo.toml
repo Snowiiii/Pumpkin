@@ -16,12 +16,13 @@ thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 log.workspace = true
+serde_with.workspace = true
 
 num-traits.workspace = true
 num-derive.workspace = true
 dashmap = "6.1.0"
 
-# Compression   
+# Compression
 flate2 = "1.0"
 lz4 = "1.28.0"
 

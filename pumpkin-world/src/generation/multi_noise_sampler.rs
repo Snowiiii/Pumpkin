@@ -1,3 +1,6 @@
+use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr, Map};
+
 use crate::biome::Biome;
 use crate::generation::noise::density::component_functions::ComponentReference;
 
@@ -5,7 +8,7 @@ use super::chunk_noise::ChunkNoiseState;
 use super::noise::density::component_functions::NoEnvironment;
 use super::noise::density::NoisePos;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct NoiseValuePoint {
     pub temperature: f64,
     pub erosion: f64,
@@ -37,43 +40,31 @@ impl MultiNoiseSampler {
     }
 }
 
-#[derive(Clone)]
+#[serde_as]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct BiomeEntries {
-    nodes: Vec<SearchTreeNode>,
-}
-
-#[derive(Clone)]
-pub struct SearchTreeNode {
-    biome: Biome,
-    center: NoiseValuePoint,
+    #[serde_as(as = "Map<_, _>")]
+    nodes: Vec<(Biome, NoiseValuePoint)>,
 }
 
 impl BiomeEntries {
-    /// Constructs a new search tree from a list of biomes and their corresponding noise value points.
-    pub fn new(biomes: Vec<(Biome, NoiseValuePoint)>) -> Self {
-        let nodes = biomes
-            .into_iter()
-            .map(|(biome, center)| SearchTreeNode { biome, center })
-            .collect();
-
+    pub fn new(nodes: Vec<(Biome, NoiseValuePoint)>) -> Self {
         Self { nodes }
     }
 
-    /// Finds the best matching biome for the given noise value point.
     pub fn find_biome(&self, point: &NoiseValuePoint) -> Biome {
-        // Use a priority queue to track the closest node.
         let mut closest_biome = None;
         let mut min_distance = f64::MAX;
 
-        for node in &self.nodes {
-            let distance = node.center.distance_squared(point);
+        for (biome, center) in &self.nodes {
+            let distance = center.distance_squared(point);
             if distance < min_distance {
                 min_distance = distance;
-                closest_biome = Some(node.biome);
+                closest_biome = Some(biome);
             }
         }
 
-        closest_biome.unwrap_or(Biome::Plains) // Default biome if none matches.
+        closest_biome.cloned().unwrap_or(Biome::Plains) // Default biome if none matches.
     }
 }
 
