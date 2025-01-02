@@ -88,19 +88,36 @@ pub struct Food {
     pub can_always_eat: Option<bool>,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Default)]
+#[serde(default)]
 pub struct Equippable {
+    pub allowed_entities: Option<ParameterValue>,
+    pub camera_overlay: Option<String>,
+    pub damage_on_hurt: bool,
+    pub swappable: bool,
     pub slot: ArmorSlot,
-    pub equip_sound: String,
-    pub asset_id: String,
+    pub equip_sound: Option<String>,
+    pub asset_id: Option<String>,
 }
 
-#[derive(Deserialize, Clone, Copy, Debug)]
+#[derive(Deserialize, Clone, Debug)]
+#[serde(untagged)]
+pub enum ParameterValue {
+    Primitive(String),
+    List(Vec<String>),
+}
+
+#[derive(Deserialize, Clone, Copy, Debug, Default)]
+#[serde(rename_all = "camelCase")]
 pub enum ArmorSlot {
+    #[default]
     Head,
     Chest,
     Legs,
     Feet,
+
+    Offhand,
+    Body
 }
 
 #[derive(Deserialize, Clone, Debug, PartialEq)]
