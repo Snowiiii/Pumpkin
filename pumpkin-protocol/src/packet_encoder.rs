@@ -511,7 +511,7 @@ mod tests {
 
         // Verify that the packet size does not exceed MAX_PACKET_SIZE
         assert!(
-            packet_bytes.len() <= MAX_PACKET_SIZE as usize,
+            packet_bytes.len() <= MAX_PACKET_SIZE,
             "Packet size exceeds maximum allowed size"
         );
 
@@ -543,7 +543,7 @@ mod tests {
     #[should_panic(expected = "TooLong")]
     fn test_encode_packet_exceeding_maximum_size() {
         // Create a custom packet with data exceeding MAX_PACKET_SIZE
-        let data_size = MAX_PACKET_SIZE as usize + 1; // Exceed by 1 byte
+        let data_size = MAX_PACKET_SIZE + 1; // Exceed by 1 byte
         let packet = MaxSizePacket::new(data_size);
 
         // Build the packet without compression and encryption

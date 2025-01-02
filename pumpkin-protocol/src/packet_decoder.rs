@@ -451,7 +451,7 @@ mod tests {
         // Sample packet data: packet_id = 8, payload = "A" repeated MAX_PACKET_SIZE times
         // Sample packet data: packet_id = 8, payload = "A" repeated (MAX_PACKET_SIZE - 1) times
         let packet_id = 8;
-        let payload = vec![0x41u8; (MAX_PACKET_SIZE - 1) as usize]; // "A" repeated
+        let payload = vec![0x41u8; MAX_PACKET_SIZE - 1]; // "A" repeated
 
         // Build the packet with compression enabled
         let packet = build_packet(packet_id, &payload, true, None, None);
