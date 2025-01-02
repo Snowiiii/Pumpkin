@@ -1,13 +1,14 @@
+use core::f32;
 use std::sync::{atomic::AtomicBool, Arc};
 
 use crossbeam::atomic::AtomicCell;
-use num_derive::FromPrimitive;
 use pumpkin_core::math::{
     boundingbox::{BoundingBox, BoundingBoxSize},
     get_section_cord,
     position::WorldPosition,
     vector2::Vector2,
     vector3::Vector3,
+    wrap_degrees,
 };
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
 use pumpkin_protocol::{
@@ -16,6 +17,9 @@ use pumpkin_protocol::{
 };
 
 use crate::world::World;
+
+pub mod ai;
+pub mod mob;
 
 pub mod living;
 pub mod player;
@@ -136,6 +140,17 @@ impl Entity {
         }
     }
 
+    /// Changes this entity's pitch and yaw to look at target
+    pub fn look_at(&self, target: Vector3<f64>) {
+        let position = self.pos.load();
+        let delta = target.sub(&position);
+        let root = delta.x.hypot(delta.z);
+        let pitch = wrap_degrees(-delta.y.atan2(root) as f32 * 180.0 / f32::consts::PI);
+        let yaw = wrap_degrees((delta.z.atan2(delta.x) as f32 * 180.0 / f32::consts::PI) - 90.0);
+        self.pitch.store(pitch);
+        self.yaw.store(yaw);
+    }
+
     pub async fn teleport(&self, position: Vector3<f64>, yaw: f32, pitch: f32) {
         self.world
             .broadcast_packet_all(&CTeleportEntity::new(
@@ -243,7 +258,7 @@ impl Entity {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, FromPrimitive)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// Represents various entity flags that are sent in entity metadata.
 ///
 /// These flags are used by the client to modify the rendering of entities based on their current state.

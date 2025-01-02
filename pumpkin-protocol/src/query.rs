@@ -1,16 +1,27 @@
 use std::{ffi::CString, io::Cursor};
 
-use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-#[derive(FromPrimitive)]
 #[repr(u8)]
 pub enum PacketType {
     // There could be other types but they are not documented
     // Besides these types are enough to get server status
     Handshake = 9,
     Status = 0,
+}
+
+pub struct InvalidPacketType;
+
+impl TryFrom<u8> for PacketType {
+    type Error = InvalidPacketType;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            9 => Ok(Self::Handshake),
+            0 => Ok(Self::Status),
+            _ => Err(InvalidPacketType),
+        }
+    }
 }
 
 pub struct RawQueryPacket {
@@ -27,8 +38,8 @@ impl RawQueryPacket {
             // Since it denotes the protocol being used
             // Should not attempt to decode packets with other magic values
             65277 => Ok(Self {
-                packet_type: PacketType::from_u8(reader.read_u8().await.map_err(|_| ())?)
-                    .ok_or(())?,
+                packet_type: PacketType::try_from(reader.read_u8().await.map_err(|_| ())?)
+                    .map_err(|_| ())?,
                 reader,
             }),
             _ => Err(()),

@@ -115,9 +115,8 @@ impl ChunkReader for AnvilChunkReader {
             .read_exact(&mut timestamp_table)
             .map_err(|err| ChunkReadingError::IoError(err.kind()))?;
 
-        let modulus = |a: i32, b: i32| ((a % b) + b) % b;
-        let chunk_x = modulus(at.x, 32) as u32;
-        let chunk_z = modulus(at.z, 32) as u32;
+        let chunk_x = at.x.rem_euclid(32) as u32;
+        let chunk_z = at.z.rem_euclid(32) as u32;
         let table_entry = (chunk_x + chunk_z * 32) * 4;
 
         let mut offset = vec![0u8];

@@ -17,9 +17,9 @@ serde.workspace = true
 serde_json.workspace = true
 log.workspace = true
 
-num-traits.workspace = true
-num-derive.workspace = true
 dashmap = "6.1.0"
+
+num-traits = "0.2"
 
 # Compression   
 flate2 = "1.0"

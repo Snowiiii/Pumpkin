@@ -8,8 +8,6 @@ use std::{
 };
 
 use crossbeam::atomic::AtomicCell;
-use num_derive::FromPrimitive;
-use num_traits::Pow;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::{
     math::{
@@ -298,7 +296,7 @@ impl Player {
         // only reduce attack damage if in cooldown
         // TODO: Enchantments are reduced same way just without the square
         if attack_cooldown_progress < 1.0 {
-            damage_multiplier = 0.2 + attack_cooldown_progress.pow(2) * 0.8;
+            damage_multiplier = 0.2 + attack_cooldown_progress.powi(2) * 0.8;
         }
         // modify added damage based on multiplier
         let mut damage = base_damage + add_damage * damage_multiplier;
@@ -823,7 +821,7 @@ impl Default for Abilities {
 }
 
 /// Represents the player's dominant hand.
-#[derive(Debug, FromPrimitive, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Hand {
     /// Usually the player's off-hand.
@@ -832,8 +830,22 @@ pub enum Hand {
     Right,
 }
 
+pub struct InvalidHand;
+
+impl TryFrom<i32> for Hand {
+    type Error = InvalidHand;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Left),
+            1 => Ok(Self::Right),
+            _ => Err(InvalidHand),
+        }
+    }
+}
+
 /// Represents the player's chat mode settings.
-#[derive(Debug, FromPrimitive, Clone)]
+#[derive(Debug, Clone)]
 pub enum ChatMode {
     /// Chat is enabled for the player.
     Enabled,
@@ -841,4 +853,19 @@ pub enum ChatMode {
     CommandsOnly,
     /// All messages should be hidden
     Hidden,
+}
+
+pub struct InvalidChatMode;
+
+impl TryFrom<i32> for ChatMode {
+    type Error = InvalidChatMode;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Enabled),
+            1 => Ok(Self::CommandsOnly),
+            2 => Ok(Self::Hidden),
+            _ => Err(InvalidChatMode),
+        }
+    }
 }

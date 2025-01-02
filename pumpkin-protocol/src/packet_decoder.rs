@@ -13,24 +13,12 @@ type Cipher = cfb8::Decryptor<aes::Aes128>;
 // Decoder: Client -> Server
 // Supports ZLib decoding/decompression
 // Supports Aes128 Encryption
+#[derive(Default)]
 pub struct PacketDecoder {
     buf: BytesMut,
     decompress_buf: BytesMut,
     cipher: Option<Cipher>,
     decompressor: Option<Decompressor>,
-}
-
-// Manual implementation of Default trait for PacketDecoder
-// Since decompressor does not implement Default
-impl Default for PacketDecoder {
-    fn default() -> Self {
-        Self {
-            buf: BytesMut::new(),
-            decompress_buf: BytesMut::new(),
-            cipher: None,
-            decompressor: None,
-        }
-    }
 }
 
 impl PacketDecoder {
@@ -44,7 +32,7 @@ impl PacketDecoder {
         };
         let packet_len = packet_len.0;
 
-        if !(0..=MAX_PACKET_SIZE).contains(&packet_len) {
+        if !(0..=MAX_PACKET_SIZE as i32).contains(&packet_len) {
             Err(PacketDecodeError::OutOfBounds)?
         }
 
@@ -63,7 +51,7 @@ impl PacketDecoder {
                 .map_err(|_| PacketDecodeError::TooLong)?
                 .0;
 
-            if !(0..=MAX_PACKET_SIZE).contains(&data_len) {
+            if !(0..=MAX_PACKET_SIZE as i32).contains(&data_len) {
                 Err(PacketDecodeError::OutOfBounds)?
             }
 

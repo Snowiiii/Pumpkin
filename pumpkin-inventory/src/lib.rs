@@ -1,6 +1,5 @@
 use crate::container_click::MouseClick;
 use crate::player::PlayerInventory;
-use num_derive::FromPrimitive;
 use pumpkin_macros::screen;
 use pumpkin_world::item::ItemStack;
 
@@ -15,7 +14,7 @@ pub mod window_property;
 pub use error::InventoryError;
 pub use open_container::*;
 
-#[derive(Debug, FromPrimitive, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
 pub enum WindowType {
     // not used

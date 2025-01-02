@@ -21,7 +21,7 @@ pub mod server;
 /// Don't forget to change this when porting
 pub const CURRENT_MC_PROTOCOL: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(769) };
 
-pub const MAX_PACKET_SIZE: i32 = 2097152;
+pub const MAX_PACKET_SIZE: usize = 2097152;
 
 pub type FixedBitSet = bytes::Bytes;
 
@@ -49,18 +49,18 @@ pub enum ConnectionState {
     Config,
     Play,
 }
+pub struct InvalidConnectionState;
 
-impl From<VarInt> for ConnectionState {
-    fn from(value: VarInt) -> Self {
+impl TryFrom<VarInt> for ConnectionState {
+    type Error = InvalidConnectionState;
+
+    fn try_from(value: VarInt) -> Result<Self, Self::Error> {
         let value = value.0;
         match value {
-            1 => Self::Status,
-            2 => Self::Login,
-            3 => Self::Transfer,
-            _ => {
-                log::info!("Unexpected Status {}", value);
-                Self::Status
-            }
+            1 => Ok(Self::Status),
+            2 => Ok(Self::Login),
+            3 => Ok(Self::Transfer),
+            _ => Err(InvalidConnectionState),
         }
     }
 }

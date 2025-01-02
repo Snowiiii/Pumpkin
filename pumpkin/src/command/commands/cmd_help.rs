@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use num_traits::ToPrimitive;
 use pumpkin_core::text::click::ClickEvent;
 use pumpkin_core::text::color::{Color, NamedColor};
 use pumpkin_core::text::TextComponent;
@@ -133,14 +132,12 @@ impl CommandExecutor for BaseHelpExecutor {
 
         commands.sort_by(|a, b| a.names[0].cmp(&b.names[0]));
 
-        let total_pages =
-            (commands.len().to_i32().unwrap() + COMMANDS_PER_PAGE - 1) / COMMANDS_PER_PAGE;
+        let total_pages = (commands.len() as i32 + COMMANDS_PER_PAGE - 1) / COMMANDS_PER_PAGE;
         let page = page_number.min(total_pages);
 
         let start = (page - 1) * COMMANDS_PER_PAGE;
         let end = start + COMMANDS_PER_PAGE;
-        let page_commands =
-            &commands[start as usize..end.min(commands.len().to_i32().unwrap()) as usize];
+        let page_commands = &commands[start as usize..end.min(commands.len() as i32) as usize];
 
         let arrow_left = if page > 1 {
             let cmd = format!("/help {}", page - 1);

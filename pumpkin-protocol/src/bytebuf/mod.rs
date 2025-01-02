@@ -241,10 +241,7 @@ impl<T: Buf> ByteBuf for T {
         if data.len() > max_size {
             return Err(ReadingError::TooLarge("string".to_string()));
         }
-        match str::from_utf8(&data) {
-            Ok(string_result) => Ok(string_result.to_string()),
-            Err(e) => Err(ReadingError::Message(e.to_string())),
-        }
+        String::from_utf8(data.to_vec()).map_err(|e| ReadingError::Message(e.to_string()))
     }
 
     fn try_get_option<G>(
