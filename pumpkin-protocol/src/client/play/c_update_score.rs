@@ -11,8 +11,8 @@ pub struct CUpdateScore<'a> {
     entity_name: &'a str,
     objective_name: &'a str,
     value: VarInt,
-    display_name: Option<TextComponent<'a>>,
-    number_format: Option<NumberFormat<'a>>,
+    display_name: Option<TextComponent>,
+    number_format: Option<NumberFormat>,
 }
 
 impl<'a> CUpdateScore<'a> {
@@ -20,8 +20,8 @@ impl<'a> CUpdateScore<'a> {
         entity_name: &'a str,
         objective_name: &'a str,
         value: VarInt,
-        display_name: Option<TextComponent<'a>>,
-        number_format: Option<NumberFormat<'a>>,
+        display_name: Option<TextComponent>,
+        number_format: Option<NumberFormat>,
     ) -> Self {
         Self {
             entity_name,

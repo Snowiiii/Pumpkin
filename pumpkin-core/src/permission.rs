@@ -23,7 +23,13 @@ pub enum PermissionLvl {
 
 impl PartialOrd for PermissionLvl {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        (*self as u8).partial_cmp(&(*other as u8))
+        Some((*self as u8).cmp(&(*other as u8)))
+    }
+}
+
+impl Ord for PermissionLvl {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        (*self as u8).cmp(&(*other as u8))
     }
 }
 

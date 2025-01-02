@@ -160,13 +160,13 @@ pub struct KnownPack<'a> {
 }
 
 #[derive(Serialize)]
-pub enum NumberFormat<'a> {
+pub enum NumberFormat {
     /// Show nothing
     Blank,
     /// The styling to be used when formatting the score number
-    Styled(Style<'a>),
+    Styled(Style),
     /// The text to be used as placeholder.
-    Fixed(TextComponent<'a>),
+    Fixed(TextComponent),
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -202,12 +202,12 @@ impl PositionFlag {
     }
 }
 
-pub enum Label<'a> {
+pub enum Label {
     BuiltIn(LinkType),
-    TextComponent(TextComponent<'a>),
+    TextComponent(TextComponent),
 }
 
-impl Serialize for Label<'_> {
+impl Serialize for Label {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -222,12 +222,12 @@ impl Serialize for Label<'_> {
 #[derive(Serialize)]
 pub struct Link<'a> {
     pub is_built_in: bool,
-    pub label: Label<'a>,
+    pub label: Label,
     pub url: &'a String,
 }
 
 impl<'a> Link<'a> {
-    pub fn new(label: Label<'a>, url: &'a String) -> Self {
+    pub fn new(label: Label, url: &'a String) -> Self {
         Self {
             is_built_in: match label {
                 Label::BuiltIn(_) => true,

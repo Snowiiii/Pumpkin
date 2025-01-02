@@ -71,7 +71,7 @@ impl CommandDispatcher {
                 Ok(err) => {
                     sender
                         .send_message(
-                            TextComponent::text_string(err)
+                            TextComponent::text(err)
                                 .color_named(pumpkin_core::text::color::NamedColor::Red),
                         )
                         .await;
@@ -94,7 +94,7 @@ impl CommandDispatcher {
         src: &mut CommandSender<'a>,
         server: &'a Server,
         cmd: &'a str,
-    ) -> Vec<CommandSuggestion<'a>> {
+    ) -> Vec<CommandSuggestion> {
         let mut parts = cmd.split_whitespace();
         let Some(key) = parts.next() else {
             return Vec::new();
@@ -254,7 +254,7 @@ impl CommandDispatcher {
         tree: &'a CommandTree,
         raw_args: &mut RawArgs<'a>,
         input: &'a str,
-    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
+    ) -> Result<Option<Vec<CommandSuggestion>>, CommandError> {
         let mut parsed_args: ConsumedArgs = HashMap::new();
 
         for node in path.iter().map(|&i| &tree.nodes[i]) {

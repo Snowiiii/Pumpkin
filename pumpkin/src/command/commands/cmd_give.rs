@@ -56,7 +56,7 @@ impl CommandExecutor for GiveExecutor {
         }
 
         sender
-            .send_message(TextComponent::text_string(match targets {
+            .send_message(TextComponent::text(match targets {
                 [target] => format!(
                     "Gave {item_count} {} to {}",
                     item_name, target.gameprofile.name

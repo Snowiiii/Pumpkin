@@ -300,7 +300,7 @@ pub trait ByteBufMut {
 
     fn put_string_len(&mut self, val: &str, max_size: usize);
 
-    fn put_string_array(&mut self, array: &[String]);
+    fn put_string_array(&mut self, array: &[&str]);
 
     fn put_bit_set(&mut self, set: &BitSet);
 
@@ -346,7 +346,7 @@ impl<T: BufMut> ByteBufMut for T {
         self.put(val.as_bytes());
     }
 
-    fn put_string_array(&mut self, array: &[String]) {
+    fn put_string_array(&mut self, array: &[&str]) {
         for string in array {
             self.put_string(string)
         }

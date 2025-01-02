@@ -17,37 +17,32 @@ pub mod style;
 /// Represents a Text component
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
-pub struct TextComponent<'a> {
+pub struct TextComponent {
     /// The actual text
     #[serde(flatten)]
-    pub content: TextContent<'a>,
+    pub content: TextContent,
     /// Style of the text. Bold, Italic, underline, Color...
     /// Also has `ClickEvent
     #[serde(flatten)]
-    pub style: Style<'a>,
+    pub style: Style,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     /// Extra text components
-    pub extra: Vec<TextComponent<'a>>,
+    pub extra: Vec<TextComponent>,
 }
 
-impl<'a> TextComponent<'a> {
-    pub fn text(text: &'a str) -> Self {
+impl TextComponent {
+    pub fn text<P>(plain: P) -> Self
+    where
+        P: Into<Cow<'static, str>>,
+    {
         Self {
-            content: TextContent::Text { text: text.into() },
+            content: TextContent::Text { text: plain.into() },
             style: Style::default(),
             extra: vec![],
         }
     }
 
-    pub fn text_string(text: String) -> Self {
-        Self {
-            content: TextContent::Text { text: text.into() },
-            style: Style::default(),
-            extra: vec![],
-        }
-    }
-
-    pub fn add_child(mut self, child: TextComponent<'a>) -> Self {
+    pub fn add_child(mut self, child: TextComponent) -> Self {
         self.extra.push(child);
         self
     }
@@ -92,7 +87,7 @@ impl<'a> TextComponent<'a> {
     }
 }
 
-impl serde::Serialize for TextComponent<'_> {
+impl serde::Serialize for TextComponent {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -101,7 +96,7 @@ impl serde::Serialize for TextComponent<'_> {
     }
 }
 
-impl<'a> TextComponent<'a> {
+impl TextComponent {
     pub fn color(mut self, color: Color) -> Self {
         self.style.color = Some(color);
         self
@@ -154,13 +149,13 @@ impl<'a> TextComponent<'a> {
     }
 
     /// Allows for events to occur when the player clicks on text. Only work in chat.
-    pub fn click_event(mut self, event: ClickEvent<'a>) -> Self {
+    pub fn click_event(mut self, event: ClickEvent) -> Self {
         self.style.click_event = Some(event);
         self
     }
 
     /// Allows for a tooltip to be displayed when the player hovers their mouse over text.
-    pub fn hover_event(mut self, event: HoverEvent<'a>) -> Self {
+    pub fn hover_event(mut self, event: HoverEvent) -> Self {
         self.style.hover_event = Some(event);
         self
     }
@@ -184,14 +179,14 @@ impl<'a> TextComponent<'a> {
         #[serde(rename_all = "camelCase")]
         struct TempStruct<'a> {
             #[serde(flatten)]
-            text: &'a TextContent<'a>,
+            text: &'a TextContent,
             #[serde(flatten)]
-            style: &'a Style<'a>,
+            style: &'a Style,
             #[serde(default, skip_serializing_if = "Vec::is_empty")]
             #[serde(rename = "extra")]
             extra: Vec<TempStruct<'a>>,
         }
-        fn convert_extra<'a>(extra: &'a [TextComponent<'a>]) -> Vec<TempStruct<'a>> {
+        fn convert_extra(extra: &[TextComponent]) -> Vec<TempStruct<'_>> {
             extra
                 .iter()
                 .map(|x| TempStruct {
@@ -218,22 +213,22 @@ impl<'a> TextComponent<'a> {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(untagged)]
-pub enum TextContent<'a> {
+pub enum TextContent {
     /// Raw Text
-    Text { text: Cow<'a, str> },
+    Text { text: Cow<'static, str> },
     /// Translated text
     Translate {
-        translate: Cow<'a, str>,
+        translate: Cow<'static, str>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        with: Vec<TextComponent<'a>>,
+        with: Vec<TextComponent>,
     },
     /// Displays the name of one or more entities found by a selector.
     EntityNames {
-        selector: Cow<'a, str>,
+        selector: Cow<'static, str>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        separator: Option<Cow<'a, str>>,
+        separator: Option<Cow<'static, str>>,
     },
     /// A keybind identifier
     /// https://minecraft.wiki/w/Controls#Configurable_controls
-    Keybind { keybind: Cow<'a, str> },
+    Keybind { keybind: Cow<'static, str> },
 }

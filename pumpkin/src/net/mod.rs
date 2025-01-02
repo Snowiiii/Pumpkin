@@ -576,8 +576,10 @@ impl Client {
             ConnectionState::Config => self.try_send_packet(&CConfigDisconnect::new(reason)).await,
             // This way players get kicked when players using client functions (e.g. poll, send_packet)
             ConnectionState::Play => {
-                self.try_send_packet(&CPlayDisconnect::new(&TextComponent::text(reason)))
-                    .await
+                self.try_send_packet(&CPlayDisconnect::new(&TextComponent::text(
+                    reason.to_owned(),
+                )))
+                .await
             }
             _ => {
                 log::warn!("Can't kick in {:?} State", self.connection_state);

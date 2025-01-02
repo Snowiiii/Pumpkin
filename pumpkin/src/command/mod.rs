@@ -9,10 +9,9 @@ use crate::server::Server;
 use crate::world::World;
 use args::ConsumedArgs;
 use async_trait::async_trait;
-use commands::cmd_op;
 use commands::{
-    cmd_clear, cmd_fill, cmd_gamemode, cmd_give, cmd_help, cmd_kick, cmd_kill, cmd_list,
-    cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_time, cmd_worldborder,
+    cmd_clear, cmd_deop, cmd_fill, cmd_gamemode, cmd_give, cmd_help, cmd_kick, cmd_kill, cmd_list,
+    cmd_op, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_time, cmd_worldborder,
 };
 use dispatcher::CommandError;
 use pumpkin_core::math::vector3::Vector3;
@@ -48,7 +47,7 @@ impl fmt::Display for CommandSender<'_> {
 }
 
 impl<'a> CommandSender<'a> {
-    pub async fn send_message(&self, text: TextComponent<'a>) {
+    pub async fn send_message(&self, text: TextComponent) {
         match self {
             CommandSender::Console => log::info!("{}", text.to_pretty_console()),
             CommandSender::Player(c) => c.send_system_message(&text).await,
@@ -131,6 +130,7 @@ pub fn default_dispatcher() -> CommandDispatcher {
     dispatcher.register(cmd_transfer::init_command_tree(), PermissionLvl::Zero);
     dispatcher.register(cmd_fill::init_command_tree(), PermissionLvl::Two);
     dispatcher.register(cmd_op::init_command_tree(), PermissionLvl::Three);
+    dispatcher.register(cmd_deop::init_command_tree(), PermissionLvl::Three);
 
     dispatcher
 }

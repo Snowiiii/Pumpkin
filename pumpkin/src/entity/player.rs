@@ -526,7 +526,7 @@ impl Player {
     }
 
     /// Kicks the Client with a reason depending on the connection state
-    pub async fn kick<'a>(&self, reason: TextComponent<'a>) {
+    pub async fn kick(&self, reason: TextComponent) {
         if self
             .client
             .closed
@@ -567,7 +567,7 @@ impl Player {
         self.client
             .send_packet(&CCombatDeath::new(
                 self.entity_id().into(),
-                TextComponent::text("noob"),
+                &TextComponent::text("noob"),
             ))
             .await;
     }
@@ -642,7 +642,7 @@ impl Player {
             .await;
     }
 
-    pub async fn send_system_message<'a>(&self, text: &TextComponent<'a>) {
+    pub async fn send_system_message(&self, text: &TextComponent) {
         self.client
             .send_packet(&CSystemChatMessage::new(text, false))
             .await;
@@ -664,9 +664,9 @@ impl Player {
                         Err(e) => {
                             if e.is_kick() {
                                 if let Some(kick_reason) = e.client_kick_reason() {
-                                    self.kick(TextComponent::text(&kick_reason)).await;
+                                    self.kick(TextComponent::text(kick_reason)).await;
                                 } else {
-                                    self.kick(TextComponent::text(&format!(
+                                    self.kick(TextComponent::text(format!(
                                         "Error while reading incoming packet {e}"
                                     )))
                                     .await;
