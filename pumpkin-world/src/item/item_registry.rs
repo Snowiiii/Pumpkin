@@ -117,7 +117,7 @@ pub enum ArmorSlot {
     Feet,
 
     Offhand,
-    Body
+    Body,
 }
 
 #[derive(Deserialize, Clone, Debug, PartialEq)]
