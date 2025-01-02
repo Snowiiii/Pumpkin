@@ -11,7 +11,8 @@ use args::ConsumedArgs;
 use async_trait::async_trait;
 use commands::{
     cmd_clear, cmd_deop, cmd_fill, cmd_gamemode, cmd_give, cmd_help, cmd_kick, cmd_kill, cmd_list,
-    cmd_op, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_time, cmd_worldborder,
+    cmd_op, cmd_pumpkin, cmd_say, cmd_setblock, cmd_stop, cmd_teleport, cmd_time, cmd_whitelist,
+    cmd_worldborder,
 };
 use dispatcher::CommandError;
 use pumpkin_core::math::vector3::Vector3;
@@ -131,6 +132,7 @@ pub fn default_dispatcher() -> CommandDispatcher {
     dispatcher.register(cmd_fill::init_command_tree(), PermissionLvl::Two);
     dispatcher.register(cmd_op::init_command_tree(), PermissionLvl::Three);
     dispatcher.register(cmd_deop::init_command_tree(), PermissionLvl::Three);
+    dispatcher.register(cmd_whitelist::init_command_tree(), PermissionLvl::Three);
 
     dispatcher
 }

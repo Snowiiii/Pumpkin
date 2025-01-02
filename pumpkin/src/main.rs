@@ -46,9 +46,11 @@ use tokio::signal::unix::{signal, SignalKind};
 
 use std::sync::Arc;
 
+use crate::data::whitelist_data::WHITELIST_CONFIG;
 use crate::server::CURRENT_MC_VERSION;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::text::{color::NamedColor, TextComponent};
+use pumpkin_core::PermissionLvl;
 use pumpkin_protocol::CURRENT_MC_PROTOCOL;
 use std::time::Instant;
 // Setup some tokens to allow us to identify which event is for which socket.
@@ -233,6 +235,21 @@ async fn main() {
                 .load(std::sync::atomic::Ordering::Relaxed)
             {
                 let (player, world) = server.add_player(client).await;
+
+                // If the whitelist is enabled, check if the player is whitelisted
+                if *server.white_list.read().await {
+                    let whitelist_config = WHITELIST_CONFIG.read().await;
+                    let is_whitelisted = whitelist_config
+                        .whitelist
+                        .iter()
+                        .any(|p| p.uuid == player.gameprofile.id);
+                    let is_op = player.permission_lvl.load() >= PermissionLvl::Three;
+                    if !is_whitelisted && !is_op {
+                        player
+                            .kick(TextComponent::text("You are not whitelisted!"))
+                            .await;
+                    }
+                }
                 world
                     .spawn_player(&BASIC_CONFIG, player.clone(), &server)
                     .await;

@@ -78,6 +78,7 @@ pub struct Server {
     pub auth_client: Option<reqwest::Client>,
     /// The server's custom bossbars
     pub bossbars: Mutex<CustomBossbars>,
+    pub white_list: RwLock<bool>,
 }
 
 impl Server {
@@ -130,6 +131,7 @@ impl Server {
             server_listing: Mutex::new(CachedStatus::new()),
             server_branding: CachedBranding::new(),
             bossbars: Mutex::new(CustomBossbars::new()),
+            white_list: RwLock::new(BASIC_CONFIG.white_list),
         }
     }
 
