@@ -135,7 +135,7 @@ impl Default for BasicConfiguration {
     }
 }
 
-pub trait LoadConfiguration {
+trait LoadConfiguration {
     fn load() -> Self
     where
         Self: Sized + Default + Serialize + DeserializeOwned,
