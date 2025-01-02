@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub mod anvil;
+pub mod pumpkin;
 
 const CHUNK_AREA: usize = 16 * 16;
 const SUBCHUNK_VOLUME: usize = CHUNK_AREA * 16;
