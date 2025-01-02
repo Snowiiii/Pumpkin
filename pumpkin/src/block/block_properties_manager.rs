@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
 use pumpkin_core::math::position::WorldPosition;
-use pumpkin_world::block::block_registry::{Block, BLOCKS};
+use pumpkin_world::block::{block_registry::{Block, BLOCKS}, BlockFace};
 
 use crate::world::World;
 
@@ -10,8 +10,8 @@ use super::properties::slab::SlabBehavior;
 
 #[async_trait]
 pub trait BlockBehavior: Send + Sync {
-    fn map_state_id(&self, world: &World, block: &Block, clicked_block: &Block, world_pos: &WorldPosition) -> u16;
-    async fn is_updateable(&self, world: &World, block: &Block, clicked_block: &Block, world_pos: &WorldPosition) -> bool;
+    async fn map_state_id(&self, world: &World, block: &Block, face: &BlockFace, world_pos: &WorldPosition) -> u16;
+    async fn is_updateable(&self, world: &World, block: &Block, face: &BlockFace, world_pos: &WorldPosition) -> bool;
 }
 
 #[derive(Clone, Debug)]
@@ -62,16 +62,16 @@ impl BlockPropertiesManager {
         }
     }
 
-    pub fn get_state_id(&self, world: &World, block: &Block, clicked_block: &Block, world_pos: &WorldPosition) -> u16 {
+    pub async fn get_state_id(&self, world: &World, block: &Block, face: &BlockFace, world_pos: &WorldPosition) -> u16 {
         if let Some(behaviour) = self.properties_registry.get(&block.id) {
-            return behaviour.map_state_id(world, block, clicked_block, world_pos);
+            return behaviour.map_state_id(world, block, face, world_pos).await;
         }
         block.default_state_id
     }
 
-    pub async fn is_updateable(&self, world: &World, block: &Block, clicked_block: &Block, world_pos: &WorldPosition) -> bool {
+    pub async fn is_updateable(&self, world: &World, block: &Block, face: &BlockFace, world_pos: &WorldPosition) -> bool {
         if let Some(behaviour) = self.properties_registry.get(&block.id) {
-            return behaviour.is_updateable(world, block, clicked_block, world_pos).await;
+            return behaviour.is_updateable(world, block, face, world_pos).await;
         }
         false
     }

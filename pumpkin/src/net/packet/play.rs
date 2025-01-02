@@ -1055,12 +1055,11 @@ impl Player {
         let world = &entity.world;
 
         let clicked_world_pos = WorldPosition(location.0);
-        let clicked_block = world.get_block(clicked_world_pos).await?;
         let clicked_block_state = world.get_block_state(clicked_world_pos).await?;
 
         let world_pos = if clicked_block_state.replaceable {
             clicked_world_pos
-        } else if server.block_properties_manager.is_updateable(&world, &block, &clicked_block, &clicked_world_pos).await {
+        } else if server.block_properties_manager.is_updateable(&world, &block, face, &clicked_world_pos).await {
             clicked_world_pos
         } else {
             let world_pos = WorldPosition(location.0 + face.to_offset());
@@ -1090,7 +1089,7 @@ impl Player {
             }
         }
         if !intersects {
-            let mapped_block_id = server.block_properties_manager.get_state_id(&world, &block, &clicked_block, &world_pos);
+            let mapped_block_id = server.block_properties_manager.get_state_id(&world, &block, face, &world_pos).await;
             let replaced_id = world
                 .set_block_state(world_pos, mapped_block_id)
                 .await;

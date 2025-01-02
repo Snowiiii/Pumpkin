@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::{Arc, OnceLock}};
 
 use pumpkin_core::math::position::WorldPosition;
-use pumpkin_world::block::block_registry::Property;
+use pumpkin_world::block::{block_registry::Property, BlockFace};
 use pumpkin_world::block::block_registry::Block;
 
 use crate::{block::block_properties_manager::{get_property_key, BlockBehavior, BlockProperty, SlabPosition}, world::World};
@@ -65,14 +65,14 @@ impl SlabBehavior {
         }
     }
 
-    pub fn evalute_property_type(&self, block: &Block, clicked_block: &Block, world_pos: &WorldPosition) -> String {
-        if block.id == clicked_block.id {
+    pub fn evalute_property_type(&self, block: &Block, clicked_block: &Block, world_pos: &WorldPosition, face: &BlockFace) -> String {
+        if block.id == clicked_block.id && *face == BlockFace::Top {
             return format!("{}{}", "type", "double")
         }
         format!("{}{}", "type", "bottom")
     }
 
-    pub fn evalute_property_waterlogged(&self, block: &Block, clicked_block: &Block, world_pos: &WorldPosition) -> String {
+    pub fn evalute_property_waterlogged(&self, block: &Block, clicked_block: &Block, world_pos: &WorldPosition, face: &BlockFace) -> String {
         if clicked_block.name == "water" {
             return format!("{}{}", "waterlogged", "true")
         }
@@ -82,14 +82,15 @@ impl SlabBehavior {
 
 #[async_trait::async_trait]
 impl BlockBehavior for SlabBehavior {
-    fn map_state_id(&self, world: &World, block: &Block, clicked_block: &Block, world_pos: &WorldPosition) -> u16 {
+    async fn map_state_id(&self, world: &World, block: &Block, face: &BlockFace, world_pos: &WorldPosition) -> u16 {
+        let clicked_block = world.get_block(*world_pos).await.unwrap();
         let mut hmap_key: Vec<String> = Vec::with_capacity(block.properties.len());
         let slab_behaviour = SlabBehavior::get();
 
         for property in block.properties.iter() {
             let state = match get_property_key(&property.name.as_str()).expect("Property not found") {
-                BlockProperty::SlabType(SlabPosition::Top) => slab_behaviour.evalute_property_type(block, clicked_block, world_pos),
-                BlockProperty::Waterlogged(false) => slab_behaviour.evalute_property_waterlogged(block, clicked_block, world_pos),
+                BlockProperty::SlabType(SlabPosition::Top) => slab_behaviour.evalute_property_type(block, clicked_block, world_pos, face),
+                BlockProperty::Waterlogged(false) => slab_behaviour.evalute_property_waterlogged(block, clicked_block, world_pos, face),
                 _ => panic!("Property not found"),
             };
             hmap_key.push(state.to_string());
@@ -99,18 +100,13 @@ impl BlockBehavior for SlabBehavior {
         block.states[0].id + slab_behaviour.state_mappings[&hmap_key]
     }
 
-    async fn is_updateable(&self, world: &World, block: &Block, clicked_block: &Block, world_pos: &WorldPosition) -> bool {
-        if block.id != clicked_block.id {
+    async fn is_updateable(&self, world: &World, block: &Block, face: &BlockFace, world_pos: &WorldPosition) -> bool {
+        let clicked_block = world.get_block(*world_pos).await.unwrap();
+        if block.id != clicked_block.id || *face != BlockFace::Top {
             return false;
         }
 
         let clicked_block_state_id = world.get_block_state_id(*world_pos).await.unwrap();
-
-        log::warn!("Clicked block: {:?}", clicked_block_state_id);
-        log::warn!("Diff: {}", clicked_block_state_id - clicked_block.states[0].id);
-        log::warn!(" ");
-        log::warn!("Property_mappings: {:?}", SlabBehavior::get().property_mappings);
-        log::warn!(" ");
 
         if let Some(properties) = SlabBehavior::get().property_mappings.get(&(&clicked_block_state_id - clicked_block.states[0].id)) {
             log::warn!("Properties: {:?}", properties);
