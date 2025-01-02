@@ -10,7 +10,7 @@ const BROADCAST_ADDRESS: SocketAddr =
     SocketAddr::new(IpAddr::V4(Ipv4Addr::new(224, 0, 2, 60)), 4445);
 
 pub async fn start_lan_broadcast(bound_addr: SocketAddr) {
-    let port = ADVANCED_CONFIG.lan_broadcast.port.unwrap_or(0);
+    let port = ADVANCED_CONFIG.networking.lan_broadcast.port.unwrap_or(0);
 
     let socket = UdpSocket::bind(format!("0.0.0.0:{port}"))
         .await
@@ -22,6 +22,7 @@ pub async fn start_lan_broadcast(bound_addr: SocketAddr) {
 
     let motd: String;
     let advanced_motd = &ADVANCED_CONFIG
+        .networking
         .lan_broadcast
         .motd
         .clone()

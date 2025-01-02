@@ -161,7 +161,7 @@ async fn main() {
         .expect("Unable to get the address of server!");
 
     let use_console = ADVANCED_CONFIG.commands.use_console;
-    let rcon = ADVANCED_CONFIG.rcon.clone();
+    let rcon = ADVANCED_CONFIG.networking.rcon.clone();
 
     let server = Arc::new(Server::new());
     let mut ticker = Ticker::new(BASIC_CONFIG.tps);
@@ -179,12 +179,12 @@ async fn main() {
         });
     }
 
-    if ADVANCED_CONFIG.query.enabled {
+    if ADVANCED_CONFIG.networking.query.enabled {
         log::info!("Query protocol enabled. Starting...");
         tokio::spawn(query::start_query_handler(server.clone(), addr));
     }
 
-    if ADVANCED_CONFIG.lan_broadcast.enabled {
+    if ADVANCED_CONFIG.networking.lan_broadcast.enabled {
         log::info!("LAN broadcast enabled. Starting...");
         tokio::spawn(lan_broadcast::start_lan_broadcast(addr));
     }

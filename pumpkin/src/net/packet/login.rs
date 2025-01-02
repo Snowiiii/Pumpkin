@@ -105,7 +105,7 @@ impl Client {
         // default game profile, when no online mode
         // TODO: make offline uuid
         let mut gameprofile = self.gameprofile.lock().await;
-        let proxy = &ADVANCED_CONFIG.proxy;
+        let proxy = &ADVANCED_CONFIG.networking.proxy;
         if proxy.enabled {
             if proxy.velocity.enabled {
                 velocity::velocity_login(self).await;
@@ -146,7 +146,7 @@ impl Client {
                 )
                 .await;
             } else {
-                if ADVANCED_CONFIG.packet_compression.enabled {
+                if ADVANCED_CONFIG.networking.packet_compression.enabled {
                     self.enable_compression().await;
                 }
                 self.finish_login(&profile).await;
@@ -205,14 +205,18 @@ impl Client {
             return;
         }
 
-        if ADVANCED_CONFIG.packet_compression.enabled {
+        if ADVANCED_CONFIG.networking.packet_compression.enabled {
             self.enable_compression().await;
         }
         self.finish_login(profile).await;
     }
 
     async fn enable_compression(&self) {
-        let compression = ADVANCED_CONFIG.packet_compression.compression_info.clone();
+        let compression = ADVANCED_CONFIG
+            .networking
+            .packet_compression
+            .compression_info
+            .clone();
         self.send_packet(&CSetCompression::new(compression.threshold.into()))
             .await;
         self.set_compression(Some(compression)).await;
@@ -237,11 +241,13 @@ impl Client {
             // Check if player should join
             if let Some(actions) = &profile.profile_actions {
                 if ADVANCED_CONFIG
+                    .networking
                     .authentication
                     .player_profile
                     .allow_banned_players
                 {
                     for allowed in &ADVANCED_CONFIG
+                        .networking
                         .authentication
                         .player_profile
                         .allowed_actions
@@ -261,7 +267,7 @@ impl Client {
             for property in &profile.properties {
                 authentication::validate_textures(
                     property,
-                    &ADVANCED_CONFIG.authentication.textures,
+                    &ADVANCED_CONFIG.networking.authentication.textures,
                 )
                 .map_err(AuthError::TextureError)?;
             }
@@ -281,7 +287,7 @@ impl Client {
     }
     pub async fn handle_plugin_response(&self, plugin_response: SLoginPluginResponse) {
         log::debug!("Handling plugin");
-        let velocity_config = &ADVANCED_CONFIG.proxy.velocity;
+        let velocity_config = &ADVANCED_CONFIG.networking.proxy.velocity;
         if velocity_config.enabled {
             let mut address = self.address.lock().await;
             match velocity::receive_velocity_plugin_response(

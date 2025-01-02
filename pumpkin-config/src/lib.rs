@@ -1,7 +1,6 @@
 use log::warn;
 use logging::LoggingConfig;
 use pumpkin_core::{Difficulty, GameMode, PermissionLvl};
-use query::QueryConfig;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use std::{
@@ -12,29 +11,26 @@ use std::{
     sync::LazyLock,
 };
 
-pub mod auth;
 pub mod logging;
-pub mod proxy;
-pub mod query;
+pub mod networking;
+
 pub mod resource_pack;
 
-pub use auth::AuthenticationConfig;
 pub use commands::CommandsConfig;
-pub use compression::CompressionConfig;
-pub use lan_broadcast::LANBroadcastConfig;
+pub use networking::auth::AuthenticationConfig;
+pub use networking::compression::CompressionConfig;
+pub use networking::lan_broadcast::LANBroadcastConfig;
+pub use networking::rcon::RCONConfig;
 pub use pvp::PVPConfig;
-pub use rcon::RCONConfig;
 pub use server_links::ServerLinksConfig;
 
 mod commands;
-pub mod compression;
-mod lan_broadcast;
+
 pub mod op;
 mod pvp;
-mod rcon;
 mod server_links;
 
-use proxy::ProxyConfig;
+use networking::NetworkingConfig;
 use resource_pack::ResourcePackConfig;
 
 const CONFIG_ROOT_FOLDER: &str = "config/";
@@ -52,17 +48,12 @@ pub static BASIC_CONFIG: LazyLock<BasicConfiguration> = LazyLock::new(BasicConfi
 #[derive(Deserialize, Serialize, Default)]
 #[serde(default)]
 pub struct AdvancedConfiguration {
-    pub proxy: ProxyConfig,
-    pub authentication: AuthenticationConfig,
-    pub packet_compression: CompressionConfig,
-    pub resource_pack: ResourcePackConfig,
-    pub commands: CommandsConfig,
-    pub rcon: RCONConfig,
-    pub pvp: PVPConfig,
     pub logging: LoggingConfig,
-    pub query: QueryConfig,
+    pub resource_pack: ResourcePackConfig,
+    pub networking: NetworkingConfig,
+    pub commands: CommandsConfig,
+    pub pvp: PVPConfig,
     pub server_links: ServerLinksConfig,
-    pub lan_broadcast: LANBroadcastConfig,
 }
 
 #[derive(Serialize, Deserialize)]

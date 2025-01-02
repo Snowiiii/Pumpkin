@@ -1,7 +1,7 @@
 use std::{collections::HashMap, net::IpAddr};
 
 use base64::{engine::general_purpose, Engine};
-use pumpkin_config::{auth::TextureConfig, ADVANCED_CONFIG};
+use pumpkin_config::{networking::auth::TextureConfig, ADVANCED_CONFIG};
 use pumpkin_protocol::Property;
 use reqwest::{StatusCode, Url};
 use serde::Deserialize;
@@ -50,8 +50,13 @@ pub async fn authenticate(
     ip: &IpAddr,
     auth_client: &reqwest::Client,
 ) -> Result<GameProfile, AuthError> {
-    let address = if ADVANCED_CONFIG.authentication.prevent_proxy_connections {
+    let address = if ADVANCED_CONFIG
+        .networking
+        .authentication
+        .prevent_proxy_connections
+    {
         let auth_url = ADVANCED_CONFIG
+            .networking
             .authentication
             .prevent_proxy_connection_auth_url
             .as_deref()
@@ -63,6 +68,7 @@ pub async fn authenticate(
             .replace("{ip}", &ip.to_string())
     } else {
         let auth_url = ADVANCED_CONFIG
+            .networking
             .authentication
             .auth_url
             .as_deref()

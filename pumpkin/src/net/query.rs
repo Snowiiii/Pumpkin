@@ -17,7 +17,7 @@ use crate::server::{Server, CURRENT_MC_VERSION};
 
 pub async fn start_query_handler(server: Arc<Server>, bound_addr: SocketAddr) {
     let mut query_addr = bound_addr;
-    if let Some(port) = ADVANCED_CONFIG.query.port {
+    if let Some(port) = ADVANCED_CONFIG.networking.query.port {
         query_addr.set_port(port);
     }
 

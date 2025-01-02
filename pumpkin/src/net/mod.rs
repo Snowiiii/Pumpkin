@@ -14,7 +14,7 @@ use crate::{
 };
 
 use crossbeam::atomic::AtomicCell;
-use pumpkin_config::compression::CompressionInfo;
+use pumpkin_config::networking::compression::CompressionInfo;
 use pumpkin_core::{text::TextComponent, ProfileAction};
 use pumpkin_protocol::{
     bytebuf::{packet_id::Packet, ReadingError},
