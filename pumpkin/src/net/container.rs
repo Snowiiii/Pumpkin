@@ -3,7 +3,7 @@ use crate::server::Server;
 use pumpkin_core::text::TextComponent;
 use pumpkin_core::GameMode;
 use pumpkin_inventory::container_click::{
-    Click, ClickType, KeyClick, MouseClick, MouseDragState, MouseDragType,
+    Click, ClickType, KeyClick, MouseClick, MouseDragState, MouseDragType, DropType,
 };
 use pumpkin_inventory::drag_handler::DragHandler;
 use pumpkin_inventory::window_property::{WindowProperty, WindowPropertyTrait};
@@ -272,9 +272,9 @@ impl Player {
                 self.mouse_drag(drag_handler, opened_container, drag_state)
                     .await
             }
-            ClickType::DropType(_drop_type) => {
-                log::debug!("todo");
-                Ok(())
+            ClickType::DropType(drop_type) => {
+                self.handle_drop_item(opened_container, drop_type, click.slot)
+                    .await
             }
         }
     }
@@ -466,6 +466,38 @@ impl Player {
                 self.carried_item.store(carried_item);
                 res
             }
+        }
+    }
+
+    async fn handle_drop_item(
+        &self,
+        opened_container: Option<&mut Box<dyn Container>>,
+        drop_type: DropType,
+        slot: container_click::Slot,
+    ) -> Result<(), InventoryError> {
+        let mut inventory = self.inventory().lock().await;
+        let mut container = OptionallyCombinedContainer::new(&mut inventory, opened_container);
+        match slot {
+            container_click::Slot::Normal(slot) => {
+                let mut carried_item = self.carried_item.load();
+                let res = match drop_type {
+                    DropType::SingleItem => container.handle_item_change(
+                        &mut carried_item,
+                        slot,
+                        MouseClick::Right,
+                        false,
+                    ),
+                    DropType::FullStack => container.handle_item_change(
+                        &mut carried_item,
+                        slot,
+                        MouseClick::Left,
+                        false,
+                    ),
+                };
+                self.carried_item.store(carried_item);
+                res
+            }
+            container_click::Slot::OutsideInventory => Ok(()),
         }
     }
 
