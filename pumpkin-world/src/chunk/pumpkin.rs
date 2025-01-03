@@ -1,24 +1,19 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     fs::OpenOptions,
     hash::RandomState,
     io::{Read, Write},
 };
 
-use bitvec::{bits, order, slice::BitSlice, vec::BitVec, view::BitView};
-use fastnbt::LongArray;
+use bitvec::{bits, order, vec::BitVec, view::BitView};
 use pumpkin_core::math::ceil_log2;
-use rayon::iter::FromParallelIterator;
 use serde::de::Error;
 
-use crate::{
-    block::block_registry::BLOCK_ID_TO_REGISTRY_ID, chunk::ChunkWritingError, level::LevelFolder,
-};
+use crate::{chunk::ChunkWritingError, level::LevelFolder};
 
 use super::{
-    ChunkBlocks, ChunkData, ChunkNbt, ChunkReader, ChunkReadingError, ChunkSection,
-    ChunkSectionBlockStates, ChunkSerializingError, ChunkWriter, PaletteEntry, CHUNK_VOLUME,
-    SUBCHUNK_VOLUME,
+    ChunkBlocks, ChunkData, ChunkReader, ChunkReadingError, ChunkSerializingError, ChunkWriter,
+    CHUNK_VOLUME, SUBCHUNK_VOLUME,
 };
 
 // 1.21.4
@@ -53,29 +48,26 @@ impl ChunkReader for PumpkinChunkFormat {
 
         let mut i = 0;
 
-        while i != 16 {
+        while i != 24 {
             let palette = {
                 let mut palette = Vec::new();
 
                 let mut block = 0;
-                while block != u16::MAX {
-                    block = data.drain(..=16).fold(
-                        0,
-                        |acc, bit| {
-                            if bit {
-                                acc << 1 + 1
-                            } else {
-                                acc << 1
-                            }
-                        },
-                    );
-                    palette.push(block);
-                    log::info!("{} {}", block, data.len());
+                loop {
+                    let b: BitVec = data.drain(..16).collect();
+                    block = b
+                        .into_iter()
+                        .rev()
+                        .fold(0, |acc, bit| if bit { (acc << 1) + 1 } else { acc << 1 });
+
+                    if block == u16::MAX {
+                        break;
+                    } else {
+                        palette.push(block);
+                    }
                 }
-                palette.pop();
                 palette
             };
-            log::info!("{:?}", palette);
 
             let block_bit_size = if palette.len() < 16 {
                 4
@@ -87,9 +79,10 @@ impl ChunkReader for PumpkinChunkFormat {
                 data.drain(..SUBCHUNK_VOLUME * block_bit_size).collect();
 
             blocks.extend(subchunk_blocks.chunks(block_bit_size).map(|b| {
-                palette[b
+                palette.get(b
                     .iter()
-                    .fold(0, |acc, bit| if *bit { acc << 1 + 1 } else { acc << 1 })]
+                    .rev()
+                    .fold(0, |acc, bit| if *bit { (acc << 1) + 1 } else { acc << 1 })).unwrap_or(&0)
             }));
             i += 1;
         }
@@ -156,7 +149,7 @@ impl PumpkinChunkFormat {
                     palette
                         .iter()
                         .flat_map(|b| b.to_le_bytes())
-                        .collect::<Vec<u8>>(),
+                        .collect::<Vec<u8>>()
                 )
                 .as_bitslice(),
             );
