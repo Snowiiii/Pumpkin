@@ -58,7 +58,7 @@ impl ChunkReader for PumpkinChunkFormat {
                 let mut block = [0, 0];
                 while block != [0xFF, 0xFF] {
                     data.read_exact(&mut block)
-                        .map_err(|_| ChunkReadingError::InvalidHeader)?;
+                        .map_err(|e| ChunkReadingError::IoError(e.kind()))?;
                     palette.push(u16::from_le_bytes(block));
                 }
                 palette.pop();
@@ -80,7 +80,6 @@ impl ChunkReader for PumpkinChunkFormat {
                     .fold(0, |acc, bit| if *bit { acc << 1 + 1 } else { acc << 1 })]
             }));
         }
-        log::info!("asd, {} {}", blocks.len(), CHUNK_VOLUME);
 
         Ok(ChunkData {
             blocks: ChunkBlocks {
