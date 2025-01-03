@@ -24,6 +24,8 @@ num-traits.workspace = true
 num-derive.workspace = true
 dashmap = "6.1.0"
 
+bitvec = "1.0"
+
 # Compression   
 flate2 = "1.0"
 lz4 = "1.28.0"
