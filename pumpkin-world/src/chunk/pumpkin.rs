@@ -5,7 +5,7 @@ use std::{
     io::{Read, Write},
 };
 
-use bitvec::{order, vec::BitVec, view::BitView};
+use bitvec::{bits, order, slice::BitSlice, vec::BitVec, view::BitView};
 use fastnbt::LongArray;
 use pumpkin_core::math::ceil_log2;
 use rayon::iter::FromParallelIterator;
@@ -55,11 +55,16 @@ impl ChunkReader for PumpkinChunkFormat {
             let palette = {
                 let mut palette = Vec::new();
 
-                let mut block = [0, 0];
-                while block != [0xFF, 0xFF] {
-                    data.read_exact(&mut block)
-                        .map_err(|e| ChunkReadingError::IoError(e.kind()))?;
-                    palette.push(u16::from_le_bytes(block));
+                let mut block = 0;
+                while block != u16::MAX {
+                    block = data.split_off(16).iter().fold(0, |acc, bit| {
+                        if *bit {
+                            acc << 1 + 1
+                        } else {
+                            acc << 1
+                        }
+                    });
+                    palette.push(block);
                 }
                 palette.pop();
                 palette
@@ -71,8 +76,7 @@ impl ChunkReader for PumpkinChunkFormat {
                 ceil_log2(palette.len() as u32).max(4)
             } as usize;
 
-            let subchunk_blocks: BitVec<u8, order::Lsb0> =
-                data.drain(..SUBCHUNK_VOLUME * block_bit_size).collect();
+            let subchunk_blocks: BitVec<u8, order::Lsb0> = data.split_off(SUBCHUNK_VOLUME * block_bit_size);
 
             blocks.extend(subchunk_blocks.chunks(block_bit_size).map(|b| {
                 palette[b
@@ -83,7 +87,9 @@ impl ChunkReader for PumpkinChunkFormat {
 
         Ok(ChunkData {
             blocks: ChunkBlocks {
-                blocks: blocks.try_into().or(Err(ChunkReadingError::RegionIsInvalid))?,
+                blocks: blocks
+                    .try_into()
+                    .or(Err(ChunkReadingError::RegionIsInvalid))?,
                 ..Default::default()
             },
             position: *at,
@@ -124,7 +130,7 @@ impl PumpkinChunkFormat {
     pub fn to_bytes(&self, chunk_data: &ChunkData) -> Result<Vec<u8>, ChunkSerializingError> {
         let mut bits: BitVec<u8, order::Lsb0> = BitVec::new();
 
-        for blocks in chunk_data.blocks.blocks.chunks(16 * 16 * 16) {
+        for blocks in chunk_data.blocks.blocks.chunks(SUBCHUNK_VOLUME) {
             let mut palette: Vec<&u16> = HashSet::<&u16, RandomState>::from_iter(blocks.iter())
                 .into_iter()
                 .collect();
@@ -136,8 +142,16 @@ impl PumpkinChunkFormat {
                 ceil_log2(palette.len() as u32).max(4)
             } as usize;
 
-            bits.extend(palette.iter().flat_map(|b| b.to_le_bytes()));
-            bits.extend([0xFF, 0xFF]);
+            bits.extend_from_bitslice(
+                BitVec::<u8, order::Lsb0>::from_vec(
+                    palette
+                        .iter()
+                        .flat_map(|b| b.to_le_bytes())
+                        .collect::<Vec<u8>>(),
+                )
+                .as_bitslice(),
+            );
+            bits.extend_from_bitslice(bits![0; 16]);
 
             for block in blocks {
                 bits.extend_from_bitslice(
