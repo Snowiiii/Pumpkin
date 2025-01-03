@@ -9,7 +9,7 @@ use crate::generation::{
     noise::density::{NoisePos, UnblendedNoisePos},
 };
 
-static ENTRIES: LazyLock<BiomeEntries> = LazyLock::new(|| {
+pub static BIOME_ENTRIES: LazyLock<BiomeEntries> = LazyLock::new(|| {
     serde_json::from_str(include_str!("../../assets/multi_noise.json"))
         .expect("Could not parse synced_registries.json registry.")
 });
@@ -38,7 +38,7 @@ pub trait BiomeSupplierImpl {
 }
 
 #[derive(Clone)]
-pub struct DebugBiomeSupplier {}
+pub struct DebugBiomeSupplier;
 
 impl BiomeSupplierImpl for DebugBiomeSupplier {
     fn biome(&self, _x: i32, _y: i32, _z: i32, _noise: &mut MultiNoiseSampler) -> Biome {
@@ -47,13 +47,11 @@ impl BiomeSupplierImpl for DebugBiomeSupplier {
 }
 
 #[derive(Clone)]
-pub struct MultiNoiseBiomeSource {
-    biome_entries: BiomeEntries,
-}
+pub struct MultiNoiseBiomeSource;
 
 impl BiomeSupplierImpl for MultiNoiseBiomeSource {
     fn biome(&self, x: i32, y: i32, z: i32, noise: &mut MultiNoiseSampler) -> Biome {
-        self.biome_entries
+        BIOME_ENTRIES
             .find_biome(&noise.sample(&NoisePos::Unblended(UnblendedNoisePos::new(x, y, z))))
     }
 }

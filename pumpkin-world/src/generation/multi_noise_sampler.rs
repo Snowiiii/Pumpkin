@@ -5,37 +5,37 @@ use crate::biome::Biome;
 use crate::generation::noise::density::component_functions::ComponentReference;
 
 use super::chunk_noise::ChunkNoiseState;
-use super::noise::density::component_functions::NoEnvironment;
+use super::noise::density::component_functions::{NoEnvironment, SharedComponentReference};
 use super::noise::density::NoisePos;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct NoiseValuePoint {
-    pub temperature: f64,
-    pub erosion: f64,
-    pub depth: f64,
-    pub continents: f64,
-    pub weirdness: f64,
-    pub humidity: f64,
+    pub temperature: [f64; 2],
+    pub erosion: [f64; 2],
+    pub depth: [f64; 2],
+    pub continents: [f64; 2],
+    pub weirdness: [f64; 2],
+    pub humidity: [f64; 2],
 }
 
 pub struct MultiNoiseSampler {
-    pub(crate) temperature: Box<dyn ComponentReference<NoEnvironment>>,
-    pub(crate) erosion: Box<dyn ComponentReference<NoEnvironment>>,
-    pub(crate) depth: Box<dyn ComponentReference<NoEnvironment>>,
-    pub(crate) continents: Box<dyn ComponentReference<NoEnvironment>>,
-    pub(crate) weirdness: Box<dyn ComponentReference<NoEnvironment>>,
-    pub(crate) humidity: Box<dyn ComponentReference<NoEnvironment>>,
+    pub(crate) temperature: SharedComponentReference,
+    pub(crate) erosion: SharedComponentReference,
+    pub(crate) depth: SharedComponentReference,
+    pub(crate) continents: SharedComponentReference,
+    pub(crate) weirdness: SharedComponentReference,
+    pub(crate) humidity: SharedComponentReference,
 }
 
 impl MultiNoiseSampler {
     pub fn sample(&mut self, pos: &NoisePos) -> NoiseValuePoint {
         NoiseValuePoint {
-            temperature: self.temperature.sample_mut(pos, &NoEnvironment {}),
-            erosion: self.erosion.sample_mut(pos, &NoEnvironment {}),
-            depth: self.depth.sample_mut(pos, &NoEnvironment {}),
-            continents: self.continents.sample_mut(pos, &NoEnvironment {}),
-            weirdness: self.weirdness.sample_mut(pos, &NoEnvironment {}),
-            humidity: self.humidity.sample_mut(pos, &NoEnvironment {}),
+            temperature: self.temperature.sample(pos),
+            erosion: self.erosion.sample(pos),
+            depth: self.depth.sample(pos),
+            continents: self.continents.sample(pos),
+            weirdness: self.weirdness.sample(pos),
+            humidity: self.humidity.sample(pos),
         }
     }
 }
