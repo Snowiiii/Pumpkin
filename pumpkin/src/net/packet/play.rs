@@ -1,5 +1,7 @@
 use std::num::NonZeroU8;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::block::block_manager::BlockActionResult;
 use crate::net::PlayerConfig;
@@ -21,7 +23,9 @@ use pumpkin_core::{
 use pumpkin_entity::entity_type::EntityType;
 use pumpkin_inventory::player::PlayerInventory;
 use pumpkin_inventory::InventoryError;
-use pumpkin_protocol::client::play::{CSetContainerSlot, CSetHeldItem, CSpawnEntity};
+use pumpkin_protocol::client::play::{
+    CEntityStatus, CSetContainerSlot, CSetHeldItem, CSpawnEntity,
+};
 use pumpkin_protocol::codec::slot::Slot;
 use pumpkin_protocol::codec::var_int::VarInt;
 use pumpkin_protocol::server::play::SCookieResponse as SPCookieResponse;
@@ -42,7 +46,7 @@ use pumpkin_protocol::{
     },
 };
 use pumpkin_world::block::block_registry::Block;
-use pumpkin_world::item::item_registry::get_item_by_id;
+use pumpkin_world::item::item_registry::{self, get_item_by_id, ITEMS_REGISTRY_NAME_BY_ID};
 use pumpkin_world::item::ItemStack;
 use pumpkin_world::{
     block::{block_registry::get_block_by_item, BlockFace},
@@ -50,6 +54,7 @@ use pumpkin_world::{
     item::item_registry::get_spawn_egg,
 };
 use thiserror::Error;
+use tokio::time::sleep;
 
 #[derive(Debug, Error)]
 pub enum BlockPlacingError {
@@ -757,10 +762,14 @@ impl Player {
                             .await;
                     }
                 }
-                Status::DropItemStack
-                | Status::DropItem
-                | Status::ShootArrowOrFinishEating
-                | Status::SwapItem => {
+                Status::ShootArrowOrFinishEating => {
+                    // TODO: Handle this correctly, not only food eating stop
+                    if let Some(eating) = &*self.eating.lock().await {
+                        log::debug!("player stopped eat food");
+                        eating.abort();
+                    }
+                }
+                Status::DropItemStack | Status::DropItem | Status::SwapItem => {
                     log::debug!("todo");
                 }
             },
@@ -889,9 +898,71 @@ impl Player {
         }
     }
 
-    pub fn handle_use_item(&self, _use_item: &SUseItem) {
-        // TODO: handle packet correctly
-        log::error!("An item was used(SUseItem), but the packet is not implemented yet");
+    // TODO: handle packet correctly
+    pub async fn handle_use_item(
+        self: &Arc<Self>,
+        _use_item: &SUseItem,
+    ) -> Result<(), Box<dyn PumpkinError>> {
+        let item_stack = *self
+            .inventory()
+            .lock()
+            .await
+            .held_item()
+            .ok_or(InventoryError::InvalidPacket)?;
+        let item = item_registry::get_item_by_id(item_stack.item_id)
+            .ok_or(InventoryError::InvalidPacket)?;
+
+        if let Some(food) = item.components.food {
+            log::debug!("Player tried eat food: {:?}", food);
+
+            let player = self.clone();
+
+            *self.eating.lock().await = Some(tokio::spawn(async move {
+                sleep(Duration::from_millis(1610)).await;
+
+                player
+                    .client
+                    .send_packet(&CEntityStatus::new(player.entity_id(), 9))
+                    .await;
+
+                if player.gamemode.load() != GameMode::Creative {
+                    let mut inventory = player.inventory().lock().await;
+                    let item_count = &mut inventory.held_item_mut().as_mut().unwrap().item_count;
+                    *item_count -= 1;
+
+                    if *item_count == 0 {
+                        *inventory.held_item_mut() = None;
+                    }
+                }
+
+                player
+                    .set_health(
+                        player.living_entity.health.load(),
+                        player.food.load(Ordering::Relaxed) + food.nutrition,
+                        player.food_saturation.load() + food.saturation,
+                    )
+                    .await;
+
+                log::debug!("Player eated food: {:?}", food);
+            }));
+            return Ok(());
+        }
+
+        if let Some(equippable) = &item.components.equippable {
+            let mut inventory = self.inventory().lock().await;
+            let slot = equippable.slot as usize + 5;
+
+            if inventory.get_slot(slot)?.is_none() {
+                *inventory.get_slot(slot)? = inventory.held_item_mut().take();
+            }
+            return Ok(());
+        }
+
+        log::error!(
+            "An item was used ({}), but the use is not implemented yet",
+            ITEMS_REGISTRY_NAME_BY_ID.get(&item.id).unwrap()
+        );
+        Ok(())
     }
 
     pub async fn handle_set_held_item(&self, held: SSetHeldItem) {

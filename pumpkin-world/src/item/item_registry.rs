@@ -54,6 +54,10 @@ pub struct ItemComponents {
     pub max_damage: Option<u16>,
     #[serde(rename = "minecraft:attribute_modifiers")]
     pub attribute_modifiers: Option<AttributeModifiers>,
+    #[serde(rename = "minecraft:food")]
+    pub food: Option<Food>,
+    #[serde(rename = "minecraft:equippable")]
+    pub equippable: Option<Equippable>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -75,6 +79,45 @@ pub struct Modifier {
     pub operation: Operation,
     // TODO: Make this an enum
     pub slot: String,
+}
+
+#[derive(Deserialize, Clone, Copy, Debug)]
+pub struct Food {
+    pub nutrition: u32,
+    pub saturation: f32,
+    pub can_always_eat: Option<bool>,
+}
+
+#[derive(Deserialize, Clone, Debug, Default)]
+#[serde(default)]
+pub struct Equippable {
+    pub allowed_entities: Option<ParameterValue>,
+    pub camera_overlay: Option<String>,
+    pub damage_on_hurt: bool,
+    pub swappable: bool,
+    pub slot: ArmorSlot,
+    pub equip_sound: Option<String>,
+    pub asset_id: Option<String>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+#[serde(untagged)]
+pub enum ParameterValue {
+    Primitive(String),
+    List(Vec<String>),
+}
+
+#[derive(Deserialize, Clone, Copy, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum ArmorSlot {
+    #[default]
+    Head,
+    Chest,
+    Legs,
+    Feet,
+
+    Offhand,
+    Body,
 }
 
 #[derive(Deserialize, Clone, Debug, PartialEq)]
