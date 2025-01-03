@@ -10,11 +10,11 @@ use crate::VarInt;
 pub struct COpenScreen<'a> {
     window_id: VarInt,
     window_type: VarInt,
-    window_title: TextComponent<'a>,
+    window_title: &'a TextComponent,
 }
 
 impl<'a> COpenScreen<'a> {
-    pub fn new(window_id: VarInt, window_type: VarInt, window_title: TextComponent<'a>) -> Self {
+    pub fn new(window_id: VarInt, window_type: VarInt, window_title: &'a TextComponent) -> Self {
         Self {
             window_id,
             window_type,

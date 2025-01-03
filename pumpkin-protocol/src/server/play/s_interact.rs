@@ -1,6 +1,4 @@
 use bytes::Buf;
-use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
 use pumpkin_core::math::vector3::Vector3;
 use pumpkin_macros::server_packet;
 
@@ -23,8 +21,8 @@ impl ServerPacket for SInteract {
     fn read(bytebuf: &mut impl Buf) -> Result<Self, ReadingError> {
         let entity_id = bytebuf.try_get_var_int()?;
         let typ = bytebuf.try_get_var_int()?;
-        let action = ActionType::from_i32(typ.0)
-            .ok_or(ReadingError::Message("invalid action type".to_string()))?;
+        let action = ActionType::try_from(typ.0)
+            .map_err(|_| ReadingError::Message("invalid action type".to_string()))?;
         let target_position: Option<Vector3<f32>> = match action {
             ActionType::Interact => None,
             ActionType::Attack => None,
@@ -50,9 +48,24 @@ impl ServerPacket for SInteract {
     }
 }
 
-#[derive(FromPrimitive, PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum ActionType {
     Interact,
     Attack,
     InteractAt,
+}
+
+pub struct InvalidActionType;
+
+impl TryFrom<i32> for ActionType {
+    type Error = InvalidActionType;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Interact),
+            1 => Ok(Self::Attack),
+            2 => Ok(Self::InteractAt),
+            _ => Err(InvalidActionType),
+        }
+    }
 }

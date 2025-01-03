@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use async_trait::async_trait;
-use num_traits::FromPrimitive;
 use pumpkin_core::GameMode;
 use pumpkin_protocol::client::play::{
     CommandSuggestion, ProtoCmdArgParser, ProtoCmdArgSuggestionType,
@@ -36,10 +35,10 @@ impl ArgumentConsumer for GamemodeArgumentConsumer {
     ) -> Option<Arg<'a>> {
         let s = args.pop()?;
 
-        if let Ok(id) = s.parse::<u8>() {
-            match GameMode::from_u8(id) {
-                None | Some(GameMode::Undefined) => {}
-                Some(gamemode) => return Some(Arg::GameMode(gamemode)),
+        if let Ok(id) = s.parse::<i8>() {
+            match GameMode::from(id) {
+                GameMode::Undefined => {}
+                gamemode => return Some(Arg::GameMode(gamemode)),
             };
         };
 
@@ -54,7 +53,7 @@ impl ArgumentConsumer for GamemodeArgumentConsumer {
         _sender: &CommandSender<'a>,
         _server: &'a Server,
         _input: &'a str,
-    ) -> Result<Option<Vec<CommandSuggestion<'a>>>, CommandError> {
+    ) -> Result<Option<Vec<CommandSuggestion>>, CommandError> {
         Ok(None)
     }
 }

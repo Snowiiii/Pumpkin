@@ -1,13 +1,14 @@
+use core::f32;
 use std::sync::{atomic::AtomicBool, Arc};
 
 use crossbeam::atomic::AtomicCell;
-use num_derive::FromPrimitive;
 use pumpkin_core::math::{
     boundingbox::{BoundingBox, BoundingBoxSize},
     get_section_cord,
     position::WorldPosition,
     vector2::Vector2,
     vector3::Vector3,
+    wrap_degrees,
 };
 use pumpkin_entity::{entity_type::EntityType, pose::EntityPose, EntityId};
 use pumpkin_protocol::{
@@ -17,6 +18,9 @@ use pumpkin_protocol::{
 
 use crate::world::World;
 
+pub mod ai;
+pub mod mob;
+
 pub mod living;
 pub mod player;
 
@@ -24,6 +28,8 @@ pub mod player;
 pub struct Entity {
     /// A unique identifier for the entity
     pub entity_id: EntityId,
+    /// A persistant, unique identifier for the entity
+    pub entity_uuid: uuid::Uuid,
     /// The type of entity (e.g., player, zombie, item)
     pub entity_type: EntityType,
     /// The world in which the entity exists.
@@ -63,6 +69,7 @@ pub struct Entity {
 impl Entity {
     pub fn new(
         entity_id: EntityId,
+        entity_uuid: uuid::Uuid,
         world: Arc<World>,
         entity_type: EntityType,
         standing_eye_height: f32,
@@ -71,6 +78,7 @@ impl Entity {
     ) -> Self {
         Self {
             entity_id,
+            entity_uuid,
             entity_type,
             on_ground: AtomicBool::new(false),
             pos: AtomicCell::new(Vector3::new(0.0, 0.0, 0.0)),
@@ -130,6 +138,17 @@ impl Entity {
                 }
             }
         }
+    }
+
+    /// Changes this entity's pitch and yaw to look at target
+    pub fn look_at(&self, target: Vector3<f64>) {
+        let position = self.pos.load();
+        let delta = target.sub(&position);
+        let root = delta.x.hypot(delta.z);
+        let pitch = wrap_degrees(-delta.y.atan2(root) as f32 * 180.0 / f32::consts::PI);
+        let yaw = wrap_degrees((delta.z.atan2(delta.x) as f32 * 180.0 / f32::consts::PI) - 90.0);
+        self.pitch.store(pitch);
+        self.yaw.store(yaw);
     }
 
     pub async fn teleport(&self, position: Vector3<f64>, yaw: f32, pitch: f32) {
@@ -239,7 +258,7 @@ impl Entity {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, FromPrimitive)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// Represents various entity flags that are sent in entity metadata.
 ///
 /// These flags are used by the client to modify the rendering of entities based on their current state.

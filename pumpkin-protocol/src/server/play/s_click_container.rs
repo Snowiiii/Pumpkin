@@ -1,7 +1,5 @@
 use crate::codec::slot::Slot;
 use crate::VarInt;
-use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
 use pumpkin_macros::server_packet;
 use serde::de::SeqAccess;
 use serde::{de, Deserialize};
@@ -74,7 +72,7 @@ impl<'de> Deserialize<'de> for SClickContainer {
                     state_id,
                     slot,
                     button,
-                    mode: SlotActionType::from_i32(mode.0)
+                    mode: SlotActionType::try_from(mode.0)
                         .expect("Invalid Slot action, TODO better error handling ;D"),
                     length_of_array,
                     array_of_changed_slots,
@@ -87,7 +85,7 @@ impl<'de> Deserialize<'de> for SClickContainer {
     }
 }
 
-#[derive(Deserialize, FromPrimitive)]
+#[derive(Deserialize)]
 pub enum SlotActionType {
     /// Performs a normal slot click. This can pickup or place items in the slot, possibly merging the cursor stack into the slot, or swapping the slot stack with the cursor stack if they can't be merged.
     Pickup,
@@ -106,4 +104,24 @@ pub enum SlotActionType {
     QuickCraft,
     /// Replenishes the cursor stack with items from the screen handler. This is usually triggered by the player double clicking
     PickupAll,
+}
+
+#[derive(Debug)]
+pub struct InvalidSlotActionType;
+
+impl TryFrom<i32> for SlotActionType {
+    type Error = InvalidSlotActionType;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Pickup),
+            1 => Ok(Self::QuickMove),
+            2 => Ok(Self::Swap),
+            3 => Ok(Self::Clone),
+            4 => Ok(Self::Throw),
+            5 => Ok(Self::QuickCraft),
+            6 => Ok(Self::PickupAll),
+            _ => Err(InvalidSlotActionType),
+        }
+    }
 }

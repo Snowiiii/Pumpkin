@@ -8,8 +8,6 @@ use std::{
 };
 
 use crossbeam::atomic::AtomicCell;
-use num_derive::FromPrimitive;
-use num_traits::Pow;
 use pumpkin_config::{ADVANCED_CONFIG, BASIC_CONFIG};
 use pumpkin_core::{
     math::{
@@ -133,11 +131,12 @@ impl Player {
         entity_id: EntityId,
         gamemode: GameMode,
     ) -> Self {
+        let player_uuid = uuid::Uuid::new_v4();
         let gameprofile = client.gameprofile.lock().await.clone().map_or_else(
             || {
                 log::error!("Client {} has no game profile!", client.id);
                 GameProfile {
-                    id: uuid::Uuid::new_v4(),
+                    id: player_uuid,
                     name: String::new(),
                     properties: vec![],
                     profile_actions: None,
@@ -157,6 +156,7 @@ impl Player {
             living_entity: LivingEntity::new_with_container(
                 Entity::new(
                     entity_id,
+                    player_uuid,
                     world,
                     EntityType::Player,
                     1.62,
@@ -296,7 +296,7 @@ impl Player {
         // only reduce attack damage if in cooldown
         // TODO: Enchantments are reduced same way just without the square
         if attack_cooldown_progress < 1.0 {
-            damage_multiplier = 0.2 + attack_cooldown_progress.pow(2) * 0.8;
+            damage_multiplier = 0.2 + attack_cooldown_progress.powi(2) * 0.8;
         }
         // modify added damage based on multiplier
         let mut damage = base_damage + add_damage * damage_multiplier;
@@ -522,7 +522,7 @@ impl Player {
     }
 
     /// Kicks the Client with a reason depending on the connection state
-    pub async fn kick<'a>(&self, reason: TextComponent<'a>) {
+    pub async fn kick(&self, reason: TextComponent) {
         if self
             .client
             .closed
@@ -563,7 +563,7 @@ impl Player {
         self.client
             .send_packet(&CCombatDeath::new(
                 self.entity_id().into(),
-                TextComponent::text("noob"),
+                &TextComponent::text("noob"),
             ))
             .await;
     }
@@ -638,7 +638,7 @@ impl Player {
             .await;
     }
 
-    pub async fn send_system_message<'a>(&self, text: &TextComponent<'a>) {
+    pub async fn send_system_message(&self, text: &TextComponent) {
         self.client
             .send_packet(&CSystemChatMessage::new(text, false))
             .await;
@@ -660,9 +660,9 @@ impl Player {
                         Err(e) => {
                             if e.is_kick() {
                                 if let Some(kick_reason) = e.client_kick_reason() {
-                                    self.kick(TextComponent::text(&kick_reason)).await;
+                                    self.kick(TextComponent::text(kick_reason)).await;
                                 } else {
-                                    self.kick(TextComponent::text(&format!(
+                                    self.kick(TextComponent::text(format!(
                                         "Error while reading incoming packet {e}"
                                     )))
                                     .await;
@@ -821,7 +821,7 @@ impl Default for Abilities {
 }
 
 /// Represents the player's dominant hand.
-#[derive(Debug, FromPrimitive, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Hand {
     /// Usually the player's off-hand.
@@ -830,8 +830,22 @@ pub enum Hand {
     Right,
 }
 
+pub struct InvalidHand;
+
+impl TryFrom<i32> for Hand {
+    type Error = InvalidHand;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Left),
+            1 => Ok(Self::Right),
+            _ => Err(InvalidHand),
+        }
+    }
+}
+
 /// Represents the player's chat mode settings.
-#[derive(Debug, FromPrimitive, Clone)]
+#[derive(Debug, Clone)]
 pub enum ChatMode {
     /// Chat is enabled for the player.
     Enabled,
@@ -839,4 +853,19 @@ pub enum ChatMode {
     CommandsOnly,
     /// All messages should be hidden
     Hidden,
+}
+
+pub struct InvalidChatMode;
+
+impl TryFrom<i32> for ChatMode {
+    type Error = InvalidChatMode;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Enabled),
+            1 => Ok(Self::CommandsOnly),
+            2 => Ok(Self::Hidden),
+            _ => Err(InvalidChatMode),
+        }
+    }
 }

@@ -85,14 +85,15 @@ fn init_logger() {
             logger = logger.without_timestamps();
         }
 
-        if ADVANCED_CONFIG.logging.env {
-            logger = logger.env();
-        }
-
         logger = logger.with_level(convert_logger_filter(ADVANCED_CONFIG.logging.level));
 
         logger = logger.with_colors(ADVANCED_CONFIG.logging.color);
         logger = logger.with_threads(ADVANCED_CONFIG.logging.threads);
+
+        if ADVANCED_CONFIG.logging.env {
+            logger = logger.env();
+        }
+
         logger.init().unwrap();
     }
 }
@@ -161,7 +162,7 @@ async fn main() {
         .expect("Unable to get the address of server!");
 
     let use_console = ADVANCED_CONFIG.commands.use_console;
-    let rcon = ADVANCED_CONFIG.rcon.clone();
+    let rcon = ADVANCED_CONFIG.networking.rcon.clone();
 
     let server = Arc::new(Server::new());
     let mut ticker = Ticker::new(BASIC_CONFIG.tps);
@@ -179,12 +180,12 @@ async fn main() {
         });
     }
 
-    if ADVANCED_CONFIG.query.enabled {
+    if ADVANCED_CONFIG.networking.query.enabled {
         log::info!("Query protocol enabled. Starting...");
         tokio::spawn(query::start_query_handler(server.clone(), addr));
     }
 
-    if ADVANCED_CONFIG.lan_broadcast.enabled {
+    if ADVANCED_CONFIG.networking.lan_broadcast.enabled {
         log::info!("LAN broadcast enabled. Starting...");
         tokio::spawn(lan_broadcast::start_lan_broadcast(addr));
     }

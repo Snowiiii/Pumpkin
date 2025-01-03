@@ -1,4 +1,3 @@
-use num_derive::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// Represents the player's permission level
@@ -10,7 +9,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 /// - `Two`: `gamemaster`: Player or executor can use more commands and player can use command blocks.
 /// - `Three`:  `admin`: Player or executor can use commands related to multiplayer management.
 /// - `Four`: `owner`: Player or executor can use all of the commands, including commands related to server management.
-#[derive(FromPrimitive, ToPrimitive, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
 #[repr(i8)]
 pub enum PermissionLvl {
     #[default]
@@ -23,7 +22,13 @@ pub enum PermissionLvl {
 
 impl PartialOrd for PermissionLvl {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        (*self as u8).partial_cmp(&(*other as u8))
+        Some((*self as u8).cmp(&(*other as u8)))
+    }
+}
+
+impl Ord for PermissionLvl {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        (*self as u8).cmp(&(*other as u8))
     }
 }
 

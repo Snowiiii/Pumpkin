@@ -83,7 +83,7 @@ impl RCONClient {
         let Some(packet) = self.receive_packet().await? else {
             return Ok(());
         };
-        let config = &ADVANCED_CONFIG.rcon;
+        let config = &ADVANCED_CONFIG.networking.rcon;
         match packet.get_type() {
             ServerboundPacket::Auth => {
                 if packet.get_body() == password {

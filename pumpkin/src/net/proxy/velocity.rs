@@ -5,7 +5,7 @@ use std::net::{IpAddr, SocketAddr};
 
 use bytes::{BufMut, BytesMut};
 use hmac::{Hmac, Mac};
-use pumpkin_config::proxy::VelocityConfig;
+use pumpkin_config::networking::proxy::VelocityConfig;
 use pumpkin_protocol::{
     bytebuf::ByteBuf, client::login::CLoginPluginRequest, server::login::SLoginPluginResponse,
     Property,

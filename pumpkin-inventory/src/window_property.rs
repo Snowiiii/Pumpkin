@@ -1,14 +1,5 @@
-use num_derive::ToPrimitive;
-use num_traits::ToPrimitive;
-
 pub trait WindowPropertyTrait {
     fn to_id(self) -> i16;
-}
-
-impl<T: ToPrimitive> WindowPropertyTrait for T {
-    fn to_id(self) -> i16 {
-        self.to_i16().unwrap()
-    }
 }
 
 pub struct WindowProperty<T: WindowPropertyTrait> {
@@ -28,7 +19,7 @@ impl<T: WindowPropertyTrait> WindowProperty<T> {
         (self.window_property.to_id(), self.value)
     }
 }
-#[derive(ToPrimitive)]
+#[repr(u8)]
 pub enum Furnace {
     FireIcon,
     MaximumFuelBurnTime,
@@ -55,35 +46,35 @@ impl WindowPropertyTrait for EnchantmentTable {
         }) as i16
     }
 }
-#[derive(ToPrimitive)]
+#[repr(u8)]
 pub enum Beacon {
     PowerLevel,
     FirstPotionEffect,
     SecondPotionEffect,
 }
 
-#[derive(ToPrimitive)]
+#[repr(u8)]
 pub enum Anvil {
     RepairCost,
 }
 
-#[derive(ToPrimitive)]
+#[repr(u8)]
 pub enum BrewingStand {
     BrewTime,
     FuelTime,
 }
 
-#[derive(ToPrimitive)]
+#[repr(u8)]
 pub enum Stonecutter {
     SelectedRecipe,
 }
 
-#[derive(ToPrimitive)]
+#[repr(u8)]
 pub enum Loom {
     SelectedPattern,
 }
 
-#[derive(ToPrimitive)]
+#[repr(u8)]
 pub enum Lectern {
     PageNumber,
 }

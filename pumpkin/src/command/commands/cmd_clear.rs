@@ -36,20 +36,20 @@ async fn clear_player(target: &Player) -> usize {
 
 fn clear_command_text_output(item_count: usize, targets: &[Arc<Player>]) -> TextComponent {
     match targets {
-        [target] if item_count == 0 => TextComponent::text_string(format!(
+        [target] if item_count == 0 => TextComponent::text(format!(
             "No items were found on player {}",
             target.gameprofile.name
         ))
         .color_named(NamedColor::Red),
-        [target] => TextComponent::text_string(format!(
+        [target] => TextComponent::text(format!(
             "Removed {} item(s) on player {}",
             item_count, target.gameprofile.name
         )),
         targets if item_count == 0 => {
-            TextComponent::text_string(format!("No items were found on {} players", targets.len()))
+            TextComponent::text(format!("No items were found on {} players", targets.len()))
                 .color_named(NamedColor::Red)
         }
-        targets => TextComponent::text_string(format!(
+        targets => TextComponent::text(format!(
             "Removed {item_count} item(s) from {} players",
             targets.len()
         )),

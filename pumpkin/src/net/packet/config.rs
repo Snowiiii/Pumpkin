@@ -6,7 +6,6 @@ use crate::{
     server::Server,
 };
 use core::str;
-use num_traits::FromPrimitive;
 use pumpkin_protocol::{
     client::config::{CFinishConfig, CRegistryData},
     codec::var_int::VarInt,
@@ -28,9 +27,9 @@ impl Client {
             return;
         }
 
-        if let (Some(main_hand), Some(chat_mode)) = (
-            Hand::from_i32(client_information.main_hand.into()),
-            ChatMode::from_i32(client_information.chat_mode.into()),
+        if let (Ok(main_hand), Ok(chat_mode)) = (
+            Hand::try_from(client_information.main_hand.0),
+            ChatMode::try_from(client_information.chat_mode.0),
         ) {
             *self.config.lock().await = Some(PlayerConfig {
                 locale: client_information.locale,

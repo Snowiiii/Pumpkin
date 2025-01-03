@@ -13,25 +13,13 @@ type Cipher = cfb8::Encryptor<aes::Aes128>;
 /// Encoder: Server -> Client
 /// Supports ZLib endecoding/compression
 /// Supports Aes128 Encryption
+#[derive(Default)]
 pub struct PacketEncoder {
     buf: BytesMut,
     compress_buf: Vec<u8>,
     cipher: Option<Cipher>,
     // compression and compression threshold
     compression: Option<(Compressor, CompressionThreshold)>,
-}
-
-// Manual implementation of Default trait for PacketEncoder
-// Since compressor does not implement Default
-impl Default for PacketEncoder {
-    fn default() -> Self {
-        Self {
-            buf: BytesMut::with_capacity(1024),
-            compress_buf: Vec::with_capacity(1024),
-            cipher: None,
-            compression: None, // init compressor with fastest compression level
-        }
-    }
 }
 
 impl PacketEncoder {
@@ -99,7 +87,7 @@ impl PacketEncoder {
 
                 let packet_len = data_len_size + compressed_size;
 
-                if packet_len >= MAX_PACKET_SIZE as usize {
+                if packet_len >= MAX_PACKET_SIZE {
                     return Err(PacketEncodeError::TooLong(packet_len));
                 }
 
@@ -112,7 +100,7 @@ impl PacketEncoder {
                 let data_len_size = 1;
                 let packet_len = data_len_size + data_len;
 
-                if packet_len >= MAX_PACKET_SIZE as usize {
+                if packet_len >= MAX_PACKET_SIZE {
                     Err(PacketEncodeError::TooLong(packet_len))?
                 }
 
@@ -136,7 +124,7 @@ impl PacketEncoder {
 
         let packet_len = data_len;
 
-        if packet_len >= MAX_PACKET_SIZE as usize {
+        if packet_len >= MAX_PACKET_SIZE {
             Err(PacketEncodeError::TooLong(packet_len))?
         }
 
@@ -523,7 +511,7 @@ mod tests {
 
         // Verify that the packet size does not exceed MAX_PACKET_SIZE
         assert!(
-            packet_bytes.len() <= MAX_PACKET_SIZE as usize,
+            packet_bytes.len() <= MAX_PACKET_SIZE,
             "Packet size exceeds maximum allowed size"
         );
 
@@ -555,7 +543,7 @@ mod tests {
     #[should_panic(expected = "TooLong")]
     fn test_encode_packet_exceeding_maximum_size() {
         // Create a custom packet with data exceeding MAX_PACKET_SIZE
-        let data_size = MAX_PACKET_SIZE as usize + 1; // Exceed by 1 byte
+        let data_size = MAX_PACKET_SIZE + 1; // Exceed by 1 byte
         let packet = MaxSizePacket::new(data_size);
 
         // Build the packet without compression and encryption

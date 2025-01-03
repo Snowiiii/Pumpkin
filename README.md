@@ -34,7 +34,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
 
 - [x] Configuration (toml)
 - [x] Server Status/Ping
-- Login
+- Networking
   - [x] Encryption
   - [x] Packet Compression
 - Player Configuration
@@ -52,10 +52,11 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Bossbar
   - [x] Chunk Loading
   - [x] Chunk Generation
+  - [ ] Chunk Saving
   - [x] World Time
   - [x] Scoreboard
   - [x] World Borders
-  - [ ] World Saving
+  - [x] World Saving
 - Player
   - [x] Player Skins
   - [x] Player Client brand
@@ -65,11 +66,11 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Player Inventory
   - [x] Player Combat
 - Entities
+  - [ ] Non-Living (Minecart, Eggs...)
   - [x] Players
-  - [ ] Mobs
-  - [ ] Animals
+  - [x] Mobs
+  - [x] Animals
   - [ ] Entity AI
-  - [ ] Minecart
   - [ ] Boss
 - Server
   - [ ] Plugins
@@ -79,7 +80,7 @@ and customizable experience. It prioritizes performance and player enjoyment whi
   - [x] Particles
   - [x] Chat
   - [x] Commands
-  - [x] OP Permission
+  - [x] Permissions
 - Proxy
   - [x] Bungeecord
   - [x] Velocity

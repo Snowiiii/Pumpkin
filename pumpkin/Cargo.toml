@@ -8,7 +8,7 @@ edition = "2021"
 # FileDescription is handled as the Program name by Windows!
 FileDescription = "Pumpkin"
 OriginalFilename = "pumpkin.exe"
-LegalCopyright = "Copyright © 2024 Aleksander Medvedev"
+LegalCopyright = "Copyright © 2025 Aleksander Medvedev"
 
 [dependencies]
 # pumpkin
@@ -28,9 +28,6 @@ tokio.workspace = true
 rayon.workspace = true
 thiserror.workspace = true
 
-num-traits.workspace = true
-num-derive.workspace = true
-
 # config
 serde.workspace = true
 serde_json.workspace = true
@@ -46,7 +43,7 @@ rsa = "0.9.7"
 rsa-der = "0.3.0"
 
 # authentication
-reqwest = { version = "0.12.10", default-features = false, features = [
+reqwest = { version = "0.12.12", default-features = false, features = [
     "http2",
     "json",
     "macos-system-configuration",

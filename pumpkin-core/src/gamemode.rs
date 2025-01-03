@@ -1,12 +1,11 @@
 use std::str::FromStr;
 
-use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseGameModeError;
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, FromPrimitive)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[repr(i8)]
 pub enum GameMode {
     Undefined = -1,
@@ -14,6 +13,19 @@ pub enum GameMode {
     Creative,
     Adventure,
     Spectator,
+}
+
+impl From<i8> for GameMode {
+    fn from(value: i8) -> Self {
+        match value {
+            -1 => Self::Undefined,
+            0 => Self::Survival,
+            1 => Self::Creative,
+            2 => Self::Adventure,
+            3 => Self::Spectator,
+            _ => Self::Undefined,
+        }
+    }
 }
 
 impl FromStr for GameMode {

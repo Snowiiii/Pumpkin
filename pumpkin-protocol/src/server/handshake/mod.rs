@@ -20,7 +20,10 @@ impl ServerPacket for SHandShake {
             protocol_version: bytebuf.try_get_var_int()?,
             server_address: bytebuf.try_get_string_len(255)?,
             server_port: bytebuf.try_get_u16()?,
-            next_state: bytebuf.try_get_var_int()?.into(),
+            next_state: bytebuf
+                .try_get_var_int()?
+                .try_into()
+                .map_err(|_| ReadingError::Message("Invalid Status".to_string()))?,
         })
     }
 }

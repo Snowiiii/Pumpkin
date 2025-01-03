@@ -38,7 +38,7 @@ impl CommandExecutor for PumpkinExecutor {
             .send_message(
                 TextComponent::text("Seed: [")
                     .add_child(
-                        TextComponent::text(&seed.clone())
+                        TextComponent::text(seed.clone())
                             .hover_event(HoverEvent::ShowText(Cow::from(
                                 "Click to Copy to Clipboard",
                             )))

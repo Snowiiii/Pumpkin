@@ -21,7 +21,7 @@ pub mod server;
 /// Don't forget to change this when porting
 pub const CURRENT_MC_PROTOCOL: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(769) };
 
-pub const MAX_PACKET_SIZE: i32 = 2097152;
+pub const MAX_PACKET_SIZE: usize = 2097152;
 
 pub type FixedBitSet = bytes::Bytes;
 
@@ -49,18 +49,18 @@ pub enum ConnectionState {
     Config,
     Play,
 }
+pub struct InvalidConnectionState;
 
-impl From<VarInt> for ConnectionState {
-    fn from(value: VarInt) -> Self {
+impl TryFrom<VarInt> for ConnectionState {
+    type Error = InvalidConnectionState;
+
+    fn try_from(value: VarInt) -> Result<Self, Self::Error> {
         let value = value.0;
         match value {
-            1 => Self::Status,
-            2 => Self::Login,
-            3 => Self::Transfer,
-            _ => {
-                log::info!("Unexpected Status {}", value);
-                Self::Status
-            }
+            1 => Ok(Self::Status),
+            2 => Ok(Self::Login),
+            3 => Ok(Self::Transfer),
+            _ => Err(InvalidConnectionState),
         }
     }
 }
@@ -160,13 +160,13 @@ pub struct KnownPack<'a> {
 }
 
 #[derive(Serialize)]
-pub enum NumberFormat<'a> {
+pub enum NumberFormat {
     /// Show nothing
     Blank,
     /// The styling to be used when formatting the score number
-    Styled(Style<'a>),
+    Styled(Style),
     /// The text to be used as placeholder.
-    Fixed(TextComponent<'a>),
+    Fixed(TextComponent),
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -202,12 +202,12 @@ impl PositionFlag {
     }
 }
 
-pub enum Label<'a> {
+pub enum Label {
     BuiltIn(LinkType),
-    TextComponent(TextComponent<'a>),
+    TextComponent(TextComponent),
 }
 
-impl Serialize for Label<'_> {
+impl Serialize for Label {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -222,12 +222,12 @@ impl Serialize for Label<'_> {
 #[derive(Serialize)]
 pub struct Link<'a> {
     pub is_built_in: bool,
-    pub label: Label<'a>,
+    pub label: Label,
     pub url: &'a String,
 }
 
 impl<'a> Link<'a> {
-    pub fn new(label: Label<'a>, url: &'a String) -> Self {
+    pub fn new(label: Label, url: &'a String) -> Self {
         Self {
             is_built_in: match label {
                 Label::BuiltIn(_) => true,

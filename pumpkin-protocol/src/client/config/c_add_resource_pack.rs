@@ -10,7 +10,7 @@ pub struct CConfigAddResourcePack<'a> {
     url: &'a str,
     hash: &'a str, // max 40
     forced: bool,
-    prompt_message: Option<TextComponent<'a>>,
+    prompt_message: Option<TextComponent>,
 }
 
 impl<'a> CConfigAddResourcePack<'a> {
@@ -19,7 +19,7 @@ impl<'a> CConfigAddResourcePack<'a> {
         url: &'a str,
         hash: &'a str,
         forced: bool,
-        prompt_message: Option<TextComponent<'a>>,
+        prompt_message: Option<TextComponent>,
     ) -> Self {
         Self {
             uuid,
