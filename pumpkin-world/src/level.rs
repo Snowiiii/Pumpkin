@@ -11,8 +11,8 @@ use tokio::{
 
 use crate::{
     chunk::{
-        anvil::AnvilChunkFormat, pumpkin::PumpkinChunkFormat, ChunkData, ChunkParsingError,
-        ChunkReader, ChunkReadingError, ChunkWriter,
+        pumpkin::PumpkinChunkFormat, ChunkData, ChunkParsingError, ChunkReader, ChunkReadingError,
+        ChunkWriter,
     },
     generation::{get_world_gen, Seed, WorldGenerator},
     lock::{anvil::AnvilLevelLocker, LevelLocker},
@@ -77,7 +77,7 @@ impl Level {
             world_gen,
             world_info_writer: Arc::new(AnvilLevelInfo),
             level_folder,
-            chunk_reader: Arc::new(AnvilChunkFormat),
+            chunk_reader: Arc::new(PumpkinChunkFormat),
             chunk_writer: Arc::new(PumpkinChunkFormat),
             loaded_chunks: Arc::new(DashMap::new()),
             chunk_watchers: Arc::new(DashMap::new()),

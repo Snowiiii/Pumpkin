@@ -1,19 +1,24 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs::OpenOptions,
+    hash::RandomState,
     io::{Read, Write},
 };
 
+use bitvec::{order, vec::BitVec, view::BitView};
 use fastnbt::LongArray;
 use pumpkin_core::math::ceil_log2;
+use rayon::iter::FromParallelIterator;
+use serde::de::Error;
 
 use crate::{
     block::block_registry::BLOCK_ID_TO_REGISTRY_ID, chunk::ChunkWritingError, level::LevelFolder,
 };
 
 use super::{
-    ChunkData, ChunkNbt, ChunkReader, ChunkReadingError, ChunkSection, ChunkSectionBlockStates,
-    ChunkSerializingError, ChunkWriter, PaletteEntry,
+    ChunkBlocks, ChunkData, ChunkNbt, ChunkReader, ChunkReadingError, ChunkSection,
+    ChunkSectionBlockStates, ChunkSerializingError, ChunkWriter, PaletteEntry, CHUNK_VOLUME,
+    SUBCHUNK_VOLUME,
 };
 
 // 1.21.4
@@ -42,8 +47,48 @@ impl ChunkReader for PumpkinChunkFormat {
 
         let mut data = Vec::new();
         file.read_to_end(&mut data).unwrap();
+        let mut data: BitVec<u8, order::Lsb0> = BitVec::from_vec(data);
 
-        ChunkData::from_bytes(&data, *at).map_err(ChunkReadingError::ParsingError)
+        let mut blocks = Vec::with_capacity(CHUNK_VOLUME);
+
+        while !data.is_empty() {
+            let palette = {
+                let mut palette = Vec::new();
+
+                let mut block = [0, 0];
+                while block != [0xFF, 0xFF] {
+                    data.read_exact(&mut block)
+                        .map_err(|_| ChunkReadingError::InvalidHeader)?;
+                    palette.push(u16::from_le_bytes(block));
+                }
+                palette.pop();
+                palette
+            };
+
+            let block_bit_size = if palette.len() < 16 {
+                4
+            } else {
+                ceil_log2(palette.len() as u32).max(4)
+            } as usize;
+
+            let subchunk_blocks: BitVec<u8, order::Lsb0> =
+                data.drain(..SUBCHUNK_VOLUME * block_bit_size).collect();
+
+            blocks.extend(subchunk_blocks.chunks(block_bit_size).map(|b| {
+                palette[b
+                    .iter()
+                    .fold(0, |acc, bit| if *bit { acc << 1 + 1 } else { acc << 1 })]
+            }));
+        }
+        log::info!("asd, {} {}", blocks.len(), CHUNK_VOLUME);
+
+        Ok(ChunkData {
+            blocks: ChunkBlocks {
+                blocks: blocks.try_into().or(Err(ChunkReadingError::RegionIsInvalid))?,
+                ..Default::default()
+            },
+            position: *at,
+        })
     }
 }
 
@@ -78,79 +123,38 @@ impl ChunkWriter for PumpkinChunkFormat {
 
 impl PumpkinChunkFormat {
     pub fn to_bytes(&self, chunk_data: &ChunkData) -> Result<Vec<u8>, ChunkSerializingError> {
-        let mut sections = Vec::new();
+        let mut bits: BitVec<u8, order::Lsb0> = BitVec::new();
 
-        for (i, blocks) in chunk_data.blocks.blocks.chunks(16 * 16 * 16).enumerate() {
-            // get unique blocks
-            let palette = HashMap::<u16, &String>::from_iter(blocks.iter().map(|v| {
-                (
-                    *v,
-                    BLOCK_ID_TO_REGISTRY_ID
-                        .get(v)
-                        .expect("Tried saving a block which does not exist."),
-                )
-            }));
-            let palette = HashMap::<u16, (&String, usize)>::from_iter(
-                palette
-                    .into_iter()
-                    .enumerate()
-                    .map(|(index, (block_id, registry_str))| (block_id, (registry_str, index))),
-            );
+        for blocks in chunk_data.blocks.blocks.chunks(16 * 16 * 16) {
+            let mut palette: Vec<&u16> = HashSet::<&u16, RandomState>::from_iter(blocks.iter())
+                .into_iter()
+                .collect();
+            palette.sort();
 
             let block_bit_size = if palette.len() < 16 {
                 4
             } else {
                 ceil_log2(palette.len() as u32).max(4)
-            };
-            let _blocks_in_pack = 64 / block_bit_size;
+            } as usize;
 
-            let mut section_longs = Vec::new();
-            let mut current_pack_long: i64 = 0;
-            let mut bits_used_in_pack: u32 = 0;
+            bits.extend(palette.iter().flat_map(|b| b.to_le_bytes()));
+            bits.extend([0xFF, 0xFF]);
 
             for block in blocks {
-                let index = palette.get(block).expect("Just added all unique").1;
-                current_pack_long |= (index as i64) << bits_used_in_pack;
-                bits_used_in_pack += block_bit_size as u32;
-
-                if bits_used_in_pack >= 64 {
-                    section_longs.push(current_pack_long);
-                    current_pack_long = 0;
-                    bits_used_in_pack = 0;
-                }
+                bits.extend_from_bitslice(
+                    &palette
+                        .binary_search(&block)
+                        .map_err(|_| {
+                            ChunkSerializingError::ErrorSerializingChunk(
+                                fastnbt::error::Error::custom("block not found"),
+                            )
+                        })?
+                        .view_bits::<order::Lsb0>()[..block_bit_size],
+                );
             }
-
-            if bits_used_in_pack > 0 {
-                section_longs.push(current_pack_long);
-            }
-
-            sections.push(ChunkSection {
-                y: i as i8,
-                block_states: Some(ChunkSectionBlockStates {
-                    data: Some(LongArray::new(section_longs)),
-                    palette: palette
-                        .into_iter()
-                        .map(|entry| PaletteEntry {
-                            name: entry.1 .0.clone(),
-                            properties: None,
-                        })
-                        .collect(),
-                }),
-            });
         }
 
-        let nbt = ChunkNbt {
-            data_version: WORLD_DATA_VERSION,
-            x_pos: chunk_data.position.x,
-            z_pos: chunk_data.position.z,
-            status: super::ChunkStatus::Full,
-            heightmaps: chunk_data.blocks.heightmap.clone(),
-            sections,
-        };
-
-        let bytes = fastnbt::to_bytes(&nbt);
-
-        bytes.map_err(ChunkSerializingError::ErrorSerializingChunk)
+        Ok(bits.as_raw_slice().to_vec())
     }
 }
 
