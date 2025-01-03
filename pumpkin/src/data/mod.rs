@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 const DATA_FOLDER: &str = "data/";
 
 pub mod op_data;
+pub mod whitelist_data;
 
 pub trait LoadJSONConfiguration {
     #[must_use]
@@ -34,7 +35,7 @@ pub trait LoadJSONConfiguration {
 
             if let Err(err) = fs::write(&path, serde_json::to_string_pretty(&content).unwrap()) {
                 log::error!(
-                    "Couldn't write default data config to {path:?}. Reason: {err}. This is probably caused by a config update. Just delete the old data config and restart.", 
+                    "Couldn't write default data config to {path:?}. Reason: {err}. This is probably caused by a config update. Just delete the old data config and restart.",
                 );
             }
 
@@ -69,7 +70,7 @@ pub trait SaveJSONConfiguration: LoadJSONConfiguration {
             Ok(content) => content,
             Err(err) => {
                 log::warn!(
-                    "Couldn't serialize operator data config to {:?}. Reason: {}",
+                    "Couldn't serialize data config to {:?}. Reason: {}",
                     path,
                     err
                 );
@@ -78,11 +79,17 @@ pub trait SaveJSONConfiguration: LoadJSONConfiguration {
         };
 
         if let Err(err) = std::fs::write(&path, content) {
-            log::warn!(
-                "Couldn't write operator config to {:?}. Reason: {}",
-                path,
-                err
-            );
+            log::warn!("Couldn't write config to {:?}. Reason: {}", path, err);
         }
+    }
+}
+
+pub trait ReloadJSONConfiguration: LoadJSONConfiguration {
+    fn reload(&mut self)
+    where
+        Self: Sized + Default + Serialize + for<'de> Deserialize<'de>,
+    {
+        let config = Self::load();
+        *self = config;
     }
 }

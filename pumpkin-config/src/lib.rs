@@ -27,6 +27,7 @@ pub use server_links::ServerLinksConfig;
 mod commands;
 
 pub mod op;
+pub mod player_profile;
 mod pvp;
 mod server_links;
 
@@ -83,6 +84,7 @@ pub struct BasicConfiguration {
     pub encryption: bool,
     /// The server's description displayed on the status screen.
     pub motd: String,
+    /// The server's tps
     pub tps: f32,
     /// The default game mode for players.
     pub default_gamemode: GameMode,
@@ -92,6 +94,10 @@ pub struct BasicConfiguration {
     pub use_favicon: bool,
     /// Path to server favicon
     pub favicon_path: String,
+    /// Whether to enable the whitelist
+    pub white_list: bool,
+    /// Whether to enforce the whitelist
+    pub enforce_whitelist: bool,
 }
 
 impl Default for BasicConfiguration {
@@ -114,6 +120,8 @@ impl Default for BasicConfiguration {
             scrub_ips: true,
             use_favicon: true,
             favicon_path: "icon.png".to_string(),
+            white_list: false,
+            enforce_whitelist: false,
         }
     }
 }
