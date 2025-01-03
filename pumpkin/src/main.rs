@@ -85,14 +85,15 @@ fn init_logger() {
             logger = logger.without_timestamps();
         }
 
-        if ADVANCED_CONFIG.logging.env {
-            logger = logger.env();
-        }
-
         logger = logger.with_level(convert_logger_filter(ADVANCED_CONFIG.logging.level));
 
         logger = logger.with_colors(ADVANCED_CONFIG.logging.color);
         logger = logger.with_threads(ADVANCED_CONFIG.logging.threads);
+
+        if ADVANCED_CONFIG.logging.env {
+            logger = logger.env();
+        }
+
         logger.init().unwrap();
     }
 }
