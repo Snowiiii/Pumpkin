@@ -154,6 +154,12 @@ impl Client {
 
             *gameprofile = Some(profile);
         }
+
+        drop(gameprofile);
+
+        if !self.can_join().await {
+            self.kick("Banned").await;
+        }
     }
 
     pub async fn handle_encryption_response(
