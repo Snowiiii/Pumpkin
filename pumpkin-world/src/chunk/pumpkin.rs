@@ -51,24 +51,31 @@ impl ChunkReader for PumpkinChunkFormat {
 
         let mut blocks = Vec::with_capacity(CHUNK_VOLUME);
 
-        while !data.is_empty() {
+        let mut i = 0;
+
+        while i != 16 {
             let palette = {
                 let mut palette = Vec::new();
 
                 let mut block = 0;
                 while block != u16::MAX {
-                    block = data.split_off(16).iter().fold(0, |acc, bit| {
-                        if *bit {
-                            acc << 1 + 1
-                        } else {
-                            acc << 1
-                        }
-                    });
+                    block = data.drain(..=16).fold(
+                        0,
+                        |acc, bit| {
+                            if bit {
+                                acc << 1 + 1
+                            } else {
+                                acc << 1
+                            }
+                        },
+                    );
                     palette.push(block);
+                    log::info!("{} {}", block, data.len());
                 }
                 palette.pop();
                 palette
             };
+            log::info!("{:?}", palette);
 
             let block_bit_size = if palette.len() < 16 {
                 4
@@ -76,13 +83,15 @@ impl ChunkReader for PumpkinChunkFormat {
                 ceil_log2(palette.len() as u32).max(4)
             } as usize;
 
-            let subchunk_blocks: BitVec<u8, order::Lsb0> = data.split_off(SUBCHUNK_VOLUME * block_bit_size);
+            let subchunk_blocks: BitVec<u8, order::Lsb0> =
+                data.drain(..SUBCHUNK_VOLUME * block_bit_size).collect();
 
             blocks.extend(subchunk_blocks.chunks(block_bit_size).map(|b| {
                 palette[b
                     .iter()
                     .fold(0, |acc, bit| if *bit { acc << 1 + 1 } else { acc << 1 })]
             }));
+            i += 1;
         }
 
         Ok(ChunkData {
@@ -151,7 +160,7 @@ impl PumpkinChunkFormat {
                 )
                 .as_bitslice(),
             );
-            bits.extend_from_bitslice(bits![0; 16]);
+            bits.extend_from_bitslice(bits![1; 16]);
 
             for block in blocks {
                 bits.extend_from_bitslice(
