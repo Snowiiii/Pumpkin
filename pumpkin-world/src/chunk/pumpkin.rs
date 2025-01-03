@@ -16,9 +16,6 @@ use super::{
     CHUNK_VOLUME, SUBCHUNK_VOLUME,
 };
 
-// 1.21.4
-const WORLD_DATA_VERSION: i32 = 4189;
-
 #[derive(Clone, Default)]
 pub struct PumpkinChunkFormat;
 
@@ -52,13 +49,11 @@ impl ChunkReader for PumpkinChunkFormat {
             let palette = {
                 let mut palette = Vec::new();
 
-                let mut block = 0;
                 loop {
-                    let b: BitVec = data.drain(..16).collect();
-                    block = b
-                        .into_iter()
-                        .rev()
-                        .fold(0, |acc, bit| if bit { (acc << 1) + 1 } else { acc << 1 });
+                    let block =
+                        data.drain(..16)
+                            .rev()
+                            .fold(0, |acc, bit| if bit { (acc << 1) + 1 } else { acc << 1 });
 
                     if block == u16::MAX {
                         break;
@@ -79,10 +74,13 @@ impl ChunkReader for PumpkinChunkFormat {
                 data.drain(..SUBCHUNK_VOLUME * block_bit_size).collect();
 
             blocks.extend(subchunk_blocks.chunks(block_bit_size).map(|b| {
-                palette.get(b
-                    .iter()
-                    .rev()
-                    .fold(0, |acc, bit| if *bit { (acc << 1) + 1 } else { acc << 1 })).unwrap_or(&0)
+                palette
+                    .get(
+                        b.iter()
+                            .rev()
+                            .fold(0, |acc, bit| if *bit { (acc << 1) + 1 } else { acc << 1 }),
+                    )
+                    .unwrap_or(&0)
             }));
             i += 1;
         }
@@ -149,7 +147,7 @@ impl PumpkinChunkFormat {
                     palette
                         .iter()
                         .flat_map(|b| b.to_le_bytes())
-                        .collect::<Vec<u8>>()
+                        .collect::<Vec<u8>>(),
                 )
                 .as_bitslice(),
             );
